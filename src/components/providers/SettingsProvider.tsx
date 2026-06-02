@@ -181,6 +181,30 @@ interface Settings {
     enableParentView: boolean;
     /** When on, admins see the school-wide behavior timeline under Classroom Management. */
     enablePrincipalBehaviorTimeline?: boolean;
+    /** Shared quick-award buttons and quick-tap label for the classroom seating chart. */
+    classroomQuickAwards?: Array<{ id: string; label: string; points: number; description: string }>;
+    classroomQuickTapDescription?: string;
+    /** Custom one-tap phrases per behavior note type (positive, comment, etc.). */
+    classroomBehaviorQuickOptions?: Partial<Record<'p' | 'c' | 'i' | 'w' | 'h', string[]>>;
+    /** If/then classroom alert rules (threshold in time window → auto behavior note). */
+    classroomAlertRules?: Array<{
+        id: string;
+        name: string;
+        enabled: boolean;
+        windowHours: number;
+        trigger: {
+            type: 'classroom_points_total' | 'classroom_award_count' | 'behavior_note_count';
+            minPoints?: number;
+            minCount?: number;
+            noteKind?: 'positive' | 'concern' | 'incident' | 'any';
+        };
+        action: {
+            type: 'create_behavior_note';
+            noteKind: 'positive' | 'concern' | 'incident';
+            noteTemplate: string;
+            visibleToParent: boolean;
+        };
+    }>;
     /** When on, staff get a Room display section tab (in-room projector/TV view). */
     enableClassroomRoomDisplay?: boolean;
     enableMultiAdmin: boolean;
@@ -196,7 +220,7 @@ interface Settings {
     studentPortalLockBrowserToStudent?: boolean;
     /** @deprecated No longer used — student home never shows the global site header. */
     studentPortalShowHeader?: boolean;
-    /** When true, tuck the school header off-screen on staff portal pages (reveals at the top edge on hover). */
+    /** When true, tuck the school header off-screen on portal pages (reveals at scroll top or top-edge hover on kiosks). */
     hideSiteHeaderOutsidePortal?: boolean;
     /**
      * When true, student kiosk screens (portal hub, sign-in, rewards shop) use a tall narrow
@@ -253,6 +277,10 @@ interface Settings {
     /** When false, kiosk / rewards shop sessions stay signed in until manual logout or kiosk lock. Default on when unset. */
     kioskAutoLogoutEnabled?: boolean;
     kioskSessionTimeoutSec?: number;
+    /** When false, full-screen classroom view stays open until the teacher closes it. Default on when unset. */
+    classroomAutoLogoutEnabled?: boolean;
+    /** Idle time before leaving full-screen classroom (returns to portal). */
+    classroomSessionTimeoutMs?: number;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
     kioskAiFunIdleOffSec?: number;
     /** @deprecated Voucher idle timeout removed; print-voucher prompts are always available. */
@@ -403,7 +431,7 @@ interface Settings {
     adminNavLayout?: 'top' | 'sidebar';
     /** Teacher portal tab layout (defaults to side tabs). */
     teacherNavLayout?: 'top' | 'sidebar';
-    /** When on, each admin section tab applies its own color scheme while you work in that tab. */
+    /** When on, pinned extra-feature tabs use subtle per-tab accent colors. */
     adminPerTabColorScheme?: boolean;
     /** Admin-only UI preference: persists the main Admin tab order (including pinned add-ons). */
     adminMainTabOrder?: string[];
@@ -630,6 +658,8 @@ const defaultSettings: Settings = {
     adminSessionTimeoutMs: 5 * 60 * 1000,
     kioskAutoLogoutEnabled: true,
     kioskSessionTimeoutSec: 10,
+    classroomAutoLogoutEnabled: true,
+    classroomSessionTimeoutMs: 15 * 60 * 1000,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,

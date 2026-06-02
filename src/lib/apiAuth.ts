@@ -506,3 +506,42 @@ export async function guardDeveloperRoute(
 
   return { ok: true, value: { uid: verified.uid, body } };
 }
+
+/** Developer-only auth for GET routes (no JSON body). */
+export async function guardDeveloperAuth(
+  req: NextRequest,
+  options: Pick<GuardOptions, 'maxRequests' | 'windowMs'> = {},
+): Promise<Ok<{ uid: string }> | Err> {
+  const windowMs = options.windowMs ?? DEFAULT_WINDOW_MS;
+  const maxRequests = options.maxRequests ?? 30;
+
+  if (!sameOrigin(req)) {
+    return { ok: false, response: jsonError(403, 'Cross-origin requests are not allowed.') };
+  }
+
+  const authHeader = req.headers.get('authorization') || '';
+  const match = /^Bearer\s+(.+)$/i.exec(authHeader);
+  if (!match) {
+    return { ok: false, response: jsonError(401, 'Authentication required.') };
+  }
+
+  const verified = await verifyIdToken(match[1]!);
+  if (!verified) {
+    return { ok: false, response: jsonError(401, 'Invalid or expired session.') };
+  }
+
+  sweepBuckets();
+  const userLimit = checkRateLimit(`dev-auth:uid:${verified.uid}`, maxRequests, windowMs);
+  if (!userLimit.allowed) {
+    const res = jsonError(429, 'Too many requests. Please slow down.');
+    res.headers.set('Retry-After', String(userLimit.retryAfterSec));
+    return { ok: false, response: res };
+  }
+
+  const developer = await checkDeveloperAllowlist(match[1]!, verified.uid);
+  if (!developer) {
+    return { ok: false, response: jsonError(403, 'Developer access is required.') };
+  }
+
+  return { ok: true, value: { uid: verified.uid } };
+}

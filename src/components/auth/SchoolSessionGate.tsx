@@ -5,10 +5,13 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import {
+  followAppRedirect,
+  markSchoolLoginOfficeIntent,
   schoolLoginRedirectHref,
   schoolStaffPortalHref,
 } from '@/lib/auth/schoolLoginRedirect';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
+import { officePublicHref } from '@/lib/officePublicUrl';
 import { isOfficeHostname, isOfficeSchoolScopedPath } from '@/lib/officeRouting';
 
 const ALLOWED = new Set([
@@ -160,6 +163,16 @@ function SchoolSessionGateBody({
     [pathname, route],
   );
 
+  const redirectToSchoolLogin = useCallback(
+    (options?: { changeSchool?: boolean }) => {
+      if (typeof window !== 'undefined' && isOfficeHostname(window.location.host)) {
+        markSchoolLoginOfficeIntent(route);
+      }
+      followAppRedirect(schoolLoginHref(options), router);
+    },
+    [route, router, schoolLoginHref],
+  );
+
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
 
@@ -168,7 +181,7 @@ function SchoolSessionGateBody({
         void login('student', { schoolId: route });
         return;
       }
-      router.replace(schoolLoginHref());
+      redirectToSchoolLogin();
       return;
     }
 
@@ -177,13 +190,22 @@ function SchoolSessionGateBody({
     const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
       if (loginState === 'school' && sessionSchool && sessionSchool !== route) {
-        router.replace(schoolLoginHref({ changeSchool: true }));
+        redirectToSchoolLogin({ changeSchool: true });
         return;
       }
       // Student / school chooser sessions may restore schoolId shortly after navigation.
       if (loginState !== 'student' && loginState !== 'school') {
-        router.replace(schoolLoginHref());
+        redirectToSchoolLogin();
       }
+      return;
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      isOfficeHostname(window.location.host) &&
+      pathname === `/${route}/portal`
+    ) {
+      followAppRedirect(officePublicHref(route), router);
       return;
     }
 
@@ -193,10 +215,22 @@ function SchoolSessionGateBody({
           ? schoolStaffPortalHref(route, 'admin')
           : schoolLoginHref();
       if (pathname !== fallback) {
-        router.replace(fallback);
+        followAppRedirect(fallback, router);
       }
     }
-  }, [isInitialized, isStaffSignInLink, isUserLoading, login, loginState, schoolId, route, router, pathname, schoolLoginHref]);
+  }, [
+    isInitialized,
+    isStaffSignInLink,
+    isUserLoading,
+    login,
+    loginState,
+    schoolId,
+    route,
+    router,
+    pathname,
+    schoolLoginHref,
+    redirectToSchoolLogin,
+  ]);
 
   if (!isInitialized || isUserLoading) {
     return (

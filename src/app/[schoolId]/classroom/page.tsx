@@ -1,7 +1,8 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
 import { useScrollPausedValue } from '@/hooks/useScrollPausedValue';
+import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, X } from 'lucide-react';
@@ -16,6 +17,7 @@ import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 import {
   remainingTeacherBudgetPoints,
   teacherWithBudgetAfterSpend,
@@ -125,6 +127,31 @@ export default function ClassroomFullscreenPage() {
     };
   }, [schoolWide, currentTeacher, updateTeacher]);
 
+  const fullscreenClassLabel = useMemo(() => {
+    if (!classIdFromUrl) return null;
+    return classes.find((c) => c.id === classIdFromUrl)?.name ?? null;
+  }, [classIdFromUrl, classes]);
+
+  const classroomAutoLogoutOn = settings.classroomAutoLogoutEnabled !== false;
+  const classroomIdleMs =
+    typeof settings.classroomSessionTimeoutMs === 'number' &&
+    Number.isFinite(settings.classroomSessionTimeoutMs) &&
+    settings.classroomSessionTimeoutMs > 0
+      ? settings.classroomSessionTimeoutMs
+      : DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS;
+
+  const exitClassroom = useCallback(() => {
+    const href =
+      loginState === 'teacher' ? `/${schoolId}/teacher` : `/${schoolId}/admin`;
+    router.replace(href);
+  }, [loginState, router, schoolId]);
+
+  useClassroomIdleExit({
+    enabled: classroomAutoLogoutOn && classroomOn && isInitialized,
+    idleMs: classroomIdleMs,
+    onExit: exitClassroom,
+  });
+
   useEffect(() => {
     if (!isInitialized) return;
     if (!canAccessHallOfFameRoute(loginState)) {
@@ -175,7 +202,9 @@ export default function ClassroomFullscreenPage() {
     >
       <header className="flex shrink-0 items-center justify-between gap-2 border-b bg-background px-2 py-1.5 sm:px-3">
         <div className="min-w-0">
-          <p className="truncate text-sm font-black tracking-tight">Classroom</p>
+          <p className="truncate text-sm font-black tracking-tight">
+            {fullscreenClassLabel ?? 'Classroom'}
+          </p>
           {currentTeacher && !schoolWide && (
             <p className="truncate text-[10px] text-muted-foreground">
               {currentTeacher.name}

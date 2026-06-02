@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { schoolLoginNextPath, schoolLoginRedirectHref } from './schoolLoginRedirect';
+import {
+  consumeSchoolLoginOfficeIntent,
+  markSchoolLoginOfficeIntent,
+  schoolLoginNextPath,
+  schoolLoginRedirectHref,
+} from './schoolLoginRedirect';
 
 describe('schoolLoginRedirect', () => {
   afterEach(() => {
@@ -55,5 +60,12 @@ describe('schoolLoginRedirect', () => {
     } as Location);
 
     expect(schoolLoginNextPath('yeshiva', '/yeshiva/teacher')).toBe('/yeshiva/teacher');
+  });
+
+  it('tracks office login intent for post-login return', () => {
+    sessionStorage.clear();
+    markSchoolLoginOfficeIntent('ytt');
+    expect(consumeSchoolLoginOfficeIntent('ytt')).toBe(true);
+    expect(consumeSchoolLoginOfficeIntent('ytt')).toBe(false);
   });
 });

@@ -9,6 +9,7 @@ import { StaffPortalChrome } from './StaffPortalChrome';
 import { StaffPortalDocumentTitle } from './StaffPortalDocumentTitle';
 import { StaffPortalLayoutProvider } from './StaffPortalLayoutContext';
 import { StaffPortalShellFrame } from './StaffPortalShellFrame';
+import { StaffPortalContentWidth } from './StaffPortalContentWidth';
 
 type TeacherStaffPortalDashboardProps = {
   /** Admin opened teacher tools from the staff portal (`/admin?view=teacher`). */
@@ -42,6 +43,7 @@ export function TeacherStaffPortalDashboard({
       <StaffPortalDocumentTitle title={pageTitle} />
       <StaffPortalLayoutProvider>
         <StaffPortalShellFrame>
+          <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-5">
           <StaffPortalChrome
             role="teacher"
             schoolId={schoolId}
@@ -61,6 +63,7 @@ export function TeacherStaffPortalDashboard({
               onLogout={handleLogout}
             />
           </ErrorBoundary>
+          </StaffPortalContentWidth>
         </StaffPortalShellFrame>
       </StaffPortalLayoutProvider>
     </TooltipProvider>

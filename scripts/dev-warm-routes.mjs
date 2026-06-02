@@ -16,7 +16,7 @@
  *   DEV_WARMUP_BROWSER=0        — skip headless browser pass
  *   DEV_WARMUP_BROWSER_ALL=1    — browser-warm every route (default: heavy pages only)
  *   DEV_WARMUP_BROWSER_WAIT_MS  — extra wait on heavy routes (default 1500)
- *   DEV_WARMUP_START_DELAY_MS   — wait after "Ready" before warming (default 15000)
+ *   DEV_WARMUP_START_DELAY_MS   — wait after dev ready before warmup starts (launcher only; default 3000)
  *   DEV_WARMUP_ROUTE_GAP_MS     — pause between routes so browsing stays responsive (default 400)
  *   DEV_WARMUP_SKIP             — comma-separated path prefixes to skip
  */
@@ -35,10 +35,6 @@ const schoolId = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase(
 const concurrency = Math.max(1, parseInt(process.env.DEV_WARMUP_CONCURRENCY || '1', 10) || 1);
 const browserEnabled = process.env.DEV_WARMUP_BROWSER !== '0';
 const browserAllRoutes = process.env.DEV_WARMUP_BROWSER_ALL === '1';
-const startDelayMs = Math.max(
-  0,
-  parseInt(process.env.DEV_WARMUP_START_DELAY_MS || '15000', 10) || 15000,
-);
 const routeGapMs = Math.max(
   0,
   parseInt(process.env.DEV_WARMUP_ROUTE_GAP_MS || '400', 10) || 400,
@@ -253,6 +249,10 @@ const allRoutes = orderRoutes(
   ),
 );
 
+const browserRoutes = browserAllRoutes
+  ? allRoutes
+  : allRoutes.filter((route) => HEAVY_ROUTES.has(route));
+
 if (allRoutes.length === 0) {
   console.log('[dev:warmup] No routes found under src/app');
   process.exit(1);
@@ -271,25 +271,19 @@ if (!ready) {
 const t0 = Date.now();
 let httpOk = 0;
 
-console.log('[dev:warmup] Phase 1/2 — HTTP + script assets …');
+if (browserEnabled && browserRoutes.length > 0) {
+  console.log(
+    `[dev:warmup] Phase 1/2 — browser pre-compile (${browserRoutes.length} heavy route${browserRoutes.length === 1 ? '' : 's'}) …`,
+  );
+  await warmRoutesInBrowser(browserRoutes);
+}
+
+console.log('[dev:warmup] Phase 2/2 — HTTP + script assets …');
 await runPool(allRoutes, async (route) => {
   if (await warmRouteHttp(route)) httpOk += 1;
 });
-console.log(`[dev:warmup] Phase 1 done — ${httpOk}/${allRoutes.length} routes (${Math.round((Date.now() - t0) / 1000)}s)`);
-
-const t1 = Date.now();
-if (startDelayMs > 0) {
-  console.log(
-    `[dev:warmup] Waiting ${Math.round(startDelayMs / 1000)}s before browser pass (use the app first; warmup yields between routes) …`,
-  );
-  await sleep(startDelayMs);
-}
-console.log(
-  `[dev:warmup] Phase 2/2 — headless browser (${browserRoutes.length} route${browserRoutes.length === 1 ? '' : 's'}) …`,
-);
-await warmRoutesInBrowser(browserRoutes);
+console.log(`[dev:warmup] Phase 2 done — ${httpOk}/${allRoutes.length} routes (${Math.round((Date.now() - t0) / 1000)}s)`);
 
 const elapsed = Math.round((Date.now() - t0) / 1000);
-const browserElapsed = Math.round((Date.now() - t1) / 1000);
-console.log(`[dev:warmup] All done in ${elapsed}s (browser phase ${browserElapsed}s)`);
+console.log(`[dev:warmup] All done in ${elapsed}s`);
 console.log('[dev:warmup] Heavy pages (admin, teacher, portal) should load much faster now.');

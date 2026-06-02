@@ -15,6 +15,8 @@ export type StaffPortalTabDef = {
   description?: string;
   kind: StaffPortalTabKind;
   roles: StaffPortalRole[];
+  /** Admin portal banner — primarily a teacher day-to-day tool. */
+  teacherOperated?: boolean;
   isEnabled: (settings: Settings, role: StaffPortalRole) => boolean;
 };
 

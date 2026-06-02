@@ -137,7 +137,7 @@ async function addFirebaseAuthDomain(hostname) {
 }
 
 function startNgrok() {
-  const args = ['http', PORT, '--log=stdout'];
+  const args = ['http', `127.0.0.1:${PORT}`, '--log=stdout'];
   if (NGROK_DOMAIN) args.push('--domain', NGROK_DOMAIN);
   return spawn('ngrok', args, {
     stdio: 'inherit',

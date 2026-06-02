@@ -8,7 +8,7 @@ import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset, MonitorSmartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -64,6 +64,7 @@ import {
 } from '@/lib/homeLogoMode';
 import { DeveloperRemoteSupportViewer } from '@/components/support/DeveloperRemoteSupportViewer';
 import { DeveloperSchoolInsightsPanel } from '@/components/developer/DeveloperSchoolInsightsPanel';
+import { DeveloperSchoolScreensSheet } from '@/components/developer/DeveloperSchoolScreensSheet';
 
 interface SchoolInfo {
   id: string;
@@ -125,6 +126,7 @@ export default function DeveloperPage() {
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
   const [insightFocusSchoolId, setInsightFocusSchoolId] = useState<string | null>(null);
+  const [screensSchool, setScreensSchool] = useState<SchoolInfo | null>(null);
   const [supportStartingSchool, setSupportStartingSchool] = useState<string | null>(null);
 
   type FaceEnrollmentRow = {
@@ -705,10 +707,18 @@ export default function DeveloperPage() {
                   </div>
                 </div>
               </Helper>
-              <Button type="button" variant="outline" className="shrink-0 gap-2" onClick={() => logout()}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:shrink-0">
+              <Button type="button" variant="secondary" className="gap-2" asChild>
+                <a href="/developer/media-library">
+                  <ImageIcon className="h-4 w-4" aria-hidden />
+                  Media library
+                </a>
+              </Button>
+              <Button type="button" variant="outline" className="gap-2" onClick={() => logout()}>
                 <LogOut className="h-4 w-4" aria-hidden />
                 Sign out
               </Button>
+            </div>
             </CardContent>
           </Card>
         </header>
@@ -716,6 +726,19 @@ export default function DeveloperPage() {
         <DeveloperSchoolInsightsPanel
           focusSchoolId={insightFocusSchoolId}
           onFocusSchool={setInsightFocusSchoolId}
+        />
+
+        <DeveloperSchoolScreensSheet
+          schoolId={screensSchool?.id ?? ''}
+          schoolName={screensSchool?.name ?? ''}
+          open={!!screensSchool}
+          onOpenChange={(open) => {
+            if (!open) setScreensSchool(null);
+          }}
+          onOpenSchoolAdmin={async (schoolId) => {
+            const school = allSchools?.find((item) => item.id === schoolId);
+            if (school) await handleStartSupportSession(school);
+          }}
         />
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-start">
@@ -784,6 +807,17 @@ export default function DeveloperPage() {
                       >
                         {copiedId === school.id ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
                         {copiedId === school.id ? 'Copied!' : 'Copy school link'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScreensSchool(school);
+                        }}
+                        className="mt-1 flex items-center gap-1.5 text-xs text-sky-600 hover:underline font-medium dark:text-sky-400"
+                      >
+                        <MonitorSmartphone className="w-3 h-3" aria-hidden />
+                        Kiosk &amp; portal screens
                       </button>
                     </div>
                     <div className="flex items-center gap-0.5">

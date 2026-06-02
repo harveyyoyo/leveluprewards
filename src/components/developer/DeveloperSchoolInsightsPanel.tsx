@@ -63,6 +63,11 @@ function CountGrid({ counts, keys }: { counts: Record<string, number>; keys: Arr
   );
 }
 
+function schoolDisplayName(row: { schoolId: string; name: string }): string {
+  const name = row.name?.trim();
+  return name || row.schoolId;
+}
+
 function FleetTable({
   fleet,
   selectedId,
@@ -73,7 +78,10 @@ function FleetTable({
   onSelect: (school: DeveloperFleetSchoolSummary) => void;
 }) {
   const sorted = useMemo(
-    () => [...fleet].sort((a, b) => b.engagementScore - a.engagementScore),
+    () =>
+      [...fleet].sort((a, b) =>
+        schoolDisplayName(a).localeCompare(schoolDisplayName(b), undefined, { sensitivity: 'base' }),
+      ),
     [fleet],
   );
 
@@ -105,8 +113,8 @@ function FleetTable({
                 onClick={() => onSelect(row)}
               >
                 <td className="px-3 py-2.5">
-                  <p className="font-mono text-xs font-bold">{row.schoolId}</p>
-                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">{row.name}</p>
+                  <p className="text-sm font-bold truncate max-w-[220px]">{schoolDisplayName(row)}</p>
+                  <p className="font-mono text-xs text-muted-foreground truncate max-w-[220px]">{row.schoolId}</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">{formatActivePillars(row.pillars)}</p>
                 </td>
                 <td className="px-3 py-2.5">
@@ -626,12 +634,12 @@ export function DeveloperSchoolInsightsPanel({
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle className="flex items-center gap-2 font-mono text-base">
-              <School className="h-5 w-5" />
-              {selectedSummary?.schoolId}
+            <SheetTitle className="flex items-center gap-2 text-base">
+              <School className="h-5 w-5 shrink-0" />
+              {selectedSummary ? schoolDisplayName(selectedSummary) : 'School insights'}
             </SheetTitle>
             <SheetDescription>
-              {selectedSummary?.name} · {formatActivePillars(selectedSummary?.pillars)}
+              {selectedSummary?.schoolId} · {formatActivePillars(selectedSummary?.pillars)}
             </SheetDescription>
           </SheetHeader>
           {detailLoading ? (

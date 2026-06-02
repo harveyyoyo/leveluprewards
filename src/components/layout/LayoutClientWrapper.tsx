@@ -18,7 +18,6 @@ import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
-import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
@@ -138,24 +137,19 @@ function LayoutClientWrapperInner({
       pathname === '/login' || isSignInPage || isAdminSignInPage || isPortalChoosePage;
     const isStudentHomePage =
       typeof pathname === 'string' && /\/student-home(?:\/|$)/.test(pathname);
-    const isStudentKioskRoute =
-      typeof pathname === 'string' && /\/student\/?$/.test(pathname);
-    const isStudentKioskPage =
-      typeof pathname === 'string' &&
-      /\/(?:student|student-home|prize)(?:\/|$)/.test(pathname);
-    const { kioskSignedIn } = useStudentLayoutChrome();
+    /** In-school kiosk surfaces (/student, /prize) — locked viewport, internal scroll. */
+    const isStudentKioskSurface =
+      typeof pathname === 'string' && /\/(?:student|prize)(?:\/|$)/.test(pathname);
+    /** Any student-facing rewards surface (kiosk + home portal). */
+    const isStudentRewardsPage = isStudentKioskSurface || isStudentHomePage;
     const isKioskPortraitRoute =
       typeof pathname === 'string' &&
-      !/\/student-home(?:\/|$)/.test(pathname) &&
+      !isStudentHomePage &&
       /\/(?:portal|student|prize)(?:\/|$)/.test(pathname);
     const kioskPortraitLayout = isKioskPortraitDisplay(settings) && isKioskPortraitRoute;
-    /** Student home uses its own name bar — never the global site header. */
-    const suppressGlobalHeaderOnStudentHome = isStudentHomePage;
-    /** Post-sign-in kiosk: no global site header (student welcome bar handles chrome). */
-    const suppressGlobalHeaderForSignedInStudent = isStudentKioskRoute && kioskSignedIn;
     const browserHost = typeof window !== 'undefined' ? window.location.host : '';
     const hideOfficeChrome =
-      isOfficeHost || shouldHideGlobalAppChrome(pathname, browserHost);
+      isOfficeHost || shouldHideGlobalAppChrome(pathname, browserHost) || hideGlobalHeader;
     const hideAppChrome =
       isLoginPage || isSignInPage || isMarketingLandingPath(pathname) || hideOfficeChrome;
     const hideHeaderEnabled = settings.hideSiteHeaderOutsidePortal === true;
@@ -163,22 +157,17 @@ function LayoutClientWrapperInner({
       typeof pathname === 'string' &&
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
-    const canShowGlobalHeader =
-      !hideAppChrome &&
-      !suppressGlobalHeaderForSignedInStudent &&
-      !suppressGlobalHeaderOnStudentHome;
-    /** Hide header on staff portal pages: tuck while scrolling; show again at scroll top. */
-    const useStaffSidebarScrollHeader =
-      hideHeaderEnabled && isStaffPortalRoute && canShowGlobalHeader;
-    /** Pre-sign-in student kiosk: same top-edge reveal behavior. */
-    const useKioskHoverHeader =
-      isStudentKioskPage &&
-      !isStudentHomePage &&
-      !(isStudentKioskRoute && kioskSignedIn) &&
+    const canShowGlobalHeader = !hideAppChrome;
+    /** Portal pages with document scroll: tuck header while scrolling; reveal at scroll top. */
+    const usePortalScrollHeader =
+      hideHeaderEnabled &&
+      (isStaffPortalRoute || isStudentHomePage) &&
       canShowGlobalHeader;
-    const useHoverGlobalHeader = useKioskHoverHeader;
-    const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useHoverGlobalHeader);
-    const sidebarScrollHeaderVisible = useScrollTopRevealChrome(useStaffSidebarScrollHeader);
+    /** Kiosk surfaces without page scroll: reveal header at the top edge on hover. */
+    const useKioskHoverHeader =
+      hideHeaderEnabled && isStudentKioskSurface && canShowGlobalHeader;
+    const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useKioskHoverHeader);
+    const sidebarScrollHeaderVisible = useScrollTopRevealChrome(usePortalScrollHeader);
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
     const isStaffPortalShellRoot =
       typeof pathname === 'string' &&
@@ -233,7 +222,7 @@ function LayoutClientWrapperInner({
       loginState !== 'student' &&
       !isKioskLocked &&
       !hideAppChrome &&
-      !isStudentKioskPage &&
+      !isStudentRewardsPage &&
       !isFullscreenSpecialPage;
     const useCompactSiteFooter = settings.displayMode === 'app' && isPortalChoosePage;
 
@@ -292,6 +281,15 @@ function LayoutClientWrapperInner({
                     registration.unregister();
                 }
             });
+            if ('caches' in window) {
+                void caches.keys().then((keys) =>
+                    Promise.all(
+                        keys
+                            .filter((name) => name.startsWith('levelup-'))
+                            .map((name) => caches.delete(name)),
+                    ),
+                );
+            }
             return;
         }
 
@@ -432,23 +430,24 @@ function LayoutClientWrapperInner({
                         kioskPortraitLayout && 'kiosk-portrait-layout',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
                         // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
-                        (appShellNoPageScroll || isStudentKioskPage || isPortalChoosePage) &&
+                        (appShellNoPageScroll || isStudentKioskSurface || isPortalChoosePage) &&
                             'h-dvh max-h-dvh',
-                        (appShellNoPageScroll || isStudentKioskPage) &&
+                        (appShellNoPageScroll || isStudentKioskSurface) &&
                             'overflow-hidden overflow-x-hidden',
                         isPortalChoosePage && 'overflow-x-hidden',
                     )}
                 >
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
                     {shouldRenderGlobalHeader &&
-                        (useHoverGlobalHeader ? (
+                        (useKioskHoverHeader ? (
                             <HoverRevealHeaderShell visible={hoverGlobalHeaderVisible}>
                                 <Header />
                             </HoverRevealHeaderShell>
-                        ) : useStaffSidebarScrollHeader ? (
+                        ) : usePortalScrollHeader ? (
                             <HoverRevealHeaderShell
                                 visible={sidebarScrollHeaderVisible}
                                 peekWhenHidden={false}
+                                layout="overlay"
                             >
                                 <Header />
                             </HoverRevealHeaderShell>
@@ -461,10 +460,20 @@ function LayoutClientWrapperInner({
                             'flex-1 min-w-0',
                             hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
-                                : isStudentKioskPage
+                                : isStudentKioskSurface
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
                                     : isStaffPortalRoute
-                                        ? staffPortalMainClassName(staffPortalWide)
+                                        ? cn(
+                                            staffPortalMainClassName(staffPortalWide),
+                                            usePortalScrollHeader &&
+                                              'pt-[var(--global-header-height,5rem)]',
+                                          )
+                                        : isStudentHomePage
+                                            ? cn(
+                                                'relative z-10 mx-auto w-full max-w-7xl',
+                                                usePortalScrollHeader &&
+                                                  'pt-[var(--global-header-height,5rem)]',
+                                              )
                                         : isPortalChoosePage || isSmartScreenPage
                                             ? 'relative z-10 w-full max-w-none'
                                             : 'relative z-10 mx-auto w-full max-w-7xl',
@@ -484,7 +493,7 @@ function LayoutClientWrapperInner({
                         </div>
                     )}
                     {nonCriticalUiReady && settings.showIntroWizard && <IntroWizard />}
-                    {nonCriticalUiReady && !hideAppChrome && !isFullscreenSpecialPage && !isStudentKioskPage && <StaffAiHelpButton />}
+                    {nonCriticalUiReady && !hideAppChrome && !isFullscreenSpecialPage && !isStudentRewardsPage && <StaffAiHelpButton />}
                     {!hideAppChrome &&
                       !isFullscreenSpecialPage &&
                       // Prevent a "flash of animated background" before settings hydrate from storage.

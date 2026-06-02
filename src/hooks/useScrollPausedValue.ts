@@ -5,6 +5,9 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 /**
  * Freezes `value` while the user scrolls inside `scrollRootRef` (or the window).
  * Applies the latest value after scrolling stops so live Firestore feeds do not jank scroll.
+ *
+ * Important: does not re-render on scroll start — only after scrolling stops — so heavy
+ * child trees (e.g. seating grids) are not repainted mid-gesture.
  */
 export function useScrollPausedValue<T>(
   value: T,
@@ -14,7 +17,7 @@ export function useScrollPausedValue<T>(
   const latestRef = useRef(value);
   const frozenRef = useRef(value);
   const pausedRef = useRef(false);
-  const [epoch, setEpoch] = useState(0);
+  const [, setEpoch] = useState(0);
 
   latestRef.current = value;
 
@@ -39,7 +42,7 @@ export function useScrollPausedValue<T>(
       if (!pausedRef.current) {
         pausedRef.current = true;
         frozenRef.current = latestRef.current;
-        setEpoch((n) => n + 1);
+        // No setState here — avoids repainting heavy panels during the scroll gesture.
       }
       if (timer) clearTimeout(timer);
       timer = setTimeout(flush, pauseMs);

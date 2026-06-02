@@ -1,6 +1,7 @@
 'use client';
 
-import { ChevronDown, Settings } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { ChevronDown, Power, PowerOff, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,23 +9,33 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import type { StaffPortalTabView } from '@/lib/staffPortal';
 
 type StaffPortalAddFeatureTabsMenuProps = {
   tabs: StaffPortalTabView[];
   onAddTab: (value: string) => void;
+  /** Enable every optional feature tab (admin: feature flags + sidebar pins). */
+  onTurnAllOn?: () => void;
+  /** Disable every optional feature tab currently on. */
+  onTurnAllOff?: () => void;
   align?: 'start' | 'end';
   className?: string;
+  getTabStyle?: (value: string) => CSSProperties | undefined;
 };
 
 /** Add-only menu — lists feature tabs not already in the sidebar. */
 export function StaffPortalAddFeatureTabsMenu({
   tabs,
   onAddTab,
+  onTurnAllOn,
+  onTurnAllOff,
   align = 'start',
   className,
+  getTabStyle,
 }: StaffPortalAddFeatureTabsMenuProps) {
-  if (tabs.length === 0) return null;
+  const hasBulkActions = !!(onTurnAllOn || onTurnAllOff);
+  if (tabs.length === 0 && !hasBulkActions) return null;
 
   return (
     <DropdownMenu>
@@ -33,7 +44,7 @@ export function StaffPortalAddFeatureTabsMenu({
           type="button"
           className={
             className ??
-            'inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60'
+            'inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-border/60 bg-transparent px-3 py-2 text-sm font-semibold text-muted-foreground transition-all hover:bg-muted/40 hover:text-foreground'
           }
           title="Add feature tab"
           aria-label="Add feature tab"
@@ -48,17 +59,28 @@ export function StaffPortalAddFeatureTabsMenu({
           <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
             Add feature tab
           </span>
-          <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-            Pick a tab to show in your sidebar. Remove pinned tabs with the × on each tab.
-          </p>
         </div>
         <DropdownMenuSeparator />
+        {onTurnAllOn ? (
+          <DropdownMenuItem className="gap-2 font-semibold" onSelect={() => onTurnAllOn()}>
+            <Power className="h-4 w-4 opacity-75" aria-hidden />
+            Turn all on
+          </DropdownMenuItem>
+        ) : null}
+        {onTurnAllOff ? (
+          <DropdownMenuItem className="gap-2 font-semibold" onSelect={() => onTurnAllOff()}>
+            <PowerOff className="h-4 w-4 opacity-75" aria-hidden />
+            Turn all off
+          </DropdownMenuItem>
+        ) : null}
+        {hasBulkActions && tabs.length > 0 ? <DropdownMenuSeparator /> : null}
         {tabs.map((t) => {
           const Icon = t.icon;
           return (
             <DropdownMenuItem
               key={t.value}
-              className="gap-2 font-semibold"
+              className={cn('gap-2 font-semibold', getTabStyle && 'rounded-md')}
+              style={getTabStyle?.(t.value)}
               onSelect={() => onAddTab(t.value)}
             >
               <Icon className="h-4 w-4 opacity-75" aria-hidden />

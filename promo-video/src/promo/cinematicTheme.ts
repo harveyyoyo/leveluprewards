@@ -1,3 +1,6 @@
+import { defaultWidescreenPromoProps } from "./widescreenPromoDefaults";
+import { CINEMATIC_VOICE_OFFSET } from "./cinematicVoice";
+
 export const CINEMATIC = {
   navy: "#0a1628",
   navyMid: "#0f2040",
@@ -12,14 +15,17 @@ export const CINEMATIC = {
   textDim: "#4a6080",
 } as const;
 
-// All frame values are at 30fps
+const shift = (frame: number) => frame + CINEMATIC_VOICE_OFFSET;
+const wt = defaultWidescreenPromoProps.timing;
+
+/** Scene cuts aligned to widescreen voiceover. */
 export const CT = {
   fps: 30,
-  coldOpenEnd: 45,      // 1.5s cold open
-  introEnd: 280,        // 45 + 235 (fits intro.mp3 - 227 frames)
-  feature1End: 460,     // 280 + 180 (fits coupons.mp3 - 163 frames)
-  feature2End: 655,     // 460 + 195 (fits kiosk.mp3 - 183 frames)
-  feature3End: 805,     // 655 + 150 (fits analytics.mp3 - 132 frames)
-  socialEnd: 975,       // 805 + 170 (fits portal.mp3 - 157 frames)
-  total: 1205,          // 975 + 230 (fits outro.mp3 - 210 frames)
+  coldOpenEnd: 0,
+  introEnd: shift(wt.introEnd),
+  feature1End: shift(wt.selectorEnd),
+  feature2End: shift(wt.studentKioskEnd),
+  feature3End: shift(wt.studentHomeEnd),
+  outroEnd: shift(wt.dashboardEnd),
+  total: shift(wt.total),
 } as const;

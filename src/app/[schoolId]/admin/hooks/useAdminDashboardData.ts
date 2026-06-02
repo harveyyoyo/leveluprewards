@@ -10,7 +10,6 @@ import {
 import type {
   LibraryItem,
   AttendanceScheduleSlot,
-  BackupInfo,
   Category,
   Class,
   House,
@@ -90,11 +89,6 @@ export function useAdminDashboardData(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null),
     [firestore, schoolId],
   );
-  const backupsQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'backups') : null),
-    [firestore, schoolId],
-  );
-
   // --- Doc refs --------------------------------------------------------
   const schoolDocRef = useMemoFirebase(
     () => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null),
@@ -116,7 +110,6 @@ export function useAdminDashboardData(
   const library = useCollection<LibraryItem>(libraryQuery);
   const coupons = useCollection<Coupon>(couponsQuery);
   const attendancePeriods = useCollection<AttendanceScheduleSlot>(attendancePeriodsQuery);
-  const backups = useCollection<BackupInfo>(backupsQuery);
   const schoolDoc = useDoc<SchoolDocData>(schoolDocRef);
   const appConfigDoc = useDoc<AppConfigGlobalData>(appConfigRef);
 
@@ -151,9 +144,6 @@ export function useAdminDashboardData(
     couponsError: coupons.error,
     attendancePeriods: attendancePeriods.data,
     attendancePeriodsLoading: attendancePeriods.isLoading,
-    backups: backups.data,
-    backupsLoading: backups.isLoading,
-    backupsError: backups.error,
     schoolData: schoolDoc.data,
     schoolDocRef,
     appConfigGlobal: appConfigDoc.data,

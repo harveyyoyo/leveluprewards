@@ -21,7 +21,6 @@ import {
   Trophy,
   User,
   Users,
-  Database,
   Sparkles,
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
@@ -49,7 +48,7 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
  *
  * | Tab value        | Admin | Teacher | Notes |
  * |------------------|:-----:|:-------:|-------|
- * | raffle, goals, homework | — / add-on | add-on | Teacher-operational (not Rewards-gated) |
+ * | raffle, goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
  * | generated-coupons | — | add-on | Rewards economy (coupon print) |
  * | attendance | add-on | add-on | `payAttendance` pillar |
  * | insights, houses, … | add-on | — | Admin-only |
@@ -115,6 +114,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: LayoutGrid,
     kind: 'core',
     roles: ['admin', 'teacher'],
+    teacherOperated: true,
     title: `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and room display`,
     isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
@@ -168,6 +168,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Clock,
     kind: 'addon',
     roles: ['admin', 'teacher'],
+    teacherOperated: true,
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'attendance')) return false;
@@ -230,6 +231,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Target,
     kind: 'addon',
     roles: ['admin', 'teacher'],
+    teacherOperated: true,
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'goals')) return false;
@@ -243,11 +245,15 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     label: 'Raffle',
     icon: Dices,
     kind: 'addon',
-    roles: ['teacher'],
+    roles: ['admin', 'teacher'],
+    teacherOperated: true,
     isEnabled: (s, role) => {
-      if (role !== 'teacher') return false;
-      if (teacherAddonHidden(s, 'raffle')) return false;
-      return true;
+      if (role === 'teacher') {
+        if (teacherAddonHidden(s, 'raffle')) return false;
+        return true;
+      }
+      if (adminAddonHidden(s, 'raffle')) return false;
+      return !!s.enableWeeklyRaffle;
     },
   },
   {
@@ -314,14 +320,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
       return isRewardsPillarOn(s);
     },
   },
-  {
-    value: 'backups',
-    label: 'Backups',
-    icon: Database,
-    kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (_s, role) => role === 'admin',
-  },
 ];
 
 /** When a teacher pins a tab, enable student/school flags needed for that feature. */
@@ -357,11 +355,9 @@ export function staffPortalAdminAddOnIsOn(settings: Settings, tabValue: string):
 export function staffPortalTabsForRole(
   role: StaffPortalRole,
   settings: Settings,
-  options?: { includeDeveloperBackups?: boolean },
 ): StaffPortalTabDef[] {
   return STAFF_PORTAL_TAB_REGISTRY.filter((tab) => {
     if (!tab.roles.includes(role)) return false;
-    if (tab.value === 'backups' && !options?.includeDeveloperBackups) return false;
     return tab.isEnabled(settings, role);
   });
 }
@@ -412,7 +408,6 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   homework: 'Homework tracking and classroom assignments.',
   raffle: 'Weekly raffle tickets and drawings.',
   'generated-coupons': 'Coupons you generated for your classes.',
-  backups: 'Developer backups and restore tools.',
 };
 
 /** Keep Welcome as the first nav item when present. */
@@ -423,6 +418,19 @@ export function staffPortalPinWelcomeFirst<T extends { value: string }>(tabs: T[
 }
 
 /** Description for Welcome tab cards — uses registry `description`, then map, then `title`. */
+export function staffPortalIsTeacherOperatedTab(tabValue: string): boolean {
+  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
+  return def?.teacherOperated === true;
+}
+
+/** Banner copy when school admin opens a teacher-operated tab. */
+export function staffPortalTeacherOperatedAdminNote(tabValue: string): string | null {
+  if (!staffPortalIsTeacherOperatedTab(tabValue)) return null;
+  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
+  const label = def?.label ?? 'This section';
+  return `${label} is mainly for teachers in day-to-day classroom use. You can preview and set defaults here as school admin.`;
+}
+
 export function staffPortalTabDescription(tab: StaffPortalTabDef): string {
   if (tab.description) return tab.description;
   const mapped = STAFF_PORTAL_TAB_DESCRIPTIONS[tab.value];

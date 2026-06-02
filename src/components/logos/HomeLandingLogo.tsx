@@ -11,8 +11,21 @@ import {
   type HomeLogoMode,
 } from '@/lib/homeLogoMode';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
+import { cn } from '@/lib/utils';
 
-export function HomeLandingLogo() {
+type HomeLandingLogoProps = {
+  /** When false, logo is display-only (splash intro). Default true. */
+  linkToLogin?: boolean;
+  /** Larger cinematic logo for homepage intro. */
+  size?: 'default' | 'intro';
+  className?: string;
+};
+
+export function HomeLandingLogo({
+  linkToLogin = true,
+  size = 'default',
+  className,
+}: HomeLandingLogoProps) {
   const [mounted, setMounted] = useState(false);
   const [mode, setMode] = useState<HomeLogoMode>('animated');
 
@@ -25,7 +38,10 @@ export function HomeLandingLogo() {
   if (!mounted) {
     return (
       <div
-        className="flex min-h-[280px] w-full flex-col items-center justify-center"
+        className={cn(
+          'flex min-h-[280px] w-full flex-col items-center justify-center',
+          className,
+        )}
         aria-busy="true"
         aria-label="Loading logo"
       >
@@ -34,17 +50,34 @@ export function HomeLandingLogo() {
     );
   }
 
-  if (mode === 'static') {
+    const staticLogoClass =
+    size === 'intro' ? 'h-52 w-52 sm:h-72 sm:w-72' : 'h-48 w-48 sm:h-64 sm:w-64';
+
+  const logo =
+    mode === 'static' ? (
+      <Logo className={staticLogoClass} />
+    ) : (
+      <LevelUpLogo size={size} />
+    );
+
+  if (!linkToLogin) {
     return (
-      <Link href={getLevelUpLogoHref()} aria-label="LevelUp EDU — school sign-in" className="inline-flex outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl">
-        <Logo className="h-48 w-48 sm:h-64 sm:w-64" />
-      </Link>
+      <div className={cn('inline-flex', className)} aria-label="LevelUp EDU">
+        {logo}
+      </div>
     );
   }
 
   return (
-    <Link href={getLevelUpLogoHref()} aria-label="LevelUp EDU — school sign-in" className="inline-flex outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl">
-      <LevelUpLogo />
+    <Link
+      href={getLevelUpLogoHref()}
+      aria-label="LevelUp EDU — school sign-in"
+      className={cn(
+        'inline-flex outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-2xl',
+        className,
+      )}
+    >
+      {logo}
     </Link>
   );
 }

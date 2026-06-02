@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalShellClassName } from '@/components/staff/staffPortalNavStyles';
 
 type StaffPortalShellFrameProps = {
@@ -12,7 +12,7 @@ type StaffPortalShellFrameProps = {
 };
 
 export function StaffPortalShellFrame({ children, className, style }: StaffPortalShellFrameProps) {
-  const { isWide } = useStaffPortalLayout();
+  const { isWide } = useStaffPortalLayoutMode();
 
   return (
     <div className={cn(staffPortalShellClassName(isWide), className)} style={style}>

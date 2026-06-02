@@ -9,49 +9,41 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   setup: {
     title: 'Setup',
     checklist: [
-      'Turn Room display, Parent portal, and Principal on or off for your school.',
-      'Teachers and admins use the same toggles — changes apply for everyone.',
-      'Optional tabs only appear when they are enabled.',
+      'Turn Principal or Parent portal on or off for your school.',
+      'Use the preview links to see what each audience sees.',
+      'Room display is always available on its own tab.',
     ],
   },
   seating: {
     title: CLASSROOM_SEATING_SECTION_LABEL,
     checklist: [
-      'In classroom settings (gear), pick Quick select or Show award menu — only one mode at a time.',
-      'Choose a class, then tap a desk to award points.',
-      'Shift+click a student for a behavior note.',
-    ],
-  },
-  'room-display': {
-    title: 'Room display',
-    checklist: [
-      'For a projector or classroom TV in the room — not the hallway Smart Screen.',
-      'Shows live seating, session totals, and class messages for the class.',
-      'Full launch is coming soon; turn it on in Setup to see this section.',
+      'Hold P, C, I, W, or H and click a student for note popups (positive, comment, incident, warning, highlight).',
+      'Use the Quick and Awards tabs in the toolbar — or Shift+click for a note picker.',
+      'Arrange seats to drag desks into your room layout. Full-screen auto-exit is under Setup.',
     ],
   },
   behavior: {
     title: 'Behavior',
     checklist: [
-      `Add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu → Behavior note).`,
+      `Add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (P/C/I/W/H + click or award menu notes).`,
       'Saved notes appear in the Behavior tab list right away.',
-      'Turn on Principal in Setup for the same school-wide view under Principal.',
+      'Enable Principal in Setup to preview the school-wide timeline.',
     ],
   },
-  principal: {
-    title: 'Principal',
+  alerts: {
+    title: 'Alerts',
     checklist: [
-      'School-wide timeline of behavior notes from all classes.',
-      'Turn on Principal under Setup if this tab is missing.',
-      'Staff-only incidents stay hidden from families.',
+      'Create if/then rules: threshold + time window → auto behavior note.',
+      'Examples: 25 classroom points in 24h, or 3 concern notes in a week.',
+      'Rules run when awards or notes are saved; each rule fires once per student per window.',
     ],
   },
-  parents: {
-    title: 'Parent portal',
+  'room-display': {
+    title: 'Room display',
     checklist: [
-      'Share the parent link from your school portal when the feature is on.',
-      'Families sign in with the parent email on file for each student.',
-      'Only behavior notes shared with parents appear in their view.',
+      'Pick a class, customize the headline and modules, then open on your classroom TV.',
+      'Session leaderboard updates as you award on the seating chart.',
+      'Separate from the hallway Smart Screen.',
     ],
   },
 };

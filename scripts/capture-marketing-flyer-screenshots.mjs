@@ -372,8 +372,16 @@ const SHOTS = [
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  const shotFilter = process.argv.find((a) => a.startsWith('--shot='))?.split('=')[1]?.trim();
+  const shots = shotFilter
+    ? SHOTS.filter((s) => s.name === shotFilter || s.name.includes(shotFilter))
+    : SHOTS;
+  if (shotFilter && !shots.length) {
+    throw new Error(`No marketing shots match --shot=${shotFilter}`);
+  }
+
   console.log(`Capturing marketing screenshots → ${OUT_DIR}`);
-  console.log(`Base: ${BASE} · School: ${SCHOOL}\n`);
+  console.log(`Base: ${BASE} · School: ${SCHOOL}${shotFilter ? ` · shot=${shotFilter}` : ''}\n`);
 
   const browser = await chromium.launch({ headless: true });
   await ensureSchoolAuth(browser);
@@ -382,7 +390,7 @@ async function main() {
 
   const manifest = { capturedAt: new Date().toISOString(), base: BASE, school: SCHOOL, shots: [] };
 
-  for (const shot of SHOTS) {
+  for (const shot of shots) {
     console.log(`→ ${shot.name}`);
     const ctx = await browser.newContext({
       viewport: VIEWPORT,

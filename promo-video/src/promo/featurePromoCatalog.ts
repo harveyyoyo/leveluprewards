@@ -50,6 +50,8 @@ export const FEATURE_SEGMENT_ORDER = [
 
   "prizes",
 
+  "classroom",
+
   "coupons",
 
   "raffle",
@@ -167,6 +169,24 @@ export const FEATURE_SEGMENT_CATALOG: Record<
     accent: "#fbbf24",
 
     clip: clip("capture-library/student-kiosk/kiosk-prizes-hover.mp4", 1.08),
+
+  },
+
+  classroom: {
+
+    id: "classroom",
+
+    label: "Classroom displays",
+
+    tagline: "Live seating charts, awards, and noise meters.",
+
+    emoji: "👩‍🏫",
+
+    color: "#0d9488",
+
+    accent: "#2dd4bf",
+
+    clip: clip("capture-library/teacher/teacher-classes-tab.mp4", 1.05),
 
   },
 

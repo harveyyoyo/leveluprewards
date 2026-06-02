@@ -22,8 +22,6 @@ export type UseStaffPortalTabsOptions = {
   pinnedAddOnValues?: string[];
   /** Admin: persisted main tab order */
   mainTabOrder?: string[];
-  /** Developer-only admin tab */
-  includeDeveloperBackups?: boolean;
 };
 
 export type UseStaffPortalTabsResult = {
@@ -71,11 +69,10 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     settings,
     pinnedAddOnValues = [],
     mainTabOrder,
-    includeDeveloperBackups = false,
   } = options;
 
   return useMemo(() => {
-    const allDefs = staffPortalTabsForRole(role, settings, { includeDeveloperBackups });
+    const allDefs = staffPortalTabsForRole(role, settings);
     const core = staffPortalCoreTabs(role, settings).map(toTabView);
     const addOnDefs = staffPortalAddOnTabs(role, settings);
     const addOnViews = addOnDefs.map(toTabView);
@@ -113,12 +110,6 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     const pinnedSet = new Set(pinnedAddOnValues);
     const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
     const availableMain = [...core, ...pinnedExtras.map((t) => ({ ...t, title: `${t.label} (pinned)` }))];
-    if (includeDeveloperBackups) {
-      const backups = allDefs.find((t) => t.value === 'backups');
-      if (backups && !availableMain.some((t) => t.value === 'backups')) {
-        availableMain.push(toTabView(backups));
-      }
-    }
     const main = orderTabs(availableMain, mainTabOrder);
     const mainValues = new Set(main.map((t) => t.value));
     const addMore = addOnViews.filter((t) => !mainValues.has(t.value));
@@ -131,7 +122,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
       coreTabs: core,
       addOnTabDefs: addOnDefs,
     };
-  }, [role, settings, pinnedAddOnValues, mainTabOrder, includeDeveloperBackups]);
+  }, [role, settings, pinnedAddOnValues, mainTabOrder]);
 }
 
 export function staffPortalTabIsValid(

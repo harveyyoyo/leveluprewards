@@ -1,3 +1,4 @@
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import {
   isOfficeAppPath,
   isOfficeHostname,
@@ -5,6 +6,51 @@ import {
 } from '@/lib/officeRouting';
 import { officePublicHref, type OfficePublicSegment } from '@/lib/officePublicUrl';
 import { canonicalPortalHost, isLocalDevHost } from '@/lib/portalRouting';
+
+export const SCHOOL_LOGIN_OFFICE_INTENT_KEY = 'lvlup:schoolLoginOfficeIntent';
+
+export function markSchoolLoginOfficeIntent(schoolId: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(SCHOOL_LOGIN_OFFICE_INTENT_KEY, schoolId.trim().toLowerCase());
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeSchoolLoginOfficeIntent(schoolId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const expected = schoolId.trim().toLowerCase();
+    const stored = sessionStorage.getItem(SCHOOL_LOGIN_OFFICE_INTENT_KEY);
+    sessionStorage.removeItem(SCHOOL_LOGIN_OFFICE_INTENT_KEY);
+    return stored === expected;
+  } catch {
+    return false;
+  }
+}
+
+/** Client navigations must hard-assign cross-origin URLs (Next router only handles same-origin). */
+export function followAppRedirect(href: string, router: AppRouterInstance): void {
+  if (typeof window === 'undefined') return;
+
+  if (/^https?:\/\//i.test(href)) {
+    try {
+      const target = new URL(href);
+      if (target.origin !== window.location.origin) {
+        window.location.assign(href);
+        return;
+      }
+      router.replace(`${target.pathname}${target.search}${target.hash}`);
+      return;
+    } catch {
+      window.location.assign(href);
+      return;
+    }
+  }
+
+  router.replace(href);
+}
 
 const OFFICE_PUBLIC_SEGMENTS = new Set<OfficePublicSegment>([
   'students',
@@ -87,7 +133,12 @@ export function schoolLoginRedirectHref(
 
   if (usePortalLogin) {
     const scheme = portalHost.includes('localhost') ? 'http' : 'https';
+    markSchoolLoginOfficeIntent(route);
     return `${scheme}://${portalHost}/login?${params.toString()}`;
+  }
+
+  if (onOffice) {
+    markSchoolLoginOfficeIntent(route);
   }
 
   return `/login?${params.toString()}`;

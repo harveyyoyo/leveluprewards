@@ -18,6 +18,7 @@
 - origin: Primary app repo (harveyyoyo/leveluprewards).
 - lovable: UI design lab repo (harveyyoyo/levelupluvable).
 - Integration branch: dev -- bridge where Lovable-aligned UI lands and Cursor integrates Firebase logic.
+- **Agent branches**: Each AI assistant edits on its own branch only (`cursor/`, `codex/`, `antigravity/`). See `.cursor/rules/agent-branches.mdc` and `.agent/workflows/agent-branch-workflow.md`. Merge to `main` or `dev` via PR, not direct agent commits on protected branches.
 
 ## Engineering role (Cursor)
 

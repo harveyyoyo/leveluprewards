@@ -2,6 +2,7 @@ import { getAuth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import {
   applyClassroomPointsToStudents,
+  applyRewardsPointsToStudents,
   type ClassroomPointsMeta,
 } from '@/lib/db/classroomPoints';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
@@ -11,6 +12,9 @@ export type ClassroomPointsAwardRequest = ClassroomPointsMeta & {
   studentIds: string[];
   signedDelta: number;
   description: string;
+  /** When true, update Rewards balances instead of classroom-only points. */
+  rewardsMode?: boolean;
+  rollupHousePoints?: boolean;
 };
 
 export type ClassroomAwardResult = {
@@ -113,15 +117,26 @@ export async function awardClassroomPoints(
       };
     }
 
-    const { schoolId, studentIds, signedDelta, description, ...meta } = body;
-    const client = await applyClassroomPointsToStudents(
-      firestore,
-      schoolId,
-      studentIds,
-      signedDelta,
-      description,
-      meta,
-    );
+    const { schoolId, studentIds, signedDelta, description, rewardsMode, rollupHousePoints, ...meta } =
+      body;
+    const client = rewardsMode
+      ? await applyRewardsPointsToStudents(
+          firestore,
+          schoolId,
+          studentIds,
+          signedDelta,
+          description,
+          meta,
+          { rollupHousePoints },
+        )
+      : await applyClassroomPointsToStudents(
+          firestore,
+          schoolId,
+          studentIds,
+          signedDelta,
+          description,
+          meta,
+        );
     if (client.success) {
       return { ...client, via: 'client' };
     }

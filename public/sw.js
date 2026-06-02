@@ -33,6 +33,11 @@ const MAX_ENTRIES = {
 };
 
 const API_NETWORK_TIMEOUT_MS = 6000;
+
+/** Local dev must never be controlled by this worker (stale SW breaks `next dev` / HMR). */
+function isLocalDevHost(hostname = self.location.hostname) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '[::1]';
+}
 const LEGACY_CACHE_NAMES = new Set([
   'start-url',
   'google-fonts-webfonts',
@@ -65,6 +70,17 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  if (isLocalDevHost()) {
+    event.waitUntil(
+      caches
+        .keys()
+        .then((names) => Promise.all(names.map((name) => caches.delete(name))))
+        .then(() => self.registration.unregister())
+        .catch(() => undefined),
+    );
+    return;
+  }
+
   event.waitUntil(
     caches
       .keys()
@@ -95,6 +111,8 @@ self.addEventListener('message', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (isLocalDevHost()) return;
+
   const { request } = event;
   if (request.method !== 'GET') return;
 
@@ -294,6 +312,16 @@ function offlineDocument() {
       <h1>Offline</h1>
       <p>This page has not been saved on this device yet. Reconnect once, open the kiosk or portal page, then it can be reopened offline.</p>
     </main>
+    <script>
+      (function () {
+        var host = self.location.hostname;
+        if (host !== '127.0.0.1' && host !== 'localhost' && host !== '[::1]') return;
+        if (!('serviceWorker' in navigator)) return;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }).then(function () { self.location.reload(); });
+      })();
+    </script>
   </body>
 </html>`,
     {

@@ -76,3 +76,32 @@ header .brand img,
     min-height: 11in;
   }
 }
+
+@media screen {
+  html:not(.embed) {
+    width: 100% !important;
+    height: 100% !important;
+    background: #0f172a !important; /* Premium dark background */
+  }
+  html:not(.embed) body {
+    width: 100% !important;
+    min-height: 100vh !important;
+    background: transparent !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    padding: 2rem 1rem !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+  }
+  html:not(.embed) .flyer,
+  html:not(.embed) article.flyer {
+    width: 8.5in !important;
+    min-height: 11in !important;
+    margin: 0 auto !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+  }
+}
+

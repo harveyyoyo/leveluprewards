@@ -13,11 +13,15 @@ export type ClassroomDeskDisplay = {
 export function classroomDeskDisplayFromStudent(
   student: Student,
   pointsOverride?: number,
+  options?: { showLastName?: boolean },
 ): ClassroomDeskDisplay {
-  const first = getStudentNickname(student).charAt(0).toUpperCase();
-  const last = (student.lastName || '').charAt(0).toUpperCase();
+  const nickname = getStudentNickname(student);
+  const lastName = (student.lastName || '').trim();
+  const first = nickname.charAt(0).toUpperCase();
+  const last = lastName.charAt(0).toUpperCase();
   const initials = `${first}${last}` || '?';
-  const name = getStudentNickname(student);
+  const name =
+    options?.showLastName && lastName ? `${nickname} ${lastName}` : nickname;
   const points = pointsOverride ?? student.points ?? 0;
   return {
     id: student.id,
@@ -47,6 +51,7 @@ export function buildClassroomDeskCatalog(
   sessionOnly: boolean,
   classroomBalances: Record<string, number>,
   previous?: Map<string, ClassroomDeskDisplay> | null,
+  showLastName = false,
 ): Map<string, ClassroomDeskDisplay> {
   const map = new Map<string, ClassroomDeskDisplay>();
   const list = classId === 'all' ? students : students.filter((s) => s.classId === classId);
@@ -54,7 +59,7 @@ export function buildClassroomDeskCatalog(
     const points = sessionOnly
       ? (classroomBalances[s.id] ?? s.classroomPoints ?? 0)
       : (s.points ?? 0);
-    const entry = classroomDeskDisplayFromStudent(s, points);
+    const entry = classroomDeskDisplayFromStudent(s, points, { showLastName });
     const prevEntry = previous?.get(s.id);
     if (
       prevEntry &&

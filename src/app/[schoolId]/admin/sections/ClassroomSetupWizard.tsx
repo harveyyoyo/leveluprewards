@@ -323,7 +323,7 @@ export function ClassroomSetupWizard({
             </div>
             <p className="text-[11px] text-muted-foreground">
               Saved as admin defaults in this browser. Each teacher can customize their own classroom
-              prefs later.
+              prefs later. Full-screen auto-exit is under Classroom → Setup.
             </p>
           </div>
         )}

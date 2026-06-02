@@ -134,9 +134,6 @@ export default function FlyersPage() {
             <Link href="/" className="transition-colors hover:text-slate-300">
               Home
             </Link>
-            <Link href="/level-up-arcade" className="transition-colors hover:text-slate-300">
-              LevelUp Arcade
-            </Link>
             <Link href="/privacy" className="transition-colors hover:text-slate-300">
               Privacy
             </Link>

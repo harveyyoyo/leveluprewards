@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "node .cursor/hooks/agent-branch-hook.mjs"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .cursor/hooks/agent-branch-hook.mjs",
+        "matcher": "Write|StrReplace|Delete|ApplyPatch|EditNotebook"
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node .cursor/hooks/agent-branch-hook.mjs"
+      }
+    ]
+  }
+}

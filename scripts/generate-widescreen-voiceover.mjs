@@ -28,57 +28,57 @@ const PROPS_JSON = path.join(ROOT, 'promo-video', 'widescreen-promo-props.json')
 
 const CUE_LABELS = {
   intro: 'Welcome',
-  home: 'Kiosk sign-in',
   selector: 'ID cards',
+  home: 'Kiosk sign-in',
   dashboard: 'Prize shop',
   outro: 'Scan only',
 };
-const FPS = 30;
-const COMPOSITION_TOTAL = 620;
-const FIRST_START = 14;
-const GAP_FRAMES = 14;
-
-const DEFAULT_EDGE_VOICE = 'en-US-JennyNeural';
-const DEFAULT_EDGE_RATE = '+5%';
-/** OpenAI voices: alloy, ash, coral, echo, fable, onyx, nova, sage, shimmer */
-const DEFAULT_OPENAI_VOICE = 'marin';
-const DEFAULT_OPENAI_SPEED = 0.93;
-
-const WIDESCREEN_TTS_INSTRUCTIONS =
-  'Natural conversational narrator for a school product video. Warm, clear, relaxed pace — like explaining the product to a principal, not reading a script.';
-
-dotenv.config({ path: path.join(ROOT, '.env.local') });
-dotenv.config({ path: path.join(ROOT, '.env') });
 
 const CUES = [
   {
     id: 'intro',
-    text: 'LevelUp is school rewards built around students — scan in, earn points, redeem prizes.',
-  },
-  {
-    id: 'home',
-    text: 'Students sign in at the kiosk and see their points in seconds.',
+    text: 'LevelUp is a rewards system built for schools. Students scan in, earn points, and pick their prizes.',
   },
   {
     id: 'selector',
-    text: 'Every student gets a digital ID card, ready to print or scan.',
+    text: 'Each student gets a digital ID card you can print or scan.',
+  },
+  {
+    id: 'home',
+    text: 'At the kiosk, students sign in and see their points right away.',
   },
   {
     id: 'dashboard',
-    text: 'They pick prizes from the shop — scan to redeem.',
+    text: 'They browse the prize shop and scan to redeem.',
   },
   {
     id: 'outro',
-    text: 'No keyboard, mouse, or touchscreen required. LevelUp runs on scans.',
+    text: 'No keyboard, no mouse, no touchscreen. Just a quick scan and you\'re done.',
   },
 ];
 
 const PROMO_COPY = {
   introEyebrow: 'Welcome to LevelUp',
-  introTagline: 'Rewards built for scanning',
+  introTagline: 'Rewards built for schools',
   outroHeadline: 'Scanning only',
-  outroSubline: 'No keyboard · No mouse · No touchscreen',
+  outroSubline: 'Just a quick scan and you\'re done',
 };
+
+const FPS = 30;
+const FIRST_START = 14;
+const GAP_FRAMES = 0;
+
+/** Microsoft neural — Andrew reads like a real presenter, not synthetic TTS. */
+const DEFAULT_EDGE_VOICE = 'en-US-AndrewMultilingualNeural';
+const DEFAULT_EDGE_RATE = '+0%';
+const DEFAULT_OPENAI_VOICE = 'cedar';
+const DEFAULT_OPENAI_SPEED = 0.92;
+
+const WIDESCREEN_TTS_INSTRUCTIONS =
+  'Speak like a calm school tech coordinator showing a colleague the product for the first time. Conversational, unhurried, slight warmth — never announcer or sales pitch.';
+
+dotenv.config({ path: path.join(ROOT, '.env.local') });
+dotenv.config({ path: path.join(ROOT, '.env') });
 
 function parseArgs() {
   const dryRun = process.argv.includes('--dry-run');
@@ -94,7 +94,7 @@ function parseArgs() {
   }
 
   if (!engine || engine === 'default') {
-    engine = process.env.OPENAI_API_KEY?.trim() ? 'openai' : 'edge';
+    engine = 'edge';
   }
   if (voiceArg) {
     if (voiceArg.startsWith('en-')) edgeVoice = voiceArg;
@@ -186,23 +186,24 @@ function scheduleCues(measured) {
   return scheduled;
 }
 
-function timingFromWidescreenNarration(narration, padAfterIntro = 12) {
+/** Align montage cuts to narration cue starts (matches promoMusic.ts). */
+function timingFromWidescreenNarration(narration, padAfterIntro = 0) {
   const byId = Object.fromEntries(narration.map((c) => [c.id, c]));
   const intro = byId.intro;
-  const selector = byId.selector;
-  const kiosk = byId.kiosk;
   const home = byId.home;
+  const selector = byId.selector;
   const dashboard = byId.dashboard;
   const outro = byId.outro;
 
   const introEnd =
     (intro?.startFrame ?? 14) + (intro?.durationFrames ?? 60) + padAfterIntro;
-  const selectorEnd = kiosk?.startFrame ?? introEnd + 90;
-  const studentKioskEnd = home?.startFrame ?? selectorEnd + 90;
-  const studentHomeEnd = dashboard?.startFrame ?? studentKioskEnd + 90;
-  const dashboardEnd = outro?.startFrame ?? studentHomeEnd + 90;
-  const actionEnd =
-    (outro?.startFrame ?? dashboardEnd) + (outro?.durationFrames ?? 90);
+  /** Montage: ID cards → kiosk → prizes → closing */
+  const selectorEnd = home?.startFrame ?? introEnd + 90;
+  const studentKioskEnd = dashboard?.startFrame ?? selectorEnd + 90;
+  const studentHomeEnd = outro?.startFrame ?? studentKioskEnd + 90;
+  const dashboardEnd =
+    (outro?.startFrame ?? studentHomeEnd) + (outro?.durationFrames ?? 90);
+  const actionEnd = dashboardEnd;
   const last = narration[narration.length - 1];
   const total = Math.max(
     actionEnd + 60,
@@ -278,8 +279,7 @@ ${narrationBlocks}
     outroHeadline: ${JSON.stringify(props.copy?.outroHeadline ?? PROMO_COPY.outroHeadline)},
     outroSubline: ${JSON.stringify(props.copy?.outroSubline ?? PROMO_COPY.outroSubline)},
   },
-  ttsVoice: ${JSON.stringify(props.ttsVoice ?? 'ash')},
-  musicVolume: ${props.musicVolume},
+${props.ttsVoice ? `  ttsVoice: ${JSON.stringify(props.ttsVoice)},\n` : ''}  musicVolume: ${props.musicVolume},
   musicDuckRatio: ${props.musicDuckRatio},
   musicStyle: ${JSON.stringify(props.musicStyle ?? 'cinematic')},
   musicSrc: ${JSON.stringify(props.musicSrc ?? 'background-music.mp3')},
@@ -306,7 +306,7 @@ async function main() {
     console.log(`OpenAI ${OPENAI_TTS_MODEL} · voice ${openaiVoice} · speed ${DEFAULT_OPENAI_SPEED}`);
   } else {
     console.log(`edge-tts · ${edgeVoice} · rate ${edgeRate}`);
-    console.log('Set OPENAI_API_KEY in .env.local to use OpenAI by default.');
+    console.log('Pass --engine=openai to use OpenAI TTS instead.');
   }
 
   const measured = [];
@@ -326,7 +326,7 @@ async function main() {
       synthesizeEdge(python, cue.text, outPath, edgeVoice, edgeRate);
     }
     const sec = probeDurationSec(outPath);
-    const durationFrames = Math.max(24, Math.ceil(sec * FPS) + 4);
+    const durationFrames = Math.max(24, Math.ceil(sec * FPS));
     measured.push({ ...cue, durationFrames });
     console.log(`${sec.toFixed(1)}s`);
   }

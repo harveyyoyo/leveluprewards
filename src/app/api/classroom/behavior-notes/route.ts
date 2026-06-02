@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
-import { hasFirebaseAdminCredentials } from '@/lib/server/firebaseAdminAuth';
+import {
+  firebaseAdminCredentialProjectMismatch,
+  getFirebaseAdminFirestore,
+  hasFirebaseAdminCredentials,
+} from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import { verifyStaffForSchoolApi } from '@/lib/server/verifyStaffForSchoolApi';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import type { BehaviorNoteKind } from '@/lib/types';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
+import { evaluateClassroomAlertRulesForStudent } from '@/lib/server/classroomAlertRulesEvaluator';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 16 * 1024;
@@ -13,9 +17,7 @@ const LIST_LIMIT = 80;
 const NOTE_KINDS = new Set<BehaviorNoteKind>(['positive', 'concern', 'incident']);
 
 async function getDb() {
-  await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  return admin.firestore();
+  return getFirebaseAdminFirestore();
 }
 
 async function staffSession(req: NextRequest, schoolId: string, idToken?: string) {
@@ -45,7 +47,11 @@ export async function GET(req: NextRequest) {
       return jsonError(400, 'schoolId is required.');
     }
 
-    const idToken = (req.nextUrl.searchParams.get('idToken') || '').trim();
+    const idToken =
+      (req.nextUrl.searchParams.get('idToken') || '').trim() ||
+      (req.headers.get('authorization')?.startsWith('Bearer ')
+        ? req.headers.get('authorization')!.slice(7).trim()
+        : '');
     const session = await staffSession(req, schoolId, idToken);
     if (!session) {
       return jsonError(403, 'Staff access required for this school.');
@@ -56,6 +62,11 @@ export async function GET(req: NextRequest) {
         503,
         'Server Firebase Admin is not configured. Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local.',
       );
+    }
+
+    const credentialMismatch = firebaseAdminCredentialProjectMismatch();
+    if (credentialMismatch) {
+      return jsonError(503, credentialMismatch);
     }
 
     const db = await getDb();
@@ -95,7 +106,12 @@ export async function GET(req: NextRequest) {
     );
   } catch (e) {
     console.error('[api/classroom/behavior-notes] GET failed:', e);
-    return jsonError(503, 'Could not load behavior notes.');
+    const detail = e instanceof Error ? e.message : String(e);
+    const devDetail =
+      process.env.NODE_ENV === 'development' && detail
+        ? `Could not load behavior notes: ${detail}`
+        : 'Could not load behavior notes.';
+    return jsonError(503, devDetail);
   }
 }
 
@@ -149,9 +165,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const credentialMismatch = firebaseAdminCredentialProjectMismatch();
+    if (credentialMismatch) {
+      return jsonError(503, credentialMismatch);
+    }
+
     const db = await getDb();
     const pillarErr = await assertClassroomOn(db, schoolId);
     if (pillarErr) return pillarErr;
+
+    const schoolSnap = await db.collection('schools').doc(schoolId).get();
+    const appSettings = (schoolSnap.data()?.appSettings || {}) as Record<string, unknown>;
 
     const now = Date.now();
     const ref = await db.collection('schools').doc(schoolId).collection('behaviorNotes').add({
@@ -168,6 +192,17 @@ export async function POST(req: NextRequest) {
       pointsAmount: pointsAmount != null && Number.isFinite(pointsAmount) ? pointsAmount : null,
       pointsLabel: pointsLabel || null,
     });
+
+    void evaluateClassroomAlertRulesForStudent(db, schoolId, appSettings, {
+      event: 'note',
+      studentId,
+      studentName,
+      classId,
+      className,
+      teacherId,
+      teacherName,
+      noteKind: kind as BehaviorNoteKind,
+    }).catch((e) => console.error('[api/classroom/behavior-notes] alert rules:', e));
 
     return NextResponse.json({ ok: true, id: ref.id });
   } catch (e) {

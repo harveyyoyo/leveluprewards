@@ -1,5 +1,4 @@
 import React from "react";
-import { Video } from "@remotion/media";
 import {
   AbsoluteFill,
   Audio,
@@ -11,22 +10,22 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { WIDESCREEN_CLIPS } from "./promo/widescreenPromoTiming";
 import {
   buildWidescreenSegments,
   getFlashBoundaries,
 } from "./promo/widescreenPromoHelpers";
+import { WIDESCREEN_BEATS } from "./promo/widescreenBeatCatalog";
+import { PromoClipVideo } from "./promo/PromoClipVideo";
+import { WidescreenIntroLayout } from "./promo/WidescreenIntroLayout";
 import {
   LandscapeBackground,
   LandscapeBrowser,
-  LandscapeIntro,
   LandscapeOutro,
   LandscapeSidebar,
   ProgressRail,
   SegmentFlash,
   Sparkles,
 } from "./promo/landscapeShared";
-import { outfit } from "./promo/shared";
 import { resolveMusicSrc, usePromoMusicVolume } from "./promo/promoMusic";
 import { BRAND } from "./promo/theme";
 import type { WidescreenPromoProps } from "./promo/widescreenPromoSchema";
@@ -36,25 +35,6 @@ export { WidescreenPromoSchema } from "./promo/widescreenPromoSchema";
 export { defaultWidescreenPromoProps } from "./promo/widescreenPromoDefaults";
 
 const FLASH_FRAMES = 3;
-
-const ClipVideo: React.FC<{
-  clip: (typeof WIDESCREEN_CLIPS)[keyof typeof WIDESCREEN_CLIPS];
-}> = ({ clip }) => {
-  const { fps } = useVideoConfig();
-  const trimBefore =
-    clip.trimBeforeSec > 0 ? Math.round(clip.trimBeforeSec * fps) : undefined;
-
-  return (
-    <Video
-      src={staticFile(clip.src)}
-      playbackRate={clip.playbackRate}
-      trimBefore={trimBefore}
-      muted
-      objectFit="cover"
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
-};
 
 const WidescreenMontage: React.FC<{
   timing: WidescreenPromoProps["timing"];
@@ -88,10 +68,10 @@ const WidescreenMontage: React.FC<{
   const segmentIndex = segments.indexOf(activeSegment);
 
   const segDur = (end: number, start: number) => Math.max(1, end - start);
-  const kioskSignInDur = segDur(timing.selectorEnd, timing.introEnd);
-  const idCardsDur = segDur(timing.studentKioskEnd, timing.selectorEnd);
+  const idCardsDur = segDur(timing.selectorEnd, timing.introEnd);
+  const kioskDur = segDur(timing.studentKioskEnd, timing.selectorEnd);
   const prizesDur = segDur(timing.studentHomeEnd, timing.studentKioskEnd);
-  const scanDur = segDur(timing.dashboardEnd, timing.studentHomeEnd);
+  const portalDur = segDur(timing.dashboardEnd, timing.studentHomeEnd);
   const premountFor = Math.round(1 * fps);
 
   return (
@@ -102,62 +82,27 @@ const WidescreenMontage: React.FC<{
       <div
         style={{
           position: "absolute",
-          top: 72,
-          left: 64,
-          zIndex: 15,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: outfit,
-            fontSize: 14,
-            fontWeight: 700,
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            color: BRAND.cyan,
-          }}
-        >
-          See it in action
-        </span>
-        <h2
-          style={{
-            fontFamily: outfit,
-            fontSize: 36,
-            fontWeight: 800,
-            margin: "6px 0 0",
-            background: `linear-gradient(90deg, ${BRAND.pink}, ${BRAND.cyan})`,
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-          }}
-        >
-          LevelUp in action
-        </h2>
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
           inset: 0,
-          top: 100,
+          top: 56,
           display: "flex",
           alignItems: "center",
-          padding: "0 56px 48px",
-          gap: 40,
+          padding: "0 40px 40px",
+          gap: 32,
         }}
       >
         <LandscapeBrowser scale={cardScale} rotateY={rotateY} kenBurn={kenBurn}>
           <Series>
-            <Series.Sequence durationInFrames={kioskSignInDur} premountFor={premountFor}>
-              <ClipVideo clip={WIDESCREEN_CLIPS.studentHome} />
-            </Series.Sequence>
             <Series.Sequence durationInFrames={idCardsDur} premountFor={premountFor}>
-              <ClipVideo clip={WIDESCREEN_CLIPS.selector} />
+              <PromoClipVideo clip={WIDESCREEN_BEATS.selector.clip} />
+            </Series.Sequence>
+            <Series.Sequence durationInFrames={kioskDur} premountFor={premountFor}>
+              <PromoClipVideo clip={WIDESCREEN_BEATS.home.clip} />
             </Series.Sequence>
             <Series.Sequence durationInFrames={prizesDur} premountFor={premountFor}>
-              <ClipVideo clip={WIDESCREEN_CLIPS.dashboard} />
+              <PromoClipVideo clip={WIDESCREEN_BEATS.dashboard.clip} />
             </Series.Sequence>
-            <Series.Sequence durationInFrames={scanDur} premountFor={premountFor}>
-              <ClipVideo clip={WIDESCREEN_CLIPS.action} />
+            <Series.Sequence durationInFrames={portalDur} premountFor={premountFor}>
+              <PromoClipVideo clip={WIDESCREEN_BEATS.outro.clip} />
             </Series.Sequence>
           </Series>
         </LandscapeBrowser>
@@ -184,9 +129,9 @@ const WidescreenMontage: React.FC<{
 
 const DEFAULT_COPY = {
   introEyebrow: "Welcome to LevelUp",
-  introTagline: "Rewards that move at the speed of your school",
-  outroHeadline: "Built for scanning",
-  outroSubline: "No keyboard · No mouse · No touchscreen",
+  introTagline: "Rewards built for schools",
+  outroHeadline: "Scanning only",
+  outroSubline: "Just a quick scan and you're done",
 };
 
 export const WidescreenPromo: React.FC<WidescreenPromoProps> = ({
@@ -217,7 +162,10 @@ export const WidescreenPromo: React.FC<WidescreenPromoProps> = ({
       <WidescreenVoiceover narration={narration} timing={timing} />
       <LandscapeBackground totalFrames={timing.total} />
       <Sequence durationInFrames={timing.introEnd}>
-        <LandscapeIntro />
+        <WidescreenIntroLayout
+          eyebrow={onScreen.introEyebrow ?? "Welcome to LevelUp"}
+          durationFrames={timing.introEnd}
+        />
         <Sparkles count={20} seed="widescreen-intro" />
       </Sequence>
       <Sequence

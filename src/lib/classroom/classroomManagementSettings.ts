@@ -6,6 +6,9 @@ import {
 } from '@/lib/classroomSeatingChart';
 import type { Class } from '@/lib/types';
 
+/** Default idle time before leaving full-screen classroom (15 minutes). */
+export const DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+
 export type ClassroomSetupWizardDraft = {
   /** Class highlighted in finish links. */
   spotlightClassId: string;
@@ -14,6 +17,14 @@ export type ClassroomSetupWizardDraft = {
   design: ClassroomDesign;
   enableParentView: boolean;
 };
+
+export function classroomSessionTimeoutMinFromSettings(settings?: Partial<Settings>): number {
+  const raw = settings?.classroomSessionTimeoutMs;
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+    return Math.max(1, Math.min(1440, Math.round(raw / 60_000)));
+  }
+  return Math.round(DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS / 60_000);
+}
 
 export function defaultClassroomWizardDraft(classes: Class[]): ClassroomSetupWizardDraft {
   const sorted = [...classes].sort((a, b) => a.name.localeCompare(b.name));

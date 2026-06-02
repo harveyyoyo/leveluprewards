@@ -172,5 +172,11 @@ export function canonicalOfficeRedirectUrl(
 export function officeHostRedirectPath(pathname: string): string | null {
   const parts = pathname.split('/').filter(Boolean);
   if (parts.length === 0) return '/office-bootstrap';
+
+  // Rewards portal routes do not belong on the office subdomain.
+  if (parts.length >= 2 && isSchoolIdSegment(parts[0]) && parts[1].toLowerCase() === 'portal') {
+    return `/${parts[0].toLowerCase()}`;
+  }
+
   return null;
 }

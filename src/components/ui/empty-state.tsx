@@ -28,7 +28,7 @@ interface EmptyStateProps {
 }
 
 /**
- * Consistent empty state: icon in a soft-tinted circle, bold title, calmer
+ * Consistent empty state: icon in a soft-tinted circle, bold title, softer
  * description, then a primary "Add first X" CTA. Use everywhere a list or
  * dashboard has nothing to show so the UI teaches the next step instead of
  * leaving a lonely "No X yet." paragraph.

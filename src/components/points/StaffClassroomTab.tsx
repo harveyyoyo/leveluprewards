@@ -1,27 +1,43 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { LayoutGrid, Monitor, Users } from 'lucide-react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { BellRing, ExternalLink, LayoutGrid, LogOut, ShieldCheck, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useScrollPausedValue } from '@/hooks/useScrollPausedValue';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { buildClassroomSections, CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import {
+  classroomSessionTimeoutMinFromSettings,
+} from '@/lib/classroom/classroomManagementSettings';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 import { isClassroomOnlyMode, isClassroomPillarOn, CLASSROOM_SESSION_ONLY } from '@/lib/productPillars';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
+import { ClassroomLabelsSetupSection } from '@/components/classroom/ClassroomLabelsSetupSection';
+import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
+import { ClassroomAlertRulesSection } from '@/components/classroom/ClassroomAlertRulesSection';
 import { ClassroomSectionFrame } from '@/components/classroom/ClassroomSectionFrame';
+import {
+  ClassroomSeatingShortcutsHint,
+  type ClassroomSeatingShortcutsHintState,
+} from '@/components/points/classroomSeatingShortcutsHint';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 import type { Category, Class, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -66,9 +82,8 @@ export function StaffClassroomTab({
   manualAccentColor,
   manualBudgetOptions,
 }: StaffClassroomTabProps) {
-  const pageScrollRef = useRef<HTMLElement | null>(null);
-  const pausedStudents = useScrollPausedValue(students ?? [], pageScrollRef, 280);
-  const deferredStudents = useDeferredValue(pausedStudents);
+  /** Defer roster updates so Firestore snapshots do not block scroll on the staff portal page. */
+  const deferredStudents = useDeferredValue(students ?? []);
   const { loginState } = useAppContext();
   const { user } = useFirebase();
   const { settings, updateSettings } = useSettings();
@@ -81,7 +96,8 @@ export function StaffClassroomTab({
   const canEnableClassroomPillar = isAdminVariant;
   const parentPortalOn = settings.enableParentView === true;
   const principalTimelineOn = settings.enablePrincipalBehaviorTimeline === true;
-  const roomDisplayOn = settings.enableClassroomRoomDisplay === true;
+  const classroomAutoExitOn = settings.classroomAutoLogoutEnabled !== false;
+  const classroomIdleMin = classroomSessionTimeoutMinFromSettings(settings);
 
   useEffect(() => {
     if (!classroomOn || !schoolId) return;
@@ -103,20 +119,285 @@ export function StaffClassroomTab({
   );
   const seatingScope = managerTeacherId ?? (isAdminVariant ? 'admin' : 'staff');
   const [behaviorNotesRefresh, setBehaviorNotesRefresh] = useState(0);
+  const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
   const onBehaviorNoteSaved = useCallback(() => {
     setBehaviorNotesRefresh((n) => n + 1);
   }, []);
 
-  const sections = useMemo(
-    () => buildClassroomSections({ parentPortalOn, principalTimelineOn, roomDisplayOn }),
-    [parentPortalOn, principalTimelineOn, roomDisplayOn],
+  const sections = useMemo(() => buildClassroomSections(), []);
+
+  const seatingDescription = sessionOnly ? CLASSROOM_SESSION_ONLY.tabBody : undefined;
+
+  const [sectionHint, setSectionHint] = useState<ClassroomSeatingShortcutsHintState | null>(null);
+  const onSectionHintChange = useCallback((state: ClassroomSeatingShortcutsHintState | null) => {
+    setSectionHint(state);
+  }, []);
+
+  const setupContent = useMemo(
+    () => (
+      <ClassroomSectionFrame
+        title="Setup"
+        description="Control what principals and families can see, and full-screen classroom session timing."
+      >
+        <div className="space-y-3">
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+                  <Label htmlFor="enable-principal-timeline" className="text-sm font-bold">
+                    Principal timeline
+                  </Label>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  When on, principals and admins can open a school-wide behavior timeline — all classes, positives,
+                  concerns, and incidents.
+                </p>
+              </div>
+              <Switch
+                id="enable-principal-timeline"
+                checked={principalTimelineOn}
+                disabled={!canEditClassroomSetup}
+                onCheckedChange={(v) => updateSettings({ enablePrincipalBehaviorTimeline: v })}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-border/40 pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={!principalTimelineOn}
+                onClick={() => setPrincipalPreviewOpen(true)}
+              >
+                <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden />
+                Preview principal timeline
+              </Button>
+              {!principalTimelineOn ? (
+                <p className="self-center text-xs text-muted-foreground">Turn on to preview the school-wide view.</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+                  <Label htmlFor="enable-parent-view" className="text-sm font-bold">
+                    Parent portal
+                  </Label>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  When on, families sign in with the parent email on file to view shared behavior notes and student
+                  points.
+                </p>
+              </div>
+              <Switch
+                id="enable-parent-view"
+                checked={parentPortalOn}
+                disabled={!canEditClassroomSetup}
+                onCheckedChange={(v) => updateSettings({ enableParentView: v })}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={!parentPortalOn}
+              >
+                <Link href={`/${schoolId}/parent`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden />
+                  Open parent portal
+                </Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Sign-in URL: <span className="font-mono text-foreground">/{schoolId}/parent</span>
+              </p>
+            </div>
+          </div>
+
+          <ClassroomLabelsSetupSection
+            settings={settings}
+            updateSettings={updateSettings}
+            disabled={!canEditClassroomSetup}
+          />
+
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+                  <Label htmlFor="classroom-auto-exit" className="text-sm font-bold">
+                    Full-screen auto-exit
+                  </Label>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  When teachers use the full-screen classroom view on a shared tablet or projector PC,
+                  return to the portal after idle time — separate from staff or kiosk auto-logout.
+                </p>
+              </div>
+              <Switch
+                id="classroom-auto-exit"
+                checked={classroomAutoExitOn}
+                disabled={!canEditClassroomSetup}
+                onCheckedChange={(v) => updateSettings({ classroomAutoLogoutEnabled: v })}
+                aria-label="Enable full-screen classroom auto-exit"
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/40 pt-3">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="classroom-idle-minutes" className="text-xs font-semibold text-muted-foreground">
+                  Idle minutes
+                </Label>
+                <Input
+                  id="classroom-idle-minutes"
+                  type="number"
+                  min={1}
+                  max={1440}
+                  className="h-9 w-20 rounded-xl text-center font-bold"
+                  value={classroomIdleMin}
+                  disabled={!canEditClassroomSetup || !classroomAutoExitOn}
+                  onChange={(e) =>
+                    updateSettings({
+                      classroomSessionTimeoutMs:
+                        Math.max(1, parseInt(e.target.value, 10) || 1) * 60_000,
+                    })
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {classroomAutoExitOn
+                  ? 'Tap, click, scroll, or keyboard activity resets the timer.'
+                  : 'Full-screen classroom stays open until closed manually.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <Dialog open={principalPreviewOpen} onOpenChange={setPrincipalPreviewOpen}>
+          <DialogContent wide className="max-h-[min(90vh,720px)] overflow-hidden p-0 sm:rounded-2xl">
+            <DialogHeader className="border-b px-4 py-3 sm:px-6">
+              <DialogTitle>Principal timeline preview</DialogTitle>
+              <DialogDescription>
+                School-wide behavior notes from every class — what principals see when this feature is enabled.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="max-h-[min(75vh,640px)] overflow-y-auto p-4 sm:p-6">
+              <BehaviorTimelinePanel
+                schoolId={schoolId}
+                refreshToken={behaviorNotesRefresh}
+                embedded
+                mode="principal"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      </ClassroomSectionFrame>
+    ),
+    [
+      canEditClassroomSetup,
+      classroomAutoExitOn,
+      classroomIdleMin,
+      parentPortalOn,
+      principalTimelineOn,
+      schoolId,
+      behaviorNotesRefresh,
+      principalPreviewOpen,
+      settings,
+      updateSettings,
+    ],
   );
 
-  const seatingDescription = sessionOnly
-    ? CLASSROOM_SESSION_ONLY.tabBody
-    : roomDisplayOn
-      ? 'Tap students for quick awards, optional burst/class tools, room display, and live session totals on each desk.'
-      : 'Tap students for quick awards, optional burst/class tools, and live session totals on each desk.';
+  const seatingPanel = useMemo(
+    () => (
+      <ClassroomPointsPanel
+        schoolId={schoolId}
+        students={deferredStudents}
+        classes={sortedClasses}
+        categories={categoryList}
+        storageScope={seatingScope}
+        accentColor={manualAccentColor}
+        isGraphic={isGraphic}
+        budgetOptions={manualBudgetOptions}
+        sessionOnly={sessionOnly}
+        onBehaviorNoteSaved={onBehaviorNoteSaved}
+        onSectionHintChange={onSectionHintChange}
+      />
+    ),
+    [
+      schoolId,
+      deferredStudents,
+      sortedClasses,
+      categoryList,
+      seatingScope,
+      manualAccentColor,
+      isGraphic,
+      manualBudgetOptions,
+      sessionOnly,
+      onBehaviorNoteSaved,
+      onSectionHintChange,
+    ],
+  );
+
+  const seatingContent = (
+    <ClassroomSectionFrame
+      title={CLASSROOM_SEATING_SECTION_LABEL}
+      icon={LayoutGrid}
+      description={seatingDescription}
+      titleBelow={sectionHint ? <ClassroomSeatingShortcutsHint {...sectionHint} /> : null}
+    >
+      {seatingPanel}
+    </ClassroomSectionFrame>
+  );
+
+  const behaviorContent = useMemo(
+    () => (
+      <BehaviorTimelinePanel
+        schoolId={schoolId}
+        refreshToken={behaviorNotesRefresh}
+        embedded
+        mode="behavior"
+      />
+    ),
+    [schoolId, behaviorNotesRefresh],
+  );
+
+  const alertsContent = useMemo(
+    () => (
+      <ClassroomSectionFrame
+        title="If / then alerts"
+        icon={BellRing}
+        description="Automatic behavior notes when students hit award or note thresholds in a time window."
+      >
+        <ClassroomAlertRulesSection
+          settings={settings}
+          updateSettings={updateSettings}
+          disabled={!canEditClassroomSetup}
+        />
+      </ClassroomSectionFrame>
+    ),
+    [settings, updateSettings, canEditClassroomSetup],
+  );
+
+  const roomDisplayContent = useMemo(
+    () => (
+      <ClassroomRoomDisplaySection
+        schoolId={schoolId}
+        scope={seatingScope}
+        classes={sortedClasses}
+        students={deferredStudents}
+      />
+    ),
+    [schoolId, seatingScope, sortedClasses, deferredStudents],
+  );
+
+  const headerAction = useMemo(
+    () => <ClassroomManagementHelpWizard sections={sections} />,
+    [sections],
+  );
 
   if (!classroomOn) {
     return (
@@ -146,165 +427,17 @@ export function StaffClassroomTab({
     );
   }
 
-  const setupContent = (
-    <ClassroomSectionFrame
-      title="Setup"
-      description={
-        canEditClassroomSetup
-          ? 'Optional features for your school. Turn sections on or off here — teachers and admins see the same tabs when a feature is enabled.'
-          : 'Classroom Management must be enabled before these options are available.'
-      }
-    >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-          <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="enable-principal-timeline" className="text-sm font-bold">
-              Principal
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              School-wide behavior timeline for staff and principals.
-            </p>
-          </div>
-          <Switch
-            id="enable-principal-timeline"
-            checked={principalTimelineOn}
-            disabled={!canEditClassroomSetup}
-            onCheckedChange={(v) => updateSettings({ enablePrincipalBehaviorTimeline: v })}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-          <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="enable-room-display" className="text-sm font-bold">
-              Room display
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              In-room projector or TV view of the live seating chart, session totals, and class messages — not the
-              hallway Smart Screen.
-            </p>
-          </div>
-          <Switch
-            id="enable-room-display"
-            checked={roomDisplayOn}
-            disabled={!canEditClassroomSetup}
-            onCheckedChange={(v) => updateSettings({ enableClassroomRoomDisplay: v })}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-          <div className="min-w-0 space-y-0.5">
-            <Label htmlFor="enable-parent-view" className="text-sm font-bold">
-              Parent portal
-            </Label>
-            <p className="text-xs text-muted-foreground">
-              Families sign in with the parent email on file to view shared notes and points.
-            </p>
-          </div>
-          <Switch
-            id="enable-parent-view"
-            checked={parentPortalOn}
-            disabled={!canEditClassroomSetup}
-            onCheckedChange={(v) => updateSettings({ enableParentView: v })}
-          />
-        </div>
-      </div>
-    </ClassroomSectionFrame>
-  );
-
-  const seatingContent = (
-    <ClassroomSectionFrame title={CLASSROOM_SEATING_SECTION_LABEL} icon={LayoutGrid} description={seatingDescription}>
-      <ClassroomPointsPanel
-        schoolId={schoolId}
-        students={deferredStudents}
-        classes={sortedClasses}
-        categories={categoryList}
-        storageScope={seatingScope}
-        accentColor={manualAccentColor}
-        isGraphic={isGraphic}
-        budgetOptions={manualBudgetOptions}
-        sessionOnly={sessionOnly}
-        onBehaviorNoteSaved={onBehaviorNoteSaved}
-      />
-    </ClassroomSectionFrame>
-  );
-
-  const behaviorContent = (
-    <BehaviorTimelinePanel
-      schoolId={schoolId}
-      refreshToken={behaviorNotesRefresh}
-      embedded
-      mode="behavior"
-    />
-  );
-
-  const principalContent = principalTimelineOn ? (
-    <BehaviorTimelinePanel
-      schoolId={schoolId}
-      refreshToken={behaviorNotesRefresh}
-      embedded
-      mode="principal"
-    />
-  ) : null;
-
-  const roomDisplayContent = roomDisplayOn ? (
-    <ClassroomSectionFrame
-      title="Room display"
-      icon={Monitor}
-      description="Mirror the live class session on a projector, interactive board, or classroom TV."
-      headerExtra={
-        <Badge variant="secondary" className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-bold uppercase tracking-wide">
-          Coming soon
-        </Badge>
-      }
-    >
-      <div className="space-y-4 rounded-xl border border-dashed border-violet-500/40 bg-violet-500/5 px-4 py-5">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          <span className="font-semibold text-foreground">Purpose:</span> give students and visitors a read-only view
-          of who is on the chart, points earned this session, and optional class messages — without opening the full
-          teacher seating tools on the big screen.
-        </p>
-        <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
-          <li>Runs on a dedicated display URL for the room (separate from the hallway Smart Screen).</li>
-          <li>Stays in sync with the seating chart while you award during the lesson.</li>
-          <li>Best for projectors, classroom TVs, and front-of-room boards.</li>
-        </ul>
-        <p className="text-sm font-semibold text-foreground">
-          The full Room display experience is coming soon. You can still use the seating chart and session totals
-          today.
-        </p>
-      </div>
-    </ClassroomSectionFrame>
-  ) : null;
-
-  const parentsContent = parentPortalOn ? (
-    <ClassroomSectionFrame
-      title="Parent portal"
-      icon={Users}
-      description="Preview what families see, or share the link from your school portal."
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Parent sign-in: <span className="font-mono text-foreground">/{schoolId}/parent</span>
-        </p>
-        <Button asChild variant="outline" size="sm" className="shrink-0 rounded-xl">
-          <Link href={`/${schoolId}/parent`} target="_blank" rel="noopener noreferrer">
-            Open parent portal
-          </Link>
-        </Button>
-      </div>
-    </ClassroomSectionFrame>
-  ) : null;
-
   return (
     <ClassroomTabLayout
       className={className}
       defaultSection="seating"
       sections={sections}
-      headerAction={<ClassroomManagementHelpWizard sections={sections} />}
+      headerAction={headerAction}
       setupContent={setupContent}
       seatingContent={seatingContent}
       behaviorContent={behaviorContent}
-      principalContent={principalContent}
+      alertsContent={alertsContent}
       roomDisplayContent={roomDisplayContent}
-      parentsContent={parentsContent}
     />
   );
 }

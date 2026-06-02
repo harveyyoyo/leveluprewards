@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ColorScheme, Settings } from '@/components/providers/SettingsProvider';
+import { STAFF_PORTAL_TAB_REGISTRY } from '@/lib/staffPortal/tabRegistry';
 import { complementTripletByIndex, rainbowTripletByIndex, type NavColorScheme } from '@/lib/rainbowNav';
 
 /** Stable ordering so each admin tab maps to a palette slot in the active theme. */
@@ -31,7 +32,6 @@ const ADMIN_TAB_ORDER = [
   'student-portal',
   'homework',
   'generated-coupons',
-  'backups',
 ] as const;
 
 function adminTabPaletteIndex(tabId: string): number {
@@ -75,29 +75,46 @@ export function adminTabMildAccentTriplet(
   return formatTriplet(h, mildS, mildL);
 }
 
-/** Per-tab colors on section triggers (visible before the tab is selected). */
-export function adminTabTriggerStyle(
+export function isAdminAddOnTabValue(tabValue: string): boolean {
+  if (tabValue === 'welcome') return false;
+  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
+  return def?.kind === 'addon';
+}
+
+/** Subtle per-tab tint for pinned extra-feature tabs (sidebar + Add more menu). */
+export function adminAddOnTabTriggerStyle(
   tabId: string,
   settings: Pick<Settings, 'colorScheme' | 'darkMode'>,
   isActive: boolean,
 ): CSSProperties {
-  const triplet = adminTabAccentTriplet(tabId, settings.colorScheme ?? 'default');
   const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'default', !!settings.darkMode);
   const dark = !!settings.darkMode;
 
-  if (isActive) {
-    return {
-      ['--primary' as string]: triplet,
-      ['--primary-foreground' as string]: dark ? '0 0% 98%' : '0 0% 100%',
-    };
-  }
+  const bgAlpha = isActive ? (dark ? 0.2 : 0.12) : dark ? 0.08 : 0.05;
+  const borderAlpha = isActive ? (dark ? 0.38 : 0.28) : dark ? 0.16 : 0.1;
 
   return {
-    backgroundColor: `hsl(${mild} / ${dark ? 0.22 : 0.14})`,
-    borderColor: `hsl(${mild} / ${dark ? 0.42 : 0.32})`,
-    color: `hsl(${mild})`,
+    backgroundColor: `hsl(${mild} / ${bgAlpha})`,
+    borderColor: `hsl(${mild} / ${borderAlpha})`,
+    color: isActive ? `hsl(${mild})` : `hsl(${mild} / ${dark ? 0.78 : 0.88})`,
     borderWidth: 1,
     borderStyle: 'solid',
+  };
+}
+
+/** Subtle accent for rows in the Add more feature menu. */
+export function adminAddOnTabMenuItemStyle(
+  tabId: string,
+  settings: Pick<Settings, 'colorScheme' | 'darkMode'>,
+): CSSProperties {
+  const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'default', !!settings.darkMode);
+  const dark = !!settings.darkMode;
+
+  return {
+    backgroundColor: `hsl(${mild} / ${dark ? 0.1 : 0.06})`,
+    borderLeftWidth: 3,
+    borderLeftStyle: 'solid',
+    borderLeftColor: `hsl(${mild} / ${dark ? 0.5 : 0.4})`,
   };
 }
 

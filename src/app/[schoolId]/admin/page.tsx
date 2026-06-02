@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, Suspense, type ComponentType } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, Suspense, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -13,10 +13,10 @@ import { useAuthFetch } from '@/lib/authFetch';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import {
-   Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard, Database,
+   Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
-   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket,
+   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices,
  } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import type { Student, Prize, Coupon, Category, Class, House, Teacher, BackupInfo, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, TeacherPersonnelRole, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
+import type { Student, Prize, Coupon, Category, Class, House, Teacher, Achievement, Badge, AttendanceScheduleSlot, TeacherBudgetPeriod, TeacherPersonnelRole, StaffAccount, LibraryItem, LibraryItemInput } from '@/lib/types';
 import { isLeadershipPersonnel, leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import { Label } from '@/components/ui/label';
 import {
@@ -101,11 +101,16 @@ import { StaffPortalAddFeatureTabsMenu } from '@/components/staff/StaffPortalAdd
 import { StaffPortalSidebarTabRow } from '@/components/staff/StaffPortalSidebarTabRow';
 import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
+import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
+import { StaffPortalTeacherToolNotice } from '@/components/staff/StaffPortalTeacherToolNotice';
 import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import {
+  staffPortalAddOnTabTriggerClassName,
   staffPortalPageIntroClassName,
+  staffPortalSidebarRailClassName,
   staffPortalTabTriggerClassName,
+  staffPortalWorkspaceMainClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs, staffPortalPinWelcomeFirst } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
@@ -134,7 +139,12 @@ import { AdminStudentsTab } from './sections/AdminStudentsTab';
 import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
-import { adminPerTabAppearanceProps, adminTabTriggerStyle } from '@/lib/adminTabColorScheme';
+import {
+  adminAddOnTabMenuItemStyle,
+  adminAddOnTabTriggerStyle,
+  adminPerTabAppearanceProps,
+  isAdminAddOnTabValue,
+} from '@/lib/adminTabColorScheme';
 import { ADMIN_SETTINGS_TAB_VALUES } from '@/components/settings/settingsModalConfig';
 
 const tabLoader = () => (
@@ -210,6 +220,10 @@ const AdminGoalsTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminGoalsTab'), 'AdminGoalsTab'),
   { loading: tabLoader, ssr: false },
 );
+const AdminRaffleTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminRaffleTab'), 'AdminRaffleTab'),
+  { loading: tabLoader, ssr: false },
+);
 const AdminBadgesTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminBadgesTab'), 'AdminBadgesTab'),
   { loading: tabLoader, ssr: false },
@@ -224,10 +238,6 @@ const AdminSmartScreenTab = dynamic(
 );
 const AdminHallOfFameTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminHallOfFameTab'), 'AdminHallOfFameTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminBackupsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminBackupsTab'), 'AdminBackupsTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminIntegrationsTab = dynamic(
@@ -301,7 +311,7 @@ const fittedAdminTabClassName =
   'transition-opacity duration-150 mt-0 w-full min-w-0 flex-col pb-6 focus-visible:outline-none';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
 
-function AdminPageIntro() {
+function AdminPageIntro({ className }: { className?: string }) {
   const { isWide } = useStaffPortalLayout();
 
   return (
@@ -309,6 +319,7 @@ function AdminPageIntro() {
       className={cn(
         'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
         staffPortalPageIntroClassName(isWide),
+        className,
       )}
     >
       <Helper content="School administrators manage students, staff, points, prizes, and school settings from here.">
@@ -405,9 +416,6 @@ function AdminDashboardInner() {
     listTeacherAttendanceLog,
     deleteCoupon,
     deleteCoupons,
-    devCreateBackup,
-    devRestoreFromBackup,
-    devDownloadBackup,
   } = useAppContext();
   const params = useParams<{ schoolId?: string }>();
   const schoolId = (typeof params?.schoolId === 'string' && params.schoolId.trim())
@@ -462,43 +470,6 @@ function AdminDashboardInner() {
     schoolData, schoolDocRef,
     appConfigGlobal,
   } = useAdminDashboardData(schoolId, settings.payLibrary, settings.enableHouses);
-
-  const backupsQuery = useMemoFirebase(
-    () => (firestore && schoolId && loginState === 'developer' ? collection(firestore, 'schools', schoolId, 'backups') : null),
-    [firestore, schoolId, loginState],
-  );
-  const { data: backups } = useCollection<BackupInfo>(backupsQuery);
-
-  const handleCreateBackup = async () => {
-    if (!schoolId) return;
-    try {
-      await devCreateBackup(schoolId);
-      playSound('success');
-      toast({ title: 'Backup created', description: 'A new snapshot has been saved.' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Backup failed', description: getReadableErrorMessage(e, 'Backup failed.') });
-    }
-  };
-
-  const handleRestoreFromBackup = async (backupId: string) => {
-    if (!schoolId) return;
-    try {
-      await devRestoreFromBackup(schoolId, backupId);
-      playSound('success');
-      toast({ title: 'Restore complete', description: 'School data has been restored from the snapshot.' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Restore failed', description: getReadableErrorMessage(e, 'Restore failed.') });
-    }
-  };
-
-  const handleDownloadBackup = async (backupId: string) => {
-    if (!schoolId) return;
-    try {
-      await devDownloadBackup(schoolId, backupId);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Download failed', description: getReadableErrorMessage(e, 'Download failed.') });
-    }
-  };
 
   // School logo state + upload/crop/remove pipeline (see hook for details).
   const {
@@ -701,6 +672,19 @@ function AdminDashboardInner() {
         disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals'), adminPinnedAddOnTabs: removePinned('goals') }),
       },
       {
+        value: 'raffle',
+        label: 'Raffle',
+        icon: Dices,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'raffle'),
+        enable: () => updateSettings({ enableWeeklyRaffle: true, adminHiddenAddOnTabs: removeHidden('raffle') }),
+        disable: () =>
+          updateSettings({
+            enableWeeklyRaffle: false,
+            adminHiddenAddOnTabs: removeHidden('raffle'),
+            adminPinnedAddOnTabs: removePinned('raffle'),
+          }),
+      },
+      {
         value: 'houses',
         label: 'Houses',
         icon: Home,
@@ -817,10 +801,7 @@ function AdminDashboardInner() {
       title: `${t.label} (pinned from Add more)`,
     }));
 
-    const maybeDev: AdminMainTabDef[] =
-      loginState === 'developer' ? [{ value: 'backups', label: 'Backups', icon: Database }] : [];
-
-    const available = [...base, ...pinnedExtras, ...maybeDev];
+    const available = [...base, ...pinnedExtras];
     const availableByValue = new Map(available.map((t) => [t.value, t]));
 
     const saved = settings.adminMainTabOrder || [];
@@ -842,13 +823,19 @@ function AdminDashboardInner() {
     }
 
     return staffPortalPinWelcomeFirst(out);
-  }, [loginState, pinnedAddOnTabs, settings]);
+  }, [pinnedAddOnTabs, settings]);
 
   const adminTabTriggerClassName = staffPortalTabTriggerClassName();
   const adminPerTabColors = !!settings.adminPerTabColorScheme;
+  const activeTabUsesAddOnColors = adminPerTabColors && isAdminAddOnTabValue(activeMainTab);
   const adminTabAppearance = useMemo(
-    () => adminPerTabAppearanceProps(settings, activeMainTab, adminPerTabColors),
-    [settings, activeMainTab, adminPerTabColors],
+    () => adminPerTabAppearanceProps(settings, activeMainTab, activeTabUsesAddOnColors),
+    [settings, activeMainTab, activeTabUsesAddOnColors],
+  );
+  const adminAddOnTabMenuStyle = useCallback(
+    (tabValue: string) =>
+      adminPerTabColors ? adminAddOnTabMenuItemStyle(tabValue, settings) : undefined,
+    [adminPerTabColors, settings],
   );
 
   const mobileMoreTabOptions = useMemo(() => {
@@ -957,6 +944,9 @@ function AdminDashboardInner() {
       case 'goals':
         patch.enableGoals = true;
         break;
+      case 'raffle':
+        patch.enableWeeklyRaffle = true;
+        break;
       case 'houses':
         patch.enableHouses = true;
         break;
@@ -1027,6 +1017,10 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'raffle':
+          patch.enableWeeklyRaffle = false;
+          nextHidden = nextHidden.filter((x) => x !== 'raffle');
           break;
         case 'houses':
           patch.enableHouses = false;
@@ -1105,6 +1099,9 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = true;
           break;
+        case 'raffle':
+          patch.enableWeeklyRaffle = true;
+          break;
         case 'houses':
           patch.enableHouses = true;
           break;
@@ -1175,6 +1172,10 @@ function AdminDashboardInner() {
         case 'goals':
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
+          break;
+        case 'raffle':
+          patch.enableWeeklyRaffle = false;
+          nextHidden = nextHidden.filter((x) => x !== 'raffle');
           break;
         case 'houses':
           patch.enableHouses = false;
@@ -1715,56 +1716,20 @@ function AdminDashboardInner() {
       <StaffPortalDocumentTitle title="School admin" />
       <StaffPortalLayoutProvider>
         <StaffPortalShellFrame
-          className={cn(adminPerTabColors && 'transition-[color,background-color] duration-300')}
+          className={cn(activeTabUsesAddOnColors && 'transition-[color,background-color] duration-300')}
           style={adminTabAppearance.style}
         >
+        <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
         <AdminPageIntro />
 
-        <BulkRosterSetupDialog
-          open={bulkRosterOpen}
-          onOpenChange={setBulkRosterOpen}
-          aiClassNames={(classes || []).map((c) => c.name)}
-          onClassesCsv={handleBulkClassesCsv}
-          onTeachersCsv={handleBulkTeachersCsv}
-          onStudentsCsv={handleBulkStudentsCsv}
-          onAiCommitSnapshot={handleAiCommitSnapshot}
-        />
-
-        <StudentCsvColumnMapDialog
-          open={csvColumnMapOpen}
-          onOpenChange={setCsvColumnMapOpen}
-          csvText={csvColumnMapText}
-          onConfirm={handleCsvColumnMapConfirm}
-        />
-
-        {idCardPrintJob ? (
-          <IdCardPrintSetupDialog
-            open
-            onOpenChange={(o) => {
-              if (!o) setIdCardPrintJob(null);
-            }}
-            students={idCardPrintJob.students}
-            classes={idCardPrintJob.classes}
-            onConfirm={(args) => {
-              if (!schoolId) {
-                toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
-                return;
-              }
-              setStudentsToPrint({ ...args, schoolId });
-              setIdCardPrintJob(null);
-            }}
-          />
-        ) : null}
-
-        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-visible">
+        <StaffPortalWorkspace>
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
             onValueChange={setActiveMainTab}
-            className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 p-1.5 sm:p-2 lg:flex-row lg:items-stretch lg:gap-3"
+            className="contents"
           >
-          <div className="flex w-full min-w-0 flex-col gap-4 lg:w-60 lg:shrink-0">
-            <div className="w-full min-w-0 space-y-3">
+          <div className={staffPortalSidebarRailClassName()}>
               <div className="lg:hidden">
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
@@ -1810,6 +1775,7 @@ function AdminDashboardInner() {
               <AdminMainTabsList
                 activeTabValue={activeMainTab}
                 orientation="vertical"
+                inWorkspace
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 endAction={
@@ -1820,6 +1786,9 @@ function AdminDashboardInner() {
                       icon: t.icon,
                     }))}
                     onAddTab={(value) => toggleAddOnTab(value, true)}
+                    onTurnAllOn={enableAllAddOnTabs}
+                    onTurnAllOff={disableAllAddOnTabs}
+                    getTabStyle={adminAddOnTabMenuStyle}
                     align="end"
                   />
                 }
@@ -1841,17 +1810,22 @@ function AdminDashboardInner() {
                 {orderedMainTabs.map((t) => {
                   const Icon = t.icon;
                   const removable = isRemovableAdminAddOnTab(t.value);
+                  const isColoredAddOn = adminPerTabColors && isAdminAddOnTabValue(t.value);
                   return (
                     <StaffPortalSidebarTabRow
                       key={t.value}
                       value={t.value}
-                      triggerClassName={cn(
-                        adminTabTriggerClassName,
-                        adminPerTabColors && 'border-solid data-[state=inactive]:shadow-none',
-                      )}
+                      triggerClassName={
+                        isColoredAddOn
+                          ? cn(
+                              staffPortalAddOnTabTriggerClassName(),
+                              'border-solid data-[state=inactive]:shadow-none',
+                            )
+                          : adminTabTriggerClassName
+                      }
                       triggerStyle={
-                        adminPerTabColors
-                          ? adminTabTriggerStyle(t.value, settings, activeMainTab === t.value)
+                        isColoredAddOn
+                          ? adminAddOnTabTriggerStyle(t.value, settings, activeMainTab === t.value)
                           : undefined
                       }
                       title={t.title ?? 'Drag to reorder'}
@@ -1895,20 +1869,17 @@ function AdminDashboardInner() {
                 })}
               </AdminMainTabsList>
               </div>
-            </div>
-
-
           </div>
 
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <StaffPortalContentWidth className="w-full min-w-0 flex-1">
+          <div className={staffPortalWorkspaceMainClassName()}>
+          <StaffPortalTeacherToolNotice activeTab={activeMainTab} />
           <TabsContent value="welcome" className={scrollingAdminTabClassName}>
             <StaffPortalWelcomeTab
               role="admin"
               settings={settings}
               onGoToTab={setActiveMainTab}
               onBulkRoster={() => setBulkRosterOpen(true)}
-              includeDeveloperBackups={loginState === 'developer'}
               schoolName={schoolData?.name?.trim() || null}
               adminStats={adminWelcomeStats}
             />
@@ -2301,6 +2272,12 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
+          <TabsContent value="raffle" className={scrollingAdminTabClassName}>
+            {activeMainTab === 'raffle' ? (
+              <AdminRaffleTab schoolId={schoolId!} students={students ?? []} />
+            ) : null}
+          </TabsContent>
+
           <TabsContent value="houses" className={scrollingAdminTabClassName}>
             <AdminHousesTab
               schoolId={schoolId!}
@@ -2340,21 +2317,6 @@ function AdminDashboardInner() {
             <AdminStudentPortalTab schoolId={schoolId!} students={students ?? []} />
           </TabsContent>
 
-          <TabsContent value="backups" className={fittedAdminTabClassName}>
-            {loginState === 'developer' ? (
-              <AdminBackupsTab
-                backups={backups}
-                onCreateBackup={handleCreateBackup}
-                onDownloadBackup={handleDownloadBackup}
-                onRestoreFromBackup={handleRestoreFromBackup}
-              />
-            ) : (
-              <div className="rounded-2xl border bg-muted/20 p-6 text-sm text-muted-foreground">
-                Backups are available in developer accounts. Sign in with a developer login to create and restore snapshots.
-              </div>
-            )}
-          </TabsContent>
-
           <TabsContent value="branding" className={scrollingAdminTabClassName}>
             <AdminBrandingTab
               schoolId={schoolId}
@@ -2375,9 +2337,47 @@ function AdminDashboardInner() {
               playSound={(s: any) => playSound(s)}
             />
           </TabsContent>
-          </StaffPortalContentWidth>
+          </div>
           </TabWalkthroughProvider>
         </Tabs>
+        </StaffPortalWorkspace>
+        </StaffPortalContentWidth>
+
+        <BulkRosterSetupDialog
+          open={bulkRosterOpen}
+          onOpenChange={setBulkRosterOpen}
+          aiClassNames={(classes || []).map((c) => c.name)}
+          onClassesCsv={handleBulkClassesCsv}
+          onTeachersCsv={handleBulkTeachersCsv}
+          onStudentsCsv={handleBulkStudentsCsv}
+          onAiCommitSnapshot={handleAiCommitSnapshot}
+        />
+
+        <StudentCsvColumnMapDialog
+          open={csvColumnMapOpen}
+          onOpenChange={setCsvColumnMapOpen}
+          csvText={csvColumnMapText}
+          onConfirm={handleCsvColumnMapConfirm}
+        />
+
+        {idCardPrintJob ? (
+          <IdCardPrintSetupDialog
+            open
+            onOpenChange={(o) => {
+              if (!o) setIdCardPrintJob(null);
+            }}
+            students={idCardPrintJob.students}
+            classes={idCardPrintJob.classes}
+            onConfirm={(args) => {
+              if (!schoolId) {
+                toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
+                return;
+              }
+              setStudentsToPrint({ ...args, schoolId });
+              setIdCardPrintJob(null);
+            }}
+          />
+        ) : null}
 
         {/* Modals outside Tabs */}
         <Dialog open={isClassModalOpen} onOpenChange={setIsClassModalOpen}>
@@ -2985,7 +2985,6 @@ function AdminDashboardInner() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        </div>
         {showPurgeFlash && (
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-none absolute inset-0 bg-white/90 animate-pulse" aria-hidden />

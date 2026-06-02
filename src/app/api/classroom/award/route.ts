@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import { verifyStaffForSchoolApi } from '@/lib/server/verifyStaffForSchoolApi';
-import { applyClassroomPointsAdmin } from '@/lib/server/classroomPointsAdmin';
+import { applyClassroomPointsAdmin, applyRewardsPointsAdmin } from '@/lib/server/classroomPointsAdmin';
 import {
   firebaseAdminCredentialProjectMismatch,
   hasFirebaseAdminCredentials,
 } from '@/lib/server/firebaseAdminAuth';
-import { isClassroomPillarOn } from '@/lib/productPillars';
+import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { evaluateClassroomAlertRulesAfterAward } from '@/lib/server/classroomAlertRulesEvaluator';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 32 * 1024;
 const MAX_STUDENTS = 120;
 
 async function getDb() {
-  await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  return admin.firestore();
+  return getFirebaseAdminFirestore();
 }
 
 /** POST: record classroom points (Rewards-off / classroom balance) via Admin SDK. */
@@ -43,6 +42,7 @@ export async function POST(req: NextRequest) {
     const teacherName = typeof body?.teacherName === 'string' ? body.teacherName.trim() : 'Staff';
     const classId = typeof body?.classId === 'string' ? body.classId.trim() : undefined;
     const className = typeof body?.className === 'string' ? body.className.trim() : undefined;
+    const rewardsMode = body?.rewardsMode === true;
 
     if (!schoolId || !SCHOOL_ID_RE.test(schoolId) || !description) {
       return jsonError(400, 'schoolId and description are required.');
@@ -79,27 +79,75 @@ export async function POST(req: NextRequest) {
     const schoolSnap = await db.collection('schools').doc(schoolId).get();
     if (!schoolSnap.exists) return jsonError(404, 'School not found.');
 
-    const appSettings = (schoolSnap.data()?.appSettings || {}) as { payClassroom?: boolean };
+    const appSettings = (schoolSnap.data()?.appSettings || {}) as {
+      payClassroom?: boolean;
+      payRewards?: boolean;
+      enableHouses?: boolean;
+      housePointsSource?: string;
+      housesRollupPoints?: boolean;
+    };
     if (!isClassroomPillarOn(appSettings)) {
       return jsonError(403, 'Classroom Management is not enabled for this school.');
     }
 
-    const result = await applyClassroomPointsAdmin(
-      db,
-      schoolId,
-      studentIds,
-      signedDelta,
-      description,
-      {
-        classId,
-        className,
-        teacherId,
-        teacherName,
-      },
-    );
+    const meta = {
+      classId,
+      className,
+      teacherId,
+      teacherName,
+    };
+
+    const result = rewardsMode
+      ? await (async () => {
+          if (!isRewardsPillarOn(appSettings)) {
+            return { success: false, message: 'Rewards is not enabled for this school.', count: 0 };
+          }
+          const rollupHousePoints =
+            appSettings.enableHouses === true &&
+            (appSettings.housePointsSource === 'studentRollup' ||
+              (appSettings.housePointsSource !== 'manual' &&
+                appSettings.housesRollupPoints !== false));
+          return applyRewardsPointsAdmin(
+            db,
+            schoolId,
+            studentIds,
+            signedDelta,
+            description,
+            meta,
+            { rollupHousePoints },
+          );
+        })()
+      : await applyClassroomPointsAdmin(
+          db,
+          schoolId,
+          studentIds,
+          signedDelta,
+          description,
+          meta,
+        );
 
     if (!result.success) {
       return jsonError(400, result.message);
+    }
+
+    if (!rewardsMode && result.count > 0) {
+      const nameEntries: [string, string][] = [];
+      for (const id of studentIds) {
+        const snap = await db.collection('schools').doc(schoolId).collection('students').doc(id).get();
+        if (!snap.exists) continue;
+        const data = snap.data()!;
+        const name =
+          [data.nickname || data.firstName, data.lastName].filter(Boolean).join(' ').trim() || id;
+        nameEntries.push([id, name]);
+      }
+      void evaluateClassroomAlertRulesAfterAward(
+        db,
+        schoolId,
+        appSettings,
+        studentIds,
+        Object.fromEntries(nameEntries),
+        meta,
+      ).catch((e) => console.error('[api/classroom/award] alert rules:', e));
     }
 
     return NextResponse.json(result);

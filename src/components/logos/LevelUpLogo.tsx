@@ -3,7 +3,13 @@ import { cn } from '@/lib/utils';
 const BAR_COUNT = 16;
 
 /** Animated cinematic LEVEL UP logo (SVG + CSS): layered glow, chromatic arrow, looping rise, wordmark + underline. */
-export function LevelUpLogo({ className }: { className?: string }) {
+export function LevelUpLogo({
+  className,
+  size = 'default',
+}: {
+  className?: string;
+  size?: 'default' | 'intro';
+}) {
   const arrowPath =
     'M 400 60 L 760 420 L 560 420 L 560 660 L 240 660 L 240 420 L 40 420 Z';
 
@@ -50,7 +56,12 @@ export function LevelUpLogo({ className }: { className?: string }) {
         }}
       />
 
-      <div className="relative aspect-[800/720] w-[min(40vw,280px)]">
+      <div
+        className={cn(
+          'relative aspect-[800/720]',
+          size === 'intro' ? 'w-[min(72vw,400px)]' : 'w-[min(40vw,280px)]',
+        )}
+      >
         <svg
           viewBox="0 0 800 720"
           className="h-full w-full overflow-visible"

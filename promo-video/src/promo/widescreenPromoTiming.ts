@@ -31,65 +31,19 @@ export const WIDESCREEN_TIMING = {
 /**
 
  * Montage order (timing keys are legacy names):
-
- * selector → ID card tab | studentKiosk → teacher print | studentHome → kiosk sign-in
-
- * dashboard → prize shop | action → scan/type entry
+ * selector → ID cards | studentHome → kiosk sign-in
+ * dashboard → prize shop | action → quick scan
 
  */
 
+import { CAPTURE_CLIPS } from "./widescreenBeatCatalog";
+
 export const WIDESCREEN_CLIPS = {
-
-  selector: {
-
-    src: "capture-library/student-kiosk/kiosk-card-tab.mp4",
-
-    playbackRate: 1.05,
-
-    trimBeforeSec: 0,
-
-  },
-
-  studentKiosk: {
-
-    src: "capture-library/action/action-print-coupons.mp4",
-
-    playbackRate: 1.1,
-
-    trimBeforeSec: 0,
-
-  },
-
-  studentHome: {
-
-    src: "capture-library/student-kiosk/kiosk-signin-rewards.mp4",
-
-    playbackRate: 1.1,
-
-    trimBeforeSec: 0,
-
-  },
-
-  dashboard: {
-
-    src: "capture-library/student-kiosk/kiosk-prizes-hover.mp4",
-
-    playbackRate: 1.08,
-
-    trimBeforeSec: 0,
-
-  },
-
-  action: {
-
-    src: "capture-library/student-kiosk/kiosk-type-entry.mp4",
-
-    playbackRate: 1.05,
-
-    trimBeforeSec: 0,
-
-  },
-
+  selector: CAPTURE_CLIPS.idCard,
+  studentKiosk: CAPTURE_CLIPS.prizeShop,
+  studentHome: CAPTURE_CLIPS.signInPoints,
+  dashboard: CAPTURE_CLIPS.prizeShop,
+  action: CAPTURE_CLIPS.scanEntry,
 } as const;
 
 

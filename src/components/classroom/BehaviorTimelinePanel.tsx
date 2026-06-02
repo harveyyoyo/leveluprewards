@@ -9,6 +9,9 @@ import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
 import { useFirestore } from '@/firebase';
 import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
+import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
+import { useFirebase } from '@/firebase';
+import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import {
   formatBehaviorNoteDate,
@@ -31,13 +34,19 @@ function kindMeta(kind: BehaviorNoteKind) {
 
 function errorHint(status?: number, message?: string): string {
   const m = (message || '').toLowerCase();
-  if (status === 503 || m.includes('firebase_service_account')) {
+  if (m.includes('permission') || m.includes('passcode') || m.includes('staff sign-in')) {
+    return 'Sign out, return to your school portal, and sign in as Admin or Teacher with your role passcode. The school lobby passcode alone is not enough.';
+  }
+  if (m.includes('firebase_service_account') || m.includes('firebase admin is not configured')) {
     return 'Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local and restart npm run dev.';
   }
   if (status === 403 || m.includes('staff access')) {
     return 'Sign in as school staff (Admin or Teacher portal) for this school.';
   }
-  return 'Deploy Firestore rules: firebase deploy --only firestore:rules — or use staff login so the server API can load notes.';
+  if (status === 503 && !m.includes('could not load behavior notes:')) {
+    return 'Restart npm run dev after checking .env.local. If this persists, sign in again as Admin or Teacher.';
+  }
+  return 'Check the server message above, then sign in again as Admin or Teacher for this school.';
 }
 
 export function BehaviorTimelinePanel({
@@ -57,23 +66,53 @@ export function BehaviorTimelinePanel({
   mode?: BehaviorTimelineMode;
 }) {
   const firestore = useFirestore();
+  const { user } = useFirebase();
   const [rows, setRows] = useState<BehaviorNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
 
-  const load = useCallback(async (opts?: { silent?: boolean }) => {
-    if (!schoolId) return;
-    if (!opts?.silent) setIsLoading(true);
-    setError(null);
-    const result = await fetchBehaviorNotes(schoolId, firestore);
-    if (result.error) {
-      setError({ message: result.error, status: result.status });
-      if (!opts?.silent) setRows([]);
-    } else {
-      setRows(result.notes);
-    }
-    if (!opts?.silent) setIsLoading(false);
-  }, [schoolId, firestore]);
+  const load = useCallback(
+    async (opts?: { silent?: boolean; afterProvision?: boolean }) => {
+      if (!schoolId) return;
+      if (!opts?.silent) setIsLoading(true);
+      setError(null);
+
+      if (!opts?.afterProvision && user && isAllowedDeveloperGoogleUser(user)) {
+        try {
+          await ensureDeveloperSchoolAccess(schoolId);
+        } catch {
+          /* callable may be unavailable; still try fetch */
+        }
+      }
+
+      let result = await fetchBehaviorNotes(schoolId, firestore);
+      if (
+        result.error &&
+        !opts?.afterProvision &&
+        user &&
+        isAllowedDeveloperGoogleUser(user) &&
+        (result.error.toLowerCase().includes('permission') ||
+          result.status === 403 ||
+          result.error.toLowerCase().includes('staff'))
+      ) {
+        try {
+          await ensureDeveloperSchoolAccess(schoolId);
+          result = await fetchBehaviorNotes(schoolId, firestore);
+        } catch {
+          /* keep first error */
+        }
+      }
+
+      if (result.error) {
+        setError({ message: result.error, status: result.status });
+        if (!opts?.silent) setRows([]);
+      } else {
+        setRows(result.notes);
+      }
+      if (!opts?.silent) setIsLoading(false);
+    },
+    [schoolId, firestore, user],
+  );
 
   useEffect(() => {
     void load(refreshToken === 0 ? undefined : { silent: true });
@@ -97,7 +136,7 @@ export function BehaviorTimelinePanel({
   const title = mode === 'behavior' ? 'Behavior notes' : 'Principal';
   const description =
     mode === 'behavior'
-      ? `Notes you add from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu → Behavior note). New entries appear here after you save.`
+      ? `Notes you add from ${CLASSROOM_SEATING_SECTION_LABEL} (hold P, C, I, W, or H and click a student, or use the award menu). New entries appear here after you save.`
       : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
 
   const header = (
@@ -131,11 +170,17 @@ export function BehaviorTimelinePanel({
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
             <li>
               On <span className="font-semibold text-foreground">{CLASSROOM_SEATING_SECTION_LABEL}</span>,
-              <span className="font-semibold text-foreground"> Shift+click</span> a student (or turn on{' '}
-              <span className="font-semibold text-foreground">Show award menu</span> in classroom settings (not quick
-              select) and choose Behavior note).
+              hold <span className="font-semibold text-foreground">P</span>,{' '}
+              <span className="font-semibold text-foreground">C</span>,{' '}
+              <span className="font-semibold text-foreground">I</span>,{' '}
+              <span className="font-semibold text-foreground">W</span>, or{' '}
+              <span className="font-semibold text-foreground">H</span> and click a student — each letter opens
+              its own note popup (positive, comment, incident, warning, highlight). Or use the{' '}
+              <span className="font-semibold text-foreground">Quick</span> /{' '}
+              <span className="font-semibold text-foreground">Awards</span> tabs in the toolbar and pick a note
+              from the menu.
             </li>
-            <li>Choose positive, concern, or incident, write the note, and save.</li>
+            <li>Pick a quick option or write your note, then save — the type is set by the shortcut you used.</li>
             <li>
               Notes marked for families can appear in the{' '}
               <span className="font-semibold text-foreground">Parent portal</span> when that is enabled.

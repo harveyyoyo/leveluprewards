@@ -5,7 +5,8 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
-import { applyPointsByPeriod } from '@/lib/db/helpers';
+import { applyCategoryPointsByPeriod, applyPointsByPeriod } from '@/lib/db/helpers';
+import { applyHousePointsRollupInTransaction } from '@/lib/db/housePoints';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 
 export type ClassroomPointsMeta = {
@@ -115,6 +116,152 @@ export async function applyClassroomPointsToStudents(
     };
   } catch (error: unknown) {
     const fallback = (error instanceof Error && error.message) || 'Could not save classroom points.';
+    return { success: false, message: getReadableErrorMessage(error, fallback), count: 0 };
+  }
+}
+
+export type RewardsPointsClientOptions = {
+  rollupHousePoints?: boolean;
+};
+
+/** Client fallback for classroom chart awards when Rewards balances should update. */
+export async function applyRewardsPointsToStudents(
+  firestore: Firestore,
+  schoolId: string,
+  studentIds: string[],
+  signedDelta: number,
+  description: string,
+  meta: ClassroomPointsMeta,
+  options?: RewardsPointsClientOptions,
+): Promise<{ success: boolean; message: string; count: number }> {
+  if (!signedDelta || !Number.isFinite(signedDelta)) {
+    return { success: false, message: 'Invalid points amount.', count: 0 };
+  }
+  if (!studentIds?.length) {
+    return { success: false, message: 'No students selected.', count: 0 };
+  }
+
+  const desc = description.trim();
+  if (!desc) {
+    return { success: false, message: 'A description is required.', count: 0 };
+  }
+
+  const uniqueIds = [...new Set(studentIds)].filter((id) => id.trim().length > 0 && !id.includes('/'));
+  if (uniqueIds.length === 0) {
+    return { success: false, message: 'No valid students selected.', count: 0 };
+  }
+
+  const logDesc = classroomActivityDescription(desc);
+  const chunkSize = signedDelta > 0 ? 80 : 200;
+  let processedCount = 0;
+  const rollupHousePoints = options?.rollupHousePoints === true;
+
+  try {
+    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
+      const chunkIds = uniqueIds.slice(i, i + chunkSize);
+      await runTransaction(firestore, async (transaction) => {
+        const studentRefs = chunkIds.map((id) =>
+          doc(firestore, 'schools', schoolId, 'students', id),
+        );
+        const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
+        const houseDeltas = new Map<string, number>();
+
+        for (const studentDoc of studentDocs) {
+          if (!studentDoc.exists()) continue;
+          const studentData = studentDoc.data() as Student;
+          const now = Date.now();
+
+          if (signedDelta > 0) {
+            const newPoints = studentData.points + signedDelta;
+            const newLifetime = (studentData.lifetimePoints || 0) + signedDelta;
+            const categoryPointsUpdate = { ...studentData.categoryPoints };
+            categoryPointsUpdate[desc] = (categoryPointsUpdate[desc] || 0) + signedDelta;
+            const pointsByPeriodUpdate = applyPointsByPeriod(studentData.pointsByPeriod, signedDelta, now);
+            const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
+              studentData.categoryPointsByPeriod,
+              desc,
+              signedDelta,
+              now,
+            );
+
+            transaction.update(studentDoc.ref, {
+              points: newPoints,
+              lifetimePoints: newLifetime,
+              categoryPoints: categoryPointsUpdate,
+              pointsByPeriod: pointsByPeriodUpdate,
+              categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+              updatedAt: now,
+            });
+
+            if (rollupHousePoints && studentData.houseId) {
+              houseDeltas.set(
+                studentData.houseId,
+                (houseDeltas.get(studentData.houseId) ?? 0) + signedDelta,
+              );
+            }
+          } else {
+            const magnitude = Math.abs(signedDelta);
+            const newPoints = Math.max(0, studentData.points - magnitude);
+            transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
+
+            if (rollupHousePoints && studentData.houseId) {
+              houseDeltas.set(
+                studentData.houseId,
+                (houseDeltas.get(studentData.houseId) ?? 0) - magnitude,
+              );
+            }
+          }
+
+          const activityRef = doc(collection(studentDoc.ref, 'activities'));
+          transaction.set(activityRef, { desc, amount: signedDelta, date: now });
+
+          const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
+          transaction.set(logRef, {
+            studentId: studentDoc.id,
+            studentName:
+              [studentData.nickname || studentData.firstName, studentData.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || studentDoc.id,
+            classId: meta.classId ?? studentData.classId ?? null,
+            className: meta.className ?? null,
+            teacherId: meta.teacherId,
+            teacherName: meta.teacherName,
+            points: signedDelta,
+            description: logDesc,
+            createdAt: now,
+          });
+
+          processedCount += 1;
+        }
+
+        if (rollupHousePoints) {
+          for (const [houseId, delta] of houseDeltas) {
+            await applyHousePointsRollupInTransaction(
+              transaction,
+              firestore,
+              schoolId,
+              houseId,
+              delta,
+              true,
+            );
+          }
+        }
+      });
+    }
+
+    return {
+      success: processedCount > 0,
+      message:
+        processedCount > 0
+          ? signedDelta > 0
+            ? `Points awarded to ${processedCount} student(s).`
+            : `Points deducted for ${processedCount} student(s).`
+          : 'No students found.',
+      count: processedCount,
+    };
+  } catch (error: unknown) {
+    const fallback = (error instanceof Error && error.message) || 'Could not award points.';
     return { success: false, message: getReadableErrorMessage(error, fallback), count: 0 };
   }
 }

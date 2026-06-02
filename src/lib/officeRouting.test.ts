@@ -41,6 +41,7 @@ describe('office routing', () => {
     expect(officeHostRedirectPath('/')).toBe('/office-bootstrap');
     expect(officeHostRedirectPath('/yeshiva')).toBeNull();
     expect(officeHostRedirectPath('/office-bootstrap')).toBeNull();
+    expect(officeHostRedirectPath('/yeshiva/portal')).toBe('/yeshiva');
   });
 
   it('rewrites public office paths to internal routes', () => {

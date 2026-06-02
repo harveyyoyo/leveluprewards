@@ -94,6 +94,8 @@ const SEGMENT_IDS = [
 
   "prizes",
 
+  "classroom",
+
   "coupons",
 
   "raffle",
@@ -196,6 +198,8 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
 
         prizes: "The prize shop turns effort into something they can hold in their hands.",
 
+        classroom: "Classroom seating charts display goals and active point achievements in real time.",
+
         coupons: "Teachers print reward coupons without breaking stride in the classroom.",
 
         raffle: "Raffles transform everyday points into electric, school-wide moments.",
@@ -285,6 +289,8 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
         themes: "Design themes in minutes — describe the look, adjust colors, and preview it on student ID cards.",
 
         prizes: "They pick prizes they actually care about from the shop.",
+
+        classroom: "Seating charts and noise meters help teachers set the perfect classroom vibe.",
 
         coupons: "Teachers print coupons when you want to reward on the spot.",
 
@@ -376,6 +382,8 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
 
         prizes: "Configurable prize catalog with inventory awareness.",
 
+        classroom: "Live seating layouts, behavior logs, and projector-ready displays.",
+
         coupons: "Teachers issue printable coupons tied to point rules.",
 
         raffle: "Scheduled raffles with ticket rules and winner workflows.",
@@ -466,6 +474,8 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
 
         prizes: "Prize shop — scroll, tap, redeem.",
 
+        classroom: "Classrooms — seating charts and noise meters live on screen.",
+
         coupons: "Teachers — print coupons — done.",
 
         raffle: "Raffle week — tickets flying — winners loud.",
@@ -555,6 +565,8 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
         themes: "An admin creates the card theme once — colors and gradients — and every student ID matches.",
 
         prizes: "At lunch, someone cashes points for a prize they picked last week.",
+
+        classroom: "In third period, the teacher awards bonus points right from the seating chart display.",
 
         coupons: "A teacher prints a coupon for kindness caught in the hallway.",
 

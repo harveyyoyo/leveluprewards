@@ -20,9 +20,10 @@ The `.agent` directory is the source of truth for AI-specific instructions.
 
 ## Rules
 1. **Sync Before Work**: Check `.agent/workflows/sync-skills.md` to ensure your instructions are up to date.
-2. **Auto-Git**: ALWAYS stage your changes after a successful edit (`git add <file>`). Suggest or perform a commit (`git commit`) when a task boundary or logical unit of work is reached. Prefex commit messages with `[cursor]`.
-3. **Document Deviations**: If you discover a project quirk, document it in a new Skill or Knowledge Item in `.agent` so other assistants can learn.
-3. **Respect Boundaries**: Do not overwrite `.mdc` files that are marked as "Managed by Antigravity" unless specifically asked.
+2. **Own Branch**: Each agent works on its own branch (`cursor/`, `codex/`, `antigravity/`). Follow `.cursor/rules/agent-branches.mdc` and `.agent/workflows/agent-branch-workflow.md` before editing code—not on `main` unless the user asks.
+3. **Auto-Git**: ALWAYS stage your changes after a successful edit (`git add <file>`). Suggest or perform a commit (`git commit`) when a task boundary or logical unit of work is reached. Prefex commit messages with `[cursor]`.
+4. **Document Deviations**: If you discover a project quirk, document it in a new Skill or Knowledge Item in `.agent` so other assistants can learn.
+5. **Respect Boundaries**: Do not overwrite `.mdc` files that are marked as "Managed by Antigravity" unless specifically asked.
 
 ## Shared Context
 - **Project Goal**: "School Arcade Rewards" - a system for managing student rewards in a school setting.

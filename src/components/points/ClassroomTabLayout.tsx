@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { LayoutGrid, Users, Settings2, BookOpenCheck, ShieldCheck, Monitor } from 'lucide-react';
+import { LayoutGrid, Settings2, BookOpenCheck, Monitor, BellRing } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
@@ -15,8 +15,7 @@ export type { ClassroomTabSection };
 const SECTION_LABELS: Record<ClassroomTabSection, string> = {
   seating: CLASSROOM_SEATING_SECTION_LABEL,
   behavior: 'Behavior',
-  principal: 'Principal',
-  parents: 'Parent portal',
+  alerts: 'Alerts',
   setup: 'Setup',
   'room-display': 'Room display',
 };
@@ -24,8 +23,7 @@ const SECTION_LABELS: Record<ClassroomTabSection, string> = {
 const SECTION_ICONS: Record<ClassroomTabSection, React.ComponentType<{ className?: string }>> = {
   seating: LayoutGrid,
   behavior: BookOpenCheck,
-  principal: ShieldCheck,
-  parents: Users,
+  alerts: BellRing,
   setup: Settings2,
   'room-display': Monitor,
 };
@@ -35,8 +33,7 @@ export type ClassroomTabLayoutProps = {
   sections: ClassroomTabSection[];
   seatingContent: React.ReactNode;
   behaviorContent?: React.ReactNode;
-  principalContent?: React.ReactNode;
-  parentsContent?: React.ReactNode;
+  alertsContent?: React.ReactNode;
   roomDisplayContent?: React.ReactNode;
   setupContent?: React.ReactNode;
   headerAction?: React.ReactNode;
@@ -48,8 +45,7 @@ export function ClassroomTabLayout({
   sections,
   seatingContent,
   behaviorContent,
-  principalContent,
-  parentsContent,
+  alertsContent,
   roomDisplayContent,
   setupContent,
   headerAction,
@@ -68,8 +64,7 @@ export function ClassroomTabLayout({
   const contentBySection: Record<ClassroomTabSection, React.ReactNode> = {
     seating: seatingContent,
     behavior: behaviorContent,
-    principal: principalContent,
-    parents: parentsContent,
+    alerts: alertsContent,
     'room-display': roomDisplayContent,
     setup: setupContent,
   };
@@ -84,9 +79,12 @@ export function ClassroomTabLayout({
 
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <Helper content={`${CLASSROOM_SEATING_SECTION_LABEL}, behavior notes, principal timeline, and optional parent portal.`}>
+      <Helper
+        content={`${CLASSROOM_SEATING_SECTION_LABEL}, behavior notes, if/then alerts, room display, and optional principal or parent access configured in Setup.`}
+      >
         <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
-          <LayoutGrid className="w-5 h-5 shrink-0 text-violet-500 sm:w-6 sm:h-6" /> Classroom Management
+          <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> Classroom
+          Management
         </CardTitle>
       </Helper>
       {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
@@ -97,7 +95,7 @@ export function ClassroomTabLayout({
     return (
       <Card
         className={cn(
-          'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background/95 backdrop-blur-md',
+          'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background [contain:layout_paint]',
           className,
         )}
       >
@@ -110,7 +108,7 @@ export function ClassroomTabLayout({
   return (
     <Card
       className={cn(
-        'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background/95 backdrop-blur-md',
+        'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background [contain:layout_paint]',
         className,
       )}
     >
@@ -129,17 +127,12 @@ export function ClassroomTabLayout({
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={resolvedSection}
-            layout
-            initial={reduceMotion ? false : { opacity: 0, y: 12 }}
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{
               opacity: 1,
-              y: 0,
-              transition: reduceMotion
-                ? { duration: 0 }
-                : { type: 'spring', stiffness: 420, damping: 34, mass: 0.8, staggerChildren: 0.04 },
+              transition: reduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' },
             }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
-            transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, transition: { duration: 0.1 } }}
             className="focus-visible:outline-none"
           >
             {contentBySection[resolvedSection]}

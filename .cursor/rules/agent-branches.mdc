@@ -1,0 +1,60 @@
+---
+description: Each AI assistant must work on its own git branch; never share main for parallel agent work.
+globs: .agent/**/*, .cursor/rules/**/*
+alwaysApply: true
+---
+
+# AI Agent Branch Rules
+
+Multiple assistants edit this repo in parallel. **Each agent session works on exactly one dedicated branch** so changes do not collide on `main`.
+
+## Branch ownership
+
+| Assistant | Branch prefix | Example |
+|-----------|---------------|---------|
+| **Cursor** | `cursor/` | `cursor/staff-portal-workspace` |
+| **Codex** | `codex/` | `codex/attendance-updates` |
+| **Antigravity** | `antigravity/` | `antigravity/refactor-alignment-sync` |
+
+- One active task → one branch. Do not reuse another agent’s branch.
+- Slug: lowercase, hyphenated, short (task or feature name). Optional suffix for Cloud Agent runs (e.g. `-b28a`) is fine.
+
+## Automatic enforcement (default)
+
+This repo enables enforcement by default:
+
+- **Cursor hooks** (`.cursor/hooks.json`): on Agent **sessionStart**, creates/checks out a `cursor/` branch if you were on `main` or `dev`; blocks file edits and risky shell commands on protected branches until you branch.
+- **Git pre-commit** (`npm install` runs `prepare` → `scripts/install-agent-git-hooks.mjs`): refuses commits on `main` / `dev` / `master` unless `ALLOW_MAIN_COMMIT=1`.
+- **Manual branch**: `npm run agent:branch -- my-task-slug` or `AGENT_BRANCH_SLUG=my-task-slug`.
+
+Human override on protected branches: `ALLOW_PROTECTED_BRANCH_EDITS=1` (edits) or `ALLOW_MAIN_COMMIT=1` (commits).
+
+## Before any code edit
+
+1. Confirm current branch: `git rev-parse --abbrev-ref HEAD` (or rely on session hooks + `npm run agent:branch`).
+2. If on `main` (or another agent’s branch), **create or checkout your branch first**:
+   - Base: `main` for isolated fixes; `dev` when integrating Lovable/UI with Firebase (see `.agent/knowledge/project-context.md`).
+   - `git fetch origin` when online, then `git checkout -b <prefix>/<slug>` from the chosen base.
+3. Call **SetActiveBranch** (Cursor) when the branch name is known so the UI tracks the correct diff/PR context.
+
+## While working
+
+- **Never** commit or push to `main` unless the user explicitly asks for a direct `main` change or hotfix.
+- Stage and commit on **your** branch only. Prefix commit messages: `[cursor]`, `[codex]`, or `[antigravity]` (match the assistant).
+- Do not merge another agent’s branch without the user’s direction.
+
+## Finishing work
+
+- Open a PR from your branch → `main` (or → `dev` when that is the integration target).
+- Do not leave long-running WIP on `main`. If work stops mid-task, push the agent branch so another session can resume it.
+- After merge, delete the local branch when the user or workflow says to clean up.
+
+## Conflicts and recovery
+
+- If `main` moved while you work: rebase or merge `main` into **your** branch, resolve conflicts there, then continue—not on `main`.
+- If unsure which branch owns current uncommitted changes, ask the user before switching branches or stashing.
+
+## Protected branches
+
+- **`main`**: production; agent edits only via PR from an agent branch (unless user overrides).
+- **`dev`**: Lovable/UI integration lane; same rule—use `cursor/`, `codex/`, or `antigravity/` branches and merge via PR.

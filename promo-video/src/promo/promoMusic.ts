@@ -272,7 +272,7 @@ export function timingFromWidescreenNarration(
 
   narration: WidescreenNarrationCue[],
 
-  padAfterIntro = 12,
+  padAfterIntro = 0,
 
 ): {
 
@@ -298,8 +298,6 @@ export function timingFromWidescreenNarration(
 
   const home = byId.home;
 
-  const selector = byId.selector;
-
   const dashboard = byId.dashboard;
 
   const outro = byId.outro;
@@ -310,8 +308,8 @@ export function timingFromWidescreenNarration(
 
     (intro?.startFrame ?? 14) + (intro?.durationFrames ?? 60) + padAfterIntro;
 
-  /** Montage: kiosk sign-in → ID cards → prizes → scan (no portal/teacher beat). */
-  const selectorEnd = selector?.startFrame ?? introEnd + 90;
+  /** Montage: ID cards → kiosk sign-in → prizes → closing */
+  const selectorEnd = home?.startFrame ?? introEnd + 90;
 
   const studentKioskEnd = dashboard?.startFrame ?? selectorEnd + 90;
 
