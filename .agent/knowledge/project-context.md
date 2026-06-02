@@ -4,7 +4,7 @@
 
 **Goal**: Multi-tenant gamification for schools: student rewards, credits, and levels.
 
-**Local folder**: The repo directory is named studio; the product name is LevelUp Rewards.
+**Local folder**: The repo directory may still be named `studio` locally; the GitHub repo is `harveyyoyo/leveluprewards` and the product name is LevelUp Rewards.
 
 ## Stack
 
@@ -15,7 +15,7 @@
 
 ## Git and remotes
 
-- origin: Primary app repo (harveyyoyo/studio).
+- origin: Primary app repo (harveyyoyo/leveluprewards).
 - lovable: UI design lab repo (harveyyoyo/levelupluvable).
 - Integration branch: dev -- bridge where Lovable-aligned UI lands and Cursor integrates Firebase logic.
 

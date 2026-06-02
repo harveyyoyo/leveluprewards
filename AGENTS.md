@@ -8,7 +8,7 @@ Cloud agents run on Ubuntu with a clean git checkout. They do **not** see your l
 
 - Install: `npm install` and `npm install --prefix functions` (see `.cursor/environment.json`).
 - Default branch: `main`.
-- Repo: `harveyyoyo/studio`.
+- Repo: `harveyyoyo/leveluprewards`.
 
 ### Secrets (add in [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents) → Secrets)
 
