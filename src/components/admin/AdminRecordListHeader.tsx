@@ -3,7 +3,6 @@ import {
   adminRecordListGridClassName,
   adminRecordListGridCompactGapClassName,
 } from '@/components/admin/adminRecordListGrid';
-import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { staffPortalRecordListHeaderClassName } from '@/components/staff/staffPortalNavStyles';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +28,6 @@ export function AdminRecordListHeader({
   className?: string;
   style?: CSSProperties;
 }) {
-  const { sidebar } = useStaffPortalLayout();
   const gridStyle: CSSProperties | undefined = gridColumns
     ? {
         ...style,
@@ -42,7 +40,7 @@ export function AdminRecordListHeader({
     <li
       className={cn(
         'w-full min-w-0',
-        staffPortalRecordListHeaderClassName(sidebar),
+        staffPortalRecordListHeaderClassName(),
         className,
       )}
     >

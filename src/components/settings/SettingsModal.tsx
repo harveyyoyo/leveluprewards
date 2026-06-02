@@ -54,7 +54,6 @@ import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/
 import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
-import { StaffPortalNavLayoutControls } from '@/components/settings/StaffPortalNavLayoutControls';
 import {
     FEATURE_SECTION_NAV,
     GENERAL_SECTION_NAV,
@@ -244,9 +243,7 @@ export function SettingsModal() {
             key === 'kioskSessionTimeoutSec' ||
             key === 'kioskAiFunIdleOffSec' ||
             key === 'soundEnabled' ||
-            key === 'studentAudioTheme' ||
-            key === 'adminNavLayout' ||
-            key === 'teacherNavLayout'
+            key === 'studentAudioTheme'
         ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
@@ -1166,22 +1163,6 @@ export function SettingsModal() {
                                      </p>
                                  </div>
 
-                                 {loginState === 'teacher' && !canManageSchoolSettings ? (
-                                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mt-4 pt-4 border-t border-border/40">
-                                         <div className="min-w-0 pr-4">
-                                             <span className="text-sm font-bold">Portal tab layout</span>
-                                             <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                 Section tabs across the top or in a left sidebar.
-                                             </p>
-                                         </div>
-                                         <StaffPortalNavLayoutControls
-                                             target="teacher"
-                                             value={local.teacherNavLayout ?? 'sidebar'}
-                                             onChange={(layout) => handleToggle('teacherNavLayout', layout)}
-                                         />
-                                     </div>
-                                 ) : null}
-
                                  {interfaceRole === 'student' && (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">
@@ -1304,52 +1285,6 @@ export function SettingsModal() {
                             </div>
 
                             <div
-                                id="settings-general-staff-portals"
-                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
-                            >
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <LayoutDashboard className="w-3.5 h-3.5" /> Staff portals
-                                </p>
-                                <div className="space-y-4 mt-1">
-                                    {canManageSchoolSettings ? (
-                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                            <div className="min-w-0 pr-4">
-                                                <span className="text-sm font-bold">School admin tab layout</span>
-                                                <p className="text-[11px] text-muted-foreground">
-                                                    Section tabs across the top or in a left sidebar for the admin portal.
-                                                </p>
-                                            </div>
-                                            <StaffPortalNavLayoutControls
-                                                target="admin"
-                                                value={local.adminNavLayout ?? 'sidebar'}
-                                                onChange={(layout) => handleToggle('adminNavLayout', layout)}
-                                            />
-                                        </div>
-                                    ) : null}
-                                    <div
-                                        className={cn(
-                                            'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between',
-                                            canManageSchoolSettings &&
-                                                'border-t border-slate-200/60 dark:border-slate-700/50 pt-4',
-                                        )}
-                                    >
-                                        <div className="min-w-0 pr-4">
-                                            <span className="text-sm font-bold">Teacher portal tab layout</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Same choice for the teacher staff portal (points, classes, reports).
-                                            </p>
-                                        </div>
-                                        <StaffPortalNavLayoutControls
-                                            target="teacher"
-                                            value={local.teacherNavLayout ?? 'sidebar'}
-                                            onChange={(layout) => handleToggle('teacherNavLayout', layout)}
-                                            disabled={!canManageSchoolSettings && loginState !== 'teacher'}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div
                                 id="settings-general-kiosk"
                                 className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
                             >
@@ -1384,7 +1319,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                With top tabs, tuck the school header off-screen. A small tab stays visible at the top â€” move the mouse there to slide the full header down. Side tabs always hide the header while you scroll and bring it back at the top of the page.
+                                                Side tabs hide the header while you scroll and bring it back at the top of the page. Use the wide/standard button in the portal header to change content width.
                                             </p>
                                         </div>
                                         <Switch

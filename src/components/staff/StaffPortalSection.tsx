@@ -1,8 +1,6 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import {
   staffPortalSectionCardClassName,
   staffPortalSectionCardHeaderClassName,
@@ -13,28 +11,21 @@ export function StaffPortalSectionCard({
   className,
   ...props
 }: React.ComponentProps<typeof Card>) {
-  const { sidebar } = useStaffPortalLayout();
-  return <Card className={staffPortalSectionCardClassName(sidebar, className)} {...props} />;
+  return <Card className={staffPortalSectionCardClassName(className)} {...props} />;
 }
 
 export function StaffPortalSectionCardHeader({
   className,
   ...props
 }: React.ComponentProps<typeof CardHeader>) {
-  const { sidebar } = useStaffPortalLayout();
-  return (
-    <CardHeader className={staffPortalSectionCardHeaderClassName(sidebar, className)} {...props} />
-  );
+  return <CardHeader className={staffPortalSectionCardHeaderClassName(className)} {...props} />;
 }
 
 export function StaffPortalSectionCardTitle({
   className,
   ...props
 }: React.ComponentProps<typeof CardTitle>) {
-  const { sidebar } = useStaffPortalLayout();
-  return (
-    <CardTitle className={staffPortalSectionCardTitleClassName(sidebar, className)} {...props} />
-  );
+  return <CardTitle className={staffPortalSectionCardTitleClassName(className)} {...props} />;
 }
 
 export { CardContent as StaffPortalSectionCardContent };

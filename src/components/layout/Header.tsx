@@ -264,13 +264,8 @@ export default function Header() {
   if (settings.payHomework ?? true) paidProducts.push('Homework');
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
-  const staffNavSidebar =
-    loginState === 'teacher'
-      ? (settings.teacherNavLayout ?? 'sidebar') === 'sidebar'
-      : (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
   const adminSideTabHeader =
     !!schoolId &&
-    staffNavSidebar &&
     (pathname === `/${schoolId}/admin` ||
       pathname.startsWith(`/${schoolId}/admin/`) ||
       pathname === `/${schoolId}/teacher` ||
@@ -364,7 +359,7 @@ export default function Header() {
           className={cn(
             'w-full min-w-0',
             adminSideTabHeader
-              ? staffPortalGlobalHeaderWrapClassName(true)
+              ? staffPortalGlobalHeaderWrapClassName()
               : 'mx-auto max-w-7xl px-4 md:px-8',
           )}
         >
@@ -372,8 +367,8 @@ export default function Header() {
           className={cn(
             'no-print relative z-20 mb-2 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
-            adminSideTabHeader && staffPortalGlobalHeaderClassName(true),
-            adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(true),
+            adminSideTabHeader && staffPortalGlobalHeaderClassName(),
+            adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(),
           )}
         >
           <div className="relative z-10 flex shrink-0 justify-start">
@@ -468,7 +463,7 @@ export default function Header() {
         className={cn(
           'w-full min-w-0',
           adminSideTabHeader
-            ? staffPortalGlobalHeaderWrapClassName(true)
+            ? staffPortalGlobalHeaderWrapClassName()
             : 'mx-auto max-w-7xl px-4 md:px-8',
         )}
       >
@@ -477,13 +472,13 @@ export default function Header() {
             'relative z-20 mb-2 w-full min-w-0 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
             'sm:mb-3 sm:rounded-b-3xl',
-            adminSideTabHeader && staffPortalGlobalHeaderClassName(true),
+            adminSideTabHeader && staffPortalGlobalHeaderClassName(),
           )}
         >
       <div
         className={cn(
           'grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3',
-          staffPortalGlobalHeaderInnerClassName(adminSideTabHeader),
+          staffPortalGlobalHeaderInnerClassName(),
         )}
       >
         {/* Left: Branding */}

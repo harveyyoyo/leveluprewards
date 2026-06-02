@@ -8,6 +8,9 @@ import { FileText, Loader2, LogOut } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
+import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -124,9 +127,10 @@ export default function ReportsPage() {
 
   return (
     <ErrorBoundary name="ReportsStaffPage">
+      <StaffPortalLayoutProvider>
       <div className="min-h-screen bg-background">
         <div className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
+          <StaffPortalContentWidth className="flex items-center justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <FileText className="h-5 w-5" />
@@ -136,14 +140,17 @@ export default function ReportsPage() {
                 <h1 className="truncate text-xl font-black">Reports</h1>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              End session
-            </Button>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <StaffPortalLayoutToggle />
+              <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                End session
+              </Button>
+            </div>
+          </StaffPortalContentWidth>
         </div>
 
-        <main className="mx-auto max-w-7xl px-4 py-6">
+        <StaffPortalContentWidth className="px-4 py-6">
           {isLoading ? (
             <Card>
               <CardContent className="flex min-h-[320px] items-center justify-center text-muted-foreground">
@@ -170,8 +177,9 @@ export default function ReportsPage() {
               rafflePointsPerTicket={settings.rafflePointsPerTicket}
             />
           )}
-        </main>
+        </StaffPortalContentWidth>
       </div>
+      </StaffPortalLayoutProvider>
     </ErrorBoundary>
   );
 }

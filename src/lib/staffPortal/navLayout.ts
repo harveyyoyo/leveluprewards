@@ -1,22 +1,20 @@
 import type { Settings } from '@/components/providers/SettingsProvider';
 import type { StaffPortalRole } from './types';
 
-/** Whether staff portal section tabs use the left sidebar (vs top row). */
-export function staffPortalUsesSidebar(settings: Settings, role: StaffPortalRole): boolean {
-  if (role === 'teacher') {
-    return (settings.teacherNavLayout ?? 'sidebar') === 'sidebar';
-  }
-  return (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
+/** Staff portal section tabs always use the left sidebar. */
+export function staffPortalUsesSidebar(_settings: Settings, _role?: StaffPortalRole): boolean {
+  return true;
 }
 
+/** @deprecated Top tabs removed; kept so existing settings patches are harmless. */
 export function staffPortalNavLayoutPatch(
   role: StaffPortalRole,
-  layout: 'top' | 'sidebar',
+  _layout: 'top' | 'sidebar',
 ): Partial<Settings> {
   if (role === 'teacher') {
-    return { teacherNavLayout: layout };
+    return { teacherNavLayout: 'sidebar' };
   }
-  return { adminNavLayout: layout };
+  return { adminNavLayout: 'sidebar' };
 }
 
 /** Map signed-in staff session to portal nav layout role. */
@@ -34,8 +32,6 @@ export function staffPortalRoleFromLoginState(loginState: string): StaffPortalRo
   return null;
 }
 
-export function staffPortalUsesSidebarForLogin(settings: Settings, loginState: string): boolean {
-  const role = staffPortalRoleFromLoginState(loginState);
-  if (!role) return (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
-  return staffPortalUsesSidebar(settings, role);
+export function staffPortalUsesSidebarForLogin(_settings: Settings, _loginState: string): boolean {
+  return true;
 }

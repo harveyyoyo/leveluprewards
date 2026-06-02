@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
+import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { LibraryManagementPanel } from '@/components/library/LibraryManagementPanel';
 import { LibraryItemModal } from '@/components/library/LibraryItemModal';
 import { useCollection } from '@/firebase';
@@ -200,16 +203,20 @@ export default function LibrarianPage() {
 
   return (
     <ErrorBoundary>
+      <StaffPortalLayoutProvider>
       <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <StaffPortalContentWidth className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h1 className="text-2xl font-black">Library</h1>
               <p className="text-sm text-muted-foreground">{userName}</p>
             </div>
-            <Button variant="outline" className="rounded-xl" onClick={() => logout({ staffNavigateTo: 'portal' })}>
-              <LogOut className="mr-2 h-4 w-4" /> Sign out
-            </Button>
+            <div className="flex items-center gap-2">
+              <StaffPortalLayoutToggle />
+              <Button variant="outline" className="rounded-xl" onClick={() => logout({ staffNavigateTo: 'portal' })}>
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </Button>
+            </div>
           </div>
 
           <LibraryManagementPanel
@@ -232,7 +239,7 @@ export default function LibrarianPage() {
             upcTaken={(upc) => libraryUpcTaken(upc)}
             categories={categories}
           />
-        </div>
+        </StaffPortalContentWidth>
 
         <LibraryItemModal
           isOpen={isLibraryModalOpen}
@@ -241,6 +248,7 @@ export default function LibrarianPage() {
           onSave={handleSaveLibraryItem}
         />
       </div>
+      </StaffPortalLayoutProvider>
     </ErrorBoundary>
   );
 }

@@ -97,10 +97,13 @@ import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
-import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
+import { StaffPortalAddFeatureTabsMenu } from '@/components/staff/StaffPortalAddFeatureTabsMenu';
+import { StaffPortalSidebarTabRow } from '@/components/staff/StaffPortalSidebarTabRow';
+import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
+import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import {
   staffPortalPageIntroClassName,
-  staffPortalShellClassName,
   staffPortalTabTriggerClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs, staffPortalPinWelcomeFirst } from '@/lib/staffPortal';
@@ -296,6 +299,31 @@ function describeSnapshotImport(result: SchoolSnapshotImportResult): {
 const fittedAdminTabClassName =
   'transition-opacity duration-150 mt-0 w-full min-w-0 flex-col pb-6 focus-visible:outline-none';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
+
+function AdminPageIntro() {
+  const { isWide } = useStaffPortalLayout();
+
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
+        staffPortalPageIntroClassName(isWide),
+      )}
+    >
+      <Helper content="School administrators manage students, staff, points, prizes, and school settings from here.">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            School admin
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            Students, classes, points, prizes, and school settings.
+          </p>
+        </div>
+      </Helper>
+      <StaffPortalLayoutToggle />
+    </div>
+  );
+}
 
 /** Mirrors the loaded admin shell: page header, tab row, default Students roster. */
 function AdminDashboardSkeleton() {
@@ -815,8 +843,7 @@ function AdminDashboardInner() {
     return staffPortalPinWelcomeFirst(out);
   }, [loginState, pinnedAddOnTabs, settings]);
 
-  const adminNavSidebar = (settings.adminNavLayout ?? 'sidebar') === 'sidebar';
-  const adminTabTriggerClassName = staffPortalTabTriggerClassName(adminNavSidebar);
+  const adminTabTriggerClassName = staffPortalTabTriggerClassName();
   const adminPerTabColors = !!settings.adminPerTabColorScheme;
   const adminTabAppearance = useMemo(
     () => adminPerTabAppearanceProps(settings, activeMainTab, adminPerTabColors),
@@ -827,6 +854,28 @@ function AdminDashboardInner() {
     const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
     return addOnTabDefs.filter((t) => !mainTabValues.has(t.value));
   }, [addOnTabDefs, orderedMainTabs]);
+
+  const adminCoreTabValues = useMemo(
+    () => new Set(staffPortalCoreTabs('admin', settings).map((t) => t.value)),
+    [settings],
+  );
+
+  const adminPinnedAddOnSet = useMemo(
+    () => new Set(settings.adminPinnedAddOnTabs || []),
+    [settings.adminPinnedAddOnTabs],
+  );
+
+  const isRemovableAdminAddOnTab = (tabValue: string) =>
+    adminPinnedAddOnSet.has(tabValue) && !adminCoreTabValues.has(tabValue);
+
+  const unpinAdminAddOnTab = (tabValue: string) => {
+    const pinnedNow = settings.adminPinnedAddOnTabs || [];
+    if (!pinnedNow.includes(tabValue)) return;
+    updateSettings({ adminPinnedAddOnTabs: pinnedNow.filter((x) => x !== tabValue) });
+    if (activeMainTab === tabValue) {
+      setActiveMainTab('welcome');
+    }
+  };
 
   const handleMobileMainTabChange = (value: string) => {
     if (orderedMainTabs.some((t) => t.value === value)) {
@@ -1663,30 +1712,12 @@ function AdminDashboardInner() {
   return (
     <TooltipProvider>
       <StaffPortalDocumentTitle title="School admin" />
-      <div
-        className={cn(
-          staffPortalShellClassName(adminNavSidebar),
-          adminPerTabColors && 'transition-[color,background-color] duration-300',
-        )}
-        style={adminTabAppearance.style}
-      >
-        <div
-          className={cn(
-            'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
-            staffPortalPageIntroClassName(adminNavSidebar),
-          )}
+      <StaffPortalLayoutProvider>
+        <StaffPortalShellFrame
+          className={cn(adminPerTabColors && 'transition-[color,background-color] duration-300')}
+          style={adminTabAppearance.style}
         >
-          <Helper content="School administrators manage students, staff, points, prizes, and school settings from here.">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                School admin
-              </h2>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                Students, classes, points, prizes, and school settings.
-              </p>
-            </div>
-          </Helper>
-        </div>
+        <AdminPageIntro />
 
         <BulkRosterSetupDialog
           open={bulkRosterOpen}
@@ -1724,31 +1755,16 @@ function AdminDashboardInner() {
           />
         ) : null}
 
-        <div
-          className={cn(
-            'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-visible',
-            !adminNavSidebar && 'rounded-xl border border-border/70 bg-card shadow-sm',
-          )}
-        >
+        <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-visible">
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
             onValueChange={setActiveMainTab}
-            className={cn(
-              'flex min-h-0 min-w-0 w-full flex-1 gap-3',
-              adminNavSidebar
-                ? 'flex-col p-1.5 sm:p-2 lg:flex-row lg:items-stretch lg:gap-3'
-                : 'flex-col gap-4 p-4 md:gap-6 md:p-6',
-            )}
+            className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3 p-1.5 sm:p-2 lg:flex-row lg:items-stretch lg:gap-3"
           >
-          <div
-            className={cn(
-              'flex w-full min-w-0 flex-col gap-4',
-              adminNavSidebar && 'lg:w-60 lg:shrink-0',
-            )}
-          >
+          <div className="flex w-full min-w-0 flex-col gap-4 lg:w-60 lg:shrink-0">
             <div className="w-full min-w-0 space-y-3">
-              <div className={adminNavSidebar ? 'lg:hidden' : 'md:hidden'}>
+              <div className="lg:hidden">
                 <Label htmlFor="admin-portal-section" className="sr-only">
                   Admin portal section
                 </Label>
@@ -1789,100 +1805,22 @@ function AdminDashboardInner() {
                   </SelectContent>
                 </Select>
               </div>
-              <div
-                className={cn(
-                  'w-full min-w-0',
-                  adminNavSidebar ? 'hidden lg:block' : 'hidden md:block',
-                )}
-              >
+              <div className="hidden w-full min-w-0 lg:block">
               <AdminMainTabsList
                 activeTabValue={activeMainTab}
-                orientation={adminNavSidebar ? 'vertical' : 'horizontal'}
+                orientation="vertical"
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 endAction={
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className={cn(
-                          'inline-flex items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60',
-                          adminNavSidebar
-                            ? 'h-10 w-full shrink-0 justify-center'
-                            : 'h-full shrink-0',
-                        )}
-                        title="Add more tabs"
-                        aria-label="Add more"
-                      >
-                        <Settings className="w-4 h-4" aria-hidden />
-                        Add more
-                        <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="min-w-[240px]">
-                      <div className="px-2 py-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-                              Feature tabs
-                            </span>
-                            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                              Check to turn on and pin to your tab bar. Uncheck to turn off.
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                enableAllAddOnTabs();
-                              }}
-                              aria-label="Turn on all feature tabs"
-                              title="Turn on all"
-                            >
-                              All on
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-md border bg-background px-2 py-1 text-[10px] font-black uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                disableAllAddOnTabs();
-                              }}
-                              aria-label="Turn off all feature tabs"
-                              title="Turn off all"
-                            >
-                              All off
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                      <DropdownMenuSeparator />
-                      {addOnTabDefs.map((t) => {
-                        const Icon = t.icon;
-                        const checked = t.isOn(settings);
-                        return (
-                          <DropdownMenuCheckboxItem
-                            key={t.value}
-                            checked={checked}
-                            className="flex items-center gap-2 font-semibold"
-                            title={
-                              checked
-                                ? `${t.label} is on — uncheck to turn off`
-                                : `${t.label} is off — check to turn on`
-                            }
-                            onCheckedChange={(next) => toggleAddOnTab(t.value, !!next)}
-                          >
-                            <Icon className="h-4 w-4 opacity-75" aria-hidden />
-                            <span className="flex-1">{t.label}</span>
-                          </DropdownMenuCheckboxItem>
-                        );
-                      })}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <StaffPortalAddFeatureTabsMenu
+                    tabs={mobileMoreTabOptions.map((t) => ({
+                      value: t.value,
+                      label: t.label,
+                      icon: t.icon,
+                    }))}
+                    onAddTab={(value) => toggleAddOnTab(value, true)}
+                    align="end"
+                  />
                 }
                 onDragOver={(e) => {
                   // Allow dropping add-on tabs here to "pin" them into the main row.
@@ -1901,57 +1839,57 @@ function AdminDashboardInner() {
               >
                 {orderedMainTabs.map((t) => {
                   const Icon = t.icon;
+                  const removable = isRemovableAdminAddOnTab(t.value);
                   return (
-                    <div
+                    <StaffPortalSidebarTabRow
                       key={t.value}
-                      draggable
-                      className={cn(
-                        'flex shrink-0',
-                        adminNavSidebar ? 'w-full' : 'snap-center',
+                      value={t.value}
+                      triggerClassName={cn(
+                        adminTabTriggerClassName,
+                        adminPerTabColors && 'border-solid data-[state=inactive]:shadow-none',
                       )}
+                      triggerStyle={
+                        adminPerTabColors
+                          ? adminTabTriggerStyle(t.value, settings, activeMainTab === t.value)
+                          : undefined
+                      }
                       title={t.title ?? 'Drag to reorder'}
-                      onDragStart={(e) => {
-                        e.dataTransfer.setData('text/admin-main-tab', t.value);
-                        e.dataTransfer.effectAllowed = 'move';
-                        draggingMainTabValueRef.current = t.value;
-                      }}
-                      onDragEnd={() => {
-                        draggingMainTabValueRef.current = null;
-                      }}
-                      onDrop={() => {
-                        draggingMainTabValueRef.current = null;
-                      }}
-                      onDragOver={(e) => {
-                        const dragged = draggingMainTabValueRef.current;
-                        if (!dragged) return;
-                        e.preventDefault();
+                      removable={removable}
+                      removeLabel={`Remove ${t.label} from sidebar`}
+                      onRemove={removable ? () => unpinAdminAddOnTab(t.value) : undefined}
+                      wrapperClassName="flex w-full shrink-0"
+                      wrapperProps={{
+                        draggable: true,
+                        title: t.title ?? 'Drag to reorder',
+                        onDragStart: (e) => {
+                          e.dataTransfer.setData('text/admin-main-tab', t.value);
+                          e.dataTransfer.effectAllowed = 'move';
+                          draggingMainTabValueRef.current = t.value;
+                        },
+                        onDragEnd: () => {
+                          draggingMainTabValueRef.current = null;
+                        },
+                        onDrop: () => {
+                          draggingMainTabValueRef.current = null;
+                        },
+                        onDragOver: (e) => {
+                          const dragged = draggingMainTabValueRef.current;
+                          if (!dragged) return;
+                          e.preventDefault();
 
-                        if (!dragged || dragged === t.value) return;
+                          if (!dragged || dragged === t.value) return;
 
-                        const values = orderedMainTabs.map((x) => x.value);
-                        const from = values.indexOf(dragged);
-                        const to = values.indexOf(t.value);
-                        if (from < 0 || to < 0 || from === to) return;
+                          const values = orderedMainTabs.map((x) => x.value);
+                          const from = values.indexOf(dragged);
+                          const to = values.indexOf(t.value);
+                          if (from < 0 || to < 0 || from === to) return;
 
-                        persistMainTabOrder(moveInArray(values, from, to));
+                          persistMainTabOrder(moveInArray(values, from, to));
+                        },
                       }}
                     >
-                      <TabsTrigger
-                        value={t.value}
-                        className={cn(
-                          adminTabTriggerClassName,
-                          adminPerTabColors && 'border-solid data-[state=inactive]:shadow-none',
-                        )}
-                        style={
-                          adminPerTabColors
-                            ? adminTabTriggerStyle(t.value, settings, activeMainTab === t.value)
-                            : undefined
-                        }
-                        title={t.title}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" /> {t.label}
-                      </TabsTrigger>
-                    </div>
+                      <Icon className="w-4 h-4 shrink-0" /> {t.label}
+                    </StaffPortalSidebarTabRow>
                   );
                 })}
               </AdminMainTabsList>
@@ -1961,7 +1899,6 @@ function AdminDashboardInner() {
 
           </div>
 
-          <StaffPortalLayoutProvider sidebar={adminNavSidebar}>
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
           <div className="w-full min-w-0 flex-1">
           <TabsContent value="welcome" className={scrollingAdminTabClassName}>
@@ -2439,7 +2376,6 @@ function AdminDashboardInner() {
           </TabsContent>
           </div>
           </TabWalkthroughProvider>
-          </StaffPortalLayoutProvider>
         </Tabs>
 
         {/* Modals outside Tabs */}
@@ -3057,7 +2993,8 @@ function AdminDashboardInner() {
             </div>
           </div>
         )}
-      </div>
+        </StaffPortalShellFrame>
+      </StaffPortalLayoutProvider>
     </TooltipProvider>
   );
 }

@@ -3,9 +3,9 @@
 import type { ReactNode } from 'react';
 import { Helper } from '@/components/ui/helper';
 import type { StaffPortalRole } from '@/lib/staffPortal';
-import { staffPortalUsesSidebar } from '@/lib/staffPortal';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import { staffPortalPageIntroClassName } from '@/components/staff/staffPortalNavStyles';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
+import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { cn } from '@/lib/utils';
 
 function portalHeading(role: StaffPortalRole): string {
@@ -34,8 +34,7 @@ export function StaffPortalChrome({
   subtitle,
   endActions,
 }: StaffPortalChromeProps) {
-  const { settings } = useSettings();
-  const sidebar = staffPortalUsesSidebar(settings, role);
+  const { isWide } = useStaffPortalLayout();
 
   const defaultSubtitle =
     role === 'teacher'
@@ -61,7 +60,7 @@ export function StaffPortalChrome({
     <div
       className={cn(
         'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
-        staffPortalPageIntroClassName(sidebar),
+        staffPortalPageIntroClassName(isWide),
       )}
     >
       <Helper content={helperContent}>
@@ -73,11 +72,10 @@ export function StaffPortalChrome({
         </div>
       </Helper>
 
-      {endActions ? (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
-          {endActions}
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
+        <StaffPortalLayoutToggle />
+        {endActions ? endActions : null}
+      </div>
     </div>
   );
 }

@@ -37,7 +37,6 @@ export const INTERFACE_SECTION_NAV = [
 
 export const GENERAL_SECTION_NAV = [
     { id: 'settings-general-sessions', label: 'Sessions' },
-    { id: 'settings-general-staff-portals', label: 'Staff portals' },
     { id: 'settings-general-kiosk', label: 'Kiosk' },
     { id: 'settings-general-printing', label: 'Printing' },
     { id: 'settings-general-guidance', label: 'Guidance' },

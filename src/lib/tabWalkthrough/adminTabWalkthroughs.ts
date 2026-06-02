@@ -115,7 +115,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Review coupon inventory',
         checklist: [
-          'Open Manage Coupons to see available and redeemed codes.',
+          'Open Coupon inventory to see available and redeemed codes.',
           'Search by code or filter by category and teacher to audit a print run.',
           'Delete unused codes or purge redeemed history when cleaning up.',
         ],

@@ -1,5 +1,6 @@
 import type { Database } from './types';
 import { DEMO_STUDENT_THEMES } from './demoStudentThemes';
+import { withSampleCategoryColors } from './sampleCategoryColors';
 
 export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   name: 'School ABC',
@@ -79,7 +80,7 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
     { id: 'st9', name: 'Ms. Green', username: 'msgreen', passcode: '1234' },
     { id: 'st10', name: 'Mr. Walker', username: 'mrwalker', passcode: '1234' },
   ],
-  categories: [
+  categories: withSampleCategoryColors([
     { id: 'scat1', name: 'Academics', points: 50 },
     { id: 'scat2', name: 'Good Behavior', points: 20 },
     { id: 'scat3', name: 'Helping Others', points: 25 },
@@ -90,7 +91,7 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
     { id: 'scat8', name: 'Leadership', points: 40 },
     { id: 'scat9', name: 'Teamwork', points: 15 },
     { id: 'scat10', name: 'Problem Solving', points: 45 },
-  ],
+  ]),
   coupons: [
     { id: '123123', code: '123123', category: 'Academics', value: 10, used: false, createdAt: Date.now() - 86400000 * 20, teacher: 'Mr. Smith' },
     { id: '234567', code: '234567', category: 'Good Behavior', value: 5, used: true, usedBy: '100', usedAt: Date.now() - 86400000 * 2, createdAt: Date.now() - 86400000 * 30, teacher: 'Mrs. Jones' },

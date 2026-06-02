@@ -1,18 +1,14 @@
 'use client';
 
-import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { cn } from '@/lib/utils';
 import { TeacherPrinterInner } from '@/app/[schoolId]/teacher/TeacherPrinterInner';
 import { StaffPortalChrome } from './StaffPortalChrome';
 import { StaffPortalDocumentTitle } from './StaffPortalDocumentTitle';
-import { staffPortalUsesSidebar } from '@/lib/staffPortal';
 import { StaffPortalLayoutProvider } from './StaffPortalLayoutContext';
-import { staffPortalShellClassName } from './staffPortalNavStyles';
+import { StaffPortalShellFrame } from './StaffPortalShellFrame';
 
 type TeacherStaffPortalDashboardProps = {
   /** Admin opened teacher tools from the staff portal (`/admin?view=teacher`). */
@@ -24,14 +20,6 @@ export function TeacherStaffPortalDashboard({
 }: TeacherStaffPortalDashboardProps) {
   const router = useRouter();
   const { schoolId, userName, userId, teacherDocId, logout, loginState } = useAppContext();
-  const { settings } = useSettings();
-  const sidebar = useMemo(
-    () =>
-      adminViewingTeacherTools
-        ? staffPortalUsesSidebar(settings, 'admin')
-        : staffPortalUsesSidebar(settings, 'teacher'),
-    [adminViewingTeacherTools, settings],
-  );
 
   if (!schoolId) return null;
 
@@ -52,21 +40,19 @@ export function TeacherStaffPortalDashboard({
   return (
     <TooltipProvider>
       <StaffPortalDocumentTitle title={pageTitle} />
-      <div
-        className={staffPortalShellClassName(sidebar)}
-      >
-        <StaffPortalChrome
-          role="teacher"
-          schoolId={schoolId}
-          displayName={displayName}
-          title={adminViewingTeacherTools ? 'Teacher tools' : undefined}
-          subtitle={
-            adminViewingTeacherTools
-              ? 'Previewing what teachers see. Signed in as school admin.'
-              : undefined
-          }
-        />
-        <StaffPortalLayoutProvider sidebar={sidebar}>
+      <StaffPortalLayoutProvider>
+        <StaffPortalShellFrame>
+          <StaffPortalChrome
+            role="teacher"
+            schoolId={schoolId}
+            displayName={displayName}
+            title={adminViewingTeacherTools ? 'Teacher tools' : undefined}
+            subtitle={
+              adminViewingTeacherTools
+                ? 'Previewing what teachers see. Signed in as school admin.'
+                : undefined
+            }
+          />
           <ErrorBoundary name="TeacherStaffPortal">
             <TeacherPrinterInner
               embedded
@@ -75,8 +61,8 @@ export function TeacherStaffPortalDashboard({
               onLogout={handleLogout}
             />
           </ErrorBoundary>
-        </StaffPortalLayoutProvider>
-      </div>
+        </StaffPortalShellFrame>
+      </StaffPortalLayoutProvider>
     </TooltipProvider>
   );
 }

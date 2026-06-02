@@ -155,7 +155,13 @@ export async function verifySchoolAccessViaApi(
   }
 
   if (functions) {
-    const callableResult = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode);
+    const callableResult = await verifySchoolAccessViaCallable(
+      auth,
+      functions,
+      schoolId,
+      passcode,
+      devOptions,
+    );
     if (callableResult.ok) return callableResult;
     if (!callableResult.infrastructureFailure) {
       return { ok: false, message: callableResult.message };
@@ -166,7 +172,13 @@ export async function verifySchoolAccessViaApi(
   if (apiResult.ok) return apiResult;
 
   if (functions && canUseSchoolAccessApiFallback(apiResult.status)) {
-    const callableRetry = await verifySchoolAccessViaCallable(auth, functions, schoolId, passcode);
+    const callableRetry = await verifySchoolAccessViaCallable(
+      auth,
+      functions,
+      schoolId,
+      passcode,
+      devOptions,
+    );
     if (callableRetry.ok) return callableRetry;
     if (!callableRetry.infrastructureFailure) {
       return { ok: false, message: callableRetry.message };

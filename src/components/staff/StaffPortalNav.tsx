@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, Settings } from 'lucide-react';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { Label } from '@/components/ui/label';
 import {
@@ -11,17 +10,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import type { StaffPortalTabView } from '@/lib/staffPortal';
 import { staffPortalTabTriggerClassName } from './staffPortalNavStyles';
+import { StaffPortalAddFeatureTabsMenu } from './StaffPortalAddFeatureTabsMenu';
+import { StaffPortalSidebarTabRow } from './StaffPortalSidebarTabRow';
 
 export type StaffPortalNavProps = {
   role: 'admin' | 'teacher' | 'secretary';
@@ -29,15 +22,18 @@ export type StaffPortalNavProps = {
   onTabChange: (value: string) => void;
   mainTabs: StaffPortalTabView[];
   addMoreTabs?: StaffPortalTabView[];
-  /** Use admin sidebar layout (also reads from settings when `navLayout` omitted). */
-  navLayout?: 'top' | 'sidebar';
-  /** Optional “Add more” menu with checkboxes (admin feature pinning). */
+  /** Pin a feature tab into the sidebar (from Add more). */
+  onAddTab?: (value: string) => void;
+  /** Tab values that show a remove (×) control — pinned feature tabs only. */
+  removableTabValues?: ReadonlySet<string>;
+  onRemoveTab?: (value: string) => void;
+  /** Optional custom Add more control. */
   addMoreMenu?: React.ReactNode;
   className?: string;
 };
 
 /**
- * Unified staff portal tab navigation (same shell as admin: mobile select + AdminMainTabsList).
+ * Unified staff portal tab navigation (mobile select + vertical sidebar tabs).
  */
 export function StaffPortalNav({
   role,
@@ -45,11 +41,12 @@ export function StaffPortalNav({
   onTabChange,
   mainTabs,
   addMoreTabs = [],
-  navLayout = 'top',
+  onAddTab,
+  removableTabValues,
+  onRemoveTab,
   addMoreMenu,
   className,
 }: StaffPortalNavProps) {
-  const sidebar = navLayout === 'sidebar';
   const portalLabel =
     role === 'admin' ? 'Admin portal' : role === 'secretary' ? 'Coupon printing' : 'Teacher portal';
 
@@ -58,56 +55,32 @@ export function StaffPortalNav({
   const mobileSelectId =
     role === 'admin' ? 'admin-portal-section' : role === 'secretary' ? 'secretary-portal-section' : 'teacher-portal-section';
 
+  const handleMobileTabChange = (value: string) => {
+    if (mainTabs.some((t) => t.value === value)) {
+      onTabChange(value);
+      return;
+    }
+    const addTab = addMoreTabs.find((t) => t.value === value);
+    if (addTab && onAddTab) {
+      onAddTab(value);
+      return;
+    }
+    onTabChange(value);
+  };
+
   const addMoreDropdown =
     addMoreMenu ??
-    (addMoreTabs.length > 0 ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              'inline-flex items-center gap-2 rounded-xl border bg-muted/40 px-3 py-2 text-sm font-bold text-foreground transition-all hover:bg-muted/60',
-              sidebar ? 'h-10 w-full shrink-0 justify-center' : 'h-full shrink-0',
-            )}
-            title="Add more tabs"
-            aria-label="Add more"
-          >
-            <Settings className="w-4 h-4" aria-hidden />
-            Add more
-            <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align={sidebar ? 'start' : 'end'} className="min-w-[220px]">
-          <div className="px-2 py-2">
-            <span className="text-[10px] font-black uppercase text-muted-foreground tracking-wider">
-              Feature tabs
-            </span>
-          </div>
-          <DropdownMenuSeparator />
-          {addMoreTabs.map((t) => {
-            const Icon = t.icon;
-            return (
-              <DropdownMenuItem
-                key={t.value}
-                className="gap-2 font-semibold"
-                onSelect={() => onTabChange(t.value)}
-              >
-                <Icon className="h-4 w-4 opacity-75" aria-hidden />
-                {t.label}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    (addMoreTabs.length > 0 && onAddTab ? (
+      <StaffPortalAddFeatureTabsMenu tabs={addMoreTabs} onAddTab={onAddTab} />
     ) : null);
 
   return (
     <div className={cn('flex w-full min-w-0 flex-col gap-4', className)}>
-      <div className={cn('w-full min-w-0', sidebar ? 'lg:hidden' : 'md:hidden')}>
+      <div className="w-full min-w-0 lg:hidden">
         <Label htmlFor={mobileSelectId} className="sr-only">
           {portalLabel} section
         </Label>
-        <Select value={activeTab} onValueChange={onTabChange}>
+        <Select value={activeTab} onValueChange={handleMobileTabChange}>
           <SelectTrigger
             id={mobileSelectId}
             className="h-12 w-full rounded-xl font-bold"
@@ -123,33 +96,37 @@ export function StaffPortalNav({
             ))}
             {addMoreTabs.map((t) => (
               <SelectItem key={t.value} value={t.value}>
-                {t.label}
+                + {t.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      <div className={cn('hidden w-full min-w-0', sidebar ? 'lg:block' : 'md:block')}>
+      <div className="hidden w-full min-w-0 lg:block">
         <AdminMainTabsList
           activeTabValue={activeTab}
-          orientation={sidebar ? 'vertical' : 'horizontal'}
+          orientation="vertical"
           autoScrollActiveTab={false}
           aria-label={`${portalLabel} main tabs`}
           endAction={addMoreDropdown}
         >
           {mainTabs.map((t) => {
             const Icon = t.icon;
+            const removable = removableTabValues?.has(t.value) ?? false;
             return (
-              <TabsTrigger
+              <StaffPortalSidebarTabRow
                 key={t.value}
                 value={t.value}
-                className={staffPortalTabTriggerClassName(sidebar)}
+                triggerClassName={staffPortalTabTriggerClassName()}
                 title={t.title ?? t.label}
+                removable={removable}
+                removeLabel={`Remove ${t.label} from sidebar`}
+                onRemove={removable && onRemoveTab ? () => onRemoveTab(t.value) : undefined}
               >
                 <Icon className="w-4 h-4 shrink-0" aria-hidden />
                 {t.label}
-              </TabsTrigger>
+              </StaffPortalSidebarTabRow>
             );
           })}
         </AdminMainTabsList>

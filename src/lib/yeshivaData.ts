@@ -1,6 +1,7 @@
 import type { Database } from './types';
 import { buildBalancedDemoRoster } from './demoSampleRosterBuilder';
 import { DEMO_STUDENT_THEMES_YESHIVA_ORDER } from './demoStudentThemes';
+import { withSampleCategoryColors } from './sampleCategoryColors';
 
 const YESHIVA_CLASSES = [
   { id: 'yc1', name: 'Shiur Aleph' },
@@ -60,7 +61,7 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: 'yt9', name: 'Rabbi Weiss', username: 'rabbiweiss', passcode: '1234' },
     { id: 'yt10', name: 'Rabbi Horowitz', username: 'rabbihorowitz', passcode: '1234' },
   ],
-  categories: [
+  categories: withSampleCategoryColors([
     { id: 'ycat1', name: 'Middos Tovos', points: 100 },
     { id: 'ycat2', name: 'Shteiging', points: 50 },
     { id: 'ycat3', name: 'Gemara B\'iyun', points: 75 },
@@ -69,7 +70,7 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: 'ycat6', name: 'Chesed', points: 150 },
     { id: 'ycat7', name: 'Avos Ubanim', points: 25 },
     { id: 'ycat8', name: 'Chavrusa Learning', points: 20 },
-  ],
+  ]),
   coupons: [
     { id: '101010', code: '101010', value: 10, category: 'Tefillah', teacher: 'Rabbi Cohen', used: false, createdAt: Date.now(), description: 'For excellent concentration during morning prayers.' },
     { id: '505050', code: '505050', value: 50, category: 'Shteiging', teacher: 'Rabbi Levi', used: false, createdAt: Date.now() - 86400000, description: 'For asking a great question in shiur.' },

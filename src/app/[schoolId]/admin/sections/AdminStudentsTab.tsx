@@ -29,7 +29,6 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from "@/components/staff/StaffPortalSection";
-import { useStaffPortalLayout } from "@/components/staff/StaffPortalLayoutContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -212,7 +211,6 @@ export function AdminStudentsTab({
   const playSound = useArcadeSound();
   const { purgeStudentsProgress, deleteStudent: deleteStudentRecord } =
     useAppContext();
-  const { sidebar } = useStaffPortalLayout();
   const [bulkPurgeOpen, setBulkPurgeOpen] = useState(false);
   const [isBulkPurging, setIsBulkPurging] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
@@ -535,8 +533,7 @@ export function AdminStudentsTab({
           <AdminRecordListScroll>
             <ul
               className={cn(
-                "flex w-full min-w-0 flex-col gap-1.5",
-                sidebar && "pr-12",
+                "flex w-full min-w-0 flex-col gap-1.5 pr-12",
               )}
             >
               {filteredStudents.length === 0 ? (

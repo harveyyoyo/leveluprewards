@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment, type ReactNode } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -40,9 +40,12 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
 import {
+  staffPortalContentWidthClassName,
   staffPortalPageIntroClassName,
-  staffPortalShellClassName,
 } from '@/components/staff/staffPortalNavStyles';
+import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
+import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
 import { TeacherPortalAddMoreMenu } from '@/components/staff/TeacherPortalAddMoreMenu';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
@@ -91,8 +94,33 @@ import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
 const MAX_COUPON_PRINT_SHEETS = 100;
 const teacherPortalTabContentClassName =
     'mt-0 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1 data-[state=active]:animate-none motion-reduce:animate-none';
-function teacherPortalPanelClassName(sidebar: boolean) {
-  return cn('w-full', sidebar ? 'max-w-none' : 'mx-auto max-w-7xl');
+function teacherPortalPanelClassName(isWide: boolean) {
+  return cn('w-full', staffPortalContentWidthClassName(isWide));
+}
+
+function TeacherPortalShell({
+  embedded,
+  className,
+  children,
+}: {
+  embedded: boolean;
+  className?: string;
+  children: ReactNode;
+}) {
+  if (embedded) {
+    return (
+      <div
+        className={cn(
+          'relative z-10 mx-auto flex w-full max-w-none flex-1 min-h-0 flex-col gap-6 p-0',
+          className,
+        )}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return <StaffPortalShellFrame className={className}>{children}</StaffPortalShellFrame>;
 }
 
 
@@ -1957,6 +1985,44 @@ export function TeacherPrinterInner({
     secretaryMode?: boolean;
     embedded?: boolean;
 }) {
+    if (embedded) {
+        return (
+            <TeacherPrinterInnerBody
+                teacherName={teacherName}
+                teacherId={teacherId}
+                onLogout={onLogout}
+                secretaryMode={secretaryMode}
+                embedded
+            />
+        );
+    }
+
+    return (
+        <StaffPortalLayoutProvider>
+            <TeacherPrinterInnerBody
+                teacherName={teacherName}
+                teacherId={teacherId}
+                onLogout={onLogout}
+                secretaryMode={secretaryMode}
+                embedded={false}
+            />
+        </StaffPortalLayoutProvider>
+    );
+}
+
+function TeacherPrinterInnerBody({
+    teacherName,
+    teacherId,
+    onLogout,
+    secretaryMode = false,
+    embedded = false,
+}: {
+    teacherName: string;
+    teacherId: string;
+    onLogout: () => void;
+    secretaryMode?: boolean;
+    embedded?: boolean;
+}) {
     const { updateTeacher, deleteCategory, schoolId, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, isAdmin, isTeacher } = useAppContext();
     const confirm = useConfirm();
     const { toast } = useToast();
@@ -1973,7 +2039,7 @@ export function TeacherPrinterInner({
     const playSound = useArcadeSound();
 
     const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
-    const teacherNavSidebar = (settings.teacherNavLayout ?? 'sidebar') === 'sidebar';
+    const { isWide } = useStaffPortalLayout();
     const { mainTabs, addMoreTabs, allTabValues, defaultTab } = useStaffPortalTabs({
         role: staffPortalRole,
         settings,
@@ -2004,6 +2070,11 @@ export function TeacherPrinterInner({
         updateSettings({ teacherPinnedAddOnTabs: now.filter((v) => v !== tabValue) });
         if (activeTeacherTab === tabValue) setActiveTeacherTab(defaultTab);
     };
+
+    const teacherPinnedAddOnSet = useMemo(
+        () => new Set(settings.teacherPinnedAddOnTabs || []),
+        [settings.teacherPinnedAddOnTabs],
+    );
 
     const resolvedTeacherTab = useMemo(() => {
         if (secretaryMode) return 'coupons';
@@ -2152,14 +2223,9 @@ export function TeacherPrinterInner({
                     </>
                 )}
 
-                <div
-                    className={cn(
-                        'mx-auto flex w-full flex-1 min-h-0 flex-col gap-6 relative z-10',
-                        embedded
-                            ? 'max-w-none p-0'
-                            : staffPortalShellClassName(teacherNavSidebar),
-                        settings.displayMode === 'app' && !embedded && 'pb-24',
-                    )}
+                <TeacherPortalShell
+                    embedded={embedded}
+                    className={cn('relative z-10', settings.displayMode === 'app' && !embedded && 'pb-24')}
                 >
                     {pendingTeacherAwardCount > 0 && !secretaryMode ? (
                         <div
@@ -2174,7 +2240,7 @@ export function TeacherPrinterInner({
                     <div
                       className={cn(
                         'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
-                        !embedded && staffPortalPageIntroClassName(teacherNavSidebar),
+                        staffPortalPageIntroClassName(isWide),
                       )}
                     >
                         <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
@@ -2203,6 +2269,7 @@ export function TeacherPrinterInner({
                             </div>
                         </Helper>
                         <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end items-center">
+                            <StaffPortalLayoutToggle />
                             {secretaryMode && (
                                 <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
                                     <LogOut className="w-4 h-4" />
@@ -2224,10 +2291,7 @@ export function TeacherPrinterInner({
                             onValueChange={(v) => {
                                 if (!secretaryMode) setActiveTeacherTab(v);
                             }}
-                            className={cn(
-                                'flex min-h-0 w-full flex-1 gap-6',
-                                teacherNavSidebar ? 'flex-col lg:flex-row lg:items-start' : 'flex-col',
-                            )}
+                            className="flex min-h-0 w-full flex-1 flex-col gap-6 lg:flex-row lg:items-start"
                         >
                         {!secretaryMode ? (
                             <StaffPortalNav
@@ -2236,26 +2300,27 @@ export function TeacherPrinterInner({
                                 onTabChange={setActiveTeacherTab}
                                 mainTabs={mainTabs}
                                 addMoreTabs={addMoreTabs}
-                                navLayout={teacherNavSidebar ? 'sidebar' : 'top'}
-                                className={teacherNavSidebar ? 'lg:w-60 lg:shrink-0' : undefined}
+                                onAddTab={(value) => toggleTeacherPinnedAddOn(value, true)}
+                                removableTabValues={teacherPinnedAddOnSet}
+                                onRemoveTab={(value) => toggleTeacherPinnedAddOn(value, false)}
+                                className="lg:w-60 lg:shrink-0"
                                 addMoreMenu={
                                     <TeacherPortalAddMoreMenu
-                                        settings={settings}
-                                        navSidebar={teacherNavSidebar}
-                                        onTogglePinnedTab={toggleTeacherPinnedAddOn}
+                                        tabs={addMoreTabs}
+                                        onAddTab={(value) => toggleTeacherPinnedAddOn(value, true)}
                                     />
                                 }
                             />
                         ) : null}
 
-                            <div className={cn('min-h-0 w-full flex-1', teacherNavSidebar && 'min-w-0')}>
+                            <div className="min-h-0 min-w-0 w-full flex-1">
                             <TabWalkthroughProvider
                                 scope="teacher"
                                 tabId={resolvedTeacherTab}
                             >
                             {teacherTabEnabled('welcome') && !secretaryMode && (
                             <TeacherPortalTabPane tabId="welcome" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <StaffPortalWelcomeTab
                                     role="teacher"
                                     settings={settings}
@@ -2268,7 +2333,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('coupons') && (
                             <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <CategoryModal
                                     isOpen={isCategoryModalOpen}
                                     setIsOpen={setIsCategoryModalOpen}
@@ -2288,7 +2353,7 @@ export function TeacherPrinterInner({
                                     issuerDisplayName={teacherName}
                                     isGraphic={isGraphic}
                                     printAccentColor={teacherAccent}
-                                    className={teacherPortalPanelClassName(teacherNavSidebar)}
+                                    className={teacherPortalPanelClassName(isWide)}
                                     onAddCategory={!secretaryMode ? () => handleOpenCategoryModal(null) : undefined}
                                     onEditCategory={!secretaryMode ? (c) => handleOpenCategoryModal(c) : undefined}
                                     onDeleteCategory={
@@ -2363,7 +2428,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('classroom') && (
                             <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <StaffClassroomTab
                                     variant="teacher"
                                     schoolId={schoolId!}
@@ -2374,7 +2439,7 @@ export function TeacherPrinterInner({
                                     schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
                                     isGraphic={isGraphic}
                                     manualAccentColor={teacherAccent}
-                                    className={teacherPortalPanelClassName(teacherNavSidebar)}
+                                    className={teacherPortalPanelClassName(isWide)}
                                     manualBudgetOptions={
                                         isAdmin
                                             ? undefined
@@ -2401,7 +2466,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('generated-coupons') && (
                             <TeacherPortalTabPane tabId="generated-coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <MyCoupons
                                         schoolId={schoolId!}
                                         teacherId={teacherId}
@@ -2414,7 +2479,7 @@ export function TeacherPrinterInner({
 
 
                             <TeacherPortalTabPane tabId="roster" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherRosterTab
                                         teacherId={teacherId}
                                         allStudents={students || []}
@@ -2426,7 +2491,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="classes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherClassesTab
                                         teacherId={teacherId}
                                         classes={classes || []}
@@ -2437,7 +2502,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('attendance') && (
                             <TeacherPortalTabPane tabId="attendance" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
                                     <p className="text-sm text-muted-foreground max-w-prose">
                                         New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
@@ -2481,7 +2546,7 @@ export function TeacherPrinterInner({
                             )}
 
                             <TeacherPortalTabPane tabId="prizes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <div className="grid grid-cols-1 gap-8">
                                     <div className="w-full">
                                         <TeacherPrizeManager schoolId={schoolId!} teacherId={teacherId} teachers={teachers} />
@@ -2491,7 +2556,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="redemptions" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
                                 </div>
@@ -2499,7 +2564,7 @@ export function TeacherPrinterInner({
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="reports" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <div className="w-full">
                                         <SchoolReportsPanel
                                             scope="teacher"
@@ -2520,7 +2585,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('raffle') && (
                                 <TeacherPortalTabPane tabId="raffle" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                    <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                    <div className={teacherPortalPanelClassName(isWide)}>
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
@@ -2533,7 +2598,7 @@ export function TeacherPrinterInner({
 
                                 {teacherTabEnabled('goals') && (
                                     <TeacherPortalTabPane tabId="goals" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                        <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                        <div className={teacherPortalPanelClassName(isWide)}>
                                             <GoalsManager
                                                 schoolId={schoolId!}
                                                 variant="teacher"
@@ -2551,7 +2616,7 @@ export function TeacherPrinterInner({
 
                             {teacherTabEnabled('homework') && (
                                 <TeacherPortalTabPane tabId="homework" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(teacherNavSidebar)}>
+                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
                                 </div>
                             </TeacherPortalTabPane>
@@ -2561,8 +2626,7 @@ export function TeacherPrinterInner({
                             </div>
                         </Tabs>
                     </div>
-                </div>
-
+                </TeacherPortalShell>
             </div>
         </TooltipProvider>
     );

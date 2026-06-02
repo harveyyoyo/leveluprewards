@@ -19,7 +19,6 @@ import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
 import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
-import { staffPortalUsesSidebarForLogin } from '@/lib/staffPortal';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
@@ -165,23 +164,16 @@ function LayoutClientWrapperInner({
       !hideAppChrome &&
       !suppressGlobalHeaderForSignedInStudent &&
       !suppressGlobalHeaderOnStudentHome;
-    /** Hide header (staff top tabs only): slides up until the pointer reaches the top edge. */
-    const staffNavSidebar = staffPortalUsesSidebarForLogin(settings, loginState);
-    const useStaffHoverHeader =
-      hideHeaderEnabled &&
-      isStaffPortalRoute &&
-      canShowGlobalHeader &&
-      !staffNavSidebar;
-    /** Side tabs: tuck the global header while scrolling; show again at scroll top. */
+    /** Hide header on staff portal pages: tuck while scrolling; show again at scroll top. */
     const useStaffSidebarScrollHeader =
-      isStaffPortalRoute && canShowGlobalHeader && staffNavSidebar;
+      hideHeaderEnabled && isStaffPortalRoute && canShowGlobalHeader;
     /** Pre-sign-in student kiosk: same top-edge reveal behavior. */
     const useKioskHoverHeader =
       isStudentKioskPage &&
       !isStudentHomePage &&
       !(isStudentKioskRoute && kioskSignedIn) &&
       canShowGlobalHeader;
-    const useHoverGlobalHeader = useStaffHoverHeader || useKioskHoverHeader;
+    const useHoverGlobalHeader = useKioskHoverHeader;
     const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useHoverGlobalHeader);
     const sidebarScrollHeaderVisible = useScrollTopRevealChrome(useStaffSidebarScrollHeader);
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */

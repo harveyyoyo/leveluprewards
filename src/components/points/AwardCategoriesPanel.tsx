@@ -64,7 +64,7 @@ export function AwardCategoriesPanel({
             }
           >
             <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight sm:text-2xl">
-              <Tag className="w-5 h-5 shrink-0 text-destructive" /> Award Categories
+              <Tag className="w-5 h-5 shrink-0 text-destructive" /> Categories
             </CardTitle>
           </Helper>
         </div>

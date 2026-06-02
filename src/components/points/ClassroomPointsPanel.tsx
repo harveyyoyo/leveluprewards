@@ -140,7 +140,7 @@ type ClassroomPointsPanelProps = {
   schoolId: string;
   students: Student[];
   classes: Class[];
-  /** School award categories (same list as Points → Award Categories). */
+  /** School point categories (same list as Points → Categories). */
   categories?: Category[];
   storageScope: string;
   /** Embedded in Points tab vs dedicated fullscreen tab. */
