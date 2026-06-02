@@ -5,30 +5,28 @@ import {
 } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import {
-  verifySchoolAccessServer,
-  VerifySchoolAccessError,
-} from '@/lib/server/verifySchoolAccess';
+  verifyAdminPasscodeServer,
+  VerifyAdminPasscodeError,
+} from '@/lib/server/verifyAdminPasscode';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
 
-async function getDb() {
-  return getFirebaseAdminFirestore();
-}
-
-/** POST: verify school access passcode and grant anonymous portal session. */
+/** POST: verify admin passcode and grant admin role doc. */
 export async function POST(req: NextRequest) {
   try {
     if (!sameOrigin(req)) return jsonError(403, 'Forbidden');
-    if (!rateLimit(`verify-school-access:${clientIp(req)}`, 30)) {
+    if (!rateLimit(`verify-admin-passcode:${clientIp(req)}`, 30)) {
       return jsonError(429, 'Too many requests');
     }
 
     const contentLength = Number(req.headers.get('content-length') || 0);
     if (contentLength > MAX_BODY_BYTES) return jsonError(413, 'Body too large');
 
+    const authHeader = req.headers.get('authorization') || '';
+    const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
     const body = await req.json();
-    const idToken = typeof body?.idToken === 'string' ? body.idToken : '';
+    const idToken = bearer || (typeof body?.idToken === 'string' ? body.idToken : '');
     const schoolId =
       typeof body?.schoolId === 'string' ? body.schoolId.trim().toLowerCase() : '';
     const passcode = typeof body?.passcode === 'string' ? body.passcode : '';
@@ -39,9 +37,9 @@ export async function POST(req: NextRequest) {
 
     const auth = await getFirebaseAdminAuth();
     const decoded = await auth.verifyIdToken(idToken, true);
-    const db = await getDb();
+    const db = await getFirebaseAdminFirestore();
 
-    await verifySchoolAccessServer(db, {
+    await verifyAdminPasscodeServer(db, {
       uid: decoded.uid,
       email: String(decoded.email ?? ''),
       firebase: decoded.firebase as Record<string, unknown> | undefined,
@@ -51,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (e) {
-    if (e instanceof VerifySchoolAccessError) {
+    if (e instanceof VerifyAdminPasscodeError) {
       const status =
         e.code === 'not-found'
           ? 404
@@ -62,7 +60,7 @@ export async function POST(req: NextRequest) {
               : 400;
       return jsonError(status, e.message);
     }
-    console.error('[api/auth/verify-school-access] POST failed:', e);
-    return jsonError(503, 'Could not verify school access. Check Firebase Admin credentials.');
+    console.error('[api/auth/verify-admin-passcode] POST failed:', e);
+    return jsonError(503, 'Could not verify admin passcode. Check Firebase Admin credentials.');
   }
 }

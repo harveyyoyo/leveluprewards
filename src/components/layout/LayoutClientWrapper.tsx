@@ -17,6 +17,7 @@ import { isKioskPortraitDisplay } from '@/lib/kioskPortraitLayout';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
+import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
 import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
 import { staffPortalUsesSidebarForLogin } from '@/lib/staffPortal';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
@@ -41,6 +42,46 @@ const StaffAiHelpButton = dynamic(
 );
 
 const SERVICE_WORKER_PAGE_CACHE = 'levelup-offline-v1-pages';
+
+function schoolGateScopesForLoginState(loginState: string): Set<string> {
+    const scopes = new Set<string>();
+    switch (loginState) {
+        case 'developer':
+            scopes.add('dev');
+            break;
+        case 'school':
+            scopes.add('portal');
+            break;
+        case 'student':
+            scopes.add('kiosk');
+            break;
+        case 'admin':
+            scopes.add('admin');
+            break;
+        case 'teacher':
+            scopes.add('teacher');
+            break;
+        case 'secretary':
+            scopes.add('secretary');
+            break;
+        case 'prizeClerk':
+            scopes.add('prizeClerk');
+            break;
+        case 'reports':
+            scopes.add('reports');
+            break;
+        case 'librarian':
+            scopes.add('librarian');
+            break;
+        case 'office':
+            scopes.add('office');
+            break;
+        case 'houseCoordinator':
+            scopes.add('houseCoordinator');
+            break;
+    }
+    return scopes;
+}
 
 interface LayoutClientWrapperProps {
     children: React.ReactNode;
@@ -143,7 +184,6 @@ function LayoutClientWrapperInner({
     const useHoverGlobalHeader = useStaffHoverHeader || useKioskHoverHeader;
     const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useHoverGlobalHeader);
     const sidebarScrollHeaderVisible = useScrollTopRevealChrome(useStaffSidebarScrollHeader);
-    const shouldRenderGlobalHeader = canShowGlobalHeader;
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
     const isStaffPortalShellRoot =
       typeof pathname === 'string' &&
@@ -169,10 +209,25 @@ function LayoutClientWrapperInner({
     const schoolPathMatch =
       typeof pathname === 'string'
         ? pathname.match(
-            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen)(?:\/|$)/i,
+            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|office)(?:\/|$)/i,
           )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];
+    const routeSchoolIdLower = routeSchoolId?.trim().toLowerCase() || '';
+    const contextSchoolIdLower = contextSchoolId?.trim().toLowerCase() || '';
+    const schoolScopedChromePending = Boolean(
+      routeSchoolIdLower &&
+      (!isInitialized ||
+        loginState === 'loggedOut' ||
+        (loginState !== 'developer' && contextSchoolIdLower !== routeSchoolIdLower) ||
+        (loginState !== 'developer' &&
+          !schoolPathAllowedByGate(
+            pathname,
+            routeSchoolIdLower,
+            schoolGateScopesForLoginState(loginState),
+          ))),
+    );
+    const shouldRenderGlobalHeader = canShowGlobalHeader && !schoolScopedChromePending;
 
     const dockSchoolId = contextSchoolId ?? routeSchoolId ?? null;
     const showPortalBottomDockPadding =

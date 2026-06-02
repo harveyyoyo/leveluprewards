@@ -33,6 +33,7 @@ import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
 import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
+import { verifyAdminPasscodeLogin } from '@/lib/adminPasscodeLogin';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState =
@@ -974,11 +975,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         const startSupportSession = httpsCallable(functions, 'startDeveloperSupportSession');
                         await startSupportSession({ schoolId: lowerSchoolId });
                     } else {
-                        const verify = httpsCallable(functions, 'verifySchoolPasscode');
-                        await verify({
+                        const verifyResult = await verifyAdminPasscodeLogin(auth, functions, {
                             schoolId: lowerSchoolId,
                             passcode: passcodeTrimmed,
                         });
+                        if (!verifyResult.ok) {
+                            return loginErr(verifyResult.message);
+                        }
                     }
 
                     // 2. Poll the server to confirm the admin role is readable
@@ -988,7 +991,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
 
                     if (!roleData) {
-                        throw new Error("Could not confirm admin role after login. Your permissions might be out of sync. Please try again.");
+                        console.warn('Admin role was granted by the server but was not immediately readable.');
                     }
 
                     // 3. Only now set the client state
@@ -1111,7 +1114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
 
                     if (!roleData) {
-                        throw new Error('Could not confirm desk staff role after login.');
+                        console.warn('Desk staff role was granted by the server but was not immediately readable.');
                     }
 
                     setSchoolId(lowerSchoolId);

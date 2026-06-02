@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import {
+  getFirebaseAdminAuth,
+  getFirebaseAdminFirestore,
+} from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import {
   isStaffLoginRole,
@@ -11,9 +14,7 @@ const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
 
 async function getDb() {
-  await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  return admin.firestore();
+  return getFirebaseAdminFirestore();
 }
 
 /** POST: verify desk staff passcode and grant role docs (librarian, office, etc.). */

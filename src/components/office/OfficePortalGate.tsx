@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isOfficePillarOn } from '@/lib/productPillars';
+import { isOfficePillarOn, type PillarSettings } from '@/lib/productPillars';
 import type { OfficeBillingAccount, OfficeGradeEntry, OfficeInvoice } from '@/lib/office/types';
 import { OfficePortalShell } from '@/components/office/OfficePortalShell';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -22,6 +22,7 @@ import {
   hasVerifiedOfficeFirestoreAccess,
 } from '@/lib/office/officeAccess';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
+import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
 type OfficePortalData = {
   gradeEntries: OfficeGradeEntry[];
@@ -66,6 +67,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPasscode, setShowPasscode] = useState(false);
+  const [signInMode, setSignInMode] = useState<'office' | 'admin'>('admin');
 
   useEffect(() => {
     if (!usernameStorageKey || typeof window === 'undefined') return;
@@ -75,17 +77,32 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
 
   const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
+  const routeSchoolPublicRef = useMemoFirebase(
+    () => (firestore && routeSchoolId ? schoolPublicDocRef(firestore, routeSchoolId) : null),
+    [firestore, routeSchoolId],
+  );
+  const { data: routeSchoolPublic } = useDoc<{
+    name?: string;
+    appSettings?: PillarSettings;
+  }>(routeSchoolPublicRef);
 
-  const pillarOn = isOfficePillarOn(settings);
+  const pillarOn = isOfficePillarOn(routeSchoolPublic?.appSettings ?? settings);
   const handoffPending =
     searchParams?.get('officeHandoff') === '1' &&
     Boolean(searchParams?.get('meta')?.trim() && searchParams?.get('ct')?.trim());
-  const roleVerified = hasVerifiedOfficeFirestoreAccess({
-    loginState,
-    isAdmin,
-    isOffice,
-    schoolId: routeSchoolId || sessionSchoolId,
-  });
+  const sessionMatchesRoute = !!(
+    routeSchoolId &&
+    sessionSchoolId?.trim().toLowerCase() === routeSchoolId
+  );
+  const roleVerified =
+    (loginState === 'developer' && isAdmin) ||
+    (sessionMatchesRoute &&
+      hasVerifiedOfficeFirestoreAccess({
+        loginState,
+        isAdmin,
+        isOffice,
+        schoolId: routeSchoolId,
+      }));
   const wantsOfficePortal = hasOfficePortalLoginIntent(loginState);
   const canAccess = pillarOn && roleVerified && !handoffPending;
   const canLoadOfficeData = canAccess && !!firestore && !!routeSchoolId;
@@ -147,14 +164,22 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
     if (isSubmitting || !routeSchoolId) return;
     setIsSubmitting(true);
     try {
-      const authResult = await login('office', {
-        schoolId: routeSchoolId,
-        username: username.trim(),
-        passcode,
-      });
+      const cleanUsername = username.trim();
+      const cleanPasscode = passcode.trim();
+      const authResult =
+        signInMode === 'admin'
+          ? await login('admin', {
+              schoolId: routeSchoolId,
+              passcode: cleanPasscode,
+            })
+          : await login('office', {
+              schoolId: routeSchoolId,
+              username: cleanUsername,
+              passcode: cleanPasscode,
+            });
       if (authResult.ok) {
-        if (usernameStorageKey && typeof window !== 'undefined') {
-          sessionStorage.setItem(usernameStorageKey, username.trim());
+        if (signInMode === 'office' && usernameStorageKey && typeof window !== 'undefined') {
+          sessionStorage.setItem(usernameStorageKey, cleanUsername);
         }
         playSound('login');
         toast({ title: 'Signed in to School Office' });
@@ -225,16 +250,37 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="office-username">Username</Label>
-              <Input
-                id="office-username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                className="rounded-xl"
-              />
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-900">
+              <Button
+                type="button"
+                variant={signInMode === 'admin' ? 'default' : 'ghost'}
+                className="h-9 rounded-lg text-xs"
+                onClick={() => setSignInMode('admin')}
+              >
+                Admin
+              </Button>
+              <Button
+                type="button"
+                variant={signInMode === 'office' ? 'default' : 'ghost'}
+                className="h-9 rounded-lg text-xs"
+                onClick={() => setSignInMode('office')}
+              >
+                Office staff
+              </Button>
             </div>
+            {signInMode === 'office' ? (
+              <div className="space-y-2">
+                <Label htmlFor="office-username">Username</Label>
+                <Input
+                  id="office-username"
+                  placeholder="office"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="off"
+                  className="rounded-xl"
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="office-passcode">Passcode</Label>
               <div className="relative">
@@ -264,7 +310,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
             <Button
               className="w-full rounded-xl gap-2"
               onClick={() => void handleLogin()}
-              disabled={isSubmitting || !username.trim() || !passcode}
+              disabled={isSubmitting || !passcode.trim() || (signInMode === 'office' && !username.trim())}
             >
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
               Sign in
@@ -293,7 +339,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const displaySchool = schoolMeta?.name?.trim() || routeSchoolId;
+  const displaySchool = schoolMeta?.name?.trim() || routeSchoolPublic?.name?.trim() || routeSchoolId;
 
   return (
     <OfficePortalDataContext.Provider value={portalData}>

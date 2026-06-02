@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { parse as parseDotenv } from 'dotenv';
+import type { App } from 'firebase-admin/app';
 import type { Auth } from 'firebase-admin/auth';
+import type { Firestore } from 'firebase-admin/firestore';
 import type { ServiceAccount } from 'firebase-admin/app';
 import { firebaseConfig } from '@/firebase/config';
 
@@ -41,24 +44,42 @@ export function normalizeServiceAccountForAdmin(
 const HOSTING_SERVICE_ACCOUNT_ENV = 'SSR_SERVICE_ACCOUNT_JSON';
 /** Local dev / scripts (`.env.local`, backup scripts). */
 const LOCAL_SERVICE_ACCOUNT_ENV = 'FIREBASE_SERVICE_ACCOUNT_KEY';
+const ADMIN_APP_NAME = 'levelup-admin';
 
-function serviceAccountRawFromEnv(): string | null {
+function serviceAccountRawCandidates(): string[] {
+  const candidates: string[] = [];
   for (const key of [HOSTING_SERVICE_ACCOUNT_ENV, LOCAL_SERVICE_ACCOUNT_ENV]) {
     const raw = process.env[key]?.trim();
-    if (raw) return raw;
+    if (raw) candidates.push(raw);
   }
-  return null;
+
+  for (const fileName of ['.env.local', '.env']) {
+    const filePath = join(process.cwd(), fileName);
+    if (!existsSync(filePath)) continue;
+    try {
+      const parsed = parseDotenv(readFileSync(filePath));
+      for (const key of [HOSTING_SERVICE_ACCOUNT_ENV, LOCAL_SERVICE_ACCOUNT_ENV]) {
+        const raw = parsed[key]?.trim();
+        if (raw) candidates.push(raw);
+      }
+    } catch {
+      // Ignore malformed local env files here; callers surface Admin credential errors.
+    }
+  }
+
+  return candidates;
 }
 
 /** Supports service account JSON from env (see HOSTING / LOCAL env names above). */
 function serviceAccountFromEnv(): ServiceAccount | null {
-  const raw = serviceAccountRawFromEnv();
-  if (!raw) return null;
-  try {
-    return normalizeServiceAccountForAdmin(JSON.parse(raw) as ServiceAccount);
-  } catch {
-    return null;
+  for (const raw of serviceAccountRawCandidates()) {
+    try {
+      return normalizeServiceAccountForAdmin(JSON.parse(raw) as ServiceAccount);
+    } catch {
+      // Try the next source; local dev can inherit malformed env while .env.local is valid.
+    }
   }
+  return null;
 }
 
 /** Optional local dev file (gitignored as `serviceAccountKey.json`). */
@@ -109,14 +130,10 @@ export function hasFirebaseAdminCredentials(): boolean {
  * Lazily initializes firebase-admin for Auth operations (session cookies).
  * Mirrors the lightweight init used elsewhere in this repo (project id + ADC when available).
  */
-export async function getFirebaseAdminAuth(): Promise<Auth> {
-  const [{ applicationDefault, cert, getApp, initializeApp }, { getAuth }] = await Promise.all([
-    import('firebase-admin/app'),
-    import('firebase-admin/auth'),
-  ]);
-
+export async function getFirebaseAdminApp(): Promise<App> {
+  const { applicationDefault, cert, getApp, initializeApp } = await import('firebase-admin/app');
   try {
-    getApp();
+    return getApp(ADMIN_APP_NAME);
   } catch {
     const projectId = resolveAdminProjectId();
     const serviceAccount = resolveServiceAccount();
@@ -124,36 +141,61 @@ export async function getFirebaseAdminAuth(): Promise<Auth> {
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (serviceAccount) {
-      initializeApp({
-        credential: cert(serviceAccount),
-        projectId: projectId || serviceAccount.projectId,
-      });
+      return initializeApp(
+        {
+          credential: cert(serviceAccount),
+          projectId: projectId || serviceAccount.projectId,
+        },
+        ADMIN_APP_NAME,
+      );
     } else if (clientEmail && privateKey && projectId) {
-      initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
+      return initializeApp(
+        {
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+        },
+        ADMIN_APP_NAME,
+      );
     } else if (process.env.FIREBASE_CONFIG) {
       // Managed Firebase runtimes inject FIREBASE_CONFIG for Admin SDK auto-init.
-      initializeApp();
+      return initializeApp(undefined, ADMIN_APP_NAME);
     } else {
       try {
-        initializeApp({
-          credential: applicationDefault(),
-          projectId,
-        });
+        return initializeApp(
+          {
+            credential: applicationDefault(),
+            projectId,
+          },
+          ADMIN_APP_NAME,
+        );
       } catch {
         if (projectId) {
-          initializeApp({ projectId });
+          return initializeApp({ projectId }, ADMIN_APP_NAME);
         } else {
           throw new Error('Firebase Admin: missing project id for session cookies.');
         }
       }
     }
   }
+}
 
-  return getAuth();
+export async function getFirebaseAdminAuth(): Promise<Auth> {
+  const [{ getAuth }, app] = await Promise.all([
+    import('firebase-admin/auth'),
+    getFirebaseAdminApp(),
+  ]);
+
+  return getAuth(app);
+}
+
+export async function getFirebaseAdminFirestore(): Promise<Firestore> {
+  const [{ getFirestore }, app] = await Promise.all([
+    import('firebase-admin/firestore'),
+    getFirebaseAdminApp(),
+  ]);
+
+  return getFirestore(app);
 }

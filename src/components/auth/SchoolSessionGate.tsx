@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
+import { Suspense, useCallback, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -70,7 +70,12 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
   if (section === 'librarian') return loginState === 'librarian' || loginState === 'admin';
-  if (section === 'office') return loginState === 'office' || loginState === 'admin';
+  if (section === 'office') {
+    if (pathname === `/${routeSchoolId}/office`) {
+      return loginState === 'school' || loginState === 'office' || loginState === 'admin';
+    }
+    return loginState === 'office' || loginState === 'admin';
+  }
   if (section === 'library' || section === 'parent') return true;
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
@@ -128,6 +133,13 @@ function SchoolSessionGateBody({
   const pathname = usePathname();
   const route = routeSchoolId.trim().toLowerCase();
 
+  const schoolLoginHref = useCallback((options?: { changeSchool?: boolean }) => {
+    const params = new URLSearchParams({ school: route });
+    if (options?.changeSchool) params.set('changeSchool', '1');
+    if (pathname.startsWith(`/${route}/`)) params.set('next', pathname);
+    return `/login?${params.toString()}`;
+  }, [pathname, route]);
+
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
 
@@ -136,7 +148,7 @@ function SchoolSessionGateBody({
         void login('student', { schoolId: route });
         return;
       }
-      router.replace(`/login?school=${encodeURIComponent(route)}`);
+      router.replace(schoolLoginHref());
       return;
     }
 
@@ -145,12 +157,12 @@ function SchoolSessionGateBody({
     const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
     if (!sessionSchool || sessionSchool !== route) {
       if (loginState === 'school' && sessionSchool && sessionSchool !== route) {
-        router.replace(`/login?school=${encodeURIComponent(route)}&changeSchool=1`);
+        router.replace(schoolLoginHref({ changeSchool: true }));
         return;
       }
       // Student / school chooser sessions may restore schoolId shortly after navigation.
       if (loginState !== 'student' && loginState !== 'school') {
-        router.replace(`/login?school=${encodeURIComponent(route)}`);
+        router.replace(schoolLoginHref());
       }
       return;
     }
@@ -159,12 +171,12 @@ function SchoolSessionGateBody({
       const fallback =
         loginState === 'teacher'
           ? `/${route}/admin`
-          : `/login?school=${encodeURIComponent(route)}`;
+          : schoolLoginHref();
       if (pathname !== fallback) {
         router.replace(fallback);
       }
     }
-  }, [isInitialized, isStaffSignInLink, isUserLoading, login, loginState, schoolId, route, router, pathname]);
+  }, [isInitialized, isStaffSignInLink, isUserLoading, login, loginState, schoolId, route, router, pathname, schoolLoginHref]);
 
   if (!isInitialized || isUserLoading) {
     return (
