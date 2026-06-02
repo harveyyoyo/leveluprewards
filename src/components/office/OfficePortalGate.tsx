@@ -21,6 +21,8 @@ import {
   hasOfficePortalLoginIntent,
   hasVerifiedOfficeFirestoreAccess,
 } from '@/lib/office/officeAccess';
+import { schoolStaffPortalHref } from '@/lib/auth/schoolLoginRedirect';
+import { isOfficeHostname } from '@/lib/officeRouting';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 
@@ -153,11 +155,15 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
     if (!isInitialized || !routeSchoolId) return;
     if (loginState === 'developer') return;
     if (loginState === 'office' || loginState === 'admin') return;
-    if (loginState === 'teacher') router.replace(`/${routeSchoolId}/teacher`);
-    else if (loginState === 'secretary') router.replace(`/${routeSchoolId}/secretary`);
-    else if (loginState === 'prizeClerk') router.replace(`/${routeSchoolId}/admin`);
-    else if (loginState === 'reports') router.replace(`/${routeSchoolId}/reports`);
-    else if (loginState === 'librarian') router.replace(`/${routeSchoolId}/librarian`);
+    const staffDest = (section: string) =>
+      typeof window !== 'undefined' && isOfficeHostname(window.location.host)
+        ? schoolStaffPortalHref(routeSchoolId, section)
+        : `/${routeSchoolId}/${section}`;
+    if (loginState === 'teacher') router.replace(staffDest('teacher'));
+    else if (loginState === 'secretary') router.replace(staffDest('secretary'));
+    else if (loginState === 'prizeClerk') router.replace(staffDest('admin'));
+    else if (loginState === 'reports') router.replace(staffDest('reports'));
+    else if (loginState === 'librarian') router.replace(staffDest('librarian'));
   }, [isInitialized, loginState, routeSchoolId, router]);
 
   const handleLogin = async () => {
@@ -347,7 +353,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
         schoolId={routeSchoolId}
         schoolName={displaySchool}
         userName={userName}
-        onLogout={logout}
+        onLogout={() => logout({ staffNavigateTo: 'office' })}
       >
         {children}
       </OfficePortalShell>

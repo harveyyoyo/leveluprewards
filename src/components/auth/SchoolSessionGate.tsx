@@ -4,7 +4,12 @@ import { Suspense, useCallback, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
+import {
+  schoolLoginRedirectHref,
+  schoolStaffPortalHref,
+} from '@/lib/auth/schoolLoginRedirect';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
+import { isOfficeHostname, isOfficeSchoolScopedPath } from '@/lib/officeRouting';
 
 const ALLOWED = new Set([
   'school',
@@ -76,6 +81,22 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     }
     return loginState === 'office' || loginState === 'admin';
   }
+  if (
+    typeof window !== 'undefined' &&
+    isOfficeHostname(window.location.host) &&
+    isOfficeSchoolScopedPath(pathname) &&
+    (pathname === `/${routeSchoolId}` || pathname === `/${routeSchoolId}/`)
+  ) {
+    return loginState === 'school' || loginState === 'office' || loginState === 'admin';
+  }
+  if (
+    typeof window !== 'undefined' &&
+    isOfficeHostname(window.location.host) &&
+    isOfficeSchoolScopedPath(pathname) &&
+    pathname.startsWith(`/${routeSchoolId}/`)
+  ) {
+    return loginState === 'office' || loginState === 'admin';
+  }
   if (section === 'library' || section === 'parent') return true;
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
@@ -133,12 +154,11 @@ function SchoolSessionGateBody({
   const pathname = usePathname();
   const route = routeSchoolId.trim().toLowerCase();
 
-  const schoolLoginHref = useCallback((options?: { changeSchool?: boolean }) => {
-    const params = new URLSearchParams({ school: route });
-    if (options?.changeSchool) params.set('changeSchool', '1');
-    if (pathname.startsWith(`/${route}/`)) params.set('next', pathname);
-    return `/login?${params.toString()}`;
-  }, [pathname, route]);
+  const schoolLoginHref = useCallback(
+    (options?: { changeSchool?: boolean }) =>
+      schoolLoginRedirectHref(route, { pathname, changeSchool: options?.changeSchool }),
+    [pathname, route],
+  );
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
@@ -170,7 +190,7 @@ function SchoolSessionGateBody({
     if (!canUseRoute(pathname, route, loginState)) {
       const fallback =
         loginState === 'teacher'
-          ? `/${route}/admin`
+          ? schoolStaffPortalHref(route, 'admin')
           : schoolLoginHref();
       if (pathname !== fallback) {
         router.replace(fallback);
