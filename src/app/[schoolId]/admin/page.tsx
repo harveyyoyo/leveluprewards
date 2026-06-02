@@ -106,6 +106,7 @@ import {
 import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs, staffPortalPinWelcomeFirst } from '@/lib/staffPortal';
 import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
+import { prizeIsListed } from '@/lib/prizes/prizeUtils';
 import { StaffPortalDocumentTitle } from '@/components/staff/StaffPortalDocumentTitle';
 import { AchievementModal } from '@/components/badges/AchievementModal';
 import { BadgeModal } from '@/components/badges/BadgeModal';
@@ -747,6 +748,16 @@ function AdminDashboardInner() {
   const visibleAddOnTabs = useMemo(() => {
     return addOnTabDefs.filter((t) => t.isOn(settings));
   }, [addOnTabDefs, settings]);
+
+  const adminWelcomeStats = useMemo(
+    () => ({
+      studentCount: students?.length ?? 0,
+      classCount: classes?.length ?? 0,
+      staffCount: (teachers?.length ?? 0) + (staffAccounts?.length ?? 0),
+      activePrizeCount: (prizes ?? []).filter(prizeIsListed).length,
+    }),
+    [students, classes, teachers, staffAccounts, prizes],
+  );
 
   const pinnedAddOnTabs = useMemo(() => {
     const pinned = settings.adminPinnedAddOnTabs || [];
@@ -1961,6 +1972,7 @@ function AdminDashboardInner() {
               onBulkRoster={() => setBulkRosterOpen(true)}
               includeDeveloperBackups={loginState === 'developer'}
               schoolName={schoolData?.name?.trim() || null}
+              adminStats={adminWelcomeStats}
             />
           </TabsContent>
 

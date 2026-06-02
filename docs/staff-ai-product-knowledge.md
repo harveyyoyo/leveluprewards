@@ -13,7 +13,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 ## Product map (typical school URL starts with /{schoolId}/…)
 
 - **Portal** — home hub for the school.
-- **Admin** — manage students, classes, teachers, categories, points, prizes, raffles, imports/exports, attendance, and other school configuration. The administration panel features state-of-the-art interactive dashboards:
+- **Admin** — manage students, classes, teachers, categories, points, prizes, raffles, imports/exports, attendance, and other school configuration. The administration panel features state-of-the-art interactive dashboards and a stunning **Admin Welcome Hero** with real-time stat tiles (total students, class count, active staff, and listed prize count).
   - **Library** — RedESIGNED! Stunning manual addition modal, scannable item cards, and direct status toggles.
   - **Points** — RedESIGNED! Highly polished visual selector cards with smooth micro-interactions instead of plain inputs.
   - **Notifications** — RedESIGNED! Premium multi-step setup wizard with dynamic toggles.

@@ -81,7 +81,7 @@ Create a task that runs (for example) daily at 3 AM — `setup-gcs-backup.ps1` r
 - **Arguments**:
 
 ```powershell
-"C:\Users\Administrator\school arcade reward antigravity\studio\scripts\run-gcs-backup.cmd"
+"C:\Users\Administrator\leveluprewards\scripts\run-gcs-backup.cmd"
 ```
 
 The backup script reads bucket settings from `.gcs-backup.env` (created during setup). If automatic scheduling fails, run the `schtasks /Create` command printed by `setup-gcs-backup.ps1`.
