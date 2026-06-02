@@ -34,8 +34,9 @@ import { cn } from '@/lib/utils';
 import {
   staffPortalGlobalHeaderClassName,
   staffPortalGlobalHeaderInnerClassName,
-  staffPortalGlobalHeaderWrapClassName,
+  staffPortalHeaderWrapClassName,
 } from '@/components/staff/staffPortalNavStyles';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -78,6 +79,7 @@ export default function Header() {
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const { firestore } = useFirebase();
+  const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
   const schoolDocRef = useSchoolMetadataDocRef();
 
   const { data: schoolData, isLoading: isSchoolMetaLoading } = useDoc<{ name: string; logoUrl?: string }>(
@@ -266,10 +268,11 @@ export default function Header() {
   const paidProductsLabel = paidProducts.join(' • ');
   const adminSideTabHeader =
     !!schoolId &&
-    (pathname === `/${schoolId}/admin` ||
-      pathname.startsWith(`/${schoolId}/admin/`) ||
-      pathname === `/${schoolId}/teacher` ||
-      pathname.startsWith(`/${schoolId}/teacher/`));
+    typeof pathname === 'string' &&
+    new RegExp(`^/${schoolId}/(?:admin|teacher|secretary|reports|librarian)(?:/|$)`).test(pathname);
+  const staffPortalHeaderWrap = adminSideTabHeader
+    ? staffPortalHeaderWrapClassName(staffPortalWide)
+    : 'mx-auto max-w-7xl px-4 md:px-8';
 
   /** Long school names wrap; header row must grow (fixed h-20 + absolute center caused top clipping). */
   const headerSchoolNameClass =
@@ -359,7 +362,7 @@ export default function Header() {
           className={cn(
             'w-full min-w-0',
             adminSideTabHeader
-              ? staffPortalGlobalHeaderWrapClassName()
+              ? staffPortalHeaderWrap
               : 'mx-auto max-w-7xl px-4 md:px-8',
           )}
         >
@@ -463,7 +466,7 @@ export default function Header() {
         className={cn(
           'w-full min-w-0',
           adminSideTabHeader
-            ? staffPortalGlobalHeaderWrapClassName()
+            ? staffPortalHeaderWrap
             : 'mx-auto max-w-7xl px-4 md:px-8',
         )}
       >

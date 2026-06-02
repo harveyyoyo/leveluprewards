@@ -5,6 +5,23 @@ export function staffPortalContentWidthClassName(isWide: boolean) {
   return isWide ? 'w-full max-w-none' : 'mx-auto w-full max-w-7xl';
 }
 
+/** `<main>` width on staff portal routes (synced with layout toggle). */
+export function staffPortalMainClassName(isWide: boolean) {
+  return isWide
+    ? 'relative z-10 flex w-full min-h-0 max-w-none flex-1 flex-col'
+    : 'relative z-10 mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-4 md:px-8';
+}
+
+/** Global header outer wrap on staff portal routes. */
+export function staffPortalHeaderWrapClassName(isWide: boolean) {
+  return isWide ? staffPortalGlobalHeaderWrapClassName() : 'mx-auto w-full max-w-7xl px-4 md:px-8';
+}
+
+/** Site footer inner width on staff portal routes. */
+export function staffPortalFooterInnerClassName(isWide: boolean) {
+  return isWide ? 'w-full max-w-none px-4 sm:px-6' : 'mx-auto w-full max-w-7xl px-4 sm:px-6';
+}
+
 /** Outer wrap: edge-to-edge header band for side-tab portals. */
 export function staffPortalGlobalHeaderWrapClassName() {
   return 'max-w-none w-full px-0';
@@ -37,7 +54,7 @@ export function staffPortalPageIntroClassName(isWide: boolean) {
 export function staffPortalShellClassName(isWide: boolean) {
   return cn(
     'flex h-full min-h-0 min-w-0 w-full flex-1 flex-col gap-6',
-    isWide ? 'max-w-none px-2 py-3 sm:px-3 md:py-4' : 'mx-auto max-w-7xl p-4 md:p-8',
+    isWide ? 'max-w-none px-3 py-3 sm:px-4 md:px-6 md:py-4' : 'w-full py-4 md:py-6',
   );
 }
 

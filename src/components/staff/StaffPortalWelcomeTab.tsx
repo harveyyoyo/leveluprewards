@@ -127,28 +127,26 @@ function AdminWelcomeHero({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl px-5 py-6 sm:px-7 sm:py-7',
-        'bg-gradient-to-br from-slate-900 via-primary to-primary/90',
-        'text-white shadow-lg shadow-primary/15',
+        'overflow-hidden rounded-2xl border border-border/50 bg-card px-5 py-6 shadow-sm sm:px-7 sm:py-7',
       )}
     >
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 space-y-3">
             <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-black/25 ring-1 ring-white/10"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"
               aria-hidden
             >
-              <Sparkles className="h-5 w-5 text-amber-300" />
+              <Sparkles className="h-5 w-5" />
             </div>
             {schoolName ? (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 {schoolName}
               </p>
             ) : null}
             <div>
-              <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome back 👋</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/85 sm:text-[15px]">
+              <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Welcome back 👋</h2>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
                 This is your control center. Manage students, award points, run the prize shop, and
                 power the screens around your school — all from one place.
               </p>
@@ -160,7 +158,7 @@ function AdminWelcomeHero({
           <Button
             type="button"
             size="sm"
-            className="h-9 rounded-lg bg-white px-4 font-semibold text-slate-900 shadow-sm hover:bg-white/95"
+            className="h-9 rounded-lg font-semibold"
             onClick={onManageStudents}
           >
             <Users className="mr-2 h-4 w-4" aria-hidden />
@@ -172,7 +170,7 @@ function AdminWelcomeHero({
               type="button"
               size="sm"
               variant="outline"
-              className="h-9 rounded-lg border-white/35 bg-transparent px-4 font-semibold text-white hover:bg-white/10 hover:text-white"
+              className="h-9 rounded-lg border-border font-semibold"
               onClick={onImportRoster}
             >
               <Upload className="mr-2 h-4 w-4" aria-hidden />
@@ -185,12 +183,12 @@ function AdminWelcomeHero({
           {statTiles.map((tile) => (
             <div
               key={tile.label}
-              className="rounded-xl bg-white/10 px-3 py-3 ring-1 ring-white/10 backdrop-blur-[2px] sm:px-4 sm:py-3.5"
+              className="rounded-xl border border-border/60 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3.5"
             >
-              <p className="text-xl font-bold tabular-nums tracking-tight sm:text-2xl">
+              <p className="text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
                 {formatStat(tile.value)}
               </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/70 sm:text-[11px]">
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
                 {tile.label}
               </p>
             </div>
@@ -200,7 +198,6 @@ function AdminWelcomeHero({
     </section>
   );
 }
-
 function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">

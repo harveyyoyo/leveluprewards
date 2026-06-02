@@ -22,6 +22,8 @@ import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
+import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -159,7 +161,8 @@ function LayoutClientWrapperInner({
     const hideHeaderEnabled = settings.hideSiteHeaderOutsidePortal === true;
     const isStaffPortalRoute =
       typeof pathname === 'string' &&
-      /\/(?:admin|teacher|secretary|reports|prize-clerk)(?:\/|$)/.test(pathname);
+      /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
+    const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader =
       !hideAppChrome &&
       !suppressGlobalHeaderForSignedInStudent &&
@@ -456,14 +459,15 @@ function LayoutClientWrapperInner({
                         id="screen-view"
                         className={cn(
                             'flex-1 min-w-0',
-                            /* Login / sign-in / admin-sign-in: full-width shell so pages can center their own content */
                             hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskPage
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
-                                    : isStaffPortalShellRoot || isPortalChoosePage || isSmartScreenPage
-                                        ? 'relative z-10 w-full max-w-none'
-                                        : 'relative z-10 mx-auto w-full max-w-7xl',
+                                    : isStaffPortalRoute
+                                        ? staffPortalMainClassName(staffPortalWide)
+                                        : isPortalChoosePage || isSmartScreenPage
+                                            ? 'relative z-10 w-full max-w-none'
+                                            : 'relative z-10 mx-auto w-full max-w-7xl',
                             appShellNoPageScroll && 'overflow-hidden flex flex-col min-h-0',
                             isPortalChoosePage && 'min-h-0 flex flex-col overflow-hidden',
                             showPortalBottomDockPadding && 'pb-24'
@@ -473,7 +477,10 @@ function LayoutClientWrapperInner({
                     </main>
                     {showSiteFooter && (
                         <div className="relative z-10 mt-auto shrink-0 no-print">
-                            <SiteFooter compact={useCompactSiteFooter} />
+                            <SiteFooter
+                                compact={useCompactSiteFooter}
+                                staffPortalWide={isStaffPortalRoute && staffPortalWide}
+                            />
                         </div>
                     )}
                     {nonCriticalUiReady && settings.showIntroWizard && <IntroWizard />}

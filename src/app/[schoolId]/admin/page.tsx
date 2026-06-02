@@ -100,6 +100,7 @@ import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { StaffPortalAddFeatureTabsMenu } from '@/components/staff/StaffPortalAddFeatureTabsMenu';
 import { StaffPortalSidebarTabRow } from '@/components/staff/StaffPortalSidebarTabRow';
 import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
+import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import {
@@ -1900,7 +1901,7 @@ function AdminDashboardInner() {
           </div>
 
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <div className="w-full min-w-0 flex-1">
+          <StaffPortalContentWidth className="w-full min-w-0 flex-1">
           <TabsContent value="welcome" className={scrollingAdminTabClassName}>
             <StaffPortalWelcomeTab
               role="admin"
@@ -2374,7 +2375,7 @@ function AdminDashboardInner() {
               playSound={(s: any) => playSound(s)}
             />
           </TabsContent>
-          </div>
+          </StaffPortalContentWidth>
           </TabWalkthroughProvider>
         </Tabs>
 

@@ -3,14 +3,21 @@
 import Link from 'next/link';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { getContactFormHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';
+import { staffPortalFooterInnerClassName } from '@/components/staff/staffPortalNavStyles';
 import { cn } from '@/lib/utils';
 
-export function SiteFooter({ compact = false }: { compact?: boolean }) {
+export function SiteFooter({
+  compact = false,
+  staffPortalWide = false,
+}: {
+  compact?: boolean;
+  staffPortalWide?: boolean;
+}) {
   const playSound = useArcadeSound();
 
   return (
     <footer className="border-t border-border/60 bg-background/85 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <div className={cn('mx-auto w-full max-w-7xl px-4 sm:px-6', compact ? 'py-1.5' : 'py-3')}>
+      <div className={cn(staffPortalFooterInnerClassName(staffPortalWide), compact ? 'py-1.5' : 'py-3')}>
         <div className={cn('flex flex-col items-center text-center', compact ? 'gap-0' : 'gap-1')}>
           <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/70">
             beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'} · {process.env.NEXT_PUBLIC_BUILD_TIME}
