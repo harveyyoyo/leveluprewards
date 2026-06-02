@@ -85,7 +85,7 @@ export function SettingsModal() {
     const [adminSubmitting, setAdminSubmitting] = useState(false);
     /** Set when kiosk/school session unlocks settings via passcode (before auth context re-renders). */
     const [kioskAdminSettingsUnlock, setKioskAdminSettingsUnlock] = useState(false);
-    /** Full school settings (all sections, edits) â€” admin role, admin session, or kiosk passcode unlock. */
+    /** Full school settings (all sections, edits) — admin role, admin session, or kiosk passcode unlock. */
     const canManageSchoolSettings =
         kioskAdminSettingsUnlock ||
         hasAdminRole ||
@@ -323,7 +323,7 @@ export function SettingsModal() {
         } else {
             setDraft(null);
             setKioskAdminSettingsUnlock(false);
-            // Do not force view to hub here â€” avoids flashing the hub screen while the modal is
+            // Do not force view to hub here — avoids flashing the hub screen while the modal is
             // closing from Interface / features / etc. Next open always resets via beginSettingsSession.
         }
         setOpen(next);
@@ -565,9 +565,9 @@ export function SettingsModal() {
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
                                 {viewTitle[view]}
                                 {view === 'features' ? (
-                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">Â· Advanced</span>
+                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">&middot; Advanced</span>
                                 ) : view === 'general' ? (
-                                    <span className="ml-2 text-sm font-bold text-muted-foreground">Â· General</span>
+                                    <span className="ml-2 text-sm font-bold text-muted-foreground">&middot; General</span>
                                 ) : null}
                             </DialogTitle>
                         </div>
@@ -1051,7 +1051,7 @@ export function SettingsModal() {
                                             }}
                                         />
                                     </div>
-                                    {/* Colorized dark â€” richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
+                                    {/* Colorized dark — richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
                                     <div
                                         className={cn(
                                             'flex items-start justify-between gap-2',
@@ -1089,7 +1089,7 @@ export function SettingsModal() {
                                             className="shrink-0 mt-0.5"
                                         />
                                     </div>
-                                    {/* Legacy Mode â€” performance-oriented simple visuals (see `.legacy` in globals.css) */}
+                                    {/* Legacy Mode — performance-oriented simple visuals (see `.legacy` in globals.css) */}
                                     <div className="flex items-start justify-between gap-2 col-span-2">
                                         <div className="min-w-0 pr-1">
                                             <div className="flex items-center gap-2">
@@ -1297,7 +1297,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Portrait display layout</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin â†’ Branding â†’ Kiosk profiles.
+                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin &rarr; Branding &rarr; Kiosk profiles.
                                             </p>
                                         </div>
                                         <Switch
@@ -1583,7 +1583,7 @@ export function SettingsModal() {
                                                 <SelectValue placeholder="Paper format" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="label_50x70">Small label / M110-class (50 Ã— 70 mm)</SelectItem>
+                                                <SelectItem value="label_50x70">Small label / M110-class (50 × 70 mm)</SelectItem>
                                                 <SelectItem value="thermal_80mm">80 mm thermal receipt (POS / VCP-8370)</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -1611,7 +1611,7 @@ export function SettingsModal() {
                                                 <Textarea
                                                     id="printerReminderIdCards"
                                                     rows={2}
-                                                    placeholder='e.g. "Use the Fargo DTC at the front desk â€” not the office copier."'
+                                                    placeholder='e.g. "Use the Fargo DTC at the front desk — not the office copier."'
                                                     className="min-h-[72px] rounded-xl text-sm bg-background/80 border-border/60 resize-y"
                                                     value={local.printerReminderIdCards ?? ''}
                                                     onChange={(e) => handleToggle('printerReminderIdCards', e.target.value)}
@@ -1794,7 +1794,7 @@ export function SettingsModal() {
                                             Find toggles
                                         </p>
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Search by name (e.g. â€œattendanceâ€, â€œnotificationsâ€, â€œvendingâ€).
+                                            Search by name (e.g. "attendance", "notifications", "vending").
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
@@ -1802,7 +1802,7 @@ export function SettingsModal() {
                                             <Input
                                                 value={featureQuery}
                                                 onChange={(e) => setFeatureQuery(e.target.value)}
-                                                placeholder="Search featuresâ€¦"
+                                                placeholder="Search features…"
                                                 className="h-9 rounded-xl bg-background/60 border-border/50"
                                             />
                                         </div>
@@ -1885,7 +1885,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableTeacherBudgets"
                                     label="Teacher Budgets"
-                                    desc="Give each teacher a monthly points allowance so they canâ€™t overspend when printing coupons or awarding points."
+                                    desc="Give each teacher a monthly points allowance so they can't overspend when printing coupons or awarding points."
                                     icon={<Users className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -1919,7 +1919,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableLevels"
                                     label="Levels (Soon)"
-                                    desc="Turn total points into fun â€œlevelsâ€ (Level 1, Level 2, etc.) for extra motivation."
+                                    desc="Turn total points into fun 'levels' (Level 1, Level 2, etc.) for extra motivation."
                                     icon={<Zap className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2037,7 +2037,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
-                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin â†’ Students."
+                                    desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin &rarr; Students."
                                     icon={<Tv className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2057,7 +2057,7 @@ export function SettingsModal() {
                                 <SettingsFeatureRow
                                     id="enableStudentWelcome"
                                     label="Student welcome styles"
-                                    desc="Full-screen animated welcome styles on the kiosk. Coming soon â€” per-student controls will return when this ships."
+                                    desc="Full-screen animated welcome styles on the kiosk. Coming soon — per-student controls will return when this ships."
                                     icon={<Sparkles className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
@@ -2101,7 +2101,7 @@ export function SettingsModal() {
                                         </div>
                                     </div>
                                 ) : null}
-                                {/* Student kiosk login/coupon controls: Settings â†’ General â†’ Kiosk. */}
+                                {/* Student kiosk login/coupon controls: Settings -> General -> Kiosk. */}
 
                                   <SettingsFeatureRow
                                     id="enablePrizeImages"

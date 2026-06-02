@@ -68,22 +68,10 @@ Then re-run this script.
   $keyDir = Join-Path $RepoRoot ".local-backups"
   New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
   $keyPath = Join-Path $keyDir "gcs-sa-key.json"
-  $writeKeyScript = @'
-require('dotenv').config({ path: '.env.local' });
-const fs = require('fs');
-const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-if (!raw) throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY missing');
-const parsed = JSON.parse(raw);
-parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
-const keyPath = process.argv[1];
-fs.writeFileSync(keyPath, JSON.stringify(parsed, null, 2));
-'@
-  Push-Location $RepoRoot
-  try {
-    node -e $writeKeyScript -- $keyPath | Out-Null
-  } finally {
-    Pop-Location
-  }
+  
+  # Format private key backslash-n to actual newlines and write to json
+  $sa.private_key = $sa.private_key -replace '\\n', "`n"
+  $sa | ConvertTo-Json -Depth 10 | Set-Content -Path $keyPath -Encoding UTF8
 
   $projectId = [string]$sa.project_id
   Write-Host "Activating service account: $($sa.client_email) (project: $projectId)"

@@ -147,7 +147,7 @@ export default function DeveloperPage() {
       const rows = (res.data as { enrollments?: FaceEnrollmentRow[] })?.enrollments ?? [];
       setFaceEnrollments(rows);
       toast({
-        title: `Face enrollments Â· ${schoolId}`,
+        title: `Face enrollments · ${schoolId}`,
         description:
           rows.length === 0
             ? 'No faceAuth records in Firestore.'
@@ -173,7 +173,7 @@ export default function DeveloperPage() {
       const res = await fn({ schoolId, exceptStudentIds });
       const cleared = (res.data as { cleared?: number })?.cleared ?? 0;
       toast({
-        title: `Cleared face enrollments Â· ${schoolId}`,
+        title: `Cleared face enrollments · ${schoolId}`,
         description:
           cleared === 0
             ? 'Nothing removed.'
@@ -323,7 +323,7 @@ export default function DeveloperPage() {
 
     try {
       setIsAppLogoUploading(true);
-      toast({ title: 'Uploading app logoâ€¦', description: 'Please wait.' });
+      toast({ title: 'Uploading app logo…', description: 'Please wait.' });
 
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -678,7 +678,7 @@ export default function DeveloperPage() {
       <div className="min-h-screen flex items-center justify-center">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Loadingâ€¦
+          Loading…
         </Button>
       </div>
     );
@@ -1010,9 +1010,9 @@ export default function DeveloperPage() {
                       faceEnrollments.map((row) => (
                         <li key={row.studentId} className="font-mono text-xs">
                           {row.studentId}
-                          {' Â· '}
+                          {' · '}
                           {row.enabled ? 'enabled' : 'disabled'}
-                          {' Â· '}
+                          {' · '}
                           {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
                         </li>
                       ))
@@ -1095,7 +1095,7 @@ export default function DeveloperPage() {
                       </div>
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         <span className="font-medium text-foreground/80">Fit</span> keeps the whole mark visible with padding.
-                        <span className="mx-1 text-border">Â·</span>
+                        <span className="mx-1 text-border">·</span>
                         <span className="font-medium text-foreground/80">Fill</span> crops to the frame like a cover photo.
                       </p>
                     </div>
@@ -1114,10 +1114,10 @@ export default function DeveloperPage() {
                         disabled={isAppLogoUploading}
                       >
                         {isAppLogoUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                        {isAppLogoUploading ? 'Uploadingâ€¦' : 'Upload new image'}
+                        {isAppLogoUploading ? 'Uploading…' : 'Upload new image'}
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        PNG, JPG, WebP, or SVG Â· up to 10 MB Â· raster files can be cropped to a square after choosing.
+                        PNG, JPG, WebP, or SVG · up to 10 MB · raster files can be cropped to a square after choosing.
                       </p>
                       <input
                         ref={appLogoInputRef}
@@ -1200,7 +1200,7 @@ export default function DeveloperPage() {
                   />
                 </div>
                 <Button className="shrink-0" onClick={handleFindLatestBackup} disabled={!orphanSchoolId || isFindingBackup}>
-                  {isFindingBackup ? 'Searchingâ€¦' : 'Find Latest Backup'}
+                  {isFindingBackup ? 'Searching…' : 'Find Latest Backup'}
                 </Button>
               </div>
               {latestBackup && (
