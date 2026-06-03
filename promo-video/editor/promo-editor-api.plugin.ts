@@ -45,7 +45,10 @@ function sendJson(
   res.end(JSON.stringify(body));
 }
 
-function runNode(args: string[], cwd: string): Promise<{ code: number; stderr: string }> {
+function runNode(
+  args: string[],
+  cwd: string,
+): Promise<{ code: number; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const isWin = process.platform === "win32";
     const child = spawn(isWin ? "node.exe" : "node", args, {
@@ -53,11 +56,15 @@ function runNode(args: string[], cwd: string): Promise<{ code: number; stderr: s
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
     });
+    let stdout = "";
     let stderr = "";
+    child.stdout?.on("data", (d: Buffer) => {
+      stdout += d.toString();
+    });
     child.stderr?.on("data", (d: Buffer) => {
       stderr += d.toString();
     });
-    child.on("close", (code) => resolve({ code: code ?? 1, stderr }));
+    child.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
     child.on("error", reject);
   });
 }
@@ -266,6 +273,40 @@ export function promoEditorApiPlugin(): Plugin {
             sendJson(res, 500, {
               ok: false,
               error: e instanceof Error ? e.message : "Save failed",
+            });
+          }
+          return;
+        }
+
+        if (req.method === "POST" && req.url === "/api/capture-library/rename") {
+          try {
+            const raw = await readBody(req);
+            const body = JSON.parse(raw) as { path?: string; newFilename?: string };
+            const relPath = String(body.path ?? "").replace(/\\/g, "/");
+            const newFilename = String(body.newFilename ?? "").trim();
+            const script = path.join(STUDIO_ROOT, "scripts", "rename-media-asset.mjs");
+            const { code, stdout, stderr } = await runNode(
+              [script, `--path=${relPath}`, `--name=${newFilename}`],
+              STUDIO_ROOT,
+            );
+            if (code !== 0) {
+              sendJson(res, 400, {
+                ok: false,
+                error: stderr.trim() || stdout.trim() || `Rename failed (exit ${code})`,
+              });
+              return;
+            }
+            const parsed = JSON.parse(stdout.trim() || "{}") as {
+              ok?: boolean;
+              newPath?: string;
+              referencesUpdated?: number;
+              filesTouched?: string[];
+            };
+            sendJson(res, 200, { ok: true, ...parsed });
+          } catch (e) {
+            sendJson(res, 400, {
+              ok: false,
+              error: e instanceof Error ? e.message : "Rename failed",
             });
           }
           return;

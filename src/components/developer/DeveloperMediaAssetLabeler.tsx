@@ -9,6 +9,7 @@ import {
   Film,
   ImageIcon,
   Loader2,
+  FilePenLine,
   RefreshCw,
   Save,
   Trash2,
@@ -46,6 +47,7 @@ import {
   type MediaAssetLabelsFile,
   type MediaUsageSlot,
 } from '@/lib/marketing/mediaAssetTypes';
+import { mediaFilenameFromLabel } from '@/lib/marketing/mediaFilename';
 
 type LibraryPayload = {
   clips: MediaAssetItem[];
@@ -93,14 +95,27 @@ export function DeveloperMediaAssetLabeler() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [recapturing, setRecapturing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
 
-  const reloadLibrary = useCallback(async () => {
-    const token = await user?.getIdToken();
-    if (!token) throw new Error('Sign in required');
-    const data = await devFetch<LibraryPayload>('/api/developer/media-assets', token);
-    setItems([...data.clips, ...data.screenshots]);
-    setLabels(normalizeMediaLabelsFile(data.labels));
-  }, [user]);
+  const reloadLibrary = useCallback(
+    async (focusPath?: string) => {
+      const token = await user?.getIdToken();
+      if (!token) throw new Error('Sign in required');
+      const data = await devFetch<LibraryPayload>('/api/developer/media-assets', token);
+      const merged = [...data.clips, ...data.screenshots];
+      setItems(merged);
+      setLabels(normalizeMediaLabelsFile(data.labels));
+      if (focusPath) {
+        const pool =
+          source === 'clips'
+            ? merged.filter((i) => i.kind === 'video')
+            : merged.filter((i) => i.kind === 'image');
+        const nextIndex = pool.findIndex((i) => i.path === focusPath);
+        if (nextIndex >= 0) setIndex(nextIndex);
+      }
+    },
+    [source, user],
+  );
 
   useEffect(() => {
     if (!allowedDeveloper || loginState !== 'developer') return;
@@ -150,6 +165,15 @@ export function DeveloperMediaAssetLabeler() {
   const wiredUsage = current ? WIDESCREEN_CLIP_USAGE[current.path] : undefined;
   const recaptureSummary = current ? getRecaptureSummary(current.path) : null;
   const canRecapture = current ? canRecaptureMediaAsset(current.path) : false;
+
+  const targetFilename = current
+    ? mediaFilenameFromLabel(
+        currentLabel.displayName ||
+          current.filename.replace(/\.[^.]+$/, ''),
+        current.filename,
+      )
+    : '';
+  const renamePending = !!current && targetFilename !== current.filename;
 
   useEffect(() => {
     if (index >= visibleItems.length) {
@@ -311,6 +335,56 @@ export function DeveloperMediaAssetLabeler() {
     if (index < visibleItems.length - 1) setIndex((i) => i + 1);
   };
 
+  const renameCurrent = useCallback(async () => {
+    if (!current || !renamePending || renaming) return;
+    if (
+      !window.confirm(
+        `Rename "${current.filename}" → "${targetFilename}"?\n\nThis renames the file on disk and updates flyers, scripts, and code references.`,
+      )
+    ) {
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      const token = await user?.getIdToken();
+      if (!token) throw new Error('Sign in required');
+      const data = await devFetch<{
+        ok: boolean;
+        newPath: string;
+        referencesUpdated: number;
+        filesTouched: string[];
+      }>('/api/developer/media-assets/rename', token, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: current.path,
+          newFilename: targetFilename,
+        }),
+      });
+      await reloadLibrary(data.newPath);
+      toast({
+        title: 'File renamed',
+        description: `${targetFilename} — updated ${data.referencesUpdated} file(s) in the repo.`,
+      });
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Rename failed',
+        description: e instanceof Error ? e.message : 'Unknown error',
+      });
+    } finally {
+      setRenaming(false);
+    }
+  }, [
+    current,
+    renamePending,
+    renaming,
+    reloadLibrary,
+    targetFilename,
+    toast,
+    user,
+  ]);
+
   const reviewedCount = visibleItems.filter(
     (i) => labels.items[i.path]?.reviewed,
   ).length;
@@ -347,9 +421,9 @@ export function DeveloperMediaAssetLabeler() {
             Media asset library
           </h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Label promo clips and marketing screenshots once. Saved labels live in{' '}
-            <code className="text-xs">public/marketing/media-labels.json</code> and
-            can be used across the site, flyers, and Remotion promos.
+            Rename screenshot and clip files on disk; labels live in{' '}
+            <code className="text-xs">public/marketing/media-labels.json</code>.
+            Renaming also updates flyer HTML and other references in the repo.
           </p>
         </div>
         <Button
@@ -461,13 +535,31 @@ export function DeveloperMediaAssetLabeler() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display name</Label>
+                  <Label htmlFor="displayName">File name</Label>
                   <Input
                     id="displayName"
                     value={currentLabel.displayName}
                     placeholder={current.filename.replace(/\.[^.]+$/, '')}
                     onChange={(e) => patchLabel({ displayName: e.target.value })}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    On disk: <code className="text-[11px]">{targetFilename}</code>
+                    {renamePending ? ' (not saved yet)' : ''}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full gap-2"
+                    disabled={!renamePending || renaming || deleting}
+                    onClick={() => void renameCurrent()}
+                  >
+                    {renaming ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FilePenLine className="h-4 w-4" />
+                    )}
+                    {renaming ? 'Renaming…' : 'Rename file on disk'}
+                  </Button>
                 </div>
 
                 <div className="space-y-2">

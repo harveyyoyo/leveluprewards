@@ -365,7 +365,7 @@ export function ShowcaseLanding() {
                 transition={{ duration: 0.35 }}
                 className="flex min-h-[min(78vh,720px)] flex-col items-center justify-center py-8"
               >
-                <div className="w-full max-w-xl rounded-3xl bg-slate-950 px-6 py-10 shadow-2xl shadow-[#102a45]/25 sm:px-10 sm:py-14">
+                <div className="w-full max-w-xl rounded-3xl border border-[#102a45]/15 bg-[#fcfaf6] px-6 py-10 shadow-2xl shadow-[#102a45]/10 sm:px-10 sm:py-14">
                   <HomeLandingLogo linkToLogin={false} size="intro" />
                 </div>
                 <div className="mt-8 max-w-md text-center">

@@ -71,6 +71,7 @@ function roleLabel(option: StaffPortalLoginOption) {
 }
 
 function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
+    if (type === 'teacher') return `/${schoolId}/teacher`;
     if (type === 'secretary') return `/${schoolId}/secretary`;
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
@@ -264,7 +265,7 @@ export default function PortalPage() {
                 ? [
                       {
                           id: 'admin',
-                          href: `/${schoolId}/portal`,
+                          href: `/${schoolId}/admin`,
                           title: 'Admin Portal',
                           description: 'Manage students, classes, teachers, points, prizes and much more...',
                           icon: UserCog,
@@ -275,7 +276,7 @@ export default function PortalPage() {
             ? [
                   {
                       id: 'print',
-                      href: `/${schoolId}/admin`,
+                      href: `/${schoolId}/teacher`,
                       title: 'Teacher Portal',
                       description: isRewardsPillarOn(settings)
                         ? 'Staff portal with teacher tabs — points, classes, prizes, and reports.'

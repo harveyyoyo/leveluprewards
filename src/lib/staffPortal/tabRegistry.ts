@@ -51,7 +51,8 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
  * | raffle, goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
  * | generated-coupons | — | add-on | Rewards economy (coupon print) |
  * | attendance | add-on | add-on | `payAttendance` pillar |
- * | insights, houses, … | add-on | — | Admin-only |
+ * | insights, notifications, … | add-on | — | Admin-only |
+ * | houses | add-on | add-on | School-wide; `enableHouses` |
  */
 
 /** All staff portal tabs (admin + teacher + shared add-ons). */
@@ -261,8 +262,12 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     label: 'Houses',
     icon: Home,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableHouses,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      if (!s.enableHouses) return false;
+      if (role === 'teacher' && teacherAddonHidden(s, 'houses')) return false;
+      return true;
+    },
   },
   {
     value: 'notifications',
@@ -429,6 +434,15 @@ export function staffPortalTeacherOperatedAdminNote(tabValue: string): string | 
   const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
   const label = def?.label ?? 'This section';
   return `${label} is mainly for teachers in day-to-day classroom use. You can preview and set defaults here as school admin.`;
+}
+
+/** Banner copy when a teacher opens a school-wide add-on (e.g. Houses). */
+export function staffPortalSchoolwideTeacherNote(tabValue: string): string | null {
+  if (tabValue !== 'houses') return null;
+  return (
+    'Houses is a school-wide program: rosters, standings, sorting, and point totals apply to every student. ' +
+    'Coordinate with your school admin and have one designated lead teacher make setup changes so the whole school stays aligned.'
+  );
 }
 
 export function staffPortalTabDescription(tab: StaffPortalTabDef): string {

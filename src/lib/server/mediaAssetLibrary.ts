@@ -1,12 +1,14 @@
 import fs from "fs";
 import path from "path";
+import { isValidMediaFilename } from "@/lib/marketing/mediaFilename";
 import {
   normalizeMediaLabelsFile,
   type MediaAssetItem,
   type MediaAssetLabelsFile,
 } from "@/lib/marketing/mediaAssetTypes";
+import { updateMediaAssetReferences } from "@/lib/server/mediaAssetRename";
 
-const REPO_ROOT = process.cwd();
+const REPO_ROOT = process.env.LEVELUP_REPO_ROOT ?? process.cwd();
 const LABELS_FILE = path.join(REPO_ROOT, "public", "marketing", "media-labels.json");
 const LEGACY_LABELS_FILE = path.join(
   REPO_ROOT,
@@ -157,4 +159,58 @@ export function contentTypeForPath(relPath: string): string {
   if (relPath.endsWith(".png")) return "image/png";
   if (relPath.endsWith(".mp4")) return "video/mp4";
   return "application/octet-stream";
+}
+
+export function renameMediaAsset(
+  relPath: string,
+  newFilename: string,
+): { newPath: string; referencesUpdated: number; filesTouched: string[] } {
+  const normalized = relPath.replace(/\\/g, "/");
+  if (!normalized || normalized.includes("..")) {
+    throw new Error("Invalid path");
+  }
+
+  const safeName = newFilename.trim().replace(/\\/g, "/");
+  if (!safeName || safeName.includes("/") || !isValidMediaFilename(safeName)) {
+    throw new Error("Invalid filename (use letters, numbers, hyphens; .png or .mp4)");
+  }
+
+  const oldFilePath = resolveMediaAssetFile(normalized);
+  if (!oldFilePath || !fs.existsSync(oldFilePath)) {
+    throw new Error("File not found");
+  }
+
+  const oldFilename = path.basename(oldFilePath);
+  if (oldFilename === safeName) {
+    return { newPath: normalized, referencesUpdated: 0, filesTouched: [] };
+  }
+
+  const parentRel = normalized.slice(0, normalized.length - oldFilename.length);
+  const newRelPath = `${parentRel}${safeName}`;
+  const newFilePath = resolveMediaAssetFile(newRelPath);
+  if (!newFilePath) {
+    throw new Error("Invalid target path");
+  }
+  if (fs.existsSync(newFilePath)) {
+    throw new Error(`"${safeName}" already exists`);
+  }
+
+  fs.renameSync(oldFilePath, newFilePath);
+
+  const labels = readMediaLabelsFile();
+  if (labels.items[normalized]) {
+    labels.items[newRelPath] = labels.items[normalized];
+    delete labels.items[normalized];
+    labels.updatedAt = new Date().toISOString();
+    writeMediaLabelsFile(labels);
+  }
+
+  const { referencesUpdated, filesTouched } = updateMediaAssetReferences(
+    normalized,
+    newRelPath,
+    oldFilename,
+    safeName,
+  );
+
+  return { newPath: newRelPath, referencesUpdated, filesTouched };
 }

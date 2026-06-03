@@ -67,6 +67,7 @@ function roleLabel(option: StaffPortalLoginOption) {
 }
 
 function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
+    if (type === 'teacher') return `/${schoolId}/teacher`;
     if (type === 'secretary') return `/${schoolId}/secretary`;
     if (type === 'prizeClerk') return `/${schoolId}/admin`;
     if (type === 'reports') return `/${schoolId}/reports`;
@@ -182,8 +183,6 @@ export default function TeacherPage() {
         } else if (loginState === 'office') {
             router.replace(`/${schoolId}/office`);
         } else if (loginState === 'houseCoordinator') {
-            router.replace(`/${schoolId}/admin`);
-        } else if (loginState === 'teacher') {
             router.replace(`/${schoolId}/admin`);
         } else if (
             adminTeacherBypass &&
@@ -325,12 +324,16 @@ export default function TeacherPage() {
         );
     }
 
-    const canOpenTeacherTools =
-        loginState === 'teacher' ||
-        (adminTeacherBypass && (loginState === 'admin' || loginState === 'developer') && isAdmin);
+    const canOpenTeacherTools = loginState === 'teacher';
 
     if (!directAccountKey && canOpenTeacherTools) {
-        return null;
+        return (
+            <TeacherPrinter
+                teacherName={userName || 'Teacher'}
+                teacherId={teacherDocId || userId || 'teacher'}
+                onLogout={handleLogout}
+            />
+        );
     }
 
     const selectedOption = staffOptions.find((option) => staffLoginKey(option) === selectedLoginKey);

@@ -11,6 +11,7 @@ export {
   staffPortalTabDescription,
   staffPortalTabsForRole,
   staffPortalTeacherOperatedAdminNote,
+  staffPortalSchoolwideTeacherNote,
 } from './tabRegistry';
 export {
   staffPortalTabIsValid,

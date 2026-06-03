@@ -618,21 +618,12 @@ export function AdminStudentsTab({
                       "flex flex-wrap items-center gap-2 overflow-visible py-1.5 px-2 rounded-xl border transition-all sm:grid sm:flex-nowrap sm:items-center",
                       adminRecordListGridClassName,
                       adminRecordListGridCompactGapClassName,
-                      "cursor-pointer",
+                      "cursor-default",
                       selectedStudentIds.has(s.id)
                         ? "bg-secondary border-ring/45 hover:bg-secondary"
                         : "bg-secondary/45 border-transparent hover:bg-secondary/80",
                     )}
                     style={studentsListGridStyle}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => toggleStudentSelected(s.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        toggleStudentSelected(s.id);
-                      }
-                    }}
                   >
                     <div
                       className="flex items-center justify-center shrink-0 sm:justify-self-center"

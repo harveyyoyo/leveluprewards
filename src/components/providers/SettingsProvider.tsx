@@ -460,7 +460,17 @@ interface Settings {
     houseHallOfFameAutoScroll?: boolean;
     houseHallOfFameGridLayout?: boolean;
     /** Admin Houses tab: standings preview chart style. */
-    houseStandingsChartFormat?: 'bars' | 'columns' | 'line' | 'pie';
+    houseStandingsChartFormat?:
+      | 'bars'
+      | 'columns'
+      | 'horizontal'
+      | 'line'
+      | 'area'
+      | 'pie'
+      | 'donut'
+      | 'radar'
+      | 'radial'
+      | 'thermometer';
     /** Admin Houses tab: whether the standings preview panel is expanded. */
     houseStandingsPreviewOpen?: boolean;
 

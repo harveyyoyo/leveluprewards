@@ -243,6 +243,23 @@ body {
   color: #64748b;
 }
 
+.labeler-btn-rename {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(76, 201, 240, 0.35);
+  background: rgba(76, 201, 240, 0.12);
+  color: #e8ecf4;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.labeler-btn-rename:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .labeler-btn-danger {
   margin-top: 4px;
   width: 100%;

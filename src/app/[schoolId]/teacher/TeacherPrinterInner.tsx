@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
+import type { Coupon, Category, Teacher, Student, Class, House, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
@@ -85,6 +85,8 @@ import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
+import { AdminHousesTab } from '@/app/[schoolId]/admin/sections/AdminHousesTab';
+import { StaffPortalSchoolwideFeatureNotice } from '@/components/staff/StaffPortalSchoolwideFeatureNotice';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
 import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
 import { CategoryModal } from '@/components/admin/CategoryModal';
@@ -2023,7 +2025,23 @@ function TeacherPrinterInnerBody({
     secretaryMode?: boolean;
     embedded?: boolean;
 }) {
-    const { updateTeacher, deleteCategory, schoolId, addPrize, updatePrize, deletePrize, getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog, isAdmin, isTeacher } = useAppContext();
+    const {
+        updateTeacher,
+        updateStudent,
+        deleteCategory,
+        schoolId,
+        addPrize,
+        updatePrize,
+        deletePrize,
+        getTeacherAttendanceConfig,
+        setTeacherAttendanceConfig,
+        listTeacherAttendanceLog,
+        isAdmin,
+        isTeacher,
+        addHouse,
+        updateHouse,
+        deleteHouse,
+    } = useAppContext();
     const confirm = useConfirm();
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -2113,6 +2131,12 @@ function TeacherPrinterInnerBody({
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
+    const housesQuery = useMemoFirebase(
+        () => (schoolId && settings.enableHouses ? collection(firestore, 'schools', schoolId, 'houses') : null),
+        [firestore, schoolId, settings.enableHouses],
+    );
+    const { data: houses, isLoading: housesLoading } = useCollection<House>(housesQuery);
+
     const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
     const { data: periods, isLoading: periodsLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
 
@@ -2162,7 +2186,12 @@ function TeacherPrinterInnerBody({
 
     const isLoading = secretaryMode
         ? categoriesLoading
-        : categoriesLoading || studentsLoading || classesLoading || periodsLoading || teachersLoading;
+        : categoriesLoading ||
+          studentsLoading ||
+          classesLoading ||
+          periodsLoading ||
+          teachersLoading ||
+          (settings.enableHouses && housesLoading);
     const teacherAccent = 'hsl(var(--primary))';
 
     const { teacherDocId, userId } = useAppContext();
@@ -2620,6 +2649,38 @@ function TeacherPrinterInnerBody({
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
                                 </div>
                             </TeacherPortalTabPane>
+                            )}
+
+                            {teacherTabEnabled('houses') && (
+                                <TeacherPortalTabPane tabId="houses" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
+                                    <div className={teacherPortalPanelClassName(isWide)}>
+                                        <StaffPortalSchoolwideFeatureNotice activeTab="houses" />
+                                        <AdminHousesTab
+                                            schoolId={schoolId!}
+                                            houses={houses}
+                                            students={students}
+                                            teachers={teachers}
+                                            onAddHouse={addHouse}
+                                            onUpdateHouse={updateHouse}
+                                            onDeleteHouse={async (id, houseStudents) => {
+                                                const house = (houses || []).find((h) => h.id === id);
+                                                const ok = await confirm({
+                                                    title: house ? `Delete house "${house.name}"?` : 'Delete this house?',
+                                                    description:
+                                                        houseStudents.length > 0
+                                                            ? `${houseStudents.length} student(s) will be unassigned from this house.`
+                                                            : 'No students are assigned to this house.',
+                                                    confirmLabel: 'Delete house',
+                                                    destructive: true,
+                                                });
+                                                if (!ok) return;
+                                                await deleteHouse(id, houseStudents);
+                                            }}
+                                            onUpdateStudent={updateStudent}
+                                            onUpdateTeacher={updateTeacher}
+                                        />
+                                    </div>
+                                </TeacherPortalTabPane>
                             )}
 
                             </TabWalkthroughProvider>

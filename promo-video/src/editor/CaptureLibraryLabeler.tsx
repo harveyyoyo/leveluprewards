@@ -10,6 +10,7 @@ import {
   type CaptureLibraryLabel,
   type CaptureLibraryLabelsFile,
 } from "./captureLibraryTypes";
+import { mediaFilenameFromLabel } from "@levelup/lib/marketing/mediaFilename";
 
 type LibraryPayload = {
   clips: CaptureLibraryItem[];
@@ -36,15 +37,25 @@ export const CaptureLibraryLabeler: React.FC = () => {
   const [dirty, setDirty] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [recapturing, setRecapturing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
 
-  const reloadLibrary = useCallback(async () => {
+  const reloadLibrary = useCallback(async (focusPath?: string) => {
     const [library, saved] = await Promise.all([
       fetchJson<LibraryPayload>("/api/capture-library/list"),
       fetchJson<CaptureLibraryLabelsFile>("/api/capture-library/labels"),
     ]);
-    setItems([...library.clips, ...library.screenshots]);
+    const merged = [...library.clips, ...library.screenshots];
+    setItems(merged);
     setLabels(normalizeLabelsFile(saved));
-  }, []);
+    if (focusPath) {
+      const pool =
+        source === "clips"
+          ? merged.filter((i) => i.kind === "video")
+          : merged.filter((i) => i.kind === "image");
+      const nextIndex = pool.findIndex((i) => i.path === focusPath);
+      if (nextIndex >= 0) setIndex(nextIndex);
+    }
+  }, [source]);
 
   const visibleItems = useMemo(() => {
     const pool =
@@ -65,6 +76,15 @@ export const CaptureLibraryLabeler: React.FC = () => {
   const wiredBeat = current ? WIDESCREEN_CLIP_USAGE[current.path] : undefined;
   const recaptureSummary = current ? getRecaptureSummary(current.path) : null;
   const canRecapture = current ? canRecaptureMediaAsset(current.path) : false;
+
+  const targetFilename = current
+    ? mediaFilenameFromLabel(
+        currentLabel.displayName ||
+          current.filename.replace(/\.[^.]+$/, ""),
+        current.filename,
+      )
+    : "";
+  const renamePending = !!current && targetFilename !== current.filename;
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +168,48 @@ export const CaptureLibraryLabeler: React.FC = () => {
       setIndex((i) => i + 1);
     }
   };
+
+  const renameCurrent = useCallback(async () => {
+    if (!current || !renamePending || renaming) return;
+    if (
+      !window.confirm(
+        `Rename "${current.filename}" → "${targetFilename}"?\n\nThis renames the file on disk and updates flyers, scripts, and code references.`,
+      )
+    ) {
+      return;
+    }
+
+    setRenaming(true);
+    setStatus(`Renaming to ${targetFilename}…`);
+    try {
+      const res = await fetch("/api/capture-library/rename", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: current.path,
+          newFilename: targetFilename,
+        }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        newPath?: string;
+        referencesUpdated?: number;
+        error?: string;
+      };
+      if (!res.ok || !data.ok || !data.newPath) {
+        setStatus(data.error ?? "Rename failed");
+        return;
+      }
+      await reloadLibrary(data.newPath);
+      setStatus(
+        `Renamed to ${targetFilename} — updated ${data.referencesUpdated ?? 0} file(s).`,
+      );
+    } catch {
+      setStatus("Rename failed — is npm run editor running?");
+    } finally {
+      setRenaming(false);
+    }
+  }, [current, renamePending, renaming, reloadLibrary, targetFilename]);
 
   const deleteCurrent = useCallback(async () => {
     if (!current || deleting) return;
@@ -359,13 +421,26 @@ export const CaptureLibraryLabeler: React.FC = () => {
             )}
 
             <label className="labeler-field">
-              Display name
+              File name
               <input
                 value={currentLabel.displayName}
                 placeholder={current.filename.replace(/\.[^.]+$/, "")}
                 onChange={(e) => patchLabel({ displayName: e.target.value })}
               />
+              <span className="labeler-hint">
+                On disk: <code>{targetFilename}</code>
+                {renamePending ? " (click rename below)" : ""}
+              </span>
             </label>
+
+            <button
+              type="button"
+              className="labeler-btn-rename"
+              disabled={!renamePending || renaming || deleting || recapturing}
+              onClick={() => void renameCurrent()}
+            >
+              {renaming ? "Renaming…" : "Rename file on disk"}
+            </button>
 
             <label className="labeler-field">
               Promo beat

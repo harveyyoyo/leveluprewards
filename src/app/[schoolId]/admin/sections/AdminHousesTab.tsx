@@ -5,21 +5,18 @@ import Link from 'next/link';
 import {
   Home,
   Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
   RefreshCw,
   Wand2,
   ExternalLink,
-  UserPlus,
   Loader2,
-  Pencil,
   FlaskConical,
-  Search,
-  ArrowRightLeft,
-  Minus,
-  Plus as PlusIcon,
   Sparkles,
+  MoreHorizontal,
+  LayoutGrid,
+  Users,
+  Settings,
+  Trophy,
+  Search,
 } from 'lucide-react';
 import { HouseSetupWizard } from '@/app/[schoolId]/admin/sections/HouseSetupWizard';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
@@ -31,7 +28,6 @@ import {
 } from '@/lib/houses/housePointsSettings';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
@@ -39,10 +35,14 @@ import {
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/empty-state';
-import { Badge } from '@/components/ui/badge';
-import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -69,11 +69,12 @@ import { useToast } from '@/hooks/use-toast';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import {
   HouseStandingsChartBlock,
-  type HouseStandingsChartFormat,
-  HOUSE_STANDINGS_FORMAT_OPTIONS,
+  normalizeHouseStandingsChartFormat,
 } from '@/components/houses/HouseStandingsChartBlock';
 import { HouseIdeasPanel } from '@/components/houses/HouseIdeasPanel';
-import { HouseStandingsInlineCell } from '@/components/houses/HouseStandingsInlineCell';
+import { AdminHousesStatsStrip } from '@/components/houses/admin/AdminHousesStatsStrip';
+import { AdminHousesOverviewGrid } from '@/components/houses/admin/AdminHousesOverviewGrid';
+import { AdminHouseRosterCard } from '@/components/houses/admin/AdminHouseRosterCard';
 import { buildHouseStandingsRows } from '@/lib/houses/houseStandings';
 import type { House, Student, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -129,7 +130,8 @@ export function AdminHousesTab({
   const [draftMotto, setDraftMotto] = useState('');
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
   const [transferStudent, setTransferStudent] = useState<{ student: Student; fromHouseId: string } | null>(null);
-  const [mainSection, setMainSection] = useState<'rosters' | 'hallOfFame'>('rosters');
+  const [mainSection, setMainSection] = useState<'overview' | 'rosters' | 'setup' | 'hallOfFame'>('overview');
+  const [houseSearch, setHouseSearch] = useState('');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [pointsAdjustHouse, setPointsAdjustHouse] = useState<House | null>(null);
   const [draftCurrentPts, setDraftCurrentPts] = useState('0');
@@ -314,7 +316,30 @@ export function AdminHousesTab({
     [sortedHouses, students],
   );
 
-  const chartFormat = (settings.houseStandingsChartFormat as HouseStandingsChartFormat) ?? 'bars';
+  const chartFormat = normalizeHouseStandingsChartFormat(settings.houseStandingsChartFormat);
+
+  const assignedStudentCount = useMemo(
+    () => (students ?? []).filter((s) => Boolean(s.houseId)).length,
+    [students],
+  );
+
+  const leaderHouse = standingsRows[0]?.house ?? null;
+
+  const filteredStandingsRows = useMemo(() => {
+    const q = houseSearch.trim().toLowerCase();
+    if (!q) return standingsRows;
+    return standingsRows.filter(
+      (r) =>
+        r.house.name.toLowerCase().includes(q) ||
+        (r.house.value?.toLowerCase().includes(q) ?? false) ||
+        (r.house.motto?.toLowerCase().includes(q) ?? false),
+    );
+  }, [standingsRows, houseSearch]);
+
+  const goToHouseRoster = (houseId: string) => {
+    setMainSection('rosters');
+    setExpandedHouseIds(new Set([houseId]));
+  };
 
   const openPointsAdjust = (house: House) => {
     setPointsAdjustHouse(house);
@@ -525,15 +550,21 @@ export function AdminHousesTab({
                     value={chartFormat}
                     onValueChange={(v) => updateSettings({ houseStandingsChartFormat: v as HouseStandingsChartFormat })}
                   >
-                    <SelectTrigger className="h-8 w-[10.5rem] rounded-lg text-xs font-semibold">
+                    <SelectTrigger className="h-8 w-[12.5rem] rounded-lg text-xs font-semibold">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {HOUSE_STANDINGS_FORMAT_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.id} value={opt.id}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
+                      {HOUSE_STANDINGS_FORMAT_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        return (
+                          <SelectItem key={opt.id} value={opt.id}>
+                            <span className="flex items-center gap-2">
+                              <Icon className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                              {opt.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 ) : null}

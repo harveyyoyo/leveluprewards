@@ -84,7 +84,8 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
-import { classroomAwardDisplayLabel } from '@/lib/classroom/classroomAwardLabel';
+import { classroomAwardDisplayLabel, type ClassroomAwardLabelContext } from '@/lib/classroom/classroomAwardLabel';
+import type { ClassroomSeatingShortcutsHintState } from '@/components/points/classroomSeatingShortcutsHint';
 import {
   remainingTeacherBudgetPoints,
   resolveTeacherBudgetPeriod,
@@ -153,6 +154,8 @@ type ClassroomPointsPanelProps = {
   sessionOnly?: boolean;
   /** Bumps admin behavior timeline when a note is saved from this panel. */
   onBehaviorNoteSaved?: () => void;
+  /** Publishes current seating controls so the parent can render compact shortcut help. */
+  onSectionHintChange?: (state: ClassroomSeatingShortcutsHintState | null) => void;
 };
 
 function deskDensity(cellCount: number): 'normal' | 'cozy' | 'tight' {
@@ -174,6 +177,7 @@ function ClassroomPointsPanelInner({
   budgetOptions,
   sessionOnly: sessionOnlyProp,
   onBehaviorNoteSaved,
+  onSectionHintChange,
 }: ClassroomPointsPanelProps) {
   const deferredStudents = useDeferredValue(students);
   const isFullscreen = variant === 'fullscreen';
@@ -207,7 +211,23 @@ function ClassroomPointsPanelInner({
   });
   const [layout, setLayout] = useState<ClassroomSeatingLayout | null>(null);
   const [prefs, setPrefs] = useState<ClassroomSeatingPrefs>(DEFAULT_CLASSROOM_PREFS);
+  const awardLabelContext = useMemo<ClassroomAwardLabelContext>(
+    () => ({ ...prefs, quickTapDescription: prefs.defaultDescription }),
+    [prefs],
+  );
   const [editMode, setEditMode] = useState(false);
+
+  useEffect(() => {
+    onSectionHintChange?.({
+      prefs,
+      editMode,
+      attendanceEnabled,
+      bathroomEnabled: bathroomTimerOn,
+      isFullscreen,
+    });
+    return () => onSectionHintChange?.(null);
+  }, [attendanceEnabled, bathroomTimerOn, editMode, isFullscreen, onSectionHintChange, prefs]);
+
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pendingAward, setPendingAward] = useState<PendingAward | null>(null);
   const [awardingId, setAwardingId] = useState<string | null>(null);
@@ -223,6 +243,8 @@ function ClassroomPointsPanelInner({
   const autoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+  const awardLabelContextRef = useRef(awardLabelContext);
+  awardLabelContextRef.current = awardLabelContext;
 
   const playClassroomSound = useCallback(
     (sound: SoundEffect) => {
@@ -488,7 +510,7 @@ function ClassroomPointsPanelInner({
   const recordSessionAwards = useCallback(
     (studentIds: string[], pointsDelta: number, description: string) => {
       if (!effectiveClassId || effectiveClassId === 'all') return;
-      const label = classroomAwardDisplayLabel(description, prefsRef.current);
+      const label = classroomAwardDisplayLabel(description, awardLabelContextRef.current);
       const next = applyClassroomSessionAward(
         schoolId,
         storageScope,
@@ -603,7 +625,7 @@ function ClassroomPointsPanelInner({
         });
         playClassroomSound(classroomPointSoundEffect(points, isDeduct));
         if (!options?.silent) {
-          const awardLabel = classroomAwardDisplayLabel(description, prefsRef.current);
+          const awardLabel = classroomAwardDisplayLabel(description, awardLabelContextRef.current);
           const oneStudent =
             studentIds.length === 1 ? studentById.get(studentIds[0]!) : undefined;
           toast({
@@ -669,7 +691,7 @@ function ClassroomPointsPanelInner({
             'count' in result && typeof result.count === 'number'
               ? result.count
               : studentIds.length;
-          const awardLabel = classroomAwardDisplayLabel(description, prefsRef.current);
+          const awardLabel = classroomAwardDisplayLabel(description, awardLabelContextRef.current);
           const oneStudent =
             studentIds.length === 1 ? studentById.get(studentIds[0]!) : undefined;
           toast({
@@ -1567,6 +1589,7 @@ export const ClassroomPointsPanel = memo(ClassroomPointsPanelInner, (prev, next)
     prev.initialClassId === next.initialClassId &&
     prev.sessionOnly === next.sessionOnly &&
     prev.onBehaviorNoteSaved === next.onBehaviorNoteSaved &&
+    prev.onSectionHintChange === next.onSectionHintChange &&
     prev.accentColor === next.accentColor &&
     prev.isGraphic === next.isGraphic &&
     prev.classes.length === next.classes.length &&
