@@ -76,7 +76,7 @@ async function getRoleDocForSessionRestore(
 
 /** Optional navigation after ending a scoped session (default: staff -> portal, student -> kiosk). */
 export type LogoutOptions = {
-    staffNavigateTo?: 'portal' | 'teacher' | 'student';
+    staffNavigateTo?: 'portal' | 'teacher' | 'student' | 'office';
     studentNavigateTo?: 'portal' | 'student';
 };
 
