@@ -380,25 +380,6 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       },
     ],
   },
-  backups: {
-    title: 'Backups tab',
-    subtitle: 'Developer snapshots (developer login only)',
-    steps: [
-      {
-        title: 'Create a snapshot',
-        checklist: [
-          'Click Create backup before major imports or term rollovers.',
-          'Download the JSON file to store off-site.',
-        ],
-      },
-      {
-        title: 'Restore carefully',
-        checklist: [
-          'Restore replaces school data; confirm no one is actively using the site.',
-        ],
-      },
-    ],
-  },
 };
 
 export function getAdminTabWalkthrough(tabId: string): TabWalkthroughConfig | null {

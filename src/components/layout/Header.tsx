@@ -31,12 +31,6 @@ const SettingsModal = dynamic(
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isRewardsPillarOn } from '@/lib/productPillars';
 import { cn } from '@/lib/utils';
-import {
-  staffPortalGlobalHeaderClassName,
-  staffPortalGlobalHeaderInnerClassName,
-  staffPortalHeaderWrapClassName,
-} from '@/components/staff/staffPortalNavStyles';
-import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -44,6 +38,7 @@ import Logo from '../logos/Logo';
 import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/lib/portalColors';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
+import { useHeaderManagedShell } from '@/components/layout/HeaderChromeContext';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -79,8 +74,8 @@ export default function Header() {
   const { settings } = useSettings();
   const playSound = useArcadeSound();
   const { firestore } = useFirebase();
-  const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
   const schoolDocRef = useSchoolMetadataDocRef();
+  const headerManagedShell = useHeaderManagedShell();
 
   const { data: schoolData, isLoading: isSchoolMetaLoading } = useDoc<{ name: string; logoUrl?: string }>(
     schoolDocRef,
@@ -266,13 +261,7 @@ export default function Header() {
   if (settings.payHomework ?? true) paidProducts.push('Homework');
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
-  const adminSideTabHeader =
-    !!schoolId &&
-    typeof pathname === 'string' &&
-    new RegExp(`^/${schoolId}/(?:admin|teacher|secretary|reports|librarian)(?:/|$)`).test(pathname);
-  const staffPortalHeaderWrap = adminSideTabHeader
-    ? staffPortalHeaderWrapClassName(staffPortalWide)
-    : 'mx-auto max-w-7xl px-4 md:px-8';
+  const headerWrapClassName = 'mx-auto max-w-7xl px-4 md:px-8';
 
   /** Long school names wrap; header row must grow (fixed h-20 + absolute center caused top clipping). */
   const headerSchoolNameClass =
@@ -358,20 +347,11 @@ export default function Header() {
   if (settings.displayMode === 'app') {
     return (
       <div id="levelup-global-app-header" className="w-full">
-        <div
-          className={cn(
-            'w-full min-w-0',
-            adminSideTabHeader
-              ? staffPortalHeaderWrap
-              : 'mx-auto max-w-7xl px-4 md:px-8',
-          )}
-        >
+        <div className={cn('w-full min-w-0', headerWrapClassName)}>
         <header
           className={cn(
             'no-print relative z-20 mb-2 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
-            adminSideTabHeader && staffPortalGlobalHeaderClassName(),
-            adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(),
           )}
         >
           <div className="relative z-10 flex shrink-0 justify-start">
@@ -461,29 +441,22 @@ export default function Header() {
   // --- WEB MODE HEADER (rounded bottom shell, same card shape as app mode) ---
   return (
     <>
-    <div id="levelup-global-app-header" className="no-print sticky top-0 z-50 w-full transition-colors">
-      <div
-        className={cn(
-          'w-full min-w-0',
-          adminSideTabHeader
-            ? staffPortalHeaderWrap
-            : 'mx-auto max-w-7xl px-4 md:px-8',
-        )}
-      >
+    <div
+      id="levelup-global-app-header"
+      className={cn(
+        'no-print z-50 w-full transition-colors',
+        headerManagedShell ? 'relative' : 'sticky top-0',
+      )}
+    >
+      <div className={cn('w-full min-w-0', headerWrapClassName)}>
         <header
           className={cn(
             'relative z-20 mb-2 w-full min-w-0 rounded-b-2xl border border-border/10 border-t-0',
             'bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
             'sm:mb-3 sm:rounded-b-3xl',
-            adminSideTabHeader && staffPortalGlobalHeaderClassName(),
           )}
         >
-      <div
-        className={cn(
-          'grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3',
-          staffPortalGlobalHeaderInnerClassName(),
-        )}
-      >
+      <div className="grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3">
         {/* Left: Branding */}
         <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>

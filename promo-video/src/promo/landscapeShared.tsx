@@ -153,7 +153,7 @@ export const LandscapeIntro: React.FC<{
             opacity: subtitleIn,
           }}
         >
-          School Rewards System
+          {eyebrow}
         </p>
         <h1
           style={{
@@ -244,7 +244,7 @@ export const LandscapeOutro: React.FC<{
         <h2
           style={{
             fontFamily: outfit,
-            fontSize: 88,
+            fontSize: 100,
             fontWeight: 800,
             lineHeight: 1.02,
             margin: 0,
@@ -259,7 +259,7 @@ export const LandscapeOutro: React.FC<{
         <p
           style={{
             fontFamily: jakarta,
-            fontSize: 28,
+            fontSize: 32,
             color: BRAND.textMuted,
             marginTop: 20,
             marginBottom: 48,
@@ -303,7 +303,7 @@ export const SegmentFlash: React.FC<{
   const opacity = interpolate(
     globalFrame,
     [local, local + flashFrames],
-    [0.9, 0],
+    [0.35, 0],
     {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
@@ -313,7 +313,7 @@ export const SegmentFlash: React.FC<{
   return (
     <AbsoluteFill
       style={{
-        background: `linear-gradient(135deg, rgba(255,255,255,${opacity * 0.7}), rgba(255,0,127,${opacity * 0.35}))`,
+        background: `linear-gradient(135deg, rgba(76,201,240,${opacity * 0.25}), rgba(255,0,127,${opacity * 0.2}))`,
         pointerEvents: "none",
         zIndex: 50,
       }}
@@ -345,11 +345,11 @@ export const LandscapeSidebar: React.FC<{
   return (
     <div
       style={{
-        flex: 1,
+        flex: "0 0 380px",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
-        padding: "0 48px 0 40px",
+        padding: "0 24px 0 16px",
         transform: `translateX(${interpolate(slide, [0, 1], [80, 0])}px)`,
         opacity: slide,
       }}
@@ -357,7 +357,7 @@ export const LandscapeSidebar: React.FC<{
       <span
         style={{
           fontFamily: outfit,
-          fontSize: 120,
+          fontSize: 140,
           fontWeight: 800,
           lineHeight: 1,
           transform: `scale(${numScale})`,
@@ -370,11 +370,11 @@ export const LandscapeSidebar: React.FC<{
       >
         {String(segmentIndex + 1).padStart(2, "0")}
       </span>
-      <span style={{ fontSize: 64, marginBottom: 16 }}>{emoji}</span>
+      <span style={{ fontSize: 72, marginBottom: 18 }}>{emoji}</span>
       <h3
         style={{
           fontFamily: outfit,
-          fontSize: 48,
+          fontSize: 56,
           fontWeight: 800,
           margin: 0,
           color,
@@ -395,11 +395,11 @@ export const LandscapeSidebar: React.FC<{
       <p
         style={{
           fontFamily: jakarta,
-          fontSize: 24,
-          lineHeight: 1.5,
+          fontSize: 28,
+          lineHeight: 1.45,
           color: BRAND.textMuted,
           margin: 0,
-          maxWidth: 420,
+          maxWidth: 360,
         }}
       >
         {tagline}
@@ -416,8 +416,8 @@ export const LandscapeBrowser: React.FC<{
 }> = ({ children, scale, rotateY, kenBurn }) => (
   <div
     style={{
-      width: 1080,
-      height: 608,
+      width: 1360,
+      height: 765,
       borderRadius: 20,
       border: "1px solid rgba(255, 255, 255, 0.14)",
       background: "#0c0a1a",

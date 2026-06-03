@@ -16,6 +16,8 @@ import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
 import { StudentPortalMyBooksCard } from './StudentPortalMyBooksCard';
 import { StudentPortalMyHouseCard } from './StudentPortalMyHouseCard';
+import { useSchoolSurfaceSnapshotReporter } from '@/hooks/useSchoolSurfaceSnapshotReporter';
+import { STUDENT_PORTAL_PREVIEW_DEVICE_ID } from '@/lib/kiosk/kioskScreenTypes';
 
 type Props = {
   schoolId: string;
@@ -86,6 +88,16 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
     [student],
   );
 
+  useSchoolSurfaceSnapshotReporter({
+    schoolId,
+    surface: 'studentPortal',
+    deviceId: STUDENT_PORTAL_PREVIEW_DEVICE_ID,
+    enabled: Boolean(schoolId && studentId && student),
+    studentId,
+    studentName: displayName,
+    firstCaptureOnly: true,
+  });
+
   if (studentLoading && !student) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
@@ -109,7 +121,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8">
+    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8" data-kiosk-snapshot-root>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">Student home</p>

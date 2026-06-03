@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { TabsList } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { staffPortalSidebarPanelClassName } from '@/components/staff/staffPortalNavStyles';
 
 export type AdminMainTabsOrientation = 'horizontal' | 'vertical';
 
@@ -12,6 +13,8 @@ type AdminMainTabsListProps = Omit<React.ComponentPropsWithoutRef<typeof TabsLis
   activeTabValue?: string;
   /** Horizontal row (default) or vertical sidebar stack. */
   orientation?: AdminMainTabsOrientation;
+  /** Sidebar sits inside `StaffPortalWorkspace` — no separate card chrome. */
+  inWorkspace?: boolean;
   /** Scroll active tab into view on change (can feel jumpy on staff portal). */
   autoScrollActiveTab?: boolean;
   /** Pinned controls (e.g. Add more) — end of row (horizontal) or bottom of stack (vertical). */
@@ -27,6 +30,7 @@ function AdminMainTabsListVertical({
   children,
   activeTabValue,
   autoScrollActiveTab = true,
+  inWorkspace = false,
   endAction,
   ...props
 }: AdminMainTabsListProps) {
@@ -43,10 +47,11 @@ function AdminMainTabsListVertical({
 
   return (
     <div
-      className={cn(
-        'flex w-full min-w-0 flex-col gap-2 rounded-2xl border bg-muted/50 p-2 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)]',
-        className,
-      )}
+      className={
+        inWorkspace
+          ? cn('flex w-full min-w-0 flex-col gap-2', className)
+          : staffPortalSidebarPanelClassName(className)
+      }
     >
       <TabsList
         ref={listRef}
@@ -172,12 +177,7 @@ function AdminMainTabsListHorizontal({
   }, [edgePadding, updateScrollHints]);
 
   return (
-    <div
-      className={cn(
-        'flex w-full min-w-0 flex-col gap-1.5 rounded-2xl border bg-muted/50 p-2 shadow-sm',
-        className,
-      )}
-    >
+    <div className={staffPortalSidebarPanelClassName(cn('gap-1.5', className))}>
       <div className="flex min-w-0 items-stretch gap-2">
         <div className="flex min-w-0 flex-1 items-stretch gap-1">
           {hasOverflow ? (
@@ -274,6 +274,7 @@ export function AdminMainTabsList({
   children,
   activeTabValue,
   orientation = 'horizontal',
+  inWorkspace = false,
   autoScrollActiveTab = true,
   endAction,
   ...props
@@ -283,6 +284,7 @@ export function AdminMainTabsList({
       <AdminMainTabsListVertical
         className={className}
         activeTabValue={activeTabValue}
+        inWorkspace={inWorkspace}
         autoScrollActiveTab={autoScrollActiveTab}
         endAction={endAction}
         {...props}

@@ -72,7 +72,6 @@ export const ADMIN_SETTINGS_TAB_VALUES = new Set([
     'raffle',
     'attendance',
     'insights',
-    'backups',
     'integrations',
     'staff-accounts',
     'reports',

@@ -189,6 +189,11 @@ service cloud.firestore {
     match /{path=**}/supportSessions/{sessionId} {
       allow read: if isDeveloper();
     }
+
+    // School screen snapshots (kiosk + student portal) for the developer console.
+    match /{path=**}/schoolScreens/{deviceId} {
+      allow read: if isDeveloper();
+    }
     
     match /schools/{schoolId} {
       allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isOffice(schoolId) || isHouseCoordinator(schoolId);
@@ -496,6 +501,13 @@ service cloud.firestore {
               && get(/databases/$(database)/documents/schools/$(schoolId)/supportSessions/$(sessionId)).data.requesterUid == request.auth.uid
             );
         }
+      }
+
+      // Live school screen snapshots (written by server API; readable by developer + school admin).
+      match /schoolScreens/{deviceId} {
+        allow read: if isDeveloper() || isAdmin(schoolId);
+        allow write: if false;
+        allow delete: if isDeveloper();
       }
 
       match /attendance/{docId} {

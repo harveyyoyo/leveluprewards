@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 /** Section body inside Classroom Management — no nested card. */
 export function ClassroomSectionFrame({
   title,
+  titleBelow,
   description,
   icon: Icon,
   children,
@@ -14,6 +15,7 @@ export function ClassroomSectionFrame({
   headerExtra,
 }: {
   title: string;
+  titleBelow?: ReactNode;
   description?: ReactNode;
   icon?: LucideIcon;
   children: ReactNode;
@@ -28,6 +30,7 @@ export function ClassroomSectionFrame({
             {Icon ? <Icon className="h-5 w-5 shrink-0 text-violet-500" aria-hidden /> : null}
             {title}
           </h3>
+          {titleBelow ? <div className="pt-1">{titleBelow}</div> : null}
           {description ? (
             <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
           ) : null}

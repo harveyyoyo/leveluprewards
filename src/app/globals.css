@@ -1305,13 +1305,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   color: #4b5563;
   font-weight: 600;
 }
-.print-id-number {
-  font-size: calc(10px * var(--print-id-font-scale));
-  color: #6b7280;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
 .print-id-barcode-container {
   width: 100%;
@@ -2521,18 +2514,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     line-height: 1.15;
   }
 
-  .print-id-number {
-    font-size: calc(10px * var(--print-id-font-scale));
-    color: #6b7280;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: normal;
-    word-break: normal;
-    overflow-wrap: break-word;
-    line-height: 1.15;
-  }
-
   .print-id-barcode-container {
     width: 100%;
     flex-shrink: 0;
@@ -2732,16 +2713,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-class {
     font-size: calc(12px * var(--print-id-font-scale)) !important;
     font-weight: 600 !important;
-    white-space: normal !important;
-    word-break: normal !important;
-    overflow-wrap: break-word !important;
-    line-height: 1.15 !important;
-  }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-number {
-    font-size: calc(10px * var(--print-id-font-scale)) !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
     white-space: normal !important;
     word-break: normal !important;
     overflow-wrap: break-word !important;

@@ -61,8 +61,8 @@ export function ContentSectionTreeNav({
       <Tabs value={value} onValueChange={onValueChange} className="w-full">
         <TabsList
           className={cn(
-            'grid h-auto w-full rounded-xl bg-muted/40 p-1',
-            fullWidth ? 'max-w-none' : 'max-w-2xl border border-border/40 bg-secondary/80 rounded-2xl',
+            'grid h-auto w-full gap-1 rounded-xl border border-border/50 bg-muted/50 p-1.5 shadow-inner',
+            fullWidth ? 'max-w-none' : 'max-w-2xl',
             colsClass,
           )}
         >
@@ -72,12 +72,19 @@ export function ContentSectionTreeNav({
               <TabsTrigger
                 key={item.id}
                 value={item.id}
-                className="group flex min-h-10 w-full min-w-0 items-center justify-start gap-1.5 whitespace-normal rounded-xl px-2 py-2 text-left text-xs font-bold leading-tight data-[state=active]:bg-background data-[state=active]:shadow-sm sm:justify-center sm:text-center sm:text-sm"
+                className={cn(
+                  'group flex min-h-11 w-full min-w-0 items-center justify-start gap-2 whitespace-normal rounded-lg border border-transparent px-3 py-2.5 text-left text-xs font-semibold leading-tight text-muted-foreground transition-[color,background-color,box-shadow,border-color] duration-200',
+                  'hover:border-border/60 hover:bg-background/70 hover:text-foreground',
+                  'data-[state=active]:border-primary/30 data-[state=active]:bg-primary data-[state=active]:font-black data-[state=active]:text-primary-foreground data-[state=active]:shadow-md',
+                  'sm:justify-center sm:text-center sm:text-sm',
+                )}
               >
-                {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
+                {Icon ? (
+                  <Icon className="h-4 w-4 shrink-0 opacity-80 group-data-[state=active]:opacity-100" />
+                ) : null}
                 <span className="min-w-0">{item.label}</span>
                 {item.badge !== undefined && item.badge !== '' && (
-                  <span className="ml-auto shrink-0 px-1.5 py-0.5 text-[9px] font-black rounded-lg bg-muted text-muted-foreground group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground sm:ml-1">
+                  <span className="ml-auto shrink-0 rounded-lg bg-muted px-1.5 py-0.5 text-[9px] font-black text-muted-foreground group-data-[state=active]:bg-primary-foreground/20 group-data-[state=active]:text-primary-foreground sm:ml-1">
                     {item.badge}
                   </span>
                 )}

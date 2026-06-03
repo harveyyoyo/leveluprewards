@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
 import { useKioskBackendWarmup } from '@/hooks/useKioskBackendWarmup';
+import { useKioskSnapshotReporter } from '@/hooks/useSchoolSurfaceSnapshotReporter';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { preloadBarcodeScanStack } from '@/lib/barcodeCameraScan';
@@ -1289,6 +1290,7 @@ function StudentDashboardInner({
         }}
       />
       <div
+        data-kiosk-snapshot-root
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
@@ -1990,6 +1992,17 @@ function StudentLoginPage() {
 
   const { activeStudentId, setActiveStudentId, handleDone, loginMeta, setLoginMeta } = useStudentKioskSession();
 
+  const kioskProfileId = settings.kioskProfileId ?? null;
+  const kioskProfileName =
+    (kioskProfileId && settings.kioskProfiles?.[kioskProfileId]?.name) || null;
+
+  useKioskSnapshotReporter({
+    schoolId,
+    enabled: Boolean(schoolId && isInitialized),
+    kioskProfileId,
+    profileName: kioskProfileName,
+  });
+
   useEffect(() => {
     setStudentKioskSignedIn(Boolean(activeStudentId));
     return () => setStudentKioskSignedIn(false);
@@ -2320,7 +2333,7 @@ function StudentLoginPage() {
   return (
     <ErrorBoundary name="StudentLoginPage">
       {/* Single column fills #screen-view so the scanner stays vertically centered in the viewport (not clustered top). */}
-      <div className="flex w-full flex-1 flex-col min-h-dvh">
+      <div className="flex w-full flex-1 flex-col min-h-dvh" data-kiosk-snapshot-root>
         <TooltipProvider>
           <div
             className={cn(

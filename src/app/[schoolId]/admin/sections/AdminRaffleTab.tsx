@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dices, Disc3, Ticket, Trophy, Users } from 'lucide-react';
+import { Clock, Dices, Disc3, RotateCcw, Ticket, Trophy, UserMinus, UserPlus, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   StaffPortalSectionCard,
@@ -24,8 +24,17 @@ import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
-import { rafflePointsFieldLabel, rafflePointsForStudent } from '@/lib/raffleStudentPoints';
-import { isRewardsPillarOn } from '@/lib/productPillars';
+import { rafflePointsFieldLabel } from '@/lib/raffleStudentPoints';
+import {
+  buildRafflePool,
+  isAttendanceRaffleScopeAvailable,
+  type RaffleEntryRow,
+  type RafflePoolScope,
+} from '@/lib/rafflePool';
+import { isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { attendanceStatusForStudent, useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { applyPointsByPeriod } from '@/lib/db/helpers';
 import {
   Dialog,
@@ -34,17 +43,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-type EntryRow = {
-  id: string;
-  name: string;
-  points: number;
-  /** Weight in the raffle pool (1 in equal-odds mode, or full ticket count). */
-  tickets: number;
-  /** floor(points / pointsPerTicket) when pointsPerTicket ≥ 1; in general raffle (0) shown as 1 for display. */
-  fullTickets: number;
-  deductPoints: number;
-};
 
 export function AdminRaffleTab({
   schoolId,
@@ -67,6 +65,26 @@ export function AdminRaffleTab({
   const [jackpotResetKey, setJackpotResetKey] = useState(0);
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
+  const [poolScope, setPoolScope] = useState<RafflePoolScope>('eligible');
+  const [manualExcludeIds, setManualExcludeIds] = useState<Set<string>>(() => new Set());
+  const [manualIncludeIds, setManualIncludeIds] = useState<Set<string>>(() => new Set());
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+
+  const attendanceScopeAvailable = isAttendanceRaffleScopeAvailable(settings);
+  const attendancePillarOn = isPillarOn(settings, 'payAttendance');
+  const todayAttendance = useTodayAttendanceMap(schoolId, attendanceScopeAvailable);
+
+  const onTimeTodayIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (!attendanceScopeAvailable) return ids;
+    for (const s of students || []) {
+      if (!s?.id) continue;
+      if (attendanceStatusForStudent(todayAttendance, s.id, true) === 'on-time') {
+        ids.add(s.id);
+      }
+    }
+    return ids;
+  }, [attendanceScopeAvailable, students, todayAttendance]);
 
   const storedPpt = Number(settings.rafflePointsPerTicket);
   const rewardsPillarOn = isRewardsPillarOn(settings);
@@ -76,54 +94,113 @@ export function AdminRaffleTab({
   const oneEntryPerStudent = !!settings.raffleOneEntryPerStudent;
   const raffleDisplayMode = settings.raffleDisplayMode === 'wheel' ? 'wheel' : 'jackpot';
 
-  const entries = useMemo<EntryRow[]>(() => {
-    const rows: EntryRow[] = [];
-    if (isGeneralRaffle) {
-      for (const s of students || []) {
-        const pts = rafflePointsForStudent(s, settings);
-        rows.push({
-          id: s.id,
-          name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
-          points: pts,
-          tickets: 1,
-          fullTickets: 1,
-          deductPoints: 0,
-        });
-      }
-      rows.sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
-      return rows;
-    }
-    for (const s of students || []) {
-      const pts = rafflePointsForStudent(s, settings);
-      const fullTickets = Math.max(0, Math.floor(pts / pointsPerTicket));
-      if (fullTickets <= 0) continue;
-      const tickets = oneEntryPerStudent ? 1 : fullTickets;
-      const deductPoints = oneEntryPerStudent ? pointsPerTicket : fullTickets * pointsPerTicket;
-      rows.push({
+  const effectivePoolScope: RafflePoolScope =
+    poolScope === 'onTimeToday' && attendanceScopeAvailable ? 'onTimeToday' : 'eligible';
+
+  const entries = useMemo<RaffleEntryRow[]>(
+    () =>
+      buildRafflePool({
+        students: students || [],
+        settings,
+        rafflePointsPerTicket: settings.rafflePointsPerTicket,
+        raffleOneEntryPerStudent: oneEntryPerStudent,
+        poolScope: effectivePoolScope,
+        onTimeTodayIds,
+        manualExcludeIds,
+        manualIncludeIds,
+      }),
+    [
+      effectivePoolScope,
+      manualExcludeIds,
+      manualIncludeIds,
+      onTimeTodayIds,
+      oneEntryPerStudent,
+      settings,
+      students,
+    ],
+  );
+
+  const entryIdSet = useMemo(() => new Set(entries.map((e) => e.id)), [entries]);
+
+  const excludedPreview = useMemo(() => {
+    return (students || [])
+      .filter((s) => s?.id && manualExcludeIds.has(s.id))
+      .map((s) => ({
         id: s.id,
         name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
-        points: pts,
-        tickets,
-        fullTickets,
-        deductPoints,
-      });
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [manualExcludeIds, students]);
+
+  const studentsAvailableToAdd = useMemo(() => {
+    return (students || [])
+      .filter((s) => s?.id && !entryIdSet.has(s.id) && !manualExcludeIds.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [entryIdSet, manualExcludeIds, students]);
+
+  const clearDrawSessionOverrides = useCallback(() => {
+    setPoolScope('eligible');
+    setManualExcludeIds(new Set());
+    setManualIncludeIds(new Set());
+    setAddStudentOpen(false);
+  }, []);
+
+  const removeFromPool = useCallback((studentId: string) => {
+    setManualIncludeIds((prev) => {
+      if (!prev.has(studentId)) return prev;
+      const next = new Set(prev);
+      next.delete(studentId);
+      return next;
+    });
+    setManualExcludeIds((prev) => new Set(prev).add(studentId));
+  }, []);
+
+  const restoreToPool = useCallback((studentId: string) => {
+    setManualExcludeIds((prev) => {
+      if (!prev.has(studentId)) return prev;
+      const next = new Set(prev);
+      next.delete(studentId);
+      return next;
+    });
+  }, []);
+
+  const addToPool = useCallback((studentId: string) => {
+    setManualExcludeIds((prev) => {
+      if (!prev.has(studentId)) return prev;
+      const next = new Set(prev);
+      next.delete(studentId);
+      return next;
+    });
+    setManualIncludeIds((prev) => new Set(prev).add(studentId));
+    setAddStudentOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!attendanceScopeAvailable && poolScope === 'onTimeToday') {
+      setPoolScope('eligible');
     }
-    rows.sort((a, b) =>
-      oneEntryPerStudent
-        ? b.fullTickets - a.fullTickets || b.points - a.points || a.name.localeCompare(b.name)
-        : b.tickets - a.tickets || b.points - a.points || a.name.localeCompare(b.name),
-    );
-    return rows;
-  }, [isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, students, settings]);
+  }, [attendanceScopeAvailable, poolScope]);
 
   useEffect(() => {
     setWinner(null);
     setJackpotResetKey((k) => k + 1);
-  }, [isGeneralRaffle, oneEntryPerStudent, pointsPerTicket, raffleDisplayMode]);
+  }, [
+    effectivePoolScope,
+    isGeneralRaffle,
+    manualExcludeIds,
+    manualIncludeIds,
+    oneEntryPerStudent,
+    pointsPerTicket,
+    raffleDisplayMode,
+  ]);
 
   const totalTickets = useMemo(() => entries.reduce((sum, r) => sum + r.tickets, 0), [entries]);
 
-  const pickWeightedWinner = useCallback((): EntryRow | null => {
+  const pickWeightedWinner = useCallback((): RaffleEntryRow | null => {
     if (totalTickets <= 0) return null;
     const pick = Math.floor(Math.random() * totalTickets);
     let cursor = 0;
@@ -184,7 +261,7 @@ export function AdminRaffleTab({
         await runTransaction(firestore, async (tx) => {
           // Firestore requires every read before any write in a transaction.
           const readResults: {
-            r: EntryRow;
+            r: RaffleEntryRow;
             studentRef: ReturnType<typeof doc>;
             snap: DocumentSnapshot;
           }[] = [];
@@ -471,6 +548,112 @@ export function AdminRaffleTab({
             )}
 
             <section className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  This draw
+                </h2>
+                {(poolScope !== 'eligible' ||
+                  manualExcludeIds.size > 0 ||
+                  manualIncludeIds.size > 0) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 gap-1.5 self-start text-xs"
+                    onClick={clearDrawSessionOverrides}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+                    Reset pool tweaks
+                  </Button>
+                )}
+              </div>
+              <div className="rounded-2xl border bg-muted/15 p-4 shadow-sm sm:p-5 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setPoolScope('eligible')}
+                    className={cn(
+                      'rounded-xl border px-3.5 py-3 text-left transition-colors',
+                      effectivePoolScope === 'eligible'
+                        ? 'border-primary bg-primary/10 ring-1 ring-primary/20'
+                        : 'border-border bg-background/80 hover:border-primary/30',
+                    )}
+                  >
+                    <p className="text-sm font-semibold">All eligible students</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Everyone in this list who meets ticket rules (or general raffle).
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!attendanceScopeAvailable}
+                    onClick={() => attendanceScopeAvailable && setPoolScope('onTimeToday')}
+                    className={cn(
+                      'rounded-xl border px-3.5 py-3 text-left transition-colors',
+                      !attendanceScopeAvailable && 'cursor-not-allowed opacity-50',
+                      effectivePoolScope === 'onTimeToday'
+                        ? 'border-primary bg-primary/10 ring-1 ring-primary/20'
+                        : 'border-border bg-background/80 hover:border-primary/30',
+                      !attendanceScopeAvailable && 'hover:border-border',
+                    )}
+                  >
+                    <p className="flex items-center gap-2 text-sm font-semibold">
+                      <Clock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      On-time today only
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {attendanceScopeAvailable
+                        ? `Only students who signed in on time today (${onTimeTodayIds.size} in scope).`
+                        : !attendancePillarOn
+                          ? 'Turn on the Attendance product pillar to use this.'
+                          : 'Turn on class sign-in in Attendance settings to use this.'}
+                    </p>
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Popover open={addStudentOpen} onOpenChange={setAddStudentOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="outline" size="sm" className="gap-1.5">
+                        <UserPlus className="h-4 w-4" aria-hidden />
+                        Add to pool
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-0" align="start">
+                      <div className="max-h-56 overflow-y-auto divide-y">
+                        {studentsAvailableToAdd.length === 0 ? (
+                          <p className="px-3 py-4 text-xs text-muted-foreground">
+                            No more students to add in this list.
+                          </p>
+                        ) : (
+                          studentsAvailableToAdd.map((s) => (
+                            <button
+                              key={s.id}
+                              type="button"
+                              className="flex w-full px-3 py-2.5 text-left text-sm hover:bg-muted/60"
+                              onClick={() => addToPool(s.id)}
+                            >
+                              {s.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {manualIncludeIds.size > 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {manualIncludeIds.size} manually added (this session only)
+                    </span>
+                  ) : null}
+                  {manualExcludeIds.size > 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {manualExcludeIds.size} removed (this session only)
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
               <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Run draw</h2>
               <p className="text-xs text-muted-foreground">
                 Same pool and deduct behavior — only the animation changes. Wheel slices reflect ticket weights.
@@ -572,11 +755,13 @@ export function AdminRaffleTab({
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Entries preview</h2>
                 <p className="text-xs text-muted-foreground sm:max-w-[min(42rem,72%)] sm:text-right">
-                  {isGeneralRaffle
-                    ? 'One pool entry each; balances shown for reference.'
-                    : oneEntryPerStudent
-                      ? 'One entry each if qualified; full tickets from points for reference.'
-                      : 'Rows weighted by ticket count from points.'}
+                  {effectivePoolScope === 'onTimeToday'
+                    ? 'On-time sign-ins today only. Use Remove to skip someone for this draw.'
+                    : isGeneralRaffle
+                      ? 'One pool entry each; balances shown for reference.'
+                      : oneEntryPerStudent
+                        ? 'One entry each if qualified; full tickets from points for reference.'
+                        : 'Rows weighted by ticket count from points.'}
                 </p>
               </div>
               <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
@@ -589,10 +774,17 @@ export function AdminRaffleTab({
                     entries.slice(0, 50).map((r) => (
                       <div
                         key={r.id}
-                        className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-muted/30"
+                        className="flex items-center gap-2 px-4 py-2.5 transition-colors hover:bg-muted/30 sm:gap-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold">{r.name}</p>
+                          <p className="truncate text-sm font-semibold">
+                            {r.name}
+                            {r.manualInclude ? (
+                              <span className="ml-1.5 text-[0.65rem] font-bold uppercase tracking-wide text-primary">
+                                Added
+                              </span>
+                            ) : null}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {isGeneralRaffle ? (
                               <>
@@ -615,6 +807,16 @@ export function AdminRaffleTab({
                         >
                           ×{r.tickets}
                         </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove ${r.name} from this draw`}
+                          onClick={() => removeFromPool(r.id)}
+                        >
+                          <UserMinus className="h-4 w-4" aria-hidden />
+                        </Button>
                       </div>
                     ))
                   )}
@@ -625,6 +827,29 @@ export function AdminRaffleTab({
                   </div>
                 ) : null}
               </div>
+              {excludedPreview.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-dashed bg-muted/10">
+                  <p className="border-b bg-muted/20 px-4 py-2 text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">
+                    Removed for this draw
+                  </p>
+                  <div className="divide-y">
+                    {excludedPreview.map((s) => (
+                      <div key={s.id} className="flex items-center justify-between gap-2 px-4 py-2">
+                        <p className="truncate text-sm text-muted-foreground">{s.name}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 shrink-0 text-xs"
+                          onClick={() => restoreToPool(s.id)}
+                        >
+                          Restore
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>

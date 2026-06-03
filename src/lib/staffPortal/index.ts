@@ -7,8 +7,10 @@ export {
   staffPortalCoreTabs,
   staffPortalDefaultTab,
   staffPortalPinWelcomeFirst,
+  staffPortalIsTeacherOperatedTab,
   staffPortalTabDescription,
   staffPortalTabsForRole,
+  staffPortalTeacherOperatedAdminNote,
 } from './tabRegistry';
 export {
   staffPortalTabIsValid,

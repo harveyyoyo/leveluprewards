@@ -11,6 +11,11 @@ export function getStudentNickname(student: { firstName: string; nickname?: stri
   return student.nickname && student.nickname.trim() !== '' ? student.nickname : student.firstName;
 }
 
+/** Label for staff portal welcome greeting — keeps titles and surnames intact. */
+export function staffGreetingName(displayName: string): string {
+  return displayName.trim();
+}
+
 /** How student names appear on shared displays (Hall of Fame, etc.). */
 export type PrivacyStudentNameDisplayMode = 'full' | 'preferred_only';
 

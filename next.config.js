@@ -46,7 +46,12 @@ const nextConfig = {
       },
       {
         source: '/leveluparcade',
-        destination: '/level-up-arcade',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/level-up-arcade',
+        destination: '/',
         permanent: true,
       },
       {

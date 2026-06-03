@@ -38,12 +38,14 @@ export type ClassroomSeatingPrefs = {
   defaultPoints: number;
   defaultDescription: string;
   quickAwards: ClassroomQuickAward[];
-  /** When true, quick select (one tap = default points); when false, show award menu on tap. */
+  /** When true, quick select (one tap = default points); when false, show awards menu on tap. */
   instantTap: boolean;
   /** Show lifetime balance on each desk. */
   showPointBalances: boolean;
   /** Show points earned this session on each desk. */
   showSessionTotals: boolean;
+  /** Append last name after the desk label (nickname or first name). */
+  showLastName: boolean;
   /** Optional quick deduct button in the award menu. */
   correctionPoints: number;
   correctionLabel: string;
@@ -80,7 +82,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 11;
+export const CLASSROOM_PREFS_VERSION = 13;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -90,12 +92,13 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   instantTap: true,
   showPointBalances: true,
   showSessionTotals: true,
+  showLastName: false,
   correctionPoints: 2,
   correctionLabel: 'Reminder',
   correctionDescription: 'Behavior reminder',
   design: 'playful',
   frontAtBottom: false,
-  celebrationEffect: 'none',
+  celebrationEffect: 'flash',
   showKioskFlyUp: true,
   kioskFlyUpSize: 'medium',
   showRandomPicker: false,
@@ -209,9 +212,13 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
         parsed.quickAwards?.length && parsed.quickAwards.every((q) => q.label && q.points > 0)
           ? parsed.quickAwards
           : DEFAULT_CLASSROOM_PREFS.quickAwards,
-      instantTap: true,
+      instantTap:
+        typeof parsed.instantTap === 'boolean'
+          ? parsed.instantTap
+          : DEFAULT_CLASSROOM_PREFS.instantTap,
       showPointBalances: parsed.showPointBalances ?? DEFAULT_CLASSROOM_PREFS.showPointBalances,
       showSessionTotals: parsed.showSessionTotals ?? DEFAULT_CLASSROOM_PREFS.showSessionTotals,
+      showLastName: parsed.showLastName ?? DEFAULT_CLASSROOM_PREFS.showLastName,
       correctionPoints: parsed.correctionPoints ?? DEFAULT_CLASSROOM_PREFS.correctionPoints,
       correctionLabel: parsed.correctionLabel ?? DEFAULT_CLASSROOM_PREFS.correctionLabel,
       correctionDescription:
@@ -228,7 +235,7 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
-    if (parsedVersion < 10 && prefs.celebrationEffect === 'none') {
+    if (parsedVersion < 13 && prefs.celebrationEffect === 'none') {
       prefs.celebrationEffect = 'flash';
     }
     if (
@@ -238,7 +245,7 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       hadLegacyFlyUpEffect(parsed.celebrationEffect) ||
       String(parsed.celebrationEffect) === LEGACY_FLASH_EFFECT ||
       (parsedVersion < 5 && parsed.celebrationEffect === 'none') ||
-      parsedVersion < 10
+      parsedVersion < 13
     ) {
       if (parsedVersion < 5 && parsed.celebrationEffect === 'none') {
         prefs.celebrationEffect = 'flash';

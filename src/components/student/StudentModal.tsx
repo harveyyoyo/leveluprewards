@@ -19,6 +19,7 @@ import {
 import { useAppContext } from '@/components/AppProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Class, House, Teacher, StudentTheme } from '@/lib/types';
+import { ensureStudentHasClassPrimaryTeacher } from '@/lib/studentTeacherRoster';
 import { useFirestore, useFunctions } from '@/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -142,6 +143,19 @@ export function StudentModal({
       }
     }
   }, [student, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || classId === 'none') return;
+    const linked = ensureStudentHasClassPrimaryTeacher(
+      { id: '', firstName: '', lastName: '', points: 0, lifetimePoints: 0, nfcId: '', classId },
+      allClasses,
+    ).teacherIds;
+    if (!linked?.length) return;
+    setSelectedTeacherIds((prev) => {
+      const next = new Set([...prev, ...linked]);
+      return next.size === prev.length ? prev : [...next];
+    });
+  }, [classId, isOpen, allClasses]);
 
   useEffect(() => {
     return () => {

@@ -53,6 +53,7 @@ import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJum
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
 import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
 import {
     FEATURE_SECTION_NAV,
@@ -241,9 +242,12 @@ export function SettingsModal() {
             key === 'adminSessionTimeoutMs' ||
             key === 'kioskAutoLogoutEnabled' ||
             key === 'kioskSessionTimeoutSec' ||
+            key === 'classroomAutoLogoutEnabled' ||
+            key === 'classroomSessionTimeoutMs' ||
             key === 'kioskAiFunIdleOffSec' ||
             key === 'soundEnabled' ||
-            key === 'studentAudioTheme'
+            key === 'studentAudioTheme' ||
+            key === 'adminPerTabColorScheme'
         ) {
             updateSettings({ [key]: value } as Partial<AppSettings>);
         }
@@ -1122,6 +1126,23 @@ export function SettingsModal() {
                                             onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
                                         />
                                     </div>
+                                    {canManageSchoolSettings && interfaceRole === 'global' ? (
+                                        <div className="flex items-center justify-between col-span-2">
+                                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                <Layers className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                <div className="min-w-0">
+                                                    <span className="text-sm font-bold">Colored feature tabs</span>
+                                                    <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                        Soft accent colors on extra-feature tabs you pin in the admin sidebar (Insights, Hall of Fame, and similar).
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Switch
+                                                checked={!!local.adminPerTabColorScheme}
+                                                onCheckedChange={(checked) => handleToggle('adminPerTabColorScheme', checked)}
+                                            />
+                                        </div>
+                                    ) : null}
                                 </div>
 
                                  {/* Display Mode */}
@@ -1281,6 +1302,45 @@ export function SettingsModal() {
                                             />
                                         </div>
                                     </div>
+
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-bold">Classroom Auto-Exit</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                {local.classroomAutoLogoutEnabled !== false
+                                                    ? 'Leave full-screen classroom after idle time (minutes)'
+                                                    : 'Full-screen classroom stays open until closed manually'}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <Switch
+                                                checked={local.classroomAutoLogoutEnabled !== false}
+                                                onCheckedChange={(checked) => handleToggle('classroomAutoLogoutEnabled', checked)}
+                                                disabled={!canManageSchoolSettings}
+                                                aria-label="Enable classroom auto-exit"
+                                            />
+                                            <Input
+                                                type="number"
+                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50 disabled:opacity-40"
+                                                value={Math.round(
+                                                    (local.classroomSessionTimeoutMs ||
+                                                        DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS) / 60000,
+                                                )}
+                                                onChange={(e) =>
+                                                    handleToggle(
+                                                        'classroomSessionTimeoutMs',
+                                                        Math.max(1, parseInt(e.target.value, 10) || 1) * 60000,
+                                                    )
+                                                }
+                                                min={1}
+                                                max={1440}
+                                                disabled={
+                                                    local.classroomAutoLogoutEnabled === false ||
+                                                    !canManageSchoolSettings
+                                                }
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1319,7 +1379,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Side tabs hide the header while you scroll and bring it back at the top of the page. Use the wide/standard button in the portal header to change content width.
+                                                Portal pages tuck the header while you scroll and bring it back at the top. Student kiosks reveal it when you move the pointer to the top edge. Use the wide/standard button in the portal header to change content width.
                                             </p>
                                         </div>
                                         <Switch
@@ -1328,7 +1388,7 @@ export function SettingsModal() {
                                                 handleToggle('hideSiteHeaderOutsidePortal', checked)
                                             }
                                             disabled={!canManageSchoolSettings}
-                                            aria-label="Hide header on staff portal pages"
+                                            aria-label="Hide header on portal pages"
                                         />
                                     </div>
 

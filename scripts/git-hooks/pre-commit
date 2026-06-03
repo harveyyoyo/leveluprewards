@@ -1,0 +1,3 @@
+#!/bin/sh
+# Blocks commits on protected branches unless ALLOW_MAIN_COMMIT=1
+node scripts/git-hooks/pre-commit.mjs

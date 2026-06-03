@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalContentWidthClassName } from '@/components/staff/staffPortalNavStyles';
 
 type StaffPortalContentWidthProps = {
@@ -10,9 +10,9 @@ type StaffPortalContentWidthProps = {
   className?: string;
 };
 
-/** Centers page content when standard layout is selected; full width when wide. */
+/** Width helper inside the staff portal shell — wide stretches edge-to-edge inside `<main>`. */
 export function StaffPortalContentWidth({ children, className }: StaffPortalContentWidthProps) {
-  const { isWide } = useStaffPortalLayout();
+  const { isWide } = useStaffPortalLayoutMode();
 
   return <div className={cn(staffPortalContentWidthClassName(isWide), className)}>{children}</div>;
 }

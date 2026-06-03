@@ -2466,9 +2466,31 @@ async function captureLibrary({ categoryFilter, nameFilter, variantsOverride, sk
   fs.mkdirSync(LIBRARY_DIR, { recursive: true });
   let variants = variantsOverride ?? LIBRARY_VARIANTS;
   if (nameFilter?.length) {
-    variants = variants.filter((v) =>
-      nameFilter.includes(`${v.category}/${v.name}`),
-    );
+    if (variantsOverride) {
+      variants = variants.filter((v) =>
+        nameFilter.includes(`${v.category}/${v.name}`),
+      );
+    } else {
+      const extras = buildPromoBrollExtraVariants();
+      let coupons = [];
+      try {
+        coupons = await buildKioskCouponRedeemVariants();
+      } catch {
+        /* optional */
+      }
+      const byId = new Map(
+        [...LIBRARY_VARIANTS, ...extras, ...coupons].map((v) => [
+          `${v.category}/${v.name}`,
+          v,
+        ]),
+      );
+      variants = nameFilter
+        .map((id) => byId.get(id))
+        .filter(Boolean);
+      if (!variants.length) {
+        throw new Error(`No capture definitions for: ${nameFilter.join(', ')}`);
+      }
+    }
   } else if (categoryFilter) {
     variants = variants.filter((v) => v.category.includes(categoryFilter));
   }
@@ -2814,7 +2836,31 @@ async function main() {
   }
 
   if (libraryMode) {
-    await captureLibrary({ categoryFilter });
+    const clipFilter = process.argv.find((a) => a.startsWith('--clip='))?.split('=')[1]?.trim();
+    let nameFilter;
+    if (clipFilter) {
+      const normalized = clipFilter.replace(/\.mp4$/, '');
+      if (normalized.includes('/')) {
+        nameFilter = [normalized];
+      } else {
+        nameFilter = LIBRARY_VARIANTS.filter(
+          (v) => v.name === normalized || v.name.includes(normalized),
+        ).map((v) => `${v.category}/${v.name}`);
+        for (const v of buildPromoBrollExtraVariants()) {
+          const id = `${v.category}/${v.name}`;
+          if (
+            (v.name === normalized || v.name.includes(normalized)) &&
+            !nameFilter.includes(id)
+          ) {
+            nameFilter.push(id);
+          }
+        }
+      }
+      if (!nameFilter.length) {
+        throw new Error(`No library clips match --clip=${clipFilter}`);
+      }
+    }
+    await captureLibrary({ categoryFilter, nameFilter });
     if (promoteDefaults) promoteDefaultsToWalkthrough();
     return;
   }

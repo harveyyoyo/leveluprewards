@@ -1,9 +1,10 @@
 /**
- * Default local dev launcher (Webpack `next dev`).
+ * Webpack `next dev` without background route warmup (`npm run dev:fast`).
  *
  * - Binds 127.0.0.1 (reliable on Windows; use HOST=0.0.0.0 for LAN/tunnel).
  * - Does NOT delete `.next` on every start (that caused missing chunk errors like ./1682.js).
  * - Run `npm run dev:reset` when the dev graph is corrupt (blank page / MODULE_NOT_FOUND).
+ * - Default `npm run dev` uses scripts/dev-with-warmup.cjs instead.
  */
 const { spawn } = require('child_process');
 const path = require('path');

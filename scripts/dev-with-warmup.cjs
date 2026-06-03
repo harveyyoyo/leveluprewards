@@ -1,11 +1,12 @@
 /**
- * Start Next.js dev quickly, then warm-compile routes in the background.
+ * Default local dev launcher: Next.js dev + background route warmup.
  *
  * Usage:
- *   npm run dev:warm       - Webpack dev (default, stable on Windows)
+ *   npm run dev            - Webpack dev + background warmup (default)
+ *   npm run dev:fast       - Webpack dev, no warmup (responsive on weak machines)
  *   npm run dev:warm:turbo - Turbopack dev + warmup
  *
- * Enable background warmup: DEV_WARMUP=1 npm run dev
+ * Disable warmup: DEV_WARMUP=0 npm run dev (or DEV_WARMUP=0 in .env.local)
  */
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -19,8 +20,15 @@ const root = path.join(__dirname, '..');
 const port = String(process.env.PORT || '3000').trim() || '3000';
 const host = String(process.env.HOST || '127.0.0.1').trim() || '127.0.0.1';
 const useTurbo = String(process.env.DEV_WARMUP_BUNDLER || '').trim().toLowerCase() === 'turbo';
-/** Off by default so dev stays responsive; opt in with DEV_WARMUP=1 when you want pre-compile. */
-const warmupEnabled = process.env.DEV_WARMUP === '1';
+
+function isWarmupEnabled() {
+  const flag = String(process.env.DEV_WARMUP ?? '').trim().toLowerCase();
+  if (flag === '0' || flag === 'false' || flag === 'no' || flag === 'off') return false;
+  if (flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on') return true;
+  return true;
+}
+
+const warmupEnabled = isWarmupEnabled();
 const nextCli = path.join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 function sleepMs(ms) {
@@ -70,12 +78,13 @@ async function main() {
     ? ['dev', '--turbo', '-H', host, '-p', port]
     : ['dev', '-H', host, '-p', port];
 
-  console.log(`[dev:warm] http://${host}:${port} (${useTurbo ? 'Turbopack' : 'Webpack'})`);
+  console.log(`[dev] http://${host}:${port} (${useTurbo ? 'Turbopack' : 'Webpack'})`);
+  console.log('[dev] If pages are blank or you see Cannot find module ./*.js -> npm run dev:reset');
   if (warmupEnabled) {
     console.log('[dev:warmup] Background warmup: low-priority HTTP, then heavy pages only in headless Chrome.');
-    console.log('[dev:warmup] "Ready" = app is usable. Warmup runs in background (~2-5 min).\n');
+    console.log('[dev:warmup] App is usable while warmup runs (~2-5 min). Disable: DEV_WARMUP=0 or npm run dev:fast\n');
   } else {
-    console.log('[dev:warm] Background warmup off (default). Set DEV_WARMUP=1 to pre-compile routes.\n');
+    console.log('[dev] Background warmup off. Re-enable: npm run dev (default) or DEV_WARMUP=1\n');
   }
 
   const dev = spawn(process.execPath, [nextCli, ...nextArgs], {
@@ -101,7 +110,7 @@ async function main() {
 
   if (warmupEnabled) {
     // Start after Next is up; dev-warm-routes waits for /login then delays before browser pass.
-    const warmupStartMs = Math.max(0, parseInt(process.env.DEV_WARMUP_START_DELAY_MS || '8000', 10) || 8000);
+    const warmupStartMs = Math.max(0, parseInt(process.env.DEV_WARMUP_START_DELAY_MS || '3000', 10) || 3000);
     setTimeout(startWarmup, warmupStartMs);
   }
 
@@ -134,6 +143,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`[dev:warm] ${error.message || error}`);
+  console.error(`[dev] ${error.message || error}`);
   process.exit(1);
 });

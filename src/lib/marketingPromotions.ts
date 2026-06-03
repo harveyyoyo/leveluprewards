@@ -169,6 +169,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['Teachers', 'Classroom', 'Playbook', 'Raffles'],
   },
   {
+    id: 'levelup-rewards-basic-settings',
+    name: 'Rewards Basic Settings',
+    description:
+      'Admin handout—point categories, rewards shop setup, coupon printing, and school rules. Shows the student kiosk sign-in screen (not the school login page).',
+    href: '/marketing/levelup-rewards-basic-settings-flyer.html',
+    audience: 'staff',
+    preview: { border: 'border-blue-500/40', tag: 'Admin' },
+    tags: ['Admin', 'Setup', 'Categories', 'Kiosk'],
+  },
+  {
     id: 'students-elementary',
     name: 'Elementary Stars',
     description:

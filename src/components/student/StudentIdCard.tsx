@@ -155,7 +155,6 @@ export function StudentIdCard({
               <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
             ) : null}
             <div className="print-id-class" style={classStyle}>Class: {className}</div>
-            <div className="print-id-number" style={metaStyle}>ID #{student.nfcId}</div>
           </div>
         </div>
 

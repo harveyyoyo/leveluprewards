@@ -1826,7 +1826,7 @@ exports.awardSpecialDayPoints = functions.https.onCall(async (data, context) => 
 // ========================================================================
 const LOGO_MAX_BYTES = 10 * 1024 * 1024; // 10MB
 const LOGO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
-const STUDENT_PHOTO_MAX_BYTES = 10 * 1024 * 1024; // 10MB
+const STUDENT_PHOTO_MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const STUDENT_PHOTO_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 const STUDENT_CUSTOM_EMOJI_MAX_BYTES = 2 * 1024 * 1024; // 2MB
 const STUDENT_CUSTOM_EMOJI_ALLOWED_TYPES = [
@@ -2032,7 +2032,7 @@ exports.uploadStudentPhoto = functions.https.onCall(async (data, context) => {
             throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
         }
         if (buffer.length > STUDENT_PHOTO_MAX_BYTES) {
-            throw new functions.https.HttpsError("invalid-argument", "Image must be under 10MB.");
+            throw new functions.https.HttpsError("invalid-argument", "Image must be under 5MB.");
         }
         const bucket = admin.storage().bucket();
         const path = `student-photos/${schoolId}/${studentId}`;

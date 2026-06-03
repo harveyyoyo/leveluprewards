@@ -2,21 +2,24 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  ArrowRight,
   ChevronRight,
   Sparkles,
   TableProperties,
-  Upload,
-  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+  StaffPortalSectionCardHeader,
+  StaffPortalSectionCardTitle,
+} from '@/components/staff/StaffPortalSection';
 import {
   staffPortalTabDescription,
   staffPortalTabsForRole,
   type StaffPortalRole,
 } from '@/lib/staffPortal';
 import type { Settings } from '@/components/providers/SettingsProvider';
-import { cn } from '@/lib/utils';
+import { cn, staffGreetingName } from '@/lib/utils';
 
 export type AdminWelcomeStats = {
   studentCount: number;
@@ -31,7 +34,6 @@ type StaffPortalWelcomeTabProps = {
   onGoToTab: (tabValue: string) => void;
   /** Admin-only: open bulk CSV roster import. */
   onBulkRoster?: () => void;
-  includeDeveloperBackups?: boolean;
   /** First name or display name for a personal greeting. */
   displayName?: string | null;
   /** Shown on admin welcome when available. */
@@ -40,12 +42,6 @@ type StaffPortalWelcomeTabProps = {
   adminStats?: AdminWelcomeStats;
   className?: string;
 };
-
-function firstName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return '';
-  return trimmed.split(/\s+/)[0] ?? trimmed;
-}
 
 function formatStat(n: number): string {
   return n.toLocaleString();
@@ -108,13 +104,9 @@ function TabLinkRow({
 
 function AdminWelcomeHero({
   schoolName,
-  onManageStudents,
-  onImportRoster,
   stats,
 }: {
   schoolName: string | null;
-  onManageStudents: () => void;
-  onImportRoster?: () => void;
   stats: AdminWelcomeStats;
 }) {
   const statTiles = [
@@ -125,61 +117,25 @@ function AdminWelcomeHero({
   ];
 
   return (
-    <section
-      className={cn(
-        'overflow-hidden rounded-2xl border border-border/50 bg-card px-5 py-6 shadow-sm sm:px-7 sm:py-7',
-      )}
-    >
-      <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15"
-              aria-hidden
-            >
-              <Sparkles className="h-5 w-5" />
-            </div>
-            {schoolName ? (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {schoolName}
-              </p>
-            ) : null}
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Welcome back 👋</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-                This is your control center. Manage students, award points, run the prize shop, and
-                power the screens around your school — all from one place.
-              </p>
-            </div>
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-3">
+          {schoolName ? (
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              {schoolName}
+            </p>
+          ) : null}
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Welcome back 👋</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
+              This is your control center. Manage students, award points, run the prize shop, and
+              power the screens around your school — all from one place.
+            </p>
           </div>
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-2.5">
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 rounded-lg font-semibold"
-            onClick={onManageStudents}
-          >
-            <Users className="mr-2 h-4 w-4" aria-hidden />
-            Manage students
-            <ArrowRight className="ml-1.5 h-4 w-4 opacity-70" aria-hidden />
-          </Button>
-          {onImportRoster ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-9 rounded-lg border-border font-semibold"
-              onClick={onImportRoster}
-            >
-              <Upload className="mr-2 h-4 w-4" aria-hidden />
-              Import roster
-            </Button>
-          ) : null}
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {statTiles.map((tile) => (
             <div
               key={tile.label}
@@ -194,8 +150,7 @@ function AdminWelcomeHero({
             </div>
           ))}
         </div>
-      </div>
-    </section>
+    </div>
   );
 }
 function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
@@ -232,19 +187,18 @@ export function StaffPortalWelcomeTab({
   settings,
   onGoToTab,
   onBulkRoster,
-  includeDeveloperBackups = false,
   displayName,
   schoolName,
   adminStats,
   className,
 }: StaffPortalWelcomeTabProps) {
-  const tabs = staffPortalTabsForRole(role, settings, { includeDeveloperBackups }).filter(
+  const tabs = staffPortalTabsForRole(role, settings).filter(
     (t) => t.value !== 'welcome',
   );
   const core = tabs.filter((t) => t.kind === 'core');
   const addons = tabs.filter((t) => t.kind === 'addon');
 
-  const greetingName = displayName ? firstName(displayName) : '';
+  const greetingName = displayName ? staffGreetingName(displayName) : '';
   const greeting = greetingName ? `Hi, ${greetingName}` : 'Welcome';
 
   const intro =
@@ -256,27 +210,25 @@ export function StaffPortalWelcomeTab({
 
   const isAdminHero = role === 'admin' && adminStats;
 
-  return (
-    <div className={cn('space-y-6', className)}>
+  const welcomeBody = (
+    <>
       {isAdminHero ? (
         <AdminWelcomeHero
           schoolName={schoolName?.trim() || null}
-          onManageStudents={() => onGoToTab('students')}
-          onImportRoster={onBulkRoster}
           stats={adminStats}
         />
       ) : (
-        <div className="rounded-2xl border border-border/50 bg-muted/25 px-5 py-5 sm:px-6 sm:py-6">
-          <div className="flex items-start gap-3">
+        <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-5 py-8 text-center sm:px-6">
+          <div className="mx-auto flex max-w-md flex-col items-center gap-3">
             <div
-              className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"
               aria-hidden
             >
               <Sparkles className="h-5 w-5" />
             </div>
             <div className="min-w-0">
               <h3 className="text-lg font-semibold tracking-tight text-foreground">{greeting}</h3>
-              <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">{intro}</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{intro}</p>
             </div>
           </div>
         </div>
@@ -331,6 +283,20 @@ export function StaffPortalWelcomeTab({
           </div>
         </section>
       ) : null}
-    </div>
+    </>
+  );
+
+  return (
+    <StaffPortalSectionCard className={className}>
+      <StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardTitle>
+          <Sparkles className="h-5 w-5 text-primary" aria-hidden />
+          Welcome
+        </StaffPortalSectionCardTitle>
+      </StaffPortalSectionCardHeader>
+      <StaffPortalSectionCardContent className="space-y-6 p-5 sm:p-6">
+        {welcomeBody}
+      </StaffPortalSectionCardContent>
+    </StaffPortalSectionCard>
   );
 }

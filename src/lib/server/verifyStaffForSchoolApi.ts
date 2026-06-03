@@ -76,6 +76,14 @@ export async function verifyStaffForSchoolApi(
   let uid: string | null = null;
   let email = '';
 
+  let bearerToken = options?.idToken?.trim() || '';
+  if (!bearerToken) {
+    const authHeader = req.headers.get('authorization') || '';
+    if (authHeader.startsWith('Bearer ')) {
+      bearerToken = authHeader.slice(7).trim();
+    }
+  }
+
   const fbRaw = req.cookies.get(FIREBASE_SESSION_COOKIE_NAME)?.value;
   if (fbRaw) {
     const fromCookie = await uidFromFirebaseCookie(fbRaw);
@@ -85,8 +93,8 @@ export async function verifyStaffForSchoolApi(
     }
   }
 
-  if (!uid && options?.idToken?.trim()) {
-    const token = options.idToken.trim();
+  if (!uid && bearerToken) {
+    const token = bearerToken;
     const jwt = await verifyFirebaseAuthJwt(token);
     if (jwt?.sub) {
       uid = jwt.sub;
@@ -115,8 +123,12 @@ export async function verifyStaffForSchoolApi(
   }
 
   if (scopes.size === 0) {
-    const resolved = await resolveSchoolGateScopes(uid, sid);
-    scopes = new Set(resolved);
+    try {
+      const resolved = await resolveSchoolGateScopes(uid, sid);
+      scopes = new Set(resolved);
+    } catch {
+      /* Admin SDK unavailable — fall through to role-doc / developer checks */
+    }
   }
 
   if (scopesAllowClassroomAward(scopes)) {

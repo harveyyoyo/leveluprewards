@@ -45,6 +45,7 @@ const FLYER_IMAGES = {
   'flyer-feature-id-cards-themes.html': ['admin-id-card.png', 'admin-theme-designer.png'],
   'flyer-feature-student-kiosk.html': ['kiosk-system-ready.png'],
   'flyer-feature-rewards-shop.html': ['kiosk-rewards-shop.png'],
+  'levelup-rewards-basic-settings-flyer.html': ['kiosk-system-ready.png', 'kiosk-rewards-shop.png'],
 };
 
 for (const [file, images] of Object.entries(FLYER_IMAGES)) {

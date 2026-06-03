@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -14,19 +14,21 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { emitBehaviorNoteSaved } from '@/lib/classroom/behaviorNoteEvents';
+import {
+  classroomNoteDialogTitle,
+  getClassroomNoteShortcut,
+  type ClassroomNoteShortcutKey,
+} from '@/lib/classroom/classroomNoteShortcuts';
+import {
+  resolveBehaviorQuickOptionsForKey,
+  type ClassroomBehaviorQuickOptions,
+} from '@/lib/classroom/classroomQuickAwardsSettings';
 import { saveBehaviorNote } from '@/lib/classroom/behaviorNotesClient';
-import type { BehaviorNote, BehaviorNoteKind, Student } from '@/lib/types';
-import { getStudentNickname } from '@/lib/utils';
+import type { BehaviorNote, Student } from '@/lib/types';
+import { cn, getStudentNickname } from '@/lib/utils';
 
 export function BehaviorNoteDialog({
   open,
@@ -39,6 +41,9 @@ export function BehaviorNoteDialog({
   teacherName,
   pointsLabel,
   pointsAmount,
+  shortcutKey = 'c',
+  suppressHeldShortcutKey = null,
+  behaviorQuickOptions,
   onSaved,
 }: {
   open: boolean;
@@ -51,20 +56,64 @@ export function BehaviorNoteDialog({
   teacherName: string;
   pointsLabel?: string;
   pointsAmount?: number;
+  shortcutKey?: ClassroomNoteShortcutKey;
+  /** When set, swallow key repeat from the held shortcut until that key is released. */
+  suppressHeldShortcutKey?: ClassroomNoteShortcutKey | null;
+  behaviorQuickOptions?: ClassroomBehaviorQuickOptions | null;
   onSaved?: () => void;
 }) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [kind, setKind] = useState<BehaviorNoteKind>('concern');
+  const shortcut = getClassroomNoteShortcut(shortcutKey);
+  const quickOptions = resolveBehaviorQuickOptionsForKey(shortcutKey, behaviorQuickOptions);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState('');
   const [visibleToParent, setVisibleToParent] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [heldShortcutReleased, setHeldShortcutReleased] = useState(!suppressHeldShortcutKey);
 
-  const studentName = `${getStudentNickname(student)} ${student.lastName || ''}`.trim() || student.id;
+  useEffect(() => {
+    if (!open) return;
+    setNote('');
+    setVisibleToParent(true);
+    setHeldShortcutReleased(!suppressHeldShortcutKey);
+  }, [open, shortcutKey, student.id, suppressHeldShortcutKey]);
+
+  useEffect(() => {
+    if (!open || !suppressHeldShortcutKey) return;
+    const blockKey = suppressHeldShortcutKey;
+    const swallowHeldKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== blockKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const releaseHeldKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() !== blockKey) return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.removeEventListener('keydown', swallowHeldKey, true);
+      window.removeEventListener('keyup', releaseHeldKey, true);
+      setHeldShortcutReleased(true);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    };
+    window.addEventListener('keydown', swallowHeldKey, true);
+    window.addEventListener('keyup', releaseHeldKey, true);
+    return () => {
+      window.removeEventListener('keydown', swallowHeldKey, true);
+      window.removeEventListener('keyup', releaseHeldKey, true);
+    };
+  }, [open, suppressHeldShortcutKey]);
+
+  const studentLabel = getStudentNickname(student);
+  const studentName = `${studentLabel} ${student.lastName || ''}`.trim() || student.id;
 
   const handleSave = async () => {
     if (!note.trim()) {
-      toast({ variant: 'destructive', title: 'Add a note', description: 'Describe what happened.' });
+      toast({
+        variant: 'destructive',
+        title: `Add a ${shortcut.popupTitle.toLowerCase()}`,
+        description: shortcut.placeholder,
+      });
       return;
     }
     setSaving(true);
@@ -77,9 +126,9 @@ export function BehaviorNoteDialog({
         className,
         teacherId,
         teacherName,
-        kind,
+        kind: shortcut.kind,
         note: note.trim(),
-        visibleToParent: kind === 'incident' ? visibleToParent : true,
+        visibleToParent: shortcut.showParentToggle ? visibleToParent : true,
         pointsLabel,
         pointsAmount,
       });
@@ -94,17 +143,15 @@ export function BehaviorNoteDialog({
         className,
         teacherId,
         teacherName,
-        kind,
+        kind: shortcut.kind,
         note: note.trim(),
         createdAt: Date.now(),
-        visibleToParent: kind === 'incident' ? visibleToParent : true,
+        visibleToParent: shortcut.showParentToggle ? visibleToParent : true,
         pointsLabel,
         pointsAmount,
       };
       emitBehaviorNoteSaved(savedNote);
-      toast({ title: 'Behavior note saved' });
-      setNote('');
-      setKind('concern');
+      toast({ title: shortcut.toastTitle });
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
@@ -120,39 +167,50 @@ export function BehaviorNoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent
+        className="max-w-md rounded-2xl"
+        onOpenAutoFocus={(e) => {
+          if (suppressHeldShortcutKey && !heldShortcutReleased) e.preventDefault();
+        }}
+      >
         <DialogHeader>
-          <DialogTitle>Behavior note — {getStudentNickname(student)}</DialogTitle>
-          <DialogDescription>
-            Staff and principals can see this on the behavior timeline. Parents see notes marked for
-            them.
-          </DialogDescription>
+          <DialogTitle>{classroomNoteDialogTitle(shortcut, studentLabel)}</DialogTitle>
+          <DialogDescription>{shortcut.description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Type</Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as BehaviorNoteKind)}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="positive">Positive</SelectItem>
-                <SelectItem value="concern">Concern</SelectItem>
-                <SelectItem value="incident">Incident</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="behavior-note-text">Note</Label>
+            <Label htmlFor="behavior-note-text">{shortcut.popupTitle}</Label>
             <Textarea
+              ref={textareaRef}
               id="behavior-note-text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="What happened in class?"
+              placeholder={shortcut.placeholder}
               className="min-h-[100px] rounded-xl"
             />
           </div>
-          {kind === 'incident' ? (
+          {quickOptions.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Quick options</p>
+              <div className="flex flex-wrap gap-1.5">
+                {quickOptions.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={cn(
+                      'rounded-full border border-border/70 bg-muted/30 px-2.5 py-1 text-left text-[11px] font-semibold leading-snug text-foreground transition-colors',
+                      'hover:border-primary/40 hover:bg-primary/10',
+                      note === option && 'border-primary/50 bg-primary/10 text-primary',
+                    )}
+                    onClick={() => setNote(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {shortcut.showParentToggle ? (
             <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-3 py-2">
               <div>
                 <p className="text-sm font-semibold">Share with parent</p>
@@ -167,7 +225,7 @@ export function BehaviorNoteDialog({
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save note'}
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : shortcut.saveLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

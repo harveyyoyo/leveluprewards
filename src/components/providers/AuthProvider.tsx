@@ -34,6 +34,12 @@ import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
 import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 import { verifyAdminPasscodeLogin } from '@/lib/adminPasscodeLogin';
+import { officePublicHref } from '@/lib/officePublicUrl';
+import {
+    isOfficeAppPath,
+    isOfficeHostname,
+    isOfficeSchoolScopedPath,
+} from '@/lib/officeRouting';
 
 export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export type LoginState =
@@ -79,6 +85,16 @@ export type LogoutOptions = {
     staffNavigateTo?: 'portal' | 'teacher' | 'student' | 'office';
     studentNavigateTo?: 'portal' | 'student';
 };
+
+function isOfficeLogoutSurface(): boolean {
+    if (typeof window === 'undefined') return false;
+    const { host, pathname } = window.location;
+    return (
+        isOfficeHostname(host) ||
+        isOfficeAppPath(pathname) ||
+        isOfficeSchoolScopedPath(pathname)
+    );
+}
 
 interface AuthContextType {
     isInitialized: boolean;
@@ -299,10 +315,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('school');
             if (schoolId) {
-                if (loginState === 'office') {
-                    const isSubdomain = typeof window !== 'undefined' && window.location.host.startsWith('office.');
-                    const destPath = isSubdomain ? `/${schoolId}` : `/${schoolId}/office`;
-                    router.push(destPath);
+                const returnToOffice =
+                    options?.staffNavigateTo === 'office' ||
+                    loginState === 'office' ||
+                    isOfficeLogoutSurface();
+                if (returnToOffice) {
+                    const dest = officePublicHref(schoolId);
+                    if (dest.startsWith('http://') || dest.startsWith('https://')) {
+                        window.location.assign(dest);
+                    } else {
+                        router.push(dest);
+                    }
                 } else {
                     const dest =
                         options?.staffNavigateTo === 'teacher'
@@ -357,10 +380,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useLayoutEffect(() => {
         setIsMounted(true);
-        if (typeof window !== 'undefined') {
-            (window as Window & { __LEVELUP_APP_MOUNTED__?: boolean }).__LEVELUP_APP_MOUNTED__ = true;
-            document.getElementById('levelup-js-boot-hint')?.remove();
-        }
     }, []);
 
     /** If client JS is slow or hydration stalls, do not block the shell forever. */

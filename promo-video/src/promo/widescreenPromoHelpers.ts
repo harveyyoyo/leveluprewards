@@ -9,87 +9,40 @@ import type {
 } from "./widescreenPromoSchema";
 
 import type { WidescreenSegment } from "./widescreenPromoTiming";
-
-
+import { WIDESCREEN_BEATS } from "./widescreenBeatCatalog";
 
 const SEGMENT_META: Record<
-
   string,
-
   Pick<WidescreenSegment, "label" | "tagline" | "emoji" | "color" | "accent">
-
 > = {
-
-  selector: {
-
-    label: "Student ID cards",
-
-    tagline: "Print-ready digital IDs for every student.",
-
-    emoji: "🪪",
-
-    color: "#4cc9f0",
-
-    accent: "#7dd3fc",
-
-  },
-
-  studentKiosk: {
-
-    label: "Teacher coupons",
-
-    tagline: "Print reward coupons from the teacher portal.",
-
-    emoji: "🖨️",
-
-    color: "#a855f7",
-
-    accent: "#c084fc",
-
-  },
-
   studentHome: {
-
-    label: "Kiosk sign-in",
-
-    tagline: "Students check in and see their balance.",
-
-    emoji: "🎮",
-
-    color: "#4895ef",
-
+    label: WIDESCREEN_BEATS.home.label,
+    tagline: WIDESCREEN_BEATS.home.tagline,
+    emoji: WIDESCREEN_BEATS.home.emoji,
+    color: WIDESCREEN_BEATS.home.color,
     accent: "#60a5fa",
-
   },
-
+  selector: {
+    label: WIDESCREEN_BEATS.selector.label,
+    tagline: WIDESCREEN_BEATS.selector.tagline,
+    emoji: WIDESCREEN_BEATS.selector.emoji,
+    color: WIDESCREEN_BEATS.selector.color,
+    accent: "#7dd3fc",
+  },
   dashboard: {
-
-    label: "Prize shop",
-
-    tagline: "Browse and choose rewards.",
-
-    emoji: "🎁",
-
-    color: "#f59e0b",
-
+    label: WIDESCREEN_BEATS.dashboard.label,
+    tagline: WIDESCREEN_BEATS.dashboard.tagline,
+    emoji: WIDESCREEN_BEATS.dashboard.emoji,
+    color: WIDESCREEN_BEATS.dashboard.color,
     accent: "#fbbf24",
-
   },
-
   action: {
-
-    label: "Scan to play",
-
-    tagline: "Type or scan a student ID — no mouse required.",
-
-    emoji: "📷",
-
-    color: "#27c93f",
-
+    label: WIDESCREEN_BEATS.outro.label,
+    tagline: WIDESCREEN_BEATS.outro.tagline,
+    emoji: WIDESCREEN_BEATS.outro.emoji,
+    color: WIDESCREEN_BEATS.outro.color,
     accent: "#4ade80",
-
   },
-
 };
 
 
@@ -100,17 +53,12 @@ export function buildWidescreenSegments(
 
 ): WidescreenSegment[] {
 
-  /** Student-first montage: kiosk sign-in → ID cards → prizes → scan (no portal/teacher beat). */
+  /** Montage: ID cards → kiosk sign-in → prizes → closing beat */
   const ranges = [
-
-    ["studentHome", timing.introEnd, timing.selectorEnd],
-
-    ["selector", timing.selectorEnd, timing.studentKioskEnd],
-
+    ["selector", timing.introEnd, timing.selectorEnd],
+    ["studentHome", timing.selectorEnd, timing.studentKioskEnd],
     ["dashboard", timing.studentKioskEnd, timing.studentHomeEnd],
-
     ["action", timing.studentHomeEnd, timing.dashboardEnd],
-
   ] as const;
 
 

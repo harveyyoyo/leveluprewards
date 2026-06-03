@@ -86,6 +86,15 @@ export function DeveloperSchoolHealthCoach({
     return report.alerts;
   }, [report, filter]);
 
+  const schoolNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    fleet?.forEach((school) => {
+      const name = school.name?.trim();
+      map.set(school.schoolId, name || school.schoolId);
+    });
+    return map;
+  }, [fleet]);
+
   const runAiCoach = useCallback(async () => {
     if (!report || !fleet?.length || !user) return;
     setAiLoading(true);
@@ -222,11 +231,14 @@ export function DeveloperSchoolHealthCoach({
                   <li key={`${p.schoolId}-${p.issue}`} className="rounded-md border bg-background p-3">
                     <button
                       type="button"
-                      className="font-mono text-xs font-bold text-primary hover:underline"
+                      className="text-sm font-bold text-primary hover:underline text-left"
                       onClick={() => onFocusSchool?.(p.schoolId)}
                     >
-                      {p.schoolId}
+                      {schoolNameById.get(p.schoolId) ?? p.schoolId}
                     </button>
+                    {schoolNameById.get(p.schoolId) && schoolNameById.get(p.schoolId) !== p.schoolId ? (
+                      <p className="font-mono text-xs text-muted-foreground">{p.schoolId}</p>
+                    ) : null}
                     <p className="mt-1 font-medium">{p.issue}</p>
                     <p className="mt-0.5 text-muted-foreground">{p.action}</p>
                   </li>
@@ -262,11 +274,14 @@ export function DeveloperSchoolHealthCoach({
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        className="font-mono text-xs font-bold hover:text-primary hover:underline"
+                        className="text-sm font-bold hover:text-primary hover:underline text-left"
                         onClick={() => onFocusSchool?.(alert.schoolId)}
                       >
-                        {alert.schoolId}
+                        {alert.schoolName || alert.schoolId}
                       </button>
+                      {alert.schoolName && alert.schoolName !== alert.schoolId ? (
+                        <span className="font-mono text-xs text-muted-foreground">{alert.schoolId}</span>
+                      ) : null}
                       <Badge variant={severityBadgeVariant(alert.severity)} className="text-[10px]">
                         {alert.severity}
                       </Badge>
@@ -292,7 +307,7 @@ export function DeveloperSchoolHealthCoach({
                       variant="ghost"
                       size="icon"
                       className="shrink-0"
-                      aria-label={`Open insights for ${alert.schoolId}`}
+                      aria-label={`Open insights for ${alert.schoolName || alert.schoolId}`}
                       onClick={() => onFocusSchool(alert.schoolId)}
                     >
                       <ChevronRight className="h-4 w-4" />

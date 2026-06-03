@@ -2,7 +2,9 @@
 
 ## LevelUp flyer (`levelup-flyer.html`)
 
-Print-ready **US Letter (8.5×11)** one-pager aligned with the [level-up-arcade](/src/app/level-up-arcade/page.tsx) landing and `src/lib/appBranding.ts`.
+Print-ready **US Letter (8.5×11)** one-pager aligned with the root [showcase landing](/src/components/marketing/ShowcaseLanding.tsx) and `src/lib/appBranding.ts`.
+
+Archived dark arcade-style landing (reference only): [`ArcadeStyleShowcaseLanding.tsx`](/src/components/marketing/archived/ArcadeStyleShowcaseLanding.tsx).
 
 **Flyers hub:** `/flyers` — lists all flyer styles with preview cards. (`/promotions` redirects here.)
 

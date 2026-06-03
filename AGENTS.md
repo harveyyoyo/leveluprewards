@@ -7,8 +7,20 @@ Cloud agents run on Ubuntu with a clean git checkout. They do **not** see your l
 ### Setup (already in repo)
 
 - Install: `npm install` and `npm install --prefix functions` (see `.cursor/environment.json`).
-- Default branch: `main`.
+- Default branch: `main` (read-only base for agents—do not commit here).
 - Repo: `harveyyoyo/leveluprewards`.
+
+### Git branches (required)
+
+Each agent session must use **its own branch** before changing code:
+
+| Agent | Prefix |
+|-------|--------|
+| Cursor | `cursor/<task-slug>` |
+| Codex | `codex/<task-slug>` |
+| Antigravity | `antigravity/<task-slug>` |
+
+Workflow: `.agent/workflows/agent-branch-workflow.md`. Rules: `.cursor/rules/agent-branches.mdc`. **Enforced by default:** Cursor hooks (`.cursor/hooks.json`) + git pre-commit after `npm install`. Named branch: `npm run agent:branch -- <slug>`. Base `main` for most work; base `dev` for Lovable/UI integration. Open PRs to merge; do not push agent work directly to `main` unless the user explicitly asks.
 
 ### Secrets (add in [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents) → Secrets)
 
@@ -46,7 +58,7 @@ Cloud agents require **Privacy Mode** (not Legacy) on the Cursor account.
 ### Local development notes
 
 - The dev server uses Webpack by default (`scripts/dev-webpack.cjs`). Turbopack is also available via `npm run dev:turbo`.
-- `npm run dev` does **not** run route warmup by default (keeps the UI responsive). Opt in: `DEV_WARMUP=1 npm run dev` or add `DEV_WARMUP=1` to `.env.local`.
+- `npm run dev` starts Webpack dev and **background route warmup** (HTTP pre-compile, then headless Chrome on heavy pages). Disable: `DEV_WARMUP=0` in `.env.local` or `npm run dev:fast`.
 - If pages are blank or you see "Cannot find module ./*.js" errors, run `npm run dev:reset` to clean the `.next` cache.
 - The Firebase config (API key, project ID) is hardcoded in `src/firebase/config.ts`; no Firebase secrets are needed for the dev server to start and render pages.
 - The `/developer` login page is always available in dev mode (`next dev`). In production builds it requires `NEXT_PUBLIC_ENABLE_DEV_LOGIN=true`.

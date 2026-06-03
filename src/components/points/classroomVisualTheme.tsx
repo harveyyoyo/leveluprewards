@@ -71,7 +71,7 @@ export function classroomControlsBarClass(design: ClassroomDesign): string {
   if (design === 'brutalist') {
     return 'mb-3 flex flex-wrap items-center gap-2 border-2 border-foreground bg-card p-3 shadow-[4px_4px_0_0_hsl(var(--foreground))]';
   }
-  return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/70 p-3 shadow-sm backdrop-blur-md';
+  return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm';
 }
 
 function studentInitials(student: Student) {
@@ -281,7 +281,7 @@ export function classroomStudentDeskClass(
     'group relative flex h-full min-h-0 w-full flex-col items-center justify-center gap-1 p-1',
     hasStudent ? 'overflow-visible' : 'overflow-hidden',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-    hasStudent && !editMode && 'hover:shadow-sm [@media(hover:hover)]:hover:-translate-y-px',
+    hasStudent && !editMode && 'hover:shadow-sm',
     editMode && hasStudent && 'cursor-grab active:cursor-grabbing',
     isPending && 'z-10 scale-[1.02] ring-4 ring-primary',
     isFlashing && 'z-10 ring-4 ring-emerald-400/80',
@@ -322,13 +322,13 @@ export function classroomStudentDeskClass(
   if (design === 'playful') {
     return cn(
       interactive,
-      'rounded-3xl border-2 border-white bg-white shadow-[0_8px_24px_-8px_rgba(0,0,0,0.12)] hover:-rotate-1 hover:scale-[1.03]',
+      'rounded-3xl border-2 border-white bg-white shadow-[0_8px_24px_-8px_rgba(0,0,0,0.12)] hover:shadow-[0_10px_28px_-8px_rgba(0,0,0,0.16)]',
     );
   }
   if (design === 'brutalist') {
     return cn(
       interactive,
-      'border-2 border-foreground bg-card shadow-[4px_4px_0_0_hsl(var(--foreground))] hover:-translate-x-0.5 hover:-translate-y-1 hover:shadow-[6px_6px_0_0_hsl(var(--foreground))]',
+      'border-2 border-foreground bg-card shadow-[4px_4px_0_0_hsl(var(--foreground))] hover:border-primary/40',
     );
   }
   return cn(

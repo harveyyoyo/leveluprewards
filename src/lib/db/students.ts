@@ -25,13 +25,34 @@ import {
   applyAchievementsAndBadges,
 } from './helpers';
 import { applyHousePointsRollupInTransaction } from './housePoints';
+import { ensureStudentHasClassPrimaryTeacher } from '@/lib/studentTeacherRoster';
 
 export { lookupStudentId } from './lookup';
+
+async function primaryTeacherIdForClass(
+  firestore: Firestore,
+  schoolId: string,
+  classId: string,
+): Promise<string | undefined> {
+  const trimmed = classId.trim();
+  if (!trimmed) return undefined;
+  const classRef = doc(firestore, 'schools', schoolId, 'classes', trimmed);
+  const classSnap = await getDoc(classRef);
+  if (!classSnap.exists()) return undefined;
+  const teacherId = ((classSnap.data() as Class).primaryTeacherId || '').trim();
+  return teacherId || undefined;
+}
+
+function withPrimaryTeacherId(student: Student, primaryTeacherId: string): Student {
+  const current = student.teacherIds || [];
+  if (current.includes(primaryTeacherId)) return student;
+  return { ...student, teacherIds: [...current, primaryTeacherId] };
+}
 
 // --- Student Mutations ---
 export const addStudent = async (firestore: Firestore, schoolId: string, studentData: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => {
   const newStudentId = Math.floor(10000000 + Math.random() * 90000000).toString();
-  const newStudent: Student = {
+  let newStudent: Student = {
     ...studentData,
     id: newStudentId,
     nfcId: studentData.nfcId || newStudentId,
@@ -45,6 +66,13 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
     earnedAchievements: [],
     earnedBadges: [],
   };
+  const classId = (newStudent.classId || '').trim();
+  if (classId) {
+    const primaryTeacherId = await primaryTeacherIdForClass(firestore, schoolId, classId);
+    if (primaryTeacherId) {
+      newStudent = withPrimaryTeacherId(newStudent, primaryTeacherId);
+    }
+  }
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
   try {
     await setDoc(studentDocRef, removeUndefined(newStudent as unknown as Record<string, unknown>));
@@ -70,11 +98,24 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
       }
       const oldStudent = studentDoc.data() as Student;
 
-      const pointsDifference = student.points - oldStudent.points;
+      let studentToWrite = student;
+      const classId = (student.classId || '').trim();
+      if (classId) {
+        const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
+        const classSnap = await transaction.get(classRef);
+        if (classSnap.exists()) {
+          const primaryTeacherId = ((classSnap.data() as Class).primaryTeacherId || '').trim();
+          if (primaryTeacherId) {
+            studentToWrite = withPrimaryTeacherId(student, primaryTeacherId);
+          }
+        }
+      }
+
+      const pointsDifference = studentToWrite.points - oldStudent.points;
 
       const newLifetimePoints = (oldStudent.lifetimePoints || oldStudent.points) + (pointsDifference > 0 ? pointsDifference : 0);
 
-      const finalStudentData = { ...student, lifetimePoints: newLifetimePoints, updatedAt: Date.now() };
+      const finalStudentData = { ...studentToWrite, lifetimePoints: newLifetimePoints, updatedAt: Date.now() };
 
       const payload = removeUndefined(finalStudentData as unknown as Record<string, unknown>) as Record<string, unknown>;
       // `theme: undefined` in the client object is stripped by removeUndefined; Firestore would otherwise keep the old theme.
@@ -589,7 +630,11 @@ export const importStudentsFromParsedRows = async (
         if (parentPhone && !(existing.parentPhone || '').trim()) patch.parentPhone = parentPhone;
         if (studentEmail && !(existing.studentEmail || '').trim()) patch.studentEmail = studentEmail;
         if (studentPhone && !(existing.studentPhone || '').trim()) patch.studentPhone = studentPhone;
-        if (classObj?.id && !(existing.classId || '').trim()) patch.classId = classObj.id;
+        if (classObj?.id && !(existing.classId || '').trim()) {
+          patch.classId = classObj.id;
+          const withTeacher = ensureStudentHasClassPrimaryTeacher({ ...existing, ...patch }, allClasses);
+          if (withTeacher.teacherIds?.length) patch.teacherIds = withTeacher.teacherIds;
+        }
 
         if (Object.keys(patch).length > 0) {
           studentUpdates.push({ id: existing.id, patch });
@@ -614,29 +659,34 @@ export const importStudentsFromParsedRows = async (
       (c) => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase(),
     );
 
-    studentsToCreate.push({
-      id: newStudentId,
-      nfcId: newStudentId,
-      firstName,
-      lastName,
-      ...(middleName ? { middleName } : {}),
-      ...(nickname ? { nickname } : {}),
-      ...(birthday ? { birthday } : {}),
-      ...(parentEmail ? { parentEmail } : {}),
-      ...(parentPhone ? { parentPhone } : {}),
-      ...(studentEmail ? { studentEmail } : {}),
-      ...(studentPhone ? { studentPhone } : {}),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      points: 0,
-      lifetimePoints: 0,
-      classId: classObj?.id || '',
-      categoryPoints: {},
-      pointsByPeriod: {},
-      categoryPointsByPeriod: {},
-      earnedAchievements: [],
-      earnedBadges: [],
-    });
+    studentsToCreate.push(
+      ensureStudentHasClassPrimaryTeacher(
+        {
+          id: newStudentId,
+          nfcId: newStudentId,
+          firstName,
+          lastName,
+          ...(middleName ? { middleName } : {}),
+          ...(nickname ? { nickname } : {}),
+          ...(birthday ? { birthday } : {}),
+          ...(parentEmail ? { parentEmail } : {}),
+          ...(parentPhone ? { parentPhone } : {}),
+          ...(studentEmail ? { studentEmail } : {}),
+          ...(studentPhone ? { studentPhone } : {}),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          points: 0,
+          lifetimePoints: 0,
+          classId: classObj?.id || '',
+          categoryPoints: {},
+          pointsByPeriod: {},
+          categoryPointsByPeriod: {},
+          earnedAchievements: [],
+          earnedBadges: [],
+        },
+        allClasses,
+      ),
+    );
   }
 
   await persistStudentUpdates(firestore, schoolId, studentUpdates);
@@ -740,7 +790,7 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
       earnedBadges: [],
     };
 
-    studentsToCreate.push(newStudent);
+    studentsToCreate.push(ensureStudentHasClassPrimaryTeacher(newStudent, allClasses));
     successCount++;
   });
 

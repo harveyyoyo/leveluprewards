@@ -20,14 +20,43 @@ export type SaveBehaviorNoteResult = {
   status?: number;
 };
 
-async function getIdToken(): Promise<string | undefined> {
+async function authHeaders(): Promise<Headers> {
+  const headers = new Headers();
   try {
     const user = getAuth().currentUser;
-    if (user) return await user.getIdToken();
+    if (user) {
+      headers.set('Authorization', `Bearer ${await user.getIdToken()}`);
+    }
   } catch {
     /* ignore */
   }
-  return undefined;
+  return headers;
+}
+
+function formatBehaviorNotesError(
+  apiError: string,
+  status?: number,
+  browserErr?: string,
+): { error: string; status?: number } {
+  if (!browserErr) return { error: apiError, status };
+
+  const perm = browserErr.toLowerCase().includes('permission');
+  if (perm) {
+    const serverBit = apiError ? ` Server: ${apiError}` : '';
+    if (status === 403 || apiError.toLowerCase().includes('staff access')) {
+      return {
+        error: `Staff sign-in required for this school.${serverBit}`,
+        status,
+      };
+    }
+    return {
+      error:
+        `Your Firebase user cannot read behavior notes for this school. Sign out, open Admin or Teacher, and sign in with your passcode (not only the school lobby passcode).${serverBit}`,
+      status,
+    };
+  }
+
+  return { error: `${apiError} Browser load failed: ${browserErr}`, status };
 }
 
 function shouldTryClientFallback(status?: number, message?: string): boolean {
@@ -49,13 +78,13 @@ export async function fetchBehaviorNotes(
   error?: string;
   status?: number;
 }> {
-  const idToken = await getIdToken();
   const params = new URLSearchParams({ schoolId });
-  if (idToken) params.set('idToken', idToken);
+  const headers = await authHeaders();
 
   const res = await fetch(`/api/classroom/behavior-notes?${params}`, {
     credentials: 'same-origin',
     cache: 'no-store',
+    headers,
   });
   const data = (await res.json().catch(() => ({}))) as {
     notes?: BehaviorNote[];
@@ -77,11 +106,8 @@ export async function fetchBehaviorNotes(
       const notes = await listBehaviorNotes(firestore, schoolId);
       return { notes };
     } catch (e) {
-      return {
-        notes: [],
-        error: `${error} Browser load failed: ${(e as Error).message}`,
-        status: res.status,
-      };
+      const formatted = formatBehaviorNotesError(error, res.status, (e as Error).message);
+      return { notes: [], error: formatted.error, status: formatted.status };
     }
   }
 
@@ -92,15 +118,13 @@ export async function saveBehaviorNote(
   firestore: Firestore | null,
   body: SaveBehaviorNoteRequest,
 ): Promise<SaveBehaviorNoteResult> {
-  const idToken = await getIdToken();
+  const headers = await authHeaders();
+  headers.set('Content-Type', 'application/json');
   const res = await fetch('/api/classroom/behavior-notes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     credentials: 'same-origin',
-    body: JSON.stringify({
-      ...body,
-      ...(idToken ? { idToken } : {}),
-    }),
+    body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string };
 
@@ -122,11 +146,8 @@ export async function saveBehaviorNote(
       const id = await createBehaviorNote(firestore, schoolId, input);
       return { success: true, message: 'Saved.', id, via: 'client', status: res.status };
     } catch (e) {
-      return {
-        success: false,
-        message: `${message} Browser save failed: ${(e as Error).message}`,
-        status: res.status,
-      };
+      const formatted = formatBehaviorNotesError(message, res.status, (e as Error).message);
+      return { success: false, message: formatted.error, status: formatted.status };
     }
   }
 

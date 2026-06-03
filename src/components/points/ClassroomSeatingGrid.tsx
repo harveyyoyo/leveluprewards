@@ -17,12 +17,21 @@ import type { ClassroomDeskDisplay } from '@/lib/classroom/classroomDeskDisplay'
 import type { ClassroomKioskFlyUpSize } from '@/lib/classroomSeatingChart';
 import type { TodayAttendanceStatus } from '@/hooks/useTodayAttendanceMap';
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
+import {
+  isClassroomNoteShortcutKey,
+  type ClassroomNoteShortcutKey,
+} from '@/lib/classroom/classroomNoteShortcuts';
 import { cn } from '@/lib/utils';
 import { Timer } from 'lucide-react';
 
+export type { ClassroomNoteShortcutKey };
+
 export type ClassroomGridHandlers = {
   onDeskTap: (studentId: string, cellIndex: number) => void;
-  onBehaviorNote: (studentId: string) => void;
+  onBehaviorNote: (studentId: string, shortcutKey: ClassroomNoteShortcutKey, fromHeldKey?: boolean) => void;
+  /** Shift+click — pick a note/comment type for this student. */
+  onNotePicker?: (studentId: string) => void;
+  getNoteKeyHeld?: () => ClassroomNoteShortcutKey | null;
   onBathroomToggle?: (studentId: string) => void;
   onDragStart: (cellIndex: number) => void;
   onDrop: (cellIndex: number) => void;
@@ -164,8 +173,14 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         h.onBathroomToggle(studentId);
         return;
       }
-      if (e.shiftKey) {
-        h.onBehaviorNote(studentId);
+      if (e.shiftKey && h.onNotePicker) {
+        e.preventDefault();
+        h.onNotePicker(studentId);
+        return;
+      }
+      const noteKey = h.getNoteKeyHeld?.() ?? null;
+      if (noteKey && isClassroomNoteShortcutKey(noteKey)) {
+        h.onBehaviorNote(studentId, noteKey, true);
         return;
       }
       h.onDeskTap(studentId, cellIndex);
@@ -184,7 +199,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   return (
     <div
       ref={(el) => cellWrapRef?.(cellIndex, el)}
-      className="relative min-h-0 min-w-0 overflow-visible"
+      className="relative aspect-square min-h-0 min-w-0 overflow-visible"
     >
       <button
         type="button"
@@ -200,6 +215,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         onClick={onClick}
         disabled={!hasStudent && !editMode}
         className={cn(
+          'absolute inset-0 h-full w-full',
           classroomStudentDeskClass(design, {
             hasStudent,
             isPending,
@@ -406,7 +422,6 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   }, [flyUpCell, measureFlyUpAnchor]);
 
   const gridStyle = {
-    gridTemplateRows: `repeat(${layoutRows}, minmax(0, 1fr))`,
     gridTemplateColumns: `repeat(${layoutCols}, minmax(0, 1fr))`,
     gap: gridGap,
   };
@@ -416,8 +431,8 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   const flyUpName = flyUpCell?.studentName || flyUpDisplay?.name;
 
   return (
-    <div className={cn('relative h-full min-h-0 w-full flex-1 overflow-visible px-0.5', className)}>
-      <div className={cn('grid h-full min-h-0 w-full overflow-visible')} style={gridStyle}>
+    <div className={cn('relative min-h-0 w-full flex-1 overflow-auto px-0.5', className)}>
+      <div className={cn('grid w-full content-start overflow-visible')} style={gridStyle}>
         {visualCells.map(({ cellIndex, visualRow }) => {
           const studentId = cellStudentIds[cellIndex];
           const display = studentId ? deskCatalog.get(studentId) ?? null : null;
