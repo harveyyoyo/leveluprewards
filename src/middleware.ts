@@ -29,6 +29,9 @@ import {
   officeHostInternalRewritePath,
   officeHostRedirectPath,
 } from '@/lib/officeRouting';
+import {
+  SCHOOL_LOGIN_OFFICE_INTENT_PARAM,
+} from '@/lib/auth/schoolLoginRedirect';
 import { officePublicHref } from '@/lib/officePublicUrl';
 
 function officeChromeRequestHeaders(request: NextRequest): Headers {
@@ -92,6 +95,7 @@ function portalLoginRedirect(
 
   loginBase.searchParams.set('school', schoolId.toLowerCase());
   loginBase.searchParams.set('next', nextPath);
+  loginBase.searchParams.set(SCHOOL_LOGIN_OFFICE_INTENT_PARAM, '1');
 
   const redirect = NextResponse.redirect(loginBase);
   applySecurityHeaders(redirect);

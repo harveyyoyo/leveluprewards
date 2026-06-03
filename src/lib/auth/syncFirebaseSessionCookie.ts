@@ -1,13 +1,9 @@
 import type { Auth } from 'firebase/auth';
 import { FIREBASE_SESSION_COOKIE_NAME } from '@/lib/auth/firebaseSessionCookie';
-import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import {
-  consumeSchoolLoginOfficeIntent,
-  schoolLoginNextPath,
+  resolveSchoolLoginNextUrl,
 } from '@/lib/auth/schoolLoginRedirect';
 import { userHasGoogleProvider } from '@/lib/google/googleAuthSession';
-import { isOfficeHostname } from '@/lib/officeRouting';
-import { officePublicHref } from '@/lib/officePublicUrl';
 
 export async function syncFirebaseSessionCookie(auth: Auth): Promise<boolean> {
   const user = auth.currentUser;
@@ -76,29 +72,7 @@ export async function navigateAfterSchoolLogin(auth: Auth, schoolId: string): Pr
   const okGate = await syncSchoolGateCookie(auth, sid);
   if (!okGate) return false;
 
-  let nextUrl = `/${sid}/portal`;
-  if (typeof window !== 'undefined') {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const nextParam = params.get('next');
-      if (nextParam) {
-        const target = sanitizeInternalNextPath(nextParam, sid);
-        if (target) {
-          nextUrl = target;
-        }
-      } else if (consumeSchoolLoginOfficeIntent(sid) || isOfficeHostname(window.location.host)) {
-        nextUrl = officePublicHref(sid);
-      } else {
-        const pathname = window.location.pathname;
-        const officeNext = schoolLoginNextPath(sid, pathname);
-        if (officeNext.startsWith('http://') || officeNext.startsWith('https://')) {
-          nextUrl = officeNext;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
+  const nextUrl = resolveSchoolLoginNextUrl(sid);
 
   window.location.assign(nextUrl);
   return true;

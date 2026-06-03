@@ -1,3 +1,42 @@
+import { canonicalOfficeHost } from '@/lib/officeRouting';
+import { canonicalPortalHost } from '@/lib/portalRouting';
+
+function normalizeRedirectHostname(rawHost: string): string {
+  const host = rawHost.trim().toLowerCase();
+  if (host.startsWith('[')) {
+    const end = host.indexOf(']');
+    return end >= 0 ? host.slice(0, end + 1) : host;
+  }
+  return host.split(':')[0] || '';
+}
+
+/** Hostnames allowed for absolute `next` URLs after school login. */
+export function isTrustedRedirectHostname(rawHost: string): boolean {
+  const host = normalizeRedirectHostname(rawHost);
+  if (!host) return false;
+
+  if (host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1') {
+    return true;
+  }
+
+  if (
+    host === 'leveluprewards.app' ||
+    host.endsWith('.leveluprewards.app') ||
+    host === 'leveluprewards.com' ||
+    host.endsWith('.leveluprewards.com')
+  ) {
+    return true;
+  }
+
+  for (const configured of [canonicalOfficeHost(), canonicalPortalHost()]) {
+    const normalized = normalizeRedirectHostname(configured);
+    if (!normalized) continue;
+    if (host === normalized || host.endsWith(`.${normalized}`)) return true;
+  }
+
+  return false;
+}
+
 /**
  * Validates `next` from /login?school=&next= so we never open-redirect off-site.
  * Requires the first path segment to match the school id from the login flow.
@@ -19,15 +58,8 @@ export function sanitizeInternalNextPath(next: string, schoolId: string): string
     try {
       const parsed = new URL(decoded);
       const host = parsed.hostname.toLowerCase();
-      
-      const isAllowedHost =
-        host === 'leveluprewards.app' ||
-        host.endsWith('.leveluprewards.app') ||
-        host === 'localhost' ||
-        host.endsWith('.localhost') ||
-        host === '127.0.0.1';
 
-      if (!isAllowedHost) {
+      if (!isTrustedRedirectHostname(host)) {
         return null;
       }
       

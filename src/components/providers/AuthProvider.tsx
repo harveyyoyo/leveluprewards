@@ -25,7 +25,10 @@ import {
     clearFirebaseSessionCookieSync,
     clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
-import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
+import {
+  hasUrlSchoolLoginOfficeIntent,
+  resolveSchoolLoginNextUrl,
+} from '@/lib/auth/schoolLoginRedirect';
 import { canBypassSchoolAdminPasscode } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
@@ -699,12 +702,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (typeof window === 'undefined') return;
             if (window.location.pathname !== '/login') return;
             const params = new URLSearchParams(window.location.search);
-            const next = params.get('next');
-            if (!next) return;
             const schoolParam = (params.get('school') || schoolId || '').trim().toLowerCase();
             if (!schoolParam) return;
-            const target = sanitizeInternalNextPath(next, schoolParam);
-            if (!target) return;
+            const hasNext = Boolean(params.get('next'));
+            if (!hasNext && !hasUrlSchoolLoginOfficeIntent(params)) return;
+            const target = resolveSchoolLoginNextUrl(schoolParam);
             window.location.assign(target);
         })();
         return () => {

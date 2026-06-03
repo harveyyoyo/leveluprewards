@@ -31,6 +31,9 @@ describe('sanitizeInternalNextPath', () => {
     expect(sanitizeInternalNextPath('https://office.leveluprewards.app/ytt', schoolId)).toBe(
       'https://office.leveluprewards.app/ytt',
     );
+    expect(sanitizeInternalNextPath('https://office.leveluprewards.com/ytt', schoolId)).toBe(
+      'https://office.leveluprewards.com/ytt',
+    );
     expect(sanitizeInternalNextPath('https://leveluprewards.app/ytt/portal', schoolId)).toBe(
       'https://leveluprewards.app/ytt/portal',
     );

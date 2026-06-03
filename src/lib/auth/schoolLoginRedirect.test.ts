@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   consumeSchoolLoginOfficeIntent,
   markSchoolLoginOfficeIntent,
+  resolveSchoolLoginNextUrl,
   schoolLoginNextPath,
   schoolLoginRedirectHref,
 } from './schoolLoginRedirect';
@@ -25,7 +26,7 @@ describe('schoolLoginRedirect', () => {
       'https://office.leveluprewards.app/yeshiva',
     );
     expect(schoolLoginRedirectHref('yeshiva', { pathname: '/yeshiva' })).toBe(
-      'https://portal.leveluprewards.app/login?school=yeshiva&next=https%3A%2F%2Foffice.leveluprewards.app%2Fyeshiva',
+      'https://portal.leveluprewards.app/login?school=yeshiva&next=https%3A%2F%2Foffice.leveluprewards.app%2Fyeshiva&office=1',
     );
   });
 
@@ -67,5 +68,35 @@ describe('schoolLoginRedirect', () => {
     markSchoolLoginOfficeIntent('ytt');
     expect(consumeSchoolLoginOfficeIntent('ytt')).toBe(true);
     expect(consumeSchoolLoginOfficeIntent('ytt')).toBe(false);
+  });
+
+  it('returns office after login when next is rejected but office intent is set', () => {
+    vi.stubEnv('NEXT_PUBLIC_OFFICE_CANONICAL_HOST', 'office.leveluprewards.app');
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      pathname: '/login',
+    } as Location);
+
+    expect(
+      resolveSchoolLoginNextUrl('ytt', {
+        search: '?school=ytt&next=https%3A%2F%2Fevil.com%2Fytt&office=1',
+      }),
+    ).toBe('https://office.leveluprewards.app/ytt');
+  });
+
+  it('falls back to office when next param is missing but office=1 is present', () => {
+    vi.stubEnv('NEXT_PUBLIC_OFFICE_CANONICAL_HOST', 'office.leveluprewards.app');
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      pathname: '/login',
+    } as Location);
+
+    expect(
+      resolveSchoolLoginNextUrl('yeshiva', {
+        search: '?school=yeshiva&office=1',
+      }),
+    ).toBe('https://office.leveluprewards.app/yeshiva');
   });
 });

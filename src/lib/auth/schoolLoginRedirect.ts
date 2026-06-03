@@ -1,4 +1,5 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
 import {
   isOfficeAppPath,
   isOfficeHostname,
@@ -8,6 +9,14 @@ import { officePublicHref, type OfficePublicSegment } from '@/lib/officePublicUr
 import { canonicalPortalHost, isLocalDevHost } from '@/lib/portalRouting';
 
 export const SCHOOL_LOGIN_OFFICE_INTENT_KEY = 'lvlup:schoolLoginOfficeIntent';
+/** Query flag set when edge middleware sends users from the office host to portal login. */
+export const SCHOOL_LOGIN_OFFICE_INTENT_PARAM = 'office';
+
+export function hasUrlSchoolLoginOfficeIntent(
+  params: URLSearchParams | null | undefined,
+): boolean {
+  return params?.get(SCHOOL_LOGIN_OFFICE_INTENT_PARAM) === '1';
+}
 
 export function markSchoolLoginOfficeIntent(schoolId: string): void {
   if (typeof window === 'undefined') return;
@@ -131,17 +140,55 @@ export function schoolLoginRedirectHref(
   const usePortalLogin =
     onOffice && portalHost && !isLocalDevHost(window.location.host);
 
+  if (onOffice) {
+    markSchoolLoginOfficeIntent(route);
+    params.set(SCHOOL_LOGIN_OFFICE_INTENT_PARAM, '1');
+  }
+
   if (usePortalLogin) {
     const scheme = portalHost.includes('localhost') ? 'http' : 'https';
-    markSchoolLoginOfficeIntent(route);
     return `${scheme}://${portalHost}/login?${params.toString()}`;
   }
 
-  if (onOffice) {
-    markSchoolLoginOfficeIntent(route);
+  return `/login?${params.toString()}`;
+}
+
+/**
+ * Post-login destination after school passcode sign-in (`/login?school=&next=`).
+ * Prefers a validated `next`, then office intent, then the rewards portal default.
+ */
+export function resolveSchoolLoginNextUrl(
+  schoolId: string,
+  options?: { search?: string; pathname?: string },
+): string {
+  const sid = schoolId.trim().toLowerCase();
+  const defaultPortal = `/${sid}/portal`;
+
+  if (typeof window === 'undefined') return defaultPortal;
+
+  const params = new URLSearchParams(options?.search ?? window.location.search);
+  const nextParam = params.get('next');
+  const officeIntent =
+    hasUrlSchoolLoginOfficeIntent(params) ||
+    consumeSchoolLoginOfficeIntent(sid) ||
+    isOfficeHostname(window.location.host);
+
+  if (nextParam) {
+    const target = sanitizeInternalNextPath(nextParam, sid);
+    if (target) return target;
+    if (officeIntent) return officePublicHref(sid);
+    return defaultPortal;
   }
 
-  return `/login?${params.toString()}`;
+  if (officeIntent) return officePublicHref(sid);
+
+  const pathname = options?.pathname ?? window.location.pathname;
+  const officeNext = schoolLoginNextPath(sid, pathname);
+  if (officeNext.startsWith('http://') || officeNext.startsWith('https://')) {
+    return officeNext;
+  }
+
+  return defaultPortal;
 }
 
 /** Rewards portal staff route (portal host when configured). */
