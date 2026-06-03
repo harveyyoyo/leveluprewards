@@ -77,7 +77,6 @@ import { AdminHousesOverviewGrid } from '@/components/houses/admin/AdminHousesOv
 import { AdminHouseRosterCard } from '@/components/houses/admin/AdminHouseRosterCard';
 import { buildHouseStandingsRows } from '@/lib/houses/houseStandings';
 import type { House, Student, Teacher } from '@/lib/types';
-import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   seedHouseThemePack,
@@ -379,14 +378,17 @@ export function AdminHousesTab({
   return (
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Helper content="School houses: rosters, house parents, point rollups, sorting ceremony, and Hall of Fame standings.">
+        <div className="space-y-1 min-w-0">
+          <Helper content="School houses: standings overview, rosters, settings, and Hall of Fame TV display.">
             <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Home className="w-5 h-5 text-primary" /> Houses
             </StaffPortalSectionCardTitle>
           </Helper>
+          <p className="text-sm text-muted-foreground max-w-xl">
+            Track team standings, manage rosters, and configure how house points sync with student rewards.
+          </p>
         </div>
-        <div className="flex flex-nowrap items-center gap-2 overflow-x-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />
           <Button
             variant="default"
@@ -395,138 +397,103 @@ export function AdminHousesTab({
           >
             <Sparkles className="mr-2 h-4 w-4" /> Setup wizard
           </Button>
-          <Button variant="outline" className="rounded-xl" asChild>
-            <Link href={sortingHref} target="_blank" rel="noopener noreferrer">
-              <Wand2 className="mr-2 h-4 w-4" /> Sorting ceremony
-              <ExternalLink className="ml-1.5 h-3.5 w-3.5 opacity-60" />
-            </Link>
-          </Button>
-          <Button
-            variant="outline"
-            className="rounded-xl"
-            disabled={busy !== null}
-            onClick={() => setSampleDialogOpen(true)}
-          >
-            {busy === 'sample' ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <FlaskConical className="mr-2 h-4 w-4" />
-            )}
-            Populate sample
-          </Button>
-          {sortedHouses.length > 0 ? (
-            <Button
-              variant="outline"
-              className="rounded-xl shrink-0"
-              disabled={busy !== null}
-              onClick={() => void runSyncTotals()}
-            >
-              {busy === 'sync' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Sync from students
-            </Button>
-          ) : null}
-          <Button className="rounded-xl shrink-0" onClick={() => openEditor(null)}>
+          <Button className="rounded-xl" onClick={() => openEditor(null)}>
             <Plus className="mr-2 h-4 w-4" /> Add house
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl" aria-label="More house actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem asChild>
+                <Link href={sortingHref} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  Sorting ceremony
+                  <ExternalLink className="ml-auto h-3.5 w-3.5 opacity-50" />
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={busy !== null} onClick={() => setSampleDialogOpen(true)}>
+                <FlaskConical className="mr-2 h-4 w-4" />
+                Populate sample
+              </DropdownMenuItem>
+              {sortedHouses.length > 0 ? (
+                <DropdownMenuItem disabled={busy !== null} onClick={() => void runSyncTotals()}>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync from students
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setMainSection('setup')}>
+                <Settings className="mr-2 h-4 w-4" />
+                House settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </StaffPortalSectionCardHeader>
 
       <StaffPortalSectionCardContent className="space-y-6">
         <ContentSectionTreeNav
+          branchLabel="Houses"
+          fullWidth
           items={[
-            { id: 'rosters', label: 'Rosters & Points' },
-            { id: 'hallOfFame', label: 'House Hall of Fame' },
+            { id: 'overview', label: 'Overview', icon: LayoutGrid },
+            { id: 'rosters', label: 'Rosters', icon: Users, badge: sortedHouses.length || undefined },
+            { id: 'setup', label: 'Setup', icon: Settings },
+            { id: 'hallOfFame', label: 'Hall of Fame', icon: Trophy },
           ]}
           value={mainSection}
-          onValueChange={(id) => setMainSection(id as 'rosters' | 'hallOfFame')}
+          onValueChange={(id) => setMainSection(id as typeof mainSection)}
           className="bg-muted/50 p-1.5 rounded-2xl border"
         />
 
         {mainSection === 'hallOfFame' ? (
           <AdminHouseHallOfFamePanel schoolId={schoolId} />
-        ) : (
-        <>
-        <div className="space-y-4 rounded-2xl border bg-muted/20 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Link house totals to student rewards
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                {studentPointsRollup
-                  ? "On: each house score follows its students' LevelUp points (awards and redemptions update houses automatically). Use Sync from students above the list if totals look wrong."
-                  : 'Off: give house points manually on this tab using +/- on each row. Student LevelUp balances will not change house standings.'}
-              </p>
-            </div>
-            <Switch
-              checked={studentPointsRollup}
-              onCheckedChange={(checked) =>
-                updateSettings(housePointsSourceSettingsPatch(checked ? 'studentRollup' : 'manual'))
-              }
-              aria-label="Link house totals to student rewards"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-4">
-            <div>
-              <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                Show house on student kiosk
-              </Label>
-              <p className="text-xs text-muted-foreground mt-1">Badge next to the student name after sign-in.</p>
-            </div>
-            <Switch
-              checked={settings.showHouseOnStudentKiosk !== false}
-              onCheckedChange={(v) => updateSettings({ showHouseOnStudentKiosk: v })}
-            />
-          </div>
-        </div>
+        ) : null}
 
-        <HouseIdeasPanel
-          linkedToStudentRewards={studentPointsRollup}
-          hasHouses={sortedHouses.length > 0}
-          unassignedCount={unassignedStudents.length}
-          sortingHref={sortingHref}
-          onSetupWizard={() => setWizardOpen(true)}
-          onPopulateSample={() => setSampleDialogOpen(true)}
-          onHallOfFame={() => setMainSection('hallOfFame')}
-          onSync={sortedHouses.length > 0 ? () => void runSyncTotals() : undefined}
-          syncBusy={busy === 'sync'}
-        />
-
-        {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
-            <span className="font-semibold text-amber-900 dark:text-amber-100">
-              {unassignedStudents.length} student{unassignedStudents.length === 1 ? '' : 's'} not in a house
-            </span>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="rounded-lg"
-              disabled={busy !== null}
-              onClick={() => void runBulkAssign('balanced')}
-            >
-              Assign balanced
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="rounded-lg"
-              disabled={busy !== null}
-              onClick={() => void runBulkAssign('random')}
-            >
-              Assign random
-            </Button>
+        {mainSection === 'overview' && sortedHouses.length > 0 ? (
+          <div className="space-y-6">
+            <AdminHousesStatsStrip
+              houseCount={sortedHouses.length}
+              assignedCount={assignedStudentCount}
+              unassignedCount={unassignedStudents.length}
+              leader={leaderHouse}
+            />
+            {sortedHouses.length > 1 ? (
+              <HouseStandingsChartBlock
+                houses={sortedHouses}
+                students={students ?? []}
+                format={chartFormat}
+                onFormatChange={(format) => updateSettings({ houseStandingsChartFormat: format })}
+              />
+            ) : null}
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Ranked standings
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl text-xs"
+                  onClick={() => setMainSection('rosters')}
+                >
+                  Manage all rosters
+                </Button>
+              </div>
+              <AdminHousesOverviewGrid rows={standingsRows} onManageHouse={goToHouseRoster} />
+            </div>
           </div>
         ) : null}
 
-        {sortedHouses.length === 0 ? (
+        {mainSection === 'overview' && sortedHouses.length === 0 ? (
           <EmptyState
             icon={Home}
             title="No houses yet"
-            description="Run the setup wizard for a guided start, or load a sample theme pack manually."
+            description="Run the setup wizard for a guided start, or load a sample theme pack."
             action={{
               label: 'Setup wizard',
               onClick: () => setWizardOpen(true),
@@ -538,333 +505,174 @@ export function AdminHousesTab({
               icon: FlaskConical,
             }}
           />
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Houses — ranked by points
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {sortedHouses.length > 1 ? (
-                  <Select
-                    value={chartFormat}
-                    onValueChange={(v) => updateSettings({ houseStandingsChartFormat: v as HouseStandingsChartFormat })}
+        ) : null}
+
+        {mainSection === 'rosters' ? (
+          <div className="space-y-4">
+            {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
+              <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm font-semibold text-amber-950 dark:text-amber-100">
+                  {unassignedStudents.length} student{unassignedStudents.length === 1 ? '' : 's'} not assigned to a
+                  house
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-lg"
+                    disabled={busy !== null}
+                    onClick={() => void runBulkAssign('balanced')}
                   >
-                    <SelectTrigger className="h-8 w-[12.5rem] rounded-lg text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {HOUSE_STANDINGS_FORMAT_OPTIONS.map((opt) => {
-                        const Icon = opt.icon;
-                        return (
-                          <SelectItem key={opt.id} value={opt.id}>
-                            <span className="flex items-center gap-2">
-                              <Icon className="h-3.5 w-3.5 opacity-70" aria-hidden />
-                              {opt.label}
-                            </span>
-                          </SelectItem>
+                    Assign balanced
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-lg"
+                    disabled={busy !== null}
+                    onClick={() => void runBulkAssign('random')}
+                  >
+                    Assign random
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {sortedHouses.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No houses to roster"
+                description="Add houses first, then assign students from each team card."
+                action={{
+                  label: 'Setup wizard',
+                  onClick: () => setWizardOpen(true),
+                  icon: Sparkles,
+                }}
+              />
+            ) : (
+              <>
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search houses…"
+                    value={houseSearch}
+                    onChange={(e) => setHouseSearch(e.target.value)}
+                    className="h-10 rounded-xl pl-9"
+                  />
+                </div>
+                {filteredStandingsRows.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">No houses match your search.</p>
+                ) : (
+                  <ul className="space-y-4">
+                    {filteredStandingsRows.map((row) => {
+                      const house = row.house;
+                      const houseStudents = (students || []).filter((s) => s.houseId === house.id);
+                      const availableStudents = (students || [])
+                        .filter((s) => s.houseId !== house.id)
+                        .sort(
+                          (a, b) =>
+                            a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName),
                         );
-                      })}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl"
-                  disabled={busy !== null}
-                  onClick={() => void runSyncTotals()}
-                >
-                  {busy === 'sync' ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                  )}
-                  Sync from students
-                </Button>
-                <Button className="rounded-xl" size="sm" onClick={() => openEditor(null)}>
-                  <Plus className="mr-2 h-4 w-4" /> Add house
-                </Button>
+
+                      return (
+                        <li key={house.id}>
+                          <AdminHouseRosterCard
+                            row={row}
+                            house={house}
+                            houseStudents={houseStudents}
+                            availableStudents={availableStudents}
+                            allHouses={sortedHouses}
+                            teachers={teachers ?? []}
+                            manualPoints={housePointsSource === 'manual'}
+                            busy={busy}
+                            isExpanded={expandedHouseIds.has(house.id)}
+                            selectedStudentId={studentPickByHouse[house.id] || ''}
+                            memberSearch={memberSearch[house.id] ?? ''}
+                            onToggleExpand={() => toggleExpand(house.id)}
+                            onSelectStudent={(v) =>
+                              setStudentPickByHouse((prev) => ({ ...prev, [house.id]: v }))
+                            }
+                            onMemberSearch={(v) =>
+                              setMemberSearch((prev) => ({ ...prev, [house.id]: v }))
+                            }
+                            onAddStudent={(s) => {
+                              void onUpdateStudent({ ...s, houseId: house.id });
+                              setStudentPickByHouse((prev) => ({ ...prev, [house.id]: '' }));
+                            }}
+                            onEdit={() => openEditor(house)}
+                            onDelete={() => void handleConfirmedDelete(house, houseStudents)}
+                            onOpenPoints={() => openPointsAdjust(house)}
+                            onNudgePoints={(dc, dl) => void nudgeHousePoints(house, dc, dl)}
+                            onTransfer={(s) => setTransferStudent({ student: s, fromHouseId: house.id })}
+                            onRemoveStudent={(s) => void onUpdateStudent({ ...s, houseId: '' })}
+                            onToggleHouseParent={(t, isParent) => {
+                              const current = t.houseParentHouseIds || [];
+                              const next = isParent
+                                ? current.filter((id) => id !== house.id)
+                                : [...current, house.id];
+                              void onUpdateTeacher({ ...t, houseParentHouseIds: next });
+                            }}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </>
+            )}
+          </div>
+        ) : null}
+
+        {mainSection === 'setup' ? (
+          <div className="space-y-6">
+            <div className="space-y-4 rounded-2xl border bg-muted/20 p-4 md:p-5">
+              <p className="text-sm font-bold text-foreground">House settings</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Link house totals to student rewards
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {studentPointsRollup
+                      ? "On: house scores follow students' LevelUp points. Use Sync from students if totals look wrong."
+                      : 'Off: adjust house points manually on each roster card (+/-). Student wallets stay separate.'}
+                  </p>
+                </div>
+                <Switch
+                  checked={studentPointsRollup}
+                  onCheckedChange={(checked) =>
+                    updateSettings(housePointsSourceSettingsPatch(checked ? 'studentRollup' : 'manual'))
+                  }
+                  aria-label="Link house totals to student rewards"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-4">
+                <div>
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Show house on student kiosk
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">Badge next to the student name after sign-in.</p>
+                </div>
+                <Switch
+                  checked={settings.showHouseOnStudentKiosk !== false}
+                  onCheckedChange={(v) => updateSettings({ showHouseOnStudentKiosk: v })}
+                />
               </div>
             </div>
 
-            {sortedHouses.length > 1 ? (
-              <HouseStandingsChartBlock
-                houses={sortedHouses}
-                students={students ?? []}
-                format={chartFormat}
-                onFormatChange={(format) => updateSettings({ houseStandingsChartFormat: format })}
-              />
-            ) : null}
-
-          <ul className="space-y-4 pr-1">
-            <AdminRecordListHeader
-              gridClassName="grid-cols-[40px_minmax(140px,1.2fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px]"
-              columns={[
-                { label: '#' },
-                { label: 'House' },
-                { label: 'Standings' },
-                { label: 'Current' },
-                { label: 'Lifetime' },
-                { label: 'Members' },
-                { label: 'Edit', className: 'text-right' },
-                { label: 'Delete', className: 'text-right' },
-              ]}
+            <HouseIdeasPanel
+              linkedToStudentRewards={studentPointsRollup}
+              hasHouses={sortedHouses.length > 0}
+              unassignedCount={unassignedStudents.length}
+              sortingHref={sortingHref}
+              onSetupWizard={() => setWizardOpen(true)}
+              onPopulateSample={() => setSampleDialogOpen(true)}
+              onHallOfFame={() => setMainSection('hallOfFame')}
+              onSync={sortedHouses.length > 0 ? () => void runSyncTotals() : undefined}
+              syncBusy={busy === 'sync'}
             />
-            {standingsRows.map((row) => {
-              const house = row.house;
-              const houseStudents = (students || []).filter((s) => s.houseId === house.id);
-              const availableStudents = (students || [])
-                .filter((s) => s.houseId !== house.id)
-                .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
-              const selectedStudentId = studentPickByHouse[house.id] || '';
-              const isExpanded = expandedHouseIds.has(house.id);
-              const parents = (teachers || []).filter((t) =>
-                (t.houseParentHouseIds || []).includes(house.id),
-              );
-
-              return (
-                <li
-                  key={house.id}
-                  className="flex flex-col overflow-hidden rounded-2xl border border-primary/20 bg-secondary/45 transition-all hover:border-primary/40"
-                >
-                  <div className="grid grid-cols-[40px_minmax(140px,1.2fr)_minmax(110px,1.2fr)_80px_80px_72px_40px_40px] items-center gap-2 p-3">
-                    <span className="text-center text-sm font-black tabular-nums text-muted-foreground">
-                      {row.rank}
-                    </span>
-                    <div className="flex min-w-0 flex-col gap-0.5">
-                      <div className="flex min-w-0 items-center gap-2">
-                        {house.emoji ? (
-                          <span className="shrink-0 text-xl leading-none" aria-hidden>
-                            {house.emoji}
-                          </span>
-                        ) : (
-                          <span
-                            className="h-3 w-3 shrink-0 rounded-full border"
-                            style={{ backgroundColor: house.color, borderColor: `${house.color}88` }}
-                            aria-hidden
-                          />
-                        )}
-                        <span className="truncate text-lg font-bold leading-tight text-foreground">
-                          {house.name}
-                        </span>
-                      </div>
-                      {house.value ? (
-                        <span className="truncate text-sm font-semibold text-muted-foreground pl-0.5">
-                          {house.value}
-                        </span>
-                      ) : null}
-                    </div>
-                    <HouseStandingsInlineCell row={row} />
-                    {housePointsSource === 'manual' ? (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          disabled={busy !== null}
-                          onClick={() => void nudgeHousePoints(house, -5, 0)}
-                          aria-label={`Remove 5 points from ${house.name}`}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <button
-                          type="button"
-                          className="min-w-[3rem] text-sm font-bold tabular-nums underline-offset-2 hover:underline"
-                          onClick={() => openPointsAdjust(house)}
-                        >
-                          {house.points ?? 0}
-                        </button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7 shrink-0"
-                          disabled={busy !== null}
-                          onClick={() => void nudgeHousePoints(house, 5, 5)}
-                          aria-label={`Add 5 points to ${house.name}`}
-                        >
-                          <PlusIcon className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="text-sm font-bold tabular-nums">{house.points ?? 0}</div>
-                    )}
-                    {housePointsSource === 'manual' ? (
-                      <button
-                        type="button"
-                        className="text-sm font-bold tabular-nums text-muted-foreground underline-offset-2 hover:underline text-left"
-                        onClick={() => openPointsAdjust(house)}
-                      >
-                        {house.lifetimePoints ?? 0}
-                      </button>
-                    ) : (
-                      <div className="text-sm font-bold tabular-nums text-muted-foreground">
-                        {house.lifetimePoints ?? 0}
-                      </div>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-full gap-1.5 rounded-lg border-primary/35 bg-background font-semibold"
-                      onClick={() => toggleExpand(house.id)}
-                    >
-                      {houseStudents.length}
-                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => openEditor(house)}
-                      aria-label={`Edit ${house.name}`}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => void handleConfirmedDelete(house, houseStudents)}
-                      aria-label={`Delete ${house.name}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {isExpanded ? (
-                    <div className="space-y-4 border-t border-primary/15 bg-background/60 px-4 py-4">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">
-                          House parents
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(teachers || []).map((t) => {
-                            const isParent = (t.houseParentHouseIds || []).includes(house.id);
-                            return (
-                              <Badge
-                                key={t.id}
-                                variant={isParent ? 'default' : 'outline'}
-                                className={cn('cursor-pointer rounded-full', isParent && 'bg-primary')}
-                                onClick={() => {
-                                  const current = t.houseParentHouseIds || [];
-                                  const next = isParent
-                                    ? current.filter((id) => id !== house.id)
-                                    : [...current, house.id];
-                                  void onUpdateTeacher({ ...t, houseParentHouseIds: next });
-                                }}
-                              >
-                                {t.name}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                        {parents.length === 0 ? (
-                          <p className="text-xs text-muted-foreground mt-2">Tap teacher names to assign house parents.</p>
-                        ) : null}
-                      </div>
-
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                            Add student to {house.name}
-                          </Label>
-                          <Select
-                            value={selectedStudentId}
-                            onValueChange={(v) => setStudentPickByHouse((prev) => ({ ...prev, [house.id]: v }))}
-                          >
-                            <SelectTrigger className="h-9 rounded-lg">
-                              <SelectValue placeholder="Choose student…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableStudents.map((s) => (
-                                <SelectItem key={s.id} value={s.id}>
-                                  {s.lastName}, {s.firstName}
-                                  {s.houseId
-                                    ? ` (from ${sortedHouses.find((h) => h.id === s.houseId)?.name ?? 'other'})`
-                                    : ''}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <Button
-                          className="rounded-xl shrink-0"
-                          disabled={!selectedStudentId}
-                          onClick={() => {
-                            const s = availableStudents.find((x) => x.id === selectedStudentId);
-                            if (!s) return;
-                            void onUpdateStudent({ ...s, houseId: house.id });
-                            setStudentPickByHouse((prev) => ({ ...prev, [house.id]: '' }));
-                          }}
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" /> Add
-                        </Button>
-                      </div>
-
-                      {houseStudents.length > 5 ? (
-                        <div className="relative group">
-                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                          <Input
-                            placeholder="Search members…"
-                            value={memberSearch[house.id] ?? ''}
-                            onChange={(e) => setMemberSearch((prev) => ({ ...prev, [house.id]: e.target.value }))}
-                            className="h-8 rounded-lg pl-8 text-xs"
-                          />
-                        </div>
-                      ) : null}
-                      <ul className="space-y-1 max-h-48 overflow-y-auto">
-                        {(() => {
-                          const searchTerm = (memberSearch[house.id] ?? '').trim().toLowerCase();
-                          const filtered = searchTerm
-                            ? houseStudents.filter((s) => `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm))
-                            : houseStudents;
-                          return filtered.length > 0 ? filtered.map((s) => (
-                            <li
-                              key={s.id}
-                              className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2 text-sm"
-                            >
-                              <span>
-                                {s.lastName}, {s.firstName}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-xs text-primary"
-                                  onClick={() => setTransferStudent({ student: s, fromHouseId: house.id })}
-                                  title="Transfer to another house"
-                                >
-                                  <ArrowRightLeft className="h-3 w-3 mr-1" /> Transfer
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 text-xs text-muted-foreground"
-                                  onClick={() => void onUpdateStudent({ ...s, houseId: '' })}
-                                >
-                                  Remove
-                                </Button>
-                              </div>
-                            </li>
-                          )) : (
-                            <li className="text-xs text-muted-foreground py-2">
-                              {searchTerm ? 'No matching students.' : 'No students in this house yet.'}
-                            </li>
-                          );
-                        })()}
-                      </ul>
-                    </div>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
           </div>
-        )}
-        </>
-        )}
+        ) : null}
       </StaffPortalSectionCardContent>
 
       <HouseSetupWizard
