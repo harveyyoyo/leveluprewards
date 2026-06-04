@@ -54,6 +54,7 @@ import {
 } from '@/lib/library/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
+import { StudentKioskOptionsMenu } from '@/components/student-kiosk/StudentKioskOptionsMenu';
 import {
   StudentKioskEmojiBadge,
   StudentKioskProfileExtras,
@@ -1642,15 +1643,23 @@ function StudentDashboardInner({
                     ) : null}
                   </div>
                 ) : null}
-                <StudentKioskLogoutControls
-                  themed={{ active: !!effectiveTheme }}
-                  primaryForeground={primaryForeground}
-                  isKioskLocked={isKioskLocked}
-                  autoLogoutEnabled={kioskAutoLogoutOn}
-                  logoutTimer={logoutTimer}
-                  sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
-                  onLogout={handleManualLogout}
-                />
+                <div className="flex items-center gap-2">
+                  <StudentKioskOptionsMenu
+                    schoolId={schoolId}
+                    student={student}
+                    classLabel={studentClassLabel}
+                    themed={!!effectiveTheme}
+                  />
+                  <StudentKioskLogoutControls
+                    themed={{ active: !!effectiveTheme }}
+                    primaryForeground={primaryForeground}
+                    isKioskLocked={isKioskLocked}
+                    autoLogoutEnabled={kioskAutoLogoutOn}
+                    logoutTimer={logoutTimer}
+                    sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                    onLogout={handleManualLogout}
+                  />
+                </div>
               </div>
             }
         />
