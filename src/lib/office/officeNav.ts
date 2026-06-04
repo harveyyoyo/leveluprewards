@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CreditCard, FileText, GraduationCap, Home, LayoutGrid, Settings, UserRound, Users } from 'lucide-react';
+import { CreditCard, GraduationCap, Home, LayoutGrid, Settings, UserRound, Users } from 'lucide-react';
 import { officePublicHref } from '@/lib/officePublicUrl';
 
 export type OfficeNavId =
@@ -9,7 +9,6 @@ export type OfficeNavId =
   | 'teachers'
   | 'grades'
   | 'billing'
-  | 'reports'
   | 'settings';
 
 export type OfficeNavItem = {
@@ -24,56 +23,49 @@ export const OFFICE_NAV_ITEMS: OfficeNavItem[] = [
   {
     id: 'home',
     label: 'Home',
-    description: 'Roster, grades, and billing at a glance',
+    description: 'Overview and quick actions',
     href: (schoolId) => officePublicHref(schoolId),
     icon: Home,
   },
   {
     id: 'students',
     label: 'Students',
-    description: 'Student roster',
+    description: 'Add and manage students',
     href: (schoolId) => officePublicHref(schoolId, 'students'),
     icon: Users,
   },
   {
     id: 'classes',
     label: 'Classes',
-    description: 'Students grouped by class',
+    description: 'Group students by class',
     href: (schoolId) => officePublicHref(schoolId, 'classes'),
     icon: LayoutGrid,
   },
   {
     id: 'teachers',
     label: 'Teachers',
-    description: 'Homeroom teachers for student assignments',
+    description: 'Homeroom teachers',
     href: (schoolId) => officePublicHref(schoolId, 'teachers'),
     icon: UserRound,
   },
   {
     id: 'grades',
     label: 'Grades',
-    description: 'Report cards and term grades',
+    description: 'Enter and print grades',
     href: (schoolId) => officePublicHref(schoolId, 'grades'),
     icon: GraduationCap,
   },
   {
     id: 'billing',
     label: 'Billing',
-    description: 'Family accounts and invoices',
+    description: 'Family invoices and payments',
     href: (schoolId) => officePublicHref(schoolId, 'billing'),
     icon: CreditCard,
   },
   {
-    id: 'reports',
-    label: 'Reports',
-    description: 'Print term grades and reports',
-    href: (schoolId) => officePublicHref(schoolId, 'reports'),
-    icon: FileText,
-  },
-  {
     id: 'settings',
     label: 'Settings',
-    description: 'Office defaults and staff sign-in accounts',
+    description: 'Terms, staff accounts, import',
     href: (schoolId) => officePublicHref(schoolId, 'settings'),
     icon: Settings,
   },
@@ -96,8 +88,8 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
   if (rest.startsWith('classes')) return 'classes';
   if (rest.startsWith('teachers')) return 'teachers';
   if (rest.startsWith('grades')) return 'grades';
+  if (rest.startsWith('reports')) return 'grades'; // Reports accessed via Grades
   if (rest.startsWith('billing')) return 'billing';
-  if (rest.startsWith('reports')) return 'reports';
   if (rest.startsWith('settings')) return 'settings';
   return 'home';
 }

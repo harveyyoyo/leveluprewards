@@ -1,32 +1,31 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import {
-  ChevronRight,
-  Sparkles,
-  TableProperties,
-} from 'lucide-react';
+import { ChevronRight, TableProperties } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
-  StaffPortalSectionCardHeader,
-  StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import {
+  staffPortalAddOnTabs,
+  staffPortalCoreTabs,
   staffPortalTabDescription,
-  staffPortalTabsForRole,
   type StaffPortalRole,
 } from '@/lib/staffPortal';
 import type { Settings } from '@/components/providers/SettingsProvider';
-import { cn, staffGreetingName } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
-export type AdminWelcomeStats = {
+export type StaffPortalWelcomeStats = {
   studentCount: number;
   classCount: number;
   staffCount: number;
   activePrizeCount: number;
 };
+
+/** @deprecated Use StaffPortalWelcomeStats */
+export type AdminWelcomeStats = StaffPortalWelcomeStats;
 
 type StaffPortalWelcomeTabProps = {
   role: StaffPortalRole;
@@ -34,12 +33,12 @@ type StaffPortalWelcomeTabProps = {
   onGoToTab: (tabValue: string) => void;
   /** Admin-only: open bulk CSV roster import. */
   onBulkRoster?: () => void;
-  /** First name or display name for a personal greeting. */
-  displayName?: string | null;
-  /** Shown on admin welcome when available. */
+  /** Shown under the hero heading when available. */
   schoolName?: string | null;
-  /** Admin hero metrics (students, classes, staff, active prizes). */
-  adminStats?: AdminWelcomeStats;
+  /** Hero metrics for admin and teacher welcome tabs. */
+  welcomeStats?: StaffPortalWelcomeStats;
+  /** @deprecated Use welcomeStats */
+  adminStats?: StaffPortalWelcomeStats;
   className?: string;
 };
 
@@ -47,18 +46,63 @@ function formatStat(n: number): string {
   return n.toLocaleString();
 }
 
+function useCountUp(target: number, duration = 800, enabled = true): number {
+  const [current, setCurrent] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || hasAnimated.current || target === 0) {
+      setCurrent(target);
+      return;
+    }
+    hasAnimated.current = true;
+
+    const startTime = performance.now();
+    let rafId: number;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCurrent(Math.round(eased * target));
+
+      if (progress < 1) {
+        rafId = requestAnimationFrame(animate);
+      }
+    };
+
+    rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
+  }, [target, duration, enabled]);
+
+  return current;
+}
+
+function AnimatedStat({ value, label }: { value: number; label: string }) {
+  const animatedValue = useCountUp(value, 800);
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3.5">
+      <p className="text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
+        {formatStat(animatedValue)}
+      </p>
+      <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+        {label}
+      </p>
+    </div>
+  );
+}
+
 function TabLinkRow({
   icon: Icon,
   label,
   description,
   onOpen,
-  variant = 'default',
 }: {
   icon: LucideIcon;
   label: string;
   description: string;
   onOpen: () => void;
-  variant?: 'default' | 'admin';
 }) {
   return (
     <button
@@ -66,33 +110,19 @@ function TabLinkRow({
       onClick={onOpen}
       className={cn(
         'group flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
+        'border-border/70 bg-card hover:border-primary/20 hover:bg-muted/30',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
-        variant === 'admin'
-          ? 'border-border/70 bg-card hover:border-primary/20 hover:bg-muted/30'
-          : 'border-border/60 bg-card hover:border-primary/25 hover:bg-muted/40',
       )}
     >
       <div
-        className={cn(
-          'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
-          variant === 'admin'
-            ? 'bg-primary/10 text-primary group-hover:bg-primary/15'
-            : 'bg-primary/10 text-primary group-hover:bg-primary/15',
-        )}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
         aria-hidden
       >
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-semibold leading-snug text-foreground">{label}</p>
-        <p
-          className={cn(
-            'mt-0.5 text-sm leading-snug text-muted-foreground',
-            variant === 'admin' ? 'line-clamp-2' : 'line-clamp-1',
-          )}
-        >
-          {description}
-        </p>
+        <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-muted-foreground">{description}</p>
       </div>
       <ChevronRight
         className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
@@ -102,18 +132,22 @@ function TabLinkRow({
   );
 }
 
-function AdminWelcomeHero({
+function StaffPortalWelcomeHero({
   schoolName,
   stats,
+  description,
+  statLabels,
 }: {
   schoolName: string | null;
-  stats: AdminWelcomeStats;
+  stats: StaffPortalWelcomeStats;
+  description: string;
+  statLabels: [string, string, string, string];
 }) {
   const statTiles = [
-    { label: 'Students', value: stats.studentCount },
-    { label: 'Classes', value: stats.classCount },
-    { label: 'Staff', value: stats.staffCount },
-    { label: 'Active prizes', value: stats.activePrizeCount },
+    { label: statLabels[0], value: stats.studentCount },
+    { label: statLabels[1], value: stats.classCount },
+    { label: statLabels[2], value: stats.staffCount },
+    { label: statLabels[3], value: stats.activePrizeCount },
   ];
 
   return (
@@ -128,31 +162,21 @@ function AdminWelcomeHero({
           <div>
             <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Welcome back 👋</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
-              This is your control center. Manage students, award points, run the prize shop, and
-              power the screens around your school — all from one place.
+              {description}
             </p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          {statTiles.map((tile) => (
-            <div
-              key={tile.label}
-              className="rounded-xl border border-border/60 bg-primary/5 px-3 py-3 sm:px-4 sm:py-3.5"
-            >
-              <p className="text-xl font-bold tabular-nums tracking-tight text-foreground sm:text-2xl">
-                {formatStat(tile.value)}
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-[11px]">
-                {tile.label}
-              </p>
-            </div>
-          ))}
-        </div>
+        {statTiles.map((tile) => (
+          <AnimatedStat key={tile.label} value={tile.value} label={tile.label} />
+        ))}
+      </div>
     </div>
   );
 }
+
 function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
@@ -182,120 +206,89 @@ function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
+const ADMIN_WELCOME_DESCRIPTION =
+  'This is your control center. Manage students, award points, run the prize shop, and power the screens around your school — all from one place.';
+
+const TEACHER_WELCOME_DESCRIPTION =
+  'Award points, print coupons, manage your classes, and track student progress — all from one place.';
+
 export function StaffPortalWelcomeTab({
   role,
   settings,
   onGoToTab,
   onBulkRoster,
-  displayName,
   schoolName,
+  welcomeStats,
   adminStats,
   className,
 }: StaffPortalWelcomeTabProps) {
-  const tabs = staffPortalTabsForRole(role, settings).filter(
-    (t) => t.value !== 'welcome',
-  );
-  const core = tabs.filter((t) => t.kind === 'core');
-  const addons = tabs.filter((t) => t.kind === 'addon');
+  const stats = welcomeStats ?? adminStats;
+  const core = staffPortalCoreTabs(role, settings);
+  const addons = staffPortalAddOnTabs(role, settings);
+  const trimmedSchoolName = schoolName?.trim() || null;
 
-  const greetingName = displayName ? staffGreetingName(displayName) : '';
-  const greeting = greetingName ? `Hi, ${greetingName}` : 'Welcome';
+  const heroDescription =
+    role === 'teacher' ? TEACHER_WELCOME_DESCRIPTION : ADMIN_WELCOME_DESCRIPTION;
 
-  const intro =
+  const heroStatLabels: [string, string, string, string] =
     role === 'teacher'
-      ? 'Choose what you want to do today. Your tabs are always available on the left or across the top.'
-      : schoolName?.trim()
-        ? `Quick links for ${schoolName.trim()}. Open a section below or use the tabs.`
-        : 'Quick links to every section. Open one below or use the tabs.';
-
-  const isAdminHero = role === 'admin' && adminStats;
-
-  const welcomeBody = (
-    <>
-      {isAdminHero ? (
-        <AdminWelcomeHero
-          schoolName={schoolName?.trim() || null}
-          stats={adminStats}
-        />
-      ) : (
-        <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-5 py-8 text-center sm:px-6">
-          <div className="mx-auto flex max-w-md flex-col items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary"
-              aria-hidden
-            >
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">{greeting}</h3>
-              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{intro}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {role === 'admin' && onBulkRoster ? <ImportRosterCard onOpen={onBulkRoster} /> : null}
-
-      {core.length > 0 ? (
-        <section className="space-y-3">
-          <h4
-            className={cn(
-              'font-medium text-foreground',
-              role === 'admin' ? 'text-xs font-semibold uppercase tracking-wider text-muted-foreground' : 'text-sm',
-            )}
-          >
-            {role === 'teacher' ? 'Your everyday tools' : 'Main areas'}
-          </h4>
-          <div className="grid gap-2.5 sm:grid-cols-2">
-            {core.map((tab) => (
-              <TabLinkRow
-                key={tab.value}
-                icon={tab.icon}
-                label={tab.label}
-                description={staffPortalTabDescription(tab)}
-                onOpen={() => onGoToTab(tab.value)}
-                variant={role === 'admin' ? 'admin' : 'default'}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {addons.length > 0 ? (
-        <section className="space-y-2.5">
-          <div>
-            <h4 className="text-sm font-medium text-foreground">More tools</h4>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Turn these on and pin them from Add more when you need them.
-            </p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {addons.map((tab) => (
-              <TabLinkRow
-                key={tab.value}
-                icon={tab.icon}
-                label={tab.label}
-                description={staffPortalTabDescription(tab)}
-                onOpen={() => onGoToTab(tab.value)}
-                variant={role === 'admin' ? 'admin' : 'default'}
-              />
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </>
-  );
+      ? ['Students', 'Classes', 'Point categories', 'Active prizes']
+      : ['Students', 'Classes', 'Staff', 'Active prizes'];
 
   return (
     <StaffPortalSectionCard className={className}>
-      <StaffPortalSectionCardHeader>
-        <StaffPortalSectionCardTitle>
-          <Sparkles className="h-5 w-5 text-primary" aria-hidden />
-          Welcome
-        </StaffPortalSectionCardTitle>
-      </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent className="space-y-6 p-5 sm:p-6">
-        {welcomeBody}
+        {stats ? (
+          <StaffPortalWelcomeHero
+            schoolName={trimmedSchoolName}
+            stats={stats}
+            description={heroDescription}
+            statLabels={heroStatLabels}
+          />
+        ) : null}
+
+        {role === 'admin' && onBulkRoster ? <ImportRosterCard onOpen={onBulkRoster} /> : null}
+
+        {core.length > 0 ? (
+          <section className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Main areas
+            </h4>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              {core.map((tab) => (
+                <TabLinkRow
+                  key={tab.value}
+                  icon={tab.icon}
+                  label={tab.label}
+                  description={staffPortalTabDescription(tab)}
+                  onOpen={() => onGoToTab(tab.value)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {addons.length > 0 ? (
+          <section className="space-y-2.5">
+            <div>
+              <h4 className="text-sm font-medium text-foreground">More tools</h4>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Turn these on and pin them from Add more when you need them.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {addons.map((tab) => (
+                <TabLinkRow
+                  key={tab.value}
+                  icon={tab.icon}
+                  label={tab.label}
+                  description={staffPortalTabDescription(tab)}
+                  onOpen={() => onGoToTab(tab.value)}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
   );

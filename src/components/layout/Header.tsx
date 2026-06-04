@@ -39,6 +39,12 @@ import { portalHoverTextClass, portalTextClass, type PortalColorKey } from '@/li
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 import { useHeaderManagedShell } from '@/components/layout/HeaderChromeContext';
+import {
+  staffPortalGlobalHeaderClassName,
+  staffPortalGlobalHeaderInnerClassName,
+  staffPortalHeaderWrapClassName,
+} from '@/components/staff/staffPortalNavStyles';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -76,6 +82,7 @@ export default function Header() {
   const { firestore } = useFirebase();
   const schoolDocRef = useSchoolMetadataDocRef();
   const headerManagedShell = useHeaderManagedShell();
+  const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
 
   const { data: schoolData, isLoading: isSchoolMetaLoading } = useDoc<{ name: string; logoUrl?: string }>(
     schoolDocRef,
@@ -261,7 +268,14 @@ export default function Header() {
   if (settings.payHomework ?? true) paidProducts.push('Homework');
   if (settings.payLibrary ?? true) paidProducts.push('Library');
   const paidProductsLabel = paidProducts.join(' • ');
-  const headerWrapClassName = 'mx-auto max-w-7xl px-4 md:px-8';
+  const adminSideTabHeader =
+    !!schoolId &&
+    typeof pathname === 'string' &&
+    new RegExp(`^/${schoolId}/(?:admin|teacher|secretary|reports|librarian)(?:/|$)`).test(pathname);
+
+  const headerWrapClassName = adminSideTabHeader
+    ? staffPortalHeaderWrapClassName(staffPortalWide)
+    : 'mx-auto max-w-7xl px-4 md:px-8';
 
   /** Long school names wrap; header row must grow (fixed h-20 + absolute center caused top clipping). */
   const headerSchoolNameClass =
@@ -350,8 +364,17 @@ export default function Header() {
         <div className={cn('w-full min-w-0', headerWrapClassName)}>
         <header
           className={cn(
-            'no-print relative z-20 mb-2 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2 rounded-b-2xl border border-border/10 border-t-0',
-            'bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
+            'no-print relative z-20 grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2',
+            adminSideTabHeader
+              ? cn(
+                  staffPortalGlobalHeaderClassName(),
+                  staffPortalGlobalHeaderInnerClassName(),
+                  'py-2 sm:py-3',
+                )
+              : cn(
+                  'mb-2 rounded-b-2xl border border-border/10 border-t-0 bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
+                  'sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
+                ),
           )}
         >
           <div className="relative z-10 flex shrink-0 justify-start">
@@ -451,12 +474,21 @@ export default function Header() {
       <div className={cn('w-full min-w-0', headerWrapClassName)}>
         <header
           className={cn(
-            'relative z-20 mb-2 w-full min-w-0 rounded-b-2xl border border-border/10 border-t-0',
-            'bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
-            'sm:mb-3 sm:rounded-b-3xl',
+            'relative z-20 w-full min-w-0',
+            adminSideTabHeader
+              ? staffPortalGlobalHeaderClassName()
+              : cn(
+                  'mb-2 rounded-b-2xl border border-border/10 border-t-0 bg-card/95 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
+                  'sm:mb-3 sm:rounded-b-3xl',
+                ),
           )}
         >
-      <div className="grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3">
+      <div
+        className={cn(
+          'grid min-h-20 min-w-0 w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-2 sm:gap-x-3 sm:px-5 sm:py-3',
+          adminSideTabHeader && staffPortalGlobalHeaderInnerClassName(),
+        )}
+      >
         {/* Left: Branding */}
         <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>

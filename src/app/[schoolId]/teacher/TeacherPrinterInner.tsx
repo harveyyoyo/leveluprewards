@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import type { Coupon, Category, Teacher, Student, Class, House, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
+import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
@@ -39,17 +39,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
+import { StaffPortalPageIntro } from '@/components/staff/StaffPortalPageIntro';
 import {
-  staffPortalContentWidthClassName,
-  staffPortalPageIntroClassName,
+  staffPortalSidebarRailClassName,
+  staffPortalWorkspaceMainClassName,
 } from '@/components/staff/staffPortalNavStyles';
+import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
+import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
 import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
-import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
-import { TeacherPortalAddMoreMenu } from '@/components/staff/TeacherPortalAddMoreMenu';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
-import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs } from '@/lib/staffPortal';
+import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs, staffPortalAllAddOnTabValues, staffPortalMergePinnedAddOnValues } from '@/lib/staffPortal';
 import { Switch } from '@/components/ui/switch';
 
 import DynamicIcon from '@/components/DynamicIcon';
@@ -62,7 +63,7 @@ import {
     teacherBudgetRemainingPhrase,
     resolveTeacherBudgetPeriod,
 } from '@/lib/teacherBudget';
-import { Helper } from '@/components/ui/helper';
+
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
 import {
   TabWalkthroughHeaderAction,
@@ -85,21 +86,19 @@ import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
-import { AdminHousesTab } from '@/app/[schoolId]/admin/sections/AdminHousesTab';
-import { StaffPortalSchoolwideFeatureNotice } from '@/components/staff/StaffPortalSchoolwideFeatureNotice';
+import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
+import {
+  teacherPortalPanelClassName,
+  teacherPortalTabContentClassName,
+} from '@/components/staff/teacherPortalLayout';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
 import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
+import { prizeIsListed } from '@/lib/prizes/prizeUtils';
 
 /** Max sheets per run. Bounded for sensible printer jobs and UI. */
 const MAX_COUPON_PRINT_SHEETS = 100;
-const teacherPortalTabContentClassName =
-    'mt-0 h-full min-h-0 w-full overflow-y-auto overflow-x-hidden pb-6 pr-1 data-[state=active]:animate-none motion-reduce:animate-none';
-function teacherPortalPanelClassName(isWide: boolean) {
-  return cn('w-full', staffPortalContentWidthClassName(isWide));
-}
-
 function TeacherPortalShell({
   embedded,
   className,
@@ -2038,9 +2037,6 @@ function TeacherPrinterInnerBody({
         listTeacherAttendanceLog,
         isAdmin,
         isTeacher,
-        addHouse,
-        updateHouse,
-        deleteHouse,
     } = useAppContext();
     const confirm = useConfirm();
     const { toast } = useToast();
@@ -2051,14 +2047,14 @@ function TeacherPrinterInnerBody({
     const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
     const currentTeacher = teachers?.find(t => t.id === teacherId);
     /** Admin and leadership staff can act on the whole school while keeping teacher tabs/tools. */
-    const schoolWideTeacherScope = secretaryMode || isAdmin || isLeadershipPersonnel(currentTeacher);
+    const schoolWideTeacherScope = secretaryMode || isLeadershipPersonnel(currentTeacher);
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
 
     const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
     const { isWide } = useStaffPortalLayout();
-    const { mainTabs, addMoreTabs, allTabValues, defaultTab } = useStaffPortalTabs({
+    const { mainTabs, addMoreTabs, allTabValues, defaultTab, addOnTabDefs } = useStaffPortalTabs({
         role: staffPortalRole,
         settings,
         pinnedAddOnValues: settings.teacherPinnedAddOnTabs || [],
@@ -2077,7 +2073,7 @@ function TeacherPrinterInnerBody({
         const now = settings.teacherPinnedAddOnTabs || [];
         if (pinned) {
             if (!allTabValues.includes(tabValue)) return;
-            const next = [...new Set([...now, tabValue])];
+            const next = staffPortalMergePinnedAddOnValues(now, tabValue);
             updateSettings({
                 teacherPinnedAddOnTabs: next,
                 ...staffPortalTeacherPinSideEffects(tabValue, true),
@@ -2087,6 +2083,29 @@ function TeacherPrinterInnerBody({
         }
         updateSettings({ teacherPinnedAddOnTabs: now.filter((v) => v !== tabValue) });
         if (activeTeacherTab === tabValue) setActiveTeacherTab(defaultTab);
+    };
+
+    const enableAllTeacherAddOnTabs = () => {
+        const values = staffPortalAllAddOnTabValues(addOnTabDefs);
+        if (values.length === 0) return;
+
+        let patch: Partial<Settings> = {
+            teacherPinnedAddOnTabs: values,
+            teacherHiddenAddOnTabs: (settings.teacherHiddenAddOnTabs || []).filter(
+                (v) => !values.includes(v),
+            ),
+        };
+        for (const v of values) {
+            patch = { ...patch, ...staffPortalTeacherPinSideEffects(v, true) };
+        }
+        updateSettings(patch);
+    };
+
+    const disableAllTeacherAddOnTabs = () => {
+        const pinned = settings.teacherPinnedAddOnTabs || [];
+        if (pinned.length === 0) return;
+        updateSettings({ teacherPinnedAddOnTabs: [] });
+        if (pinned.includes(activeTeacherTab)) setActiveTeacherTab(defaultTab);
     };
 
     const teacherPinnedAddOnSet = useMemo(
@@ -2131,12 +2150,6 @@ function TeacherPrinterInnerBody({
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
-    const housesQuery = useMemoFirebase(
-        () => (schoolId && settings.enableHouses ? collection(firestore, 'schools', schoolId, 'houses') : null),
-        [firestore, schoolId, settings.enableHouses],
-    );
-    const { data: houses, isLoading: housesLoading } = useCollection<House>(housesQuery);
-
     const periodsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'periods') : null, [firestore, schoolId]);
     const { data: periods, isLoading: periodsLoading } = useCollection<AttendanceScheduleSlot>(periodsQuery);
 
@@ -2167,13 +2180,23 @@ function TeacherPrinterInnerBody({
         () => (schoolId && firestore ? doc(firestore, 'schools', schoolId) : null),
         [firestore, schoolId],
     );
-    const { data: schoolDocData } = useDoc<{ name?: string }>(schoolDocRef);
+    const { data: schoolDocData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
 
     const couponsQuery = useMemoFirebase(() => (schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null), [firestore, schoolId]);
     const { data: coupons } = useCollection<Coupon>(couponsQuery);
 
     const prizesQuery = useMemoFirebase(() => (schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null), [firestore, schoolId]);
     const { data: prizes } = useCollection<Prize>(prizesQuery);
+
+    const teacherWelcomeStats = useMemo(
+        () => ({
+            studentCount: studentsForTeacherActions.length,
+            classCount: classesForTeacherUi.length,
+            staffCount: (categories || []).length,
+            activePrizeCount: (prizes || []).filter(prizeIsListed).length,
+        }),
+        [studentsForTeacherActions, classesForTeacherUi, categories, prizes],
+    );
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -2190,8 +2213,7 @@ function TeacherPrinterInnerBody({
           studentsLoading ||
           classesLoading ||
           periodsLoading ||
-          teachersLoading ||
-          (settings.enableHouses && housesLoading);
+          teachersLoading;
     const teacherAccent = 'hsl(var(--primary))';
 
     const { teacherDocId, userId } = useAppContext();
@@ -2229,134 +2251,41 @@ function TeacherPrinterInnerBody({
         );
     }
 
-    return (
-        <TooltipProvider>
-            <div
-                className={cn(
-                    'bg-background transition-colors duration-500 relative overflow-x-hidden font-sans flex min-h-0 flex-col',
-                    embedded ? 'flex-1 w-full' : 'min-h-screen',
-                )}
-                style={
-                    embedded
-                        ? undefined
-                        : (appearanceVarsForSurface(settings, 'print') as React.CSSProperties)
-                }
+    const teacherPortalWorkspace = (
+        <StaffPortalWorkspace className={secretaryMode ? 'lg:grid-cols-1' : undefined}>
+            {!secretaryMode ? (
+                <div className={staffPortalSidebarRailClassName()}>
+                    <StaffPortalNav
+                        role="teacher"
+                        activeTab={resolvedTeacherTab}
+                        onTabChange={setActiveTeacherTab}
+                        mainTabs={mainTabs}
+                        addMoreTabs={addMoreTabs}
+                        onAddTab={(value) => toggleTeacherPinnedAddOn(value, true)}
+                        removableTabValues={teacherPinnedAddOnSet}
+                        onRemoveTab={(value) => toggleTeacherPinnedAddOn(value, false)}
+                        onTurnAllOn={enableAllTeacherAddOnTabs}
+                        onTurnAllOff={disableAllTeacherAddOnTabs}
+                    />
+                </div>
+            ) : null}
+
+            <Tabs
+                value={resolvedTeacherTab}
+                onValueChange={setActiveTeacherTab}
+                className={secretaryMode ? 'flex min-h-0 min-w-0 w-full flex-1 flex-col' : staffPortalWorkspaceMainClassName()}
             >
-                {/* Local orbs/noise only when global animated backdrop is off */}
-                {!embedded && isGraphic && !animBackdrop && (
-                    <>
-                        <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-                        <div className="pointer-events-none fixed -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-chart-1/10 blur-[120px] z-0 animate-pulse-slow" />
-                        <div className="pointer-events-none fixed top-1/2 -right-24 h-[600px] w-[600px] rounded-full bg-chart-2/10 blur-[140px] z-0" />
-                        <div className="pointer-events-none fixed -bottom-24 left-1/4 h-[400px] w-[400px] rounded-full bg-chart-3/10 blur-[100px] z-0" />
-                    </>
-                )}
-
-                <TeacherPortalShell
-                    embedded={embedded}
-                    className={cn('relative z-10', settings.displayMode === 'app' && !embedded && 'pb-24')}
-                >
-                    {pendingTeacherAwardCount > 0 && !secretaryMode ? (
-                        <div
-                            role="status"
-                            className="rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
-                        >
-                            <strong className="font-bold">Offline awards pending:</strong>{' '}
-                            {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
-                        </div>
-                    ) : null}
-                    {!embedded ? (
-                    <div
-                      className={cn(
-                        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
-                        staffPortalPageIntroClassName(isWide),
-                      )}
-                    >
-                        <Helper content={secretaryMode ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.' : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'}>
-                            <div>
-                                <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                                    {secretaryMode ? 'Secretary — coupon printing' : 'Teacher portal'}
-                                </h2>
-                                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                                    {secretaryMode
-                                        ? 'Print coupon batches from your school\'s point categories.'
-                                        : 'Points, classes, prizes, and reports — pick a tab to get started.'}
-                                </p>
-                                {teacherName ? (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        <span className="font-medium text-foreground/80">{teacherName}</span>
-                                        {settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
-                                            <>
-                                                {' '}
-                                                |{' '}
-                                                {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
-                                                {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
-                                            </>
-                                        ) : null}
-                                    </p>
-                                ) : null}
-                            </div>
-                        </Helper>
-                        <div className="flex flex-wrap gap-2 shrink-0 sm:self-start justify-end items-center">
-                            <StaffPortalLayoutToggle />
-                            {secretaryMode && (
-                                <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
-                                    <LogOut className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Log out</span>
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                    ) : settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
-                        <p className="text-sm text-muted-foreground">
-                            {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
-                            {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
-                        </p>
-                    ) : null}
-
-                    <div className="flex min-h-0 w-full flex-1 flex-col">
-                        <Tabs
-                            value={resolvedTeacherTab}
-                            onValueChange={(v) => {
-                                if (!secretaryMode) setActiveTeacherTab(v);
-                            }}
-                            className="flex min-h-0 w-full flex-1 flex-col gap-6 lg:flex-row lg:items-start"
-                        >
-                        {!secretaryMode ? (
-                            <StaffPortalNav
-                                role="teacher"
-                                activeTab={resolvedTeacherTab}
-                                onTabChange={setActiveTeacherTab}
-                                mainTabs={mainTabs}
-                                addMoreTabs={addMoreTabs}
-                                onAddTab={(value) => toggleTeacherPinnedAddOn(value, true)}
-                                removableTabValues={teacherPinnedAddOnSet}
-                                onRemoveTab={(value) => toggleTeacherPinnedAddOn(value, false)}
-                                className="lg:w-60 lg:shrink-0"
-                                addMoreMenu={
-                                    <TeacherPortalAddMoreMenu
-                                        tabs={addMoreTabs}
-                                        onAddTab={(value) => toggleTeacherPinnedAddOn(value, true)}
-                                    />
-                                }
-                            />
-                        ) : null}
-
-                            <div className="min-h-0 min-w-0 w-full flex-1">
-                            <TabWalkthroughProvider
-                                scope="teacher"
-                                tabId={resolvedTeacherTab}
-                            >
-                            {teacherTabEnabled('welcome') && !secretaryMode && (
+                <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
+                <TabWalkthroughProvider scope="teacher" tabId={resolvedTeacherTab}>
+                {teacherTabEnabled('welcome') && !secretaryMode && (
                             <TeacherPortalTabPane tabId="welcome" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <StaffPortalWelcomeTab
                                     role="teacher"
                                     settings={settings}
                                     onGoToTab={setActiveTeacherTab}
-                                    displayName={teacherName}
+                                    schoolName={schoolDocData?.name?.trim() || null}
+                                    welcomeStats={teacherWelcomeStats}
                                 />
-                                </div>
                             </TeacherPortalTabPane>
                             )}
 
@@ -2651,42 +2580,97 @@ function TeacherPrinterInnerBody({
                             </TeacherPortalTabPane>
                             )}
 
-                            {teacherTabEnabled('houses') && (
-                                <TeacherPortalTabPane tabId="houses" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                    <div className={teacherPortalPanelClassName(isWide)}>
-                                        <StaffPortalSchoolwideFeatureNotice activeTab="houses" />
-                                        <AdminHousesTab
-                                            schoolId={schoolId!}
-                                            houses={houses}
-                                            students={students}
-                                            teachers={teachers}
-                                            onAddHouse={addHouse}
-                                            onUpdateHouse={updateHouse}
-                                            onDeleteHouse={async (id, houseStudents) => {
-                                                const house = (houses || []).find((h) => h.id === id);
-                                                const ok = await confirm({
-                                                    title: house ? `Delete house "${house.name}"?` : 'Delete this house?',
-                                                    description:
-                                                        houseStudents.length > 0
-                                                            ? `${houseStudents.length} student(s) will be unassigned from this house.`
-                                                            : 'No students are assigned to this house.',
-                                                    confirmLabel: 'Delete house',
-                                                    destructive: true,
-                                                });
-                                                if (!ok) return;
-                                                await deleteHouse(id, houseStudents);
-                                            }}
-                                            onUpdateStudent={updateStudent}
-                                            onUpdateTeacher={updateTeacher}
-                                        />
-                                    </div>
-                                </TeacherPortalTabPane>
-                            )}
+                            <TeacherStaffPortalAddonTabPanels
+                                activeTab={resolvedTeacherTab}
+                                teacherTabEnabled={teacherTabEnabled}
+                                isWide={isWide}
+                                schoolId={schoolId!}
+                                students={students}
+                                classes={classes}
+                                categories={categories}
+                                teachers={teachers}
+                                coupons={coupons}
+                                schoolName={schoolDocData?.name?.trim()}
+                                schoolLogoUrl={schoolDocData?.logoUrl ?? null}
+                            />
+                </TabWalkthroughProvider>
+                </div>
+            </Tabs>
+        </StaffPortalWorkspace>
+    );
 
-                            </TabWalkthroughProvider>
-                            </div>
-                        </Tabs>
-                    </div>
+    return (
+        <TooltipProvider>
+            <div
+                className={cn(
+                    'bg-background transition-colors duration-500 relative overflow-x-hidden font-sans flex min-h-0 flex-col',
+                    embedded ? 'flex-1 w-full' : 'min-h-screen',
+                )}
+                style={
+                    embedded
+                        ? undefined
+                        : (appearanceVarsForSurface(settings, 'print') as React.CSSProperties)
+                }
+            >
+                {/* Local orbs/noise only when global animated backdrop is off */}
+                {!embedded && isGraphic && !animBackdrop && (
+                    <>
+                        <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
+                        <div className="pointer-events-none fixed -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-chart-1/10 blur-[120px] z-0 animate-pulse-slow" />
+                        <div className="pointer-events-none fixed top-1/2 -right-24 h-[600px] w-[600px] rounded-full bg-chart-2/10 blur-[140px] z-0" />
+                        <div className="pointer-events-none fixed -bottom-24 left-1/4 h-[400px] w-[400px] rounded-full bg-chart-3/10 blur-[100px] z-0" />
+                    </>
+                )}
+
+                <TeacherPortalShell
+                    embedded={embedded}
+                    className={cn('relative z-10', settings.displayMode === 'app' && !embedded && 'pb-24')}
+                >
+                    {pendingTeacherAwardCount > 0 && !secretaryMode ? (
+                        <div
+                            role="status"
+                            className="rounded-xl border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+                        >
+                            <strong className="font-bold">Offline awards pending:</strong>{' '}
+                            {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
+                        </div>
+                    ) : null}
+                    {embedded && settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (
+                        <p className="text-sm text-muted-foreground">
+                            {(remainingTeacherBudgetPoints(currentTeacher) ?? 0).toLocaleString()} pts remaining{' '}
+                            {teacherBudgetRemainingPhrase(resolveTeacherBudgetPeriod(currentTeacher))}
+                        </p>
+                    ) : null}
+
+                    {!embedded ? (
+                    <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
+                    <StaffPortalPageIntro
+                        title={secretaryMode ? 'Secretary — coupon printing' : 'Teacher portal'}
+                        subtitle={
+                            secretaryMode
+                                ? 'Print coupon batches from your school\'s point categories.'
+                                : 'Points, classes, prizes, and reports — pick a tab to get started.'
+                        }
+                        helperContent={
+                            secretaryMode
+                                ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.'
+                                : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'
+                        }
+                        trailing={
+                            secretaryMode ? (
+                                <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Log out</span>
+                                </Button>
+                            ) : null
+                        }
+                    />
+
+                    {teacherPortalWorkspace}
+                    </StaffPortalContentWidth>
+                    ) : (
+                    teacherPortalWorkspace
+                    )}
                 </TeacherPortalShell>
             </div>
         </TooltipProvider>

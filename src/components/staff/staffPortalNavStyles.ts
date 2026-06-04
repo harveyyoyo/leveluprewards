@@ -30,9 +30,9 @@ export function staffPortalGlobalHeaderWrapClassName() {
 /** Global site header band on staff portal pages. */
 export function staffPortalGlobalHeaderClassName() {
   return cn(
-    'mb-3 w-full max-w-none rounded-none border-0 border-b border-border/50',
+    'mb-3 w-full max-w-none rounded-b-2xl border border-border/50 border-t-0',
     'bg-slate-200/90 dark:bg-slate-900/88',
-    'shadow-none sm:mb-4',
+    'shadow-lg backdrop-blur-md sm:mb-4 sm:rounded-b-3xl',
   );
 }
 
@@ -68,7 +68,7 @@ export function staffPortalSidebarRailClassName(className?: string) {
   return cn(
     className,
     'flex w-full min-w-0 flex-col gap-2 p-2.5 sm:p-3',
-    'lg:sticky lg:top-3 lg:max-h-[calc(100vh-5.5rem)] lg:self-stretch lg:border-r lg:border-border/50 lg:bg-muted/15 lg:py-3 lg:pl-3 lg:pr-2',
+    'lg:border-r lg:border-border/50 lg:bg-muted/15 lg:py-3 lg:pl-3 lg:pr-2',
   );
 }
 
@@ -89,18 +89,38 @@ export function staffPortalSectionCardInWorkspaceClassName(className?: string) {
 export function staffPortalSidebarPanelClassName(className?: string) {
   return cn(
     className,
-    'flex w-full min-w-0 flex-col gap-2 rounded-2xl border border-border/60 bg-card p-2.5 shadow-sm',
-    'lg:sticky lg:top-3 lg:max-h-[calc(100vh-5.5rem)]',
+    'flex w-full min-w-0 min-h-0 flex-1 flex-col gap-2 overflow-hidden rounded-2xl border border-border/60 bg-card p-2.5 shadow-sm',
+    'lg:max-h-[calc(100vh-5.5rem)]',
   );
 }
 
-/** Main tab triggers — shared by admin dashboard and teacher staff portal. */
+/** Desktop sidebar nav column — sticky rail with internal scroll for long tab lists. */
+export function staffPortalSidebarNavColumnClassName(className?: string) {
+  return cn(
+    className,
+    'hidden w-full min-w-0 min-h-0 lg:flex lg:flex-1 lg:max-h-[calc(100vh-5.5rem)] lg:flex-col lg:self-start lg:sticky lg:top-3',
+  );
+}
+
+/**
+ * Main tab triggers — shared by admin dashboard and teacher staff portal.
+ * Includes data-[state=active] styles for Radix TabsTrigger (admin) and base styles.
+ */
 export function staffPortalTabTriggerClassName() {
   return cn(
     'rounded-xl font-medium flex items-center gap-2 text-sm text-muted-foreground transition-all',
     'hover:bg-muted/50 hover:text-foreground',
-    'data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground',
-    'w-full justify-start px-3 py-2.5 whitespace-normal text-left data-[state=active]:shadow-sm',
+    'w-full justify-start px-3 py-2.5 whitespace-normal text-left',
+    // Radix TabsTrigger active state (used by admin page):
+    'data-[state=active]:bg-primary data-[state=active]:font-bold data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm',
+  );
+}
+
+/** Active state styles for plain button tab triggers (JS-controlled, teacher portal). */
+export function staffPortalTabTriggerActiveClassName() {
+  return cn(
+    'bg-primary font-bold text-primary-foreground shadow-sm',
+    'hover:bg-primary/90 hover:text-primary-foreground',
   );
 }
 

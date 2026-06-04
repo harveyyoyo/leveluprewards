@@ -10,6 +10,7 @@ import { useKioskBackendWarmup } from '@/hooks/useKioskBackendWarmup';
 import { useKioskSnapshotReporter } from '@/hooks/useSchoolSurfaceSnapshotReporter';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { usePrizeShelfWedgeScan } from '@/hooks/usePrizeShelfWedgeScan';
 import { preloadBarcodeScanStack } from '@/lib/barcodeCameraScan';
 import { syncKioskBarcodeCameraWarm } from '@/lib/barcodeCameraSession';
 import { readKioskLoginTab } from '@/lib/kiosk/kioskSessionPrefs';
@@ -46,7 +47,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
-import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
+import {
+  computeDaysOverdue,
+  getLibraryPolicyFromSettings,
+  isLibraryStudentKioskCheckoutEnabled,
+} from '@/lib/library/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
 import {
@@ -56,6 +61,7 @@ import {
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
 import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
+import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 import {
   StudentKioskTopBar,
   StudentKioskPointCategoriesPanel,
@@ -69,7 +75,11 @@ import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
-import { scanMismatchAtCouponRedeem } from '@/lib/scanMismatch';
+import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
+import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
+import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
+import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
+import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import {
   ArrowLeft,
   Nfc,
@@ -260,7 +270,7 @@ function StudentDashboardInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { redeemCoupon, redeemPrize, printPrizeTickets, schoolId, isKioskLocked, badges, syncStatus } = useAppContext();
+  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges, syncStatus } = useAppContext();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
@@ -281,10 +291,13 @@ function StudentDashboardInner({
     explicitCouponCamera || (loginScanEnabled && kioskPrefersCameraLogin);
   const showManualCoupon = !showCameraCoupon && settings.kioskCouponRedemptionManualEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
-  const libraryScanHint =
-    settings.payLibrary !== false
-      ? ' Scan a library book barcode here to check out or return (after you are signed in).'
-      : '';
+  const libraryKioskCheckoutOn = isLibraryStudentKioskCheckoutEnabled(settings);
+  const libraryScanHint = libraryKioskCheckoutOn
+    ? ' Scan the LIB sticker on a library book here to check out or return (same place as coupons).'
+    : '';
+  const libraryCheckoutNote = libraryKioskCheckoutOn
+    ? 'Library books: scan the LIB sticker on the book cover (same scanner as coupons) to check out or return.'
+    : undefined;
   const couponHelperText = showCameraCoupon
     ? `Scan a coupon with the device camera.${libraryScanHint} Use Logout on this card to exit.`
     : `Scan or type a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`;
@@ -383,7 +396,6 @@ function StudentDashboardInner({
     () => (libraryCheckoutsRaw ?? []).filter((i) => i.status === 'checked_out'),
     [libraryCheckoutsRaw],
   );
-  const libraryPillarOn = isPillarOn(settings, 'payLibrary');
   const overdueLibraryBooks = useMemo(
     () => myLibraryBooks.filter((i) => computeDaysOverdue(i.dueAt) > 0),
     [myLibraryBooks],
@@ -452,22 +464,7 @@ function StudentDashboardInner({
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
   const [confirmingFunKind, setConfirmingFunKind] = useState<PrizeAiFunReward>('joke');
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
-  const [prizeTicketData, setPrizeTicketData] = useState<{
-    activityId: string;
-    ticketNo: string;
-    redeemedAt: number;
-    studentId: string;
-    studentName: string;
-    studentNickname?: string;
-    studentEmoji?: string;
-    prizeName: string;
-    prizeIcon?: string;
-    quantity: number;
-    totalCost: number;
-    aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
-    aiSurpriseText?: string;
-    aiSurpriseAnswer?: string;
-  } | null>(null);
+  const [prizeTicketData, setPrizeTicketData] = useState<PrizeRedeemTicket | null>(null);
   const pendingPrizeTicketAfterAiRef = useRef<typeof prizeTicketData>(null);
   const lastAiSurpriseTextRef = useRef<string | undefined>(undefined);
   const lastAiSurpriseCallRef = useRef(0);
@@ -732,14 +729,152 @@ function StudentDashboardInner({
     void import('@/app/[schoolId]/prize/PrizeDashboard');
   }, []);
 
+  const handlePrizeShelfScan = useCallback(
+    async (raw: string) => {
+      if (!student || !schoolId || !firestore || isRedeemingPrize) return;
+      resetLogoutTimer();
+
+      const resolved = await resolvePrizeShelfScanForStudent(
+        firestore,
+        schoolId,
+        raw,
+        rewardPrizes,
+        student,
+        { enablePrizeAiSurprise: kioskAiFunInShop },
+      );
+      if ('error' in resolved) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: resolved.error.title,
+          description: resolved.error.description,
+        });
+        return;
+      }
+
+      playSound('click');
+      setConfirmingPrize(resolved.prize);
+      if (resolved.prize.aiFunReward === 'picker') {
+        setConfirmingFunKind('joke');
+      }
+    },
+    [
+      firestore,
+      isRedeemingPrize,
+      kioskAiFunInShop,
+      playSound,
+      resetLogoutTimer,
+      rewardPrizes,
+      schoolId,
+      student,
+      toast,
+    ],
+  );
+
+  const handlePickupVoucherScan = useCallback(
+    async (raw: string) => {
+      if (!student || !schoolId) return;
+      resetLogoutTimer();
+      try {
+        const result = await fulfillPrizeVoucherFromScan(raw, student.id);
+        if (!result.success) {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Pickup failed',
+            description: result.message || 'Could not use this voucher.',
+          });
+          return;
+        }
+        if (result.status === 'already_fulfilled') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Already used',
+            description: 'This pickup voucher was already scanned.',
+          });
+          return;
+        }
+
+        playSound('success');
+        toast({
+          title: 'Pickup complete!',
+          description: result.prizeName
+            ? `Enjoy your ${result.prizeName}.`
+            : 'Your prize is ready to collect.',
+        });
+
+        const prize =
+          result.prizeId && rewardPrizes.length > 0
+            ? rewardPrizes.find((p) => p.id === result.prizeId) ?? null
+            : null;
+        const qty = Math.max(1, result.quantity ?? 1);
+        if (settings.enableVendingMachine && prize?.vendingMotor?.enabled) {
+          if (!motorIsConnected()) {
+            toast({
+              variant: 'destructive',
+              title: 'Motor not connected',
+              description: 'This prize dispenses from the vending machine, but no motor is connected here.',
+            });
+          } else {
+            for (let i = 0; i < qty; i++) {
+              try {
+                await runVendingMotor(prize.vendingMotor);
+              } catch (motorErr) {
+                console.error('Vending motor dispense failed:', motorErr);
+                toast({
+                  variant: 'destructive',
+                  title: 'Motor error',
+                  description: getReadableErrorMessage(motorErr, 'The vending motor failed.'),
+                });
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Pickup failed',
+          description: getReadableErrorMessage(e, 'Could not scan this voucher.'),
+        });
+      }
+    },
+    [
+      fulfillPrizeVoucherFromScan,
+      playSound,
+      resetLogoutTimer,
+      rewardPrizes,
+      schoolId,
+      settings.enableVendingMachine,
+      student,
+      toast,
+    ],
+  );
+
   const handleRedeemCoupon = useCallback(async (codeToRedeem?: string) => {
     if (!student) return;
-    const code = (codeToRedeem || couponCode).toUpperCase();
-    if (!code) return;
+    const raw = (codeToRedeem || couponCode).trim();
+    if (!raw) return;
     resetLogoutTimer();
 
-    // 1. Check Library Item first (if enabled)
-    if (settings.payLibrary !== false && firestore && schoolId) {
+    if (isPrizeVoucherScanCode(raw)) {
+      await handlePickupVoucherScan(raw);
+      setCouponCode('');
+      return;
+    }
+
+    if (schoolId && firestore && isPrizeScanCode(raw)) {
+      await handlePrizeShelfScan(raw);
+      setCouponCode('');
+      return;
+    }
+
+    const code = raw.toUpperCase();
+
+    // 1. Check Library Item first (when student kiosk checkout is enabled)
+    if (libraryKioskCheckoutOn && firestore && schoolId) {
       try {
         const { performLibraryCheckoutOrReturn } = await import('@/lib/library/libraryOperations');
         const result = await performLibraryCheckoutOrReturn(firestore, schoolId, student.id, code, {
@@ -848,7 +983,7 @@ function StudentDashboardInner({
     student,
     toast,
     playSound,
-    settings.payLibrary,
+    libraryKioskCheckoutOn,
     settings.enableGoals,
     settings.enableCouponRedeemCompliments,
     authFetch,
@@ -857,7 +992,84 @@ function StudentDashboardInner({
     libraryPolicy,
     functions,
     scheduleFlyDismiss,
+    handlePrizeShelfScan,
+    handlePickupVoucherScan,
   ]);
+
+  const handleRedeemPrizePickupVoucher = useCallback(async () => {
+    if (!student || !confirmingPrize || confirmingPrize.offerPrintTicketOnRedeem !== true) return;
+    resetLogoutTimer();
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Offline', description: OFFLINE_USER_MESSAGE });
+      return;
+    }
+
+    setIsRedeemingPrize(true);
+    try {
+      const prize = confirmingPrize;
+      const result = await redeemPrize(student.id, prize, 1, undefined, { issuePickupVoucher: true });
+      if (!result.success || !result.activityId || !result.redeemedAt || typeof result.totalCost !== 'number') {
+        throw new Error(result.message || 'Could not issue pickup voucher.');
+      }
+      if (!result.voucherScanCode) {
+        throw new Error('Pickup barcode was not created. Try again.');
+      }
+
+      playSound('redeem');
+      toast({
+        title: 'Pickup voucher ready',
+        description: `Print the voucher, then scan its barcode at the pickup kiosk for ${prize.name}.`,
+      });
+
+      if (settings.enableGoals && schoolId && firestore) {
+        void import('@/lib/goalsProgress').then((m) =>
+          m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
+        );
+      }
+
+      setPrizeTicketData(
+        buildPrizeRedeemTicketPayload({ ...student, id: studentId }, prize, result.activityId, result.redeemedAt, result.totalCost, 1, {
+          enableStudentThemes: settings.enableStudentThemes !== false,
+          defaultStudentTheme: settings.defaultStudentTheme ?? undefined,
+          enableStudentEmojiOnPrizeTickets: settings.enableStudentEmojiOnPrizeTickets === true,
+          voucherScanCode: result.voucherScanCode,
+        }),
+      );
+      setConfirmingPrize(null);
+    } catch (e: unknown) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Voucher failed',
+        description: getReadableErrorMessage(e, 'Could not issue pickup voucher.'),
+      });
+    } finally {
+      setIsRedeemingPrize(false);
+    }
+  }, [
+    confirmingPrize,
+    firestore,
+    playSound,
+    redeemPrize,
+    resetLogoutTimer,
+    schoolId,
+    settings.defaultStudentTheme,
+    settings.enableGoals,
+    settings.enableStudentEmojiOnPrizeTickets,
+    settings.enableStudentThemes,
+    student,
+    toast,
+  ]);
+
+  usePrizeShelfWedgeScan({
+    enabled: Boolean(student && schoolId) && !fullPrizeShopOpen,
+    busy: isRedeemingPrize || !!confirmingPrize,
+    onScan: (raw) => {
+      if (isPrizeVoucherScanCode(raw)) void handlePickupVoucherScan(raw);
+      else void handlePrizeShelfScan(raw);
+    },
+  });
 
   const handleRedeemPrize = useCallback(async () => {
     if (!student || !confirmingPrize) return;
@@ -1201,7 +1413,7 @@ function StudentDashboardInner({
   // Keep legacy variable name used widely in this file.
   const activeTheme = effectiveTheme;
 
-  const fontScale = effectiveTheme?.fontScale ?? 1.15;
+  const fontScale = effectiveTheme?.fontScale ?? 1.1;
   const themeBg = effectiveTheme?.background || '#020617';
   const themeCard = effectiveTheme?.cardBackground || themeBg;
   const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
@@ -1321,8 +1533,11 @@ function StudentDashboardInner({
           color: 'var(--theme-page-text)',
           fontFamily: effectiveTheme.fontFamily || 'inherit',
           fontSize: fontScale !== 1 ? `calc(var(--student-dashboard-density, 1) * ${fontScale}em)` : undefined,
+          ...(typeof effectiveTheme.fontTracking === 'number'
+            ? { letterSpacing: `${effectiveTheme.fontTracking}em` }
+            : {}),
         } as unknown as React.CSSProperties) : ({
-          fontSize: 'calc(var(--student-dashboard-density, 1) * 1.15em)',
+          fontSize: 'calc(var(--student-dashboard-density, 1) * 1.1em)',
           ...appearanceVarsForSurface(settings, 'redeem'),
         } as any)}
       >
@@ -1458,12 +1673,13 @@ function StudentDashboardInner({
             fullPrizeShopOpen && 'hidden',
           )}
         >
-          {libraryPillarOn && schoolId && overdueLibraryBooks.length > 0 ? (
+          {libraryKioskCheckoutOn && schoolId && myLibraryBooks.length > 0 ? (
             <StudentLibraryCheckoutsCard
               schoolId={schoolId}
-              items={overdueLibraryBooks}
+              items={myLibraryBooks}
               themed={!!effectiveTheme}
-              topAlert
+              topAlert={overdueLibraryBooks.length > 0}
+              kioskCheckoutEnabled
             />
           ) : null}
 
@@ -1514,7 +1730,7 @@ function StudentDashboardInner({
           {/* Center: redeem coupon (primary focus) */}
           <div
             className={cn(
-              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-center lg:px-8 lg:py-[clamp(0.75rem,6vh,3rem)] [@media(max-height:760px)]:gap-2',
+              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-start lg:overflow-y-auto lg:px-8 lg:py-[clamp(0.75rem,6vh,3rem)] [@media(max-height:760px)]:gap-2',
               studentKioskCenterStackClass,
             )}
           >
@@ -1522,6 +1738,7 @@ function StudentDashboardInner({
             themed={{ active: !!effectiveTheme }}
             primaryForeground={primaryForeground}
             couponHelperText={couponHelperText}
+            libraryCheckoutNote={libraryCheckoutNote}
             couponCode={couponCode}
             setCouponCode={setCouponCode}
             showManualCoupon={showManualCoupon}
@@ -1747,7 +1964,7 @@ function StudentDashboardInner({
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[360]" position="popper">
                         <SelectItem value="joke">Joke</SelectItem>
                         <SelectItem value="riddle">Riddle</SelectItem>
                         <SelectItem value="fortune">Fortune teller</SelectItem>
@@ -1757,10 +1974,32 @@ function StudentDashboardInner({
                     </Select>
                   </div>
                 ) : null}
-                <AlertDialogFooter>
-                  <AlertDialogCancel disabled={isRedeemingPrize}>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+                  <AlertDialogCancel disabled={isRedeemingPrize} className="w-full sm:w-auto">
+                    Cancel
+                  </AlertDialogCancel>
+                  {confirmingPrize?.offerPrintTicketOnRedeem === true &&
+                  confirmingPrize.aiFunReward == null ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      disabled={isRedeemingPrize}
+                      onClick={() => void handleRedeemPrizePickupVoucher()}
+                    >
+                      {isRedeemingPrize ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                          Processing...
+                        </>
+                      ) : (
+                        'Print pickup voucher'
+                      )}
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
+                    className="w-full sm:w-auto"
                     onClick={handleRedeemPrize}
                     disabled={isRedeemingPrize}
                     style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
@@ -1771,7 +2010,7 @@ function StudentDashboardInner({
                         Redeeming...
                       </>
                     ) : (
-                      'Redeem'
+                      'Redeem now'
                     )}
                   </Button>
                 </AlertDialogFooter>
@@ -1793,6 +2032,9 @@ function StudentDashboardInner({
                   >
                     Print a voucher for{' '}
                     <span className="text-xl font-black sm:text-2xl">{prizeTicketData?.prizeName}</span>?
+                    {prizeTicketData?.voucherScanCode ? (
+                      <> Scan the barcode at the pickup kiosk to collect your prize.</>
+                    ) : null}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <PrinterReminderCallout

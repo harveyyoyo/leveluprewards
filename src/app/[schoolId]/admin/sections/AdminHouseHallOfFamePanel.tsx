@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowUpRight,
   LayoutGrid,
-  Play,
   Shield,
   SlidersHorizontal,
   Tv,
@@ -30,13 +29,11 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
   );
   const [limitCount, setLimitCount] = useState(settings.houseHallOfFameLimit ?? settings.hallOfFameLimit ?? 50);
   const [podiumSize, setPodiumSize] = useState(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize ?? 3);
-  const [autoScroll, setAutoScroll] = useState(settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll ?? false);
   const [gridLayout, setGridLayout] = useState(settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout ?? true);
 
   useEffect(() => setSortBy(settings.houseHallOfFameSortBy ?? settings.hallOfFameSortBy ?? 'lifetimePoints'), [settings.houseHallOfFameSortBy, settings.hallOfFameSortBy]);
   useEffect(() => setLimitCount(settings.houseHallOfFameLimit ?? settings.hallOfFameLimit ?? 50), [settings.houseHallOfFameLimit, settings.hallOfFameLimit]);
   useEffect(() => setPodiumSize(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize ?? 3), [settings.houseHallOfFamePodiumSize, settings.hallOfFamePodiumSize]);
-  useEffect(() => setAutoScroll(settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll ?? false), [settings.houseHallOfFameAutoScroll, settings.hallOfFameAutoScroll]);
   useEffect(() => setGridLayout(settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout ?? true), [settings.houseHallOfFameGridLayout, settings.hallOfFameGridLayout]);
 
   const studentRollup = isHouseStudentPointsRollupEnabled(settings);
@@ -48,10 +45,9 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
         houseHallOfFameSortBy: sortBy,
         houseHallOfFameLimit: limitCount,
         houseHallOfFamePodiumSize: podiumSize,
-        houseHallOfFameAutoScroll: autoScroll,
         houseHallOfFameGridLayout: gridLayout,
       }),
-    [schoolId, sortBy, limitCount, podiumSize, autoScroll, gridLayout],
+    [schoolId, sortBy, limitCount, podiumSize, gridLayout],
   );
 
   const launchUrl = useMemo(() => resolveAppAbsoluteUrl(previewPath), [previewPath]);
@@ -187,22 +183,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-              <div className="flex items-center justify-between rounded-2xl border bg-background p-4 shadow-sm">
-                <div className="min-w-0 pr-4">
-                  <p className="text-sm font-bold flex items-center gap-1.5">
-                    <Play className="w-4 h-4 text-emerald-500" aria-hidden />
-                    Auto-scroll
-                  </p>
-                </div>
-                <Switch
-                  checked={autoScroll}
-                  onCheckedChange={(v) => {
-                    setAutoScroll(v);
-                    updateSettings({ houseHallOfFameAutoScroll: v });
-                  }}
-                />
-              </div>
+            <div className="pt-4 border-t">
               <div className="flex items-center justify-between rounded-2xl border bg-background p-4 shadow-sm">
                 <div className="min-w-0 pr-4">
                   <p className="text-sm font-bold flex items-center gap-1.5">

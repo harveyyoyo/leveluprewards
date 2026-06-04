@@ -103,17 +103,15 @@ import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame'
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
 import { StaffPortalTeacherToolNotice } from '@/components/staff/StaffPortalTeacherToolNotice';
-import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
-import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
+import { StaffPortalPageIntro } from '@/components/staff/StaffPortalPageIntro';
+import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
 import {
   staffPortalAddOnTabTriggerClassName,
-  staffPortalPageIntroClassName,
   staffPortalSidebarRailClassName,
   staffPortalTabTriggerClassName,
   staffPortalWorkspaceMainClassName,
 } from '@/components/staff/staffPortalNavStyles';
-import { staffPortalAdminAddOnIsOn, staffPortalCoreTabs, staffPortalPinWelcomeFirst } from '@/lib/staffPortal';
-import { TeacherStaffPortalDashboard } from '@/components/staff/TeacherStaffPortalDashboard';
+import { staffPortalAdminAddOnIsOn, staffPortalAllAddOnTabValues, staffPortalCoreTabs, staffPortalMergePinnedAddOnValues, staffPortalOrderMainTabs, staffPortalSortPinnedTabDefs, staffPortalSortTabs } from '@/lib/staffPortal';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
 import { StaffPortalDocumentTitle } from '@/components/staff/StaffPortalDocumentTitle';
@@ -311,33 +309,6 @@ const fittedAdminTabClassName =
   'transition-opacity duration-150 mt-0 w-full min-w-0 flex-col pb-6 focus-visible:outline-none';
 const scrollingAdminTabClassName = fittedAdminTabClassName;
 
-function AdminPageIntro({ className }: { className?: string }) {
-  const { isWide } = useStaffPortalLayout();
-
-  return (
-    <div
-      className={cn(
-        'flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between',
-        staffPortalPageIntroClassName(isWide),
-        className,
-      )}
-    >
-      <Helper content="School administrators manage students, staff, points, prizes, and school settings from here.">
-        <div>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-            School admin
-          </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Students, classes, points, prizes, and school settings.
-          </p>
-        </div>
-      </Helper>
-      <StaffPortalLayoutToggle />
-    </div>
-  );
-}
-
-/** Mirrors the loaded admin shell: page header, tab row, default Students roster. */
 function AdminDashboardSkeleton() {
   return (
     <div
@@ -776,7 +747,7 @@ function AdminDashboardInner() {
     const pinned = settings.adminPinnedAddOnTabs || [];
     if (pinned.length === 0) return [];
     const byValue = new Map(visibleAddOnTabs.map((t) => [t.value, t]));
-    return pinned.map((v) => byValue.get(v)).filter(Boolean) as AdminAddOnTabDef[];
+    return staffPortalSortPinnedTabDefs(pinned, byValue);
   }, [settings.adminPinnedAddOnTabs, visibleAddOnTabs]);
 
   type AdminMainTabDef = {
@@ -802,27 +773,8 @@ function AdminDashboardInner() {
     }));
 
     const available = [...base, ...pinnedExtras];
-    const availableByValue = new Map(available.map((t) => [t.value, t]));
 
-    const saved = settings.adminMainTabOrder || [];
-    const cleanedSaved = saved.filter((v) => availableByValue.has(v));
-
-    const out: AdminMainTabDef[] = [];
-    const seen = new Set<string>();
-    for (const v of cleanedSaved) {
-      const def = availableByValue.get(v);
-      if (!def || seen.has(def.value)) continue;
-      out.push(def);
-      seen.add(def.value);
-    }
-
-    for (const def of available) {
-      if (seen.has(def.value)) continue;
-      out.push(def);
-      seen.add(def.value);
-    }
-
-    return staffPortalPinWelcomeFirst(out);
+    return staffPortalOrderMainTabs(available, settings.adminMainTabOrder);
   }, [pinnedAddOnTabs, settings]);
 
   const adminTabTriggerClassName = staffPortalTabTriggerClassName();
@@ -840,7 +792,7 @@ function AdminDashboardInner() {
 
   const mobileMoreTabOptions = useMemo(() => {
     const mainTabValues = new Set(orderedMainTabs.map((t) => t.value));
-    return addOnTabDefs.filter((t) => !mainTabValues.has(t.value));
+    return staffPortalSortTabs(addOnTabDefs.filter((t) => !mainTabValues.has(t.value)));
   }, [addOnTabDefs, orderedMainTabs]);
 
   const adminCoreTabValues = useMemo(
@@ -908,7 +860,7 @@ function AdminDashboardInner() {
     const now = settings.adminPinnedAddOnTabs || [];
     if (now.includes(value)) return;
     updateSettings({
-      adminPinnedAddOnTabs: [...now, value],
+      adminPinnedAddOnTabs: staffPortalMergePinnedAddOnValues(now, value),
     });
   };
 
@@ -970,7 +922,7 @@ function AdminDashboardInner() {
 
     if (enabled) {
       patch.adminHiddenAddOnTabs = hiddenNow.filter((x) => x !== tabValue);
-      patch.adminPinnedAddOnTabs = [...new Set([...pinnedNow, tabValue])];
+      patch.adminPinnedAddOnTabs = staffPortalMergePinnedAddOnValues(pinnedNow, tabValue);
       Object.assign(patch, addOnTabEnablePatch(tabValue));
       
       updateSettings(patch);
@@ -1061,7 +1013,7 @@ function AdminDashboardInner() {
     const pinnedNow = settings.adminPinnedAddOnTabs || [];
     const valueSet = new Set(toEnable.map((d) => d.value));
     const nextHidden = hiddenNow.filter((v) => !valueSet.has(v));
-    const nextPinned = [...new Set([...pinnedNow, ...toEnable.map((d) => d.value)])];
+    const nextPinned = staffPortalAllAddOnTabValues(toEnable);
 
     const patch: Partial<AppSettings> = {
       adminHiddenAddOnTabs: nextHidden,
@@ -1720,15 +1672,13 @@ function AdminDashboardInner() {
           style={adminTabAppearance.style}
         >
         <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
-        <AdminPageIntro />
+        <StaffPortalPageIntro
+          title="School admin"
+          subtitle="Students, classes, points, prizes, and school settings."
+          helperContent="School administrators manage students, staff, points, prizes, and school settings from here."
+        />
 
         <StaffPortalWorkspace>
-          <Tabs
-            key={`admin-tabs-${schoolId ?? 'unknown'}`}
-            value={activeMainTab}
-            onValueChange={setActiveMainTab}
-            className="contents"
-          >
           <div className={staffPortalSidebarRailClassName()}>
               <div className="lg:hidden">
                 <Label htmlFor="admin-portal-section" className="sr-only">
@@ -1776,6 +1726,7 @@ function AdminDashboardInner() {
                 activeTabValue={activeMainTab}
                 orientation="vertical"
                 inWorkspace
+                autoScrollActiveTab={false}
                 style={{ ['--admin-accent' as any]: 'hsl(var(--primary))' }}
                 aria-label="Admin portal main tabs"
                 endAction={
@@ -1811,10 +1762,13 @@ function AdminDashboardInner() {
                   const Icon = t.icon;
                   const removable = isRemovableAdminAddOnTab(t.value);
                   const isColoredAddOn = adminPerTabColors && isAdminAddOnTabValue(t.value);
+                  const isTabActive = activeMainTab === t.value;
                   return (
                     <StaffPortalSidebarTabRow
                       key={t.value}
                       value={t.value}
+                      isActive={isTabActive}
+                      onSelect={() => setActiveMainTab(t.value)}
                       triggerClassName={
                         isColoredAddOn
                           ? cn(
@@ -1825,7 +1779,7 @@ function AdminDashboardInner() {
                       }
                       triggerStyle={
                         isColoredAddOn
-                          ? adminAddOnTabTriggerStyle(t.value, settings, activeMainTab === t.value)
+                          ? adminAddOnTabTriggerStyle(t.value, settings, isTabActive)
                           : undefined
                       }
                       title={t.title ?? 'Drag to reorder'}
@@ -1871,8 +1825,14 @@ function AdminDashboardInner() {
               </div>
           </div>
 
+          <Tabs
+            key={`admin-tabs-${schoolId ?? 'unknown'}`}
+            value={activeMainTab}
+            onValueChange={setActiveMainTab}
+            className={staffPortalWorkspaceMainClassName()}
+          >
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
-          <div className={staffPortalWorkspaceMainClassName()}>
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
           <StaffPortalTeacherToolNotice activeTab={activeMainTab} />
           <TabsContent value="welcome" className={scrollingAdminTabClassName}>
             <StaffPortalWelcomeTab
@@ -1881,7 +1841,7 @@ function AdminDashboardInner() {
               onGoToTab={setActiveMainTab}
               onBulkRoster={() => setBulkRosterOpen(true)}
               schoolName={schoolData?.name?.trim() || null}
-              adminStats={adminWelcomeStats}
+              welcomeStats={adminWelcomeStats}
             />
           </TabsContent>
 
@@ -3554,15 +3514,17 @@ function AdminPage() {
     ? params.schoolId.trim().toLowerCase()
     : ctxSchoolId;
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const teacherToolsView = searchParams.get('view') === 'teacher';
-
   const { isAutoLoggingIn } = useAdminGooglePasscodeBypass({ schoolId, autoLogin: false });
 
   const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
   const houseCoordinatorSession = loginState === 'houseCoordinator' && isHouseCoordinator;
-  const teacherPortalSession = loginState === 'teacher';
-  const adminTeacherToolsSession = isAdmin && teacherToolsView;
+
+  useEffect(() => {
+    if (!isInitialized || !schoolId) return;
+    if (loginState === 'teacher') {
+      router.replace(`/${schoolId}/teacher`);
+    }
+  }, [isInitialized, loginState, router, schoolId]);
 
   useEffect(() => {
     if (
@@ -3582,12 +3544,8 @@ function AdminPage() {
     return <AdminDashboardSkeleton />;
   }
 
-  if (teacherPortalSession || adminTeacherToolsSession) {
-    return (
-      <ErrorBoundary name="TeacherStaffPortal">
-        <TeacherStaffPortalDashboard adminViewingTeacherTools={adminTeacherToolsSession} />
-      </ErrorBoundary>
-    );
+  if (loginState === 'teacher') {
+    return <AdminDashboardSkeleton />;
   }
 
   if (!isAdmin && !prizeDeskSession && !houseCoordinatorSession) {

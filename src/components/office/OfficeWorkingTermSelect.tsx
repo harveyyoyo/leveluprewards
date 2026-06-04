@@ -25,7 +25,7 @@ export function OfficeWorkingTermSelect({
   gradeEntries,
   schoolDefaultTerm,
   configuredTerms,
-  label = 'Working term',
+  label = 'Term',
   layout = 'stacked',
   triggerClassName,
   id = 'office-working-term',

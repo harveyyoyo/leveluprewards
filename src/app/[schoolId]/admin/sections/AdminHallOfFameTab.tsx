@@ -11,7 +11,6 @@ import {
   Users,
   User,
   Target,
-  Play,
   LayoutGrid,
   List,
   Sparkles,
@@ -47,7 +46,6 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
   const [limitCount, setLimitCount] = useState<number>(settings.hallOfFameLimit ?? 50);
   const [podiumSize, setPodiumSize] = useState<number>(settings.hallOfFamePodiumSize ?? 3);
-  const [autoScroll, setAutoScroll] = useState<boolean>(settings.hallOfFameAutoScroll ?? false);
   const [gridLayout, setGridLayout] = useState<boolean>(settings.hallOfFameGridLayout ?? true);
   const [section, setSection] = useState<'settings' | 'preview'>('settings');
 
@@ -56,7 +54,6 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   useEffect(() => setScope(settings.hallOfFameScope ?? 'all'), [settings.hallOfFameScope]);
   useEffect(() => setLimitCount(settings.hallOfFameLimit ?? 50), [settings.hallOfFameLimit]);
   useEffect(() => setPodiumSize(settings.hallOfFamePodiumSize ?? 3), [settings.hallOfFamePodiumSize]);
-  useEffect(() => setAutoScroll(settings.hallOfFameAutoScroll ?? false), [settings.hallOfFameAutoScroll]);
   useEffect(() => setGridLayout(settings.hallOfFameGridLayout ?? true), [settings.hallOfFameGridLayout]);
 
   const classesQuery = useMemoFirebase(
@@ -304,24 +301,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
               </div>
 
               {/* Switches Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                <div className="flex items-center justify-between rounded-2xl border bg-background p-4 shadow-sm hover:border-amber-500/20 transition-all">
-                  <div className="min-w-0 pr-4">
-                    <p className="text-sm font-bold flex items-center gap-1.5 text-foreground">
-                      <Play className="w-4 h-4 text-emerald-500 fill-emerald-500/20" />
-                      Auto-scroll Leaderboard
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Automatically loop through students on the screen.</p>
-                  </div>
-                  <Switch
-                    checked={autoScroll}
-                    onCheckedChange={(v) => {
-                      setAutoScroll(v);
-                      updateSettings({ hallOfFameAutoScroll: v });
-                    }}
-                  />
-                </div>
-
+              <div className="pt-4 border-t">
                 <div className="flex items-center justify-between rounded-2xl border bg-background p-4 shadow-sm hover:border-amber-500/20 transition-all">
                   <div className="min-w-0 pr-4">
                     <p className="text-sm font-bold flex items-center gap-1.5 text-foreground">

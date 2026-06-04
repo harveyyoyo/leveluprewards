@@ -6,7 +6,8 @@ import {
   staffPortalAddOnTabs,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
-  staffPortalPinWelcomeFirst,
+  staffPortalOrderMainTabs,
+  staffPortalSortTabs,
   staffPortalTabsForRole,
 } from './tabRegistry';
 import type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabView } from './types';
@@ -36,32 +37,8 @@ export type UseStaffPortalTabsResult = {
   addOnTabDefs: StaffPortalTabDef[];
 };
 
-function orderTabs(
-  available: StaffPortalTabView[],
-  savedOrder: string[] | undefined,
-): StaffPortalTabView[] {
-  const byValue = new Map(available.map((t) => [t.value, t]));
-  const out: StaffPortalTabView[] = [];
-  const seen = new Set<string>();
-
-  for (const v of savedOrder || []) {
-    const def = byValue.get(v);
-    if (!def || seen.has(def.value)) continue;
-    out.push(def);
-    seen.add(def.value);
-  }
-
-  for (const def of available) {
-    if (seen.has(def.value)) continue;
-    out.push(def);
-    seen.add(def.value);
-  }
-
-  return staffPortalPinWelcomeFirst(out);
-}
-
 /**
- * Role-filtered staff portal tabs — admin and teacher share one registry.
+ * Role-filtered staff portal tabs — admin and teacher share one registry + canonical order.
  */
 export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaffPortalTabsResult {
   const {
@@ -89,30 +66,12 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
       };
     }
 
-    if (role === 'teacher') {
-      const pinnedSet = new Set(pinnedAddOnValues);
-      const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
-      const availableMain = [...core, ...pinnedExtras];
-      const main = orderTabs(availableMain, mainTabOrder);
-      const mainValues = new Set(main.map((t) => t.value));
-      const addMore = addOnViews.filter((t) => !mainValues.has(t.value));
-      return {
-        mainTabs: main,
-        addMoreTabs: addMore,
-        allTabValues: allDefs.map((t) => t.value),
-        defaultTab: staffPortalDefaultTab(role, settings),
-        coreTabs: core,
-        addOnTabDefs: addOnDefs,
-      };
-    }
-
-    // Admin: core + pinned add-ons in main row; other enabled add-ons in “Add more”
     const pinnedSet = new Set(pinnedAddOnValues);
     const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
-    const availableMain = [...core, ...pinnedExtras.map((t) => ({ ...t, title: `${t.label} (pinned)` }))];
-    const main = orderTabs(availableMain, mainTabOrder);
+    const availableMain = [...core, ...pinnedExtras];
+    const main = staffPortalOrderMainTabs(availableMain, mainTabOrder);
     const mainValues = new Set(main.map((t) => t.value));
-    const addMore = addOnViews.filter((t) => !mainValues.has(t.value));
+    const addMore = staffPortalSortTabs(addOnViews.filter((t) => !mainValues.has(t.value)));
 
     return {
       mainTabs: main,

@@ -158,14 +158,14 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Portal pages with document scroll: tuck header while scrolling; reveal at scroll top. */
+    /** Kiosk surfaces and staff portals: reveal header at the top edge on hover. */
+    const useKioskHoverHeader =
+      (isStaffPortalRoute || isStudentKioskSurface) && canShowGlobalHeader;
+    /** Student homepage (if scroll-hide enabled): tuck header while scrolling; reveal at scroll top. */
     const usePortalScrollHeader =
       hideHeaderEnabled &&
-      (isStaffPortalRoute || isStudentHomePage) &&
+      isStudentHomePage &&
       canShowGlobalHeader;
-    /** Kiosk surfaces without page scroll: reveal header at the top edge on hover. */
-    const useKioskHoverHeader =
-      hideHeaderEnabled && isStudentKioskSurface && canShowGlobalHeader;
     const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useKioskHoverHeader);
     const sidebarScrollHeaderVisible = useScrollTopRevealChrome(usePortalScrollHeader);
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
@@ -440,7 +440,11 @@ function LayoutClientWrapperInner({
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
                     {shouldRenderGlobalHeader &&
                         (useKioskHoverHeader ? (
-                            <HoverRevealHeaderShell visible={hoverGlobalHeaderVisible}>
+                            <HoverRevealHeaderShell
+                                visible={hoverGlobalHeaderVisible}
+                                peekWhenHidden={false}
+                                layout={isStaffPortalRoute ? 'overlay' : 'spacer'}
+                            >
                                 <Header />
                             </HoverRevealHeaderShell>
                         ) : usePortalScrollHeader ? (

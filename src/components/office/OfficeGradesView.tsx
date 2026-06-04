@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, Download, Layers, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Layers, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
@@ -363,9 +363,15 @@ export function OfficeGradesView({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Working term: <span className="font-semibold text-foreground">{activeTerm}</span> (saved for this school)
+          Term: <span className="font-semibold text-foreground">{activeTerm}</span> — grades and reports filter to this term
         </p>
         <div className="flex flex-wrap gap-2 shrink-0">
+          <Button variant="outline" className="rounded-xl gap-2" asChild>
+            <Link href={`${officePublicHref(schoolId, 'reports')}?term=${encodeURIComponent(activeTerm)}`}>
+              <Printer className="h-4 w-4" />
+              Print report
+            </Link>
+          </Button>
           <Button variant="outline" className="rounded-xl gap-2" onClick={exportCsv} disabled={sorted.length === 0}>
             <Download className="h-4 w-4" />
             Export CSV
@@ -460,7 +466,7 @@ export function OfficeGradesView({
           </Select>
         </div>
         <OfficeWorkingTermSelect
-          label="Working term"
+          label="Term"
           value={activeTerm}
           onValueChange={setActiveTerm}
           gradeEntries={entries}

@@ -1,8 +1,16 @@
 export type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabKind, StaffPortalTabView } from './types';
 export {
   STAFF_PORTAL_TAB_REGISTRY,
+  STAFF_PORTAL_CANONICAL_TAB_ORDER,
   staffPortalAddOnTabs,
   staffPortalAdminAddOnIsOn,
+  staffPortalAllAddOnTabValues,
+  staffPortalAppendTabsInCanonicalOrder,
+  staffPortalMergePinnedAddOnValues,
+  staffPortalOrderMainTabs,
+  staffPortalOrderPinnedAddOnValues,
+  staffPortalSortPinnedTabDefs,
+  staffPortalSortTabs,
   staffPortalTeacherPinSideEffects,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
@@ -12,6 +20,7 @@ export {
   staffPortalTabsForRole,
   staffPortalTeacherOperatedAdminNote,
   staffPortalSchoolwideTeacherNote,
+  STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES,
 } from './tabRegistry';
 export {
   staffPortalTabIsValid,

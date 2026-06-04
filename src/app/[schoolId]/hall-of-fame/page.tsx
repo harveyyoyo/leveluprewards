@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -21,7 +21,6 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { motion, AnimatePresence } from "framer-motion";
 import { springCinematic } from '@/lib/animation';
-import { Card, CardContent } from '@/components/ui/card';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
@@ -71,7 +70,6 @@ export default function HallOfFamePage() {
                   hallOfFameScope: 'all' as const,
                   hallOfFameLimit: settings.houseHallOfFameLimit ?? settings.hallOfFameLimit,
                   hallOfFamePodiumSize: settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize,
-                  hallOfFameAutoScroll: settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll,
                   hallOfFameGridLayout: settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout,
               }
             : {
@@ -80,7 +78,6 @@ export default function HallOfFamePage() {
                   hallOfFameScope: settings.hallOfFameScope,
                   hallOfFameLimit: settings.hallOfFameLimit,
                   hallOfFamePodiumSize: settings.hallOfFamePodiumSize,
-                  hallOfFameAutoScroll: settings.hallOfFameAutoScroll,
                   hallOfFameGridLayout: settings.hallOfFameGridLayout,
               };
         return parseHallOfFameSearchParams(searchParams, houseDefaults);
@@ -91,12 +88,10 @@ export default function HallOfFamePage() {
         settings.hallOfFameScope,
         settings.hallOfFameLimit,
         settings.hallOfFamePodiumSize,
-        settings.hallOfFameAutoScroll,
         settings.hallOfFameGridLayout,
         settings.houseHallOfFameSortBy,
         settings.houseHallOfFameLimit,
         settings.houseHallOfFamePodiumSize,
-        settings.houseHallOfFameAutoScroll,
         settings.houseHallOfFameGridLayout,
     ]);
 
@@ -105,10 +100,8 @@ export default function HallOfFamePage() {
     const [scope, setScope] = useState<'all' | string>(urlConfig.scope);
     const [limit, setLimit] = useState<number>(urlConfig.limit);
     const [podiumSize, setPodiumSize] = useState<number>(urlConfig.podiumSize);
-    const [autoScroll, setAutoScroll] = useState<boolean>(urlConfig.autoScroll);
     const [gridLayout, setGridLayout] = useState<boolean>(urlConfig.gridLayout);
     const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
-    const leaderboardScrollRef = useRef<HTMLDivElement>(null);
 
     const schoolDocRef = useSchoolMetadataDocRef();
     const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
@@ -124,7 +117,6 @@ export default function HallOfFamePage() {
         setScope(urlConfig.scope);
         setLimit(urlConfig.limit);
         setPodiumSize(urlConfig.podiumSize);
-        setAutoScroll(urlConfig.autoScroll);
         setGridLayout(urlConfig.gridLayout);
     }, [urlConfig]);
 
@@ -135,7 +127,6 @@ export default function HallOfFamePage() {
         setScope(settings.hallOfFameScope ?? 'all');
         setLimit(settings.hallOfFameLimit ?? 50);
         setPodiumSize(settings.hallOfFamePodiumSize ?? 3);
-        setAutoScroll(settings.hallOfFameAutoScroll ?? false);
         setGridLayout(settings.hallOfFameGridLayout ?? true);
     }, [
         urlConfig.locked,
@@ -144,7 +135,6 @@ export default function HallOfFamePage() {
         settings.hallOfFameScope,
         settings.hallOfFameLimit,
         settings.hallOfFamePodiumSize,
-        settings.hallOfFameAutoScroll,
         settings.hallOfFameGridLayout,
     ]);
 
@@ -412,69 +402,6 @@ export default function HallOfFamePage() {
         settings,
     ]);
 
-    // Auto-scroll: only the leaderboard region (header stays fixed).
-    useEffect(() => {
-        if (!autoScroll) return;
-
-        const scrollEl = leaderboardScrollRef.current;
-        if (!scrollEl) return;
-
-        let scrollDirection = 1; // 1 for down, -1 for up
-        const scrollSpeed = 0.5; // pixels per frame equivalent-ish
-        let lastTime = 0;
-        let animationId: number;
-        let timeoutId: ReturnType<typeof setTimeout>;
-
-        const handleScroll = (time: number) => {
-            if (!lastTime) lastTime = time;
-            const delta = Math.min(time - lastTime, 50); // cap delta to prevent huge jumps
-            lastTime = time;
-
-            const scrollStep = (scrollSpeed * delta) / 16; // attempt 1px per 16ms
-            scrollEl.scrollTop += scrollStep * scrollDirection;
-
-            const isAtBottom =
-                Math.ceil(scrollEl.clientHeight + scrollEl.scrollTop) >= scrollEl.scrollHeight - 10;
-            const isAtTop = scrollEl.scrollTop <= 10;
-
-            if (isAtBottom && scrollDirection === 1) {
-                timeoutId = setTimeout(() => {
-                    scrollDirection = -1;
-                    lastTime = 0;
-                    animationId = requestAnimationFrame(handleScroll);
-                }, 3000);
-                return;
-            }
-            if (isAtTop && scrollDirection === -1) {
-                timeoutId = setTimeout(() => {
-                    scrollDirection = 1;
-                    lastTime = 0;
-                    animationId = requestAnimationFrame(handleScroll);
-                }, 3000);
-                return;
-            }
-
-            animationId = requestAnimationFrame(handleScroll);
-        };
-
-        animationId = requestAnimationFrame(handleScroll);
-        return () => {
-            cancelAnimationFrame(animationId);
-            clearTimeout(timeoutId);
-        };
-    }, [autoScroll]);
-
-    // ESC to stop auto-scroll
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                setAutoScroll(false);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-
     const animBackdrop = globalAnimatedBackdropActive(settings);
 
     if (
@@ -555,50 +482,32 @@ export default function HallOfFamePage() {
                 "relative z-10 w-full px-4 sm:px-8 pt-8 md:pt-12 transition-all duration-500",
                 "max-w-full",
                 settings.displayMode === 'app' ? 'pb-24' : 'pb-12',
-                isFullscreen && "h-full min-h-0"
             )}>
-                <Card className={cn(
-                    "border-t-8 border-chart-5 shadow-2xl backdrop-blur-md",
-                    animBackdrop ? "bg-card/92 border-border/40" : "bg-card/80",
-                    isFullscreen && "h-full min-h-0 flex flex-col"
-                )}>
-                    <CardContent className={cn("p-4 sm:p-6 md:p-8", isFullscreen && "flex flex-col min-h-0")}>
-                        <div className={cn("mb-8", isFullscreen && "mb-4 shrink-0")}>
-                          <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 md:-mx-8 px-4 sm:px-6 md:px-8 py-3 bg-card/85 backdrop-blur-md border-b">
-                            <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                              <Link
-                                href={getLevelUpLogoHref()}
-                                className="min-w-0 justify-self-start no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
-                                aria-label="LevelUp EDU — school sign-in"
-                              >
-                                <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
-                              </Link>
+                <div className="sticky top-0 z-20 mb-8 py-3 bg-background/85 backdrop-blur-md border-b border-border/40">
+                  <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+                    <Link
+                      href={getLevelUpLogoHref()}
+                      className="min-w-0 justify-self-start no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-lg"
+                      aria-label="LevelUp EDU — school sign-in"
+                    >
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">levelUp EDU</p>
+                    </Link>
 
-                              <div className="min-w-0 max-w-[70vw] sm:max-w-[60vw] text-center">
-                                <p className="text-sm sm:text-base font-black tracking-tight text-foreground truncate">
-                                  {schoolName}
-                                </p>
-                              </div>
+                    <div className="min-w-0 max-w-[70vw] sm:max-w-[60vw] text-center">
+                      <p className="text-sm sm:text-base font-black tracking-tight text-foreground truncate">
+                        {schoolName}
+                      </p>
+                    </div>
 
-                              <div className="justify-self-end shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1.5">
-                                {rankType === 'houses' ? <Shield className="h-3 w-3 text-primary" aria-hidden /> : null}
-                                {hallLabel}
-                              </div>
-                            </div>
-                            <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground text-center">
-                              {scopeLabel} &bull; {getSortByLabel()}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          ref={leaderboardScrollRef}
-                          className={cn(
-                            (isFullscreen || autoScroll) && "overflow-y-auto overscroll-contain pr-1",
-                            isFullscreen && "flex-1 min-h-0",
-                            autoScroll && !isFullscreen && "max-h-[calc(100dvh-16rem)]",
-                          )}
-                        >
+                    <div className="justify-self-end shrink-0 rounded-xl border bg-muted/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground inline-flex items-center gap-1.5">
+                      {rankType === 'houses' ? <Shield className="h-3 w-3 text-primary" aria-hidden /> : null}
+                      {hallLabel}
+                    </div>
+                  </div>
+                  <div className="mt-3 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground text-center">
+                    {scopeLabel} &bull; {getSortByLabel()}
+                  </div>
+                </div>
 
                         {/* Podium */}
                         {rankType !== 'goals' && podium.length > 0 && (
@@ -881,9 +790,6 @@ export default function HallOfFamePage() {
                                     : 'No items have earned points yet for this view.'}
                             </motion.div>
                         )}
-                        </div>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );

@@ -36,11 +36,37 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
   return (settings.adminHiddenAddOnTabs || []).includes(tabValue);
 }
 
+/** Add-on tabs teachers may pin; changes affect the whole school (show coordination notice). */
+export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
+  'insights',
+  'halloffame',
+  'bulletinboard',
+  'smart-screen',
+  'library',
+  'bonuspoints',
+  'category-badges',
+  'houses',
+  'notifications',
+  'branding',
+  'integrations',
+  'student-portal',
+] as const;
+
+function teacherAddonEnabled(
+  settings: Settings,
+  tabValue: string,
+  whenEnabled: (s: Settings) => boolean,
+): boolean {
+  if (teacherAddonHidden(settings, tabValue)) return false;
+  return whenEnabled(settings);
+}
+
 /**
- * Staff portal tab model (one registry; two portals):
+ * Staff portal tab model (one registry; role-specific nav):
  *
  * - **Core** tabs always belong in the main nav row when enabled for that role.
  * - **Add-on** tabs: optional in the nav row when pinned via **Add more**.
+ * - **Admin** and **teacher** are separate sign-ins (`/admin` vs `/teacher`); staff who do both need two accounts.
  * - **Admin** pins school-management tabs (Insights, Houses, …) and toggles school config flags.
  * - **Teachers** pin their own tabs (Raffle, Goals, Attendance, …); admins do not gate teacher nav.
  *   Pinning raffle turns on `enableWeeklyRaffle` (kiosk ticket display still requires Rewards pillar).
@@ -51,8 +77,8 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
  * | raffle, goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
  * | generated-coupons | — | add-on | Rewards economy (coupon print) |
  * | attendance | add-on | add-on | `payAttendance` pillar |
- * | insights, notifications, … | add-on | — | Admin-only |
- * | houses | add-on | add-on | School-wide; `enableHouses` |
+ * | insights, halloffame, library, … | add-on | add-on (pin) | School-wide; see `STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES` |
+ * | notifications, branding, integrations, student-portal | add-on | add-on (pin) | School config — coordinate with admin |
  */
 
 /** All staff portal tabs (admin + teacher + shared add-ons). */
@@ -160,8 +186,12 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     label: 'Insights',
     icon: Activity,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableAdminAnalytics || (s.payRewards ?? true),
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = !!s.enableAdminAnalytics || (s.payRewards ?? true);
+      if (role === 'teacher') return teacherAddonEnabled(s, 'insights', () => on);
+      return on;
+    },
   },
   {
     value: 'attendance',
@@ -183,48 +213,73 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     label: 'Hall of Fame',
     icon: Trophy,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableClassLeaderboard,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = !!s.enableClassLeaderboard;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'halloffame', () => on);
+      return on;
+    },
   },
   {
     value: 'bulletinboard',
     label: 'Bulletin',
     icon: Megaphone,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => s.bulletinEnabled !== false,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = s.bulletinEnabled !== false;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'bulletinboard', () => on);
+      return on;
+    },
   },
   {
     value: 'smart-screen',
     label: 'Smart Screen',
     icon: Monitor,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.smartScreenEnabled && !adminAddonHidden(s, 'smart-screen'),
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      if (role === 'teacher') {
+        return teacherAddonEnabled(s, 'smart-screen', () => !!s.smartScreenEnabled);
+      }
+      return !!s.smartScreenEnabled && !adminAddonHidden(s, 'smart-screen');
+    },
   },
   {
     value: 'library',
     label: 'Library',
     icon: BookOpen,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => s.payLibrary ?? true,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = s.payLibrary ?? true;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'library', () => on);
+      return on;
+    },
   },
   {
     value: 'bonuspoints',
     label: 'Bonus Points',
     icon: Trophy,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableAchievements,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = !!s.enableAchievements;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'bonuspoints', () => on);
+      return on;
+    },
   },
   {
     value: 'category-badges',
     label: 'Badges',
     icon: Award,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableBadges,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = !!s.enableBadges;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'category-badges', () => on);
+      return on;
+    },
   },
   {
     value: 'goals',
@@ -274,32 +329,45 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     label: 'Notifications',
     icon: Bell,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !!s.enableNotifications,
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      const on = !!s.enableNotifications;
+      if (role === 'teacher') return teacherAddonEnabled(s, 'notifications', () => on);
+      return on;
+    },
   },
   {
     value: 'branding',
     label: 'Branding',
     icon: Palette,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !adminAddonHidden(s, 'branding'),
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      if (role === 'teacher') return teacherAddonEnabled(s, 'branding', () => true);
+      return !adminAddonHidden(s, 'branding');
+    },
   },
   {
     value: 'integrations',
     label: 'Integrations',
     icon: Plug,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !adminAddonHidden(s, 'integrations'),
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      if (role === 'teacher') return teacherAddonEnabled(s, 'integrations', () => true);
+      return !adminAddonHidden(s, 'integrations');
+    },
   },
   {
     value: 'student-portal',
     label: 'Student home portal',
     icon: GraduationCap,
     kind: 'addon',
-    roles: ['admin'],
-    isEnabled: (s) => !adminAddonHidden(s, 'student-portal'),
+    roles: ['admin', 'teacher'],
+    isEnabled: (s, role) => {
+      if (role === 'teacher') return teacherAddonEnabled(s, 'student-portal', () => true);
+      return !adminAddonHidden(s, 'student-portal');
+    },
   },
   {
     value: 'homework',
@@ -327,6 +395,122 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   },
 ];
 
+
+/**
+ * Shared sidebar / Add more order for admin and teacher portals.
+ * Role-specific tabs (e.g. admin `students` vs teacher `roster`) share the same slot.
+ */
+export const STAFF_PORTAL_CANONICAL_TAB_ORDER: readonly string[] = [
+  'welcome',
+  'students',
+  'roster',
+  'classes',
+  'teachers',
+  'prizes',
+  'categories',
+  'coupons',
+  'classroom',
+  'reports',
+  'redemptions',
+  'insights',
+  'attendance',
+  'halloffame',
+  'bulletinboard',
+  'smart-screen',
+  'library',
+  'bonuspoints',
+  'category-badges',
+  'goals',
+  'raffle',
+  'houses',
+  'notifications',
+  'branding',
+  'integrations',
+  'student-portal',
+  'homework',
+  'generated-coupons',
+];
+
+const STAFF_PORTAL_TAB_ORDER_INDEX = new Map(
+  STAFF_PORTAL_CANONICAL_TAB_ORDER.map((value, index) => [value, index]),
+);
+
+export function staffPortalTabSortIndex(tabValue: string): number {
+  return STAFF_PORTAL_TAB_ORDER_INDEX.get(tabValue) ?? 9999;
+}
+
+export function staffPortalSortTabs<T extends { value: string }>(tabs: readonly T[]): T[] {
+  return [...tabs].sort(
+    (a, b) => staffPortalTabSortIndex(a.value) - staffPortalTabSortIndex(b.value),
+  );
+}
+
+export function staffPortalSortTabValues(tabValues: readonly string[]): string[] {
+  return [...tabValues].sort(
+    (a, b) => staffPortalTabSortIndex(a) - staffPortalTabSortIndex(b),
+  );
+}
+
+export function staffPortalOrderPinnedAddOnValues(
+  pinnedValues: readonly string[],
+  availableValues: ReadonlySet<string> | readonly string[],
+): string[] {
+  const available = availableValues instanceof Set ? availableValues : new Set(availableValues);
+  return staffPortalSortTabValues(pinnedValues.filter((v) => available.has(v)));
+}
+
+export function staffPortalMergePinnedAddOnValues(
+  currentPinned: readonly string[],
+  tabValue: string,
+): string[] {
+  return staffPortalSortTabValues([...new Set([...currentPinned, tabValue])]);
+}
+
+export function staffPortalAllAddOnTabValues(addOnDefs: readonly { value: string }[]): string[] {
+  return staffPortalSortTabs(addOnDefs).map((d) => d.value);
+}
+
+export function staffPortalSortPinnedTabDefs<T extends { value: string }>(
+  pinnedValues: readonly string[],
+  byValue: ReadonlyMap<string, T>,
+): T[] {
+  return staffPortalSortTabValues(pinnedValues)
+    .map((v) => byValue.get(v))
+    .filter((t): t is T => t != null);
+}
+
+export function staffPortalAppendTabsInCanonicalOrder<T extends { value: string }>(
+  ordered: T[],
+  available: readonly T[],
+): T[] {
+  const seen = new Set(ordered.map((t) => t.value));
+  const out = [...ordered];
+  for (const def of staffPortalSortTabs(available)) {
+    if (seen.has(def.value)) continue;
+    out.push(def);
+    seen.add(def.value);
+  }
+  return out;
+}
+
+export function staffPortalOrderMainTabs<T extends { value: string }>(
+  available: readonly T[],
+  savedOrder: string[] | undefined,
+): T[] {
+  const availableByValue = new Map(available.map((t) => [t.value, t]));
+  const out: T[] = [];
+  const seen = new Set<string>();
+
+  for (const v of savedOrder || []) {
+    const def = availableByValue.get(v);
+    if (!def || seen.has(def.value)) continue;
+    out.push(def);
+    seen.add(def.value);
+  }
+
+  return staffPortalPinWelcomeFirst(staffPortalAppendTabsInCanonicalOrder(out, available));
+}
+
 /** When a teacher pins a tab, enable student/school flags needed for that feature. */
 export function staffPortalTeacherPinSideEffects(
   tabValue: string,
@@ -344,6 +528,24 @@ export function staffPortalTeacherPinSideEffects(
       return { payHomework: true, enableHomework: true };
     case 'generated-coupons':
       return { enableTeacherGeneratedCouponsTab: true };
+    case 'insights':
+      return { enableAdminAnalytics: true };
+    case 'halloffame':
+      return { enableClassLeaderboard: true };
+    case 'bulletinboard':
+      return { bulletinEnabled: true };
+    case 'smart-screen':
+      return { smartScreenEnabled: true };
+    case 'library':
+      return { payLibrary: true };
+    case 'bonuspoints':
+      return { enableAchievements: true };
+    case 'category-badges':
+      return { enableBadges: true };
+    case 'houses':
+      return { enableHouses: true };
+    case 'notifications':
+      return { enableNotifications: true };
     default:
       return {};
   }
@@ -368,11 +570,15 @@ export function staffPortalTabsForRole(
 }
 
 export function staffPortalCoreTabs(role: StaffPortalRole, settings: Settings): StaffPortalTabDef[] {
-  return staffPortalTabsForRole(role, settings).filter((t) => t.kind === 'core');
+  return staffPortalSortTabs(
+    staffPortalTabsForRole(role, settings).filter((t) => t.kind === 'core'),
+  );
 }
 
 export function staffPortalAddOnTabs(role: StaffPortalRole, settings: Settings): StaffPortalTabDef[] {
-  return staffPortalTabsForRole(role, settings).filter((t) => t.kind === 'addon');
+  return staffPortalSortTabs(
+    staffPortalTabsForRole(role, settings).filter((t) => t.kind === 'addon'),
+  );
 }
 
 /** Default tab when current selection is invalid. */
@@ -436,12 +642,16 @@ export function staffPortalTeacherOperatedAdminNote(tabValue: string): string | 
   return `${label} is mainly for teachers in day-to-day classroom use. You can preview and set defaults here as school admin.`;
 }
 
-/** Banner copy when a teacher opens a school-wide add-on (e.g. Houses). */
+/** Banner copy when a teacher opens a school-wide add-on. */
 export function staffPortalSchoolwideTeacherNote(tabValue: string): string | null {
-  if (tabValue !== 'houses') return null;
+  if (!(STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES as readonly string[]).includes(tabValue)) {
+    return null;
+  }
+  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
+  const label = def?.label ?? 'This feature';
   return (
-    'Houses is a school-wide program: rosters, standings, sorting, and point totals apply to every student. ' +
-    'Coordinate with your school admin and have one designated lead teacher make setup changes so the whole school stays aligned.'
+    `${label} is a school-wide setting: it can affect every student, family message, kiosk, or portal screen. ` +
+    'Coordinate with your school admin and have one designated lead staff member own setup changes so everyone stays aligned.'
   );
 }
 

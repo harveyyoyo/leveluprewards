@@ -24,7 +24,6 @@ import { compareOfficeTermLabels, getSuggestedTermLabel } from '@/lib/office/off
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
-import { OfficeGuideSection } from '@/components/office/OfficeGuideSection';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
@@ -228,21 +227,18 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
         School-wide defaults for grades and billing, plus desk accounts for front-office staff to sign in here.
       </p>
 
-      <OfficeGuideSection />
-
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-base font-bold flex items-center gap-2">
           <Building2 className="h-4 w-4 text-teal-700" />
           Office preferences
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          The default term is suggested for new staff until they pick their own working term. Statement name appears on
-          printed family billing statements.
+          The default term is suggested for new staff. Statement name appears on printed family billing statements.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 max-w-2xl">
           <div className="space-y-2">
             <OfficeWorkingTermSelect
-              label="Default working term"
+              label="Default term"
               layout="stacked"
               value={defaultTerm || suggestedTerm}
               onValueChange={setDefaultTerm}

@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Upload,
   UserRound,
   Users,
 } from 'lucide-react';
@@ -148,17 +149,17 @@ export function OfficeDashboard({
     <div className="w-full space-y-6">
       <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">
         <p className="text-lg font-medium text-slate-900 dark:text-white">
-          {isEmpty ? 'Welcome — let’s set up your roster.' : 'Your school at a glance.'}
+          {isEmpty ? 'Welcome — let’s set up your roster.' : 'School overview'}
         </p>
         <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
           {isEmpty
-            ? 'Add students, teachers, and classes to get started. Everything here stays separate from the rewards arcade.'
-            : 'Pick a term, then jump to students, grades, or billing below.'}
+            ? 'Add students, teachers, and classes to get started.'
+            : 'Grades and reports filter to the selected term.'}
         </p>
         <div className="mt-4">
           <OfficeWorkingTermSelect
             layout="inline"
-            label="Viewing term"
+            label="Term"
             value={activeTerm}
             onValueChange={onActiveTermChange}
             gradeEntries={gradeEntries}
@@ -208,17 +209,20 @@ export function OfficeDashboard({
         <OfficeEmptyState
           icon={Users}
           title="No students yet"
-          description="Start with your roster — you can add students one at a time or import a spreadsheet from Settings."
+          description="Add students one by one, or import your roster from a spreadsheet."
           action={
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button asChild className="rounded-full gap-1.5">
                 <Link href={officePublicHref(schoolId, 'students')}>
                   <Plus className="h-4 w-4" />
-                  Add your first student
+                  Add student
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="rounded-full">
-                <Link href={officePublicHref(schoolId, 'settings')}>Go to Settings</Link>
+              <Button asChild variant="outline" className="rounded-full gap-1.5">
+                <Link href={`${officePublicHref(schoolId, 'settings')}#import`}>
+                  <Upload className="h-4 w-4" />
+                  Import spreadsheet
+                </Link>
               </Button>
             </div>
           }
