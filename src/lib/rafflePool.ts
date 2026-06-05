@@ -140,3 +140,15 @@ export function isAttendanceRaffleScopeAvailable(settings: {
 } | null | undefined): boolean {
   return (settings?.payAttendance ?? true) && !!settings?.enableClassSignIn;
 }
+
+/** Per-draw class filter for raffle pools (`all` = no class restriction). */
+export type RaffleClassFilter = 'all' | 'unassigned' | string;
+
+export function filterStudentsForRaffleClass(
+  students: Student[],
+  classFilter: RaffleClassFilter,
+): Student[] {
+  if (classFilter === 'all') return students;
+  if (classFilter === 'unassigned') return students.filter((s) => !s.classId);
+  return students.filter((s) => s.classId === classFilter);
+}

@@ -27,7 +27,7 @@ import {
     portalChoosePageShellClass,
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
-import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { isClassroomPillarOn, isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import type { TeacherPersonnelRole } from '@/lib/types';
@@ -160,7 +160,6 @@ export default function PortalPage() {
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
-    const [adminDestination, setAdminDestination] = useState<'admin' | 'teacher'>('admin');
     const [teacherDialogOpen, setTeacherDialogOpen] = useState(false);
     const [selectedTeacherKey, setSelectedTeacherKey] = useState('');
     const [teacherPasscode, setTeacherPasscode] = useState('');
@@ -299,7 +298,7 @@ export default function PortalPage() {
               },
             ]
           : []),
-        ...(isClassroomPillarOn(settings) && settings.enableParentView === true
+        ...(isParentPortalOn(settings)
           ? [
               {
                   id: 'parent',
@@ -502,7 +501,6 @@ export default function PortalPage() {
                                                         description:
                                                             'Could not sign in with your Google account. Try again or use the admin passcode.',
                                                     });
-                                                    setAdminDestination('admin');
                                                     setAdminDialogOpen(true);
                                                     return;
                                                 }
@@ -513,7 +511,6 @@ export default function PortalPage() {
                                         }
                                         if (needsAdminPasscode) {
                                             if (schoolId) router.prefetch(`/${schoolId}/admin`);
-                                            setAdminDestination('admin');
                                             setAdminDialogOpen(true);
                                             return;
                                         }
@@ -555,11 +552,7 @@ export default function PortalPage() {
                             setAdminSubmitting(false);
                             setAdminPasscode('');
                         } else if (schoolId) {
-                            router.prefetch(
-                                adminDestination === 'teacher'
-                                    ? `/${schoolId}/admin?view=teacher`
-                                    : `/${schoolId}/admin`,
-                            );
+                            router.prefetch(`/${schoolId}/admin`);
                         }
                         setAdminDialogOpen(open);
                     }}
@@ -568,8 +561,7 @@ export default function PortalPage() {
                         <DialogHeader>
                             <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
                             <DialogDescription>
-                                Enter the admin passcode for this school to open{' '}
-                                {adminDestination === 'teacher' ? 'the Teacher Portal with admin access' : 'the Admin dashboard'}.
+                                Enter the admin passcode for this school to open the admin dashboard.
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-2">
@@ -615,11 +607,7 @@ export default function PortalPage() {
                                             }
                                             playSound('login');
                                             setAdminDialogOpen(false);
-                                            router.replace(
-                                                adminDestination === 'teacher'
-                                                    ? `/${schoolId}/admin?view=teacher`
-                                                    : `/${schoolId}/admin`,
-                                            );
+                                            router.replace(`/${schoolId}/admin`);
                                         })();
                                     }}
                                 />
@@ -668,11 +656,7 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(
-                                            adminDestination === 'teacher'
-                                                ? `/${schoolId}/admin?view=teacher`
-                                                : `/${schoolId}/admin`,
-                                        );
+                                        router.replace(`/${schoolId}/admin`);
                                     })();
                                 }}
                             >
@@ -705,31 +689,6 @@ export default function PortalPage() {
                             </DialogDescription>
                         </DialogHeader>
 
-                        {isAdmin && schoolId && (
-                            <div className="rounded-xl border border-border/70 bg-muted/30 p-3">
-                                <p className="text-xs font-semibold text-muted-foreground">Already signed in as admin</p>
-                                <p className="mt-1 text-xs text-muted-foreground/80">
-                                    Open teacher tools with your admin session, or pick a staff account below to sign in as
-                                    them.
-                                </p>
-                                <div className="mt-3">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        className="w-full rounded-xl font-bold"
-                                        onClick={() => {
-                                            playSound('click');
-                                            setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/admin?view=teacher`);
-                                        }}
-                                        disabled={teacherSubmitting}
-                                    >
-                                        Continue as admin
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-
                         {!isAdmin && schoolId && (
                             <Button
                                 type="button"
@@ -751,19 +710,17 @@ export default function PortalPage() {
                                                     description:
                                                         'Could not sign in with your Google account. Try again or use the admin passcode.',
                                                 });
-                                                setAdminDestination('teacher');
                                                 setAdminDialogOpen(true);
                                                 return;
                                             }
                                             playSound('login');
                                             setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/admin?view=teacher`);
+                                            router.replace(`/${schoolId}/admin`);
                                         })();
                                         return;
                                     }
                                     setTeacherDialogOpen(false);
-                                    setAdminDestination('teacher');
-                                    router.prefetch(`/${schoolId}/admin?view=teacher`);
+                                    router.prefetch(`/${schoolId}/admin`);
                                     setAdminDialogOpen(true);
                                 }}
                             >

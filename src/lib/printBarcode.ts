@@ -7,7 +7,7 @@ export function normalizePrintBarcodeValue(raw: string): string {
     .replace(/^\*+|\*+$/g, '');
 }
 
-export type PrintBarcodeVariant = 'id-card' | 'coupon' | 'library-sticker' | 'prize-id';
+export type PrintBarcodeVariant = 'id-card' | 'coupon' | 'library-sticker' | 'prize-id' | 'prize-voucher';
 
 export type PrintBarcodeOptions = {
   format?: 'CODE128' | 'CODE39';
@@ -34,6 +34,14 @@ const VARIANT_PRESETS: Record<PrintBarcodeVariant, PrintBarcodeOptions> = {
     margin: 10,
     displayValue: true,
     fontSize: 10,
+  },
+  'prize-voucher': {
+    format: 'CODE128',
+    width: 2,
+    height: 40,
+    margin: 6,
+    displayValue: true,
+    fontSize: 9,
   },
   coupon: {
     format: 'CODE128',

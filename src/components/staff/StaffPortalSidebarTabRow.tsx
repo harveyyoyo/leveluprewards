@@ -1,18 +1,22 @@
 'use client';
 
-import type { ComponentProps, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { staffPortalTabTriggerActiveClassName } from './staffPortalNavStyles';
 
 type StaffPortalSidebarTabRowProps = {
   value: string;
   triggerClassName?: string;
-  triggerStyle?: ComponentProps<typeof TabsTrigger>['style'];
+  triggerStyle?: CSSProperties;
   title?: string;
   removable?: boolean;
   onRemove?: () => void;
   removeLabel?: string;
+  /** Plain-button mode (sidebar outside Radix Tabs). */
+  isActive?: boolean;
+  onSelect?: () => void;
   /** Wrap trigger + remove (e.g. draggable shell in admin). */
   wrapperClassName?: string;
   wrapperProps?: Omit<ComponentProps<'div'>, 'className' | 'children'>;
@@ -27,23 +31,47 @@ export function StaffPortalSidebarTabRow({
   removable = false,
   onRemove,
   removeLabel,
+  isActive = false,
+  onSelect,
   wrapperClassName,
   wrapperProps,
   children,
 }: StaffPortalSidebarTabRowProps) {
+  const triggerClasses = cn(triggerClassName, removable && 'pr-9');
+
   return (
     <div
       className={cn('group/tab-row relative w-full min-w-0', wrapperClassName)}
       {...wrapperProps}
     >
-      <TabsTrigger
-        value={value}
-        className={cn(triggerClassName, removable && 'pr-9')}
-        style={triggerStyle}
-        title={title}
-      >
-        {children}
-      </TabsTrigger>
+      {onSelect ? (
+        <button
+          type="button"
+          role="tab"
+          aria-selected={isActive}
+          aria-controls={`tabpanel-${value}`}
+          tabIndex={isActive ? 0 : -1}
+          className={cn(
+            triggerClasses,
+            isActive && !triggerStyle && staffPortalTabTriggerActiveClassName(),
+            isActive && triggerStyle && 'font-bold shadow-sm',
+          )}
+          style={triggerStyle}
+          title={title}
+          onClick={onSelect}
+        >
+          {children}
+        </button>
+      ) : (
+        <TabsTrigger
+          value={value}
+          className={triggerClasses}
+          style={triggerStyle}
+          title={title}
+        >
+          {children}
+        </TabsTrigger>
+      )}
       {removable && onRemove ? (
         <button
           type="button"

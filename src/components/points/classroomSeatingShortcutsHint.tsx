@@ -1,13 +1,16 @@
 'use client';
 
 import type { ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
+import { cn } from '@/lib/utils';
 
 export type ClassroomSeatingShortcutsHintState = {
   prefs: ClassroomSeatingPrefs;
   editMode: boolean;
   attendanceEnabled: boolean;
   bathroomEnabled: boolean;
-  /** Full-screen classroom tab — wording skips Arrange seats. */
+  /** Live awards monitor — show toolbar copy with Arrange seats. */
+  monitorDisplay?: boolean;
+  /** @deprecated Use monitorDisplay */
   isFullscreen?: boolean;
 };
 
@@ -28,8 +31,10 @@ export function ClassroomSeatingShortcutsHint({
   editMode,
   attendanceEnabled,
   bathroomEnabled,
+  monitorDisplay = false,
   isFullscreen = false,
 }: ClassroomSeatingShortcutsHintState) {
+  const onMonitor = monitorDisplay || isFullscreen;
   if (editMode) {
     return (
       <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
@@ -47,9 +52,7 @@ export function ClassroomSeatingShortcutsHint({
     ? 'Use the Awards tab in the toolbar to switch to the full menu.'
     : 'Use the Quick tab in the toolbar for one-tap quick awards.';
 
-  const toolbarPlacement = isFullscreen
-    ? 'in the toolbar'
-    : 'next to Arrange seats in the toolbar';
+  const toolbarPlacement = 'next to Arrange seats in the toolbar';
 
   const extras = joinExtras([
     'Shift+click = note type picker',
@@ -58,11 +61,16 @@ export function ClassroomSeatingShortcutsHint({
     'Ctrl+U = undo last award',
     attendanceEnabled ? 'Dot = attendance today' : '',
     bathroomEnabled ? 'Alt+click = bathroom pass' : '',
-    isFullscreen ? '' : 'Arrange seats = edit layout',
+    'Arrange seats = edit layout',
   ]);
 
   return (
-    <div className="max-w-2xl space-y-2 text-sm leading-relaxed text-muted-foreground">
+    <div
+      className={cn(
+        'space-y-2 leading-relaxed text-muted-foreground',
+        onMonitor ? 'max-w-none text-xs' : 'max-w-2xl text-sm',
+      )}
+    >
       <p>
         <span className="font-semibold text-foreground">
           {prefs.instantTap ? 'Quick select' : 'Awards'}:

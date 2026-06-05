@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LevelUp — Private School Pillar Proposal</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <style>
+      .proposal-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.12in;
+        margin: 0.1in 0 0.14in;
+      }
+      .proposal-card {
+        border: 1px solid rgba(125, 211, 252, 0.28);
+        background: rgba(15, 23, 42, 0.46);
+        border-radius: 0.08in;
+        padding: 0.09in;
+      }
+      .proposal-card h3 {
+        margin: 0 0 0.02in;
+        font-size: 0.1in;
+      }
+      .proposal-card p {
+        margin: 0;
+        font-size: 0.076in;
+        line-height: 1.38;
+        color: #cbd5e1;
+      }
+      .proposal-matrix {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0.05in;
+        font-size: 0.072in;
+      }
+      .proposal-matrix th,
+      .proposal-matrix td {
+        border: 1px solid rgba(125, 211, 252, 0.2);
+        padding: 0.035in 0.04in;
+        text-align: left;
+      }
+      .proposal-matrix th {
+        font-size: 0.066in;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #7dd3fc;
+      }
+      .proposal-matrix td.center {
+        text-align: center;
+        font-weight: 800;
+      }
+      .pricing-section {
+        margin-top: 0.1in;
+        padding: 0.1in;
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 0.08in;
+        border: 1px solid rgba(125, 211, 252, 0.2);
+      }
+      .pricing-title {
+        font-size: 0.085in;
+        font-weight: 700;
+        color: #7dd3fc;
+        margin-bottom: 0.06in;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      .pricing-tiers {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.08in;
+      }
+      .pricing-tier {
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(125, 211, 252, 0.15);
+        border-radius: 0.06in;
+        padding: 0.07in;
+        text-align: center;
+      }
+      .pricing-tier h4 {
+        font-size: 0.082in;
+        margin: 0 0 0.03in;
+        color: #f1f5f9;
+      }
+      .pricing-tier .rate {
+        font-size: 0.11in;
+        font-weight: 800;
+        color: #22d3ee;
+        margin-bottom: 0.02in;
+      }
+      .pricing-tier .flat {
+        font-size: 0.068in;
+        color: #94a3b8;
+        line-height: 1.35;
+      }
+      .school-demo {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.08in;
+        padding: 0.06in 0.08in;
+        background: rgba(34, 211, 238, 0.12);
+        border-radius: 0.05in;
+        border: 1px solid rgba(34, 211, 238, 0.25);
+      }
+      .school-demo-label {
+        font-size: 0.072in;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .school-demo-value {
+        font-size: 0.1in;
+        font-weight: 800;
+        color: #22d3ee;
+      }
+      .funding-block {
+        margin-top: 0.08in;
+        font-size: 0.07in;
+        color: #94a3b8;
+        line-height: 1.45;
+      }
+      .funding-block strong {
+        color: #22d3ee;
+      }
+      .terms-block {
+        margin-top: 0.06in;
+        font-size: 0.064in;
+        color: #64748b;
+        padding-left: 0.08in;
+        border-left: 2px solid rgba(125, 211, 252, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
+    <article class="flyer flyer--compact">
+      <div class="stripe" aria-hidden="true"></div>
+      <header class="top">
+        <img src="/logo.png" alt="LevelUp logo" class="flyer-brand-logo" width="80" height="80" />
+        <h1>LEVEL UP<em>Proposal</em></h1>
+        <p class="tagline">Private Schools</p>
+      </header>
+
+      <h2 class="mega">Private school pillar<br /><span>proposal.</span></h2>
+      <p class="sub">
+        Modular platform for private academies — rewards, classroom, attendance, homework, and library pillars.
+      </p>
+
+      <div class="school-demo">
+        <span class="school-demo-label">Sample School Size</span>
+        <span class="school-demo-value">350 Students</span>
+      </div>
+
+      <section class="proposal-grid">
+        <div class="proposal-card">
+          <h3>Rewards Foundation</h3>
+          <p>Point economy, prizes, coupons, kiosk flow, and student redemption.</p>
+        </div>
+        <div class="proposal-card">
+          <h3>Classroom + Attendance</h3>
+          <p>Seating tools, teacher workflows, sign-in tracking, and behavior momentum.</p>
+        </div>
+        <div class="proposal-card">
+          <h3>Homework + Library</h3>
+          <p>Completion incentives, checkout/returns, overdue nudges, and accountability.</p>
+        </div>
+        <div class="proposal-card">
+          <h3>Funding Alignment</h3>
+          <p>Title IV-A climate support, Title II-A training compliance.</p>
+        </div>
+      </section>
+
+      <table class="proposal-matrix">
+        <thead>
+          <tr>
+            <th>Pillar</th>
+            <th>Foundation</th>
+            <th>Classroom & Culture</th>
+            <th>Complete Campus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Rewards core</td>
+            <td class="center">✔</td>
+            <td class="center">✔</td>
+            <td class="center">✔</td>
+          </tr>
+          <tr>
+            <td>Classroom management</td>
+            <td class="center">—</td>
+            <td class="center">✔</td>
+            <td class="center">✔</td>
+          </tr>
+          <tr>
+            <td>Attendance</td>
+            <td class="center">—</td>
+            <td class="center">✔</td>
+            <td class="center">✔</td>
+          </tr>
+          <tr>
+            <td>Homework + Library</td>
+            <td class="center">—</td>
+            <td class="center">—</td>
+            <td class="center">✔</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <section class="pricing-section">
+        <div class="pricing-title">Pricing Tiers (Per-Student Model)</div>
+        <div class="pricing-tiers">
+          <div class="pricing-tier">
+            <h4>Foundation</h4>
+            <div class="rate">$4.50/std</div>
+            <div class="flat">Flat: $1,250–$3,750<br />(by school size)</div>
+          </div>
+          <div class="pricing-tier">
+            <h4>Classroom & Culture</h4>
+            <div class="rate">$7.50/std</div>
+            <div class="flat">Flat: $1,950–$5,950<br />(by school size)</div>
+          </div>
+          <div class="pricing-tier">
+            <h4>Complete Campus</h4>
+            <div class="rate">$10.50/std</div>
+            <div class="flat">Flat: $2,750–$7,950<br />(by school size)</div>
+          </div>
+        </div>
+        <div class="funding-block">
+          <strong>Title IV-A:</strong> Applies to platform license (PBIS incentives).<br />
+          <strong>Title II-A:</strong> Applies to $950–$1,950 onboarding/PD fee (scales with enrollment).
+        </div>
+        <div class="terms-block">
+          • $750 annual floor • Quotes locked 90 days • COPPA/FERPA compliant • 97% retention rate
+        </div>
+      </section>
+
+      <footer class="bottom">
+        <div class="cta">
+          PRIVATE SCHOOL PROPOSAL
+          <small>Ready for board + district conversations</small>
+        </div>
+        <div class="urls">
+          <span>Contact details available on request</span>
+        </div>
+      </footer>
+      <footer class="flyer-footer">
+        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
+        <p class="flyer-footer__links">Contact details available on request</p>
+        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
+      </footer>
+    </article>
+  </body>
+</html>

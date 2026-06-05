@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Student, Class } from '@/lib/types';
 import { StudentIdCard } from './StudentIdCard';
@@ -25,20 +25,43 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady, corn
   const { data: appConfig, isLoading: isAppConfigLoading } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
   const { data: schoolData, isLoading: isSchoolLoading } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
 
-  // Trigger print dialog only after the async configurations have finished loading
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.classList.add('id-card-printing');
-    let t: ReturnType<typeof setTimeout> | undefined;
-    if (!isAppConfigLoading && !isSchoolLoading) {
-      t = setTimeout(() => {
-        onReady();
-      }, 220); // Allow SVG barcodes to render before print dialog
-    }
     return () => {
-      if (t) clearTimeout(t);
       document.body.classList.remove('id-card-printing');
     };
-  }, [isAppConfigLoading, isSchoolLoading, onReady]);
+  }, []);
+
+  // Trigger print dialog only after configs (and theme fonts) are ready
+  useEffect(() => {
+    if (isAppConfigLoading || isSchoolLoading) return;
+    let cancelled = false;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    (async () => {
+      const families = new Set<string>();
+      if (settings.enableStudentThemes !== false && settings.defaultStudentTheme?.fontFamily) {
+        families.add(settings.defaultStudentTheme.fontFamily);
+      }
+      for (const s of students) {
+        if (s.theme?.fontFamily) families.add(s.theme.fontFamily);
+      }
+      if (families.size > 0 && typeof document !== 'undefined' && document.fonts?.load) {
+        try {
+          await Promise.all([...families].map((ff) => document.fonts.load(`800 14px "${ff}"`)));
+        } catch {
+          // ignore
+        }
+      }
+      if (cancelled) return;
+      t = setTimeout(() => {
+        requestAnimationFrame(() => onReady());
+      }, 220);
+    })();
+    return () => {
+      cancelled = true;
+      if (t) clearTimeout(t);
+    };
+  }, [isAppConfigLoading, isSchoolLoading, onReady, students, settings.defaultStudentTheme?.fontFamily, settings.enableStudentThemes]);
 
   const classMap = useMemo(() => {
     if (!classes) return new Map<string, string>();
@@ -74,18 +97,19 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady, corn
       {studentChunks.map((chunk, pageIndex) => (
         <div key={pageIndex} className="student-id-print-page">
           {chunk.map((s) => (
-            <StudentIdCard
-              key={s.id}
-              student={s}
-              schoolName={schoolName}
-              schoolLogoUrl={schoolData?.logoUrl ?? null}
-              className={getClassName(s.classId || '')}
-              isColorEnabled={settings.enableColorPrinting}
-              appLogoUrl={appLogoUrl}
-              appName={appName}
-              appTagline={appTagline}
-              cornerStyle={cornerStyle}
-            />
+            <div key={s.id} className="student-id-print-slot">
+              <StudentIdCard
+                student={s}
+                schoolName={schoolName}
+                schoolLogoUrl={schoolData?.logoUrl ?? null}
+                className={getClassName(s.classId || '')}
+                isColorEnabled={settings.enableColorPrinting}
+                appLogoUrl={appLogoUrl}
+                appName={appName}
+                appTagline={appTagline}
+                cornerStyle={cornerStyle}
+              />
+            </div>
           ))}
         </div>
       ))}

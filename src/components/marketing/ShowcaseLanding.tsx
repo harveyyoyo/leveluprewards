@@ -35,7 +35,7 @@ import {
 
 const APP_LOGIN_HREF = '/login';
 const SPLASH_SESSION_KEY = 'levelup:showcaseSplashSeen';
-const INTRO_HOLD_MS = 2800;
+const INTRO_HOLD_MS = 3800;
 
 function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined') return true;
@@ -365,22 +365,14 @@ export function ShowcaseLanding() {
                 transition={{ duration: 0.35 }}
                 className="flex min-h-[min(78vh,720px)] flex-col items-center justify-center py-8"
               >
-                <div className="w-full max-w-xl rounded-3xl border border-[#102a45]/15 bg-[#fcfaf6] px-6 py-10 shadow-2xl shadow-[#102a45]/10 sm:px-10 sm:py-14">
-                  <HomeLandingLogo linkToLogin={false} size="intro" />
+                <div className="w-full max-w-2xl px-6 py-4 text-center sm:px-10">
+                  <HomeLandingLogo linkToLogin={false} tone="light" forceAnimated />
                 </div>
-                <div className="mt-8 max-w-md text-center">
+                <div className="mt-4 max-w-md text-center">
                   <p className="text-lg font-semibold tracking-tight text-[#102a45]">
                     {APP_NAME}
                   </p>
                   <p className="mt-1 text-sm text-[#1a2e42]/70">{APP_TAGLINE}</p>
-                  <p className="mt-6">
-                    <Link
-                      href={APP_LOGIN_HREF}
-                      className="text-sm font-semibold text-[#102a45] underline decoration-[#c9a227] decoration-2 underline-offset-4 transition-colors hover:text-[#0f1f2e]"
-                    >
-                      Click here to login
-                    </Link>
-                  </p>
                 </div>
               </motion.div>
             ) : (
@@ -1029,7 +1021,7 @@ export function ShowcaseLanding() {
                   </li>
                   <li className="flex items-center gap-3 text-sm font-semibold text-[#1a2e42]/95">
                     <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                    Public scoreboard rotation layouts ready for cafeteria hallways and TVs
+                    Public scoreboard rotation layouts ready for cafeteria hallways and monitors
                   </li>
                 </ul>
 

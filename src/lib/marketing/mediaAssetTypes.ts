@@ -121,7 +121,7 @@ export const WIDESCREEN_CLIP_USAGE: Record<string, MediaUsageSlot> = {
   "capture-library/student-kiosk/kiosk-type-entry.mp4": "intro-scan-in",
   "capture-library/student-kiosk/kiosk-new-points-on-entry.mp4":
     "intro-earn-points",
-  "capture-library/student-kiosk/kiosk-prize-shop.mp4": "intro-pick-prizes",
+  "capture-library/student-kiosk/student-kiosk.mp4": "intro-pick-prizes",
   "capture-library/admin/admin-id-card-preview.mp4": "id-card",
   "capture-library/student-kiosk/kiosk-signin-welcome-points.mp4":
     "kiosk-sign-in",

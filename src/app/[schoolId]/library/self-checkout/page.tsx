@@ -7,6 +7,7 @@ import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { isLibraryStandaloneSelfCheckoutEnabled } from '@/lib/library/libraryPolicy';
 import { LibraryStudentSelfCheckoutPortal } from '@/components/library/LibraryStudentSelfCheckoutPortal';
 import type { Category, Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,21 @@ export default function LibrarySelfCheckoutPage() {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 p-6">
         <p className="text-muted-foreground text-center">Library is not enabled for this school.</p>
+        <Button variant="outline" className="rounded-xl" asChild>
+          <Link href={`/${schoolId}/portal`}>Back to portal</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  if (!isLibraryStandaloneSelfCheckoutEnabled(settings)) {
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-4 p-6 max-w-md mx-auto text-center">
+        <p className="text-muted-foreground">
+          Student library self-checkout station is turned off. Enable{' '}
+          <strong className="text-foreground">Library station (shared device)</strong> under Library → Settings, or
+          use the student kiosk coupon scanner when that option is on.
+        </p>
         <Button variant="outline" className="rounded-xl" asChild>
           <Link href={`/${schoolId}/portal`}>Back to portal</Link>
         </Button>

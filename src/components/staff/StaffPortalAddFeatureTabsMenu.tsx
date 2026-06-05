@@ -54,7 +54,10 @@ export function StaffPortalAddFeatureTabsMenu({
           <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={align} className="min-w-[240px]">
+      <DropdownMenuContent
+        align={align}
+        className="max-h-[min(70vh,28rem)] min-w-[240px] overflow-y-auto"
+      >
         <div className="px-2 py-2">
           <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
             Add feature tab

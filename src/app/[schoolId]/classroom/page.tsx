@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef } from 'react';
-import { useScrollPausedValue } from '@/hooks/useScrollPausedValue';
+import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -13,17 +12,17 @@ import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
+import { getHallOfFameStageSizeStyle } from '@/lib/hallOfFameUrlConfig';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 import {
-  remainingTeacherBudgetPoints,
   teacherWithBudgetAfterSpend,
 } from '@/lib/teacherBudget';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 export default function ClassroomFullscreenPage() {
   const params = useParams();
@@ -96,9 +95,7 @@ export default function ClassroomFullscreenPage() {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [allClasses, schoolWide, students, activeTeacherId]);
 
-  const scrollRootRef = useRef<HTMLDivElement>(null);
-  const pausedStudents = useScrollPausedValue(students, scrollRootRef, 280);
-  const deferredStudents = useDeferredValue(pausedStudents);
+  const deferredStudents = useDeferredValue(students);
 
   const categories = useMemo(
     () =>
@@ -127,11 +124,6 @@ export default function ClassroomFullscreenPage() {
     };
   }, [schoolWide, currentTeacher, updateTeacher]);
 
-  const fullscreenClassLabel = useMemo(() => {
-    if (!classIdFromUrl) return null;
-    return classes.find((c) => c.id === classIdFromUrl)?.name ?? null;
-  }, [classIdFromUrl, classes]);
-
   const classroomAutoLogoutOn = settings.classroomAutoLogoutEnabled !== false;
   const classroomIdleMs =
     typeof settings.classroomSessionTimeoutMs === 'number' &&
@@ -145,6 +137,18 @@ export default function ClassroomFullscreenPage() {
       loginState === 'teacher' ? `/${schoolId}/teacher` : `/${schoolId}/admin`;
     router.replace(href);
   }, [loginState, router, schoolId]);
+
+  const handleMonitorClassChange = useCallback(
+    (nextClassId: string) => {
+      if (!nextClassId) return;
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      params.set('fullscreen', '1');
+      params.set('classId', nextClassId);
+      if (storageScope) params.set('scope', storageScope);
+      router.replace(`/${schoolId}/classroom?${params.toString()}`);
+    },
+    [router, schoolId, searchParams, storageScope],
+  );
 
   useClassroomIdleExit({
     enabled: classroomAutoLogoutOn && classroomOn && isInitialized,
@@ -181,10 +185,10 @@ export default function ClassroomFullscreenPage() {
   if (!classroomOn) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-        <p className="text-lg font-black tracking-tight">Classroom Management is not enabled</p>
+        <p className="text-lg font-black tracking-tight">{CLASSROOM_TAB_LABEL} is not enabled</p>
         <p className="max-w-md text-sm text-muted-foreground">
-          Seating charts, quick awards, and the full-screen classroom view require the Classroom
-          product pillar. Ask your admin to enable it under Settings → Product pillars.
+          Seating charts, quick awards, and the live awards monitor require the Classroom product pillar.
+          Ask your admin to enable it under Settings → Product pillars.
         </p>
         <Button type="button" variant="outline" asChild>
           <Link href={backHref}>Back to portal</Link>
@@ -194,46 +198,10 @@ export default function ClassroomFullscreenPage() {
   }
 
   return (
-    <div
-      className={cn(
-        'fixed inset-0 z-[100] flex flex-col bg-background',
-        'h-dvh max-h-dvh w-full overflow-hidden',
-      )}
-    >
-      <header className="flex shrink-0 items-center justify-between gap-2 border-b bg-background px-2 py-1.5 sm:px-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black tracking-tight">
-            {fullscreenClassLabel ?? 'Classroom'}
-          </p>
-          {currentTeacher && !schoolWide && (
-            <p className="truncate text-[10px] text-muted-foreground">
-              {currentTeacher.name}
-              {remainingTeacherBudgetPoints(currentTeacher) !== null && (
-                <> · {remainingTeacherBudgetPoints(currentTeacher)?.toLocaleString()} pts budget left</>
-              )}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
-          <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg text-xs font-bold" asChild>
-            <Link href={backHref}>Portal</Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg"
-            aria-label="Close tab"
-            onClick={() => window.close()}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
-
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
       <div
-        ref={scrollRootRef}
-        className="relative flex min-h-0 flex-1 flex-col overflow-auto p-2 sm:p-3"
+        className="relative z-10 flex min-h-0 flex-col overflow-hidden bg-background"
+        style={getHallOfFameStageSizeStyle(false)}
       >
         <ClassroomPointsPanel
           variant="fullscreen"
@@ -244,6 +212,7 @@ export default function ClassroomFullscreenPage() {
           storageScope={storageScope}
           initialClassId={classIdFromUrl || undefined}
           budgetOptions={budgetOptions}
+          onClassIdChange={handleMonitorClassChange}
         />
       </div>
     </div>

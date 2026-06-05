@@ -6,7 +6,10 @@ import {
 } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { applyCategoryPointsByPeriod, applyPointsByPeriod } from '@/lib/db/helpers';
-import { applyHousePointsRollupInTransaction } from '@/lib/db/housePoints';
+import {
+  readHouseRollupSnaps,
+  writeHousePointsRollupsFromDeltas,
+} from '@/lib/db/housePoints';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 
 export type ClassroomPointsMeta = {
@@ -165,6 +168,17 @@ export async function applyRewardsPointsToStudents(
         );
         const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
         const houseDeltas = new Map<string, number>();
+        const houseSnaps = rollupHousePoints
+          ? await readHouseRollupSnaps(
+              transaction,
+              firestore,
+              schoolId,
+              studentDocs
+                .filter((d) => d.exists())
+                .map((d) => (d.data() as Student).houseId)
+                .filter((id): id is string => Boolean(id)),
+            )
+          : new Map();
 
         for (const studentDoc of studentDocs) {
           if (!studentDoc.exists()) continue;
@@ -172,7 +186,7 @@ export async function applyRewardsPointsToStudents(
           const now = Date.now();
 
           if (signedDelta > 0) {
-            const newPoints = studentData.points + signedDelta;
+            const newPoints = Number(studentData.points ?? 0) + signedDelta;
             const newLifetime = (studentData.lifetimePoints || 0) + signedDelta;
             const categoryPointsUpdate = { ...studentData.categoryPoints };
             categoryPointsUpdate[desc] = (categoryPointsUpdate[desc] || 0) + signedDelta;
@@ -201,7 +215,7 @@ export async function applyRewardsPointsToStudents(
             }
           } else {
             const magnitude = Math.abs(signedDelta);
-            const newPoints = Math.max(0, studentData.points - magnitude);
+            const newPoints = Math.max(0, Number(studentData.points ?? 0) - magnitude);
             transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
 
             if (rollupHousePoints && studentData.houseId) {
@@ -235,18 +249,7 @@ export async function applyRewardsPointsToStudents(
           processedCount += 1;
         }
 
-        if (rollupHousePoints) {
-          for (const [houseId, delta] of houseDeltas) {
-            await applyHousePointsRollupInTransaction(
-              transaction,
-              firestore,
-              schoolId,
-              houseId,
-              delta,
-              true,
-            );
-          }
-        }
+        writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
       });
     }
 

@@ -107,7 +107,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['bulletin', 'bulletin board', 'announcement'],
     paths: [
-      'src/app/[schoolId]/admin/sections/AdminBulletinBoardTab.tsx',
+      'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
       'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },

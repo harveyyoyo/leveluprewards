@@ -379,7 +379,7 @@ export function AdminHousesTab({
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 min-w-0">
-          <Helper content="School houses: standings overview, rosters, settings, and Hall of Fame TV display.">
+          <Helper content="School houses: standings overview, rosters, settings, and Hall of Fame monitor display.">
             <StaffPortalSectionCardTitle className="flex items-center gap-2">
               <Home className="w-5 h-5 text-primary" /> Houses
             </StaffPortalSectionCardTitle>

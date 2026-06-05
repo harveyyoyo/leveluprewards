@@ -107,10 +107,10 @@ body {
 }
 
 .labeler-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .labeler-preview {
@@ -198,7 +198,9 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .labeler-nav button {
@@ -321,9 +323,6 @@ body {
 }
 
 @media (max-width: 900px) {
-  .labeler-body {
-    grid-template-columns: 1fr;
-  }
 }
 
 .editor-header {

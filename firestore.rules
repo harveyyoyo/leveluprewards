@@ -334,6 +334,12 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Printed pickup vouchers (VR… barcodes) — written by Cloud Functions; kiosk reads for fulfillment.
+      match /prizeVoucherByCode/{code} {
+        allow read: if isSchoolMember(schoolId) || hasKioskSession(schoolId) || hasStudentPortalSession(schoolId);
+        allow write: if false;
+      }
+
       match /prizes/{prizeId} {
         allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
         allow create: if isAdmin(schoolId) || isTeacherOwnedPrizeCreate(schoolId);

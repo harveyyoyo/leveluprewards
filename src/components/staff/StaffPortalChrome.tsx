@@ -4,7 +4,6 @@ import type { ReactNode } from 'react';
 import { Helper } from '@/components/ui/helper';
 import type { StaffPortalRole } from '@/lib/staffPortal';
 import { staffPortalPageIntroClassName } from '@/components/staff/staffPortalNavStyles';
-import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { cn } from '@/lib/utils';
 
@@ -72,10 +71,11 @@ export function StaffPortalChrome({
         </div>
       </Helper>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
-        <StaffPortalLayoutToggle />
-        {endActions ? endActions : null}
-      </div>
+      {endActions ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">
+          {endActions}
+        </div>
+      ) : null}
     </div>
   );
 }

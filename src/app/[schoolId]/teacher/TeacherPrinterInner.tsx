@@ -39,7 +39,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
-import { StaffPortalPageIntro } from '@/components/staff/StaffPortalPageIntro';
 import {
   staffPortalSidebarRailClassName,
   staffPortalWorkspaceMainClassName,
@@ -2284,6 +2283,7 @@ function TeacherPrinterInnerBody({
                                     settings={settings}
                                     onGoToTab={setActiveTeacherTab}
                                     schoolName={schoolDocData?.name?.trim() || null}
+                                    staffName={teacherName}
                                     welcomeStats={teacherWelcomeStats}
                                 />
                             </TeacherPortalTabPane>
@@ -2644,27 +2644,14 @@ function TeacherPrinterInnerBody({
 
                     {!embedded ? (
                     <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
-                    <StaffPortalPageIntro
-                        title={secretaryMode ? 'Secretary — coupon printing' : 'Teacher portal'}
-                        subtitle={
-                            secretaryMode
-                                ? 'Print coupon batches from your school\'s point categories.'
-                                : 'Points, classes, prizes, and reports — pick a tab to get started.'
-                        }
-                        helperContent={
-                            secretaryMode
-                                ? 'Generate coupon sheets for teachers to hand out. You cannot award points or edit prizes from here.'
-                                : 'Use Points to print coupon sheets from school categories, or open Manually Add or Deduct Points for direct changes without a printed coupon. Prizes, attendance, and reports are also here.'
-                        }
-                        trailing={
-                            secretaryMode ? (
-                                <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
-                                    <LogOut className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Log out</span>
-                                </Button>
-                            ) : null
-                        }
-                    />
+                    {secretaryMode && (
+                        <div className="flex items-center justify-end">
+                            <Button variant="outline" onClick={onLogout} className="gap-2 rounded-lg h-10">
+                                <LogOut className="w-4 h-4" />
+                                <span className="hidden sm:inline">Log out</span>
+                            </Button>
+                        </div>
+                    )}
 
                     {teacherPortalWorkspace}
                     </StaffPortalContentWidth>

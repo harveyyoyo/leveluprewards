@@ -133,7 +133,7 @@ export function StudentKioskThemeButton({
       >
         <span className={cn('flex items-center justify-center gap-1.5', sidebar && 'w-full')}>
           <Palette className={cn('shrink-0 opacity-90', sidebar ? 'h-4 w-4 sm:h-5 sm:w-5' : 'h-3.5 w-3.5')} aria-hidden />
-          {sidebar ? 'Change theme' : 'Theme'}
+          {sidebar ? 'Change theme' : 'Edit Theme'}
         </span>
       </Button>
 

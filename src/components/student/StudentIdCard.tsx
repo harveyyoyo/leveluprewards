@@ -49,11 +49,10 @@ export function StudentIdCard({
   const themeFontWeight = typeof theme?.fontWeight === 'number' ? theme.fontWeight : undefined;
   const themeFontScale = typeof theme?.fontScale === 'number' && theme.fontScale > 0 ? theme.fontScale : undefined;
 
-  const emojiGlowFilter = (() => {
+  const emojiGlowStyle: React.CSSProperties | undefined = (() => {
     const primary = theme?.primary;
     if (!primary || typeof primary !== 'string') return undefined;
-    // Works well for hex colors; safe fallback for other formats.
-    return `drop-shadow(0 0 8px ${primary}) drop-shadow(0 0 18px ${primary})`;
+    return { boxShadow: `0 0 8px ${primary}, 0 0 18px ${primary}` };
   })();
 
   const cardStyle = theme && isColorEnabled
@@ -66,6 +65,7 @@ export function StudentIdCard({
         ...(themeFontFamily ? { fontFamily: themeFontFamily } : {}),
         ...(themeFontStyle ? { fontStyle: themeFontStyle } : {}),
         ...(themeFontWeight ? { fontWeight: themeFontWeight } : {}),
+        ...(themeTracking !== undefined ? { letterSpacing: `${themeTracking}em` } : {}),
         ...(themeFontScale !== undefined ? { ['--print-id-font-scale' as string]: String(themeFontScale) } : {}),
       }
     : undefined;
@@ -159,7 +159,7 @@ export function StudentIdCard({
         </div>
 
         {(customEmojiUrl || themeEmoji) && (
-          <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowFilter ? { filter: emojiGlowFilter } : undefined}>
+          <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowStyle}>
             {customEmojiUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={customEmojiUrl} alt="" className="print-id-custom-emoji-img" />

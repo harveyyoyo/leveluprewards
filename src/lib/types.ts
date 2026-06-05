@@ -5,6 +5,10 @@ export interface HistoryItem {
   date: number;
   fulfilled?: boolean;
   teacherId?: string;
+  /** Printed pickup voucher barcode (`VR…`) for separate kiosk fulfillment. */
+  voucherScanCode?: string;
+  prizeId?: string;
+  pickupVoucher?: boolean;
 }
 
 export interface LibraryItem {
@@ -601,6 +605,8 @@ export interface BehaviorNote {
   createdAt: number;
   /** When false, visible to staff only (e.g. incident under review). */
   visibleToParent: boolean;
+  /** When true, flags this note for principal review / notification. */
+  notifyPrincipal?: boolean;
   pointsAmount?: number;
   pointsLabel?: string;
 }

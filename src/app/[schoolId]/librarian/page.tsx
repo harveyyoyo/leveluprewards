@@ -15,7 +15,6 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
-import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { LibraryManagementPanel } from '@/components/library/LibraryManagementPanel';
 import { LibraryItemModal } from '@/components/library/LibraryItemModal';
@@ -211,12 +210,9 @@ export default function LibrarianPage() {
               <h1 className="text-2xl font-black">Library</h1>
               <p className="text-sm text-muted-foreground">{userName}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <StaffPortalLayoutToggle />
-              <Button variant="outline" className="rounded-xl" onClick={() => logout({ staffNavigateTo: 'portal' })}>
-                <LogOut className="mr-2 h-4 w-4" /> Sign out
-              </Button>
-            </div>
+            <Button variant="outline" className="rounded-xl" onClick={() => logout({ staffNavigateTo: 'portal' })}>
+              <LogOut className="mr-2 h-4 w-4" /> Sign out
+            </Button>
           </div>
 
           <LibraryManagementPanel

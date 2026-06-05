@@ -494,7 +494,27 @@ export function DeveloperMediaAssetLabeler() {
           ) : !current ? (
             <p className="py-12 text-center text-muted-foreground">No items in this list.</p>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-wrap items-center gap-2 border-b pb-4">
+                <Button type="button" variant="outline" onClick={goPrev} disabled={index === 0}>
+                  <ArrowLeft className="mr-1 h-4 w-4" />
+                  Previous
+                </Button>
+                <Button type="button" className="gap-2" onClick={markReviewedAndNext}>
+                  <Check className="h-4 w-4" />
+                  Mark reviewed & next
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goNext}
+                  disabled={index >= visibleItems.length - 1}
+                >
+                  Next
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+
               <div className="overflow-hidden rounded-lg border bg-black">
                 {current.kind === 'video' ? (
                   <video
@@ -643,26 +663,6 @@ export function DeveloperMediaAssetLabeler() {
                   />
                   Reviewed
                 </label>
-
-                <div className="flex flex-wrap gap-2 pt-2">
-                  <Button type="button" variant="outline" onClick={goPrev} disabled={index === 0}>
-                    <ArrowLeft className="mr-1 h-4 w-4" />
-                    Previous
-                  </Button>
-                  <Button type="button" className="gap-2" onClick={markReviewedAndNext}>
-                    <Check className="h-4 w-4" />
-                    Mark reviewed & next
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={goNext}
-                    disabled={index >= visibleItems.length - 1}
-                  >
-                    Next
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
 
                 <Button
                   type="button"

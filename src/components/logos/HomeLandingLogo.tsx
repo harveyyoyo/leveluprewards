@@ -18,12 +18,18 @@ type HomeLandingLogoProps = {
   linkToLogin?: boolean;
   /** Larger cinematic logo for homepage intro. */
   size?: 'default' | 'intro';
+  /** Color mode for animated logo. */
+  tone?: 'dark' | 'light';
+  /** Force animated cinematic logo regardless of saved mode. */
+  forceAnimated?: boolean;
   className?: string;
 };
 
 export function HomeLandingLogo({
   linkToLogin = true,
   size = 'default',
+  tone = 'dark',
+  forceAnimated = false,
   className,
 }: HomeLandingLogoProps) {
   const [mounted, setMounted] = useState(false);
@@ -53,11 +59,12 @@ export function HomeLandingLogo({
     const staticLogoClass =
     size === 'intro' ? 'h-52 w-52 sm:h-72 sm:w-72' : 'h-48 w-48 sm:h-64 sm:w-64';
 
+  const useStaticLogo = !forceAnimated && mode === 'static';
   const logo =
-    mode === 'static' ? (
+    useStaticLogo ? (
       <Logo className={staticLogoClass} />
     ) : (
-      <LevelUpLogo size={size} />
+      <LevelUpLogo size={size} tone={tone} />
     );
 
   if (!linkToLogin) {

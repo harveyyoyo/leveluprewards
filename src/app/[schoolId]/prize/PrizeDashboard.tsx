@@ -52,6 +52,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { usePrizeShelfWedgeScan } from '@/hooks/usePrizeShelfWedgeScan';
 import { useKioskAiFunAndVoucherIdleActive } from '@/hooks/useKioskAiFunAndVoucherIdle';
 import { usePrizeAiFunAudienceCacheReset } from '@/hooks/usePrizeAiFunAudienceCacheReset';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -71,8 +72,12 @@ import {
   StudentKioskWarmBackdrop,
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
+import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
+import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
+import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
+import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
 import { runMotor as runVendingMotor, isConnected as motorIsConnected } from '@/lib/vendingMotor';
 import { useAuthFetch } from '@/lib/authFetch';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -208,6 +213,7 @@ function ConfirmRedemptionDialog({
     isOpen,
     onOpenChange,
     onConfirm,
+    onPickupVoucher,
     isRedeeming = false,
     hasTheme = false,
     themeSurfaceStyle,
@@ -218,6 +224,8 @@ function ConfirmRedemptionDialog({
     isOpen: boolean,
     onOpenChange: (open: boolean) => void,
     onConfirm: (quantity: number, aiFunUserPick?: PrizeAiFunReward) => void,
+    /** Redeem with pickup voucher (barcode for separate kiosk) when prize allows print vouchers. */
+    onPickupVoucher?: (quantity: number, aiFunUserPick?: PrizeAiFunReward) => void,
     isRedeeming?: boolean,
     hasTheme?: boolean,
     themeSurfaceStyle?: CSSProperties,
@@ -353,7 +361,7 @@ function ConfirmRedemptionDialog({
                                 >
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="z-[360]" position="popper">
                                     <SelectItem value="joke">Joke</SelectItem>
                                     <SelectItem value="riddle">Riddle</SelectItem>
                                     <SelectItem value="fortune">Fortune teller</SelectItem>
@@ -383,17 +391,37 @@ function ConfirmRedemptionDialog({
                     </div>
                     {!canAfford && <p className="text-sm text-destructive font-bold text-center" role="alert">You don&apos;t have enough points for this quantity.</p>}
                 </div>
-                <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming}>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+                    <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming} className="w-full sm:w-auto">
+                        Cancel
+                    </AlertDialogCancel>
+                    {prize.offerPrintTicketOnRedeem === true && onPickupVoucher && !aiPrize ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full sm:w-auto"
+                            disabled={!canAfford || isRedeeming}
+                            onClick={() =>
+                                onPickupVoucher(effectiveQty, pickerSurprise ? pickerKind : undefined)
+                            }
+                        >
+                            {isRedeeming ? (
+                                <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</>
+                            ) : (
+                                'Print pickup voucher'
+                            )}
+                        </Button>
+                    ) : null}
                     <Button
                         type="button"
+                        className="w-full sm:w-auto"
                         disabled={!canAfford || isRedeeming}
                         onClick={() =>
                             onConfirm(effectiveQty, pickerSurprise ? pickerKind : undefined)
                         }
                         style={hasTheme && canAfford ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
                     >
-                        {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Confirm'}
+                        {isRedeeming ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />Processing…</> : 'Redeem now'}
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
@@ -417,7 +445,7 @@ export function PrizeDashboard({
 }) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { schoolId, redeemPrize, printPrizeTickets, isKioskLocked } = useAppContext();
+    const { schoolId, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, isKioskLocked } = useAppContext();
     const firestore = useFirestore();
     const { toast } = useToast();
     const playSound = useArcadeSound();
@@ -432,22 +460,7 @@ export function PrizeDashboard({
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'price-asc' | 'price-desc' | 'name' | 'affordable'>('price-asc');
-    const [ticketData, setTicketData] = useState<{
-        activityId: string;
-        ticketNo: string;
-        redeemedAt: number;
-        studentId: string;
-        studentName: string;
-        studentNickname?: string;
-        studentEmoji?: string;
-        prizeName: string;
-        prizeIcon?: string;
-        quantity: number;
-        totalCost: number;
-        aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
-        aiSurpriseText?: string;
-        aiSurpriseAnswer?: string;
-    } | null>(null);
+    const [ticketData, setTicketData] = useState<PrizeRedeemTicket | null>(null);
 
     const [aiSurpriseOpen, setAiSurpriseOpen] = useState(false);
     /** Guards against double-click: disables confirm button while a redemption Cloud Function call is in flight. */
@@ -560,6 +573,137 @@ export function PrizeDashboard({
             setLogoutTimer(settings.kioskSessionTimeoutSec ?? 10);
         }
     }, [isKioskLocked, kioskAutoLogoutOn, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
+
+    const handlePrizeShelfScan = useCallback(
+        async (raw: string) => {
+            if (!student || !schoolId || isRedeeming) return;
+            resetTimer();
+            const resolved = await resolvePrizeShelfScanForStudent(
+                firestore,
+                schoolId,
+                raw,
+                rewardPrizes,
+                student,
+                { enablePrizeAiSurprise: kioskAiFunInShop },
+            );
+            if ('error' in resolved) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: resolved.error.title,
+                    description: resolved.error.description,
+                });
+                return;
+            }
+            playSound('click');
+            setConfirmingPrize(resolved.prize);
+        },
+        [
+            firestore,
+            isRedeeming,
+            kioskAiFunInShop,
+            playSound,
+            resetTimer,
+            rewardPrizes,
+            schoolId,
+            student,
+            toast,
+        ],
+    );
+
+    const handlePickupVoucherScan = useCallback(
+        async (raw: string) => {
+            if (!student || !schoolId || isRedeeming) return;
+            resetTimer();
+            try {
+                const result = await fulfillPrizeVoucherFromScan(raw, student.id);
+                if (!result.success) {
+                    playSound('error');
+                    toast({
+                        variant: 'destructive',
+                        title: 'Pickup failed',
+                        description: result.message || 'Could not use this voucher.',
+                    });
+                    return;
+                }
+                if (result.status === 'already_fulfilled') {
+                    playSound('error');
+                    toast({
+                        variant: 'destructive',
+                        title: 'Already used',
+                        description: 'This pickup voucher was already scanned.',
+                    });
+                    return;
+                }
+                playSound('success');
+                toast({
+                    title: 'Pickup complete!',
+                    description: result.prizeName
+                        ? `Enjoy your ${result.prizeName}.`
+                        : 'Your prize is ready to collect.',
+                });
+                const prize =
+                    result.prizeId && rewardPrizes.length > 0
+                        ? rewardPrizes.find((p) => p.id === result.prizeId) ?? null
+                        : null;
+                const qty = Math.max(1, result.quantity ?? 1);
+                if (settings.enableVendingMachine && prize?.vendingMotor?.enabled) {
+                    if (!motorIsConnected()) {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Motor not connected',
+                            description:
+                                'This prize dispenses from the vending machine, but no motor is connected on this kiosk.',
+                        });
+                    } else {
+                        for (let i = 0; i < qty; i++) {
+                            try {
+                                await runVendingMotor(prize.vendingMotor);
+                            } catch (motorErr) {
+                                console.error('Vending motor dispense failed:', motorErr);
+                                toast({
+                                    variant: 'destructive',
+                                    title: 'Motor error',
+                                    description: getReadableErrorMessage(
+                                        motorErr,
+                                        'The vending motor failed.',
+                                    ),
+                                });
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Pickup failed',
+                    description: getReadableErrorMessage(e, 'Could not scan this voucher.'),
+                });
+            }
+        },
+        [
+            fulfillPrizeVoucherFromScan,
+            isRedeeming,
+            playSound,
+            resetTimer,
+            rewardPrizes,
+            schoolId,
+            settings.enableVendingMachine,
+            student,
+            toast,
+        ],
+    );
+
+    usePrizeShelfWedgeScan({
+        enabled: Boolean(student && schoolId && !studentLoading),
+        busy: isRedeeming || !!confirmingPrize,
+        onScan: (raw) => {
+            if (isPrizeVoucherScanCode(raw)) void handlePickupVoucherScan(raw);
+            else void handlePrizeShelfScan(raw);
+        },
+    });
 
     const closeAiSurprise = useCallback(() => {
         flushPendingTicketAfterAi();
@@ -751,6 +895,59 @@ export function PrizeDashboard({
         }
     };
 
+    const handlePickupVoucherReward = async (prize: Prize, quantity: number) => {
+        if (!student || isRedeeming || prize.offerPrintTicketOnRedeem !== true) return;
+        resetTimer();
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Offline',
+                description: OFFLINE_USER_MESSAGE,
+                duration: 8000,
+            });
+            return;
+        }
+        setIsRedeeming(true);
+        setConfirmingPrize(null);
+        try {
+            const result = await redeemPrize(student.id, prize, quantity, undefined, {
+                issuePickupVoucher: true,
+            });
+            if (!result.success || !result.activityId || !result.redeemedAt || typeof result.totalCost !== 'number') {
+                throw new Error(result.message || 'Could not issue pickup voucher.');
+            }
+            if (!result.voucherScanCode) {
+                throw new Error('Pickup barcode was not created. Try again.');
+            }
+
+            playSound('redeem');
+            toast({
+                title: 'Pickup voucher ready',
+                description: `Print the voucher, then scan its barcode at the pickup kiosk for ${prize.name}.`,
+                duration: 10000,
+            });
+
+            setTicketData(
+                buildPrizeRedeemTicketPayload({ ...student, id: studentId }, prize, result.activityId, result.redeemedAt, result.totalCost, quantity, {
+                    enableStudentThemes: settings.enableStudentThemes !== false,
+                    defaultStudentTheme: settings.defaultStudentTheme ?? undefined,
+                    enableStudentEmojiOnPrizeTickets: settings.enableStudentEmojiOnPrizeTickets === true,
+                    voucherScanCode: result.voucherScanCode,
+                }),
+            );
+        } catch (error: unknown) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Voucher failed',
+                description: getReadableErrorMessage(error, 'Could not issue pickup voucher.'),
+                duration: 8000,
+            });
+        } finally {
+            setIsRedeeming(false);
+        }
+    };
 
     const handlePrintTicket = useCallback(() => {
         if (!ticketData || !schoolId) return;
@@ -900,7 +1097,7 @@ export function PrizeDashboard({
         settings.defaultStudentTheme,
         settings.enableStudentThemes,
     );
-    const fontScale = activeTheme?.fontScale ?? 1.15;
+    const fontScale = activeTheme?.fontScale ?? 1.1;
     const themeBg = activeTheme?.background || '#020617';
     const themeCard = activeTheme?.cardBackground || themeBg;
     const computedThemeText =
@@ -934,7 +1131,7 @@ export function PrizeDashboard({
     const complementAccentTriplet = complementTripletForNavId('prize', settings.colorScheme);
 
     const fallbackStyle: CSSProperties = {
-        fontSize: '1.15em',
+        fontSize: '1.1em',
         ['--primary' as string]: prizeAccentTriplet,
         ['--chart-1' as string]: prizeAccentTriplet,
         ['--chart-2' as string]: complementAccentTriplet,
@@ -964,6 +1161,9 @@ export function PrizeDashboard({
             color: 'var(--theme-page-text)',
             fontFamily: activeTheme.fontFamily || 'inherit',
             fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
+            ...(typeof activeTheme.fontTracking === 'number'
+                ? { letterSpacing: `${activeTheme.fontTracking}em` }
+                : {}),
         } as CSSProperties)
         : fallbackStyle;
 
@@ -1166,7 +1366,11 @@ export function PrizeDashboard({
                                                 studentPoints={student.points ?? 0}
                                                 themed={!!activeTheme}
                                                 primaryForeground={primaryForeground}
-                                                onRedeem={() => setConfirmingPrize(prize)}
+                                                wholeCardClick
+                                                onRedeem={() => {
+                                                    playSound('click');
+                                                    setConfirmingPrize(prize);
+                                                }}
                                             />
                                         ))
                                     )}
@@ -1212,6 +1416,10 @@ export function PrizeDashboard({
                         const p = confirmingPrize;
                         if (p) void handleRedeemReward(p, quantity, aiPick);
                     }}
+                    onPickupVoucher={(quantity: number) => {
+                        const p = confirmingPrize;
+                        if (p) void handlePickupVoucherReward(p, quantity);
+                    }}
                 />
                 <AlertDialog open={!!ticketData} onOpenChange={(open) => { if (!open) setTicketData(null); }}>
                     <AlertDialogContent
@@ -1224,6 +1432,9 @@ export function PrizeDashboard({
                                 Print a voucher for{' '}
                                 <span className="text-xl font-black sm:text-2xl">{ticketData?.prizeName}</span>
                                 {ticketData && ticketData.quantity > 1 ? ` (x${ticketData.quantity})` : ''}.
+                                {ticketData?.voucherScanCode ? (
+                                    <> The barcode on the slip is scanned at the pickup kiosk to collect the prize.</>
+                                ) : null}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <PrinterReminderCallout

@@ -64,10 +64,7 @@ describe('housePointsSettings', () => {
       houseHallOfFameGridLayout: false,
     });
     expect(href).toContain('/demo-school/hall-of-fame?');
+    expect(href).toContain('fullscreen=1');
     expect(href).toContain('rankType=houses');
-    expect(href).toContain('sortBy=points');
-    expect(href).toContain('limit=12');
-    expect(href).toContain('autoScroll=1');
-    expect(href).toContain('grid=0');
   });
 });

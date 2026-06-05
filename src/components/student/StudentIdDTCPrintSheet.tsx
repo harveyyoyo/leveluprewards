@@ -43,8 +43,11 @@ export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }:
     (async () => {
       // Ensure theme Google Fonts are loaded before print so the PDF matches the theme wizard.
       const families = new Set(
-        students.map((s) => s.theme?.fontFamily).filter(Boolean) as string[]
+        students.map((s) => s.theme?.fontFamily).filter(Boolean) as string[],
       );
+      if (settings.enableStudentThemes !== false && settings.defaultStudentTheme?.fontFamily) {
+        families.add(settings.defaultStudentTheme.fontFamily);
+      }
       if (families.size > 0 && typeof document !== 'undefined' && document.fonts?.load) {
         try {
           await Promise.all(
@@ -63,7 +66,7 @@ export function StudentIdDTCPrintSheet({ students, classes, schoolId, onReady }:
       cancelled = true;
       if (t) clearTimeout(t);
     };
-  }, [isAppConfigLoading, isSchoolLoading, onReady, students]);
+  }, [isAppConfigLoading, isSchoolLoading, onReady, students, settings.defaultStudentTheme?.fontFamily, settings.enableStudentThemes]);
 
   const classMap = useMemo(() => {
     if (!classes) return new Map<string, string>();

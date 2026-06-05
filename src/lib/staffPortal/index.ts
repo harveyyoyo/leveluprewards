@@ -21,6 +21,8 @@ export {
   staffPortalTeacherOperatedAdminNote,
   staffPortalSchoolwideTeacherNote,
   STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES,
+  normalizeStaffPortalTabValue,
+  normalizeStaffPortalTabValues,
 } from './tabRegistry';
 export {
   staffPortalTabIsValid,

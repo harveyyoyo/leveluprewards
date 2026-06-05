@@ -46,6 +46,8 @@ export type ClassroomSeatingPrefs = {
   showSessionTotals: boolean;
   /** Append last name after the desk label (nickname or first name). */
   showLastName: boolean;
+  /** Show student sticker / theme emoji on each desk avatar (photo still wins when set). */
+  showStudentEmoji: boolean;
   /** Optional quick deduct button in the award menu. */
   correctionPoints: number;
   correctionLabel: string;
@@ -66,6 +68,8 @@ export type ClassroomSeatingPrefs = {
   showClassAwardButton: boolean;
   /** Show Burst button to select several students and award once. */
   showBurstAward: boolean;
+  /** When Rewards pillar is on: local classroom balance vs school reward categories. Ignored when Rewards is off. */
+  awardSource: ClassroomAwardSource;
   /** Play arcade sounds when awarding or deducting points from the chart. */
   awardSounds: boolean;
   /** Internal — bumps when defaults change. */
@@ -73,6 +77,9 @@ export type ClassroomSeatingPrefs = {
 };
 
 export type ClassroomKioskFlyUpSize = 'small' | 'medium' | 'large';
+
+/** When Rewards pillar is on: local = quick awards + classroom balance; categories = Points tab categories + rewards balance. */
+export type ClassroomAwardSource = 'local' | 'categories';
 
 export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
   { id: 'quick', label: 'Quick tap', points: 5, description: 'Quick award' },
@@ -82,7 +89,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 13;
+export const CLASSROOM_PREFS_VERSION = 15;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -93,6 +100,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   showPointBalances: true,
   showSessionTotals: true,
   showLastName: false,
+  showStudentEmoji: false,
   correctionPoints: 2,
   correctionLabel: 'Reminder',
   correctionDescription: 'Behavior reminder',
@@ -104,6 +112,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   showRandomPicker: false,
   showClassAwardButton: false,
   showBurstAward: false,
+  awardSource: 'categories',
   awardSounds: true,
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
@@ -115,6 +124,10 @@ export function normalizeKioskFlyUpSize(size: unknown): ClassroomKioskFlyUpSize 
     return size as ClassroomKioskFlyUpSize;
   }
   return DEFAULT_CLASSROOM_PREFS.kioskFlyUpSize;
+}
+
+export function normalizeClassroomAwardSource(source: unknown): ClassroomAwardSource {
+  return source === 'local' ? 'local' : 'categories';
 }
 
 const LAYOUT_PREFIX = 'levelup-classroom-layout:';
@@ -219,6 +232,7 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showPointBalances: parsed.showPointBalances ?? DEFAULT_CLASSROOM_PREFS.showPointBalances,
       showSessionTotals: parsed.showSessionTotals ?? DEFAULT_CLASSROOM_PREFS.showSessionTotals,
       showLastName: parsed.showLastName ?? DEFAULT_CLASSROOM_PREFS.showLastName,
+      showStudentEmoji: parsed.showStudentEmoji ?? DEFAULT_CLASSROOM_PREFS.showStudentEmoji,
       correctionPoints: parsed.correctionPoints ?? DEFAULT_CLASSROOM_PREFS.correctionPoints,
       correctionLabel: parsed.correctionLabel ?? DEFAULT_CLASSROOM_PREFS.correctionLabel,
       correctionDescription:
@@ -232,6 +246,7 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showClassAwardButton:
         parsed.showClassAwardButton ?? DEFAULT_CLASSROOM_PREFS.showClassAwardButton,
       showBurstAward: parsed.showBurstAward ?? DEFAULT_CLASSROOM_PREFS.showBurstAward,
+      awardSource: normalizeClassroomAwardSource(parsed.awardSource),
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };

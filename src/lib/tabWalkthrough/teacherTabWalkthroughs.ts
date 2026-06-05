@@ -48,34 +48,28 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom Management',
+    title: 'Classroom Live',
     subtitle: 'Same sections as school admin',
     steps: [
       {
-        title: 'Setup',
-        checklist: [
-          'Open Setup to turn on Principal, Room display, or Parent portal.',
-          'Your choices apply for all staff — same tabs for teachers and admins.',
-        ],
-      },
-      {
         title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
-          'Choose your class and tap students for quick awards.',
-          'Shift+click for a behavior note (see the Behavior section).',
+          'Launch Monitor Display for quick awards during the lesson.',
+          'Chart defaults, access, labels, alerts, and auto-exit live in Class Awards Live.',
+          'Chart style, Layout, Desk display, and Toolbar options on the monitor. Choose Class there when you have more than one.',
         ],
       },
       {
         title: 'Behavior & Principal',
         checklist: [
-          'Behavior lists notes you add from the chart.',
-          'Turn on Principal in Setup to open the school-wide timeline tab.',
+          'Behavior lists notes you add from the live monitor.',
+          'Turn on Principal in Class Awards Live to preview the school-wide timeline.',
         ],
       },
       {
         title: 'Room display',
         checklist: [
-          'Use Room display to show the live chart on a classroom screen.',
+          'Use Room display to show session stats on a classroom screen.',
         ],
       },
     ],

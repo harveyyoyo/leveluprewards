@@ -103,7 +103,6 @@ import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame'
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
 import { StaffPortalTeacherToolNotice } from '@/components/staff/StaffPortalTeacherToolNotice';
-import { StaffPortalPageIntro } from '@/components/staff/StaffPortalPageIntro';
 import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
 import {
   staffPortalAddOnTabTriggerClassName,
@@ -111,7 +110,7 @@ import {
   staffPortalTabTriggerClassName,
   staffPortalWorkspaceMainClassName,
 } from '@/components/staff/staffPortalNavStyles';
-import { staffPortalAdminAddOnIsOn, staffPortalAllAddOnTabValues, staffPortalCoreTabs, staffPortalMergePinnedAddOnValues, staffPortalOrderMainTabs, staffPortalSortPinnedTabDefs, staffPortalSortTabs } from '@/lib/staffPortal';
+import { normalizeStaffPortalTabValue, normalizeStaffPortalTabValues, staffPortalAdminAddOnIsOn, staffPortalAllAddOnTabValues, staffPortalCoreTabs, staffPortalMergePinnedAddOnValues, staffPortalOrderMainTabs, staffPortalSortPinnedTabDefs, staffPortalSortTabs } from '@/lib/staffPortal';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
 import { StaffPortalDocumentTitle } from '@/components/staff/StaffPortalDocumentTitle';
@@ -226,12 +225,8 @@ const AdminBadgesTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminBadgesTab'), 'AdminBadgesTab'),
   { loading: tabLoader, ssr: false },
 );
-const AdminBulletinBoardTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminBulletinBoardTab'), 'AdminBulletinBoardTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminSmartScreenTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminSmartScreenTab'), 'AdminSmartScreenTab'),
+const AdminDisplaysTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminDisplaysTab'), 'AdminDisplaysTab'),
   { loading: tabLoader, ssr: false },
 );
 const AdminHallOfFameTab = dynamic(
@@ -404,6 +399,7 @@ function AdminDashboardInner() {
   const [csvImportBusy, setCsvImportBusy] = useState(false);
   const { settings, updateSettings } = useSettings();
   const couponsTabMigratedRef = useRef(false);
+  const displaysTabMigratedRef = useRef(false);
 
   useEffect(() => {
     if (couponsTabMigratedRef.current) return;
@@ -423,6 +419,32 @@ function AdminDashboardInner() {
       adminMainTabOrder: nextOrder,
     });
   }, [settings.adminMainTabOrder, settings.adminPinnedAddOnTabs, updateSettings]);
+
+  useEffect(() => {
+    if (displaysTabMigratedRef.current) return;
+    const pinned = settings.adminPinnedAddOnTabs || [];
+    const order = settings.adminMainTabOrder || [];
+    const hidden = settings.adminHiddenAddOnTabs || [];
+    const hadLegacyDisplaysTab =
+      pinned.some((v) => v === 'bulletinboard' || v === 'smart-screen') ||
+      order.some((v) => v === 'bulletinboard' || v === 'smart-screen') ||
+      hidden.some((v) => v === 'bulletinboard' || v === 'smart-screen');
+    if (!hadLegacyDisplaysTab) {
+      displaysTabMigratedRef.current = true;
+      return;
+    }
+    displaysTabMigratedRef.current = true;
+    updateSettings({
+      adminPinnedAddOnTabs: normalizeStaffPortalTabValues(pinned),
+      adminMainTabOrder: normalizeStaffPortalTabValues(order),
+      adminHiddenAddOnTabs: normalizeStaffPortalTabValues(hidden),
+    });
+  }, [
+    settings.adminHiddenAddOnTabs,
+    settings.adminMainTabOrder,
+    settings.adminPinnedAddOnTabs,
+    updateSettings,
+  ]);
 
   // All Firestore reads the dashboard needs live in a single hook so this
   // component only has to worry about orchestration and UI state.
@@ -518,7 +540,7 @@ function AdminDashboardInner() {
   const [activeMainTab, setActiveMainTab] = useState('welcome');
 
   useEffect(() => {
-    const tab = searchParams.get('tab')?.trim().toLowerCase();
+    const tab = normalizeStaffPortalTabValue(searchParams.get('tab')?.trim().toLowerCase() || '');
     if (tab && ADMIN_SETTINGS_TAB_VALUES.has(tab)) {
       setActiveMainTab(tab);
     }
@@ -585,29 +607,22 @@ function AdminDashboardInner() {
         disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame'), adminPinnedAddOnTabs: removePinned('halloffame') }),
       },
       {
-        value: 'bulletinboard',
-        label: 'Bulletin',
-        icon: Megaphone,
-        /** Match default-on semantics (omit/false only disables). */
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'bulletinboard'),
-        enable: () => updateSettings({ bulletinEnabled: true, adminHiddenAddOnTabs: removeHidden('bulletinboard') }),
-        disable: () => updateSettings({ bulletinEnabled: false, adminHiddenAddOnTabs: removeHidden('bulletinboard'), adminPinnedAddOnTabs: removePinned('bulletinboard') }),
-      },
-      {
-        value: 'smart-screen',
-        label: 'Smart Screen',
+        value: 'displays',
+        label: 'Displays',
         icon: Monitor,
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'smart-screen'),
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'displays'),
         enable: () =>
           updateSettings({
+            bulletinEnabled: true,
             smartScreenEnabled: true,
-            adminHiddenAddOnTabs: removeHidden('smart-screen'),
+            adminHiddenAddOnTabs: removeHidden('displays'),
           }),
         disable: () =>
           updateSettings({
+            bulletinEnabled: false,
             smartScreenEnabled: false,
-            adminHiddenAddOnTabs: removeHidden('smart-screen'),
-            adminPinnedAddOnTabs: removePinned('smart-screen'),
+            adminHiddenAddOnTabs: removeHidden('displays'),
+            adminPinnedAddOnTabs: removePinned('displays'),
           }),
       },
       {
@@ -878,10 +893,8 @@ function AdminDashboardInner() {
       case 'halloffame':
         patch.enableClassLeaderboard = true;
         break;
-      case 'bulletinboard':
+      case 'displays':
         patch.bulletinEnabled = true;
-        break;
-      case 'smart-screen':
         patch.smartScreenEnabled = true;
         break;
       case 'library':
@@ -946,13 +959,10 @@ function AdminDashboardInner() {
           patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'halloffame');
           break;
-        case 'bulletinboard':
+        case 'displays':
           patch.bulletinEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
-          break;
-        case 'smart-screen':
           patch.smartScreenEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'smart-screen');
+          nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'library':
           patch.payLibrary = false;
@@ -1033,10 +1043,8 @@ function AdminDashboardInner() {
         case 'halloffame':
           patch.enableClassLeaderboard = true;
           break;
-        case 'bulletinboard':
+        case 'displays':
           patch.bulletinEnabled = true;
-          break;
-        case 'smart-screen':
           patch.smartScreenEnabled = true;
           break;
         case 'library':
@@ -1101,13 +1109,10 @@ function AdminDashboardInner() {
           patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'halloffame');
           break;
-        case 'bulletinboard':
+        case 'displays':
           patch.bulletinEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'bulletinboard');
-          break;
-        case 'smart-screen':
           patch.smartScreenEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'smart-screen');
+          nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'library':
           patch.payLibrary = false;
@@ -1672,11 +1677,6 @@ function AdminDashboardInner() {
           style={adminTabAppearance.style}
         >
         <StaffPortalContentWidth className="flex min-h-0 min-w-0 w-full flex-1 flex-col gap-3">
-        <StaffPortalPageIntro
-          title="School admin"
-          subtitle="Students, classes, points, prizes, and school settings."
-          helperContent="School administrators manage students, staff, points, prizes, and school settings from here."
-        />
 
         <StaffPortalWorkspace>
           <div className={staffPortalSidebarRailClassName()}>
@@ -2154,18 +2154,10 @@ function AdminDashboardInner() {
             <AdminHallOfFameTab schoolId={schoolId!} />
           </TabsContent>
 
-          <TabsContent value="bulletinboard" className={scrollingAdminTabClassName}>
-            <AdminBulletinBoardTab
+          <TabsContent value="displays" className={scrollingAdminTabClassName}>
+            <AdminDisplaysTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
-              settings={settings}
-              updateSettings={updateSettings}
-            />
-          </TabsContent>
-
-          <TabsContent value="smart-screen" className={scrollingAdminTabClassName}>
-            <AdminSmartScreenTab
-              schoolId={schoolId!}
               settings={settings}
               updateSettings={updateSettings}
             />

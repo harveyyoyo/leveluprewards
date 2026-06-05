@@ -635,8 +635,8 @@ export function LibraryManagementPanel({
                 <div>
                   <p className="text-sm font-bold">Student self-checkout</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Kiosk overlay: students scan their ID, then each book. Admin or librarian passcode required to
-                    close.
+                    Shared-device flow (enable under Library → Settings). Students scan their ID, then each book.
+                    Requires a librarian passcode to close.
                   </p>
                 </div>
                 <LibrarySelfCheckoutLaunchButton

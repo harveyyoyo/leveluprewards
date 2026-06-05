@@ -1889,10 +1889,20 @@ exports.redeemPrizeServer = functions
     const prizeId = String(data.prizeId).trim();
     const rawQuantity = Number(data.quantity ?? 1);
     const quantity = Number.isFinite(rawQuantity) ? Math.floor(rawQuantity) : 1;
-    const markFulfilled = data.markFulfilled === true;
+    const issuePickupVoucher = data.issuePickupVoucher === true;
+    const markFulfilled = issuePickupVoucher ? false : data.markFulfilled === true;
     if (quantity < 1 || quantity > 99) {
       throw new functions.https.HttpsError("invalid-argument", "Quantity must be between 1 and 99.");
     }
+
+    const generateVoucherScanCode = () => {
+      const chars = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+      let code = "VR";
+      for (let i = 0; i < 8; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return code;
+    };
 
     const studentRef = db.collection("schools").doc(schoolId).collection("students").doc(studentId);
     const schoolRef = db.collection("schools").doc(schoolId);
@@ -1971,13 +1981,38 @@ exports.redeemPrizeServer = functions
       }
 
       const activityRef = studentRef.collection("activities").doc();
+      let voucherScanCode: string | undefined;
+      if (issuePickupVoucher) {
+        voucherScanCode = generateVoucherScanCode();
+        const lookupRef = db
+          .collection("schools")
+          .doc(schoolId)
+          .collection("prizeVoucherByCode")
+          .doc(voucherScanCode);
+        tx.set(lookupRef, {
+          voucherScanCode,
+          studentId,
+          activityId: activityRef.id,
+          prizeId,
+          prizeName: String(prize.name || "Prize"),
+          quantity,
+          redeemedAt,
+          fulfilled: false,
+        });
+      }
+
       const activityData: Record<string, unknown> = {
-        desc: `Redeemed: ${String(prize.name || "Prize")}${quantity > 1 ? ` (x${quantity})` : ""}`,
+        desc: `Redeemed: ${String(prize.name || "Prize")}${quantity > 1 ? ` (x${quantity})` : ""}${issuePickupVoucher ? " (pickup voucher)" : ""}`,
         amount: -totalCost,
         date: redeemedAt,
         fulfilled: markFulfilled,
       };
       if (teacherIds[0]) activityData.teacherId = teacherIds[0];
+      if (issuePickupVoucher && voucherScanCode) {
+        activityData.pickupVoucher = true;
+        activityData.voucherScanCode = voucherScanCode;
+        activityData.prizeId = prizeId;
+      }
 
       tx.update(studentRef, { points: studentPoints - totalCost });
       tx.set(activityRef, activityData);
@@ -1990,7 +2025,7 @@ exports.redeemPrizeServer = functions
         });
       }
 
-      return { activityId: activityRef.id, totalCost };
+      return { activityId: activityRef.id, totalCost, voucherScanCode };
     });
 
     return {
@@ -1998,10 +2033,81 @@ exports.redeemPrizeServer = functions
       activityId: result.activityId,
       redeemedAt,
       totalCost: result.totalCost,
+      voucherScanCode: result.voucherScanCode,
       message: "Redeemed successfully",
     };
   }
 );
+
+/** Callable: scan printed pickup voucher (VR…) at a separate kiosk and mark fulfilled. */
+exports.fulfillPrizeVoucherServer = functions
+  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
+  .https.onCall(async (data: any, context: functions.https.CallableContext) => {
+    requireAuth(context);
+    requireString(data.schoolId, "schoolId");
+    requireString(data.voucherScanCode, "voucherScanCode");
+
+    const schoolId = String(data.schoolId).trim().toLowerCase();
+    const rawCode = String(data.voucherScanCode).trim().toUpperCase().replace(/^\*+|\*+$/g, "");
+    if (!rawCode.startsWith("VR") || rawCode.length < 8) {
+      throw new functions.https.HttpsError("invalid-argument", "Not a pickup voucher barcode.");
+    }
+
+    const db = admin.firestore();
+    if (!(await hasKioskMembershipOrStaff(schoolId, context, ["admin", "teacher", "prizeClerk"]))) {
+      throw new functions.https.HttpsError("permission-denied", "School entry required.");
+    }
+
+    const expectedStudentId =
+      typeof data.expectedStudentId === "string" && data.expectedStudentId.trim()
+        ? data.expectedStudentId.trim()
+        : null;
+
+    const lookupRef = db.collection("schools").doc(schoolId).collection("prizeVoucherByCode").doc(rawCode);
+    const lookupSnap = await lookupRef.get();
+    if (!lookupSnap.exists) {
+      throw new functions.https.HttpsError("not-found", "Voucher not found.");
+    }
+    const lookup = lookupSnap.data() as any;
+    if (expectedStudentId && lookup.studentId !== expectedStudentId) {
+      throw new functions.https.HttpsError("failed-precondition", "This voucher belongs to another student.");
+    }
+    if (lookup.fulfilled === true) {
+      return {
+        success: true,
+        status: "already_fulfilled",
+        prizeId: lookup.prizeId,
+        prizeName: lookup.prizeName,
+      };
+    }
+
+    const studentId = String(lookup.studentId);
+    const activityId = String(lookup.activityId);
+    const activityRef = db
+      .collection("schools")
+      .doc(schoolId)
+      .collection("students")
+      .doc(studentId)
+      .collection("activities")
+      .doc(activityId);
+
+    await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(lookupRef);
+      if (!fresh.exists || fresh.data()?.fulfilled === true) return;
+      tx.update(activityRef, { fulfilled: true });
+      tx.update(lookupRef, { fulfilled: true });
+    });
+
+    return {
+      success: true,
+      status: "fulfilled",
+      studentId,
+      activityId,
+      prizeId: lookup.prizeId,
+      prizeName: lookup.prizeName,
+      quantity: lookup.quantity ?? 1,
+    };
+  });
 
 /** Callable: sync offline pending coupon redemptions. */
 exports.syncPendingRedemptions = functions.https.onCall(

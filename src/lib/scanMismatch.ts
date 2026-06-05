@@ -2,6 +2,7 @@ import { doc, getDoc, type Firestore } from 'firebase/firestore';
 import { lookupStudentId } from '@/lib/db/lookup';
 import { isCouponScanCode, normalizeCouponCodeInput } from '@/lib/coupons/couponScanCode';
 import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
+import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
 import { loadCouponSnapshot } from '@/lib/coupons/couponCache';
 
 export type ScanMismatchAlert = {
@@ -47,11 +48,19 @@ export async function scanMismatchAtStudentLogin(
     };
   }
 
+  if (isPrizeVoucherScanCode(trimmed)) {
+    return {
+      title: "That's a pickup voucher",
+      description:
+        'Sign in with your student card first, then scan this voucher at the pickup kiosk to collect your prize.',
+    };
+  }
+
   if (isPrizeScanCode(trimmed)) {
     return {
       title: "That's a prize shelf card",
       description:
-        'Prize shelf barcodes start with PZ and are used in the rewards shop after you sign in. Scan your student card here to log in.',
+        'Sign in with your student card first. After you are logged in, scan the prize shelf card again to redeem that reward.',
     };
   }
 
@@ -82,11 +91,19 @@ export async function scanMismatchAtCouponRedeem(
     }
   }
 
+  if (isPrizeVoucherScanCode(trimmed)) {
+    return {
+      title: "That's a pickup voucher",
+      description:
+        'Pickup vouchers start with VR. Scan the barcode on your printed slip here to collect the prize at this kiosk.',
+    };
+  }
+
   if (isPrizeScanCode(trimmed)) {
     return {
       title: "That's a prize shelf card",
       description:
-        'Shelf barcodes start with PZ. Open the rewards shop to redeem prizes — coupon codes are 6-digit numbers on reward slips.',
+        'Prize shelf barcodes start with PZ. Scan the prize card while you are signed in to redeem it, or tap a reward in the shop.',
     };
   }
 

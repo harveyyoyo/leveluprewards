@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, type CSSProperties } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -13,7 +14,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
-import { parseHallOfFameSearchParams, type HallOfFameRankType } from '@/lib/hallOfFameUrlConfig';
+import {
+  parseHallOfFameUrlRankTypePin,
+  resolveHallOfFameDisplayConfig,
+  hallOfFameGridColumnClass,
+  hallOfFameUsesClientSideStudentRanking,
+  buildPodiumDisplaySlots,
+  clampHallOfFamePodiumSize,
+  getHallOfFameStageSizeStyle,
+  isHallOfFamePointsSort,
+  type PodiumPlace,
+} from '@/lib/hallOfFameUrlConfig';
 import { isHouseStudentPointsRollupEnabled } from '@/lib/houses/housePointsSettings';
 import { computeGoalProgress } from '@/lib/goalsProgress';
 import { getPeriodKeys } from '@/lib/db/helpers';
@@ -25,25 +36,67 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 
-function HallOfFameSkeleton({ animBackdrop }: { animBackdrop: boolean }) {
-    return (
+function LeaderboardName({
+  name,
+  className,
+  variant = 'grid',
+}: {
+  name: string;
+  className?: string;
+  variant?: 'grid' | 'podium';
+}) {
+  return (
+    <p
+      className={cn(
+        'font-black text-foreground tracking-tight break-words [overflow-wrap:anywhere]',
+        variant === 'podium'
+          ? 'w-full truncate px-0.5 leading-snug'
+          : 'line-clamp-2 leading-snug',
+        className,
+      )}
+      title={name}
+    >
+      {name}
+    </p>
+  );
+}
+
+function HallOfFameSkeleton({
+    isFullscreen,
+    isPortrait,
+}: {
+    isFullscreen: boolean;
+    isPortrait: boolean;
+}) {
+    const inner = (
         <div
             className={cn(
-                "min-h-screen p-4 sm:p-8 md:p-12 flex flex-col items-center",
-                animBackdrop ? "bg-transparent" : "bg-background",
+                'flex flex-col overflow-hidden bg-background p-4 sm:p-6',
+                !isFullscreen && 'min-h-screen w-full',
             )}
+            style={isFullscreen ? getHallOfFameStageSizeStyle(isPortrait) : undefined}
         >
-            <Skeleton className="h-16 w-64 mb-16 rounded-2xl" />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-full items-end mb-12">
-                <Skeleton className="h-64 w-full rounded-3xl" />
-                <Skeleton className="h-80 w-full rounded-3xl" />
-                <Skeleton className="h-56 w-full rounded-3xl" />
+            <Skeleton className="h-14 w-full mb-4 rounded-2xl shrink-0" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full items-end mb-6 flex-1 min-h-0">
+                <Skeleton className="h-40 w-full rounded-3xl" />
+                <Skeleton className="h-48 w-full rounded-3xl" />
+                <Skeleton className="h-36 w-full rounded-3xl" />
             </div>
-            <div className="w-full max-w-full space-y-3">
-                {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-2xl" />)}
+            <div className="w-full space-y-2 shrink-0">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 w-full rounded-2xl" />)}
             </div>
         </div>
     );
+
+    if (isFullscreen) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
+                {inner}
+            </div>
+        );
+    }
+
+    return inner;
 }
 
 export default function HallOfFamePage() {
@@ -54,89 +107,52 @@ export default function HallOfFamePage() {
     const searchParams = useSearchParams();
     const { settings } = useSettings();
     const [hoveredIndex, setHoveredIndex] = useState<string | null>(null);
+    const [autoScrollPaused, setAutoScrollPaused] = useState(false);
+    const [portalReady, setPortalReady] = useState(false);
 
     const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
 
-    const urlConfig = useMemo(() => {
-        const urlRank = (searchParams?.get('rankType') || searchParams?.get('rank') || searchParams?.get('view') || '')
-            .trim()
-            .toLowerCase();
-        const wantsHouses =
-            urlRank === 'houses' || urlRank === 'house-standings' || urlRank === 'house_standings';
-        const houseDefaults = wantsHouses
-            ? {
-                  hallOfFameRankType: 'houses' as const,
-                  hallOfFameSortBy: settings.houseHallOfFameSortBy ?? settings.hallOfFameSortBy,
-                  hallOfFameScope: 'all' as const,
-                  hallOfFameLimit: settings.houseHallOfFameLimit ?? settings.hallOfFameLimit,
-                  hallOfFamePodiumSize: settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize,
-                  hallOfFameGridLayout: settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout,
-              }
-            : {
-                  hallOfFameRankType: settings.hallOfFameRankType,
-                  hallOfFameSortBy: settings.hallOfFameSortBy,
-                  hallOfFameScope: settings.hallOfFameScope,
-                  hallOfFameLimit: settings.hallOfFameLimit,
-                  hallOfFamePodiumSize: settings.hallOfFamePodiumSize,
-                  hallOfFameGridLayout: settings.hallOfFameGridLayout,
-              };
-        return parseHallOfFameSearchParams(searchParams, houseDefaults);
-    }, [
-        searchParams,
-        settings.hallOfFameRankType,
-        settings.hallOfFameSortBy,
-        settings.hallOfFameScope,
-        settings.hallOfFameLimit,
-        settings.hallOfFamePodiumSize,
-        settings.hallOfFameGridLayout,
-        settings.houseHallOfFameSortBy,
-        settings.houseHallOfFameLimit,
-        settings.houseHallOfFamePodiumSize,
-        settings.houseHallOfFameGridLayout,
-    ]);
+    useEffect(() => {
+        setPortalReady(true);
+    }, []);
 
-    const [rankType, setRankType] = useState<HallOfFameRankType>(urlConfig.rankType);
-    const [sortBy, setSortBy] = useState<string>(urlConfig.sortBy);
-    const [scope, setScope] = useState<'all' | string>(urlConfig.scope);
-    const [limit, setLimit] = useState<number>(urlConfig.limit);
-    const [podiumSize, setPodiumSize] = useState<number>(urlConfig.podiumSize);
-    const [gridLayout, setGridLayout] = useState<boolean>(urlConfig.gridLayout);
+    const urlRankTypePin = useMemo(
+        () => parseHallOfFameUrlRankTypePin(searchParams),
+        [searchParams],
+    );
+
+    const displayConfig = useMemo(
+        () => resolveHallOfFameDisplayConfig(settings, urlRankTypePin),
+        [
+            settings,
+            urlRankTypePin,
+        ],
+    );
+
+    const {
+        rankType,
+        sortBy,
+        scope,
+        limit,
+        podiumSize,
+        gridLayout,
+        gridColumns,
+        layout,
+    } = displayConfig;
+    const autoScroll = displayConfig.autoScroll && !autoScrollPaused;
+
+    useEffect(() => {
+        if (displayConfig.autoScroll) setAutoScrollPaused(false);
+    }, [displayConfig.autoScroll]);
+
     const [goalsProgressMap, setGoalsProgressMap] = useState<Record<string, number>>({});
+    const contentScrollRef = useRef<HTMLDivElement>(null);
 
     const schoolDocRef = useSchoolMetadataDocRef();
     const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
     const schoolName =
       schoolMeta?.name ||
       (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()) : '');
-
-    // URL params lock the display (e.g. House Hall of Fame from Admin → Houses).
-    useEffect(() => {
-        if (!urlConfig.locked) return;
-        setRankType(urlConfig.rankType);
-        setSortBy(urlConfig.sortBy);
-        setScope(urlConfig.scope);
-        setLimit(urlConfig.limit);
-        setPodiumSize(urlConfig.podiumSize);
-        setGridLayout(urlConfig.gridLayout);
-    }, [urlConfig]);
-
-    useEffect(() => {
-        if (urlConfig.locked) return;
-        setRankType(settings.hallOfFameRankType ?? 'students');
-        setSortBy(settings.hallOfFameSortBy ?? 'lifetimePoints');
-        setScope(settings.hallOfFameScope ?? 'all');
-        setLimit(settings.hallOfFameLimit ?? 50);
-        setPodiumSize(settings.hallOfFamePodiumSize ?? 3);
-        setGridLayout(settings.hallOfFameGridLayout ?? true);
-    }, [
-        urlConfig.locked,
-        settings.hallOfFameRankType,
-        settings.hallOfFameSortBy,
-        settings.hallOfFameScope,
-        settings.hallOfFameLimit,
-        settings.hallOfFamePodiumSize,
-        settings.hallOfFameGridLayout,
-    ]);
 
     useEffect(() => {
         if (isInitialized && !canAccessHallOfFameRoute(loginState)) {
@@ -154,24 +170,19 @@ export default function HallOfFamePage() {
 
     const studentsQuery = useMemoFirebase(() => {
         if (!schoolId) return null;
-        let orderByField = 'lifetimePoints';
-        if (sortBy === 'points') orderByField = 'points';
-        else if (sortBy === 'period_day') orderByField = `pointsByPeriod.${currentPeriodKeys.day}`;
-        else if (sortBy === 'period_week') orderByField = `pointsByPeriod.${currentPeriodKeys.week}`;
-        else if (sortBy === 'period_month') orderByField = `pointsByPeriod.${currentPeriodKeys.month}`;
-        
-        return query(
-            collection(firestore, 'schools', schoolId, 'students'),
-            orderBy(orderByField, 'desc'),
-            firestoreLimit(200) // Fetch more for client-side category sorting
-        );
-    }, [firestore, schoolId, sortBy, currentPeriodKeys]);
+        const studentsRef = collection(firestore, 'schools', schoolId, 'students');
+        if (hallOfFameUsesClientSideStudentRanking(sortBy)) {
+            return query(studentsRef, firestoreLimit(500));
+        }
+        const orderByField = sortBy === 'points' ? 'points' : 'lifetimePoints';
+        return query(studentsRef, orderBy(orderByField, 'desc'), firestoreLimit(200));
+    }, [firestore, schoolId, sortBy]);
     const { data: allTopStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
-    const showHouseLeaderboard = rankType === 'houses' || urlConfig.rankType === 'houses';
+    const showHouseLeaderboard = rankType === 'houses' || urlRankTypePin === 'houses';
     const housesQuery = useMemoFirebase(
         () =>
             schoolId && (settings.enableHouses || showHouseLeaderboard)
@@ -278,10 +289,8 @@ export default function HallOfFamePage() {
             if (!allTopStudents) return [];
             let sorted = [...allTopStudents];
 
-            if (sortBy !== 'points' && sortBy !== 'lifetimePoints' && !sortBy.startsWith('period_')) {
-                // It's a category sort
-                const categoryName = sortBy;
-                sorted.sort((a, b) => (b.categoryPoints?.[categoryName] || 0) - (a.categoryPoints?.[categoryName] || 0));
+            if (hallOfFameUsesClientSideStudentRanking(sortBy)) {
+                sorted.sort((a, b) => getPointsForStudent(b) - getPointsForStudent(a));
             }
 
             if (scope !== 'all') {
@@ -314,7 +323,7 @@ export default function HallOfFamePage() {
                 id: c.id,
                 type: 'class',
                 name: c.name || 'Unassigned',
-                photoUrl: null,
+                photoUrl: undefined,
                 points: totals.get(c.id) ?? 0,
                 classId: c.id,
                 className: c.name || 'Unassigned',
@@ -323,7 +332,7 @@ export default function HallOfFamePage() {
             rows.sort((a, b) => b.points - a.points);
             return rows.slice(0, limit);
         } else if (rankType === 'houses') {
-            if (!houses) return [];
+            if (!houses?.length) return [];
             const rollup = isHouseStudentPointsRollupEnabled(settings);
             const memberCounts = new Map<string, number>();
             for (const s of allTopStudents ?? []) {
@@ -334,7 +343,7 @@ export default function HallOfFamePage() {
                 id: h.id,
                 type: 'house' as const,
                 name: h.name,
-                photoUrl: h.crestUrl ?? null,
+                photoUrl: h.crestUrl || undefined,
                 points,
                 classId: h.id,
                 className: h.value || h.motto || 'House team',
@@ -343,25 +352,26 @@ export default function HallOfFamePage() {
                 motto: h.motto,
                 memberCount: memberCounts.get(h.id),
             });
+            const houseDocPoints = (h: House) =>
+                sortBy === 'points' ? (h.points ?? 0) : (h.lifetimePoints ?? h.points ?? 0);
 
-            if (sortBy === 'points' || sortBy === 'lifetimePoints') {
-                const rows = houses.map((h) =>
-                    makeHouseRow(
-                        h,
-                        sortBy === 'lifetimePoints' ? h.lifetimePoints ?? 0 : h.points ?? 0,
-                    ),
-                );
+            if (isHallOfFamePointsSort(sortBy)) {
+                const rows = houses.map((h) => makeHouseRow(h, houseDocPoints(h)));
                 rows.sort((a, b) => b.points - a.points);
                 return rows.slice(0, limit);
             }
-            if (!rollup || !allTopStudents) return [];
-            const totals = new Map<string, number>();
-            for (const s of allTopStudents) {
-                const hid = s.houseId;
-                if (!hid) continue;
-                totals.set(hid, (totals.get(hid) ?? 0) + getPointsForStudent(s));
+            if (sortBy.startsWith('period_') && rollup && allTopStudents?.length) {
+                const totals = new Map<string, number>();
+                for (const s of allTopStudents) {
+                    const hid = s.houseId;
+                    if (!hid) continue;
+                    totals.set(hid, (totals.get(hid) ?? 0) + getPointsForStudent(s));
+                }
+                const rows = houses.map((h) => makeHouseRow(h, totals.get(h.id) ?? 0));
+                rows.sort((a, b) => b.points - a.points);
+                return rows.slice(0, limit);
             }
-            const rows = houses.map((h) => makeHouseRow(h, totals.get(h.id) ?? 0));
+            const rows = houses.map((h) => makeHouseRow(h, houseDocPoints(h)));
             rows.sort((a, b) => b.points - a.points);
             return rows.slice(0, limit);
         } else {
@@ -375,7 +385,7 @@ export default function HallOfFamePage() {
                 id: g.id,
                 type: 'goal',
                 name: g.title,
-                photoUrl: null,
+                photoUrl: undefined,
                 points: goalsProgressMap[g.id] || 0,
                 targetPoints: g.targetPoints,
                 classId: g.classId,
@@ -402,21 +412,151 @@ export default function HallOfFamePage() {
         settings,
     ]);
 
-    const animBackdrop = globalAnimatedBackdropActive(settings);
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setAutoScrollPaused(true);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
-    if (
+    useEffect(() => {
+        if (!isFullscreen) return;
+        const prevHtml = document.documentElement.style.overflow;
+        const prevBody = document.body.style.overflow;
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.documentElement.style.overflow = prevHtml;
+            document.body.style.overflow = prevBody;
+        };
+    }, [isFullscreen]);
+
+    const animBackdrop = globalAnimatedBackdropActive(settings);
+    const isPortrait = layout === 'portrait';
+    const clampedPodiumSize = clampHallOfFamePodiumSize(podiumSize);
+    const podium = topItems?.slice(0, clampedPodiumSize) ?? [];
+    const others = topItems?.slice(clampedPodiumSize) ?? [];
+    const podiumSlots = buildPodiumDisplaySlots(podium, clampedPodiumSize);
+    const podiumSlotCount = podiumSlots.length;
+
+    const needsClasses =
+        rankType === 'classes' ||
+        rankType === 'goals' ||
+        (rankType === 'students' && scope !== 'all');
+    const needsCategories =
+        rankType === 'goals' ||
+        (rankType === 'students' &&
+            !isHallOfFamePointsSort(sortBy) &&
+            !sortBy.startsWith('period_'));
+    const needsGoals = rankType === 'goals';
+    const needsHouses = rankType === 'houses';
+
+    const isPageLoading =
         !isInitialized ||
+        !schoolId ||
         !canAccessHallOfFameRoute(loginState) ||
         studentsLoading ||
-        classesLoading ||
-        ((settings.enableHouses || showHouseLeaderboard) && housesLoading) ||
-        categoriesLoading
-    ) {
-        return <HallOfFameSkeleton animBackdrop={animBackdrop} />;
-    }
+        (needsClasses && classesLoading) ||
+        (needsHouses && (housesLoading || houses === null)) ||
+        (needsCategories && categoriesLoading) ||
+        (needsGoals && goalsLoading);
 
-    const podium = topItems?.slice(0, podiumSize) || [];
-    const others = topItems?.slice(podiumSize) || [];
+    const leaderboardDataReady =
+        rankType === 'houses'
+            ? houses !== null
+            : rankType === 'classes'
+              ? classes !== null && allTopStudents !== null
+              : rankType === 'goals'
+                ? allGoals !== null
+                : allTopStudents !== null;
+
+    useEffect(() => {
+        if (!autoScroll) return;
+
+        let cancelled = false;
+        let animationId = 0;
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+        const startLoop = (scrollEl: HTMLDivElement) => {
+            let scrollDirection = 1;
+            const scrollSpeed = 0.5;
+            let lastTime = 0;
+
+            const handleScroll = (time: number) => {
+                if (cancelled) return;
+                if (!lastTime) lastTime = time;
+                const delta = Math.min(time - lastTime, 50);
+                lastTime = time;
+
+                const scrollStep = (scrollSpeed * delta) / 16;
+                scrollEl.scrollTop += scrollStep * scrollDirection;
+
+                const isAtBottom =
+                    Math.ceil(scrollEl.clientHeight + scrollEl.scrollTop) >= scrollEl.scrollHeight - 10;
+                const isAtTop = scrollEl.scrollTop <= 10;
+
+                if (isAtBottom && scrollDirection === 1) {
+                    timeoutId = setTimeout(() => {
+                        scrollDirection = -1;
+                        lastTime = 0;
+                        animationId = requestAnimationFrame(handleScroll);
+                    }, 3000);
+                    return;
+                }
+                if (isAtTop && scrollDirection === -1) {
+                    timeoutId = setTimeout(() => {
+                        scrollDirection = 1;
+                        lastTime = 0;
+                        animationId = requestAnimationFrame(handleScroll);
+                    }, 3000);
+                    return;
+                }
+
+                animationId = requestAnimationFrame(handleScroll);
+            };
+
+            animationId = requestAnimationFrame(handleScroll);
+        };
+
+        const waitForScrollableContent = () => {
+            if (cancelled) return;
+            const scrollEl = contentScrollRef.current;
+            if (!scrollEl) {
+                animationId = requestAnimationFrame(waitForScrollableContent);
+                return;
+            }
+            if (scrollEl.scrollHeight <= scrollEl.clientHeight + 2) {
+                animationId = requestAnimationFrame(waitForScrollableContent);
+                return;
+            }
+            startLoop(scrollEl);
+        };
+
+        waitForScrollableContent();
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(animationId);
+            if (timeoutId) clearTimeout(timeoutId);
+        };
+    }, [
+        autoScroll,
+        leaderboardDataReady,
+        topItems?.length,
+        clampedPodiumSize,
+        others.length,
+        gridLayout,
+        gridColumns,
+        rankType,
+    ]);
+
+    if (isPageLoading) {
+        const skeleton = <HallOfFameSkeleton isFullscreen={isFullscreen} isPortrait={isPortrait} />;
+        if (isFullscreen && portalReady) {
+            return createPortal(skeleton, document.body);
+        }
+        return skeleton;
+    }
     const showHallLocalDecor = !animBackdrop;
     const hallLabel = rankType === 'houses' ? 'House Hall of Fame' : 'Hall of Fame';
     const scopeLabel = rankType === 'houses' ? 'All Houses' : getScopeName();
@@ -435,30 +575,131 @@ export default function HallOfFamePage() {
         return null;
     };
 
-    return (
+    const renderPodiumCard = (item: (typeof podium)[number], place: PodiumPlace, index: number) => {
+        const isFirst = place === 1;
+        const isMid = place === 2 || place === 3;
+        const isOuter = place === 4 || place === 5;
+        const accent = getAccentColor(item);
+        const metaLine = getMetaLine(item);
+        return (
+            <motion.div
+                key={`${item.id}-${place}`}
+                initial={isFullscreen ? false : { opacity: 0, scale: isFirst ? 0.9 : 1, x: place === 2 ? -20 : place === 3 ? 20 : 0 }}
+                animate={isFullscreen ? undefined : { opacity: 1, scale: 1, x: 0 }}
+                transition={{ ...springCinematic, delay: 0.2 + index * 0.2 }}
+                className={cn(
+                  'text-center min-w-0 overflow-visible',
+                  podiumSlotCount === 1 && 'w-full max-w-xs',
+                  clampedPodiumSize <= 3 && clampedPodiumSize > 1 && 'w-full max-w-[11rem] sm:max-w-xs',
+                  clampedPodiumSize >= 5 && 'w-full',
+                )}
+            >
+                <div
+                    className={cn(
+                      'relative flex flex-col items-center justify-end gap-1 overflow-visible shadow-lg transition-all',
+                      isFirst
+                        ? cn(
+                            'bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[3rem] rounded-b-3xl shadow-2xl',
+                            isFullscreen ? 'min-h-40 sm:min-h-48 p-4' : isPortrait ? 'min-h-64 p-6' : 'min-h-72 md:min-h-80 p-6 md:p-8',
+                          )
+                        : cn(
+                            'bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl',
+                            isMid
+                              ? (isFullscreen ? 'min-h-36 sm:min-h-44 p-4' : isPortrait ? 'min-h-52 p-6' : 'min-h-60 md:min-h-[17rem] p-6 md:p-8')
+                              : (isFullscreen ? 'min-h-32 sm:min-h-36 p-3' : isPortrait ? 'min-h-44 p-5' : 'min-h-52 md:min-h-56 p-5 md:p-6'),
+                          ),
+                    )}
+                    style={accent ? { borderColor: `${accent}${isFirst ? '55' : '44'}` } : undefined}
+                >
+                    <div className="flex shrink-0 flex-col items-center pb-1">
+                        {isFirst ? (
+                            <Crown className={cn('text-chart-5 animate-float drop-shadow-lg', isFullscreen ? 'w-9 h-9 sm:w-10 sm:h-10' : 'w-12 h-12 sm:w-14 sm:h-14')} />
+                        ) : (
+                            <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border-4 border-background bg-muted text-base font-black text-muted-foreground">
+                                {place}
+                            </div>
+                        )}
+                    </div>
+                    <Avatar
+                      className={cn(
+                        'mx-auto shrink-0 border-4 overflow-hidden',
+                        isFirst
+                          ? cn('mb-2 border-primary/30 shadow-xl', isFullscreen ? 'w-16 h-16' : 'w-24 h-24 md:w-28 md:h-28')
+                          : cn(
+                              'mb-2 border-border shadow-md',
+                              isOuter
+                                ? (isFullscreen ? 'w-10 h-10' : 'w-12 h-12 md:w-14 md:h-14')
+                                : (isFullscreen ? 'w-12 h-12' : 'w-16 h-16 md:w-20 md:h-20'),
+                            ),
+                      )}
+                    >
+                        {item.photoUrl && (
+                          <img
+                            src={item.photoUrl}
+                            alt=""
+                            className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'}
+                          />
+                        )}
+                        <AvatarFallback
+                            className={cn('font-black', isFirst ? 'bg-primary text-primary-foreground text-2xl' : 'bg-muted text-muted-foreground text-xl')}
+                            style={accent ? { backgroundColor: `${accent}20`, color: accent } : undefined}
+                        >
+                            {item.initials}
+                        </AvatarFallback>
+                    </Avatar>
+                    <LeaderboardName
+                      name={item.name}
+                      variant="podium"
+                      className={cn(
+                        isFirst
+                          ? (isFullscreen ? 'text-base sm:text-lg' : 'text-xl md:text-2xl')
+                          : isOuter
+                            ? (isFullscreen ? 'text-xs sm:text-sm' : 'text-sm md:text-base')
+                            : (isFullscreen ? 'text-sm sm:text-base' : 'text-lg md:text-xl'),
+                        'tracking-tight',
+                      )}
+                    />
+                    {metaLine ? (
+                        <p className="w-full truncate px-0.5 text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                            {metaLine}
+                        </p>
+                    ) : null}
+                    <p className={cn('shrink-0 text-primary font-black tracking-tighter', isFirst ? 'text-xl md:text-2xl' : 'text-lg')}>
+                        {item.points.toLocaleString()} pts
+                    </p>
+                </div>
+            </motion.div>
+        );
+    };
+
+    const themeStyle = {
+        ['--primary' as string]: rainbowTripletForNavId('fame', settings.colorScheme),
+        ['--chart-1' as string]: rainbowTripletForNavId('fame', settings.colorScheme),
+        ['--chart-2' as string]: complementTripletForNavId('fame', settings.colorScheme),
+        ['--chart-3' as string]: rainbowTripletForNavId('fame', settings.colorScheme),
+        ['--chart-4' as string]: complementTripletForNavId('fame', settings.colorScheme),
+        ['--chart-5' as string]: rainbowTripletForNavId('fame', settings.colorScheme),
+        ['--ring' as string]: complementTripletForNavId('fame', settings.colorScheme),
+    } as CSSProperties;
+
+    const pageContent = (
         <div
           className={cn(
-            "min-h-screen text-foreground relative overflow-hidden font-sans flex flex-col items-center",
-            isFullscreen && "h-dvh min-h-dvh overflow-hidden",
-            animBackdrop ? "bg-transparent" : "bg-background",
+            "text-foreground font-sans",
+            isFullscreen
+              ? "fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background"
+              : "relative min-h-screen flex flex-col items-center",
+            !isFullscreen && animBackdrop ? "bg-transparent" : "bg-background",
           )}
-          style={{
-            ['--primary' as any]: rainbowTripletForNavId('fame', settings.colorScheme),
-            ['--chart-1' as any]: rainbowTripletForNavId('fame', settings.colorScheme),
-            ['--chart-2' as any]: complementTripletForNavId('fame', settings.colorScheme),
-            ['--chart-3' as any]: rainbowTripletForNavId('fame', settings.colorScheme),
-            ['--chart-4' as any]: complementTripletForNavId('fame', settings.colorScheme),
-            ['--chart-5' as any]: rainbowTripletForNavId('fame', settings.colorScheme),
-            ['--ring' as any]: complementTripletForNavId('fame', settings.colorScheme),
-          } as any}
+          style={themeStyle}
         >
-            {showHallLocalDecor && (
+            {!isFullscreen && showHallLocalDecor && (
             <div className="pointer-events-none fixed inset-0 opacity-[0.03] z-0" style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`
             }} />
             )}
 
-            {showHallLocalDecor && (
+            {!isFullscreen && showHallLocalDecor && (
             <>
             <motion.div
                 animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
@@ -478,12 +719,25 @@ export default function HallOfFamePage() {
             </>
             )}
 
-            <div className={cn(
-                "relative z-10 w-full px-4 sm:px-8 pt-8 md:pt-12 transition-all duration-500",
-                "max-w-full",
-                settings.displayMode === 'app' ? 'pb-24' : 'pb-12',
-            )}>
-                <div className="sticky top-0 z-20 mb-8 py-3 bg-background/85 backdrop-blur-md border-b border-border/40">
+            <div
+              className={cn(
+                'relative z-10 flex flex-col overflow-hidden bg-background',
+                !isFullscreen && 'w-full min-h-screen',
+                !isFullscreen && (isPortrait ? 'max-w-md mx-auto' : 'max-w-full'),
+              )}
+              style={isFullscreen ? getHallOfFameStageSizeStyle(isPortrait) : undefined}
+            >
+            <div
+              className={cn(
+                "w-full h-full flex flex-col min-h-0",
+                isFullscreen ? "px-3 pt-2 pb-2" : "px-4 sm:px-8 pt-8 md:pt-12",
+                !isFullscreen && (settings.displayMode === 'app' ? 'pb-24' : 'pb-12'),
+              )}
+            >
+                <div className={cn(
+                  "z-20 shrink-0 bg-background/85 backdrop-blur-md border-b border-border/40",
+                  isFullscreen ? "mb-2 py-1.5" : "sticky top-0 mb-8 py-3",
+                )}>
                   <div className="w-full rounded-2xl border bg-card/70 backdrop-blur-md px-4 py-3 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <Link
                       href={getLevelUpLogoHref()}
@@ -509,111 +763,26 @@ export default function HallOfFamePage() {
                   </div>
                 </div>
 
-                        {/* Podium */}
-                        {rankType !== 'goals' && podium.length > 0 && (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end mb-12 md:mb-20">
-                                {/* 1st Place */}
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ ...springCinematic, delay: 0.2 }}
-                                    className="text-center md:order-2 order-1"
-                                >
-                                    <div
-                                        className="bg-primary/5 backdrop-blur-md border-4 border-primary/20 rounded-t-[4rem] rounded-b-3xl p-6 md:p-8 relative shadow-2xl h-72 md:h-80 flex flex-col justify-end transition-all"
-                                        style={getAccentColor(podium[0]) ? { borderColor: `${getAccentColor(podium[0])}55` } : undefined}
-                                    >
-                                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                            <Crown className="w-12 h-12 sm:w-16 sm:h-16 text-chart-5 animate-float drop-shadow-lg" />
-                                        </div>
-                                        <Avatar className="w-24 h-24 md:w-28 md:h-28 mx-auto mb-4 border-4 border-primary/30 shadow-xl overflow-hidden">
-                                            {podium[0].photoUrl && <img src={podium[0].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                            <AvatarFallback
-                                                className="bg-primary text-primary-foreground text-3xl font-black"
-                                                style={getAccentColor(podium[0]) ? { backgroundColor: `${getAccentColor(podium[0])}22`, color: getAccentColor(podium[0]) } : undefined}
-                                            >
-                                                {podium[0].initials}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <p className="font-black text-foreground text-xl md:text-2xl truncate tracking-tighter">{podium[0].name}</p>
-                                        {getMetaLine(podium[0]) ? (
-                                            <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                                                {getMetaLine(podium[0])}
-                                            </p>
-                                        ) : null}
-                                        <p className="text-primary font-black text-2xl md:text-3xl mt-1 tracking-tighter">{podium[0].points.toLocaleString()} pts</p>
-                                    </div>
-                                </motion.div>
-
-                                {/* 2nd Place */}
-                                {podium.length > 1 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ ...springCinematic, delay: 0.4 }}
-                                        className="text-center md:order-1 order-2"
-                                    >
-                                        <div
-                                            className="bg-card/40 backdrop-blur-sm border-2 border-border rounded-3xl p-6 md:p-8 relative h-56 md:h-64 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl"
-                                            style={getAccentColor(podium[1]) ? { borderColor: `${getAccentColor(podium[1])}44` } : undefined}
-                                        >
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">2</div>
-                                            </div>
-                                            <Avatar className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-4 border-4 border-border shadow-md">
-                                                {podium[1].photoUrl && <img src={podium[1].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback
-                                                    className="bg-muted text-muted-foreground text-2xl font-black"
-                                                    style={getAccentColor(podium[1]) ? { backgroundColor: `${getAccentColor(podium[1])}20`, color: getAccentColor(podium[1]) } : undefined}
-                                                >
-                                                    {podium[1].initials}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <p className="font-black text-foreground text-lg md:text-xl truncate tracking-tight">{podium[1].name}</p>
-                                            {getMetaLine(podium[1]) ? (
-                                                <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                                                    {getMetaLine(podium[1])}
-                                                </p>
-                                            ) : null}
-                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[1].points.toLocaleString()} pts</p>
-                                        </div>
-                                    </motion.div>
-                                )}
-
-                                {/* 3rd Place */}
-                                {podium.length > 2 && (
-                                    <motion.div
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ ...springCinematic, delay: 0.6 }}
-                                        className="text-center md:order-3 order-3"
-                                    >
-                                        <div
-                                            className="bg-card/40 backdrop-blur-sm border-2 border-border/50 rounded-3xl p-6 md:p-8 relative h-52 md:h-56 flex flex-col justify-end shadow-lg transition-all hover:shadow-xl"
-                                            style={getAccentColor(podium[2]) ? { borderColor: `${getAccentColor(podium[2])}44` } : undefined}
-                                        >
-                                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-black text-xl border-4 border-background">3</div>
-                                            </div>
-                                            <Avatar className="w-14 h-14 md:w-16 md:h-16 mx-auto mb-4 border-4 border-border shadow-md">
-                                                {podium[2].photoUrl && <img src={podium[2].photoUrl} alt="Photo" className={settings.photoDisplayMode === 'cover' ? 'h-full w-full object-cover' : 'h-full w-full object-contain'} />}
-                                                <AvatarFallback
-                                                    className="bg-muted text-muted-foreground text-xl font-black"
-                                                    style={getAccentColor(podium[2]) ? { backgroundColor: `${getAccentColor(podium[2])}20`, color: getAccentColor(podium[2]) } : undefined}
-                                                >
-                                                    {podium[2].initials}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <p className="font-black text-foreground text-base md:text-lg truncate tracking-tight">{podium[2].name}</p>
-                                            {getMetaLine(podium[2]) ? (
-                                                <p className="mt-1 truncate text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                                                    {getMetaLine(podium[2])}
-                                                </p>
-                                            ) : null}
-                                            <p className="text-primary font-bold text-lg mt-1 tracking-tight">{podium[2].points.toLocaleString()} pts</p>
-                                        </div>
-                                    </motion.div>
-                                )}
+                <div
+                  ref={contentScrollRef}
+                  className={cn(
+                    'flex-1 min-h-0',
+                    autoScroll && 'overflow-y-auto overscroll-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+                    isFullscreen && !autoScroll && 'overflow-hidden',
+                    !isFullscreen && autoScroll && 'max-h-[calc(100dvh-14rem)]',
+                  )}
+                >
+                        {rankType !== 'goals' && podiumSlotCount > 0 && (
+                            <div className={cn(
+                              'items-end gap-3 sm:gap-4 md:gap-6 mx-auto w-full overflow-visible pt-2',
+                              isFullscreen ? 'mb-2' : 'mb-12 md:mb-20',
+                              clampedPodiumSize === 5 && !isPortrait
+                                ? 'grid grid-cols-5 max-w-6xl'
+                                : clampedPodiumSize === 3 && !isPortrait
+                                  ? 'grid grid-cols-3 max-w-5xl'
+                                  : 'flex flex-wrap justify-center',
+                            )}>
+                                {podiumSlots.map((slot, index) => renderPodiumCard(slot.item, slot.place, index))}
                             </div>
                         )}
                         {/* Goals List Grid */}
@@ -691,10 +860,11 @@ export default function HallOfFamePage() {
                         {/* Leaderboard List */}
                         {rankType !== 'goals' && others.length > 0 && (
                             <div className={cn(
-                                "mx-auto w-full",
-                                gridLayout 
-                                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" 
-                                    : "grid grid-cols-1 lg:grid-cols-2 gap-4"
+                                "mx-auto w-full grid",
+                                isFullscreen ? "gap-2" : "gap-4",
+                                gridLayout
+                                    ? hallOfFameGridColumnClass(gridColumns, isPortrait, isFullscreen)
+                                    : "grid-cols-1 lg:grid-cols-2",
                             )}>
                                 {!gridLayout && (
                                     <div className="lg:col-span-2 px-6 pb-2 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40 flex justify-between w-full">
@@ -703,7 +873,7 @@ export default function HallOfFamePage() {
                                     </div>
                                 )}
                                 {others.map((item, index) => {
-                                    const prevItem = index === 0 ? podium[podiumSize - 1] : others[index - 1];
+                                    const prevItem = index === 0 && clampedPodiumSize > 0 ? podium[clampedPodiumSize - 1] : others[index - 1];
                                     const pointsToNext = prevItem ? prevItem.points - item.points : 0;
                                     const accentColor = getAccentColor(item);
                                     const metaLine = getMetaLine(item);
@@ -711,23 +881,23 @@ export default function HallOfFamePage() {
                                     return (
                                         <motion.div
                                             key={item.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
+                                            initial={isFullscreen ? false : { opacity: 0, y: 10 }}
+                                            animate={isFullscreen ? undefined : { opacity: 1, y: 0 }}
                                             transition={{ ...springCinematic, delay: 0.8 + index * 0.05 }}
                                             onMouseEnter={() => setHoveredIndex(item.id)}
                                             onMouseLeave={() => setHoveredIndex(null)}
                                             className={cn(
-                                                "group relative flex items-center justify-between backdrop-blur-sm border-2 border-transparent rounded-2xl transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5",
+                                                "group relative flex items-center justify-between gap-3 backdrop-blur-sm border-2 border-transparent rounded-2xl transition-all hover:bg-card hover:shadow-xl hover:shadow-primary/5 min-w-0 overflow-hidden",
                                                 rankType === 'houses'
-                                                  ? "px-5 py-4 md:px-7 md:py-5"
-                                                  : "px-4 py-3 md:px-6 md:py-4",
+                                                  ? (isFullscreen ? "px-3 py-2" : "px-5 py-4 md:px-7 md:py-5")
+                                                  : (isFullscreen ? "px-3 py-2" : "px-4 py-3 md:px-6 md:py-4"),
                                                 index % 2 === 0 ? "bg-card/40" : "bg-card/20",
                                                 "w-full"
                                             )}
                                             title={pointsToNext > 0 ? `${pointsToNext.toLocaleString()} pts to rank up` : ''}
                                         >
-                                        <div className="flex min-w-0 items-center gap-4">
-                                            <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + podiumSize + 1}</span>
+                                        <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                                            <span className="w-6 shrink-0 text-sm font-black text-muted-foreground/30">{index + clampedPodiumSize + 1}</span>
                                             <Avatar
                                               className={cn(
                                                 "border-2 border-background overflow-hidden shrink-0",
@@ -745,25 +915,21 @@ export default function HallOfFamePage() {
                                                     {item.initials}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <div className="min-w-0">
-                                                <div className="flex min-w-0 items-center gap-2">
-                                                    <p
-                                                      className={cn(
-                                                        'truncate font-black text-foreground tracking-tight',
-                                                        rankType === 'houses'
-                                                          ? 'text-2xl md:text-3xl lg:text-4xl'
-                                                          : 'text-base md:text-lg',
-                                                      )}
-                                                    >
-                                                      {item.name}
-                                                    </p>
-                                                </div>
+                                            <div className="min-w-0 flex-1">
+                                                <LeaderboardName
+                                                  name={item.name}
+                                                  className={cn(
+                                                    rankType === 'houses'
+                                                      ? 'text-xl sm:text-2xl md:text-3xl'
+                                                      : 'text-sm sm:text-base md:text-lg',
+                                                  )}
+                                                />
                                                 {metaLine ? (
                                                     <p className="truncate text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{metaLine}</p>
                                                 ) : null}
                                             </div>
                                         </div>
-                                        <div className="shrink-0 pl-3 text-lg font-black text-primary tracking-tighter">
+                                        <div className="shrink-0 pl-2 text-base sm:text-lg font-black text-primary tracking-tighter tabular-nums">
                                             {item.points.toLocaleString()}
                                         </div>
 
@@ -783,14 +949,25 @@ export default function HallOfFamePage() {
                             </div>
                         )}
 
-                        {(!topItems || topItems.length === 0) && (
+                        {leaderboardDataReady && (!topItems || topItems.length === 0) && (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground font-medium">
                                 {rankType === 'houses'
-                                    ? 'No houses have earned points yet for this view.'
-                                    : 'No items have earned points yet for this view.'}
+                                    ? houses?.length
+                                        ? 'No house point totals yet for this sort. Award points or check Houses settings.'
+                                        : 'No houses are set up yet. Add houses under Admin → Rosters & Points.'
+                                    : rankType === 'students' && scope !== 'all'
+                                      ? 'No students in the selected class have points for this view yet.'
+                                      : 'No items have earned points yet for this view.'}
                             </motion.div>
                         )}
+                </div>
+            </div>
             </div>
         </div>
     );
+
+    if (isFullscreen && portalReady) {
+        return createPortal(pageContent, document.body);
+    }
+    return pageContent;
 }

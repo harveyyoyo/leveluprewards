@@ -77,7 +77,7 @@ export const YESHIVA_DATA: Omit<Database, 'passcode'> = {
     { id: '100100', code: '100100', value: 100, category: 'Gemara B\'iyun', teacher: 'Rav Goldberg', used: false, createdAt: Date.now() - 86400000 * 2, description: 'For preparing well for shiur.' },
     { id: '757575', code: '757575', value: 75, category: 'Mishna Mastery', teacher: 'Rabbi Cohen', used: false, createdAt: Date.now() - 86400000 * 3, description: 'For completing the weekly Mishna assignment.' },
     { id: '200200', code: '200200', value: 200, category: 'Middos Tovos', teacher: 'Rosh Yeshiva', used: false, createdAt: Date.now() - 86400000 * 4, description: 'For exceptional character and integrity.' },
-    { id: '150150', code: '150150', value: 150, category: 'Chesed', teacher: 'Rabbi Levi', used: true, createdAt: Date.now() - 86400000 * 5, usedBy: '101', usedAt: Date.now() - 86400000 * 2 },
+    { id: '150150', code: '150150', value: 150, category: 'Chesed', teacher: 'Rabbi Levi', used: true, createdAt: Date.now() - 86400000 * 5, usedBy: '100101', usedAt: Date.now() - 86400000 * 2 },
     { id: '100000', code: '100000', value: 100, category: 'Avos Ubanim', teacher: 'Admin', used: false, createdAt: Date.now() - 86400000 * 6, description: 'For attending Avos Ubanim learning program.' },
     { id: '500500', code: '500500', value: 50, category: 'Chavrusa Learning', teacher: 'Rabbi Epstein', used: false, createdAt: Date.now() - 86400000 * 7, description: 'For productive learning with a chavrusa.' },
     { id: '200001', code: '200001', value: 10, category: 'Tefillah', teacher: 'Rabbi Cohen', used: false, createdAt: Date.now(), description: 'For excellent concentration during morning prayers.' },

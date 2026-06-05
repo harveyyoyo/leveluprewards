@@ -15,7 +15,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
   const firebaseServices = useMemo(() => {
     try {
       if (process.env.NODE_ENV === 'development') {
-        console.log('FirebaseClientProvider: Initializing Firebase...');
+        // FirebaseClientProvider: Initializing Firebase...
       }
       const sdks = initializeFirebase();
       if (!sdks) {

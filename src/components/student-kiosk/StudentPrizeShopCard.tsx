@@ -34,6 +34,20 @@ export function StudentPrizeShopCard({
   const displayName = stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
   const pctTowardCost = Math.min(100, Math.floor((studentPoints / (prize.points || 1)) * 100));
 
+  const prizeTitle = (
+    <h3
+      className={cn(
+        'line-clamp-2 w-full max-w-full break-words text-lg font-extrabold leading-snug tracking-tight [overflow-wrap:anywhere] sm:text-xl',
+        !themed && 'text-foreground',
+        !wholeCardClick && 'cursor-help',
+      )}
+      style={themed ? { color: 'var(--theme-text)' } : undefined}
+      title={displayName}
+    >
+      {displayName}
+    </h3>
+  );
+
   const cardBody = (
     <>
       <div className="pointer-events-none absolute inset-0 rounded-2xl bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-5" />
@@ -79,22 +93,16 @@ export function StudentPrizeShopCard({
       </div>
 
       <div className="mb-4 w-full min-w-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <h3
-              className={cn(
-                'line-clamp-2 w-full max-w-full cursor-help break-words text-lg font-extrabold leading-snug tracking-tight [overflow-wrap:anywhere] sm:text-xl',
-                !themed && 'text-foreground',
-              )}
-              style={themed ? { color: 'var(--theme-text)' } : undefined}
-            >
-              {displayName}
-            </h3>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="center" className="max-w-[min(20rem,calc(100vw-2rem))]">
-            <p className="break-words text-base font-black [overflow-wrap:anywhere] sm:text-lg">{displayName}</p>
-          </TooltipContent>
-        </Tooltip>
+        {wholeCardClick ? (
+          prizeTitle
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>{prizeTitle}</TooltipTrigger>
+            <TooltipContent side="top" align="center" className="max-w-[min(20rem,calc(100vw-2rem))]">
+              <p className="break-words text-base font-black [overflow-wrap:anywhere] sm:text-lg">{displayName}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-1.5">
           <Badge
             className="rounded-xl px-3 py-0.5 text-sm font-black"
@@ -182,7 +190,7 @@ export function StudentPrizeShopCard({
     'group relative flex w-full min-w-0 flex-col items-center justify-between rounded-2xl border-2 border-transparent p-3.5 text-center backdrop-blur-sm transition-all duration-300 sm:p-4',
     canAfford ? 'hover:border-[var(--prize-card-hover-border)] hover:shadow-2xl hover:shadow-primary/5' : 'cursor-not-allowed opacity-75',
     wholeCardClick &&
-      'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+      'cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     className,
   );
 
@@ -207,7 +215,10 @@ export function StudentPrizeShopCard({
       <button
         type="button"
         data-stagger-card
-        onClick={onRedeem}
+        onClick={() => {
+          if (!canAfford) return;
+          onRedeem();
+        }}
         disabled={!canAfford}
         aria-label={`Redeem ${displayName}`}
         className={cardClass}

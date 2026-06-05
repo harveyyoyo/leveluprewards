@@ -15,6 +15,7 @@ export type CreateBehaviorNoteInput = {
   kind: BehaviorNoteKind;
   note: string;
   visibleToParent?: boolean;
+  notifyPrincipal?: boolean;
   pointsAmount?: number;
   pointsLabel?: string;
 };
@@ -38,6 +39,7 @@ export async function createBehaviorNote(
     note: input.note.trim(),
     createdAt: Date.now(),
     visibleToParent,
+    notifyPrincipal: input.notifyPrincipal === true,
     pointsAmount: input.pointsAmount ?? null,
     pointsLabel: input.pointsLabel ?? null,
   });
@@ -60,6 +62,7 @@ function mapBehaviorNoteDoc(id: string, row: Record<string, unknown>): BehaviorN
     note: String(row.note || ''),
     createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
     visibleToParent: row.visibleToParent !== false,
+    notifyPrincipal: row.notifyPrincipal === true,
     pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
     pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
   };

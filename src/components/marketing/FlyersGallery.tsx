@@ -13,6 +13,7 @@ import {
 import {
   FLYER_AUDIENCE_LABELS,
   FLYER_AUDIENCE_ORDER,
+  PROMOTION_FLYERS,
   getPromotionFlyersByAudience,
   type FlyerAudience,
   type PromotionFlyer,
@@ -21,6 +22,64 @@ import { cn } from '@/lib/utils';
 import { ExternalLink } from 'lucide-react';
 
 const THEME_OPTIONS: readonly FlyerVisualTheme[] = ['bold', 'classic'];
+
+type BestFlyerPick = {
+  key: string;
+  label: string;
+  flyerId: string;
+  note: string;
+};
+
+const BEST_FLYER_PICKS: readonly BestFlyerPick[] = [
+  {
+    key: 'general',
+    label: 'General',
+    flyerId: 'levelup-rewards-premium',
+    note: 'Most complete all-purpose overview for first-touch conversations.',
+  },
+  {
+    key: 'principal',
+    label: 'Principal',
+    flyerId: 'levelup-principals',
+    note: 'Best leadership brief for decision-makers, compliance, and rollout readiness.',
+  },
+  {
+    key: 'pillar-rewards',
+    label: 'Pillar: Rewards Core',
+    flyerId: 'feature-rewards-shop',
+    note: 'Strongest one-pager for point economy and redemption workflows.',
+  },
+  {
+    key: 'pillar-classroom',
+    label: 'Pillar: Classroom Management',
+    flyerId: 'levelup-teachers',
+    note: 'Most actionable classroom implementation guide for teacher adoption.',
+  },
+  {
+    key: 'pillar-attendance',
+    label: 'Pillar: Attendance',
+    flyerId: 'feature-attendance',
+    note: 'Best focused summary of periods, sign-in, and reward rules.',
+  },
+  {
+    key: 'pillar-library',
+    label: 'Pillar: Library',
+    flyerId: 'feature-library',
+    note: 'Best dedicated flyer for checkout, due dates, and library incentives.',
+  },
+  {
+    key: 'pillar-homework',
+    label: 'Pillar: Homework',
+    flyerId: 'feature-student-portal',
+    note: 'Closest current fit for homework-at-home routines (until a dedicated homework flyer is added).',
+  },
+  {
+    key: 'pillar-office',
+    label: 'Pillar: School Office',
+    flyerId: 'principal-data',
+    note: 'Closest current fit for office-facing operations and admin reporting.',
+  },
+];
 
 function FlyerCard({
   flyer,
@@ -182,6 +241,44 @@ function AudienceSection({ audience, theme }: { audience: FlyerAudience; theme: 
   );
 }
 
+function BestOfSection({ theme }: { theme: FlyerVisualTheme }) {
+  const picks = useMemo(
+    () =>
+      BEST_FLYER_PICKS.map((pick) => ({
+        ...pick,
+        flyer: PROMOTION_FLYERS.find((item) => item.id === pick.flyerId) ?? null,
+      })).filter((pick): pick is BestFlyerPick & { flyer: PromotionFlyer } => Boolean(pick.flyer)),
+    [],
+  );
+
+  if (picks.length === 0) return null;
+
+  return (
+    <section aria-labelledby="flyers-best-of" className="rounded-3xl border border-cyan-500/20 bg-cyan-500/[0.04] p-6 sm:p-8">
+      <div className="mb-6">
+        <h2 id="flyers-best-of" className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+          Best of flyers
+        </h2>
+        <p className="mt-2 max-w-3xl text-sm text-slate-300/90">
+          Curated picks for general outreach, principals, and each product pillar. Use these as your default
+          handout set when you want the shortest path to a strong first impression.
+        </p>
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {picks.map((pick) => (
+          <div key={`${pick.key}-${theme}`} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-950/40">
+            <div className="border-b border-white/10 px-5 py-3">
+              <p className="text-xs font-black uppercase tracking-wide text-cyan-300">{pick.label}</p>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">{pick.note}</p>
+            </div>
+            <FlyerCard flyer={pick.flyer} theme={theme} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function FlyersGallery() {
   const [theme, setTheme] = useState<FlyerVisualTheme>('bold');
 
@@ -199,6 +296,7 @@ export function FlyersGallery() {
       <ThemeToggle theme={theme} onChange={setTheme} classicCount={classicCount} />
 
       <div className="mt-14 space-y-16">
+        <BestOfSection theme={theme} />
         {FLYER_AUDIENCE_ORDER.map((audience) => (
           <AudienceSection key={`${audience}-${theme}`} audience={audience} theme={theme} />
         ))}

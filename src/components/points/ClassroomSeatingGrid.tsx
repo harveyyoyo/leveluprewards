@@ -28,6 +28,8 @@ export type { ClassroomNoteShortcutKey };
 
 export type ClassroomGridHandlers = {
   onDeskTap: (studentId: string, cellIndex: number) => void;
+  /** Ctrl+click — deduct points from this student. */
+  onDeduct?: (studentId: string, cellIndex: number) => void;
   onBehaviorNote: (studentId: string, shortcutKey: ClassroomNoteShortcutKey, fromHeldKey?: boolean) => void;
   /** Shift+click — pick a note/comment type for this student. */
   onNotePicker?: (studentId: string) => void;
@@ -57,6 +59,7 @@ type SeatingDeskCellProps = {
   showBalance: boolean;
   showSessionTotals: boolean;
   tight: boolean;
+  fitViewport: boolean;
   editMode: boolean;
   isPending: boolean;
   flashPoints: number | null;
@@ -105,6 +108,7 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.showBalance === next.showBalance &&
     prev.showSessionTotals === next.showSessionTotals &&
     prev.tight === next.tight &&
+    prev.fitViewport === next.fitViewport &&
     prev.editMode === next.editMode &&
     prev.isPending === next.isPending &&
     prev.flashPoints === next.flashPoints &&
@@ -140,6 +144,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   showBalance,
   showSessionTotals,
   tight,
+  fitViewport,
   editMode,
   isPending,
   flashPoints,
@@ -168,6 +173,11 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
       if (editMode || !studentId) return;
       const h = handlersRef.current;
       if (!h) return;
+      if ((e.ctrlKey || e.metaKey) && h.onDeduct) {
+        e.preventDefault();
+        h.onDeduct(studentId, cellIndex);
+        return;
+      }
       if (e.altKey && h.onBathroomToggle) {
         e.preventDefault();
         h.onBathroomToggle(studentId);
@@ -199,7 +209,10 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   return (
     <div
       ref={(el) => cellWrapRef?.(cellIndex, el)}
-      className="relative aspect-square min-h-0 min-w-0 overflow-visible"
+      className={cn(
+        'relative min-h-0 min-w-0 overflow-visible',
+        fitViewport ? 'h-full w-full' : 'aspect-square',
+      )}
     >
       <button
         type="button"
@@ -332,7 +345,7 @@ export type ClassroomSeatingGridProps = {
   flashCell: { index: number; points: number; runId: number } | null;
   burstSelected: string[];
   randomHighlightId: string | null;
-  awardingId: string | null;
+  awardingStudentIds: ReadonlySet<string>;
   attendanceEnabled: boolean;
   attendanceByStudent: Map<string, TodayAttendanceStatus>;
   bathroomEnabled: boolean;
@@ -342,6 +355,8 @@ export type ClassroomSeatingGridProps = {
   activeCelebration: ActiveCelebrationState;
   handlersRef: RefObject<ClassroomGridHandlers>;
   className?: string;
+  /** Scale grid to available height (full-screen classroom view). */
+  fitViewport?: boolean;
 };
 
 export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
@@ -368,7 +383,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   flashCell,
   burstSelected,
   randomHighlightId,
-  awardingId,
+  awardingStudentIds,
   attendanceEnabled,
   attendanceByStudent,
   bathroomEnabled,
@@ -378,6 +393,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   activeCelebration,
   handlersRef,
   className,
+  fitViewport = false,
 }: ClassroomSeatingGridProps) {
   const cellRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const [flyUpAnchor, setFlyUpAnchor] = useState<{ x: number; y: number } | null>(null);
@@ -423,6 +439,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
 
   const gridStyle = {
     gridTemplateColumns: `repeat(${layoutCols}, minmax(0, 1fr))`,
+    ...(fitViewport ? { gridTemplateRows: `repeat(${layoutRows}, minmax(0, 1fr))` } : {}),
     gap: gridGap,
   };
 
@@ -431,8 +448,17 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   const flyUpName = flyUpCell?.studentName || flyUpDisplay?.name;
 
   return (
-    <div className={cn('relative min-h-0 w-full flex-1 overflow-auto px-0.5', className)}>
-      <div className={cn('grid w-full content-start overflow-visible')} style={gridStyle}>
+    <div
+      className={cn(
+        'relative min-h-0 w-full flex-1 px-0.5',
+        fitViewport ? 'h-full overflow-hidden' : 'overflow-auto',
+        className,
+      )}
+    >
+      <div
+        className={cn('grid w-full overflow-visible', fitViewport ? 'h-full' : 'content-start')}
+        style={gridStyle}
+      >
         {visualCells.map(({ cellIndex, visualRow }) => {
           const studentId = cellStudentIds[cellIndex];
           const display = studentId ? deskCatalog.get(studentId) ?? null : null;
@@ -455,6 +481,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               showBalance={showBalance}
               showSessionTotals={showSessionTotals}
               tight={density === 'tight'}
+              fitViewport={fitViewport}
               editMode={editMode}
               isPending={pendingCellIndex === cellIndex}
               flashPoints={flashCell?.index === cellIndex ? flashCell.points : null}
@@ -462,7 +489,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               hideFlashPointsBadge={flyUpActive}
               isBurstSelected={studentId ? burstSelected.includes(studentId) : false}
               isRandom={studentId === randomHighlightId}
-              isAwarding={studentId === awardingId}
+              isAwarding={studentId ? awardingStudentIds.has(studentId) : false}
               attendanceEnabled={attendanceEnabled}
               attStatus={
                 studentId && attendanceEnabled

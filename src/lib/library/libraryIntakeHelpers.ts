@@ -1,5 +1,25 @@
-import { generateLibraryBarcode } from '@/lib/library/libraryScanCode';
+import { generateLibraryBarcode, isSchoolLibraryBarcode } from '@/lib/library/libraryScanCode';
 import type { LibraryCatalogHit } from '@/lib/library/libraryCatalogLookup';
+
+/** Trim wedge / keyboard input before intake handling. */
+export function normalizeIntakeScanCode(raw: string): string {
+  return raw.trim();
+}
+
+/** School LIB checkout stickers are not catalog intake barcodes. */
+export function isBlockedLibraryIntakeBarcode(raw: string): boolean {
+  return isSchoolLibraryBarcode(normalizeIntakeScanCode(raw));
+}
+
+/** ISBNs and other barcodes already stored on catalog items (for duplicate detection). */
+export function catalogScannedCodeSet(items: { isbn?: string | null }[] | null | undefined): Set<string> {
+  const set = new Set<string>();
+  for (const item of items ?? []) {
+    const code = normalizeIntakeScanCode(item.isbn ?? '');
+    if (code) set.add(code.toUpperCase());
+  }
+  return set;
+}
 
 export async function fetchCatalogHitByIsbn(isbnDigits: string): Promise<LibraryCatalogHit | null> {
   try {

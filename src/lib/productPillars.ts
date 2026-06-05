@@ -94,10 +94,27 @@ export function isClassroomPillarOn(settings: PillarSettings | null | undefined)
   return isPillarOn(settings, 'payClassroom');
 }
 
+export type ParentPortalSettings = PillarSettings & {
+  enableParentView?: boolean;
+};
+
+/** Parent portal sign-in and portal-page card — off unless explicitly enabled. */
+export function isParentPortalOn(settings: ParentPortalSettings | null | undefined): boolean {
+  return isClassroomPillarOn(settings) && settings?.enableParentView === true;
+}
+
 /** Classroom pillar on without Rewards — session seating + room display only. */
 export function isClassroomOnlyMode(settings: PillarSettings | null | undefined): boolean {
   return isClassroomPillarOn(settings) && !isRewardsPillarOn(settings);
 }
+
+/** User-facing copy when Classroom uses local balance while Rewards pillar is still on. */
+export const CLASSROOM_LOCAL_REWARDS = {
+  tabBody:
+    'Local classroom rewards — desk awards stay on each student’s classroom balance, not kiosk or prize-shop balances. Switch to Reward categories in Toolbar options to sync into the main rewards balance.',
+  toastDescription:
+    'Saved as classroom points on the student record (not kiosk/rewards balance).',
+} as const;
 
 /** User-facing copy when Classroom is on but Rewards (student economy) is off. */
 export const CLASSROOM_SESSION_ONLY = {

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Lightbulb, Sparkles, Trophy, Wand2, RefreshCw, Users, Tv, Link2, PenLine } from 'lucide-react';
+import { Lightbulb, Sparkles, Trophy, Wand2, RefreshCw, Users, Monitor, Link2, PenLine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -30,7 +30,7 @@ const BASE_IDEAS: HouseIdea[] = [
     id: 'wizard',
     icon: Sparkles,
     title: 'Run the setup wizard',
-    detail: 'Starter themes, link to student rewards, roster assignment, and TV display in one flow.',
+    detail: 'Starter themes, link to student rewards, roster assignment, and monitor display in one flow.',
   },
   {
     id: 'sorting',
@@ -40,8 +40,8 @@ const BASE_IDEAS: HouseIdea[] = [
   },
   {
     id: 'tv',
-    icon: Tv,
-    title: 'Lobby TV board',
+    icon: Monitor,
+    title: 'Lobby monitor board',
     detail: 'Open House Hall of Fame in fullscreen on a gym or front-office display.',
   },
   {
@@ -148,7 +148,7 @@ export function HouseIdeasPanel({
         </div>
         <div>
           <p className="text-sm font-bold text-foreground">House ideas</p>
-          <p className="text-xs text-muted-foreground">Ways schools use teams, points, and the TV board.</p>
+          <p className="text-xs text-muted-foreground">Ways schools use teams, points, and the monitor board.</p>
         </div>
       </div>
       {unassignedCount > 0 && hasHouses ? (

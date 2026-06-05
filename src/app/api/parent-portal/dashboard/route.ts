@@ -7,7 +7,7 @@ import {
 } from '@/lib/parentPortal/parentPortalSession';
 import type { ParentPortalDashboard } from '@/lib/parentPortal/parentPortalClient';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
-import { isRewardsPillarOn } from '@/lib/productPillars';
+import { isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -46,6 +46,15 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
     const schoolSnap = await db.collection('schools').doc(schoolId).get();
     if (!schoolSnap.exists) return jsonError(404, 'School not found.');
+
+    const appSettings = (schoolSnap.data()?.appSettings || {}) as {
+      payRewards?: boolean;
+      enableParentView?: boolean;
+      payClassroom?: boolean;
+    };
+    if (!isParentPortalOn(appSettings)) {
+      return jsonError(403, 'Parent portal is not enabled for this school.');
+    }
 
     const studentRef = db.collection('schools').doc(schoolId).collection('students').doc(session.studentId);
     const studentSnap = await studentRef.get();
@@ -135,7 +144,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const appSettings = (schoolSnap.data()?.appSettings || {}) as { payRewards?: boolean };
     const rewardsPillarOn = isRewardsPillarOn(appSettings);
     const rewardsPoints = Number(student.points || 0);
     const classroomPoints = Number(student.classroomPoints || 0);

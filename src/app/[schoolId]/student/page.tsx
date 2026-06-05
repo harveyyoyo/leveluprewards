@@ -54,11 +54,7 @@ import {
 } from '@/lib/library/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
-import { StudentKioskOptionsMenu } from '@/components/student-kiosk/StudentKioskOptionsMenu';
-import {
-  StudentKioskEmojiBadge,
-  StudentKioskProfileExtras,
-} from '@/components/student-kiosk/StudentKioskProfileExtras';
+import { StudentKioskProfileExtras } from '@/components/student-kiosk/StudentKioskProfileExtras';
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
 import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
@@ -1060,6 +1056,7 @@ function StudentDashboardInner({
     settings.enableStudentEmojiOnPrizeTickets,
     settings.enableStudentThemes,
     student,
+    studentId,
     toast,
   ]);
 
@@ -1470,22 +1467,6 @@ function StudentDashboardInner({
     />
   );
 
-  const headerEmojiBadge = (
-    <div className="flex shrink-0 flex-col items-center gap-1">
-      <StudentKioskEmojiBadge customEmojiUrl={student.customEmojiUrl} themed={!!effectiveTheme} />
-      {schoolId && settings.enableStudentThemes !== false ? (
-        <StudentKioskThemeButton
-          schoolId={schoolId}
-          student={student}
-          classLabel={studentClassLabel}
-          themed={!!effectiveTheme}
-          primaryForeground={primaryForeground}
-          layout="inline"
-        />
-      ) : null}
-    </div>
-  );
-
   const wedgeDemoCameraActive =
     settings.kioskWedgeDemoCameraEnabled === true &&
     showManualCoupon &&
@@ -1618,7 +1599,6 @@ function StudentDashboardInner({
             themed={!!effectiveTheme}
             primaryForeground={primaryForeground}
             photoDisplayMode={settings.photoDisplayMode}
-            nameExtras={headerEmojiBadge}
             trailingActions={
               <div className="flex flex-col items-end gap-2">
                 {settings.enableBadges && headerBadges.length > 0 ? (
@@ -1643,23 +1623,15 @@ function StudentDashboardInner({
                     ) : null}
                   </div>
                 ) : null}
-                <div className="flex items-center gap-2">
-                  <StudentKioskOptionsMenu
-                    schoolId={schoolId}
-                    student={student}
-                    classLabel={studentClassLabel}
-                    themed={!!effectiveTheme}
-                  />
-                  <StudentKioskLogoutControls
-                    themed={{ active: !!effectiveTheme }}
-                    primaryForeground={primaryForeground}
-                    isKioskLocked={isKioskLocked}
-                    autoLogoutEnabled={kioskAutoLogoutOn}
-                    logoutTimer={logoutTimer}
-                    sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
-                    onLogout={handleManualLogout}
-                  />
-                </div>
+                <StudentKioskLogoutControls
+                  themed={{ active: !!effectiveTheme }}
+                  primaryForeground={primaryForeground}
+                  isKioskLocked={isKioskLocked}
+                  autoLogoutEnabled={kioskAutoLogoutOn}
+                  logoutTimer={logoutTimer}
+                  sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                  onLogout={handleManualLogout}
+                />
               </div>
             }
         />
@@ -1739,7 +1711,7 @@ function StudentDashboardInner({
           {/* Center: redeem coupon (primary focus) */}
           <div
             className={cn(
-              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-start lg:overflow-y-auto lg:px-8 lg:py-[clamp(0.75rem,6vh,3rem)] [@media(max-height:760px)]:gap-2',
+              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-start lg:px-8 lg:py-[clamp(0.5rem,3vh,1.5rem)] [@media(max-height:760px)]:gap-2',
               studentKioskCenterStackClass,
             )}
           >
@@ -2149,6 +2121,20 @@ function StudentDashboardInner({
         </div>
 
         </div>
+
+        {/* Fixed bottom center theme button */}
+        {schoolId && settings.enableStudentThemes !== false && !fullPrizeShopOpen ? (
+          <div className="fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2">
+            <StudentKioskThemeButton
+              schoolId={schoolId}
+              student={student}
+              classLabel={studentClassLabel}
+              themed={!!effectiveTheme}
+              primaryForeground={primaryForeground}
+              layout="inline"
+            />
+          </div>
+        ) : null}
 
         {welcomeBackdropActive && (
           <>

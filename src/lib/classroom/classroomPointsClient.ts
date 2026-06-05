@@ -102,6 +102,15 @@ export async function awardClassroomPoints(
   const api = await awardClassroomPointsViaApi(body);
   if (api.success) return api;
 
+  if (!firestore && shouldTryClientFallback(api.status, api.message)) {
+    return {
+      success: false,
+      message: `${api.message} Browser could not reach Firestore. Sign out and sign in again from the school portal, then retry.`,
+      count: 0,
+      status: api.status,
+    };
+  }
+
   if (firestore && shouldTryClientFallback(api.status, api.message)) {
     try {
       await ensureDeveloperSchoolAccess(body.schoolId);

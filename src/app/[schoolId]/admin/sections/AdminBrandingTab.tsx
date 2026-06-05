@@ -8,7 +8,6 @@ import {
   Palette,
   User,
   Megaphone,
-  Tv,
   Image as ImageIcon,
   RotateCcw,
   Check,
@@ -587,7 +586,7 @@ export function AdminBrandingTab({
               <div className="rounded-2xl overflow-hidden shadow-inner border bg-slate-100 dark:bg-slate-900 min-h-[90px] flex items-center justify-center p-3 relative">
                 {(!settings.kioskSponsorEnabled && !settings.kioskSponsorSchedules?.length) ? (
                   <p className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
-                    <Tv className="w-4 h-4" /> Sponsor banner is currently disabled.
+                    <Monitor className="w-4 h-4" /> Sponsor banner is currently disabled.
                   </p>
                 ) : (!settings.kioskSponsorMessage?.trim() && !settings.kioskSponsorLogoUrl?.trim() && !settings.kioskSponsorLink?.trim()) ? (
                   <p className="text-xs font-semibold text-muted-foreground">Add a banner message or logo below to generate the output preview.</p>

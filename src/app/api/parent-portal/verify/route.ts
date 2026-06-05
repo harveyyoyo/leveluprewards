@@ -8,7 +8,7 @@ import {
   PARENT_PORTAL_COOKIE_NAME,
   signParentPortalSession,
 } from '@/lib/parentPortal/parentPortalSession';
-import { isClassroomPillarOn } from '@/lib/productPillars';
+import { isParentPortalOn } from '@/lib/productPillars';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
@@ -50,10 +50,7 @@ export async function POST(req: NextRequest) {
     if (!schoolSnap.exists) return jsonError(404, 'School not found.');
 
     const appSettings = (schoolSnap.data()?.appSettings || {}) as Record<string, unknown>;
-    if (!isClassroomPillarOn(appSettings as { payClassroom?: boolean })) {
-      return jsonError(403, 'Classroom Management is not enabled for this school.');
-    }
-    if (appSettings.enableParentView !== true) {
+    if (!isParentPortalOn(appSettings as { payClassroom?: boolean; enableParentView?: boolean })) {
       return jsonError(403, 'Parent portal is not enabled for this school.');
     }
 

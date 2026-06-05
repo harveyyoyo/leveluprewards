@@ -2,6 +2,7 @@
  * Patches demo school appSettings for marketing captures (raffle, houses, etc.).
  */
 import admin from 'firebase-admin';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -14,6 +15,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '../..');
 
 export const DEMO_MARKETING_APP_SETTINGS_PATCH = {
+  /** Student kiosk, prize shop, coupon redemption (Level 1 rewards pillar). */
+  payRewards: true,
   enableWeeklyRaffle: true,
   enableHouses: true,
   housesRollupPoints: true,
@@ -41,10 +44,30 @@ export const DEMO_MARKETING_APP_SETTINGS_PATCH = {
   enablePrizeAiSurprise: true,
   kioskCouponRedemptionManualEnabled: true,
   kioskCouponRedemptionCameraEnabled: false,
+  /** Marketing capture: demo student can sign in with DEMO_STUDENT_PORTAL_PASSCODE. */
+  studentPortalRequirePasscode: true,
   /** Make teacher raffle tab visible + enabled in capture sessions. */
   teacherPinnedAddOnTabs: ['raffle'],
   teacherHiddenAddOnTabs: [],
 };
+
+function hashPortalPasscode(passcode, salt) {
+  return crypto.createHash('sha256').update(`${salt}:${passcode.trim()}`, 'utf8').digest('hex');
+}
+
+async function lookupStudentIdByBadge(db, schoolId, badgeId) {
+  const studentsRef = db.collection('schools').doc(schoolId).collection('students');
+  const byDoc = await studentsRef.doc(badgeId).get();
+  if (byDoc.exists) return byDoc.id;
+  const byStr = await studentsRef.where('nfcId', '==', badgeId).limit(1).get();
+  if (!byStr.empty) return byStr.docs[0].id;
+  if (/^\d+$/.test(badgeId)) {
+    const asNum = Number(badgeId);
+    const byNum = await studentsRef.where('nfcId', '==', asNum).limit(1).get();
+    if (!byNum.empty) return byNum.docs[0].id;
+  }
+  return null;
+}
 
 /** Fixed 6-digit code for kiosk “+PTS” redeem captures (reset before each capture). */
 export const CAPTURE_PROMO_COUPON_CODE = (
@@ -52,20 +75,20 @@ export const CAPTURE_PROMO_COUPON_CODE = (
 ).trim();
 
 /**
- * One kiosk redeem clip per row: different demo student (badge 100–109) + your coupon code.
+ * One kiosk redeem clip per row: different demo student (badge 100100–100109) + your coupon code.
  * Coupon codes must exist on the demo school; capture resets `used` when Firebase admin is available.
  */
 export const CAPTURE_COUPON_REDEEM_SCENES = [
-  { couponCode: '132403', studentBadgeId: '100' },
-  { couponCode: '230260', studentBadgeId: '101' },
-  { couponCode: '336111', studentBadgeId: '102' },
-  { couponCode: '508131', studentBadgeId: '103' },
-  { couponCode: '598970', studentBadgeId: '104' },
-  { couponCode: '666400', studentBadgeId: '105' },
-  { couponCode: '685335', studentBadgeId: '106' },
-  { couponCode: '738732', studentBadgeId: '107' },
-  { couponCode: '775872', studentBadgeId: '108' },
-  { couponCode: '844901', studentBadgeId: '109' },
+  { couponCode: '132403', studentBadgeId: '100100' },
+  { couponCode: '230260', studentBadgeId: '100101' },
+  { couponCode: '336111', studentBadgeId: '100102' },
+  { couponCode: '508131', studentBadgeId: '100103' },
+  { couponCode: '598970', studentBadgeId: '100104' },
+  { couponCode: '666400', studentBadgeId: '100105' },
+  { couponCode: '685335', studentBadgeId: '100106' },
+  { couponCode: '738732', studentBadgeId: '100107' },
+  { couponCode: '775872', studentBadgeId: '100108' },
+  { couponCode: '844901', studentBadgeId: '100109' },
 ];
 
 export function loadEnvLocal() {
@@ -141,8 +164,62 @@ export async function patchDemoMarketingSettings() {
       },
     };
     await ref.set({ appSettings }, { merge: true });
-    console.log(`  demo settings: patched appSettings on ${schoolId}`);
+    const publicRef = db.collection('schoolPublic').doc(schoolId);
+    await publicRef.set(
+      { appSettings, active: true, updatedAt: Date.now() },
+      { merge: true },
+    );
+    console.log(
+      `  demo settings: patched appSettings on ${schoolId} (+ schoolPublic mirror, payRewards=${appSettings.payRewards})`,
+    );
   }
+  return true;
+}
+
+/**
+ * Sets portal passcode for the demo capture student (badge 100 by default).
+ * @returns {Promise<boolean>}
+ */
+export async function ensureDemoStudentPortalPasscode() {
+  loadEnvLocal();
+  try {
+    initAdmin();
+  } catch {
+    return false;
+  }
+  const db = admin.firestore();
+  const schoolId = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
+  const badgeId = (process.env.DEMO_STUDENT_BADGE_ID || '100100').trim();
+  const passcode = (process.env.DEMO_STUDENT_PORTAL_PASSCODE || '1234').trim();
+  const studentId = await lookupStudentIdByBadge(db, schoolId, badgeId);
+  if (!studentId) {
+    console.warn(`  demo student portal: no student for badge ${badgeId} on ${schoolId}`);
+    return false;
+  }
+  const salt = crypto.randomBytes(16).toString('hex');
+  const portalPasscodeHash = hashPortalPasscode(passcode, salt);
+  await db
+    .collection('schools')
+    .doc(schoolId)
+    .collection('secrets')
+    .doc(`portal_${studentId}`)
+    .set({ portalPasscodeHash, portalPasscodeSalt: salt }, { merge: true });
+  await db
+    .collection('schools')
+    .doc(schoolId)
+    .collection('students')
+    .doc(studentId)
+    .set(
+      {
+        portalPasscodeSet: true,
+        portalLocked: false,
+        portalFailedAttempts: 0,
+      },
+      { merge: true },
+    );
+  console.log(
+    `  demo student portal: passcode set for ${studentId} (badge ${badgeId}) on ${schoolId}`,
+  );
   return true;
 }
 

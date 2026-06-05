@@ -9,7 +9,6 @@ import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
-import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -140,13 +139,10 @@ export default function ReportsPage() {
                 <h1 className="truncate text-xl font-black">Reports</h1>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <StaffPortalLayoutToggle />
-              <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2">
-                <LogOut className="h-4 w-4" />
-                End session
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="gap-2 shrink-0">
+              <LogOut className="h-4 w-4" />
+              End session
+            </Button>
           </StaffPortalContentWidth>
         </div>
 

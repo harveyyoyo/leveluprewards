@@ -1121,7 +1121,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
    Single physical size: ISO/IEC 7810 ID-1 (85.6mm × 53.98mm) — matches DTC/card printer output and Avery print below. */
 .print-id-card {
   /* Set inline from StudentIdCard when a theme uses fontScale (default 1). */
-  --print-id-font-scale: 1.15;
+  --print-id-font-scale: 1.1;
   --print-id-name-fit-scale: 1;
   border: 1px solid hsl(var(--border));
   padding: 12px 14px;
@@ -1143,6 +1143,17 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
 .print-id-card--rectangular {
   border-radius: 0;
+}
+
+/* On-screen ID preview (admin, theme wizard): 1:1 ISO ID-1 — same mm box as print/DTC. */
+.student-id-card-screen-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.student-id-card-screen-preview .print-id-card {
+  flex-shrink: 0;
 }
 
 .print-id-header-container {
@@ -1300,9 +1311,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   word-break: normal;
   overflow-wrap: anywhere;
 }
+.print-id-card:not(.is-colored) .print-id-class {
+  color: #4b5563;
+}
+
 .print-id-class {
   font-size: calc(12px * var(--print-id-font-scale));
-  color: #4b5563;
   font-weight: 600;
 }
 
@@ -2289,19 +2303,16 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   .print-id-card {
-    /* Preserve the physical print slot, but keep the card formatted like the screen preview. */
     border: 1px solid hsl(var(--border)) !important;
     padding: 12px 14px !important;
     text-align: center !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: 100% !important;
-    aspect-ratio: 85.6 / 53.98 !important;
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    max-width: 85.6mm !important;
+    max-height: 53.98mm !important;
     box-sizing: border-box !important;
     page-break-inside: avoid;
-    font-family: 'Ubuntu', sans-serif;
+    font-family: 'Ubuntu', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
     background: #fff;
     display: flex;
     flex-direction: column;
@@ -2312,18 +2323,50 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     overflow: hidden !important;
   }
 
-  /* After .print-id-card { width:100% } — shrink inside Avery 25395 die-cuts (borders + radius). */
-  body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-id-card {
-    width: 91% !important;
-    max-width: 91% !important;
-    max-height: 91% !important;
-    padding: 10px 12px !important;
+  .print-id-card:not(.is-colored) {
+    background: #fff !important;
+  }
+
+  /* Avery 25395: uniform scale of the full ID-1 card to fit the label cell (WYSIWYG with screen preview). */
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page > .student-id-print-slot {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    transform: scale(0.9886) !important;
+    transform-origin: center center !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page .student-id-print-slot > .print-id-card:not(.print-prize-id-card) {
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    max-width: 85.6mm !important;
+    max-height: 53.98mm !important;
+    padding: 12px 14px !important;
+    flex-shrink: 0 !important;
   }
 
   body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-prize-id-card.print-id-card {
     width: 90% !important;
     max-width: 90% !important;
     max-height: 90% !important;
+    height: auto !important;
+    aspect-ratio: 85.6 / 53.98 !important;
+  }
+
+  /* Theme fonts/weights flow from the card root (match DTC print path). */
+  body.id-card-printing #student-id-print-wrapper .student-id-print-slot .print-id-card.is-colored *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center) {
+    font-family: inherit !important;
+    font-style: inherit !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper,
+  body.id-card-printing #student-id-print-wrapper * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .print-id-card--rectangular {
@@ -2414,7 +2457,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     font-size: calc(10px * var(--print-id-font-scale));
     font-weight: 800;
     letter-spacing: 0.02em;
-    font-family: 'Ubuntu', sans-serif;
     overflow-wrap: break-word;
     word-break: normal;
     white-space: normal;
@@ -2504,9 +2546,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     line-height: 1.15;
   }
 
+  .print-id-card:not(.is-colored) .print-id-class {
+    color: #4b5563;
+  }
+
   .print-id-class {
     font-size: calc(12px * var(--print-id-font-scale));
-    color: #4b5563;
     font-weight: 600;
     white-space: normal;
     word-break: normal;
@@ -2955,6 +3000,29 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
   .prize-ticket__banner-id {
     font-weight: 800;
+  }
+
+  .prize-ticket__pickup-scan {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1mm;
+    margin: 2mm 0 1mm;
+    padding: 0 2mm;
+  }
+
+  .prize-ticket__pickup-label {
+    margin: 0;
+    font-size: 3mm;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #000 !important;
+  }
+
+  .prize-ticket__pickup-scan .print-barcode-svg {
+    max-width: 100%;
+    height: auto;
   }
 
   .prize-ticket__details {

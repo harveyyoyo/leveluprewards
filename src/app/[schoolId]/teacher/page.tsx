@@ -96,13 +96,8 @@ function TeacherPrinterSkeleton() {
 }
 
 function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogout: () => void }) {
-    const { isAdmin, isTeacher, loginState } = useAppContext();
-    const canOpenTeacherPortal =
-        isAdmin ||
-        isTeacher ||
-        loginState === 'admin' ||
-        loginState === 'developer' ||
-        loginState === 'teacher';
+    const { loginState } = useAppContext();
+    const canOpenTeacherPortal = loginState === 'teacher';
     if (!canOpenTeacherPortal) {
         return <TeacherPrinterSkeleton />;
     }
@@ -114,7 +109,7 @@ function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogou
 }
 
 export default function TeacherPage() {
-    const { loginState, isInitialized, schoolId: activeSchoolId, login, logout, isAdmin, isTeacher, userName, userId, teacherDocId } = useAppContext();
+    const { loginState, isInitialized, schoolId: activeSchoolId, login, logout, isAdmin, userName, userId, teacherDocId } = useAppContext();
     const { user: firebaseUser } = useFirebase();
     const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const params = useParams<{ schoolId: string }>();
@@ -136,7 +131,6 @@ export default function TeacherPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const passcodeRef = useRef<HTMLInputElement | null>(null);
     const directAccountKey = searchParams.get('account') || '';
-    const adminTeacherBypass = searchParams.get('as') === 'admin';
     const schoolId = useMemo(
         () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
         [activeSchoolId, params.schoolId],
@@ -184,23 +178,10 @@ export default function TeacherPage() {
             router.replace(`/${schoolId}/office`);
         } else if (loginState === 'houseCoordinator') {
             router.replace(`/${schoolId}/admin`);
-        } else if (
-            adminTeacherBypass &&
-            (loginState === 'admin' || loginState === 'developer') &&
-            isAdmin
-        ) {
-            router.replace(`/${schoolId}/admin?view=teacher`);
+        } else if ((loginState === 'admin' || loginState === 'developer') && isAdmin) {
+            router.replace(`/${schoolId}/admin`);
         }
-    }, [
-        adminTeacherBypass,
-        directAccountKey,
-        isAdmin,
-        isInitialized,
-        loginState,
-        onTeacherRoute,
-        schoolId,
-        router,
-    ]);
+    }, [directAccountKey, isAdmin, isInitialized, loginState, onTeacherRoute, schoolId, router]);
 
     useEffect(() => {
         if (
@@ -289,7 +270,7 @@ export default function TeacherPage() {
         logout({ staffNavigateTo: 'teacher' });
     };
 
-    const submitAdminForTeacher = async () => {
+    const submitAdminLogin = async () => {
         if (!schoolId || adminSubmitting) return false;
         setAdminSubmitting(true);
         try {
@@ -306,7 +287,7 @@ export default function TeacherPage() {
             }
             playSound('login');
             setAdminDialogOpen(false);
-            router.replace(`/${schoolId}/admin?view=teacher`);
+            router.replace(`/${schoolId}/admin`);
             return true;
         } finally {
             setAdminSubmitting(false);
@@ -427,22 +408,6 @@ export default function TeacherPage() {
                                 )}
                             </Button>
 
-                            {isAdmin && loginState === 'admin' && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="w-full h-12 rounded-xl font-bold"
-                                    onClick={() => {
-                                        playSound('click');
-                                        router.replace(`/${schoolId}/admin?view=teacher`);
-                                    }}
-                                    disabled={isSubmitting}
-                                >
-                                    <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                                    Continue as admin
-                                </Button>
-                            )}
-
                             {!isAdmin && (
                                 <Button
                                     type="button"
@@ -451,7 +416,7 @@ export default function TeacherPage() {
                                     onClick={() => {
                                         playSound('click');
                                         if (canBypassAdminPasscode) {
-                                            void submitAdminForTeacher();
+                                            void submitAdminLogin();
                                             return;
                                         }
                                         setAdminDialogOpen(true);
@@ -476,7 +441,7 @@ export default function TeacherPage() {
                             <DialogContent className="sm:max-w-md">
                                 <DialogHeader>
                                     <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
-                                    <DialogDescription>Enter the admin passcode for this school to open the teacher portal as admin.</DialogDescription>
+                                    <DialogDescription>Enter the admin passcode for this school to open the admin dashboard.</DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-2">
                                     <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
@@ -494,7 +459,7 @@ export default function TeacherPage() {
                                             if (e.key !== 'Enter') return;
                                             e.preventDefault();
                                             if (adminSubmitting) return;
-                                            void submitAdminForTeacher();
+                                            void submitAdminLogin();
                                         }}
                                     />
                                 </div>
@@ -514,7 +479,7 @@ export default function TeacherPage() {
                                         disabled={adminSubmitting}
                                         onClick={() => {
                                             if (adminSubmitting) return;
-                                            void submitAdminForTeacher();
+                                            void submitAdminLogin();
                                         }}
                                     >
                                         {adminSubmitting ? (

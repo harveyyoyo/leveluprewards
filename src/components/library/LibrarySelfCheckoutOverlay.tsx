@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { isLibraryStandaloneSelfCheckoutEnabled } from '@/lib/library/libraryPolicy';
 import type { Category } from '@/lib/types';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 
@@ -78,7 +80,11 @@ export function LibrarySelfCheckoutLaunchButton({
   getStudentName: (id?: string) => string;
   className?: string;
 }) {
+  const { settings } = useSettings();
   const [open, setOpen] = useState(false);
+  const standaloneEnabled = isLibraryStandaloneSelfCheckoutEnabled(settings);
+
+  if (!standaloneEnabled) return null;
 
   return (
     <>

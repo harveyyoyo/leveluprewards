@@ -76,7 +76,7 @@ export function schoolPathAllowedByGate(
     );
   }
 
-  if (section === 'smart-screen') {
+  if (section === 'smart-screen' || section === 'displays' || section === 'bulletin-board') {
     return (
       scopes.has('portal') ||
       scopes.has('admin') ||
@@ -107,6 +107,7 @@ export function schoolPathAllowedByGate(
   if (section === 'student') {
     return (
       scopes.has('kiosk') ||
+      scopes.has('portal') ||
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||

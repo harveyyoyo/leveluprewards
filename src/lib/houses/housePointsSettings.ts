@@ -38,7 +38,7 @@ export function applyHouseWizardSettings(
  * `manual` — house points are entered on the Houses tab; not rolled up from student LevelUp balances.
  */
 export function resolveHousePointsSource(
-  settings: Pick<Settings, 'housePointsSource' | 'housesRollupPoints'>,
+  settings: Partial<Pick<Settings, 'housePointsSource' | 'housesRollupPoints'>>,
 ): HousePointsSource {
   if (settings.housePointsSource === 'manual' || settings.housePointsSource === 'studentRollup') {
     return settings.housePointsSource;
@@ -48,9 +48,9 @@ export function resolveHousePointsSource(
 
 /** True when teacher/student point awards should update each house's cached totals. */
 export function isHouseStudentPointsRollupEnabled(
-  settings: Pick<Settings, 'enableHouses' | 'housePointsSource' | 'housesRollupPoints'>,
+  settings: Partial<Pick<Settings, 'enableHouses' | 'housePointsSource' | 'housesRollupPoints'>>,
 ): boolean {
-  return settings.enableHouses && resolveHousePointsSource(settings) === 'studentRollup';
+  return !!settings.enableHouses && resolveHousePointsSource(settings) === 'studentRollup';
 }
 
 export function housePointsSourceSettingsPatch(source: HousePointsSource): Pick<Settings, 'housePointsSource' | 'housesRollupPoints'> {
@@ -69,23 +69,19 @@ export function buildHouseHallOfFameHref(
     | 'houseHallOfFamePodiumSize'
     | 'houseHallOfFameAutoScroll'
     | 'houseHallOfFameGridLayout'
+    | 'houseHallOfFameGridColumns'
+    | 'houseHallOfFameLayout'
     | 'hallOfFameSortBy'
     | 'hallOfFameLimit'
     | 'hallOfFamePodiumSize'
     | 'hallOfFameAutoScroll'
     | 'hallOfFameGridLayout'
+    | 'hallOfFameGridColumns'
+    | 'hallOfFameLayout'
   >,
 ): string {
   const params = new URLSearchParams();
   params.set('fullscreen', '1');
   params.set('rankType', 'houses');
-  params.set('scope', 'all');
-  params.set('sortBy', settings.houseHallOfFameSortBy ?? settings.hallOfFameSortBy ?? 'lifetimePoints');
-  params.set('limit', String(settings.houseHallOfFameLimit ?? settings.hallOfFameLimit ?? 50));
-  params.set('podiumSize', String(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize ?? 3));
-  const autoScroll = settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll ?? false;
-  const gridLayout = settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout ?? true;
-  if (autoScroll) params.set('autoScroll', '1');
-  if (!gridLayout) params.set('grid', '0');
   return `/${schoolId}/hall-of-fame?${params.toString()}`;
 }

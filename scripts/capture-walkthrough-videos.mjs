@@ -99,8 +99,8 @@ const SCHOOL_PASSCODE = (
 const TEACHER_NAME = process.env.DEMO_TEACHER_NAME || 'Mr. Smith';
 const TEACHER_PASSCODE = process.env.DEMO_TEACHER_PASSCODE || '1234';
 /** Student card / portal ID for kiosk and student-home (School ABC demo) */
-/** School ABC demo students use nfcId 100–107 (see src/lib/schoolData.ts) */
-const STUDENT_BADGE_ID = (process.env.DEMO_STUDENT_BADGE_ID || '100').trim();
+/** School ABC demo students use nfcId 100100–100149 (see src/lib/schoolData.ts) */
+const STUDENT_BADGE_ID = (process.env.DEMO_STUDENT_BADGE_ID || '100100').trim();
 const STUDENT_PORTAL_PASSCODE = (
   process.env.DEMO_STUDENT_PORTAL_PASSCODE || '1234'
 ).trim();
@@ -522,7 +522,7 @@ let resolvedCaptureCouponCode = null;
 /** When Firebase reset fails, filled from a teacher print sheet (10 fresh codes). */
 let activeCouponRedeemScenes = null;
 
-const DEFAULT_COUPON_STUDENT_BADGES = ['100', '101', '102', '103', '104', '105', '106', '107', '108', '109'];
+const DEFAULT_COUPON_STUDENT_BADGES = ['100100', '100101', '100102', '100103', '100104', '100105', '100106', '100107', '100108', '100109'];
 
 async function mintCouponScenesViaTeacherPrint(browser) {
   const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
@@ -1548,7 +1548,7 @@ const PROMO_BROLL_LIBRARY_IDS = [
   'student-kiosk/kiosk-welcome-balance',
   'student-kiosk/kiosk-card-tab',
   'action/action-print-coupons',
-  'action/action-print-preview-hold',
+  'action/coupons',
   'admin/admin-id-card-preview',
   'features/admin-branding-theme',
   'features/hall-of-fame',

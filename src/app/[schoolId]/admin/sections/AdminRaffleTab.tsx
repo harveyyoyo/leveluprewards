@@ -17,7 +17,7 @@ import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Student } from '@/lib/types';
+import type { Class, Student } from '@/lib/types';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
@@ -27,7 +27,9 @@ import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import { rafflePointsFieldLabel } from '@/lib/raffleStudentPoints';
 import {
   buildRafflePool,
+  filterStudentsForRaffleClass,
   isAttendanceRaffleScopeAvailable,
+  type RaffleClassFilter,
   type RaffleEntryRow,
   type RafflePoolScope,
 } from '@/lib/rafflePool';
@@ -35,6 +37,13 @@ import { isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
 import { attendanceStatusForStudent, useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { applyPointsByPeriod } from '@/lib/db/helpers';
 import {
   Dialog,
@@ -47,12 +56,14 @@ import {
 export function AdminRaffleTab({
   schoolId,
   students,
+  classes,
   /** When false, raffle rules are read-only (e.g. secretary coupon-only mode). */
   canEditSettings = true,
   operatorName,
 }: {
   schoolId: string;
   students: Student[];
+  classes?: Class[];
   canEditSettings?: boolean;
   operatorName?: string;
 }) {
@@ -66,6 +77,7 @@ export function AdminRaffleTab({
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
   const [poolScope, setPoolScope] = useState<RafflePoolScope>('eligible');
+  const [classFilter, setClassFilter] = useState<RaffleClassFilter>('all');
   const [manualExcludeIds, setManualExcludeIds] = useState<Set<string>>(() => new Set());
   const [manualIncludeIds, setManualIncludeIds] = useState<Set<string>>(() => new Set());
   const [addStudentOpen, setAddStudentOpen] = useState(false);
@@ -97,10 +109,27 @@ export function AdminRaffleTab({
   const effectivePoolScope: RafflePoolScope =
     poolScope === 'onTimeToday' && attendanceScopeAvailable ? 'onTimeToday' : 'eligible';
 
+  const classOptions = useMemo(
+    () => [...(classes || [])].sort((a, b) => a.name.localeCompare(b.name)),
+    [classes],
+  );
+  const showClassFilter = classOptions.length > 0;
+
+  const scopedStudents = useMemo(
+    () => filterStudentsForRaffleClass(students || [], showClassFilter ? classFilter : 'all'),
+    [classFilter, showClassFilter, students],
+  );
+
+  const classFilterLabel = useMemo(() => {
+    if (!showClassFilter || classFilter === 'all') return null;
+    if (classFilter === 'unassigned') return 'Unassigned students';
+    return classOptions.find((c) => c.id === classFilter)?.name ?? 'Selected class';
+  }, [classFilter, classOptions, showClassFilter]);
+
   const entries = useMemo<RaffleEntryRow[]>(
     () =>
       buildRafflePool({
-        students: students || [],
+        students: scopedStudents,
         settings,
         rafflePointsPerTicket: settings.rafflePointsPerTicket,
         raffleOneEntryPerStudent: oneEntryPerStudent,
@@ -115,35 +144,36 @@ export function AdminRaffleTab({
       manualIncludeIds,
       onTimeTodayIds,
       oneEntryPerStudent,
+      scopedStudents,
       settings,
-      students,
     ],
   );
 
   const entryIdSet = useMemo(() => new Set(entries.map((e) => e.id)), [entries]);
 
   const excludedPreview = useMemo(() => {
-    return (students || [])
+    return scopedStudents
       .filter((s) => s?.id && manualExcludeIds.has(s.id))
       .map((s) => ({
         id: s.id,
         name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [manualExcludeIds, students]);
+  }, [manualExcludeIds, scopedStudents]);
 
   const studentsAvailableToAdd = useMemo(() => {
-    return (students || [])
+    return scopedStudents
       .filter((s) => s?.id && !entryIdSet.has(s.id) && !manualExcludeIds.has(s.id))
       .map((s) => ({
         id: s.id,
         name: `${s.firstName ?? ''}${s.lastName ? ` ${s.lastName}` : ''}`.trim() || s.id,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [entryIdSet, manualExcludeIds, students]);
+  }, [entryIdSet, manualExcludeIds, scopedStudents]);
 
   const clearDrawSessionOverrides = useCallback(() => {
     setPoolScope('eligible');
+    setClassFilter('all');
     setManualExcludeIds(new Set());
     setManualIncludeIds(new Set());
     setAddStudentOpen(false);
@@ -186,9 +216,15 @@ export function AdminRaffleTab({
   }, [attendanceScopeAvailable, poolScope]);
 
   useEffect(() => {
+    if (classFilter === 'all' || classFilter === 'unassigned') return;
+    if (!classOptions.some((c) => c.id === classFilter)) setClassFilter('all');
+  }, [classFilter, classOptions]);
+
+  useEffect(() => {
     setWinner(null);
     setJackpotResetKey((k) => k + 1);
   }, [
+    classFilter,
     effectivePoolScope,
     isGeneralRaffle,
     manualExcludeIds,
@@ -553,6 +589,7 @@ export function AdminRaffleTab({
                   This draw
                 </h2>
                 {(poolScope !== 'eligible' ||
+                  classFilter !== 'all' ||
                   manualExcludeIds.size > 0 ||
                   manualIncludeIds.size > 0) && (
                   <Button
@@ -610,6 +647,32 @@ export function AdminRaffleTab({
                     </p>
                   </button>
                 </div>
+                {showClassFilter ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="raffle-class-filter" className="text-xs font-semibold text-muted-foreground">
+                      Class
+                    </Label>
+                    <Select value={classFilter} onValueChange={(v) => setClassFilter(v as RaffleClassFilter)}>
+                      <SelectTrigger id="raffle-class-filter" className="h-11 w-full max-w-md rounded-xl bg-background">
+                        <SelectValue placeholder="All classes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All classes</SelectItem>
+                        <SelectItem value="unassigned">Unassigned students</SelectItem>
+                        {classOptions.map((cl) => (
+                          <SelectItem key={cl.id} value={cl.id}>
+                            {cl.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {classFilterLabel ? (
+                      <p className="text-xs text-muted-foreground">
+                        Pool limited to <span className="font-medium text-foreground">{classFilterLabel}</span>.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="flex flex-wrap items-center gap-2">
                   <Popover open={addStudentOpen} onOpenChange={setAddStudentOpen}>
                     <PopoverTrigger asChild>
@@ -755,6 +818,7 @@ export function AdminRaffleTab({
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Entries preview</h2>
                 <p className="text-xs text-muted-foreground sm:max-w-[min(42rem,72%)] sm:text-right">
+                  {classFilterLabel ? `${classFilterLabel}. ` : ''}
                   {effectivePoolScope === 'onTimeToday'
                     ? 'On-time sign-ins today only. Use Remove to skip someone for this draw.'
                     : isGeneralRaffle

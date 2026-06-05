@@ -45,15 +45,19 @@ export function buildStaffDirectory(
     const key = teacherPortalKey(teacher);
     if (!teacher.name?.trim() || !username) continue;
     const personnelRole = normalizeTeacherPersonnelRole(teacher.personnelRole);
-    expected.set(key, {
+    const option: StaffPortalLoginOption = {
       id: key,
       sourceId: teacher.id,
       type: 'teacher',
       label: teacher.name.trim(),
       username,
-      personnelRole: personnelRole === 'teacher' ? undefined : personnelRole,
       updatedAt: now,
-    });
+    };
+    // Only include personnelRole for non-default roles (Firestore rejects undefined values)
+    if (personnelRole && personnelRole !== 'teacher') {
+      option.personnelRole = personnelRole;
+    }
+    expected.set(key, option);
   }
 
   for (const account of staffAccounts ?? []) {
@@ -89,6 +93,10 @@ export async function syncSchoolStaffDirectory(
 ): Promise<void> {
   const staffDirectory = buildStaffDirectory(teachers, staffAccounts);
   const now = Date.now();
+  // Debug log to help diagnose sync issues
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+    // [syncSchoolStaffDirectory] logged
+  }
   await setDoc(
     doc(firestore, 'schoolPublic', schoolId),
     {

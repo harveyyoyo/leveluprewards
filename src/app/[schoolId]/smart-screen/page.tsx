@@ -22,6 +22,7 @@ import {
 import { collection, query, limit } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import type { Settings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { displayStudentNameOnSharedBoard, cn } from '@/lib/utils';
@@ -51,6 +52,30 @@ type SmartScreenLocationInfo = {
   temperatureF?: number | null;
   condition?: string;
 };
+
+type SmartScreenScopedSettings = Pick<
+  Settings,
+  | 'smartScreenEnabled'
+  | 'smartScreenTitle'
+  | 'smartScreenMessage'
+  | 'smartScreenTheme'
+  | 'smartScreenLayout'
+  | 'smartScreenLocationZip'
+  | 'smartScreenWeatherLabel'
+  | 'smartScreenWeatherTemp'
+  | 'smartScreenShowWeather'
+  | 'smartScreenShowStats'
+  | 'smartScreenShowCompliments'
+  | 'smartScreenShowFocus'
+  | 'smartScreenShowQuote'
+  | 'smartScreenShowLeaderboard'
+  | 'smartScreenShowHouses'
+  | 'smartScreenShowClasses'
+  | 'smartScreenShowBirthdays'
+  | 'smartScreenShowBulletin'
+  | 'smartScreenShowRewards'
+  | 'smartScreenShowSchedule'
+>;
 
 const VIEWER_LOGIN_STATES = new Set([
   'teacher',
@@ -213,6 +238,15 @@ export default function SmartScreenPage() {
   const [now, setNow] = useState(() => new Date());
   const [locationInfo, setLocationInfo] = useState<SmartScreenLocationInfo | null>(null);
   const queryZipOverride = (searchParams.get('zip') || '').trim();
+  const screenProfileId = (searchParams.get('screenProfileId') || '').trim();
+  const activeScreenProfile = screenProfileId ? settings.smartScreenProfiles?.[screenProfileId] : null;
+  const activeProfileSettings = activeScreenProfile?.settings ?? {};
+  const readScreenSetting = <K extends keyof SmartScreenScopedSettings>(key: K): SmartScreenScopedSettings[K] => {
+    const profileValue = activeProfileSettings[key as keyof typeof activeProfileSettings];
+    if (profileValue !== undefined) return profileValue as SmartScreenScopedSettings[K];
+    return settings[key];
+  };
+  const configuredZip = (readScreenSetting('smartScreenLocationZip') || '').trim();
 
   const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolMeta } = useDoc<{ logoUrl?: string; name?: string }>(schoolDocRef);
@@ -257,7 +291,7 @@ export default function SmartScreenPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const zip = (/^\d{5}$/.test(queryZipOverride) ? queryZipOverride : settings.smartScreenLocationZip || '').trim();
+    const zip = (/^\d{5}$/.test(queryZipOverride) ? queryZipOverride : configuredZip || '').trim();
 
     const loadLocation = async () => {
       try {
@@ -279,7 +313,7 @@ export default function SmartScreenPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [queryZipOverride, settings.smartScreenLocationZip]);
+  }, [configuredZip, queryZipOverride]);
 
   useEffect(() => {
     if (isInitialized && !VIEWER_LOGIN_STATES.has(loginState)) {
@@ -330,7 +364,9 @@ export default function SmartScreenPage() {
   }, [houses]);
 
   const themeKey =
-    validSmartScreenTheme(searchParams.get('theme')) || validSmartScreenTheme(settings.smartScreenTheme) || 'midnight';
+    validSmartScreenTheme(searchParams.get('theme')) ||
+    validSmartScreenTheme(readScreenSetting('smartScreenTheme')) ||
+    'midnight';
   const theme = SMART_SCREEN_THEME_CLASSES[themeKey];
 
   useEffect(() => {
@@ -343,30 +379,30 @@ export default function SmartScreenPage() {
     return <LoadingScreen label="Loading Smart Screen..." themeKey={themeKey} />;
   }
 
-  const layout = validLayout(searchParams.get('layout')) || settings.smartScreenLayout || 'mirror';
+  const layout = validLayout(searchParams.get('layout')) || readScreenSetting('smartScreenLayout') || 'mirror';
   const isPortrait = layout === 'portrait';
   const isDashboard = layout === 'dashboard';
   const compact = isPortrait || isDashboard;
-  const showWeather = settings.smartScreenShowWeather !== false;
-  const showStats = settings.smartScreenShowStats !== false;
-  const showCompliments = settings.smartScreenShowCompliments !== false;
-  const showFocus = settings.smartScreenShowFocus !== false;
-  const showQuote = settings.smartScreenShowQuote !== false;
-  const showLeaderboard = settings.smartScreenShowLeaderboard !== false;
-  const showHouses = settings.smartScreenShowHouses !== false;
-  const showClasses = settings.smartScreenShowClasses !== false;
-  const showBirthdays = settings.smartScreenShowBirthdays !== false;
-  const showBulletin = settings.smartScreenShowBulletin !== false;
-  const showRewards = settings.smartScreenShowRewards !== false;
-  const showSchedule = settings.smartScreenShowSchedule !== false;
-  const enabled = !!settings.smartScreenEnabled;
+  const showWeather = readScreenSetting('smartScreenShowWeather') !== false;
+  const showStats = readScreenSetting('smartScreenShowStats') !== false;
+  const showCompliments = readScreenSetting('smartScreenShowCompliments') !== false;
+  const showFocus = readScreenSetting('smartScreenShowFocus') !== false;
+  const showQuote = readScreenSetting('smartScreenShowQuote') !== false;
+  const showLeaderboard = readScreenSetting('smartScreenShowLeaderboard') !== false;
+  const showHouses = readScreenSetting('smartScreenShowHouses') !== false;
+  const showClasses = readScreenSetting('smartScreenShowClasses') !== false;
+  const showBirthdays = readScreenSetting('smartScreenShowBirthdays') !== false;
+  const showBulletin = readScreenSetting('smartScreenShowBulletin') !== false;
+  const showRewards = readScreenSetting('smartScreenShowRewards') !== false;
+  const showSchedule = readScreenSetting('smartScreenShowSchedule') !== false;
+  const enabled = !!readScreenSetting('smartScreenEnabled');
   const schoolName =
     schoolMeta?.name ||
     (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'School');
-  const title = (settings.smartScreenTitle || 'Smart Screen').trim();
-  const message = (settings.smartScreenMessage || 'Make today count.').trim();
-  const weatherLabel = (settings.smartScreenWeatherLabel || 'Clear focus').trim();
-  const weatherTemp = (settings.smartScreenWeatherTemp || '72').trim();
+  const title = (readScreenSetting('smartScreenTitle') || 'Smart Screen').trim();
+  const message = (readScreenSetting('smartScreenMessage') || 'Make today count.').trim();
+  const weatherLabel = (readScreenSetting('smartScreenWeatherLabel') || 'Clear focus').trim();
+  const weatherTemp = (readScreenSetting('smartScreenWeatherTemp') || '72').trim();
   const displayTimeZone =
     safeTimeZone(locationInfo?.timeZone) || safeTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const displayWeatherLabel = locationInfo?.ok && locationInfo.condition ? locationInfo.condition : weatherLabel;
@@ -638,6 +674,11 @@ export default function SmartScreenPage() {
                   {schoolName}
                 </p>
                 <h1 className={cn('truncate font-black', isPortrait ? 'text-lg' : 'text-3xl')}>{title}</h1>
+                {activeScreenProfile?.name ? (
+                  <p className={cn('truncate font-bold uppercase tracking-[0.18em]', isPortrait ? 'text-[9px]' : 'text-[10px]', theme.quiet)}>
+                    Screen version: {activeScreenProfile.name}
+                  </p>
+                ) : null}
               </div>
             </div>
             {!isPortrait ? (
@@ -679,7 +720,7 @@ export default function SmartScreenPage() {
 
       {!enabled && !isPortrait ? (
         <div className="fixed inset-x-4 bottom-4 mx-auto max-w-xl rounded-2xl border border-amber-300/40 bg-amber-100 px-4 py-3 text-sm font-bold text-amber-950 shadow-2xl">
-          Smart Screen is currently off. Turn it on from Admin → Add more → Smart Screen.
+          Smart Screen is currently off. Turn it on from Admin → Displays.
         </div>
       ) : null}
 

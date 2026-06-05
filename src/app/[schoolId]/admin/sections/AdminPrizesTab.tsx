@@ -792,7 +792,9 @@ export function AdminPrizesTab({
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label>Print redeem voucher</Label>
-                  <p className="text-xs text-muted-foreground">Offer to print a voucher after redemption.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Lets students print a pickup slip with a VR barcode to scan at a separate kiosk.
+                  </p>
                 </div>
                 <Switch checked={wOfferPrint} onCheckedChange={setWOfferPrint} />
               </div>

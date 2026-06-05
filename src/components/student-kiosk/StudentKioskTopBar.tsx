@@ -6,7 +6,7 @@ import type { Student } from '@/lib/types';
 
 /** Optional spacing below the student name bar when not inside a spaced flex column. */
 export const studentKioskHeaderGapClass =
-  'mb-2 sm:mb-3 [@media(max-height:760px)]:mb-1.5';
+  'mb-1.5 sm:mb-2 [@media(max-height:760px)]:mb-1';
 
 export type StudentKioskTopBarProps = {
   student: Student;
@@ -34,7 +34,7 @@ export function StudentKioskTopBar({
   return (
     <div
       className={cn(
-        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-4 py-3 sm:px-5 sm:py-4',
+        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-3 py-2 sm:px-4 sm:py-2.5 [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:py-1.5',
         studentKioskHeaderGapClass,
         !themed && 'border-primary/35 bg-card/95 shadow-sm',
       )}
@@ -47,18 +47,18 @@ export function StudentKioskTopBar({
           : undefined
       }
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 [@media(max-height:760px)]:gap-1.5">
         <div className="min-w-0 flex-1">
           <p
-            className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs"
+            className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
             style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
           >
             Welcome back
           </p>
-            <div className="mt-1 flex min-w-0 items-start gap-3">
+            <div className="mt-1.5 flex min-w-0 items-center gap-2 sm:mt-2 sm:gap-2.5 [@media(max-height:760px)]:mt-0 [@media(max-height:760px)]:gap-1.5">
             <div
               className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-black uppercase sm:h-12 sm:w-12',
+                'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-black uppercase sm:h-10 sm:w-10 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8',
                 !themed && 'student-kiosk-gradient-brand text-white shadow-md',
               )}
               style={
@@ -88,9 +88,9 @@ export function StudentKioskTopBar({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <h1
-                  className="truncate text-xl font-black uppercase leading-tight tracking-wide sm:text-2xl md:text-3xl lg:text-4xl"
+                  className="truncate text-lg font-black uppercase leading-tight tracking-wide sm:text-xl md:text-2xl lg:text-3xl [@media(max-height:760px)]:text-base"
                   style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
                 >
                   {displayName}
@@ -101,19 +101,19 @@ export function StudentKioskTopBar({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-2">
+        <div className="flex shrink-0 flex-col items-end gap-1 sm:gap-1.5">
           {trailingActions ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">{trailingActions}</div>
+            <div className="flex flex-wrap items-center justify-end gap-1.5">{trailingActions}</div>
           ) : null}
           <div className="text-right">
             <p
-              className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs"
+              className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
               style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
             >
               Balance
             </p>
             <p
-              className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl"
+              className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
               style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
             >
               {points.toLocaleString()}

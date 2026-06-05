@@ -16,6 +16,13 @@ const MAX_BODY_BYTES = 16 * 1024;
 const LIST_LIMIT = 80;
 const NOTE_KINDS = new Set<BehaviorNoteKind>(['positive', 'concern', 'incident']);
 
+function firstNameFromStudentLabel(label: string): string {
+  const trimmed = label.trim();
+  if (!trimmed) return 'Student';
+  const first = trimmed.split(/\s+/)[0]?.trim() || '';
+  return first.slice(0, 40) || 'Student';
+}
+
 async function getDb() {
   return getFirebaseAdminFirestore();
 }
@@ -95,6 +102,7 @@ export async function GET(req: NextRequest) {
         note: String(row.note || ''),
         createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
         visibleToParent: row.visibleToParent !== false,
+        notifyPrincipal: row.notifyPrincipal === true,
         pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
         pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
       };
@@ -140,8 +148,10 @@ export async function POST(req: NextRequest) {
     const className = typeof body?.className === 'string' ? body.className.trim() : undefined;
     const visibleToParent =
       body?.visibleToParent === true || (kind !== 'incident' && body?.visibleToParent !== false);
+    const notifyPrincipal = body?.notifyPrincipal === true;
     const pointsAmount = body?.pointsAmount != null ? Number(body.pointsAmount) : null;
     const pointsLabel = typeof body?.pointsLabel === 'string' ? body.pointsLabel.trim() : null;
+    const shareToBulletinBoard = body?.shareToBulletinBoard === true;
 
     if (!schoolId || !SCHOOL_ID_RE.test(schoolId) || !studentId || !studentName || !note) {
       return jsonError(400, 'schoolId, studentId, studentName, and note are required.');
@@ -188,10 +198,41 @@ export async function POST(req: NextRequest) {
       kind,
       note,
       createdAt: now,
-      visibleToParent: kind === 'incident' ? visibleToParent : true,
+      visibleToParent,
+      notifyPrincipal,
       pointsAmount: pointsAmount != null && Number.isFinite(pointsAmount) ? pointsAmount : null,
       pointsLabel: pointsLabel || null,
     });
+
+    let bulletinPosted = false;
+    let bulletinMessage: string | undefined;
+    if (shareToBulletinBoard) {
+      if ((kind as BehaviorNoteKind) !== 'positive') {
+        bulletinMessage = 'Only positive notes can be posted to the bulletin board.';
+      } else if (appSettings.bulletinEnabled === false) {
+        bulletinMessage = 'Bulletin board is off for this school.';
+      } else {
+        try {
+          const studentFirstName = firstNameFromStudentLabel(studentName);
+          await db.collection('schools').doc(schoolId).collection('bulletinBoardPosts').add({
+            kind: 'compliment',
+            source: 'classroom',
+            studentId,
+            studentName: studentFirstName,
+            teacherId,
+            teacherName,
+            title: `${studentFirstName} got a compliment!`,
+            message: note.slice(0, 180),
+            emoji: '👏',
+            createdAt: now,
+          });
+          bulletinPosted = true;
+        } catch (error) {
+          console.error('[api/classroom/behavior-notes] bulletin share failed:', error);
+          bulletinMessage = 'Saved note, but could not post to the bulletin board.';
+        }
+      }
+    }
 
     void evaluateClassroomAlertRulesForStudent(db, schoolId, appSettings, {
       event: 'note',
@@ -204,7 +245,7 @@ export async function POST(req: NextRequest) {
       noteKind: kind as BehaviorNoteKind,
     }).catch((e) => console.error('[api/classroom/behavior-notes] alert rules:', e));
 
-    return NextResponse.json({ ok: true, id: ref.id });
+    return NextResponse.json({ ok: true, id: ref.id, bulletinPosted, bulletinMessage });
   } catch (e) {
     console.error('[api/classroom/behavior-notes] POST failed:', e);
     return jsonError(503, 'Could not save behavior note.');

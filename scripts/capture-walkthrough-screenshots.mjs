@@ -9,7 +9,7 @@ const OUT_DIR = path.join(ROOT, 'promo-video', 'public');
 
 const BASE = 'http://localhost:3000';
 const SCHOOL = 'schoolabc';
-const STUDENT_BADGE_ID = '100';
+const STUDENT_BADGE_ID = '100100';
 
 const VIEWPORT = { width: 1280, height: 720 };
 

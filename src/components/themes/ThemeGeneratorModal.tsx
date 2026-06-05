@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Award, ChevronRight, Loader2, ScanBarcode, Trash2, Wallet, Wand2 } from 'lucide-react';
+import { Award, ChevronRight, Loader2, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -24,65 +24,17 @@ import {
     getArcadeAiModelFromStorage,
     persistArcadeAiModel,
 } from '@/lib/aiModelPreference';
-
-function hexForColorInput(color: string | undefined, fallback: string): string {
-    if (!color) return fallback;
-    const c = color.trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(c)) return c;
-    const m3 = c.match(/^#([0-9a-fA-F]{3})$/);
-    if (m3) {
-        const x = m3[1];
-        return `#${x[0]}${x[0]}${x[1]}${x[1]}${x[2]}${x[2]}`;
-    }
-    return fallback;
-}
-
-function cssColorToHexForPicker(color: string, fallback: string): string {
-    const t = color.trim();
-    if (/^#/i.test(t)) return hexForColorInput(t, fallback);
-    const rgb = t.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
-    if (rgb) {
-        const r = Math.min(255, parseInt(rgb[1], 10));
-        const g = Math.min(255, parseInt(rgb[2], 10));
-        const b = Math.min(255, parseInt(rgb[3], 10));
-        return `#${[r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('')}`;
-    }
-    return fallback;
-}
-
-const GRADIENT_ANGLE_OPTS = [45, 90, 135, 180, 225] as const;
-function snapGradientAngleDeg(deg: number): string {
-    let best: (typeof GRADIENT_ANGLE_OPTS)[number] = GRADIENT_ANGLE_OPTS[0];
-    let bestD = Infinity;
-    for (const o of GRADIENT_ANGLE_OPTS) {
-        const d = Math.abs(o - deg);
-        if (d < bestD) {
-            bestD = d;
-            best = o;
-        }
-    }
-    return String(best);
-}
-
-function parseWizardLinearGradient(backgroundStyle: string): { angle: string; colorA: string; colorB: string } | null {
-    const norm = backgroundStyle.replace(/\s+/g, ' ').trim();
-    const m = norm.match(
-        /^linear-gradient\(\s*(\d+(?:\.\d+)?)deg\s*,\s*((?:#[\da-fA-F]{3,8}|rgba?\([^)]+\)))\s+0%\s*,\s*((?:#[\da-fA-F]{3,8}|rgba?\([^)]+\)))\s+100%\s*\)$/i,
-    );
-    if (!m) return null;
-    return {
-        angle: snapGradientAngleDeg(parseFloat(m[1])),
-        colorA: m[2].trim(),
-        colorB: m[3].trim(),
-    };
-}
-
-function inferBackgroundMode(theme: StudentTheme | undefined): 'solid' | 'gradient' | 'custom' {
-    if (!theme?.backgroundStyle?.trim()) return 'solid';
-    const bs = theme.backgroundStyle.trim();
-    if (bs.startsWith('linear-gradient') && parseWizardLinearGradient(bs)) return 'gradient';
-    return 'custom';
-}
+import { useThemeEditorHistory } from '@/components/themes/useThemeEditorHistory';
+import {
+    buildLinearGradientCss,
+    extractCssColors,
+    hexForColorInput,
+    inferBackgroundMode,
+    linearGradientColors,
+    parseEditableLinearGradient,
+    replaceCssColor,
+    uniqueBackgroundColors,
+} from '@/components/themes/themeBackgroundStyle';
 
 function StudentPortalThemePreview({
     theme,
@@ -96,7 +48,7 @@ function StudentPortalThemePreview({
 
     const { vars, effective } = themed;
     const themeBg = vars['--theme-bg'];
-    const fontScale = effective.fontScale ?? 1.05;
+    const fontScale = effective.fontScale ?? 1.1;
     const previewStyle: CSSProperties = {
         ...vars,
         background:
@@ -318,8 +270,17 @@ export function ThemeGeneratorModal({
     const initialTheme = currentTheme ?? settings.defaultStudentTheme ?? undefined;
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
-    const [previewTheme, setPreviewTheme] = useState<StudentTheme | undefined>(initialTheme);
-    const [previousTheme, setPreviousTheme] = useState<StudentTheme | undefined>(initialTheme);
+    const {
+        present: previewTheme,
+        reset: resetThemeHistory,
+        commit: commitTheme,
+        commitFrom: commitThemeFrom,
+        patch: updateTheme,
+        undo: undoTheme,
+        redo: redoTheme,
+        canUndo,
+        canRedo,
+    } = useThemeEditorHistory(initialTheme);
     const [model, setModel] = useState<string>(DEFAULT_ARCADE_AI_MODEL);
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
@@ -344,7 +305,7 @@ export function ThemeGeneratorModal({
         : studentName;
 
     const previewWrapRef = useRef<HTMLDivElement | null>(null);
-    const [idPreviewScale, setIdPreviewScale] = useState(1.35);
+    const [idPreviewScale, setIdPreviewScale] = useState(1);
     const [gradientAngle, setGradientAngle] = useState('135');
     const [gradientA, setGradientA] = useState(initialTheme?.primary || LEVELUP_BRAND_PRIMARY_HEX);
     const [gradientB, setGradientB] = useState(initialTheme?.accent || '#22c55e');
@@ -361,7 +322,7 @@ export function ThemeGeneratorModal({
         const MM_PER_IN = 25.4;
         const cardW = (85.6 / MM_PER_IN) * 96;
         const cardH = (53.98 / MM_PER_IN) * 96;
-        const desired = 1.85; // "make it bigger" but still fit
+        const desired = 1; // 1:1 ISO ID-1 — matches print output
 
         const compute = () => {
             const r = el.getBoundingClientRect();
@@ -393,11 +354,10 @@ export function ThemeGeneratorModal({
         if (!isOpen) return;
         setModel(getArcadeAiModelFromStorage());
         const initial = currentTheme ?? settings.defaultStudentTheme ?? undefined;
-        setPreviewTheme(initial);
-        setPreviousTheme(initial);
+        resetThemeHistory(initial);
         setPrompt('');
         setBackgroundMode(inferBackgroundMode(initial));
-    }, [isOpen, currentTheme, settings.defaultStudentTheme]);
+    }, [isOpen, currentTheme, settings.defaultStudentTheme, resetThemeHistory]);
 
     // Keep gradient controls and background mode in sync with the active preview theme.
     useEffect(() => {
@@ -405,11 +365,11 @@ export function ThemeGeneratorModal({
         const mode = inferBackgroundMode(previewTheme);
         setBackgroundMode(mode);
         if (mode !== 'gradient' || !previewTheme.backgroundStyle) return;
-        const parsed = parseWizardLinearGradient(previewTheme.backgroundStyle);
+        const parsed = parseEditableLinearGradient(previewTheme.backgroundStyle);
         if (!parsed) return;
         setGradientAngle(parsed.angle);
-        setGradientA(cssColorToHexForPicker(parsed.colorA, previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX));
-        setGradientB(cssColorToHexForPicker(parsed.colorB, previewTheme.accent || '#22c55e'));
+        setGradientA(hexForColorInput(parsed.colorA, previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX));
+        setGradientB(hexForColorInput(parsed.colorB, previewTheme.accent || '#22c55e'));
     }, [
         previewTheme,
         previewTheme?.backgroundStyle,
@@ -441,8 +401,7 @@ export function ThemeGeneratorModal({
             }
 
             const generatedTheme: StudentTheme = await response.json();
-            setPreviousTheme(previewTheme || currentTheme);
-            setPreviewTheme(generatedTheme);
+            commitTheme(generatedTheme);
             toast({
                 title: 'Theme Generated',
                 description: 'Preview the new theme below before saving.',
@@ -472,17 +431,66 @@ export function ThemeGeneratorModal({
         onOpenChange(false);
     };
 
-    const updateTheme = (partial: Partial<StudentTheme>) => {
-        setPreviewTheme(prev => (prev ? { ...prev, ...partial } : prev));
-    };
-
-    const handleRevert = () => {
-        if (previousTheme) {
-            setPreviewTheme(previousTheme);
-        }
-    };
-
     const canRemoveThemeFromWizard = Boolean(previewTheme || currentTheme);
+
+    const parsedLinearGradient = previewTheme?.backgroundStyle
+        ? parseEditableLinearGradient(previewTheme.backgroundStyle)
+        : null;
+
+    const aiBackgroundColors =
+        backgroundMode === 'custom' && previewTheme?.backgroundStyle
+            ? uniqueBackgroundColors(previewTheme.backgroundStyle)
+            : [];
+
+    const applyLinearGradientColors = (colors: string[], angle: string = gradientAngle) => {
+        if (colors.length === 0) return;
+        const css = buildLinearGradientCss(angle, colors);
+        const lead = colors[0];
+        setGradientA(hexForColorInput(lead, LEVELUP_BRAND_PRIMARY_HEX));
+        setGradientB(hexForColorInput(colors[colors.length - 1], '#22c55e'));
+        updateTheme({ backgroundStyle: css, background: lead });
+    };
+
+    const patchThemeBackgroundSwatch = (newHex: string) => {
+        if (!previewTheme) return;
+        const bs = previewTheme.backgroundStyle?.trim();
+        if (!bs) {
+            updateTheme({ background: newHex, backgroundStyle: null });
+            return;
+        }
+        const colors = extractCssColors(bs);
+        const anchor = colors[0] ?? previewTheme.background;
+        updateTheme({
+            background: newHex,
+            backgroundStyle: replaceCssColor(bs, anchor, newHex),
+        });
+    };
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            const target = e.target;
+            if (target instanceof HTMLElement) {
+                const tag = target.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
+                    return;
+                }
+            }
+            const mod = e.ctrlKey || e.metaKey;
+            if (!mod) return;
+            if (e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undoTheme();
+                return;
+            }
+            if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
+                e.preventDefault();
+                redoTheme();
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, undoTheme, redoTheme]);
 
     const handleRemoveTheme = async () => {
         if (!canRemoveThemeFromWizard) return;
@@ -496,8 +504,7 @@ export function ThemeGeneratorModal({
                     description: 'Generate again or close the dialog.',
                 });
             }
-            setPreviewTheme(undefined);
-            setPreviousTheme(undefined);
+            resetThemeHistory(undefined);
             onOpenChange(false);
         } catch (error) {
             console.error('Remove theme failed:', error);
@@ -532,7 +539,7 @@ export function ThemeGeneratorModal({
                 throw new Error(msg);
             }
             const generated: StudentTheme = await response.json();
-            setPreviewTheme(prev => {
+            commitThemeFrom((prev) => {
                 if (!prev) return generated;
                 if (kind === 'emoji') {
                     return { ...prev, emoji: generated.emoji || prev.emoji };
@@ -683,7 +690,7 @@ export function ThemeGeneratorModal({
                                         <div className="space-y-1">
                                             <Label htmlFor="theme-font-scale">Text size</Label>
                                             <Select
-                                                value={String(previewTheme.fontScale ?? 1.15)}
+                                                value={String(previewTheme.fontScale ?? 1.1)}
                                                 onValueChange={(v) => updateTheme({ fontScale: parseFloat(v) })}
                                             >
                                                 <SelectTrigger id="theme-font-scale">
@@ -703,7 +710,7 @@ export function ThemeGeneratorModal({
                                         <div className="space-y-1">
                                             <Label htmlFor="theme-font-tracking">Text tracking</Label>
                                             <Select
-                                                value={String(previewTheme.fontTracking ?? 0)}
+                                                value={String(previewTheme.fontTracking ?? 0.02)}
                                                 onValueChange={(v) => updateTheme({ fontTracking: parseFloat(v) })}
                                             >
                                                 <SelectTrigger id="theme-font-tracking">
@@ -751,18 +758,33 @@ export function ThemeGeneratorModal({
                                             { key: 'accent', label: 'Accent' },
                                         ].map(({ key, label }) => {
                                             const value = (previewTheme as any)[key] as string | undefined;
+                                            const swatchHex =
+                                                key === 'background' && previewTheme.backgroundStyle
+                                                    ? hexForColorInput(
+                                                          extractCssColors(previewTheme.backgroundStyle)[0] ??
+                                                              value,
+                                                          '#020617',
+                                                      )
+                                                    : hexForColorInput(value, '#000000');
                                             return (
                                                 <label key={key} className="flex flex-col items-center gap-1 text-[10px] uppercase font-bold text-muted-foreground cursor-pointer">
                                                     <span
                                                         className="w-9 h-9 rounded-xl border border-border shadow-sm"
-                                                        style={{ backgroundColor: value || '#000000' }}
+                                                        style={{ backgroundColor: swatchHex }}
                                                     />
                                                     <span>{label}</span>
                                                     <input
                                                         type="color"
                                                         className="sr-only"
-                                                        value={value || '#000000'}
-                                                        onChange={(e) => updateTheme({ [key]: e.target.value } as any)}
+                                                        value={swatchHex}
+                                                        onChange={(e) => {
+                                                            const v = e.target.value;
+                                                            if (key === 'background') {
+                                                                patchThemeBackgroundSwatch(v);
+                                                                return;
+                                                            }
+                                                            updateTheme({ [key]: v } as Partial<StudentTheme>);
+                                                        }}
                                                     />
                                                 </label>
                                             );
@@ -779,12 +801,26 @@ export function ThemeGeneratorModal({
                                                     if (mode === 'solid') {
                                                         updateTheme({ backgroundStyle: null });
                                                     } else if (mode === 'gradient') {
-                                                        const a = gradientA || previewTheme.primary || LEVELUP_BRAND_PRIMARY_HEX;
-                                                        const b = gradientB || previewTheme.accent || '#22c55e';
-                                                        setGradientA(a);
-                                                        setGradientB(b);
-                                                        const css = `linear-gradient(${gradientAngle}deg, ${a} 0%, ${b} 100%)`;
-                                                        updateTheme({ backgroundStyle: css, background: a });
+                                                        const fromAi = previewTheme.backgroundStyle
+                                                            ? uniqueBackgroundColors(previewTheme.backgroundStyle)
+                                                            : [];
+                                                        const colors =
+                                                            fromAi.length >= 2
+                                                                ? fromAi
+                                                                : [
+                                                                      gradientA ||
+                                                                          previewTheme.primary ||
+                                                                          LEVELUP_BRAND_PRIMARY_HEX,
+                                                                      gradientB ||
+                                                                          previewTheme.accent ||
+                                                                          '#22c55e',
+                                                                  ];
+                                                        setGradientAngle(
+                                                            parseEditableLinearGradient(
+                                                                previewTheme.backgroundStyle || '',
+                                                            )?.angle ?? gradientAngle,
+                                                        );
+                                                        applyLinearGradientColors(colors);
                                                     }
                                                 }}
                                             >
@@ -840,7 +876,12 @@ export function ThemeGeneratorModal({
                                                 <div
                                                     className="h-11 w-full rounded-xl border border-border shadow-inner"
                                                     style={{
-                                                        backgroundImage: `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${gradientB} 100%)`,
+                                                        backgroundImage:
+                                                            previewTheme.backgroundStyle?.trim().startsWith(
+                                                                'linear-gradient',
+                                                            )
+                                                                ? previewTheme.backgroundStyle
+                                                                : `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${gradientB} 100%)`,
                                                     }}
                                                     aria-hidden
                                                 />
@@ -863,8 +904,8 @@ export function ThemeGeneratorModal({
                                                                     onChange={(e) => {
                                                                         const v = e.target.value;
                                                                         setGradientA(v);
-                                                                        const css = `linear-gradient(${gradientAngle}deg, ${v} 0%, ${gradientB} 100%)`;
-                                                                        updateTheme({ backgroundStyle: css, background: v });
+                                                                        const middles = parsedLinearGradient?.middleColors ?? [];
+                                                                        applyLinearGradientColors([v, ...middles, gradientB]);
                                                                     }}
                                                                 />
                                                             </label>
@@ -873,8 +914,8 @@ export function ThemeGeneratorModal({
                                                                 onChange={(e) => {
                                                                     const v = hexForColorInput(e.target.value, gradientA);
                                                                     setGradientA(v);
-                                                                    const css = `linear-gradient(${gradientAngle}deg, ${v} 0%, ${gradientB} 100%)`;
-                                                                    updateTheme({ backgroundStyle: css, background: v });
+                                                                    const middles = parsedLinearGradient?.middleColors ?? [];
+                                                                    applyLinearGradientColors([v, ...middles, gradientB]);
                                                                 }}
                                                                 className="min-w-0 flex-1 font-mono text-xs"
                                                                 placeholder="#hex"
@@ -899,8 +940,8 @@ export function ThemeGeneratorModal({
                                                                     onChange={(e) => {
                                                                         const v = e.target.value;
                                                                         setGradientB(v);
-                                                                        const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${v} 100%)`;
-                                                                        updateTheme({ backgroundStyle: css, background: gradientA });
+                                                                        const middles = parsedLinearGradient?.middleColors ?? [];
+                                                                        applyLinearGradientColors([gradientA, ...middles, v]);
                                                                     }}
                                                                 />
                                                             </label>
@@ -909,8 +950,8 @@ export function ThemeGeneratorModal({
                                                                 onChange={(e) => {
                                                                     const v = hexForColorInput(e.target.value, gradientB);
                                                                     setGradientB(v);
-                                                                    const css = `linear-gradient(${gradientAngle}deg, ${gradientA} 0%, ${v} 100%)`;
-                                                                    updateTheme({ backgroundStyle: css, background: gradientA });
+                                                                    const middles = parsedLinearGradient?.middleColors ?? [];
+                                                                    applyLinearGradientColors([gradientA, ...middles, v]);
                                                                 }}
                                                                 className="min-w-0 flex-1 font-mono text-xs"
                                                                 placeholder="#hex"
@@ -925,8 +966,10 @@ export function ThemeGeneratorModal({
                                                             value={gradientAngle}
                                                             onValueChange={(v) => {
                                                                 setGradientAngle(v);
-                                                                const css = `linear-gradient(${v}deg, ${gradientA} 0%, ${gradientB} 100%)`;
-                                                                updateTheme({ backgroundStyle: css, background: gradientA });
+                                                                const colors = parsedLinearGradient
+                                                                    ? linearGradientColors(parsedLinearGradient)
+                                                                    : [gradientA, gradientB];
+                                                                applyLinearGradientColors(colors, v);
                                                             }}
                                                         >
                                                             <SelectTrigger className="h-10 w-full">
@@ -942,9 +985,97 @@ export function ThemeGeneratorModal({
                                                         </Select>
                                                     </div>
                                                 </div>
+                                                {parsedLinearGradient && parsedLinearGradient.middleColors.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                                            Middle colors (from AI)
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {parsedLinearGradient.middleColors.map((mid, idx) => (
+                                                                <label
+                                                                    key={`${mid}-${idx}`}
+                                                                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 cursor-pointer"
+                                                                >
+                                                                    <span
+                                                                        className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm"
+                                                                        style={{ backgroundColor: hexForColorInput(mid, '#888888') }}
+                                                                    />
+                                                                    <span className="text-[10px] font-bold text-muted-foreground">
+                                                                        Stop {idx + 2}
+                                                                    </span>
+                                                                    <input
+                                                                        type="color"
+                                                                        className="sr-only"
+                                                                        value={hexForColorInput(mid, '#888888')}
+                                                                        aria-label={`Gradient middle color ${idx + 1}`}
+                                                                        onChange={(e) => {
+                                                                            const middles = [
+                                                                                ...parsedLinearGradient.middleColors,
+                                                                            ];
+                                                                            middles[idx] = e.target.value;
+                                                                            applyLinearGradientColors([
+                                                                                gradientA,
+                                                                                ...middles,
+                                                                                gradientB,
+                                                                            ]);
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         ) : (
                                             <div className="flex flex-col gap-2">
+                                                {aiBackgroundColors.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        <Label>Background colors from AI</Label>
+                                                        <p className="text-[10px] leading-snug text-muted-foreground">
+                                                            Tweak radial, patterned, or multi-stop backgrounds without editing raw CSS.
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {aiBackgroundColors.map((color, idx) => (
+                                                                <label
+                                                                    key={`${color}-${idx}`}
+                                                                    className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-2 py-1.5 cursor-pointer"
+                                                                >
+                                                                    <span
+                                                                        className="h-8 w-8 shrink-0 rounded-md border border-border shadow-sm"
+                                                                        style={{
+                                                                            backgroundColor: hexForColorInput(color, '#888888'),
+                                                                        }}
+                                                                    />
+                                                                    <span className="text-[10px] font-bold text-muted-foreground">
+                                                                        Color {idx + 1}
+                                                                    </span>
+                                                                    <input
+                                                                        type="color"
+                                                                        className="sr-only"
+                                                                        value={hexForColorInput(color, '#888888')}
+                                                                        aria-label={`AI background color ${idx + 1}`}
+                                                                        onChange={(e) => {
+                                                                            const newHex = e.target.value;
+                                                                            if (!previewTheme?.backgroundStyle) return;
+                                                                            const nextStyle = replaceCssColor(
+                                                                                previewTheme.backgroundStyle,
+                                                                                color,
+                                                                                newHex,
+                                                                            );
+                                                                            updateTheme({
+                                                                                background:
+                                                                                    idx === 0
+                                                                                        ? newHex
+                                                                                        : previewTheme.background,
+                                                                                backgroundStyle: nextStyle,
+                                                                            });
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ) : null}
                                                 <Input
                                                     id="theme-background-style"
                                                     value={backgroundMode === 'custom' ? (previewTheme.backgroundStyle || '') : ''}
@@ -1005,16 +1136,30 @@ export function ThemeGeneratorModal({
                                             Animations
                                         </label>
                                     ) : null}
-                                    {previousTheme && (
+                                    <div className="flex items-center gap-1">
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            onClick={handleRevert}
+                                            disabled={!canUndo}
+                                            onClick={undoTheme}
+                                            title="Undo (Ctrl+Z)"
+                                            aria-label="Undo theme change"
                                         >
-                                            Revert to previous
+                                            <Undo2 className="h-4 w-4" />
                                         </Button>
-                                    )}
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={!canRedo}
+                                            onClick={redoTheme}
+                                            title="Redo (Ctrl+Y)"
+                                            aria-label="Redo theme change"
+                                        >
+                                            <Redo2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                             <div
@@ -1057,11 +1202,10 @@ export function ThemeGeneratorModal({
                                                     className="min-h-0 min-w-0 flex items-center justify-center rounded-xl bg-black/5 dark:bg-white/5"
                                                 >
                                                     <div
-                                                        className="shrink-0"
+                                                        className="student-id-card-screen-preview shrink-0"
                                                         style={{
-                                                            transform: `scale(${idPreviewScale})`,
+                                                            transform: idPreviewScale < 1 ? `scale(${idPreviewScale})` : undefined,
                                                             transformOrigin: 'center',
-                                                            filter: 'drop-shadow(0 16px 28px rgba(0,0,0,0.22))',
                                                         }}
                                                     >
                                                         <StudentIdCard

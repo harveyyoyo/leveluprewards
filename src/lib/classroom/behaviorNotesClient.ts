@@ -10,12 +10,15 @@ import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 
 export type SaveBehaviorNoteRequest = CreateBehaviorNoteInput & {
   schoolId: string;
+  shareToBulletinBoard?: boolean;
 };
 
 export type SaveBehaviorNoteResult = {
   success: boolean;
   message: string;
   id?: string;
+  bulletinPosted?: boolean;
+  bulletinMessage?: string;
   via?: 'api' | 'client';
   status?: number;
 };
@@ -126,13 +129,21 @@ export async function saveBehaviorNote(
     credentials: 'same-origin',
     body: JSON.stringify(body),
   });
-  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; id?: string; error?: string };
+  const data = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    id?: string;
+    error?: string;
+    bulletinPosted?: boolean;
+    bulletinMessage?: string;
+  };
 
   if (res.ok && data.ok) {
     return {
       success: true,
       message: 'Saved.',
       id: typeof data.id === 'string' ? data.id : undefined,
+      bulletinPosted: data.bulletinPosted === true,
+      bulletinMessage: typeof data.bulletinMessage === 'string' ? data.bulletinMessage : undefined,
       via: 'api',
       status: res.status,
     };
@@ -142,9 +153,20 @@ export async function saveBehaviorNote(
 
   if (firestore && shouldTryClientFallback(res.status, message)) {
     try {
-      const { schoolId, ...input } = body;
+      const { schoolId, shareToBulletinBoard, ...input } = body;
       const id = await createBehaviorNote(firestore, schoolId, input);
-      return { success: true, message: 'Saved.', id, via: 'client', status: res.status };
+      return {
+        success: true,
+        message: 'Saved.',
+        id,
+        bulletinPosted: false,
+        bulletinMessage:
+          shareToBulletinBoard
+            ? 'Bulletin board sharing needs server access. The note saved, but the board post was skipped.'
+            : undefined,
+        via: 'client',
+        status: res.status,
+      };
     } catch (e) {
       const formatted = formatBehaviorNotesError(message, res.status, (e as Error).message);
       return { success: false, message: formatted.error, status: formatted.status };

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { Barcode, Loader2, ScanLine } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,9 +15,12 @@ import {
   primaryIsbnVariant,
 } from '@/lib/library/libraryCatalogLookup';
 import {
+  catalogScannedCodeSet,
   createScanDeduper,
   fetchCatalogHitByIsbn,
   generateUniqueLibraryUpc,
+  isBlockedLibraryIntakeBarcode,
+  normalizeIntakeScanCode,
 } from '@/lib/library/libraryIntakeHelpers';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
@@ -38,8 +42,10 @@ export function LibraryBookIntakeScanner({
   const [isbn, setIsbn] = useState('');
   const [category, setCategory] = useState('');
   const [shelfLocation, setShelfLocation] = useState('');
+  const [needsManualIdentify, setNeedsManualIdentify] = useState(false);
 
   const existingIsbns = useMemo(() => catalogIsbnSet(libraryItems), [libraryItems]);
+  const existingScannedCodes = useMemo(() => catalogScannedCodeSet(libraryItems), [libraryItems]);
   const shouldAcceptScan = useMemo(() => createScanDeduper(2500), []);
 
   const resetForm = () => {
@@ -48,6 +54,7 @@ export function LibraryBookIntakeScanner({
     setIsbn('');
     setCategory('');
     setShelfLocation('');
+    setNeedsManualIdentify(false);
   };
 
   const applyCatalogHit = useCallback(
@@ -62,6 +69,7 @@ export function LibraryBookIntakeScanner({
         });
         return;
       }
+      setNeedsManualIdentify(false);
       setBusy(true);
       try {
         const hit = await fetchCatalogHitByIsbn(digits);
@@ -73,9 +81,10 @@ export function LibraryBookIntakeScanner({
           toast({ title: 'Book identified', description: hit.title });
         } else {
           setIsbn(digits);
+          setNeedsManualIdentify(true);
           toast({
             title: 'ISBN scanned',
-            description: `No online match for ${digits}. You can still enter the title and register, or tap Lookup after fixing the number.`,
+            description: `No online match for ${digits}. Enter the title to identify this book, or tap Lookup after fixing the number.`,
           });
         }
       } finally {
@@ -85,21 +94,59 @@ export function LibraryBookIntakeScanner({
     [existingIsbns, toast],
   );
 
+  const applyNonIsbnScan = useCallback(
+    (raw: string) => {
+      const scanned = normalizeIntakeScanCode(raw);
+      if (!scanned) return;
+      if (isBlockedLibraryIntakeBarcode(scanned)) {
+        toast({
+          variant: 'destructive',
+          title: 'School checkout sticker',
+          description: 'Scan the barcode on the book, not the LIB sticker used for checkout.',
+        });
+        return;
+      }
+      if (existingScannedCodes.has(scanned.toUpperCase())) {
+        toast({
+          variant: 'destructive',
+          title: 'Already in catalog',
+          description: 'This barcode is already registered in your library.',
+        });
+        return;
+      }
+      setTitle('');
+      setAuthor('');
+      setCategory('');
+      setIsbn(scanned);
+      setNeedsManualIdentify(true);
+      toast({
+        title: 'Not an ISBN',
+        description: `Barcode ${scanned}. Enter the title (and author if you know it) to identify this item.`,
+      });
+    },
+    [existingScannedCodes, toast],
+  );
+
   const handleScan = useCallback(
     (code: string) => {
       if (!shouldAcceptScan(code)) return;
-      const digits = normalizeIsbnDigits(code.trim());
+      const trimmed = normalizeIntakeScanCode(code);
+      if (isBlockedLibraryIntakeBarcode(trimmed)) {
+        toast({
+          variant: 'destructive',
+          title: 'School checkout sticker',
+          description: 'Scan the barcode on the book, not the LIB sticker used for checkout.',
+        });
+        return;
+      }
+      const digits = normalizeIsbnDigits(trimmed);
       if (isRetailIsbnBarcode(digits)) {
         void applyCatalogHit(digits);
       } else {
-        toast({
-          variant: 'destructive',
-          title: 'Not an ISBN barcode',
-          description: 'Scan the ISBN on the book (10 or 13 digits), not the school LIB checkout sticker.',
-        });
+        applyNonIsbnScan(trimmed);
       }
     },
-    [applyCatalogHit, shouldAcceptScan, toast],
+    [applyCatalogHit, applyNonIsbnScan, shouldAcceptScan, toast],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
@@ -161,8 +208,8 @@ export function LibraryBookIntakeScanner({
             Register one book
           </h3>
           <p className="text-xs text-muted-foreground">
-            Scan the ISBN with a barcode reader. Title and author are filled from the internet when possible, then a
-            unique LIB sticker barcode is generated.
+            Scan any barcode on the book. ISBNs are looked up online when possible; other barcodes need a title from you.
+            A unique LIB checkout sticker is generated for each copy.
           </p>
         </div>
         <Button
@@ -192,7 +239,7 @@ export function LibraryBookIntakeScanner({
           onScanBufferChange={setScanBuffer}
           onSubmit={submitScan}
           active={!busy}
-          hint="Scan the ISBN on the book cover (not the LIB sticker)."
+          hint="Scan any barcode on the book (ISBN, UPC, or internal code). Do not scan the LIB checkout sticker."
         />
       ) : (
         <p className="text-sm text-muted-foreground rounded-lg border border-dashed bg-background/60 px-4 py-5 text-center">
@@ -200,21 +247,43 @@ export function LibraryBookIntakeScanner({
         </p>
       )}
 
+      {needsManualIdentify ? (
+        <Alert className="border-amber-500/40 bg-amber-500/10">
+          <AlertTitle>Identify this item</AlertTitle>
+          <AlertDescription>
+            {isbn.trim()
+              ? `Barcode ${isbn.trim()} is not an ISBN (or has no online match). Enter the title before registering.`
+              : 'Enter the title before registering this item.'}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1 sm:col-span-2">
           <Label>Title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Filled from ISBN lookup" />
+          <Input
+            value={title}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              if (e.target.value.trim()) setNeedsManualIdentify(false);
+            }}
+            placeholder={needsManualIdentify ? 'Required — type the book title' : 'Filled from ISBN lookup'}
+          />
         </div>
         <div className="space-y-1">
           <Label>Author</Label>
           <Input value={author} onChange={(e) => setAuthor(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label>ISBN</Label>
+          <Label>{needsManualIdentify && !isRetailIsbnBarcode(normalizeIsbnDigits(isbn)) ? 'Barcode' : 'ISBN'}</Label>
           <div className="flex gap-2">
             <Input
               value={isbn}
-              onChange={(e) => setIsbn(e.target.value)}
+              onChange={(e) => {
+                setIsbn(e.target.value);
+                const digits = normalizeIsbnDigits(e.target.value);
+                setNeedsManualIdentify(!isRetailIsbnBarcode(digits) && Boolean(e.target.value.trim()));
+              }}
               className="font-mono"
               placeholder="From reader or type"
             />
@@ -223,7 +292,7 @@ export function LibraryBookIntakeScanner({
               variant="outline"
               size="sm"
               className="shrink-0 rounded-lg"
-              disabled={busy}
+              disabled={busy || !isRetailIsbnBarcode(normalizeIsbnDigits(isbn))}
               onClick={handleLookupManual}
             >
               Lookup

@@ -46,6 +46,7 @@ Newer topics (funding, yeshiva leadership, IT kiosk, etc.) may be **Bold Navy on
 | `flyer-students-kiosk-hype.html` | Students — kiosk hype (hallway / backdrop) |
 | `flyer-parents-privacy-security.html` | Parents — data privacy & safety (newsletter) |
 | `flyer-it-kiosk-setup.html` | IT — kiosk technical specs (leave-behind) |
+| `flyer-private-school-pillar-proposal.html` | Private schools — flyer-style pillar and funding proposal |
 | `flyer-yeshiva-leadership.html` | Yeshiva — leadership brief (derech eretz, middos, attendance) |
 | `flyer-yeshiva-rebbeim-moros.html` | Yeshiva — rebbeim & moros quickstart (staff handout) |
 | `flyer-yeshiva-talmidim.html` | Yeshiva — talmidim scan & earn (student-facing) |
@@ -73,7 +74,7 @@ Previews on `/flyers` use scaled iframes (`?embed=1` hides print hints). Shared 
 Every `public/marketing/flyer-*.html` ends with the same block:
 
 1. **Approved NYC Department of Education (DOE) vendor**
-2. **leveluprewards.app** · **contact@leveluprewards.app**
+2. **Contact details available on request**
 3. **© 2026 LevelUp EdTech Enterprises LLC**
 
 Styles live in `public/marketing/flyer-print.css` (`.flyer-footer`). To re-apply after editing footers manually, run `node scripts/apply-flyer-footer.mjs`.

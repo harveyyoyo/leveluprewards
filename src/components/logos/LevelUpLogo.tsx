@@ -6,10 +6,23 @@ const BAR_COUNT = 16;
 export function LevelUpLogo({
   className,
   size = 'default',
+  tone = 'dark',
 }: {
   className?: string;
   size?: 'default' | 'intro';
+  tone?: 'dark' | 'light';
 }) {
+  const isLightTone = tone === 'light';
+  const arrowFill = isLightTone ? 'oklch(0.34 0.06 252)' : 'oklch(0.28 0.06 252)';
+  const textColor = isLightTone ? '#102a45' : 'var(--brand-cream)';
+  const barColor = textColor;
+  const strokeStart = isLightTone ? 'oklch(0.42 0.08 252)' : 'oklch(0.78 0.13 90)';
+  const strokeEnd = isLightTone ? 'oklch(0.30 0.06 252)' : 'var(--brand-cream)';
+  const subtitleColor = isLightTone ? 'rgba(26,46,66,0.78)' : 'var(--brand-cream)';
+  const textRevealDelay = isLightTone ? 1.1 : 1.8;
+  const lineRevealDelay = isLightTone ? 1.45 : 2.2;
+  const subtitleRevealDelay = isLightTone ? 1.75 : 2.6;
+
   const arrowPath =
     'M 400 60 L 760 420 L 560 420 L 560 660 L 240 660 L 240 420 L 40 420 Z';
 
@@ -37,24 +50,28 @@ export function LevelUpLogo({
       )}
       style={{ animation: 'luc-float 7s ease-in-out infinite' }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-24 rounded-full blur-3xl"
-        style={{
-          background:
-            'radial-gradient(circle, oklch(0.62 0.16 250 / 0.45), transparent 65%)',
-          animation: 'luc-glow 6s ease-in-out infinite',
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -inset-16 rounded-full blur-2xl"
-        style={{
-          background:
-            'radial-gradient(circle, oklch(0.75 0.14 90 / 0.18), transparent 70%)',
-          animation: 'luc-glow 8s ease-in-out 1s infinite reverse',
-        }}
-      />
+      {isLightTone ? null : (
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-24 rounded-full blur-3xl"
+            style={{
+              background:
+                'radial-gradient(circle, oklch(0.62 0.16 250 / 0.45), transparent 65%)',
+              animation: 'luc-glow 6s ease-in-out infinite',
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-16 rounded-full blur-2xl"
+            style={{
+              background:
+                'radial-gradient(circle, oklch(0.75 0.14 90 / 0.18), transparent 70%)',
+              animation: 'luc-glow 8s ease-in-out 1s infinite reverse',
+            }}
+          />
+        </>
+      )}
 
       <div
         className={cn(
@@ -69,13 +86,13 @@ export function LevelUpLogo({
         >
           <defs>
             <linearGradient id="lu-bar-grad" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="var(--brand-cream)" stopOpacity="0.35" />
-              <stop offset="60%" stopColor="var(--brand-cream)" stopOpacity="0.95" />
-              <stop offset="100%" stopColor="var(--brand-cream)" stopOpacity="1" />
+              <stop offset="0%" stopColor={barColor} stopOpacity="1" />
+              <stop offset="60%" stopColor={barColor} stopOpacity="1" />
+              <stop offset="100%" stopColor={barColor} stopOpacity="1" />
             </linearGradient>
             <linearGradient id="lu-stroke-grad" x1="0" y1="1" x2="0" y2="0">
-              <stop offset="0%" stopColor="oklch(0.78 0.13 90)" />
-              <stop offset="100%" stopColor="var(--brand-cream)" />
+              <stop offset="0%" stopColor={strokeStart} />
+              <stop offset="100%" stopColor={strokeEnd} />
             </linearGradient>
             <clipPath id="lu-arrow-clip">
               <path d={arrowPath} />
@@ -91,7 +108,7 @@ export function LevelUpLogo({
 
           <path
             d={arrowPath}
-            fill="oklch(0.28 0.06 252)"
+            fill={arrowFill}
             opacity={0}
             style={{
               animation: 'luc-fade-in 0.8s ease-out 0.2s forwards',
@@ -141,15 +158,16 @@ export function LevelUpLogo({
       <div className="flex flex-col items-center gap-2">
         <div className="overflow-hidden pb-1">
           <h1
-            className="font-black leading-none text-[color:var(--brand-cream)]"
+            className="font-black leading-none"
             style={{
+              color: textColor,
               fontSize: 'clamp(1.5rem, 4.2vw, 2.75rem)',
               letterSpacing: '0.32em',
               paddingLeft: '0.32em',
               transform: 'translateY(28px)',
               opacity: 0,
               animation:
-                'luc-text-reveal 1.4s cubic-bezier(0.22, 1, 0.36, 1) 1.8s forwards',
+                `luc-text-reveal 1.4s cubic-bezier(0.22, 1, 0.36, 1) ${textRevealDelay}s forwards`,
               fontFamily:
                 "'Inter', system-ui, -apple-system, 'Helvetica Neue', sans-serif",
             }}
@@ -158,22 +176,24 @@ export function LevelUpLogo({
           </h1>
         </div>
         <div
-          className="h-px origin-center bg-[color:var(--brand-cream)]"
+          className="h-px origin-center"
           style={{
+            backgroundColor: textColor,
             width: 'min(40vw,280px)',
-            opacity: 0.35,
+            opacity: isLightTone ? 0.45 : 0.35,
             transform: 'scaleX(0)',
-            animation: 'luc-line-grow 1.4s cubic-bezier(0.22,1,0.36,1) 2.2s forwards',
+            animation: `luc-line-grow 1.4s cubic-bezier(0.22,1,0.36,1) ${lineRevealDelay}s forwards`,
           }}
         />
         <p
-          className="text-[color:var(--brand-cream)]/60"
+          className="text-current"
           style={{
+            color: subtitleColor,
             fontSize: 'clamp(0.55rem, 1vw, 0.7rem)',
             letterSpacing: '0.5em',
             paddingLeft: '0.5em',
             opacity: 0,
-            animation: 'luc-fade-in 1s ease-out 2.6s forwards',
+            animation: `luc-fade-in 1s ease-out ${subtitleRevealDelay}s forwards`,
             fontFamily: "'Inter', system-ui, sans-serif",
           }}
         >

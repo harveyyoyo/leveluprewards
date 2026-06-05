@@ -131,12 +131,14 @@ function DeskAvatar({
   index,
   initials,
   photoUrl,
+  emoji,
   photoDisplayMode = 'cover',
 }: {
   design: ClassroomDesign;
   index: number;
   initials: string;
   photoUrl?: string;
+  emoji?: string;
   photoDisplayMode?: 'cover' | 'contain';
 }) {
   const shell = deskAvatarShellClass(design, index);
@@ -151,6 +153,19 @@ function DeskAvatar({
           photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain bg-muted/30',
         )}
       />
+    );
+  }
+  if (emoji) {
+    if (emoji.startsWith('http')) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={emoji} alt="" className={cn(shell, 'object-contain bg-muted/20 p-0.5')} />
+      );
+    }
+    return (
+      <div className={cn(shell, 'flex items-center justify-center text-lg leading-none sm:text-xl')}>
+        {emoji}
+      </div>
     );
   }
   return <div className={shell}>{initials}</div>;
@@ -171,12 +186,14 @@ function DeskInner({
   const name = display?.name ?? (student ? getStudentNickname(student) : '');
   const points = display?.points ?? student?.points ?? 0;
   const photoUrl = display?.photoUrl ?? student?.photoUrl;
+  const emoji = display?.emoji;
   const avatar = (
     <DeskAvatar
       design={design}
       index={index}
       initials={initials}
       photoUrl={photoUrl}
+      emoji={emoji}
       photoDisplayMode={photoDisplayMode}
     />
   );

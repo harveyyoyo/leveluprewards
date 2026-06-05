@@ -10,7 +10,7 @@ import {
   Loader2,
   Sparkles,
   Trophy,
-  Tv,
+  Monitor,
   Users,
   Wand2,
 } from 'lucide-react';
@@ -49,6 +49,7 @@ import {
   type HouseSetupWizardDraft,
 } from '@/lib/houses/housePointsSettings';
 import { HouseBadge } from '@/components/houses/HouseBadge';
+import { clampHallOfFamePodiumSize } from '@/lib/hallOfFameUrlConfig';
 
 const STEP_LABELS = ['Start', 'Houses', 'Points', 'Roster', 'Display', 'Done'] as const;
 
@@ -242,7 +243,7 @@ export function HouseSetupWizard({
         {step === 0 && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This wizard sets up named houses, how points are tracked, student rosters, and the House Hall of Fame TV
+              This wizard sets up named houses, how points are tracked, student rosters, and the House Hall of Fame monitor
               board. You can change everything later on the Houses tab.
             </p>
             <ul className="text-sm space-y-2">
@@ -250,7 +251,7 @@ export function HouseSetupWizard({
                 { icon: Sparkles, text: 'Create house teams from a starter theme' },
                 { icon: Link2, text: 'Link house standings to student rewards (recommended)' },
                 { icon: Users, text: 'Assign students and optional point sync' },
-                { icon: Tv, text: 'Configure the House Hall of Fame display' },
+                { icon: Monitor, text: 'Configure the House Hall of Fame display' },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2">
                   <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden />
@@ -429,17 +430,18 @@ export function HouseSetupWizard({
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Podium size</Label>
               <Select
-                value={String(draft.hallOfFamePodiumSize)}
-                onValueChange={(v) => setDraft((d) => ({ ...d, hallOfFamePodiumSize: parseInt(v, 10) || 3 }))}
+                value={String(clampHallOfFamePodiumSize(draft.hallOfFamePodiumSize))}
+                onValueChange={(v) =>
+                  setDraft((d) => ({ ...d, hallOfFamePodiumSize: clampHallOfFamePodiumSize(parseInt(v, 10)) }))
+                }
               >
                 <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="3">Top 3 on podium</SelectItem>
-                  <SelectItem value="2">Top 2 on podium</SelectItem>
                   <SelectItem value="1">Champion only</SelectItem>
-                  <SelectItem value="0">List only (no podium)</SelectItem>
+                  <SelectItem value="3">Top 3 on podium</SelectItem>
+                  <SelectItem value="5">Top 5 on podium</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -481,7 +483,7 @@ export function HouseSetupWizard({
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild variant="outline" className="rounded-xl flex-1">
                 <Link href={hofHref} target="_blank" rel="noopener noreferrer">
-                  <Tv className="mr-2 h-4 w-4" />
+                  <Monitor className="mr-2 h-4 w-4" />
                   Open House Hall of Fame
                 </Link>
               </Button>

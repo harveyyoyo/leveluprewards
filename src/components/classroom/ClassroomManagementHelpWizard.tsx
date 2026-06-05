@@ -3,47 +3,31 @@
 import { TabWalkthroughWizard } from '@/components/admin/TabWalkthroughWizard';
 import type { TabWalkthroughStep } from '@/lib/tabWalkthrough';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
-import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 
 const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
-  setup: {
-    title: 'Setup',
-    checklist: [
-      'Turn Principal or Parent portal on or off for your school.',
-      'Use the preview links to see what each audience sees.',
-      'Room display is always available on its own tab.',
-    ],
-  },
   seating: {
     title: CLASSROOM_SEATING_SECTION_LABEL,
     checklist: [
-      'Hold P, C, I, W, or H and click a student for note popups (positive, comment, incident, warning, highlight).',
-      'Use the Quick and Awards tabs in the toolbar — or Shift+click for a note picker.',
-      'Arrange seats to drag desks into your room layout. Full-screen auto-exit is under Setup.',
+      'Launch Monitor Display for the live seating chart and quick awards.',
+      'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit.',
+      'On the monitor: Class (when you have more than one), Chart style, Layout, Desk display, and Toolbar options.',
     ],
   },
   behavior: {
     title: 'Behavior',
     checklist: [
-      `Add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (P/C/I/W/H + click or award menu notes).`,
+      `Add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → Launch Monitor Display).`,
       'Saved notes appear in the Behavior tab list right away.',
-      'Enable Principal in Setup to preview the school-wide timeline.',
-    ],
-  },
-  alerts: {
-    title: 'Alerts',
-    checklist: [
-      'Create if/then rules: threshold + time window → auto behavior note.',
-      'Examples: 25 classroom points in 24h, or 3 concern notes in a week.',
-      'Rules run when awards or notes are saved; each rule fires once per student per window.',
+      'Enable Principal in Class Awards Live to preview the school-wide timeline.',
     ],
   },
   'room-display': {
     title: 'Room display',
     checklist: [
-      'Pick a class, customize the headline and modules, then open on your classroom TV.',
-      'Session leaderboard updates as you award on the seating chart.',
-      'Separate from the hallway Smart Screen.',
+      'Pick a class, customize the headline and modules, then open on your classroom monitor.',
+      'Session leaderboard updates as you award on the live monitor — separate from Launch Monitor Display.',
+      'Hallway Smart Screen is separate — configure it under Admin → Smart Screen.',
     ],
   },
 };
@@ -60,7 +44,7 @@ export function ClassroomManagementHelpWizard({
 
   return (
     <TabWalkthroughWizard
-      title="Classroom Management"
+      title={CLASSROOM_TAB_LABEL}
       subtitle="How each section works"
       steps={steps}
       triggerLabel="Help wizard"

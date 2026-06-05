@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { HeaderManagedShellProvider } from '@/components/layout/HeaderChromeContext';
 
 /** Visible strip when the header is tucked away (pull-down affordance). */
-export const HEADER_PEEK_PX = 12;
+export const HEADER_PEEK_PX = 20;
 
 /** Fallback until ResizeObserver measures the live header. */
 const HEADER_RESERVE_FALLBACK_PX = 80;
@@ -87,12 +87,12 @@ export function HoverRevealHeaderShell({
       {children}
       {!visible && peekWhenHidden ? (
         <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 flex h-3 items-center justify-center"
+          className="pointer-events-none absolute inset-x-0 bottom-0 flex h-5 items-center justify-center bg-gradient-to-b from-transparent via-card/60 to-card/90"
           aria-hidden
         >
-          <span className="inline-flex items-center gap-0.5 rounded-full border border-border/40 bg-card/90 px-2 py-0.5 shadow-sm backdrop-blur-sm">
-            <span className="h-0.5 w-5 rounded-full bg-primary/35" />
-            <ChevronDown className="h-2.5 w-2.5 text-primary/50" aria-hidden />
+          <span className="inline-flex items-center gap-0.5 rounded-full border border-border/50 bg-card px-2.5 py-0.5 shadow-md backdrop-blur-sm">
+            <span className="h-0.5 w-6 rounded-full bg-primary/50" />
+            <ChevronDown className="h-3 w-3 text-primary/70" aria-hidden />
           </span>
         </div>
       ) : null}

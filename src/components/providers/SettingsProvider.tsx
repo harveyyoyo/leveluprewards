@@ -205,7 +205,7 @@ interface Settings {
             visibleToParent: boolean;
         };
     }>;
-    /** When on, staff get a Room display section tab (in-room projector/TV view). */
+    /** When on, staff get a Room display section tab (in-room projector/monitor view). */
     enableClassroomRoomDisplay?: boolean;
     enableMultiAdmin: boolean;
     enableStudentPortal: boolean;
@@ -375,6 +375,8 @@ interface Settings {
     smartScreenShowBulletin?: boolean;
     smartScreenShowRewards?: boolean;
     smartScreenShowSchedule?: boolean;
+    /** Multiple named Smart Screen versions; open with `?screenProfileId=<id>`. */
+    smartScreenProfiles?: Record<string, SmartScreenProfile>;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -392,7 +394,12 @@ interface Settings {
      * Legacy schools without this field infer from category + late/bonus settings.
      */
     libraryRewardMode?: 'none' | 'fines' | 'app_points' | 'isolated_points';
-    /** When true, show the standalone student self-checkout portal at /library/self-checkout. */
+    /**
+     * When true, signed-in students can check out/return books by scanning LIB barcodes on the
+     * student kiosk coupon card (same scanner as coupons). Default on when unset.
+     */
+    libraryStudentKioskCheckoutEnabled?: boolean;
+    /** When true, enable the shared library station at /library/self-checkout (scan ID, then books). */
     libraryAutoStudentPortalEnabled?: boolean;
     /** When true, overdue returns deduct points via the library category. */
     libraryLateFeesEnabled?: boolean;
@@ -452,6 +459,8 @@ interface Settings {
     hallOfFamePodiumSize?: number;
     hallOfFameAutoScroll?: boolean;
     hallOfFameGridLayout?: boolean;
+    hallOfFameGridColumns?: number;
+    hallOfFameLayout?: 'landscape' | 'portrait';
 
     // House Hall of Fame (big screen — houses only)
     houseHallOfFameSortBy?: string;
@@ -459,6 +468,8 @@ interface Settings {
     houseHallOfFamePodiumSize?: number;
     houseHallOfFameAutoScroll?: boolean;
     houseHallOfFameGridLayout?: boolean;
+    houseHallOfFameGridColumns?: number;
+    houseHallOfFameLayout?: 'landscape' | 'portrait';
     /** Admin Houses tab: standings preview chart style. */
     houseStandingsChartFormat?:
       | 'bars'
@@ -484,6 +495,15 @@ export interface KioskProfile {
     name: string;
     createdAt: number;
     updatedAt: number;
+    settings: Partial<Settings>;
+}
+
+export interface SmartScreenProfile {
+    id: string;
+    name: string;
+    createdAt: number;
+    updatedAt: number;
+    /** Smart-screen-specific overrides for this profile. */
     settings: Partial<Settings>;
 }
 
@@ -657,7 +677,8 @@ const defaultSettings: Settings = {
     animatedBackgroundStyle: 'arcade',
     hiddenAnimatedBackgroundIds: [],
     defaultStudentTheme: {
-        fontScale: 1.15,
+        fontScale: 1.1,
+        fontTracking: 0.02,
         background: '#eff6ff',
         text: '#020617',
         primary: LEVELUP_BRAND_PRIMARY_HEX,
@@ -721,6 +742,7 @@ const defaultSettings: Settings = {
     smartScreenShowBulletin: true,
     smartScreenShowRewards: true,
     smartScreenShowSchedule: true,
+    smartScreenProfiles: {},
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     payRewards: true,
@@ -730,6 +752,8 @@ const defaultSettings: Settings = {
     payLibrary: true,
     payOffice: false,
     libraryLoanPeriodDays: 14,
+    libraryStudentKioskCheckoutEnabled: true,
+    libraryAutoStudentPortalEnabled: true,
     libraryLateFeesEnabled: true,
     libraryLatePointsPerDay: 2,
     libraryOnTimeReturnPoints: 0,
@@ -757,6 +781,8 @@ const defaultSettings: Settings = {
     hallOfFamePodiumSize: 3,
     hallOfFameAutoScroll: false,
     hallOfFameGridLayout: true,
+    hallOfFameGridColumns: 3,
+    hallOfFameLayout: 'landscape',
     kioskProfileId: undefined,
     kioskProfiles: {},
 };
@@ -1057,6 +1083,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 if (typeof parsed.enableStudentWelcomeBackScreen !== 'boolean') {
                     parsed.enableStudentWelcomeBackScreen = !!parsed.enableStudentWelcome;
+                }
+                if (typeof parsed.enableParentView !== 'boolean') {
+                    parsed.enableParentView = false;
                 }
                 // Back-compat: kiosk login tabs & coupon methods used to be controlled by `enableQrLogin`,
                 // `enableFaceLogin`, and `kioskCouponRedemptionInput`. Prefer the new per-tab booleans.

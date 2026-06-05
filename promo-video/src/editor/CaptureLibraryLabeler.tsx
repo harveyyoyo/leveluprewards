@@ -380,6 +380,26 @@ export const CaptureLibraryLabeler: React.FC = () => {
         <p className="labeler-empty">No items in this list.</p>
       ) : (
         <div className="labeler-body">
+          <div className="labeler-nav">
+            <button type="button" onClick={goPrev} disabled={index === 0}>
+              ← Previous
+            </button>
+            <button
+              type="button"
+              className="editor-btn-primary"
+              onClick={markReviewedAndNext}
+            >
+              Mark reviewed & next →
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={index >= visibleItems.length - 1}
+            >
+              Next →
+            </button>
+          </div>
+
           <div className="labeler-preview">
             {current.kind === "video" ? (
               // Native preview in dev labeler — not rendered into Remotion output.
@@ -500,26 +520,6 @@ export const CaptureLibraryLabeler: React.FC = () => {
               />
               Reviewed
             </label>
-
-            <div className="labeler-nav">
-              <button type="button" onClick={goPrev} disabled={index === 0}>
-                ← Previous
-              </button>
-              <button
-                type="button"
-                className="editor-btn-primary"
-                onClick={markReviewedAndNext}
-              >
-                Mark reviewed & next →
-              </button>
-              <button
-                type="button"
-                onClick={goNext}
-                disabled={index >= visibleItems.length - 1}
-              >
-                Next →
-              </button>
-            </div>
 
             <button
               type="button"

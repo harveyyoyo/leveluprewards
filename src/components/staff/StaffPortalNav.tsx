@@ -1,19 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import type { StaffPortalTabView } from '@/lib/staffPortal';
 import { staffPortalTabTriggerClassName } from './staffPortalNavStyles';
 import { StaffPortalAddFeatureTabsMenu } from './StaffPortalAddFeatureTabsMenu';
+import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { StaffPortalSidebarTabRow } from './StaffPortalSidebarTabRow';
 
 export type StaffPortalNavProps = {
@@ -29,11 +31,15 @@ export type StaffPortalNavProps = {
   onRemoveTab?: (value: string) => void;
   /** Optional custom Add more control. */
   addMoreMenu?: React.ReactNode;
-  className?: string;
+  /** Pin every optional feature tab into the sidebar. */
+  onTurnAllOn?: () => void;
+  /** Remove every pinned optional feature tab from the sidebar. */
+  onTurnAllOff?: () => void;
 };
 
 /**
- * Unified staff portal tab navigation (mobile select + vertical sidebar tabs).
+ * Unified staff portal tab navigation (mobile select + vertical sidebar buttons).
+ * Matches the admin workspace sidebar: rail tabs + Add more footer, page scroll (no inner scrollbar).
  */
 export function StaffPortalNav({
   role,
@@ -45,7 +51,8 @@ export function StaffPortalNav({
   removableTabValues,
   onRemoveTab,
   addMoreMenu,
-  className,
+  onTurnAllOn,
+  onTurnAllOff,
 }: StaffPortalNavProps) {
   const portalLabel =
     role === 'admin' ? 'Admin portal' : role === 'secretary' ? 'Coupon printing' : 'Teacher portal';
@@ -55,7 +62,7 @@ export function StaffPortalNav({
   const mobileSelectId =
     role === 'admin' ? 'admin-portal-section' : role === 'secretary' ? 'secretary-portal-section' : 'teacher-portal-section';
 
-  const handleMobileTabChange = (value: string) => {
+  const handleTabSelect = (value: string) => {
     if (mainTabs.some((t) => t.value === value)) {
       onTabChange(value);
       return;
@@ -70,17 +77,22 @@ export function StaffPortalNav({
 
   const addMoreDropdown =
     addMoreMenu ??
-    (addMoreTabs.length > 0 && onAddTab ? (
-      <StaffPortalAddFeatureTabsMenu tabs={addMoreTabs} onAddTab={onAddTab} />
+    (addMoreTabs.length > 0 || onTurnAllOn || onTurnAllOff ? (
+      <StaffPortalAddFeatureTabsMenu
+        tabs={addMoreTabs}
+        onAddTab={onAddTab ?? onTabChange}
+        onTurnAllOn={onTurnAllOn}
+        onTurnAllOff={onTurnAllOff}
+      />
     ) : null);
 
   return (
-    <div className={cn('flex w-full min-w-0 flex-col gap-4', className)}>
-      <div className="w-full min-w-0 lg:hidden">
+    <>
+      <div className="lg:hidden">
         <Label htmlFor={mobileSelectId} className="sr-only">
           {portalLabel} section
         </Label>
-        <Select value={activeTab} onValueChange={handleMobileTabChange}>
+        <Select value={activeTab} onValueChange={handleTabSelect}>
           <SelectTrigger
             id={mobileSelectId}
             className="h-12 w-full rounded-xl font-bold"
@@ -89,40 +101,60 @@ export function StaffPortalNav({
             <SelectValue placeholder="Choose a section" />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
-            {mainTabs.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
-            {addMoreTabs.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                + {t.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                Current tabs
+              </SelectLabel>
+              {mainTabs.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+            {addMoreTabs.length > 0 ? (
+              <>
+                <SelectSeparator />
+                <SelectGroup>
+                  <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                    Add more tabs
+                  </SelectLabel>
+                  {addMoreTabs.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>
+                      {t.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </>
+            ) : null}
           </SelectContent>
         </Select>
       </div>
 
       <div className="hidden w-full min-w-0 lg:block">
         <AdminMainTabsList
-          activeTabValue={activeTab}
           orientation="vertical"
+          inWorkspace
           autoScrollActiveTab={false}
+          activeTabValue={activeTab}
           aria-label={`${portalLabel} main tabs`}
           endAction={addMoreDropdown}
         >
           {mainTabs.map((t) => {
             const Icon = t.icon;
+            const isActive = activeTab === t.value;
             const removable = removableTabValues?.has(t.value) ?? false;
             return (
               <StaffPortalSidebarTabRow
                 key={t.value}
                 value={t.value}
+                isActive={isActive}
+                onSelect={() => handleTabSelect(t.value)}
                 triggerClassName={staffPortalTabTriggerClassName()}
                 title={t.title ?? t.label}
                 removable={removable}
                 removeLabel={`Remove ${t.label} from sidebar`}
                 onRemove={removable && onRemoveTab ? () => onRemoveTab(t.value) : undefined}
+                wrapperClassName="flex w-full shrink-0"
               >
                 <Icon className="w-4 h-4 shrink-0" aria-hidden />
                 {t.label}
@@ -131,6 +163,6 @@ export function StaffPortalNav({
           })}
         </AdminMainTabsList>
       </div>
-    </div>
+    </>
   );
 }

@@ -13,6 +13,14 @@ export function seededInt(seed: number, min: number, max: number): number {
   return min + Math.floor(t * (max - min + 1));
 }
 
+/** Minimum digits for demo student IDs (ensures reliable barcode scanning). */
+export const DEMO_STUDENT_ID_MIN_DIGITS = 6;
+
+/** Pad a numeric ID to at least DEMO_STUDENT_ID_MIN_DIGITS digits. */
+export function padDemoStudentId(numericId: number): string {
+  return String(numericId).padStart(DEMO_STUDENT_ID_MIN_DIGITS, '0');
+}
+
 export type BuildBalancedDemoRosterInput = {
   classes: readonly Pick<Class, 'id' | 'name'>[];
   minStudentsPerClass: number;
@@ -26,9 +34,10 @@ export type BuildBalancedDemoRosterInput = {
 /**
  * Builds a demo roster with balanced class sizes in the requested range.
  * Class sizes vary deterministically so reseeds stay reproducible.
+ * Student IDs are zero-padded to 6 digits for reliable barcode scanning.
  */
 export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): DemoRosterStudentSeed[] {
-  const startId = input.startStudentId ?? 100;
+  const startId = input.startStudentId ?? 100100;
   let nextNumericId = startId;
   const students: DemoRosterStudentSeed[] = [];
 
@@ -45,7 +54,7 @@ export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): De
         input.lastNames[
           Math.floor(studentIndex / input.firstNames.length) % input.lastNames.length
         ] ?? 'Demo';
-      const id = String(nextNumericId++);
+      const id = padDemoStudentId(nextNumericId++);
       students.push({
         id,
         firstName,

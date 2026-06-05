@@ -69,6 +69,8 @@ export function BehaviorNoteDialog({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [note, setNote] = useState('');
   const [visibleToParent, setVisibleToParent] = useState(true);
+  const [shareToBulletinBoard, setShareToBulletinBoard] = useState(false);
+  const [notifyPrincipal, setNotifyPrincipal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [heldShortcutReleased, setHeldShortcutReleased] = useState(!suppressHeldShortcutKey);
 
@@ -76,6 +78,8 @@ export function BehaviorNoteDialog({
     if (!open) return;
     setNote('');
     setVisibleToParent(true);
+    setShareToBulletinBoard(false);
+    setNotifyPrincipal(false);
     setHeldShortcutReleased(!suppressHeldShortcutKey);
   }, [open, shortcutKey, student.id, suppressHeldShortcutKey]);
 
@@ -129,8 +133,10 @@ export function BehaviorNoteDialog({
         kind: shortcut.kind,
         note: note.trim(),
         visibleToParent: shortcut.showParentToggle ? visibleToParent : true,
+        notifyPrincipal: shortcut.showPrincipalToggle ? notifyPrincipal : false,
         pointsLabel,
         pointsAmount,
+        shareToBulletinBoard: shortcut.showBulletinToggle && shareToBulletinBoard,
       });
       if (!result.success) {
         throw new Error(result.message);
@@ -147,11 +153,26 @@ export function BehaviorNoteDialog({
         note: note.trim(),
         createdAt: Date.now(),
         visibleToParent: shortcut.showParentToggle ? visibleToParent : true,
+        notifyPrincipal: shortcut.showPrincipalToggle ? notifyPrincipal : false,
         pointsLabel,
         pointsAmount,
       };
       emitBehaviorNoteSaved(savedNote);
       toast({ title: shortcut.toastTitle });
+      if (shortcut.kind === 'positive' && shareToBulletinBoard) {
+        if (result.bulletinPosted) {
+          toast({
+            title: 'Shared to bulletin board',
+            description: `${studentLabel}'s compliment is now on the school board.`,
+          });
+        } else if (result.bulletinMessage) {
+          toast({
+            variant: 'destructive',
+            title: 'Note saved, but not shared',
+            description: result.bulletinMessage,
+          });
+        }
+      }
       onSaved?.();
       onOpenChange(false);
     } catch (e) {
@@ -214,9 +235,37 @@ export function BehaviorNoteDialog({
             <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-3 py-2">
               <div>
                 <p className="text-sm font-semibold">Share with parent</p>
-                <p className="text-xs text-muted-foreground">Off = staff and principal only</p>
+                <p className="text-xs text-muted-foreground">
+                  {visibleToParent ? 'Visible in the parent portal' : 'Staff and admin only'}
+                </p>
               </div>
               <Switch checked={visibleToParent} onCheckedChange={setVisibleToParent} />
+            </div>
+          ) : null}
+          {shortcut.showBulletinToggle ? (
+            <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-3 py-2">
+              <div>
+                <p className="text-sm font-semibold">Share to bulletin board</p>
+                <p className="text-xs text-muted-foreground">
+                  {shareToBulletinBoard
+                    ? 'Will appear in Celebrations on the school board'
+                    : 'Keep this note private'}
+                </p>
+              </div>
+              <Switch checked={shareToBulletinBoard} onCheckedChange={setShareToBulletinBoard} />
+            </div>
+          ) : null}
+          {shortcut.showPrincipalToggle ? (
+            <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-3 py-2">
+              <div>
+                <p className="text-sm font-semibold">Flag for principal</p>
+                <p className="text-xs text-muted-foreground">
+                  {notifyPrincipal
+                    ? 'Principal will be notified of this note'
+                    : 'Standard teacher note'}
+                </p>
+              </div>
+              <Switch checked={notifyPrincipal} onCheckedChange={setNotifyPrincipal} />
             </div>
           ) : null}
         </div>

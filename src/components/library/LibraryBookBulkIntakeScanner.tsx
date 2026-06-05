@@ -13,9 +13,12 @@ import {
   primaryIsbnVariant,
 } from '@/lib/library/libraryCatalogLookup';
 import {
+  catalogScannedCodeSet,
   createScanDeduper,
   fetchCatalogHitByIsbn,
   generateUniqueLibraryUpc,
+  isBlockedLibraryIntakeBarcode,
+  normalizeIntakeScanCode,
 } from '@/lib/library/libraryIntakeHelpers';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
@@ -57,6 +60,7 @@ export function LibraryBookBulkIntakeScanner({
   const [registering, setRegistering] = useState(false);
 
   const catalogIsbns = useMemo(() => catalogIsbnSet(libraryItems), [libraryItems]);
+  const catalogScannedCodes = useMemo(() => catalogScannedCodeSet(libraryItems), [libraryItems]);
   const shouldAcceptScan = useMemo(() => createScanDeduper(2000), []);
 
   const upsertRow = useCallback((patch: Partial<BulkRow> & { id: string }) => {
@@ -65,45 +69,67 @@ export function LibraryBookBulkIntakeScanner({
 
   const addScanToQueue = useCallback(
     async (rawCode: string) => {
-      if (!isRetailIsbnBarcode(rawCode)) {
+      const trimmed = normalizeIntakeScanCode(rawCode);
+      if (!trimmed) return;
+      if (isBlockedLibraryIntakeBarcode(trimmed)) {
         toast({
           variant: 'destructive',
-          title: 'Not an ISBN barcode',
-          description: 'Scan the retail ISBN on the book, not a LIB checkout sticker.',
+          title: 'School checkout sticker',
+          description: 'Scan the barcode on the book, not the LIB sticker used for checkout.',
         });
         return;
       }
-      const digits = primaryIsbnVariant(rawCode);
-      if (catalogIsbns.has(digits)) {
-        toast({ variant: 'destructive', title: 'Already in catalog', description: `ISBN ${digits} is already registered.` });
+
+      const isIsbn = isRetailIsbnBarcode(trimmed);
+      const scannedCode = isIsbn ? primaryIsbnVariant(trimmed) : trimmed;
+      const codeKey = scannedCode.toUpperCase();
+
+      if (isIsbn && catalogIsbns.has(scannedCode)) {
+        toast({ variant: 'destructive', title: 'Already in catalog', description: `ISBN ${scannedCode} is already registered.` });
+        return;
+      }
+      if (!isIsbn && catalogScannedCodes.has(codeKey)) {
+        toast({
+          variant: 'destructive',
+          title: 'Already in catalog',
+          description: `Barcode ${scannedCode} is already registered.`,
+        });
         return;
       }
 
       const id = newRowId();
       let duplicateInQueue = false;
       setRows((prev) => {
-        if (prev.some((r) => r.isbn === digits)) {
+        if (prev.some((r) => r.isbn.toUpperCase() === codeKey)) {
           duplicateInQueue = true;
           return prev;
         }
         return [
           {
             id,
-            isbn: digits,
+            isbn: scannedCode,
             title: '',
             author: '',
             category: '',
-            status: 'lookup' as const,
+            status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
           },
           ...prev,
         ];
       });
       if (duplicateInQueue) {
-        toast({ title: 'Already in queue', description: `ISBN ${digits} was scanned already.` });
+        toast({ title: 'Already in queue', description: `${scannedCode} was scanned already.` });
         return;
       }
 
-      const hit = await fetchCatalogHitByIsbn(digits);
+      if (!isIsbn) {
+        toast({
+          title: 'Not an ISBN',
+          description: `Barcode ${scannedCode}. Type a title in the queue to identify this item.`,
+        });
+        return;
+      }
+
+      const hit = await fetchCatalogHitByIsbn(scannedCode);
       if (hit?.title) {
         upsertRow({
           id,
@@ -117,11 +143,11 @@ export function LibraryBookBulkIntakeScanner({
         upsertRow({ id, status: 'needs_title' });
         toast({
           title: 'ISBN added',
-          description: `No online match for ${digits}. Type a title, or edit the ISBN and try again.`,
+          description: `No online match for ${scannedCode}. Type a title to identify this book.`,
         });
       }
     },
-    [catalogIsbns, toast, upsertRow],
+    [catalogIsbns, catalogScannedCodes, toast, upsertRow],
   );
 
   const handleScan = useCallback(
@@ -156,7 +182,7 @@ export function LibraryBookBulkIntakeScanner({
       return;
     }
     if (!toSave.length) {
-      toast({ variant: 'destructive', title: 'Nothing to register', description: 'Scan ISBN barcodes first.' });
+      toast({ variant: 'destructive', title: 'Nothing to register', description: 'Scan barcodes and add titles first.' });
       return;
     }
 
@@ -198,7 +224,7 @@ export function LibraryBookBulkIntakeScanner({
   const statusLabel: Record<BulkRowStatus, string> = {
     lookup: 'Looking up…',
     ready: 'Ready',
-    needs_title: 'Needs title',
+    needs_title: 'Identify item',
     duplicate_catalog: 'In catalog',
     saved: 'Registered',
     error: 'Error',
@@ -213,7 +239,8 @@ export function LibraryBookBulkIntakeScanner({
             Bulk register
           </h3>
           <p className="text-xs text-muted-foreground">
-            Keep scanning ISBNs with your barcode reader. Each book is looked up online. Register all when finished.
+            Keep scanning barcodes with your reader. ISBNs are looked up online; other codes need a title in the queue.
+            Register all when finished.
           </p>
         </div>
         <Button
@@ -243,11 +270,11 @@ export function LibraryBookBulkIntakeScanner({
           onScanBufferChange={setScanBuffer}
           onSubmit={submitScan}
           active={!registering}
-          hint="Scan each ISBN on the book cover. Books are added to the queue below."
+          hint="Scan any barcode on the book. Non-ISBN codes need a title in the queue below."
         />
       ) : (
         <p className="text-sm text-muted-foreground rounded-lg border border-dashed bg-background/60 px-4 py-5 text-center">
-          Press <strong className="text-foreground">Start scanning</strong> to scan ISBNs into the queue.
+          Press <strong className="text-foreground">Start scanning</strong> to add barcodes to the queue.
         </p>
       )}
 
@@ -261,7 +288,7 @@ export function LibraryBookBulkIntakeScanner({
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-6 border border-dashed rounded-lg">
-          Scan the first ISBN with your barcode reader to start the queue.
+          Scan the first barcode with your barcode reader to start the queue.
         </p>
       ) : (
         <ul className="max-h-64 overflow-y-auto space-y-2 pr-1">
@@ -291,7 +318,12 @@ export function LibraryBookBulkIntakeScanner({
                   disabled={row.status === 'saved' || row.status === 'lookup'}
                   className="h-8 text-sm"
                 />
-                <Input value={row.isbn} readOnly className="h-8 text-sm font-mono bg-muted/50" aria-label="ISBN" />
+                <Input
+                  value={row.isbn}
+                  readOnly
+                  className="h-8 text-sm font-mono bg-muted/50"
+                  aria-label={isRetailIsbnBarcode(row.isbn) ? 'ISBN' : 'Barcode'}
+                />
               </div>
               <div className="flex items-center justify-end gap-2">
                 <Badge

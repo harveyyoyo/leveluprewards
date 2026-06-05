@@ -128,6 +128,7 @@ export default function Header() {
     (pathname?.includes('/hall-of-fame') ||
       pathname?.includes('/bulletin-board') ||
       pathname?.includes('/smart-screen') ||
+      pathname?.includes('/displays') ||
       pathname?.includes('/classroom'));
 
   const handleLogout = () => {

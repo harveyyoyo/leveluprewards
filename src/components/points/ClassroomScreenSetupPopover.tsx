@@ -72,7 +72,7 @@ export function ClassroomScreenSetupPopover({
             Classroom room display
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Project on your classroom TV — session leaderboard, message, and clock. Not the hallway
+            Project on your classroom monitor — session leaderboard, message, and clock. Not the hallway
             Smart Screen.
           </p>
         </div>

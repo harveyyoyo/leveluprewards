@@ -98,7 +98,7 @@ export function ClassroomRoomDisplayDialog({
             <div>
               <DialogTitle className="text-left text-lg">Classroom room display</DialogTitle>
               <DialogDescription className="text-left text-xs">
-                Live preview for your projector or TV. Awards update as you tap the seating chart.
+                Live preview for your projector or monitor. Awards update as you tap the seating chart.
               </DialogDescription>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -120,7 +120,7 @@ export function ClassroomRoomDisplayDialog({
                 onClick={() => openClassroomScreenTab({ schoolId, classId, scope })}
               >
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-                Open on TV
+                Open on monitor
               </Button>
             </div>
           </div>

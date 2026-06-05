@@ -16,7 +16,7 @@ function buildOfficeImportInstruction(classNames: string[], studentNames: string
       ? `Existing office students (match grade/billing rows to these when possible): ${studentNames.slice(0, 120).join('; ')}${studentNames.length > 120 ? '…' : ''}.`
       : '';
 
-  return `You are importing data into School Office — a school admin app for grades, billing, and roster (NOT a student rewards arcade).
+  return `You are importing data into School Office — a school admin app for grades, billing, and roster.
 
 The user may paste ANYTHING: CSV exports, report cards, tuition spreadsheets, family contact lists, mixed tables, emails, bullet lists, SIS dumps, etc.
 

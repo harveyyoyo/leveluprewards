@@ -12,6 +12,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { captureMarketingContent } from './marketing-screenshot-content.mjs';
+import { patchDemoMarketingSettings } from './lib/demo-marketing-settings.mjs';
+import {
+  assertPageReady,
+  assertValidPng,
+  dismissAdminSettingsModal,
+  enableAllAdminAddOnTabs,
+} from './lib/marketing-capture-helpers.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -35,7 +42,7 @@ const SCHOOL = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
 const SCHOOL_PASSCODE = (process.env.DEMO_SCHOOL_PASSCODE || '1234').trim();
 const TEACHER_NAME = process.env.DEMO_TEACHER_NAME || 'Mr. Smith';
 const TEACHER_PASSCODE = process.env.DEMO_TEACHER_PASSCODE || '1234';
-const STUDENT_BADGE_ID = (process.env.DEMO_STUDENT_BADGE_ID || '100').trim();
+const STUDENT_BADGE_ID = (process.env.DEMO_STUDENT_BADGE_ID || '100100').trim();
 const STUDENT_PORTAL_PASSCODE = (process.env.DEMO_STUDENT_PORTAL_PASSCODE || '1234').trim();
 
 const VIEWPORT = { width: 1280, height: 720 };
@@ -46,6 +53,40 @@ function sleep(ms) {
 
 function localOrigin() {
   return new URL(BASE).origin;
+}
+
+function normalizeCaptureOrigin(origin) {
+  if (!origin) return origin;
+  try {
+    const u = new URL(origin);
+    if (u.hostname === '127.0.0.1' || u.hostname === 'localhost') {
+      u.hostname = '127.0.0.1';
+      return u.origin;
+    }
+  } catch {
+    /* ignore */
+  }
+  return origin;
+}
+
+function storageStateOrigin(authPath) {
+  if (!fs.existsSync(authPath)) return '';
+  try {
+    const data = JSON.parse(fs.readFileSync(authPath, 'utf8'));
+    return normalizeCaptureOrigin(data.origins?.[0]?.origin ?? '');
+  } catch {
+    return '';
+  }
+}
+
+/** Saved auth from localhost does not apply on production (and vice versa). */
+function authNeedsRefresh(authPath) {
+  if (!fs.existsSync(authPath)) return true;
+  return storageStateOrigin(authPath) !== normalizeCaptureOrigin(localOrigin());
+}
+
+async function assertNotLoginScreen(page, shotName) {
+  await assertPageReady(page, shotName);
 }
 
 async function waitNoAppLoading(page) {
@@ -75,8 +116,8 @@ async function schoolLogin(page) {
   await sleep(500);
 }
 
-async function ensureSchoolAuth(browser) {
-  if (fs.existsSync(SCHOOL_AUTH)) return;
+async function ensureSchoolAuth(browser, force = false) {
+  if (!force && !authNeedsRefresh(SCHOOL_AUTH)) return;
   fs.mkdirSync(AUTH_DIR, { recursive: true });
   const ctx = await browser.newContext({ viewport: VIEWPORT });
   const page = await ctx.newPage();
@@ -85,8 +126,9 @@ async function ensureSchoolAuth(browser) {
   await ctx.close();
 }
 
-async function ensureAdminAuth(browser) {
-  if (fs.existsSync(ADMIN_AUTH)) return;
+async function ensureAdminAuth(browser, force = false) {
+  if (!force && !authNeedsRefresh(ADMIN_AUTH)) return;
+  await ensureSchoolAuth(browser, false);
   const ctx = await browser.newContext({ viewport: VIEWPORT });
   const page = await ctx.newPage();
   const origin = localOrigin();
@@ -96,21 +138,36 @@ async function ensureAdminAuth(browser) {
   });
   await waitNoAppLoading(page);
   await page.locator('input[type="password"]').first().fill(ADMIN_PASSCODE);
-  await page.locator('form').getByRole('button').first().click();
-  await sleep(4000);
-  if (!page.url().includes(`/${SCHOOL}/admin`) || page.url().includes('admin-sign-in')) {
-    await page.goto(`${origin}/${SCHOOL}/admin`, { waitUntil: 'domcontentloaded' });
-  }
+  await page.getByRole('button', { name: /Sign in|Continue|Access|Unlock|Enter Dashboard/i }).first().click();
+  await page
+    .waitForURL((url) => url.pathname.includes('/admin') && !url.pathname.includes('admin-sign-in'), {
+      timeout: 60000,
+    })
+    .catch(async () => {
+      await page.goto(`${origin}/${SCHOOL}/admin`, { waitUntil: 'domcontentloaded' });
+    });
   await waitNoAppLoading(page);
   await dismissAdminSettingsModal(page);
+  await page
+    .waitForFunction(
+      () => {
+        const t = document.body?.innerText ?? '';
+        return (
+          !/Admin Access|Something went wrong|Missing or insufficient permissions/i.test(t) &&
+          (/Students|Insights|Add more|School settings/i.test(t) || /Houses|Library|Attendance/i.test(t))
+        );
+      },
+      { timeout: 90000, polling: 400 },
+    )
+    .catch(() => {});
   await sleep(1000);
   await ctx.storageState({ path: ADMIN_AUTH });
   await ctx.close();
 }
 
-async function ensureTeacherAuth(browser) {
-  if (fs.existsSync(TEACHER_AUTH)) return;
-  await ensureSchoolAuth(browser);
+async function ensureTeacherAuth(browser, force = false) {
+  if (!force && !authNeedsRefresh(TEACHER_AUTH)) return;
+  await ensureSchoolAuth(browser, false);
   const ctx = await browser.newContext({ viewport: VIEWPORT, storageState: SCHOOL_AUTH });
   const page = await ctx.newPage();
   const origin = localOrigin();
@@ -122,7 +179,11 @@ async function ensureTeacherAuth(browser) {
   await page.getByRole('option', { name: TEACHER_NAME }).click();
   await page.locator('#teacher-passcode').fill(TEACHER_PASSCODE);
   await page.getByRole('button', { name: /^Continue$/i }).click();
-  await page.waitForURL((url) => url.pathname.includes('/teacher'), { timeout: 60000 });
+  await page
+    .waitForURL((url) => url.pathname.includes('/teacher'), { timeout: 90000 })
+    .catch(async () => {
+      await page.goto(`${origin}/${SCHOOL}/teacher`, { waitUntil: 'domcontentloaded' });
+    });
   await waitNoAppLoading(page);
   await sleep(800);
   await ctx.storageState({ path: TEACHER_AUTH });
@@ -131,8 +192,9 @@ async function ensureTeacherAuth(browser) {
 
 const SHOT_CONTENT_PREFER = {
   'portal-hub': 'portal',
-  'kiosk-welcome': 'kiosk',
-  'kiosk-rewards-shop': 'kiosk',
+  /** Full kiosk column after sign-in (small element clip looked like a login screen). */
+  'kiosk-welcome': 'clip-main',
+  'kiosk-rewards-shop': 'clip-main',
   'kiosk-system-ready': 'kiosk-idle',
   'student-home-portal': 'tabpanel',
   'hall-of-fame': 'fullscreen',
@@ -150,6 +212,7 @@ async function capture(page, name) {
   const filePath = path.join(OUT_DIR, `${name}.png`);
   const prefer = SHOT_CONTENT_PREFER[name] ?? 'auto';
   const { mode } = await captureMarketingContent(page, filePath, { prefer });
+  assertValidPng(filePath);
   const bytes = fs.statSync(filePath).size;
   if (bytes < 15000) {
     console.warn(`  ⚠ ${name}.png is only ${bytes} bytes (${mode})`);
@@ -170,7 +233,10 @@ async function signInKiosk(page, origin) {
     await page.getByRole('button', { name: /Identify Student/i }).click();
   }
   await page.waitForFunction(
-    () => /WELCOME BACK|BALANCE|Eligible Rewards|Rewards/i.test(document.body?.innerText ?? ''),
+    () =>
+      /WELCOME BACK|YOUR BALANCE|Eligible Rewards|CLICK HERE FOR MORE PRIZES/i.test(
+        document.body?.innerText ?? '',
+      ),
     { timeout: 90000, polling: 300 },
   );
   await sleep(800);
@@ -200,40 +266,12 @@ async function signInStudentHome(page, origin) {
   await sleep(600);
 }
 
-async function dismissAdminSettingsModal(page) {
-  const cancel = page.getByRole('button', { name: /^Cancel$/i }).first();
-  if (await cancel.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await cancel.click();
-    await sleep(500);
-    return;
-  }
-  await page.keyboard.press('Escape').catch(() => {});
-  await sleep(300);
-}
-
-async function enableAllAdminAddOnTabs(page) {
-  await dismissAdminSettingsModal(page);
-  const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
-  if (!(await addMore.isVisible({ timeout: 8000 }).catch(() => false))) return;
-  await addMore.click();
-  await sleep(500);
-  await page.keyboard.press('Escape').catch(() => {});
-  await sleep(400);
-}
-
 async function gotoAdminTab(page, origin, tabLabel) {
   await page.goto(`${origin}/${SCHOOL}/admin`, { waitUntil: 'domcontentloaded', timeout: 45000 });
   await waitNoAppLoading(page);
   await sleep(600);
   await dismissAdminSettingsModal(page);
   await enableAllAdminAddOnTabs(page);
-  const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
-  if (await addMore.isVisible({ timeout: 5000 }).catch(() => false)) {
-    await addMore.click();
-    await sleep(400);
-    await page.keyboard.press('Escape').catch(() => {});
-    await sleep(500);
-  }
   const tab = page.getByRole('tab', { name: new RegExp(tabLabel, 'i') }).first();
   if (await tab.isVisible({ timeout: 12000 }).catch(() => false)) {
     await tab.scrollIntoViewIfNeeded({ timeout: 15000 });
@@ -372,6 +410,14 @@ const SHOTS = [
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  const origin = normalizeCaptureOrigin(localOrigin());
+  const schoolOrigin = normalizeCaptureOrigin(storageStateOrigin(SCHOOL_AUTH));
+  if (fs.existsSync(SCHOOL_AUTH) && schoolOrigin && schoolOrigin !== origin) {
+    console.warn(
+      `\n⚠ Auth was saved for ${schoolOrigin} but capture base is ${origin}.`,
+    );
+    console.warn('  Use production (default) or run with --local and --refresh-auth.\n');
+  }
   const shotFilter = process.argv.find((a) => a.startsWith('--shot='))?.split('=')[1]?.trim();
   const shots = shotFilter
     ? SHOTS.filter((s) => s.name === shotFilter || s.name.includes(shotFilter))
@@ -383,22 +429,42 @@ async function main() {
   console.log(`Capturing marketing screenshots → ${OUT_DIR}`);
   console.log(`Base: ${BASE} · School: ${SCHOOL}${shotFilter ? ` · shot=${shotFilter}` : ''}\n`);
 
+  const needsKiosk = shots.some((s) => s.name.startsWith('kiosk-') || s.name === 'student-home-portal');
+  if (needsKiosk) {
+    const patched = await patchDemoMarketingSettings();
+    if (!patched) {
+      console.warn('  ⚠ Firebase patch skipped — kiosk may show “Student kiosk is off”.');
+    }
+  }
+
   const browser = await chromium.launch({ headless: true });
-  await ensureSchoolAuth(browser);
-  await ensureAdminAuth(browser);
-  await ensureTeacherAuth(browser);
+  const refreshAuth = process.argv.includes('--refresh-auth');
+  const needsSchool = shots.some((s) => s.auth === SCHOOL_AUTH);
+  const needsTeacher = shots.some((s) => s.auth === TEACHER_AUTH);
+  const needsAdmin = shots.some((s) => s.auth === ADMIN_AUTH);
+  if (needsSchool) await ensureSchoolAuth(browser, refreshAuth);
+  else if (needsAdmin || needsTeacher) await ensureSchoolAuth(browser, false);
+  if (needsAdmin) await ensureAdminAuth(browser, refreshAuth);
+  if (needsTeacher) await ensureTeacherAuth(browser, refreshAuth);
 
   const manifest = { capturedAt: new Date().toISOString(), base: BASE, school: SCHOOL, shots: [] };
 
   for (const shot of shots) {
     console.log(`→ ${shot.name}`);
+    const authPath = shot.auth;
+    if (authNeedsRefresh(authPath)) {
+      throw new Error(
+        `Auth file ${path.basename(authPath)} is for ${storageStateOrigin(authPath) || 'unknown'} but capture base is ${localOrigin()}. Use --refresh-auth.`,
+      );
+    }
     const ctx = await browser.newContext({
       viewport: VIEWPORT,
-      storageState: shot.auth,
+      storageState: authPath,
     });
     const page = await ctx.newPage();
     try {
       await shot.run(page, localOrigin());
+      await assertNotLoginScreen(page, shot.name);
       await capture(page, shot.name);
       manifest.shots.push({ name: shot.name, status: 'ok' });
     } catch (err) {

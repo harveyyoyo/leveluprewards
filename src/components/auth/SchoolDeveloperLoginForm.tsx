@@ -268,10 +268,12 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     setIsGoogleSigningIn(true);
     try {
       const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
 
-      // Wrong Google account linked — sign out so the user can pick another.
-      if (hasGoogleUser && !isAllowedGoogleEmail) {
+      // Only force account picker when switching from a non-allowed Google account.
+      // Otherwise, let Google reuse the existing session to avoid repeated sign-in prompts.
+      const needsAccountSwitch = hasGoogleUser && !isAllowedGoogleEmail;
+      if (needsAccountSwitch) {
+        provider.setCustomParameters({ prompt: 'select_account' });
         await signOut(auth);
       }
 
@@ -347,7 +349,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           markPendingGoogleRedirect();
           markGoogleRedirectAttempt();
           const provider = new GoogleAuthProvider();
-          provider.setCustomParameters({ prompt: 'select_account' });
+          // Only force account picker for redirect when switching accounts
+          if (hasGoogleUser && !isAllowedGoogleEmail) {
+            provider.setCustomParameters({ prompt: 'select_account' });
+          }
           if (auth.currentUser?.isAnonymous) {
             await linkWithRedirect(auth.currentUser, provider);
           } else {

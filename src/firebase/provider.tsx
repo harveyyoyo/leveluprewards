@@ -89,7 +89,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       (firebaseUser) => {
         if (cancelled) return;
-        console.log("FirebaseProvider: onAuthStateChanged fired", firebaseUser ? "User found" : "No user");
+        // FirebaseProvider: onAuthStateChanged fired
         if (firebaseUser) {
           setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
         } else if (bootstrapComplete) {
@@ -156,7 +156,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         return;
       }
 
-      console.log("FirebaseProvider: No user found. Attempting anonymous sign-in...");
+      // FirebaseProvider: No user found. Attempting anonymous sign-in...
       try {
         await signInAnonymously(auth);
       } catch (error) {

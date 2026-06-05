@@ -158,9 +158,9 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Kiosk surfaces and staff portals: reveal header at the top edge on hover. */
+    /** Student kiosk always uses hover reveal; staff portals only when hide header is enabled. */
     const useKioskHoverHeader =
-      (isStaffPortalRoute || isStudentKioskSurface) && canShowGlobalHeader;
+      (isStudentKioskSurface || (isStaffPortalRoute && hideHeaderEnabled)) && canShowGlobalHeader;
     /** Student homepage (if scroll-hide enabled): tuck header while scrolling; reveal at scroll top. */
     const usePortalScrollHeader =
       hideHeaderEnabled &&
@@ -181,19 +181,21 @@ function LayoutClientWrapperInner({
     const isClassroomScreenPage =
       typeof pathname === 'string' && pathname.includes('/classroom-screen');
     const isSmartScreenPage =
-      typeof pathname === 'string' && pathname.includes('/smart-screen');
+      typeof pathname === 'string' &&
+      (pathname.includes('/smart-screen') || pathname.includes('/displays'));
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||
       isSmartScreenPage ||
       (fullscreen &&
         (pathname?.includes('/hall-of-fame') ||
           pathname?.includes('/bulletin-board') ||
+          pathname?.includes('/displays') ||
           pathname?.includes('/classroom')));
 
     const schoolPathMatch =
       typeof pathname === 'string'
         ? pathname.match(
-            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|office)(?:\/|$)/i,
+            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|displays|office)(?:\/|$)/i,
           )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];
@@ -442,15 +444,15 @@ function LayoutClientWrapperInner({
                         (useKioskHoverHeader ? (
                             <HoverRevealHeaderShell
                                 visible={hoverGlobalHeaderVisible}
-                                peekWhenHidden={false}
-                                layout={isStaffPortalRoute ? 'overlay' : 'spacer'}
+                                peekWhenHidden={!isStaffPortalRoute}
+                                layout="overlay"
                             >
                                 <Header />
                             </HoverRevealHeaderShell>
                         ) : usePortalScrollHeader ? (
                             <HoverRevealHeaderShell
                                 visible={sidebarScrollHeaderVisible}
-                                peekWhenHidden={false}
+                                peekWhenHidden={true}
                                 layout="overlay"
                             >
                                 <Header />

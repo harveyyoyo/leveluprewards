@@ -33,7 +33,7 @@ import {
     Shield, Moon, Sun, ArrowLeft, Palette, Zap, Trophy,
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
-    Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen, Tv,
+    Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
     Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
@@ -53,7 +53,6 @@ import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJum
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
 import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
-import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
 import {
     FEATURE_SECTION_NAV,
@@ -63,6 +62,7 @@ import {
     parseSettingsViewFromQuery,
     type SettingsView,
 } from '@/components/settings/settingsModalConfig';
+import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
@@ -110,6 +110,7 @@ export function SettingsModal() {
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { isWide: staffPortalWideLayout, toggleLayoutMode: toggleStaffPortalLayout } = useStaffPortalLayoutMode();
     const originalSettingsRef = useRef<AppSettings | null>(null);
     const committedRef = useRef(false);
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
@@ -1303,43 +1304,15 @@ export function SettingsModal() {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-bold">Classroom Auto-Exit</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                {local.classroomAutoLogoutEnabled !== false
-                                                    ? 'Leave full-screen classroom after idle time (minutes)'
-                                                    : 'Full-screen classroom stays open until closed manually'}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <Switch
-                                                checked={local.classroomAutoLogoutEnabled !== false}
-                                                onCheckedChange={(checked) => handleToggle('classroomAutoLogoutEnabled', checked)}
-                                                disabled={!canManageSchoolSettings}
-                                                aria-label="Enable classroom auto-exit"
-                                            />
-                                            <Input
-                                                type="number"
-                                                className="w-20 h-9 rounded-xl text-center font-bold bg-background/50 border-border/50 disabled:opacity-40"
-                                                value={Math.round(
-                                                    (local.classroomSessionTimeoutMs ||
-                                                        DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS) / 60000,
-                                                )}
-                                                onChange={(e) =>
-                                                    handleToggle(
-                                                        'classroomSessionTimeoutMs',
-                                                        Math.max(1, parseInt(e.target.value, 10) || 1) * 60000,
-                                                    )
-                                                }
-                                                min={1}
-                                                max={1440}
-                                                disabled={
-                                                    local.classroomAutoLogoutEnabled === false ||
-                                                    !canManageSchoolSettings
-                                                }
-                                            />
-                                        </div>
+                                    <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 px-3 py-2.5">
+                                        <p className="text-sm font-bold">Live monitor auto-exit</p>
+                                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                                            Configure idle timeout for the live awards monitor in{' '}
+                                            <span className="font-semibold text-foreground">
+                                                Classroom Live → Class Awards Live
+                                            </span>
+                                            .
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1379,7 +1352,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Portal pages tuck the header while you scroll and bring it back at the top. Student kiosks reveal it when you move the pointer to the top edge. Use the wide/standard button in the portal header to change content width.
+                                                Portal pages tuck the header while you scroll and bring it back at the top. Student kiosks reveal it when you move the pointer to the top edge.
                                             </p>
                                         </div>
                                         <Switch
@@ -1389,6 +1362,20 @@ export function SettingsModal() {
                                             }
                                             disabled={!canManageSchoolSettings}
                                             aria-label="Hide header on portal pages"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col min-w-0 pr-4">
+                                            <span className="text-sm font-bold">Wide layout</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Use full-width layout on teacher and admin portals instead of centered content.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={staffPortalWideLayout}
+                                            onCheckedChange={() => toggleStaffPortalLayout()}
+                                            aria-label="Wide staff portal layout"
                                         />
                                     </div>
 
@@ -2098,7 +2085,7 @@ export function SettingsModal() {
                                     id="enableStudentWelcomeBackScreen"
                                     label="Welcome back splash"
                                     desc="Shows a short full-screen greeting when a student opens the kiosk. Default 2 seconds (adjustable in General). Can be turned off per student in Admin &rarr; Students."
-                                    icon={<Tv className="w-5 h-5" />}
+                                    icon={<Monitor className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}

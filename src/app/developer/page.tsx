@@ -66,9 +66,20 @@ import { DeveloperRemoteSupportViewer } from '@/components/support/DeveloperRemo
 import { DeveloperSchoolInsightsPanel } from '@/components/developer/DeveloperSchoolInsightsPanel';
 import { DeveloperSchoolScreensSheet } from '@/components/developer/DeveloperSchoolScreensSheet';
 
+function schoolAccessPasscodeFrom(data: { schoolAccessPasscode?: string; passcode?: string }): string {
+  return (data.schoolAccessPasscode || data.passcode || '').trim();
+}
+
+function adminPasscodeFrom(data: { adminPasscode?: string; passcode?: string }): string {
+  return (data.adminPasscode || data.passcode || '').trim();
+}
+
 interface SchoolInfo {
   id: string;
   name: string;
+  passcode?: string;
+  schoolAccessPasscode?: string;
+  adminPasscode?: string;
   appSettings?: {
     payClassroom?: boolean;
     payAttendance?: boolean;
@@ -443,11 +454,24 @@ export default function DeveloperPage() {
     setNewAdminPasscode('1234');
   };
 
-  const handleOpenEditModal = (school: SchoolInfo) => {
+  const handleOpenEditModal = async (school: SchoolInfo) => {
     setEditingSchool(school);
     setEditingSchoolName(school.name);
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+
+    if (!firestore) return;
+    try {
+      const snap = await getDoc(doc(firestore, 'schools', school.id));
+      const data = (snap.data() ?? school) as SchoolInfo;
+      setEditingSchool(data);
+      setEditingSchoolName(data.name);
+      setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(data));
+      setEditingAdminPasscode(adminPasscodeFrom(data));
+    } catch {
+      setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(school));
+      setEditingAdminPasscode(adminPasscodeFrom(school));
+    }
   }
 
   const handleCloseEditModal = () => {
@@ -464,11 +488,13 @@ export default function DeveloperPage() {
     if (editingSchoolName && editingSchoolName !== editingSchool.name) {
       updates.name = editingSchoolName;
     }
-    if (editingSchoolAccessPasscode) {
+    const currentSchoolAccessPasscode = schoolAccessPasscodeFrom(editingSchool);
+    const currentAdminPasscode = adminPasscodeFrom(editingSchool);
+    if (editingSchoolAccessPasscode !== currentSchoolAccessPasscode) {
       updates.passcode = editingSchoolAccessPasscode;
       updates.schoolAccessPasscode = editingSchoolAccessPasscode;
     }
-    if (editingAdminPasscode) {
+    if (editingAdminPasscode !== currentAdminPasscode) {
       updates.adminPasscode = editingAdminPasscode;
     }
 
@@ -888,7 +914,7 @@ export default function DeveloperPage() {
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenEditModal(school)}>
+                          <Button variant="ghost" size="icon" onClick={() => void handleOpenEditModal(school)}>
                             <Pencil className="w-4 h-4 text-blue-500" />
                           </Button>
                         </TooltipTrigger>
@@ -1405,7 +1431,7 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Update the school's name or set new login passcodes. Blank passcode fields are left unchanged.
+                Update the school&apos;s name or login passcodes.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -1423,9 +1449,9 @@ export default function DeveloperPage() {
                 <Input
                   id="new-school-access-passcode-edit"
                   value={editingSchoolAccessPasscode}
-                  placeholder="(Leave blank to keep unchanged)"
                   onChange={(e) => setEditingSchoolAccessPasscode(e.target.value)}
-                  className="col-span-3"
+                  className="col-span-3 font-code tracking-widest"
+                  autoComplete="off"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
@@ -1433,9 +1459,9 @@ export default function DeveloperPage() {
                 <Input
                   id="new-admin-passcode-edit"
                   value={editingAdminPasscode}
-                  placeholder="(Leave blank to keep unchanged)"
                   onChange={(e) => setEditingAdminPasscode(e.target.value)}
-                  className="col-span-3"
+                  className="col-span-3 font-code tracking-widest"
+                  autoComplete="off"
                 />
               </div>
             </div>

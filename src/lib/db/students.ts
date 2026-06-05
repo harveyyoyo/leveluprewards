@@ -24,7 +24,12 @@ import {
   applyPointsByPeriod,
   applyAchievementsAndBadges,
 } from './helpers';
-import { applyHousePointsRollupInTransaction } from './housePoints';
+import {
+  readHouseRollupSnap,
+  readHouseRollupSnaps,
+  writeHousePointsRollup,
+  writeHousePointsRollupsFromDeltas,
+} from './housePoints';
 import { ensureStudentHasClassPrimaryTeacher } from '@/lib/studentTeacherRoster';
 
 export { lookupStudentId } from './lookup';
@@ -179,7 +184,12 @@ export const awardPointsToStudent = async (
       }
       const studentData = studentDoc.data() as Student;
 
-      const newPoints = studentData.points + points;
+      const houseSnap =
+        options?.rollupHousePoints && studentData.houseId
+          ? await readHouseRollupSnap(transaction, firestore, schoolId, studentData.houseId)
+          : null;
+
+      const newPoints = Number(studentData.points ?? 0) + points;
       const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
 
       const categoryPointsUpdate = { ...studentData.categoryPoints };
@@ -221,15 +231,8 @@ export const awardPointsToStudent = async (
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, { desc: description, amount: points, date: now });
 
-      if (options?.rollupHousePoints && studentData.houseId) {
-        await applyHousePointsRollupInTransaction(
-          transaction,
-          firestore,
-          schoolId,
-          studentData.houseId,
-          points + bonusTotal,
-          true,
-        );
+      if (houseSnap) {
+        writeHousePointsRollup(transaction, houseSnap, points + bonusTotal);
       }
     });
 
@@ -283,12 +286,23 @@ export const awardPointsToMultipleStudents = async (
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
         const houseDeltas = new Map<string, number>();
+        const houseSnaps = options?.rollupHousePoints
+          ? await readHouseRollupSnaps(
+              transaction,
+              firestore,
+              schoolId,
+              studentDocs
+                .filter((d) => d.exists())
+                .map((d) => (d.data() as Student).houseId)
+                .filter((id): id is string => Boolean(id)),
+            )
+          : new Map();
 
         for (const studentDoc of studentDocs) {
           if (!studentDoc.exists()) continue;
 
           const studentData = studentDoc.data() as Student;
-          const newPoints = studentData.points + points;
+          const newPoints = Number(studentData.points ?? 0) + points;
           const newLifetimePoints = (studentData.lifetimePoints || 0) + points;
           const categoryPointsUpdate = { ...studentData.categoryPoints };
           categoryPointsUpdate[description] = (categoryPointsUpdate[description] || 0) + points;
@@ -330,18 +344,7 @@ export const awardPointsToMultipleStudents = async (
           processedCount++;
         }
 
-        if (options?.rollupHousePoints) {
-          for (const [houseId, delta] of houseDeltas) {
-            await applyHousePointsRollupInTransaction(
-              transaction,
-              firestore,
-              schoolId,
-              houseId,
-              delta,
-              true,
-            );
-          }
-        }
+        writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
       });
     }
 
@@ -391,6 +394,17 @@ export const deductPointsFromMultipleStudents = async (
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
         const houseDeltas = new Map<string, number>();
+        const houseSnaps = options?.rollupHousePoints
+          ? await readHouseRollupSnaps(
+              transaction,
+              firestore,
+              schoolId,
+              studentDocs
+                .filter((d) => d.exists())
+                .map((d) => (d.data() as Student).houseId)
+                .filter((id): id is string => Boolean(id)),
+            )
+          : new Map();
 
         for (const studentDoc of studentDocs) {
           if (!studentDoc.exists()) continue;
@@ -414,18 +428,7 @@ export const deductPointsFromMultipleStudents = async (
           processedCount++;
         }
 
-        if (options?.rollupHousePoints) {
-          for (const [houseId, delta] of houseDeltas) {
-            await applyHousePointsRollupInTransaction(
-              transaction,
-              firestore,
-              schoolId,
-              houseId,
-              delta,
-              true,
-            );
-          }
-        }
+        writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
       });
     }
 

@@ -6,6 +6,13 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { captureMarketingContent } from './marketing-screenshot-content.mjs';
+import { patchDemoMarketingSettings } from './lib/demo-marketing-settings.mjs';
+import {
+  assertPageReady,
+  assertValidPng,
+  dismissAdminSettingsModal,
+  enableAllAdminAddOnTabs,
+} from './lib/marketing-capture-helpers.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');
@@ -19,7 +26,7 @@ const SCHOOL = (process.env.DEMO_SCHOOL_ID || 'schoolabc').trim().toLowerCase();
 const SCHOOL_PASS = process.env.DEMO_SCHOOL_PASSCODE || '1234';
 const TEACHER = process.env.DEMO_TEACHER_NAME || 'Mr. Smith';
 const TEACHER_PASS = process.env.DEMO_TEACHER_PASSCODE || '1234';
-const STUDENT_BADGE = (process.env.DEMO_STUDENT_BADGE_ID || '100').trim();
+const STUDENT_BADGE = (process.env.DEMO_STUDENT_BADGE_ID || '100100').trim();
 const STUDENT_PASS = process.env.DEMO_STUDENT_PORTAL_PASSCODE || '1234';
 const VIEWPORT = { width: 1280, height: 720 };
 
@@ -65,8 +72,27 @@ async function adminLogin(page) {
   await page.waitForURL((url) => url.pathname.includes('/admin') && !url.pathname.includes('admin-sign-in'), {
     timeout: 60000,
   });
+  await page
+    .waitForURL((url) => url.pathname.includes('/admin') && !url.pathname.includes('admin-sign-in'), {
+      timeout: 60000,
+    })
+    .catch(async () => {
+      await page.goto(`${BASE}/${SCHOOL}/admin`, { waitUntil: 'domcontentloaded' });
+    });
   await waitLoaded(page);
-  await dismissSettingsModal(page);
+  await dismissAdminSettingsModal(page);
+  await page
+    .waitForFunction(
+      () => {
+        const t = document.body?.innerText ?? '';
+        return (
+          !/Admin Access|Something went wrong|Missing or insufficient permissions/i.test(t) &&
+          (/Students|Insights|Add more|School settings/i.test(t) || /Houses|Library|Attendance/i.test(t))
+        );
+      },
+      { timeout: 90000, polling: 400 },
+    )
+    .catch(() => {});
   await sleep(1000);
 }
 
@@ -101,46 +127,12 @@ async function teacherLogin(page) {
   await sleep(1500);
 }
 
-async function dismissSettingsModal(page) {
-  const cancel = page.getByRole('button', { name: /^Cancel$/i }).first();
-  if (await cancel.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await cancel.click();
-    await sleep(500);
-    return;
-  }
-  await page.keyboard.press('Escape').catch(() => {});
-  await sleep(300);
-}
-
-async function enableAllAddOnTabs(page) {
-  await dismissSettingsModal(page);
-  const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
-  if (await addMore.isVisible({ timeout: 8000 }).catch(() => false)) {
-    await addMore.click();
-    await sleep(400);
-    const allOn = page.getByText(/^All on$/i).first();
-    if (await allOn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await allOn.click();
-    } else {
-      for (const label of ['Houses', 'Attendance', 'Notifications', 'Badges', 'Library']) {
-        const item = page.getByRole('menuitemcheckbox', { name: new RegExp(label, 'i') }).first();
-        if (await item.isVisible({ timeout: 1500 }).catch(() => false)) {
-          if ((await item.getAttribute('aria-checked')) !== 'true') await item.click();
-          await sleep(300);
-        }
-      }
-    }
-    await sleep(2000);
-    await page.keyboard.press('Escape').catch(() => {});
-  }
-}
-
 async function adminTab(page, label) {
   await page.goto(`${BASE}/${SCHOOL}/admin`, { waitUntil: 'domcontentloaded' });
   await waitLoaded(page);
   await sleep(800);
-  await dismissSettingsModal(page);
-  await enableAllAddOnTabs(page);
+  await dismissAdminSettingsModal(page);
+  await enableAllAdminAddOnTabs(page);
   const tab = page.getByRole('tab', { name: new RegExp(label, 'i') }).first();
   await tab.scrollIntoViewIfNeeded({ timeout: 15000 });
   await tab.click({ timeout: 20000 });
@@ -161,24 +153,16 @@ const SHOT_PREFER = {
 };
 
 async function shot(page, name) {
+  await assertPageReady(page, name);
   const filePath = path.join(OUT_DIR, `${name}.png`);
   const { mode } = await captureMarketingContent(page, filePath, {
     prefer: SHOT_PREFER[name] ?? 'auto',
   });
+  assertValidPng(filePath);
   const bytes = fs.statSync(filePath).size;
   console.log(`${name}.png → ${bytes} bytes (${mode})`);
 }
 
-async function openAddOnTabs(page) {
-  await dismissSettingsModal(page);
-  const addMore = page.getByRole('button', { name: /^Add more$/i }).first();
-  if (await addMore.isVisible({ timeout: 8000 }).catch(() => false)) {
-    await addMore.click();
-    await sleep(600);
-    await page.keyboard.press('Escape');
-    await sleep(400);
-  }
-}
 
 async function runSection(label, fn) {
   try {
@@ -190,6 +174,11 @@ async function runSection(label, fn) {
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
+  console.log('Patching demo school settings for marketing…');
+  const patched = await patchDemoMarketingSettings();
+  if (!patched) {
+    console.warn('  ⚠ Firebase patch skipped — kiosk may show “Student kiosk is off”.');
+  }
   const browser = await chromium.launch({ headless: true });
 
   await runSection('kiosk+portal', async () => {
@@ -244,7 +233,10 @@ async function main() {
       ],
     ]) {
       await setup();
-      await captureMarketingContent(page, path.join(OUT_DIR, `${name}.png`), { prefer });
+      await assertPageReady(page, name);
+      const filePath = path.join(OUT_DIR, `${name}.png`);
+      await captureMarketingContent(page, filePath, { prefer });
+      assertValidPng(filePath);
       console.log(`${name}.png (content crop)`);
     }
     await ctx.close();
@@ -275,7 +267,6 @@ async function main() {
     const ctx = await browser.newContext({ viewport: VIEWPORT });
     const page = await ctx.newPage();
     await adminLogin(page);
-    await openAddOnTabs(page);
 
     await adminTab(page, 'Houses');
     await page.getByText(/Houses|House sorting|Spirit/i).first().waitFor({ timeout: 30000 }).catch(() => {});
@@ -316,11 +307,13 @@ async function main() {
     }
     await waitLoaded(page);
     const text = await page.locator('body').innerText();
-    if (/balance|Your points|Raffle tickets/i.test(text)) {
-      const alt = path.join(OUT_DIR, 'student-home-live.png');
-      await page.screenshot({ path: alt, type: 'png' });
-      fs.copyFileSync(alt, path.join(OUT_DIR, 'student-home-portal.png'));
-      console.log('student-home-portal.png (live login) updated');
+    if (/balance|Your points|Raffle tickets|WELCOME BACK/i.test(text)) {
+      const filePath = path.join(OUT_DIR, 'student-home-portal.png');
+      await captureMarketingContent(page, filePath, { prefer: 'clip-main' });
+      assertValidPng(filePath);
+      console.log('student-home-portal.png (live student home)');
+    } else {
+      console.warn('  ⚠ student-home login did not reach dashboard — kept admin Student portal tab shot');
     }
 
     await ctx.close();

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /** Pointer within this many px of the top edge reveals chrome. */
-export const TOP_EDGE_REVEAL_PX = 48;
+export const TOP_EDGE_REVEAL_PX = 16;
 
 export function useTopEdgeRevealChrome(active: boolean, hideAfterMs = 2500) {
   const [visible, setVisible] = useState(false);

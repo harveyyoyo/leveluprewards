@@ -19,7 +19,7 @@ const GUIDE_SECTIONS: GuideItem[] = [
   {
     icon: Users,
     title: 'Roster',
-    body: 'Students, classes, and homeroom teachers live only in School Office (not the rewards arcade). Add teachers first, assign each student on Students, group by class on Classes, or import a CSV. AI import in Settings can read messy spreadsheets and figure out classes, students, teachers, grades, and billing together.',
+    body: 'Add teachers first, assign each student on Students, group by class on Classes, or import a CSV. AI import in Settings can read messy spreadsheets and figure out classes, students, teachers, grades, and billing together.',
   },
   {
     icon: GraduationCap,

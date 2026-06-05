@@ -115,3 +115,25 @@ export const LIBRARY_REWARD_MODE_LABELS: Record<LibraryRewardMode, string> = {
   app_points: 'School points (rewards app)',
   isolated_points: 'Library points only (separate balance)',
 };
+
+export type LibraryStudentCheckoutSettings = {
+  payLibrary?: boolean;
+  /** Signed-in student kiosk: LIB barcode on the coupon scan card. Default on when library is enabled. */
+  libraryStudentKioskCheckoutEnabled?: boolean;
+  /** Shared station at /library/self-checkout (scan ID, then books). Default off. */
+  libraryAutoStudentPortalEnabled?: boolean;
+};
+
+export function isLibraryPillarEnabled(settings: LibraryStudentCheckoutSettings): boolean {
+  return settings.payLibrary !== false;
+}
+
+export function isLibraryStudentKioskCheckoutEnabled(settings: LibraryStudentCheckoutSettings): boolean {
+  if (!isLibraryPillarEnabled(settings)) return false;
+  return settings.libraryStudentKioskCheckoutEnabled !== false;
+}
+
+export function isLibraryStandaloneSelfCheckoutEnabled(settings: LibraryStudentCheckoutSettings): boolean {
+  if (!isLibraryPillarEnabled(settings)) return false;
+  return settings.libraryAutoStudentPortalEnabled !== false;
+}

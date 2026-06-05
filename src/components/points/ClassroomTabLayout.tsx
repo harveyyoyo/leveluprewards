@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { LayoutGrid, Settings2, BookOpenCheck, Monitor, BellRing } from 'lucide-react';
+import { LayoutGrid, BookOpenCheck, Monitor } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
-import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import { cn } from '@/lib/utils';
 
 export type { ClassroomTabSection };
@@ -15,16 +15,12 @@ export type { ClassroomTabSection };
 const SECTION_LABELS: Record<ClassroomTabSection, string> = {
   seating: CLASSROOM_SEATING_SECTION_LABEL,
   behavior: 'Behavior',
-  alerts: 'Alerts',
-  setup: 'Setup',
   'room-display': 'Room display',
 };
 
 const SECTION_ICONS: Record<ClassroomTabSection, React.ComponentType<{ className?: string }>> = {
   seating: LayoutGrid,
   behavior: BookOpenCheck,
-  alerts: BellRing,
-  setup: Settings2,
   'room-display': Monitor,
 };
 
@@ -33,9 +29,7 @@ export type ClassroomTabLayoutProps = {
   sections: ClassroomTabSection[];
   seatingContent: React.ReactNode;
   behaviorContent?: React.ReactNode;
-  alertsContent?: React.ReactNode;
   roomDisplayContent?: React.ReactNode;
-  setupContent?: React.ReactNode;
   headerAction?: React.ReactNode;
   className?: string;
 };
@@ -45,9 +39,7 @@ export function ClassroomTabLayout({
   sections,
   seatingContent,
   behaviorContent,
-  alertsContent,
   roomDisplayContent,
-  setupContent,
   headerAction,
   className,
 }: ClassroomTabLayoutProps) {
@@ -64,9 +56,7 @@ export function ClassroomTabLayout({
   const contentBySection: Record<ClassroomTabSection, React.ReactNode> = {
     seating: seatingContent,
     behavior: behaviorContent,
-    alerts: alertsContent,
     'room-display': roomDisplayContent,
-    setup: setupContent,
   };
 
   const resolvedSection = sections.includes(section) ? section : sections[0];
@@ -80,11 +70,10 @@ export function ClassroomTabLayout({
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <Helper
-        content={`${CLASSROOM_SEATING_SECTION_LABEL}, behavior notes, if/then alerts, room display, and optional principal or parent access configured in Setup.`}
+        content={`${CLASSROOM_SEATING_SECTION_LABEL} holds monitor launch, school access, award labels, alerts, and session timing. Behavior is your note timeline; Room display mirrors session stats on a separate monitor.`}
       >
         <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
-          <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> Classroom
-          Management
+          <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> {CLASSROOM_TAB_LABEL}
         </CardTitle>
       </Helper>
       {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
@@ -121,7 +110,7 @@ export function ClassroomTabLayout({
           onValueChange={(val) => setSection(val as ClassroomTabSection)}
           fullWidth
           className="w-full"
-          aria-label="Classroom Management sections"
+          aria-label={`${CLASSROOM_TAB_LABEL} sections`}
         />
 
         <AnimatePresence mode="wait" initial={false}>

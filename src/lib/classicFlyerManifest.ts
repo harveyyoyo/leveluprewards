@@ -36,7 +36,8 @@ export const CLASSIC_FLYER_FILES = [
   "flyer-students-middle-2.html",
   "flyer-students-middle.html",
   "flyer-sunset.html",
-  "flyer-teachers-quickstart.html"
+  "flyer-teachers-quickstart.html",
+  "flyer-private-school-pillar-proposal.html"
 ] as const;
 
 export type ClassicFlyerFile = (typeof CLASSIC_FLYER_FILES)[number];

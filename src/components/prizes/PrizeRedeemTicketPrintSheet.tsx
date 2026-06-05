@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { format } from 'date-fns';
 import DynamicIcon from '@/components/DynamicIcon';
+import { PrintBarcode } from '@/components/print/PrintBarcode';
 import { leadingEmojiSequenceFromName, stripLeadingEmojiFromPrizeName } from '@/lib/prizes/prizeUtils';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
@@ -24,6 +25,8 @@ export type PrizeRedeemTicket = {
   prizeIcon?: string;
   quantity: number;
   totalCost?: number;
+  /** Pickup kiosk barcode (`VR…`) — scan at the separate machine to collect the prize. */
+  voucherScanCode?: string;
   /** When set (e.g. after AI surprise + print voucher), show on the physical ticket. */
   aiSurpriseKind?: 'joke' | 'riddle' | 'fortune' | 'acrostic';
   aiSurpriseText?: string;
@@ -193,6 +196,13 @@ export function PrizeRedeemTicketPrintSheet({
               </span>
               <span className="prize-ticket__banner-id">#{t.ticketNo}</span>
             </div>
+
+            {t.voucherScanCode ? (
+              <div className="prize-ticket__pickup-scan" aria-label="Pickup kiosk barcode">
+                <p className="prize-ticket__pickup-label">Scan at pickup kiosk</p>
+                <PrintBarcode value={t.voucherScanCode} variant="prize-voucher" />
+              </div>
+            ) : null}
 
             <div className="prize-ticket__details">
               <div className="prize-ticket__student-info">

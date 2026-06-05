@@ -114,7 +114,7 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = 'Unass
 
   return (
     <>
-      <DropdownMenu modal={false}>
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             type="button"

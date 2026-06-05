@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import {
+  normalizeStaffPortalTabValue,
   staffPortalAddOnTabs,
   staffPortalCoreTabs,
   staffPortalDefaultTab,
@@ -66,7 +67,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
       };
     }
 
-    const pinnedSet = new Set(pinnedAddOnValues);
+    const pinnedSet = new Set(pinnedAddOnValues.map(normalizeStaffPortalTabValue));
     const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
     const availableMain = [...core, ...pinnedExtras];
     const main = staffPortalOrderMainTabs(availableMain, mainTabOrder);
@@ -88,5 +89,5 @@ export function staffPortalTabIsValid(
   tabId: string,
   allTabValues: string[],
 ): boolean {
-  return allTabValues.includes(tabId);
+  return allTabValues.includes(normalizeStaffPortalTabValue(tabId));
 }

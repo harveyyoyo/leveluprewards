@@ -28,6 +28,7 @@ import { couponIsKnownAndValidOffline, loadCouponSnapshot, saveCouponSnapshot } 
 import type { LoginResult } from '@/lib/loginResult';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
 import { isStudentKioskRoute, isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
+import { isOfficeAppPath, isOfficeHostname } from '@/lib/officeRouting';
 
 const getDb = () => import('@/lib/db');
 
@@ -88,7 +89,8 @@ interface AppContextType {
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number; queued?: boolean }>;
   awardPointsToMultipleStudents: (studentIds: string[], points: number, description: string) => Promise<{ success: boolean; message: string; count: number; queued?: boolean }>;
   deductPointsFromMultipleStudents: (studentIds: string[], points: number, reason: string) => Promise<{ success: boolean; message: string; count: number; }>;
-  redeemPrize: (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean }) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; message?: string }>;
+  redeemPrize: (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean; issuePickupVoucher?: boolean }) => Promise<{ success: boolean; activityId?: string; redeemedAt?: number; totalCost?: number; voucherScanCode?: string; message?: string }>;
+  fulfillPrizeVoucherFromScan: (voucherScanCode: string, expectedStudentId?: string) => Promise<{ success: boolean; status?: string; prizeId?: string; prizeName?: string; quantity?: number; message?: string }>;
   addPrize: (prize: Omit<Prize, 'id'>) => Promise<string>;
   updatePrize: (prize: Prize) => Promise<void>;
   deletePrize: (prizeId: string) => Promise<void>;
@@ -204,16 +206,27 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         const next = `${window.location.pathname}${q ? `?${q}` : ''}${window.location.hash}`;
         window.history.replaceState(null, '', next);
       })
-      .catch(() => {});
+      .catch((err) => { console.warn('Failed to verify kiosk entry code:', err); });
   }, [loginState, schoolId, functions, auth?.currentUser]);
 
   // Privileged sessions (admin, teacher, developer, …): auto-logout after idle period.
   // Consumes configurable timeout from settings (default: 5 min).
   // Uses logoutRef + narrow deps so a changing `logout` identity does not reset the timer every render.
   // Throttles mousemove/scroll/wheel so pointer jitter does not keep extending the session forever.
+  // School Office is excluded from auto-logout entirely (long-form data entry workflows).
   React.useEffect(() => {
     if (settings.adminAutoLogoutEnabled === false) {
       return;
+    }
+    // Never auto-logout from office (office staff or admin on office pages).
+    if (loginState === 'office') {
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      const { host, pathname } = window.location;
+      if (isOfficeHostname(host) || isOfficeAppPath(pathname)) {
+        return;
+      }
     }
     if (
       loginState !== 'admin' &&
@@ -338,7 +351,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         }
         saveCouponSnapshot(schoolId, { updatedAt, couponsByCode });
       })
-      .catch(() => {});
+      .catch((err) => { console.warn('Failed to sync coupon library:', err); });
   }, [schoolId, functions, loginState, studentKioskSessionEstablished]);
 
   // Background sync: push offline pending redemptions when internet returns.
@@ -354,7 +367,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         if (!results?.length) return;
         updatePendingCouponRedemptions(results.map((r) => ({ id: r.id, status: r.status, message: r.message })));
       })
-      .catch(() => {});
+      .catch((err) => { console.warn('Failed to sync offline redemptions:', err); });
   }, [schoolId, functions, auth]);
 
   // Background sync: push offline pending teacher awards when internet returns.
@@ -671,7 +684,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     );
   }, [firestore, schoolId, houseRollup]);
 
-  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean }) => {
+  const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean; issuePickupVoucher?: boolean }) => {
     if (!schoolId) return Promise.reject("Not logged into a school.");
     try {
       const fn = httpsCallable(functions, 'redeemPrizeServer');
@@ -681,6 +694,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         prizeId: prize.id,
         quantity,
         markFulfilled: options?.markFulfilled === true,
+        issuePickupVoucher: options?.issuePickupVoucher === true,
       });
       const data = res.data as any;
       return {
@@ -688,6 +702,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         activityId: typeof data?.activityId === 'string' ? data.activityId : undefined,
         redeemedAt: typeof data?.redeemedAt === 'number' ? data.redeemedAt : undefined,
         totalCost: typeof data?.totalCost === 'number' ? data.totalCost : undefined,
+        voucherScanCode: typeof data?.voucherScanCode === 'string' ? data.voucherScanCode : undefined,
         message: typeof data?.message === 'string' ? data.message : undefined,
       };
     } catch (e: any) {
@@ -706,6 +721,21 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
       if (canUseLocalFallback && isCallableReachabilityFailure) {
         try {
           if (prize.id !== AI_FUN_UNIFIED_PRIZE_ID) {
+            if (options?.issuePickupVoucher === true) {
+              const pickup = await getDb().then((db) =>
+                import('@/lib/prizes/prizeVoucherPickup').then((m) =>
+                  m.redeemPrizeWithPickupVoucher(firestore, schoolId, studentId, prize, quantity),
+                ),
+              );
+              return {
+                success: pickup.success,
+                activityId: pickup.activityId,
+                redeemedAt: pickup.redeemedAt,
+                totalCost: pickup.totalCost,
+                voucherScanCode: pickup.voucherScanCode,
+                message: 'Pickup voucher issued locally.',
+              };
+            }
             const result = await getDb().then((db) => db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride, options));
             return {
               success: result.success,
@@ -770,6 +800,88 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     schoolId,
     settings.enablePrizeAiSurprise,
   ]);
+
+  const fulfillPrizeVoucherFromScan_ = useCallback(
+    async (voucherScanCode: string, expectedStudentId?: string) => {
+      if (!schoolId) return { success: false, message: 'Not logged into a school.' };
+      try {
+        const fn = httpsCallable(functions, 'fulfillPrizeVoucherServer');
+        const res = await fn({
+          schoolId,
+          voucherScanCode,
+          ...(expectedStudentId ? { expectedStudentId } : {}),
+        });
+        const data = res.data as {
+          success?: boolean;
+          status?: string;
+          prizeId?: string;
+          prizeName?: string;
+          quantity?: number;
+          message?: string;
+        };
+        return {
+          success: !!data?.success,
+          status: data?.status,
+          prizeId: data?.prizeId,
+          prizeName: data?.prizeName,
+          quantity: data?.quantity,
+          message: data?.message,
+        };
+      } catch (e: unknown) {
+        const canUseLocalFallback =
+          !!firestore &&
+          (authCtx.isAdmin || authCtx.isTeacher || authCtx.isPrizeClerk || loginState === 'developer') &&
+          typeof window !== 'undefined' &&
+          ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+        if (canUseLocalFallback) {
+          try {
+            const result = await import('@/lib/prizes/prizeVoucherPickup').then((m) =>
+              m.fulfillPrizeVoucherByScanCode(firestore, schoolId, voucherScanCode, {
+                expectedStudentId,
+              }),
+            );
+            if (result.status === 'not_found') {
+              return { success: false, message: 'Voucher not found.' };
+            }
+            if (result.status === 'wrong_student') {
+              return { success: false, message: 'This voucher belongs to another student.' };
+            }
+            if (result.status === 'already_fulfilled') {
+              return {
+                success: true,
+                status: 'already_fulfilled',
+                prizeId: result.lookup.prizeId,
+                prizeName: result.lookup.prizeName,
+                quantity: result.lookup.quantity,
+                message: 'This voucher was already used.',
+              };
+            }
+            return {
+              success: true,
+              status: 'fulfilled',
+              prizeId: result.lookup.prizeId,
+              prizeName: result.lookup.prizeName,
+              quantity: result.lookup.quantity,
+              message: 'Pickup complete.',
+            };
+          } catch (fallbackError: unknown) {
+            return {
+              success: false,
+              message:
+                (fallbackError as { message?: string })?.message ||
+                (e as { message?: string })?.message ||
+                'Could not scan this voucher.',
+            };
+          }
+        }
+        return {
+          success: false,
+          message: (e as { message?: string })?.message || 'Could not scan this voucher.',
+        };
+      }
+    },
+    [authCtx.isAdmin, authCtx.isPrizeClerk, authCtx.isTeacher, firestore, functions, loginState, schoolId],
+  );
 
   const addPrize_ = useCallback((p: Omit<Prize, 'id'>) => {
     if (!firestore || !schoolId) return Promise.reject("Not logged into a school.");
@@ -912,6 +1024,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     awardPointsToMultipleStudents: awardPointsToMultipleStudents_,
     deductPointsFromMultipleStudents: deductPointsFromMultipleStudents_,
     redeemPrize: redeemPrize_,
+    fulfillPrizeVoucherFromScan: fulfillPrizeVoucherFromScan_,
     addPrize: addPrize_, updatePrize: updatePrize_, deletePrize: deletePrize_,
     uploadStudents: uploadStudents_,
     uploadClassesFromCsv: uploadClassesFromCsv_,
@@ -946,6 +1059,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     addCategory_, updateCategory_, deleteCategory_, addCoupons_,
     redeemCoupon_, deleteCoupon_, deleteCoupons_, awardPoints_, awardPointsToMultipleStudents_, deductPointsFromMultipleStudents_,
     redeemPrize_, addPrize_, updatePrize_, deletePrize_,
+    fulfillPrizeVoucherFromScan_,
     uploadStudents_,
     uploadClassesFromCsv_,
     uploadTeachersFromCsv_,

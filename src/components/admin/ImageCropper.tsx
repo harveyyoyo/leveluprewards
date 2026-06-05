@@ -230,7 +230,7 @@ export function ImageCropper({
                       onClick={() => setAspect(4/3)}
                       className="text-[10px] uppercase font-bold h-7 px-2"
                     >
-                        4:3 TV
+                        4:3 Monitor
                     </Button>
                 </div>
 

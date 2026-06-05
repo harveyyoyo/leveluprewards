@@ -35,15 +35,29 @@ function AdminMainTabsListVertical({
   ...props
 }: AdminMainTabsListProps) {
   const listRef = React.useRef<HTMLDivElement>(null);
+  const usePlainButtons = inWorkspace;
 
   React.useLayoutEffect(() => {
     if (!autoScrollActiveTab) return;
     const list = listRef.current;
     if (!list) return;
-    const active = list.querySelector<HTMLElement>('[data-state="active"]');
+    const active = usePlainButtons
+      ? list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
+      : list.querySelector<HTMLElement>('[data-state="active"]');
     const tabEl = active?.closest<HTMLElement>('[draggable]') ?? active;
     tabEl?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-  }, [activeTabValue, autoScrollActiveTab, children]);
+  }, [activeTabValue, autoScrollActiveTab, children, usePlainButtons]);
+
+  const scrollableListClassName = cn(
+    'flex w-full min-w-0 flex-col gap-1.5 rounded-xl border-0 bg-transparent p-0 shadow-none',
+    'items-stretch justify-start',
+    usePlainButtons
+      ? 'p-0'
+      : cn(
+          'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain',
+          '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-y-contain',
+        ),
+  );
 
   return (
     <div
@@ -53,18 +67,26 @@ function AdminMainTabsListVertical({
           : staffPortalSidebarPanelClassName(className)
       }
     >
-      <TabsList
-        ref={listRef}
-        className={cn(
-          'flex h-auto w-full min-w-0 flex-col gap-1.5 rounded-xl border-0 bg-transparent p-0 shadow-none',
-          'items-stretch justify-start overflow-y-auto overflow-x-hidden',
-          '[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        )}
-        aria-label="Admin portal sections"
-        {...props}
-      >
-        {children}
-      </TabsList>
+      {usePlainButtons ? (
+        <nav
+          ref={listRef}
+          role="tablist"
+          aria-orientation="vertical"
+          className={scrollableListClassName}
+          {...props}
+        >
+          {children}
+        </nav>
+      ) : (
+        <TabsList
+          ref={listRef}
+          className={scrollableListClassName}
+          aria-label="Admin portal sections"
+          {...props}
+        >
+          {children}
+        </TabsList>
+      )}
       {endAction ? <div className="shrink-0 border-t border-border/40 pt-2">{endAction}</div> : null}
     </div>
   );

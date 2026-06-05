@@ -83,7 +83,7 @@ export async function resolveMarketingContentLocator(page, options = {}) {
     const marker =
       prefer === 'kiosk-idle'
         ? /System Ready|Identify Student|Please scan|Type your badge/i
-        : /WELCOME BACK|YOUR BALANCE|Eligible Rewards|CLICK HERE FOR MORE PRIZES/i;
+        : /WELCOME BACK|Welcome back|YOUR BALANCE|Eligible prizes|More prizes|Eligible Rewards/i;
     const hit = page.locator('#screen-view').getByText(marker).first();
     if (await hit.isVisible({ timeout: 5000 }).catch(() => false)) {
       const card = hit.locator('xpath=ancestor::*[contains(@class,"Card") or contains(@class,"card")][1]');

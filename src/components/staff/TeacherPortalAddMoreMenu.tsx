@@ -6,8 +6,23 @@ import { StaffPortalAddFeatureTabsMenu } from './StaffPortalAddFeatureTabsMenu';
 export type TeacherPortalAddMoreMenuProps = {
   tabs: StaffPortalTabView[];
   onAddTab: (tabValue: string) => void;
+  onTurnAllOn?: () => void;
+  onTurnAllOff?: () => void;
 };
 
-export function TeacherPortalAddMoreMenu({ tabs, onAddTab }: TeacherPortalAddMoreMenuProps) {
-  return <StaffPortalAddFeatureTabsMenu tabs={tabs} onAddTab={onAddTab} align="start" />;
+export function TeacherPortalAddMoreMenu({
+  tabs,
+  onAddTab,
+  onTurnAllOn,
+  onTurnAllOff,
+}: TeacherPortalAddMoreMenuProps) {
+  return (
+    <StaffPortalAddFeatureTabsMenu
+      tabs={tabs}
+      onAddTab={onAddTab}
+      onTurnAllOn={onTurnAllOn}
+      onTurnAllOff={onTurnAllOff}
+      align="start"
+    />
+  );
 }

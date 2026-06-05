@@ -25,8 +25,11 @@ import {
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
-import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import type { StaffPortalRole, StaffPortalTabDef } from './types';
+import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
+
+export { normalizeStaffPortalTabValue, normalizeStaffPortalTabValues } from '@/lib/displays/displayRoutes';
 
 function teacherAddonHidden(settings: Settings, tabValue: string): boolean {
   return (settings.teacherHiddenAddOnTabs || []).includes(tabValue);
@@ -40,8 +43,7 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
 export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
   'insights',
   'halloffame',
-  'bulletinboard',
-  'smart-screen',
+  'displays',
   'library',
   'bonuspoints',
   'category-badges',
@@ -137,12 +139,12 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   },
   {
     value: 'classroom',
-    label: 'Classroom',
+    label: CLASSROOM_TAB_LABEL,
     icon: LayoutGrid,
     kind: 'core',
     roles: ['admin', 'teacher'],
     teacherOperated: true,
-    title: `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and room display`,
+    title: `${CLASSROOM_SEATING_SECTION_LABEL}, behavior, alerts, and room display`,
     isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
   {
@@ -221,28 +223,15 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     },
   },
   {
-    value: 'bulletinboard',
-    label: 'Bulletin',
-    icon: Megaphone,
-    kind: 'addon',
-    roles: ['admin', 'teacher'],
-    isEnabled: (s, role) => {
-      const on = s.bulletinEnabled !== false;
-      if (role === 'teacher') return teacherAddonEnabled(s, 'bulletinboard', () => on);
-      return on;
-    },
-  },
-  {
-    value: 'smart-screen',
-    label: 'Smart Screen',
+    value: 'displays',
+    label: 'Displays',
     icon: Monitor,
     kind: 'addon',
     roles: ['admin', 'teacher'],
     isEnabled: (s, role) => {
-      if (role === 'teacher') {
-        return teacherAddonEnabled(s, 'smart-screen', () => !!s.smartScreenEnabled);
-      }
-      return !!s.smartScreenEnabled && !adminAddonHidden(s, 'smart-screen');
+      const on = displaysFeatureEnabled(s);
+      if (role === 'teacher') return teacherAddonEnabled(s, 'displays', () => on);
+      return on && !adminAddonHidden(s, 'displays');
     },
   },
   {
@@ -415,8 +404,7 @@ export const STAFF_PORTAL_CANONICAL_TAB_ORDER: readonly string[] = [
   'insights',
   'attendance',
   'halloffame',
-  'bulletinboard',
-  'smart-screen',
+  'displays',
   'library',
   'bonuspoints',
   'category-badges',
@@ -532,10 +520,10 @@ export function staffPortalTeacherPinSideEffects(
       return { enableAdminAnalytics: true };
     case 'halloffame':
       return { enableClassLeaderboard: true };
+    case 'displays':
     case 'bulletinboard':
-      return { bulletinEnabled: true };
     case 'smart-screen':
-      return { smartScreenEnabled: true };
+      return { bulletinEnabled: true, smartScreenEnabled: true };
     case 'library':
       return { payLibrary: true };
     case 'bonuspoints':
@@ -597,7 +585,7 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   teachers: 'Staff accounts, roles, passcodes, and who can sign in to the portal.',
   prizes: 'Prize shop inventory, costs, and redemption rules.',
   categories: 'Point categories teachers use when awarding or printing coupons.',
-  classroom: `${CLASSROOM_SEATING_SECTION_LABEL}, quick awards, and classroom display tools.`,
+  classroom: `${CLASSROOM_TAB_LABEL} — ${CLASSROOM_SEATING_SECTION_LABEL} settings, behavior, alerts, and room display.`,
   reports: 'Exports and summaries of points, redemptions, and activity.',
   roster: 'Your students — search, filter, and open profiles for awards.',
   coupons: 'Print coupon sheets and award or deduct points.',
@@ -605,8 +593,7 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   insights: 'School-wide analytics and usage trends.',
   attendance: 'Sign-in, periods, and attendance reporting.',
   halloffame: 'Leaderboards for the hallway or assembly display.',
-  bulletinboard: 'School announcements on kiosk and portal screens.',
-  'smart-screen': 'Live display layouts for TVs and projectors.',
+  displays: 'Smart Screen and bulletin board displays for monitors, hallways, and lobbies.',
   library: 'Checkout, returns, and library point rules.',
   bonuspoints: 'Achievement bonuses and milestone rewards.',
   'category-badges': 'Badges students earn from point categories.',

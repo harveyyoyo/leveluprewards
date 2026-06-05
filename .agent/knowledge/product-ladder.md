@@ -24,7 +24,7 @@ Legacy `plan` tiers on the school doc remain for billing labels only.
 | Staff / admin (Rewards pillar or Classroom) | Feature keys / routes |
 |---------------------------------------------|------------------------|
 | Staff point awards | teacher/admin points tabs, categories, coupons |
-| Engagement add-ons | badges, levels, houses, Hall of Fame TV |
+| Engagement add-ons | badges, levels, houses, Hall of Fame monitor |
 | **Smart Screen** (hallway / lobby signage) | `smartScreen*`, `/smart-screen` — **not pillar-gated** |
 
 | Teacher-operational (not blocked by `payRewards`) | Notes |

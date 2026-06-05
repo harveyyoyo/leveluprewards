@@ -1,17 +1,17 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { CheckCircle2, Gift, Loader2, ScanBarcode, User } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { usePrizeShelfWedgeScan } from '@/hooks/usePrizeShelfWedgeScan';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Prize, Student } from '@/lib/types';
-import { lookupPrizeByScanCode } from '@/lib/db/lookup';
-import { isPrizeScanCode, normalizeScanInput } from '@/lib/prizes/prizeScanCode';
+import { resolvePrizeShelfScanForDesk } from '@/lib/prizes/prizeShelfScan';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { getStudentNickname } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -33,8 +33,6 @@ export function PrizeDeskCardScan({
   const { schoolId, redeemPrize } = useAppContext();
   const { toast } = useToast();
   const playSound = useArcadeSound();
-  const scanInputRef = useRef<HTMLInputElement>(null);
-  const [scanBuffer, setScanBuffer] = useState('');
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [lastPrizeName, setLastPrizeName] = useState<string | null>(null);
 
@@ -44,37 +42,17 @@ export function PrizeDeskCardScan({
   const handlePrizeScan = useCallback(
     async (raw: string) => {
       if (!schoolId || !student || isRedeeming) return;
-      const code = normalizeScanInput(raw);
-      if (!isPrizeScanCode(code)) {
-        playSound('error');
-        toast({
-          variant: 'destructive',
-          title: 'Not a prize card',
-          description: 'Scan the barcode on the reward shelf card (starts with PZ).',
-        });
-        return;
-      }
 
       setIsRedeeming(true);
       try {
-        const prizeId = await lookupPrizeByScanCode(firestore, schoolId, code);
-        if (!prizeId) {
+        const resolved = await resolvePrizeShelfScanForDesk(firestore, schoolId, raw, prizes);
+        if ('error' in resolved) {
           playSound('error');
-          toast({ variant: 'destructive', title: 'Prize not found', description: 'This card is not in the rewards catalog.' });
-          return;
-        }
-        const prize = prizes.find((p) => p.id === prizeId);
-        if (!prize) {
-          playSound('error');
-          toast({ variant: 'destructive', title: 'Prize unavailable', description: 'This reward is not active in the shop.' });
-          return;
-        }
-        if (!prize.inStock) {
-          playSound('error');
-          toast({ variant: 'destructive', title: 'Out of stock', description: `${prize.name} is not available right now.` });
+          toast({ variant: 'destructive', title: resolved.error.title, description: resolved.error.description });
           return;
         }
 
+        const { prize } = resolved;
         const result = await redeemPrize(student.id, prize, 1, undefined, { markFulfilled: true });
         if (!result.success) {
           throw new Error(result.message || 'Could not redeem this prize.');
@@ -95,46 +73,16 @@ export function PrizeDeskCardScan({
         });
       } finally {
         setIsRedeeming(false);
-        setScanBuffer('');
-        scanInputRef.current?.focus();
       }
     },
     [firestore, isRedeeming, playSound, prizes, redeemPrize, schoolId, student, toast],
   );
 
-  useEffect(() => {
-    const t = setTimeout(() => scanInputRef.current?.focus(), 100);
-    return () => clearTimeout(t);
-  }, [studentId]);
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (document.visibilityState !== 'visible' || isRedeeming) return;
-      if (e.ctrlKey || e.altKey || e.metaKey) return;
-      const ignored = ['Escape', 'Tab', 'Shift', 'CapsLock', 'Control', 'Alt', 'Meta'];
-      if (ignored.includes(e.key) || /^F\d+$/.test(e.key)) return;
-      const active = document.activeElement;
-      if (active?.tagName === 'INPUT' && active !== scanInputRef.current) {
-        return;
-      }
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const buf = scanBuffer.trim();
-        if (buf) void handlePrizeScan(buf);
-        setScanBuffer('');
-        return;
-      }
-
-      if (e.key.length === 1) {
-        e.preventDefault();
-        setScanBuffer((prev) => prev + e.key);
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [handlePrizeScan, isRedeeming, scanBuffer]);
+  usePrizeShelfWedgeScan({
+    enabled: Boolean(student),
+    busy: isRedeeming,
+    onScan: handlePrizeScan,
+  });
 
   const displayName = student
     ? `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim() || 'Student'
@@ -172,23 +120,6 @@ export function PrizeDeskCardScan({
             Last delivered: {lastPrizeName}. Scan another prize card or clear the student.
           </p>
         )}
-
-        <input
-            ref={scanInputRef}
-            type="text"
-            value={scanBuffer}
-            onChange={(e) => setScanBuffer(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void handlePrizeScan(scanBuffer);
-                setScanBuffer('');
-              }
-            }}
-            className="sr-only"
-            aria-label="Prize card scanner input"
-            autoComplete="off"
-          />
 
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={onOpenCatalog} className="gap-2">

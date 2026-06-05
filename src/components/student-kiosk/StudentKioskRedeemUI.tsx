@@ -8,6 +8,7 @@ import {
   Clock,
   Gift,
   HelpCircle,
+  BookOpen,
   ScanBarcode,
   Sparkles,
   Ticket,
@@ -455,7 +456,7 @@ function ScanCouponScanZone({
   return (
     <div
       className={cn(
-        'relative flex flex-wrap items-center justify-center gap-4 overflow-hidden rounded-2xl border-2 border-dashed px-5 py-8 min-h-[7.5rem] text-center sm:min-h-[9rem] sm:gap-5 sm:px-6 sm:py-10',
+        'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-5 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:px-5 sm:py-6 [@media(max-height:760px)]:min-h-[4.5rem] [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:py-3',
         !t &&
           'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95',
       )}
@@ -523,6 +524,8 @@ export type StudentKioskRedeemHeroProps = {
   themed: StudentKioskThemed;
   primaryForeground: string;
   couponHelperText: string;
+  /** Visible callout when library checkout is enabled on this scan card. */
+  libraryCheckoutNote?: string;
   couponCode: string;
   setCouponCode: (code: string) => void;
   showManualCoupon: boolean;
@@ -541,6 +544,7 @@ export function StudentKioskRedeemHero({
   themed,
   primaryForeground,
   couponHelperText,
+  libraryCheckoutNote,
   couponCode,
   setCouponCode,
   showManualCoupon,
@@ -559,9 +563,9 @@ export function StudentKioskRedeemHero({
   if (!couponSectionEnabled) return null;
 
   const manualEntry = (
-    <div className="w-full min-w-0 space-y-5">
+    <div className="w-full min-w-0 space-y-3 [@media(max-height:760px)]:space-y-2">
       <form
-        className="flex min-w-0 w-full flex-col gap-3 sm:flex-row sm:gap-3"
+        className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:gap-2"
         onSubmit={(e: FormEvent) => {
           e.preventDefault();
           void onRedeemCoupon();
@@ -571,7 +575,7 @@ export function StudentKioskRedeemHero({
           placeholder="Code appears here when scanned"
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-          className="h-16 w-full min-w-0 rounded-xl border-2 font-mono text-left text-lg tracking-widest sm:flex-1"
+          className="h-12 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1 [@media(max-height:760px)]:h-10"
           style={
             t
               ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }
@@ -582,7 +586,7 @@ export function StudentKioskRedeemHero({
         />
         <Button
           type="submit"
-          className="h-16 w-full shrink-0 rounded-xl px-10 text-base font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
+          className="h-12 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-10"
           style={
             t
               ? {
@@ -597,7 +601,7 @@ export function StudentKioskRedeemHero({
       </form>
       <ScanCouponScanZone themed={themed}>
         <ScanBarcode
-          className={cn('h-12 w-12 shrink-0 sm:h-14 sm:w-14', !t && 'text-amber-200')}
+          className={cn('h-8 w-8 shrink-0 sm:h-10 sm:w-10 [@media(max-height:760px)]:h-6 [@media(max-height:760px)]:w-6', !t && 'text-amber-200')}
           style={
             t
               ? {
@@ -609,22 +613,24 @@ export function StudentKioskRedeemHero({
         />
         <span
           className={cn(
-            'max-w-full text-2xl font-black uppercase tracking-[0.12em] leading-snug sm:text-3xl md:text-4xl sm:tracking-[0.18em]',
+            'max-w-full text-xl font-black uppercase tracking-[0.12em] leading-snug sm:text-2xl md:text-3xl sm:tracking-[0.18em] [@media(max-height:760px)]:text-lg',
             !t && 'text-amber-50',
           )}
           style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
         >
-          Scan coupon
+          {libraryCheckoutNote ? 'Scan coupon or LIB book sticker' : 'Scan coupon'}
         </span>
         <p
-          className="w-full text-center text-sm font-semibold opacity-90 sm:text-base"
+          className="w-full text-center text-xs font-semibold opacity-90 sm:text-sm [@media(max-height:760px)]:text-[10px]"
           style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
         >
-          Scan with your barcode scanner, or type the code above
+          {libraryCheckoutNote
+            ? 'Same scanner for coupons and library books (LIB sticker on the book)'
+            : 'Scan with your barcode scanner, or type the code above'}
         </p>
       </ScanCouponScanZone>
       <p
-        className="pt-1 text-center text-[10px]"
+        className="text-center text-[9px] [@media(max-height:760px)]:hidden"
         style={
           t ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }
         }
@@ -642,8 +648,8 @@ export function StudentKioskRedeemHero({
       onZoomChange={onCameraZoomChange}
       scanStatus={scanStatus}
       showScanFeedback
-      viewportClassName="h-36 sm:h-40 border-slate-100 shadow-inner dark:border-slate-800"
-      className="space-y-2"
+      viewportClassName="h-28 sm:h-32 [@media(max-height:760px)]:h-24 border-slate-100 shadow-inner dark:border-slate-800"
+      className="space-y-1.5"
       hintText=""
     />
   );
@@ -651,7 +657,7 @@ export function StudentKioskRedeemHero({
   return (
     <Card
       className={cn(
-        'relative z-20 shrink-0 origin-center overflow-hidden rounded-[32px] border-2 shadow-lg backdrop-blur-md transition-transform duration-300',
+        'relative z-20 shrink-0 origin-center overflow-hidden rounded-2xl border-2 shadow-lg backdrop-blur-md transition-transform duration-300 sm:rounded-3xl [@media(max-height:760px)]:rounded-xl',
         studentKioskCenterStackClass,
         !t
           ? 'border-primary/25 bg-card/90 dark:border-amber-400/60 dark:bg-slate-900/90'
@@ -668,28 +674,48 @@ export function StudentKioskRedeemHero({
           : undefined
       }
     >
-      <CardHeader className="border-b px-5 pb-5 pt-6 text-center sm:px-8 sm:pb-6 sm:pt-7" style={t ? { borderColor: 'var(--theme-bg)' } : undefined}>
+      <CardHeader className="border-b px-4 pb-3 pt-4 text-center sm:px-6 sm:pb-4 sm:pt-5 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:pb-2 [@media(max-height:760px)]:pt-3" style={t ? { borderColor: 'var(--theme-bg)' } : undefined}>
         <Helper content={couponHelperText}>
-          <CardTitle className="flex items-center justify-center gap-3 text-2xl font-black uppercase tracking-wide sm:text-3xl md:text-4xl">
+          <CardTitle className="flex items-center justify-center gap-2 text-xl font-black uppercase tracking-wide sm:text-2xl md:text-3xl [@media(max-height:760px)]:text-lg [@media(max-height:760px)]:gap-1.5">
             <div
               className={cn(
-                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl sm:h-12 sm:w-12',
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8',
                 !t && 'bg-slate-100 dark:bg-slate-800',
               )}
               style={t ? { backgroundColor: 'var(--theme-bg)' } : undefined}
             >
-              <Wallet className="h-6 w-6 sm:h-7 sm:w-7" style={t ? { color: 'var(--theme-primary)' } : undefined} />
+              <Wallet className="h-5 w-5 sm:h-6 sm:w-6 [@media(max-height:760px)]:h-4 [@media(max-height:760px)]:w-4" style={t ? { color: 'var(--theme-primary)' } : undefined} />
             </div>
-            Redeem Coupon
+            {libraryCheckoutNote ? 'Scan coupon or book' : 'Redeem Coupon'}
           </CardTitle>
         </Helper>
+        {libraryCheckoutNote ? (
+          <div
+            className={cn(
+              'mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left text-[10px] font-semibold leading-snug sm:text-xs [@media(max-height:760px)]:hidden',
+              !t && 'border-sky-200/80 bg-sky-50/90 text-sky-950 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-100',
+            )}
+            style={
+              t
+                ? {
+                    borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
+                    backgroundColor: 'color-mix(in srgb, var(--theme-primary) 12%, var(--theme-card))',
+                    color: 'var(--theme-text)',
+                  }
+                : undefined
+            }
+          >
+            <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+            <span>{libraryCheckoutNote}</span>
+          </div>
+        ) : null}
       </CardHeader>
-      <CardContent className="min-w-0 overflow-x-hidden p-6 pt-5 sm:p-8 sm:pt-6">
+      <CardContent className="min-w-0 overflow-x-hidden p-4 pt-3 sm:p-6 sm:pt-4 [@media(max-height:760px)]:p-3 [@media(max-height:760px)]:pt-2">
         {showCameraCoupon ? (
-          <div className="w-full min-w-0 space-y-3">
+          <div className="w-full min-w-0 space-y-2 [@media(max-height:760px)]:space-y-1.5">
             {cameraPane}
             <form
-              className="flex min-w-0 w-full flex-col gap-2 sm:flex-row sm:gap-2"
+              className="flex min-w-0 w-full flex-col gap-1.5 sm:flex-row sm:gap-1.5"
               onSubmit={(e: FormEvent) => {
                 e.preventDefault();
                 void onRedeemCoupon();
@@ -699,7 +725,7 @@ export function StudentKioskRedeemHero({
                 placeholder="Or type coupon code"
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                className="h-14 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1"
+                className="h-10 w-full min-w-0 rounded-lg border-2 font-mono text-left text-sm tracking-widest sm:flex-1 [@media(max-height:760px)]:h-9"
                 style={
                   t
                     ? {
@@ -713,7 +739,7 @@ export function StudentKioskRedeemHero({
               />
               <Button
                 type="submit"
-                className="h-14 w-full shrink-0 rounded-xl px-8 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto"
+                className="h-10 w-full shrink-0 rounded-lg px-6 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 sm:w-auto [@media(max-height:760px)]:h-9"
                 style={
                   t
                     ? {

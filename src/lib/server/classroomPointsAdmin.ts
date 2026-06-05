@@ -48,24 +48,61 @@ function writeClassroomAwardLog(
   });
 }
 
-async function applyHousePointsRollupAdmin(
+type HouseRollupAdminSnap = {
+  ref: DocumentReference;
+  data: DocumentData;
+};
+
+async function readHouseRollupAdmin(
   tx: Transaction,
   db: Firestore,
   schoolId: string,
   houseId: string,
-  pointsDelta: number,
-): Promise<void> {
-  if (!houseId || pointsDelta === 0) return;
+): Promise<HouseRollupAdminSnap | null> {
   const houseRef = db.collection('schools').doc(schoolId).collection('houses').doc(houseId);
   const houseSnap = await tx.get(houseRef);
-  if (!houseSnap.exists) return;
-  const house = houseSnap.data()!;
+  if (!houseSnap.exists) return null;
+  return { ref: houseRef, data: houseSnap.data()! };
+}
+
+async function readHouseRollupSnapsAdmin(
+  tx: Transaction,
+  db: Firestore,
+  schoolId: string,
+  houseIds: Iterable<string>,
+): Promise<Map<string, HouseRollupAdminSnap>> {
+  const map = new Map<string, HouseRollupAdminSnap>();
+  for (const houseId of [...new Set(houseIds)].filter((id) => id.trim().length > 0)) {
+    const snap = await readHouseRollupAdmin(tx, db, schoolId, houseId);
+    if (snap) map.set(houseId, snap);
+  }
+  return map;
+}
+
+function writeHousePointsRollupAdmin(
+  tx: Transaction,
+  snap: HouseRollupAdminSnap,
+  pointsDelta: number,
+): void {
+  if (pointsDelta === 0) return;
+  const house = snap.data;
   const nextPoints = Math.max(0, Number(house.points ?? 0) + pointsDelta);
   const nextLifetime =
     pointsDelta > 0
       ? Number(house.lifetimePoints ?? 0) + pointsDelta
       : Number(house.lifetimePoints ?? 0);
-  tx.update(houseRef, { points: nextPoints, lifetimePoints: nextLifetime });
+  tx.update(snap.ref, { points: nextPoints, lifetimePoints: nextLifetime });
+}
+
+function writeHouseRollupsFromDeltasAdmin(
+  tx: Transaction,
+  snaps: Map<string, HouseRollupAdminSnap>,
+  deltas: Map<string, number>,
+): void {
+  for (const [houseId, delta] of deltas) {
+    const snap = snaps.get(houseId);
+    if (snap) writeHousePointsRollupAdmin(tx, snap, delta);
+  }
 }
 
 /** Server-side classroom points (Admin SDK — not limited by client security rules). */
@@ -194,6 +231,15 @@ export async function applyRewardsPointsAdmin(
         }
       }
 
+      const houseSnaps = rollupHousePoints
+        ? await readHouseRollupSnapsAdmin(
+            tx,
+            db,
+            schoolId,
+            reads.map((r) => r.data.houseId).filter((id): id is string => Boolean(id)),
+          )
+        : new Map();
+
       for (const { id, ref, data } of reads) {
         if (signedDelta > 0) {
           const currentPoints = Number(data.points ?? 0);
@@ -254,11 +300,7 @@ export async function applyRewardsPointsAdmin(
         processedCount += 1;
       }
 
-      if (rollupHousePoints) {
-        for (const [houseId, delta] of houseDeltas) {
-          await applyHousePointsRollupAdmin(tx, db, schoolId, houseId, delta);
-        }
-      }
+      writeHouseRollupsFromDeltasAdmin(tx, houseSnaps, houseDeltas);
     });
   }
 

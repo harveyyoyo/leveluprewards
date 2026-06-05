@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { Copy, ExternalLink, GraduationCap, Lock, MonitorOff, Unlock } from 'lucide-react';
-import { useFirebase, useUser } from '@/firebase';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Copy, Download, ExternalLink, GraduationCap, Lock, MonitorOff, Unlock } from 'lucide-react';
+import { doc } from 'firebase/firestore';
+import { useFirebase, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,8 @@ import {
 } from '@/lib/students/studentPortalClient';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
+import { BrandedQrCode } from '@/components/qr/BrandedQrCode';
+import { downloadBrandedQrPng } from '@/lib/qr/downloadBrandedQrPng';
 
 type Props = {
   schoolId: string;
@@ -33,10 +36,20 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
   const { settings, updateSettings } = useSettings();
   const { user } = useUser();
   const { auth } = useFirebase();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const confirm = useConfirm();
   const [passcodeDraft, setPasscodeDraft] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [qrDownloadBusy, setQrDownloadBusy] = useState(false);
+  const qrCaptureRef = useRef<HTMLDivElement>(null);
+
+  const appConfigRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'appConfig', 'global') : null),
+    [firestore],
+  );
+  const { data: appConfig } = useDoc<{ appLogoUrl?: string }>(appConfigRef);
+  const appLogoUrl = appConfig?.appLogoUrl ?? null;
 
   const portalUrl = useMemo(() => {
     if (typeof window === 'undefined' || !schoolId) return `/${schoolId}/student-home`;
@@ -75,6 +88,23 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       toast({ title: 'Link copied', description: 'Share this URL with students for home access.' });
     } catch {
       toast({ variant: 'destructive', title: 'Copy failed' });
+    }
+  };
+
+  const handleDownloadPortalQr = async () => {
+    const el = qrCaptureRef.current;
+    if (!el) return;
+    setQrDownloadBusy(true);
+    try {
+      await downloadBrandedQrPng(el, `${schoolId}-student-home-portal-qr.png`);
+      toast({
+        title: 'QR downloaded',
+        description: 'Print on flyers or posters; test with a phone camera before bulk printing.',
+      });
+    } catch {
+      toast({ variant: 'destructive', title: 'Download failed', description: 'Try again in a moment.' });
+    } finally {
+      setQrDownloadBusy(false);
     }
   };
 
@@ -202,6 +232,33 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
                       <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
                       Open
                     </a>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-xl border p-4">
+                <div>
+                  <Label className="font-semibold">Poster QR code</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Branded code with the LevelUp logo in the center. Students scan to open the home portal.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-start gap-6">
+                  <BrandedQrCode
+                    ref={qrCaptureRef}
+                    value={portalUrl}
+                    logoSrc={appLogoUrl}
+                    size={180}
+                    caption="Scan to open student home"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={qrDownloadBusy}
+                    onClick={() => void handleDownloadPortalQr()}
+                  >
+                    <Download className="mr-2 h-4 w-4" aria-hidden />
+                    {qrDownloadBusy ? 'Preparing…' : 'Download PNG'}
                   </Button>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRafflePool } from '@/lib/rafflePool';
+import { buildRafflePool, filterStudentsForRaffleClass } from '@/lib/rafflePool';
 import type { Student } from '@/lib/types';
 
 const baseStudent = (id: string, points: number): Student =>
@@ -44,6 +44,17 @@ describe('buildRafflePool', () => {
     const manual = rows.find((r) => r.id === 'a');
     expect(manual?.manualInclude).toBe(true);
     expect(manual?.tickets).toBe(1);
+  });
+
+  it('filterStudentsForRaffleClass limits by class id', () => {
+    const students = [
+      { ...baseStudent('a', 50), classId: 'c1' },
+      { ...baseStudent('b', 50), classId: 'c2' },
+      { ...baseStudent('c', 50) },
+    ] as Student[];
+    expect(filterStudentsForRaffleClass(students, 'c1').map((s) => s.id)).toEqual(['a']);
+    expect(filterStudentsForRaffleClass(students, 'unassigned').map((s) => s.id)).toEqual(['c']);
+    expect(filterStudentsForRaffleClass(students, 'all')).toHaveLength(3);
   });
 
   it('filters to on-time today when scope is onTimeToday', () => {

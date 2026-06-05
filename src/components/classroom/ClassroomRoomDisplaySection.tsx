@@ -70,7 +70,7 @@ export function ClassroomRoomDisplaySection({
       <ClassroomSectionFrame
         title="Room display"
         icon={Monitor}
-        description="Mirror the live class session on a projector, interactive board, or classroom TV."
+        description="Mirror the live class session on a projector, interactive board, or classroom monitor."
       >
         <p className="rounded-xl border border-dashed bg-muted/20 px-4 py-5 text-sm text-muted-foreground">
           Add a class and students before setting up the room display.
@@ -83,7 +83,7 @@ export function ClassroomRoomDisplaySection({
     <ClassroomSectionFrame
       title="Room display"
       icon={Monitor}
-      description="Read-only view for your projector or classroom TV. Session points update as you award on the seating chart."
+      description="Read-only view for your projector or classroom monitor. Session points update as you award on the seating chart."
       headerExtra={
         <Button
           type="button"
@@ -95,7 +95,7 @@ export function ClassroomRoomDisplaySection({
           }
         >
           <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
-          Open on TV
+          Open on monitor
         </Button>
       }
     >

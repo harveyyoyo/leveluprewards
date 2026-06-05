@@ -35,7 +35,11 @@ async function main() {
   await page.getByRole('option', { name: TEACHER }).click();
   await page.locator('#teacher-passcode').fill(TEACHER_PASS);
   await page.getByRole('button', { name: /^Continue$/i }).click();
-  await page.waitForURL(/\/teacher/, { timeout: 60000 });
+  await page
+    .waitForURL(/\/teacher/, { timeout: 90000 })
+    .catch(async () => {
+      await page.goto(`${BASE}/${SCHOOL}/teacher`, { waitUntil: 'domcontentloaded' });
+    });
   await sleep(2000);
   const tabs = await page.getByRole('tab').allTextContents();
   console.log('Tabs:', tabs.join(' | '));

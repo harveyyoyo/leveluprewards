@@ -6,7 +6,7 @@ import { Users } from 'lucide-react';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { isClassroomPillarOn } from '@/lib/productPillars';
+import { isParentPortalOn } from '@/lib/productPillars';
 import { ParentPortalLogin } from '@/components/parent-portal/ParentPortalLogin';
 import { ParentPortalDashboardView } from '@/components/parent-portal/ParentPortalDashboardView';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ export default function ParentPortalPage() {
     void checkSession();
   }, [checkSession]);
 
-  const portalOn = isClassroomPillarOn(settings) && settings.enableParentView === true;
+  const portalOn = isParentPortalOn(settings);
 
   if (!portalOn) {
     return (

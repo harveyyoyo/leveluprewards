@@ -123,34 +123,28 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom Management',
-    subtitle: 'Sections inside the Classroom tab',
+    title: 'Classroom Live',
+    subtitle: 'Sections inside the Classroom Live tab',
     steps: [
       {
-        title: 'Setup',
+        title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
-          'Use Setup to turn Parent portal and Principal on or off (same tabs for teachers and admins).',
-          'Principal and Parent portal tabs only appear when they are enabled.',
+          'Launch Monitor Display for the live seating chart and quick awards.',
+          'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit in Class Awards Live.',
+          'On the monitor: Style, Layout, Desk display, and tap mode / fly-up / celebration next to Arrange seats.',
         ],
       },
       {
         title: 'Behavior',
         checklist: [
-          `Teachers add notes from ${CLASSROOM_SEATING_SECTION_LABEL} (Shift+click or award menu).`,
-          'Open the Principal tab for the school-wide timeline when it is enabled.',
-        ],
-      },
-      {
-        title: CLASSROOM_SEATING_SECTION_LABEL,
-        checklist: [
-          'Pick a class, arrange desks, and tap students to award during the lesson.',
-          'Open Help wizard in the tab header for a tour of each section.',
+          `Teachers add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → Launch Monitor Display).`,
+          'Open the Principal preview in Class Awards Live when the school-wide timeline is enabled.',
         ],
       },
       {
         title: 'Room display',
         checklist: [
-          'Open Room display to mirror the live chart on a projector or classroom TV.',
+          'Open Room display to mirror session stats on a projector or classroom monitor.',
           'Hallway Smart Screen is separate — configure it under Admin → Smart Screen.',
         ],
       },
@@ -222,35 +216,22 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       },
     ],
   },
-  bulletinboard: {
-    title: 'Bulletin tab',
-    subtitle: 'Announcements on kiosk and displays',
+  displays: {
+    title: 'Displays tab',
+    subtitle: 'Smart Screen and bulletin board for monitors and hallways',
     steps: [
       {
-        title: 'Post a message',
+        title: 'Pick your display type',
         checklist: [
-          'Create a headline and body students see on supported screens.',
-          'Set start and end dates so old posts expire automatically.',
-        ],
-      },
-    ],
-  },
-  'smart-screen': {
-    title: 'Smart Screen tab',
-    subtitle: 'Hallway and lobby signage (included on every plan)',
-    steps: [
-      {
-        title: 'Turn on the display',
-        checklist: [
-          'Enable Smart Screen, set a title and daily message, and pick mirror or dashboard layout.',
-          'Open the full-screen link on a hallway monitor, lobby TV, or gym display.',
+          'Use Overview to compare Smart Screen (live dashboard) and Bulletin board (incentives focus).',
+          'Open the full-screen links on hallway monitors, lobby TVs, or gym projectors.',
         ],
       },
       {
-        title: 'Choose modules',
+        title: 'Configure each display',
         checklist: [
-          'Show only the blocks that fit the location: clock, weather card, leaders, bulletin items, rewards, or schedule.',
-          'Use manual weather text when the display is not connected to an external weather service.',
+          'Smart Screen: set title, daily message, layout, theme, and which modules to show.',
+          'Bulletin: set board title, theme, and manage point-earning incentives.',
         ],
       },
     ],

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Clock, LayoutGrid, Loader2, Users } from 'lucide-react';
+import { Clock, LayoutGrid, Loader2, MessageSquare, Trophy, Users } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { loadClassroomSession } from '@/lib/classroomSeatingChart';
@@ -21,8 +21,33 @@ function formatDate(now: Date) {
   return now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-function screenSectionClass(): string {
-  return 'rounded-2xl border border-white/15 bg-white/10 p-4 shadow-lg backdrop-blur-sm sm:p-6';
+function ScreenSection({
+  children,
+  className,
+  icon: Icon,
+  title,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  title?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        'rounded-2xl border border-white/20 bg-white/[0.08] p-5 shadow-xl backdrop-blur-md sm:p-6',
+        className,
+      )}
+    >
+      {title && (
+        <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/60">
+          {Icon && <Icon className="h-3.5 w-3.5" aria-hidden />}
+          {title}
+        </p>
+      )}
+      {children}
+    </section>
+  );
 }
 
 export type ClassroomRoomDisplayViewProps = {
@@ -100,112 +125,157 @@ export function ClassroomRoomDisplayView({
       .slice(0, 12);
   }, [classStudents, sessionData]);
 
-  if (isLoading && !studentsProp?.length) {
-    return (
-      <div
-        className={cn(
-          'flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white',
-          embedded ? 'min-h-[320px] h-full rounded-xl' : 'fixed inset-0',
-          className,
-        )}
-      >
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
-      </div>
-    );
-  }
-
   const screen = prefs ?? loadClassroomScreenPrefs(schoolId, scope, classId);
   const title = (screen.title || classLabel || 'Our class').trim();
   const message = (screen.message || 'Make today count.').trim();
   const modulesEnabled = Object.values(screen.modules).some(Boolean);
 
+  if (isLoading && !studentsProp?.length) {
+    return (
+      <div
+        className={cn(
+          'flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white',
+          embedded ? 'h-full min-h-[280px] rounded-xl' : 'fixed inset-0 z-20',
+          className,
+        )}
+      >
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-400" />
+          <p className="mt-3 text-sm text-white/60">Loading classroom…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
-        'flex flex-col overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white',
-        embedded ? 'h-full min-h-[280px] rounded-xl' : 'fixed inset-0 z-20 p-6 sm:p-10',
+        'flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white',
+        embedded ? 'h-full min-h-[280px] rounded-xl p-4' : 'fixed inset-0 z-20 p-6 sm:p-10',
         className,
       )}
     >
-      <header className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-white/15 pb-3 sm:mb-6 sm:pb-4">
-        <div>
-          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-white/70 sm:text-xs">
+      {/* Header */}
+      <header className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-white/15 pb-4 sm:mb-6 sm:pb-5">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/80 sm:text-xs">
             <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-            Classroom display
+            Classroom Display
           </p>
-          <h1 className="mt-1 text-xl font-black tracking-tight text-white sm:text-3xl">{title}</h1>
+          <h1 className="mt-1.5 truncate text-2xl font-black tracking-tight text-white sm:text-4xl">
+            {title}
+          </h1>
         </div>
-        {screen.modules.clock ? (
-          <div className="text-right text-white">
-            <p className="flex items-center justify-end gap-2 text-2xl font-black tabular-nums sm:text-4xl">
-              <Clock className="h-6 w-6 text-white/60 sm:h-8 sm:w-8" aria-hidden />
+        {screen.modules.clock && (
+          <div className="shrink-0 text-right">
+            <p className="flex items-center justify-end gap-2 text-3xl font-black tabular-nums text-white sm:text-5xl">
+              <Clock className="h-7 w-7 text-emerald-400/70 sm:h-9 sm:w-9" aria-hidden />
               {formatClock(now)}
             </p>
-            <p className="text-xs text-white/70 sm:text-sm">{formatDate(now)}</p>
+            <p className="mt-1 text-sm font-medium text-white/60 sm:text-base">{formatDate(now)}</p>
           </div>
-        ) : null}
+        )}
       </header>
 
-      <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto sm:gap-4 lg:grid-cols-2">
+      {/* Content grid */}
+      <div className="grid min-h-0 flex-1 auto-rows-min content-start gap-4 overflow-y-auto sm:gap-5 lg:grid-cols-2">
         {!modulesEnabled ? (
-          <section className={cn(screenSectionClass(), 'lg:col-span-2')}>
-            <p className="text-base font-bold sm:text-lg">No modules enabled</p>
-            <p className="mt-2 text-sm text-white/75">
-              Turn on clock, message, leaderboard, or class size in settings below.
+          <ScreenSection className="lg:col-span-2">
+            <p className="text-lg font-bold">No modules enabled</p>
+            <p className="mt-2 text-sm text-white/70">
+              Turn on clock, message, leaderboard, or class size in the settings.
             </p>
-          </section>
+          </ScreenSection>
         ) : (
           <>
-            {screen.modules.classMessage ? (
-              <section className={screenSectionClass()}>
-                <p className="text-xs font-black uppercase tracking-wider text-white/60">Today</p>
-                <p className="mt-2 text-lg font-bold leading-snug text-white sm:text-2xl">{message}</p>
-                {screen.modules.focusLine ? (
-                  <p className="mt-3 text-sm text-white/80">Focus: {focusLineForDay(now)}</p>
-                ) : null}
-              </section>
-            ) : null}
+            {/* Daily message */}
+            {screen.modules.classMessage && (
+              <ScreenSection icon={MessageSquare} title="Today">
+                <p className="text-xl font-bold leading-snug text-white sm:text-2xl lg:text-3xl">
+                  {message}
+                </p>
+                {screen.modules.focusLine && (
+                  <p className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+                    <span className="font-semibold text-emerald-300">Focus:</span>{' '}
+                    {focusLineForDay(now)}
+                  </p>
+                )}
+              </ScreenSection>
+            )}
 
-            {screen.modules.sessionLeaderboard ? (
-              <section className={cn(screenSectionClass(), 'flex min-h-0 flex-col')}>
-                <p className="text-xs font-black uppercase tracking-wider text-white/60">This session</p>
+            {/* Session leaderboard */}
+            {screen.modules.sessionLeaderboard && (
+              <ScreenSection
+                icon={Trophy}
+                title="Session Leaderboard"
+                className="flex min-h-0 flex-col"
+              >
                 {leaderboard.length === 0 ? (
-                  <p className="mt-3 text-sm text-white/75">
-                    Awards from the seating chart appear here with the quick-award label and points.
+                  <p className="text-sm text-white/60">
+                    Awards from the seating chart appear here as students earn points.
                   </p>
                 ) : (
-                  <ol className="mt-3 min-h-0 space-y-2 overflow-y-auto">
+                  <ol className="min-h-0 space-y-2 overflow-y-auto">
                     {leaderboard.map((row, i) => (
                       <li
                         key={row.id}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2 sm:px-4"
+                        className={cn(
+                          'flex items-center justify-between gap-3 rounded-xl px-4 py-2.5',
+                          i === 0
+                            ? 'border-2 border-amber-400/40 bg-gradient-to-r from-amber-500/20 to-yellow-500/10'
+                            : i === 1
+                              ? 'border border-slate-300/30 bg-slate-300/10'
+                              : i === 2
+                                ? 'border border-orange-400/30 bg-orange-500/10'
+                                : 'border border-white/10 bg-white/5',
+                        )}
                       >
-                        <span className="min-w-0 text-sm font-bold text-white sm:text-base">
-                          {i + 1}. {row.name}
-                          {row.lastLabel ? (
-                            <span className="ml-1.5 text-xs font-semibold text-emerald-300/90">
+                        <span className="flex min-w-0 items-center gap-2.5">
+                          <span
+                            className={cn(
+                              'flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-black',
+                              i === 0
+                                ? 'bg-amber-400 text-amber-950'
+                                : i === 1
+                                  ? 'bg-slate-300 text-slate-800'
+                                  : i === 2
+                                    ? 'bg-orange-400 text-orange-950'
+                                    : 'bg-white/20 text-white',
+                            )}
+                          >
+                            {i + 1}
+                          </span>
+                          <span className="min-w-0 truncate text-sm font-bold text-white sm:text-base">
+                            {row.name}
+                          </span>
+                          {row.lastLabel && (
+                            <span className="hidden truncate text-xs font-medium text-emerald-300/80 sm:inline">
                               · {row.lastLabel}
                             </span>
-                          ) : null}
+                          )}
                         </span>
-                        <span className="shrink-0 font-mono text-base font-black text-emerald-300 sm:text-lg">
+                        <span className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1 font-mono text-base font-black text-emerald-300 sm:text-lg">
                           +{row.session}
                         </span>
                       </li>
                     ))}
                   </ol>
                 )}
-              </section>
-            ) : null}
+              </ScreenSection>
+            )}
 
-            {screen.modules.studentCount ? (
-              <section className={cn(screenSectionClass(), 'lg:col-span-2')}>
-                <p className="flex items-center gap-2 text-sm font-bold text-white/90">
-                  <Users className="h-4 w-4" aria-hidden />
-                  {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in this class
+            {/* Student count */}
+            {screen.modules.studentCount && (
+              <ScreenSection className="lg:col-span-2">
+                <p className="flex items-center gap-3 text-base font-bold text-white sm:text-lg">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20">
+                    <Users className="h-5 w-5 text-emerald-400" aria-hidden />
+                  </span>
+                  {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in this
+                  class
                 </p>
-              </section>
-            ) : null}
+              </ScreenSection>
+            )}
           </>
         )}
       </div>

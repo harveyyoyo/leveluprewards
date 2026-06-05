@@ -35,6 +35,8 @@ type StaffPortalWelcomeTabProps = {
   onBulkRoster?: () => void;
   /** Shown under the hero heading when available. */
   schoolName?: string | null;
+  /** Staff member name (e.g. teacher's name) shown in the welcome greeting. */
+  staffName?: string | null;
   /** Hero metrics for admin and teacher welcome tabs. */
   welcomeStats?: StaffPortalWelcomeStats;
   /** @deprecated Use welcomeStats */
@@ -134,11 +136,13 @@ function TabLinkRow({
 
 function StaffPortalWelcomeHero({
   schoolName,
+  staffName,
   stats,
   description,
   statLabels,
 }: {
   schoolName: string | null;
+  staffName: string | null;
   stats: StaffPortalWelcomeStats;
   description: string;
   statLabels: [string, string, string, string];
@@ -150,6 +154,8 @@ function StaffPortalWelcomeHero({
     { label: statLabels[3], value: stats.activePrizeCount },
   ];
 
+  const greeting = staffName ? `Welcome back, ${staffName} 👋` : 'Welcome back 👋';
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -160,7 +166,7 @@ function StaffPortalWelcomeHero({
             </p>
           ) : null}
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Welcome back 👋</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{greeting}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
               {description}
             </p>
@@ -218,6 +224,7 @@ export function StaffPortalWelcomeTab({
   onGoToTab,
   onBulkRoster,
   schoolName,
+  staffName,
   welcomeStats,
   adminStats,
   className,
@@ -226,6 +233,7 @@ export function StaffPortalWelcomeTab({
   const core = staffPortalCoreTabs(role, settings);
   const addons = staffPortalAddOnTabs(role, settings);
   const trimmedSchoolName = schoolName?.trim() || null;
+  const trimmedStaffName = staffName?.trim() || null;
 
   const heroDescription =
     role === 'teacher' ? TEACHER_WELCOME_DESCRIPTION : ADMIN_WELCOME_DESCRIPTION;
@@ -241,6 +249,7 @@ export function StaffPortalWelcomeTab({
         {stats ? (
           <StaffPortalWelcomeHero
             schoolName={trimmedSchoolName}
+            staffName={trimmedStaffName}
             stats={stats}
             description={heroDescription}
             statLabels={heroStatLabels}

@@ -13,7 +13,12 @@ export type ClassroomNoteShortcut = {
   saveLabel: string;
   toastTitle: string;
   quickOptions: string[];
+  /** Show "Share with parent" toggle. Default visible to parent is true unless this is shown and user turns it off. */
   showParentToggle?: boolean;
+  /** Show "Notify principal" toggle. */
+  showPrincipalToggle?: boolean;
+  /** Show "Share to bulletin board" toggle. Only makes sense for positive notes. */
+  showBulletinToggle?: boolean;
 };
 
 export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
@@ -26,6 +31,8 @@ export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
     placeholder: 'What went well in class?',
     saveLabel: 'Save positive note',
     toastTitle: 'Positive note saved',
+    showBulletinToggle: true,
+    showPrincipalToggle: true,
     quickOptions: [
       'Great participation',
       'Helped a classmate',
@@ -39,10 +46,11 @@ export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
     kind: 'concern',
     popupTitle: 'Comment',
     hintLabel: 'Comment',
-    description: 'A quick classroom comment for staff. Use this for neutral notes and reminders.',
+    description: 'A quick classroom comment. Share with families or keep it staff-only.',
     placeholder: 'Add your comment…',
     saveLabel: 'Save comment',
     toastTitle: 'Comment saved',
+    showParentToggle: true,
     quickOptions: [
       'Quick check-in',
       'Needs a reminder',
@@ -56,11 +64,12 @@ export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
     kind: 'incident',
     popupTitle: 'Incident',
     hintLabel: 'Incident',
-    description: 'Document a serious behavior issue. Choose whether families should see it.',
+    description: 'Document a serious behavior issue. Choose whether to notify families and/or the principal.',
     placeholder: 'What happened?',
     saveLabel: 'Save incident',
     toastTitle: 'Incident saved',
     showParentToggle: true,
+    showPrincipalToggle: true,
     quickOptions: [
       'Disruption during lesson',
       'Conflict with a peer',
@@ -74,10 +83,12 @@ export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
     kind: 'concern',
     popupTitle: 'Warning',
     hintLabel: 'Warning',
-    description: 'Record a warning before an incident. Staff-only unless you share it with families elsewhere.',
+    description: 'Record a warning before an incident. Share with families or flag for the principal if needed.',
     placeholder: 'What warning was given?',
     saveLabel: 'Save warning',
     toastTitle: 'Warning saved',
+    showParentToggle: true,
+    showPrincipalToggle: true,
     quickOptions: [
       'Final warning given today',
       'Repeated issue this week',
@@ -95,6 +106,8 @@ export const CLASSROOM_NOTE_SHORTCUTS: readonly ClassroomNoteShortcut[] = [
     placeholder: 'What stood out?',
     saveLabel: 'Save highlight',
     toastTitle: 'Highlight saved',
+    showBulletinToggle: true,
+    showPrincipalToggle: true,
     quickOptions: [
       'Star of the lesson',
       'Excellent question',

@@ -1,6 +1,6 @@
 'use client';
 
-import { BookMarked } from 'lucide-react';
+import { BookMarked, ScanBarcode } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -29,8 +29,50 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
     updateSettings(updates);
   };
 
+  const kioskCheckoutOn = settings.libraryStudentKioskCheckoutEnabled !== false;
+  const standalonePortalOn = settings.libraryAutoStudentPortalEnabled !== false;
+
   return (
     <div className="space-y-4">
+      <Card className="border-dashed">
+        <CardHeader className="pb-3">
+          <Helper content="Control where students can check out and return books without staff at the desk.">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ScanBarcode className="h-4 w-4 text-primary" />
+              Student checkout
+            </CardTitle>
+          </Helper>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+            <div>
+              <p className="text-sm font-semibold">Student kiosk (signed in)</p>
+              <p className="text-xs text-muted-foreground">
+                On the student rewards page, use the same barcode scan as coupons to check out or return books (LIB
+                sticker on each copy).
+              </p>
+            </div>
+            <Switch
+              checked={kioskCheckoutOn}
+              onCheckedChange={(v) => updateSettings({ libraryStudentKioskCheckoutEnabled: v })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
+            <div>
+              <p className="text-sm font-semibold">Library station (shared device)</p>
+              <p className="text-xs text-muted-foreground">
+                Opens the dedicated self-checkout flow at /library/self-checkout — students scan their ID card, then
+                each book. Staff passcode closes the session.
+              </p>
+            </div>
+            <Switch
+              checked={standalonePortalOn}
+              onCheckedChange={(v) => updateSettings({ libraryAutoStudentPortalEnabled: v })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-dashed">
         <CardHeader className="pb-3">
           <Helper content="Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.">

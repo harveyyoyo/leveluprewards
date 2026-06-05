@@ -10,7 +10,8 @@ export type FlyerAudience =
   | 'high'
   | 'principal'
   | 'parents'
-  | 'features';
+  | 'features'
+  | 'proposals';
 
 export type PromotionFlyer = {
   id: string;
@@ -34,9 +35,11 @@ export const FLYER_AUDIENCE_LABELS: Record<FlyerAudience, string> = {
   principal: 'For principals',
   parents: 'For parents & families',
   features: 'Feature highlights',
+  proposals: 'Proposal templates',
 };
 
 export const FLYER_AUDIENCE_ORDER: readonly FlyerAudience[] = [
+  'proposals',
   'features',
   'staff',
   'elementary',
@@ -419,6 +422,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     tags: ['IT', 'Kiosk', 'Deployment'],
   },
   {
+    id: 'private-school-pillar-proposal',
+    name: 'Private School Pillar Proposal',
+    description:
+      'Flyer-style one-pager for private-school proposals—pillar matrix, package tiers, and funding-aligned summary.',
+    href: '/marketing/flyer-private-school-pillar-proposal.html',
+    audience: 'proposals',
+    preview: { border: 'border-emerald-600/45', tag: 'Proposal' },
+    tags: ['Private schools', 'Pillars', 'Proposal', 'Funding'],
+  },
+  {
     id: 'feature-houses',
     name: 'School Houses',
     description:
@@ -466,7 +479,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     href: '/marketing/flyer-feature-bulletin.html',
     audience: 'features',
     preview: { border: 'border-yellow-500/40', tag: 'Display' },
-    tags: ['Bulletin', 'TV display', 'Incentives'],
+    tags: ['Bulletin', 'Monitor display', 'Incentives'],
   },
   {
     id: 'feature-engagement',
@@ -482,7 +495,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     id: 'feature-hall-of-fame',
     name: 'Hall of Fame',
     description:
-      'Live leaderboards for students, classes, houses, and goals—fullscreen-ready for hallway TVs.',
+      'Live leaderboards for students, classes, houses, and goals—fullscreen-ready for hallway monitors.',
     href: '/marketing/flyer-feature-hall-of-fame.html',
     audience: 'features',
     preview: { border: 'border-amber-500/40', tag: 'HoF' },
