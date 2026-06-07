@@ -18,6 +18,7 @@ import type { LogoutOptions } from './providers/AuthProvider';
 import { PrintProvider, usePrint } from './providers/PrintProvider';
 import { BackupProvider, useBackup } from './providers/BackupProvider';
 import { SettingsProvider, useSettings } from './providers/SettingsProvider';
+import { LocaleProvider } from './providers/LocaleProvider';
 import { addPendingCouponRedemption, listPendingCouponRedemptions, updatePendingCouponRedemptions } from '@/lib/pendingSync';
 import {
   addPendingTeacherAward,
@@ -1087,13 +1088,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <SettingsProvider>
-        <PrintProvider>
-          <BackupProvider>
-            <AppContextBridge>
-              {children}
-            </AppContextBridge>
-          </BackupProvider>
-        </PrintProvider>
+        <LocaleProvider>
+          <PrintProvider>
+            <BackupProvider>
+              <AppContextBridge>
+                {children}
+              </AppContextBridge>
+            </BackupProvider>
+          </PrintProvider>
+        </LocaleProvider>
       </SettingsProvider>
     </AuthProvider>
   );

@@ -34,8 +34,10 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
 } from 'lucide-react';
+import { useTranslation } from '@/components/providers/LocaleProvider';
+import { LOCALE_OPTIONS, resolveLocaleFromLanguageSetting, type AppLocale } from '@/lib/i18n/locales';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
@@ -93,6 +95,7 @@ export function SettingsModal() {
         loginState === 'admin' ||
         loginState === 'developer';
     const { settings, settingsPreferences, updateSettings, isPillarAvailable } = useSettings();
+    const { t } = useTranslation();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -1239,6 +1242,37 @@ export function SettingsModal() {
                                     <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden />
                                 </Button>
                             </div>
+                            <div
+                                id="settings-general-language"
+                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
+                            >
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                    <Languages className="w-3.5 h-3.5" /> {t('settings.language.title')}
+                                </p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex flex-col min-w-0 pr-4">
+                                        <span className="text-sm font-bold">{t('settings.language.title')}</span>
+                                        <p className="text-[11px] text-muted-foreground">{t('settings.language.description')}</p>
+                                    </div>
+                                    <Select
+                                        value={resolveLocaleFromLanguageSetting(local.language)}
+                                        onValueChange={(value) => handleToggle('language', value as AppLocale)}
+                                        disabled={!canManageSchoolSettings}
+                                    >
+                                        <SelectTrigger className="h-10 w-[9.5rem] rounded-xl font-semibold bg-background/50 border-border/50">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {LOCALE_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.nativeLabel}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
                             <div
                                 id="settings-general-sessions"
                                 className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"

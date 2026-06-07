@@ -36,6 +36,7 @@ export const INTERFACE_SECTION_NAV = [
 ] as const;
 
 export const GENERAL_SECTION_NAV = [
+    { id: 'settings-general-language', label: 'Language' },
     { id: 'settings-general-sessions', label: 'Sessions' },
     { id: 'settings-general-kiosk', label: 'Kiosk' },
     { id: 'settings-general-printing', label: 'Printing' },

@@ -55,6 +55,11 @@
   --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
 }
 
+/* i18n: Hebrew (RTL) typography — LocaleProvider sets html[dir]. */
+html[dir='rtl'] body {
+  font-family: 'Noto Sans Hebrew', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
 /*
  * School Office typography: Tailwind uses rem from <html>, not the parent pane.
  * Sidebar baseline = 18px on html; main pane uses zoom so all rem utilities shrink (~14px effective body).

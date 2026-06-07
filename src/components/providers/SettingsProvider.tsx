@@ -596,7 +596,7 @@ const defaultSettings: Settings = {
     colorScheme: 'sapphire',
     customAppearanceColors: {},
     soundEnabled: true,
-    language: 'English',
+    language: 'en',
     darkMode: false,
     darkModeColorized: false,
     enableThemeAnimations: false,
