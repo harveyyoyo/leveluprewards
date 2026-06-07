@@ -33,6 +33,7 @@ import {
 import { SmartScreenSettingsPanel } from './displays/SmartScreenSettingsPanel';
 import { BulletinSettingsPanel } from './displays/BulletinSettingsPanel';
 import { BulletinIncentivesPanel } from './displays/BulletinIncentivesPanel';
+import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
 type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'incentives';
 
@@ -49,6 +50,7 @@ export function AdminDisplaysTab({
   updateSettings,
 }: AdminDisplaysTabProps) {
   const firestore = useFirestore();
+  const { isJewishOrthodox } = useSchoolProfile();
   const [section, setSection] = useState<DisplaysSection>('overview');
   const [previewView, setPreviewView] = useState<'smart' | 'bulletin'>('smart');
 
@@ -287,6 +289,7 @@ export function AdminDisplaysTab({
             settings={settings}
             updateSettings={updateSettings}
             sortedIncentives={sortedIncentives}
+            isJewishOrthodoxSchool={isJewishOrthodox}
           />
         ) : null}
 

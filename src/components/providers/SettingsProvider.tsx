@@ -371,6 +371,10 @@ interface Settings {
     bulletinShowWowBadge?: boolean;
     /** '1' = single column; '2' = responsive two-column grid on wide screens. */
     bulletinColumns?: '1' | '2';
+    /** Jewish Orthodox schools only: show today's Hebrew date on the bulletin display. */
+    bulletinShowHebrewDate?: boolean;
+    /** Jewish Orthodox schools only: show upcoming Jewish holidays on the bulletin display. */
+    bulletinShowJewishHolidays?: boolean;
 
     // Smart Screen (admin-managed shared display)
     smartScreenEnabled?: boolean;
@@ -752,6 +756,8 @@ const defaultSettings: Settings = {
     bulletinLogoSize: 'md',
     bulletinShowWowBadge: true,
     bulletinColumns: '2',
+    bulletinShowHebrewDate: false,
+    bulletinShowJewishHolidays: false,
 
     smartScreenEnabled: false,
     smartScreenTitle: 'Smart Screen',
