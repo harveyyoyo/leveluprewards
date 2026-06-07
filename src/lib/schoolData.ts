@@ -1,7 +1,37 @@
 import type { Database } from './types';
+import { buildBalancedDemoRoster } from './demoSampleRosterBuilder';
 import { DEMO_STUDENT_THEMES } from './demoStudentThemes';
-import { seededInt } from './demoSampleRosterBuilder';
 import { withSampleCategoryColors } from './sampleCategoryColors';
+
+const SCHOOL_ABC_CLASSES = [
+  { id: 'sc1', name: 'Grade 5' },
+  { id: 'sc2', name: 'Grade 6' },
+  { id: 'sc3', name: 'Grade 7' },
+  { id: 'sc4', name: 'Grade 8' },
+  { id: 'sc5', name: 'Grade 9' },
+  { id: 'sc6', name: 'Grade 10' },
+  { id: 'sc7', name: 'Grade 11' },
+  { id: 'sc8', name: 'Grade 12' },
+  { id: 'sc9', name: 'Kindergarten A' },
+  { id: 'sc10', name: 'Kindergarten B' },
+] as const;
+
+const SCHOOL_ABC_FIRST_NAMES = [
+  'Emily', 'Jacob', 'Sophia', 'Michael', 'Emma', 'William', 'Olivia', 'James', 'Isabella', 'Alexander',
+  'Mia', 'Ethan', 'Abigail', 'Benjamin', 'Charlotte', 'Daniel', 'Harper', 'Henry', 'Evelyn', 'Jackson',
+  'Avery', 'David', 'Scarlett', 'Joseph', 'Victoria', 'Samuel', 'Grace', 'Lucas', 'Chloe', 'Mateo',
+  'Zoe', 'Jayden', 'Lily', 'Elijah', 'Nora', 'Logan', 'Mila', 'Carter', 'Riley', 'Leo',
+  'Aria', 'Luke', 'Layla', 'Owen', 'Stella', 'Jack', 'Penelope', 'Wyatt', 'Aubrey', 'Julian',
+  'Madison', 'Aiden', 'Hannah', 'Mason', 'Addison', 'Liam', 'Brooklyn', 'Noah', 'Leah', 'Oliver',
+] as const;
+
+const SCHOOL_ABC_LAST_NAMES = [
+  'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+  'Hernandez', 'Lopez', 'Wilson', 'Anderson', 'Thomas', 'Jackson', 'White', 'Harris', 'Martin', 'Thompson',
+  'Moore', 'Lee', 'Perez', 'Gonzalez', 'Clark', 'Lewis', 'Robinson', 'Walker', 'Hall', 'Allen',
+  'Young', 'King', 'Wright', 'Scott', 'Green', 'Adams', 'Baker', 'Nelson', 'Hill', 'Ramirez',
+  'Campbell', 'Mitchell', 'Roberts', 'Carter', 'Phillips', 'Evans', 'Turner', 'Parker', 'Collins', 'Edwards',
+] as const;
 
 const SCHOOL_ABC_CATEGORY_NAMES = [
   'Academics',
@@ -16,106 +46,23 @@ const SCHOOL_ABC_CATEGORY_NAMES = [
   'Problem Solving',
 ] as const;
 
-function distributeCategoryPointsForSchool(
-  seed: number,
-  totalPoints: number,
-): Record<string, number> {
-  if (totalPoints <= 0) return {};
-
-  const result: Record<string, number> = {};
-  let remaining = totalPoints;
-
-  for (let i = 0; i < SCHOOL_ABC_CATEGORY_NAMES.length; i++) {
-    const catName = SCHOOL_ABC_CATEGORY_NAMES[i];
-    if (i === SCHOOL_ABC_CATEGORY_NAMES.length - 1) {
-      if (remaining > 0) result[catName] = remaining;
-    } else {
-      const weight = seededInt(seed + i * 7919, 5, 30);
-      const portion = Math.floor((totalPoints * weight) / 100);
-      const assigned = Math.min(portion, remaining);
-      if (assigned > 0) {
-        result[catName] = assigned;
-        remaining -= assigned;
-      }
-    }
-  }
-
-  return result;
-}
-
-const rawStudents = [
-  { id: '100', firstName: 'Emily', lastName: 'Smith', nfcId: '100', points: 100, classId: 'sc1', theme: DEMO_STUDENT_THEMES[0] },
-  { id: '101', firstName: 'Jacob', lastName: 'Johnson', nfcId: '101', points: 215, classId: 'sc2', theme: DEMO_STUDENT_THEMES[1] },
-  { id: '102', firstName: 'Sophia', lastName: 'Williams', nfcId: '102', points: 130, classId: 'sc1', theme: DEMO_STUDENT_THEMES[2] },
-  { id: '103', firstName: 'Michael', lastName: 'Brown', nfcId: '103', points: 325, classId: 'sc3', theme: DEMO_STUDENT_THEMES[3] },
-  { id: '104', firstName: 'Emma', lastName: 'Jones', nfcId: '104', points: 170, classId: 'sc2', theme: DEMO_STUDENT_THEMES[4] },
-  { id: '105', firstName: 'William', lastName: 'Garcia', nfcId: '105', points: 50, classId: 'sc1', theme: DEMO_STUDENT_THEMES[5] },
-  { id: '106', firstName: 'Olivia', lastName: 'Miller', nfcId: '106', points: 450, classId: 'sc3', theme: DEMO_STUDENT_THEMES[6] },
-  { id: '107', firstName: 'James', lastName: 'Davis', nfcId: '107', points: 600, classId: 'sc2', theme: DEMO_STUDENT_THEMES[7] },
-  { id: '108', firstName: 'Isabella', lastName: 'Rodriguez', nfcId: '108', points: 180, classId: 'sc1' },
-  { id: '109', firstName: 'Alexander', lastName: 'Martinez', nfcId: '109', points: 1000, classId: 'sc3' },
-  { id: '110', firstName: 'Mia', lastName: 'Hernandez', nfcId: '110', points: 250, classId: 'sc4' },
-  { id: '111', firstName: 'Ethan', lastName: 'Lopez', nfcId: '111', points: 350, classId: 'sc4' },
-  { id: '112', firstName: 'Abigail', lastName: 'Wilson', nfcId: '112', points: 175, classId: 'sc5' },
-  { id: '113', firstName: 'Benjamin', lastName: 'Anderson', nfcId: '113', points: 220, classId: 'sc5' },
-  { id: '114', firstName: 'Charlotte', lastName: 'Thomas', nfcId: '114', points: 85, classId: 'sc6' },
-  { id: '115', firstName: 'Daniel', lastName: 'Jackson', nfcId: '115', points: 400, classId: 'sc6' },
-  { id: '116', firstName: 'Harper', lastName: 'White', nfcId: '116', points: 320, classId: 'sc7' },
-  { id: '117', firstName: 'Henry', lastName: 'Harris', nfcId: '117', points: 190, classId: 'sc7' },
-  { id: '118', firstName: 'Evelyn', lastName: 'Martin', nfcId: '118', points: 280, classId: 'sc8' },
-  { id: '119', firstName: 'Jackson', lastName: 'Thompson', nfcId: '119', points: 650, classId: 'sc8' },
-  { id: '120', firstName: 'Avery', lastName: 'Moore', nfcId: '120', points: 550, classId: 'sc1' },
-  { id: '121', firstName: 'David', lastName: 'Lee', nfcId: '121', points: 210, classId: 'sc2' },
-  { id: '122', firstName: 'Scarlett', lastName: 'Perez', nfcId: '122', points: 480, classId: 'sc3' },
-  { id: '123', firstName: 'Joseph', lastName: 'Gonzalez', nfcId: '123', points: 330, classId: 'sc4' },
-  { id: '124', firstName: 'Victoria', lastName: 'Clark', nfcId: '124', points: 700, classId: 'sc5' },
-  { id: '125', firstName: 'Samuel', lastName: 'Lewis', nfcId: '125', points: 270, classId: 'sc6' },
-  { id: '126', firstName: 'Grace', lastName: 'Robinson', nfcId: '126', points: 430, classId: 'sc7' },
-  { id: '127', firstName: 'Lucas', lastName: 'Walker', nfcId: '127', points: 180, classId: 'sc8' },
-  { id: '128', firstName: 'Chloe', lastName: 'Hall', nfcId: '128', points: 310, classId: 'sc9' },
-  { id: '129', firstName: 'Mateo', lastName: 'Allen', nfcId: '129', points: 90, classId: 'sc10' },
-  { id: '130', firstName: 'Zoe', lastName: 'Young', nfcId: '130', points: 220, classId: 'sc9' },
-  { id: '131', firstName: 'Jayden', lastName: 'King', nfcId: '131', points: 500, classId: 'sc10' },
-  { id: '132', firstName: 'Lily', lastName: 'Wright', nfcId: '132', points: 140, classId: 'sc1' },
-  { id: '133', firstName: 'Elijah', lastName: 'Scott', nfcId: '133', points: 260, classId: 'sc2' },
-  { id: '134', firstName: 'Nora', lastName: 'Green', nfcId: '134', points: 70, classId: 'sc3' },
-  { id: '135', firstName: 'Logan', lastName: 'Adams', nfcId: '135', points: 410, classId: 'sc4' },
-  { id: '136', firstName: 'Mila', lastName: 'Baker', nfcId: '136', points: 190, classId: 'sc5' },
-  { id: '137', firstName: 'Carter', lastName: 'Nelson', nfcId: '137', points: 620, classId: 'sc6' },
-  { id: '138', firstName: 'Riley', lastName: 'Hill', nfcId: '138', points: 130, classId: 'sc7' },
-  { id: '139', firstName: 'Leo', lastName: 'Ramirez', nfcId: '139', points: 340, classId: 'sc8' },
-  { id: '140', firstName: 'Aria', lastName: 'Campbell', nfcId: '140', points: 80, classId: 'sc9' },
-  { id: '141', firstName: 'Luke', lastName: 'Mitchell', nfcId: '141', points: 280, classId: 'sc10' },
-  { id: '142', firstName: 'Layla', lastName: 'Roberts', nfcId: '142', points: 150, classId: 'sc1' },
-  { id: '143', firstName: 'Owen', lastName: 'Carter', nfcId: '143', points: 450, classId: 'sc2' },
-  { id: '144', firstName: 'Stella', lastName: 'Phillips', nfcId: '144', points: 200, classId: 'sc3' },
-  { id: '145', firstName: 'Jack', lastName: 'Evans', nfcId: '145', points: 110, classId: 'sc4' },
-  { id: '146', firstName: 'Penelope', lastName: 'Turner', nfcId: '146', points: 300, classId: 'sc5' },
-  { id: '147', firstName: 'Wyatt', lastName: 'Parker', nfcId: '147', points: 160, classId: 'sc6' },
-  { id: '148', firstName: 'Aubrey', lastName: 'Collins', nfcId: '148', points: 250, classId: 'sc7' },
-  { id: '149', firstName: 'Julian', lastName: 'Edwards', nfcId: '149', points: 750, classId: 'sc8' },
-];
-
-const studentsWithCategoryPoints = rawStudents.map((student, index) => ({
-  ...student,
-  categoryPoints: distributeCategoryPointsForSchool(index, student.points),
-}));
+const schoolAbcStudents = buildBalancedDemoRoster({
+  classes: SCHOOL_ABC_CLASSES,
+  minStudentsPerClass: 15,
+  maxStudentsPerClass: 20,
+  firstNames: SCHOOL_ABC_FIRST_NAMES,
+  lastNames: SCHOOL_ABC_LAST_NAMES,
+  categoryNames: SCHOOL_ABC_CATEGORY_NAMES,
+}).map((student, index) =>
+  index < DEMO_STUDENT_THEMES.length
+    ? { ...student, theme: DEMO_STUDENT_THEMES[index] }
+    : student,
+);
 
 export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   name: 'School ABC',
-  students: studentsWithCategoryPoints,
-  classes: [
-    { id: 'sc1', name: 'Grade 5' },
-    { id: 'sc2', name: 'Grade 6' },
-    { id: 'sc3', name: 'Grade 7' },
-    { id: 'sc4', name: 'Grade 8' },
-    { id: 'sc5', name: 'Grade 9' },
-    { id: 'sc6', name: 'Grade 10' },
-    { id: 'sc7', name: 'Grade 11' },
-    { id: 'sc8', name: 'Grade 12' },
-    { id: 'sc9', name: 'Kindergarten A' },
-    { id: 'sc10', name: 'Kindergarten B' },
-  ],
+  students: schoolAbcStudents,
+  classes: [...SCHOOL_ABC_CLASSES],
   teachers: [
     { id: 'st1', name: 'Mr. Smith', username: 'mrsmith', passcode: '1234' },
     { id: 'st2', name: 'Mrs. Jones', username: 'mrsjones', passcode: '1234' },
@@ -142,18 +89,18 @@ export const SCHOOL_DATA: Omit<Database, 'passcode'> = {
   ]),
   coupons: [
     { id: '123123', code: '123123', category: 'Academics', value: 10, used: false, createdAt: Date.now() - 86400000 * 20, teacher: 'Mr. Smith' },
-    { id: '234567', code: '234567', category: 'Good Behavior', value: 5, used: true, usedBy: '100', usedAt: Date.now() - 86400000 * 2, createdAt: Date.now() - 86400000 * 30, teacher: 'Mrs. Jones' },
+    { id: '234567', code: '234567', category: 'Good Behavior', value: 5, used: true, usedBy: '100100', usedAt: Date.now() - 86400000 * 2, createdAt: Date.now() - 86400000 * 30, teacher: 'Mrs. Jones' },
     { id: '345678', code: '345678', category: 'Helping Others', value: 15, used: false, createdAt: Date.now() - 86400000 * 10, teacher: 'Ms. Davis' },
     { id: '456789', code: '456789', category: 'School Spirit', value: 20, used: false, createdAt: Date.now() - 86400000 * 5, teacher: 'Mr. Brown' },
-    { id: '567890', code: '567890', category: 'Attendance', value: 25, used: true, usedBy: '103', usedAt: Date.now() - 86400000 * 1, createdAt: Date.now() - 86400000 * 40, teacher: 'Mr. Wilson' },
+    { id: '567890', code: '567890', category: 'Attendance', value: 25, used: true, usedBy: '100103', usedAt: Date.now() - 86400000 * 1, createdAt: Date.now() - 86400000 * 40, teacher: 'Mr. Wilson' },
     { id: '678901', code: '678901', category: 'Extra Curricular', value: 30, used: false, createdAt: Date.now() - 86400000 * 15, teacher: 'Mrs. Anderson' },
     { id: '789012', code: '789012', category: 'Creativity', value: 35, used: false, createdAt: Date.now() - 86400000 * 25, teacher: 'Ms. Thomas' },
-    { id: '890123', code: '890123', category: 'Leadership', value: 40, used: true, usedBy: '110', usedAt: Date.now() - 86400000 * 7, createdAt: Date.now() - 86400000 * 50, teacher: 'Mr. Jackson' },
+    { id: '890123', code: '890123', category: 'Leadership', value: 40, used: true, usedBy: '100110', usedAt: Date.now() - 86400000 * 7, createdAt: Date.now() - 86400000 * 50, teacher: 'Mr. Jackson' },
     { id: '901234', code: '901234', category: 'Teamwork', value: 45, used: false, createdAt: Date.now() - 86400000 * 3, teacher: 'Mr. Smith' },
     { id: '112233', code: '112233', category: 'Problem Solving', value: 50, used: false, createdAt: Date.now() - 86400000 * 12, teacher: 'Mrs. Jones' },
-    { id: '223344', code: '223344', category: 'Academics', value: 100, used: true, usedBy: '101', usedAt: Date.now() - 86400000 * 5, createdAt: Date.now() - 86400000 * 22, teacher: 'Mr. Smith' },
+    { id: '223344', code: '223344', category: 'Academics', value: 100, used: true, usedBy: '100101', usedAt: Date.now() - 86400000 * 5, createdAt: Date.now() - 86400000 * 22, teacher: 'Mr. Smith' },
     { id: '334455', code: '334455', category: 'Good Behavior', value: 20, used: false, createdAt: Date.now() - 86400000 * 4, teacher: 'Mrs. Jones' },
-    { id: '445566', code: '445566', category: 'Helping Others', value: 25, used: true, usedBy: '104', usedAt: Date.now() - 86400000 * 3, createdAt: Date.now() - 86400000 * 18, teacher: 'Ms. Davis' },
+    { id: '445566', code: '445566', category: 'Helping Others', value: 25, used: true, usedBy: '100104', usedAt: Date.now() - 86400000 * 3, createdAt: Date.now() - 86400000 * 18, teacher: 'Ms. Davis' },
     { id: '100001', code: '100001', category: 'Academics', value: 50, used: false, createdAt: Date.now() - 86400000 * 1, teacher: 'Mr. Smith' },
     { id: '100002', code: '100002', category: 'Good Behavior', value: 20, used: false, createdAt: Date.now() - 86400000 * 2, teacher: 'Mrs. Jones' },
     { id: '100003', code: '100003', category: 'Helping Others', value: 25, used: false, createdAt: Date.now() - 86400000 * 3, teacher: 'Ms. Davis' },
