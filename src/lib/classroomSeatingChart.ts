@@ -62,19 +62,63 @@ export type ClassroomSeatingPrefs = {
   showKioskFlyUp: boolean;
   /** Visual scale for kiosk fly-up text. */
   kioskFlyUpSize: ClassroomKioskFlyUpSize;
-  /** Show Random picker button and R keyboard shortcut on the seating toolbar. */
+  /** Show Random picker on the teacher desk row (+ R shortcut when enabled). */
   showRandomPicker: boolean;
-  /** Show Class +N button to award everyone on the seating chart at once. */
+  /** Show Class +N on the teacher desk row. */
   showClassAwardButton: boolean;
-  /** Show Burst button to select several students and award once. */
+  /** Show Burst select-and-award on the teacher desk row. */
   showBurstAward: boolean;
   /** When Rewards pillar is on: local classroom balance vs school reward categories. Ignored when Rewards is off. */
   awardSource: ClassroomAwardSource;
   /** Play arcade sounds when awarding or deducting points from the chart. */
   awardSounds: boolean;
+  /** Which setting menus appear on the fullscreen monitor toolbar. */
+  monitorMenuTabs: ClassroomMonitorMenuTabs;
   /** Internal — bumps when defaults change. */
   prefsVersion?: number;
 };
+
+export type ClassroomMonitorMenuTab =
+  | 'style'
+  | 'deskDisplay'
+  | 'tapMode'
+  | 'awardSource'
+  | 'effects'
+  | 'defaults'
+  | 'sounds';
+
+export type ClassroomMonitorMenuTabs = Record<ClassroomMonitorMenuTab, boolean>;
+
+export const DEFAULT_MONITOR_MENU_TABS: ClassroomMonitorMenuTabs = {
+  style: true,
+  deskDisplay: true,
+  tapMode: true,
+  awardSource: true,
+  effects: true,
+  defaults: true,
+  sounds: true,
+};
+
+export const MONITOR_MENU_TAB_LABELS: Record<ClassroomMonitorMenuTab, string> = {
+  style: 'Chart style',
+  deskDisplay: 'Desk display',
+  tapMode: 'Tap mode',
+  awardSource: 'Award source',
+  effects: 'Effects',
+  defaults: 'Default points',
+  sounds: 'Sounds',
+};
+
+/** Setting menus users can show/hide via Toolbar options (layout is edit-mode only). */
+export const MONITOR_MENU_TAB_ORDER: ClassroomMonitorMenuTab[] = [
+  'style',
+  'deskDisplay',
+  'tapMode',
+  'awardSource',
+  'effects',
+  'defaults',
+  'sounds',
+];
 
 export type ClassroomKioskFlyUpSize = 'small' | 'medium' | 'large';
 
@@ -89,7 +133,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 15;
+export const CLASSROOM_PREFS_VERSION = 19;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -101,21 +145,37 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   showSessionTotals: true,
   showLastName: false,
   showStudentEmoji: false,
-  correctionPoints: 2,
+  correctionPoints: 0,
   correctionLabel: 'Reminder',
   correctionDescription: 'Behavior reminder',
   design: 'playful',
   frontAtBottom: false,
   celebrationEffect: 'flash',
   showKioskFlyUp: true,
-  kioskFlyUpSize: 'medium',
+  kioskFlyUpSize: 'large',
   showRandomPicker: false,
   showClassAwardButton: false,
   showBurstAward: false,
   awardSource: 'categories',
   awardSounds: true,
+  monitorMenuTabs: { ...DEFAULT_MONITOR_MENU_TABS },
   prefsVersion: CLASSROOM_PREFS_VERSION,
 };
+
+export function normalizeMonitorMenuTabs(raw: unknown): ClassroomMonitorMenuTabs {
+  const parsed = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const tab = (key: ClassroomMonitorMenuTab) =>
+    typeof parsed[key] === 'boolean' ? (parsed[key] as boolean) : DEFAULT_MONITOR_MENU_TABS[key];
+  return {
+    style: tab('style'),
+    deskDisplay: tab('deskDisplay'),
+    tapMode: tab('tapMode'),
+    awardSource: tab('awardSource'),
+    effects: tab('effects'),
+    defaults: tab('defaults'),
+    sounds: tab('sounds'),
+  };
+}
 
 const VALID_KIOSK_FLY_UP_SIZES: ClassroomKioskFlyUpSize[] = ['small', 'medium', 'large'];
 
@@ -248,8 +308,17 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showBurstAward: parsed.showBurstAward ?? DEFAULT_CLASSROOM_PREFS.showBurstAward,
       awardSource: normalizeClassroomAwardSource(parsed.awardSource),
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
+      monitorMenuTabs: normalizeMonitorMenuTabs(parsed.monitorMenuTabs),
       prefsVersion: CLASSROOM_PREFS_VERSION,
     };
+    if (parsedVersion < 18) {
+      prefs.showRandomPicker = false;
+      prefs.showClassAwardButton = false;
+      prefs.showBurstAward = false;
+    }
+    if (parsedVersion < 19 && prefs.kioskFlyUpSize === 'medium') {
+      prefs.kioskFlyUpSize = 'large';
+    }
     if (parsedVersion < 13 && prefs.celebrationEffect === 'none') {
       prefs.celebrationEffect = 'flash';
     }
@@ -365,12 +434,21 @@ export type ClassroomSessionLastAward = {
   at: number;
 };
 
+export type ClassroomSessionActivityEntry = {
+  id: string;
+  at: number;
+  label: string;
+  points: number;
+  studentLabel: string;
+};
+
 export type ClassroomSessionData = {
   totals: ClassroomSessionTotals;
   lastAward: Record<string, ClassroomSessionLastAward>;
+  activity?: ClassroomSessionActivityEntry[];
 };
 
-const EMPTY_SESSION: ClassroomSessionData = { totals: {}, lastAward: {} };
+const EMPTY_SESSION: ClassroomSessionData = { totals: {}, lastAward: {}, activity: [] };
 
 function normalizeSessionPayload(parsed: unknown): ClassroomSessionData {
   if (!parsed || typeof parsed !== 'object') return EMPTY_SESSION;
@@ -384,9 +462,24 @@ function normalizeSessionPayload(parsed: unknown): ClassroomSessionData {
       record.lastAward && typeof record.lastAward === 'object'
         ? (record.lastAward as Record<string, ClassroomSessionLastAward>)
         : {};
-    return { totals, lastAward };
+    const activity = Array.isArray(record.activity)
+      ? (record.activity as ClassroomSessionActivityEntry[]).filter(
+          (e) => e && typeof e.at === 'number' && typeof e.label === 'string',
+        )
+      : [];
+    return { totals, lastAward, activity };
   }
-  return { totals: record as ClassroomSessionTotals, lastAward: {} };
+  return { totals: record as ClassroomSessionTotals, lastAward: {}, activity: [] };
+}
+
+const SESSION_ACTIVITY_LIMIT = 40;
+
+export function appendClassroomSessionActivity(
+  data: ClassroomSessionData,
+  entry: Omit<ClassroomSessionActivityEntry, 'id'> & { id?: string },
+): ClassroomSessionActivityEntry[] {
+  const id = entry.id ?? `${entry.at}-${Math.random().toString(36).slice(2, 8)}`;
+  return [{ ...entry, id }, ...(data.activity ?? [])].slice(0, SESSION_ACTIVITY_LIMIT);
 }
 
 export function loadClassroomSession(
@@ -434,6 +527,7 @@ export function applyClassroomSessionAward(
   studentIds: string[],
   pointsDelta: number,
   awardLabel: string,
+  activityMeta?: { studentLabel: string },
 ): ClassroomSessionData {
   const current = loadClassroomSession(schoolId, scope, classId);
   const nextTotals = { ...current.totals };
@@ -446,7 +540,16 @@ export function applyClassroomSessionAward(
       nextLast[id] = { label, points: pointsDelta, at: stamp };
     }
   }
-  const next: ClassroomSessionData = { totals: nextTotals, lastAward: nextLast };
+  let activity = current.activity ?? [];
+  if (activityMeta?.studentLabel && pointsDelta !== 0) {
+    activity = appendClassroomSessionActivity(current, {
+      at: stamp,
+      label,
+      points: pointsDelta,
+      studentLabel: activityMeta.studentLabel,
+    });
+  }
+  const next: ClassroomSessionData = { totals: nextTotals, lastAward: nextLast, activity };
   saveClassroomSession(schoolId, scope, classId, next);
   return next;
 }

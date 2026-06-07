@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -25,9 +26,14 @@ import {
 import type { Category, Class, Student, Teacher } from '@/lib/types';
 
 export default function ClassroomFullscreenPage() {
+  const [portalReady, setPortalReady] = useState(false);
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
   const schoolId = typeof params.schoolId === 'string' ? params.schoolId : '';
   const classIdFromUrl = (searchParams?.get('classId') || '').trim();
   const scopeFromUrl = (searchParams?.get('scope') || '').trim();
@@ -197,24 +203,32 @@ export default function ClassroomFullscreenPage() {
     );
   }
 
-  return (
+  const monitorContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
       <div
-        className="relative z-10 flex min-h-0 flex-col overflow-hidden bg-background"
+        className="relative z-10 flex flex-col overflow-hidden bg-background"
         style={getHallOfFameStageSizeStyle(false)}
       >
-        <ClassroomPointsPanel
-          variant="fullscreen"
-          schoolId={schoolId}
-          students={deferredStudents}
-          classes={classes}
-          categories={categories}
-          storageScope={storageScope}
-          initialClassId={classIdFromUrl || undefined}
-          budgetOptions={budgetOptions}
-          onClassIdChange={handleMonitorClassChange}
-        />
+        <div className="flex h-full min-h-0 w-full flex-col px-3 pt-2 pb-2">
+          <ClassroomPointsPanel
+            variant="fullscreen"
+            schoolId={schoolId}
+            students={deferredStudents}
+            classes={classes}
+            categories={categories}
+            storageScope={storageScope}
+            initialClassId={classIdFromUrl || undefined}
+            budgetOptions={budgetOptions}
+            onClassIdChange={handleMonitorClassChange}
+          />
+        </div>
       </div>
     </div>
   );
+
+  if (portalReady) {
+    return createPortal(monitorContent, document.body);
+  }
+
+  return monitorContent;
 }

@@ -2,187 +2,669 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>LevelUp — Private School Pillar Proposal</title>
+    <title>LevelUp EDU — Private School Pillar Proposal</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <style>
-      * { box-sizing: border-box; margin: 0; padding: 0; }
-      @page { size: letter; margin: 0.4in; }
-      html, body {
-        width: 8.5in; min-height: 11in; font-family: 'Source Sans 3', system-ui, sans-serif;
-        background: #fff; color: #0f172a;
-        -webkit-print-color-adjust: exact; print-color-adjust: exact;
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
       }
-      html.embed .hint { display: none !important; }
-      .flyer { width: 8.5in; min-height: 11in; padding: 0.4in 0.5in; display: flex; flex-direction: column; }
-      .eyebrow {
-        font-size: 0.09in; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-        color: #059669; border-bottom: 2px solid #10b981; padding-bottom: 0.06in;
+      @page {
+        size: letter portrait;
+        margin: 0.3in;
       }
-      .head { display: flex; align-items: center; gap: 0.14in; margin-top: 0.12in; }
-      .head img { width: 0.5in; }
-      .head h1 { font-family: 'Source Serif 4', serif; font-size: 0.24in; font-weight: 700; color: #047857; }
+      html,
+      body {
+        font-family: 'Inter', system-ui, sans-serif;
+        background: #fff;
+        color: #1e293b;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      html.embed .hint {
+        display: none !important;
+      }
+      .flyer {
+        width: 8.5in;
+        margin: 0 auto;
+      }
+      .print-sheet {
+        box-sizing: border-box;
+        width: 100%;
+        height: 11in;
+        min-height: 11in;
+        max-height: 11in;
+        padding: 0.3in;
+        display: flex;
+        flex-direction: column;
+        font-size: 0.12in;
+        line-height: 1.45;
+        overflow: hidden;
+      }
+
+      .print-fill-block {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .print-fill-block table {
+        flex: 1 1 auto;
+        height: 100%;
+      }
+
+      .print-fill-block tbody {
+        height: 100%;
+      }
+
+      .print-fill-block tbody tr {
+        height: 20%;
+      }
+
+      .print-fill-block th,
+      .print-fill-block td {
+        vertical-align: middle;
+      }
+      .print-sheet-footer {
+        margin-top: auto;
+        padding-top: 0.08in;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+        padding-top: 0;
+      }
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.2in;
+        border-bottom: 2px solid rgba(5, 150, 105, 0.15);
+        padding-bottom: 0.16in;
+        margin-bottom: 0.18in;
+      }
+      .brand-block {
+        display: flex;
+        align-items: center;
+        gap: 0.12in;
+      }
+      .brand-icon {
+        width: 0.52in;
+        height: 0.52in;
+        background: #059669;
+        color: #fff;
+        border-radius: 0.08in;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.26in;
+        font-weight: 900;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.085in;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #d97706;
+        background: rgba(217, 119, 6, 0.1);
+        padding: 0.035in 0.07in;
+        border-radius: 999px;
+        margin-bottom: 0.05in;
+      }
+      .brand-block h1 {
+        font-size: 0.28in;
+        font-weight: 900;
+        color: #047857;
+        line-height: 1.1;
+      }
+      .brand-block p {
+        font-size: 0.1in;
+        color: #64748b;
+        margin-top: 0.03in;
+      }
+      .prepared-for {
+        text-align: right;
+      }
+      .prepared-for .label {
+        font-size: 0.085in;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #94a3b8;
+      }
+      .prepared-for .school {
+        font-size: 0.14in;
+        font-weight: 700;
+        color: #1e293b;
+        margin-top: 0.04in;
+      }
+      .prepared-for .date {
+        font-size: 0.1in;
+        color: #64748b;
+        margin-top: 0.03in;
+      }
       h2 {
-        font-family: 'Source Serif 4', serif; font-size: 0.28in; font-weight: 700;
-        line-height: 1.18; margin-top: 0.14in; color: #0f172a;
+        font-size: 0.19in;
+        font-weight: 800;
+        margin-bottom: 0.06in;
       }
-      .sub { margin-top: 0.08in; font-size: 0.11in; line-height: 1.5; color: #475569; }
-      .school-size {
-        margin: 0.12in 0; padding: 0.08in 0.12in; background: #ecfdf5; border: 1px solid #a7f3d0;
-        border-radius: 6px; display: flex; justify-content: space-between; align-items: center;
+      .intro {
+        font-size: 0.14in;
+        line-height: 1.45;
+        color: #475569;
+        margin-bottom: 0.1in;
       }
-      .school-size span { font-size: 0.09in; color: #047857; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
-      .school-size strong { font-size: 0.13in; color: #059669; }
-      .matrix-section { margin-top: 0.1in; }
-      .matrix-section h3 { font-size: 0.1in; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.06in; }
-      table.pillar-matrix {
-        width: 100%; border-collapse: collapse; font-size: 0.085in;
+      .highlight {
+        background: rgba(254, 243, 199, 0.35);
+        border-left: 3px solid #d97706;
+        padding: 0.1in 0.12in;
+        border-radius: 0 0.06in 0.06in 0;
+        margin-bottom: 0.14in;
       }
-      table.pillar-matrix th, table.pillar-matrix td {
-        border: 1px solid #d1d5db; padding: 0.05in 0.06in; text-align: left;
+      .highlight strong {
+        display: block;
+        font-size: 0.14in;
+        color: #d97706;
+        margin-bottom: 0.04in;
       }
-      table.pillar-matrix th {
-        background: #f9fafb; font-weight: 700; color: #374151;
+      .highlight p {
+        font-size: 0.13in;
+        line-height: 1.4;
+        color: #475569;
       }
-      table.pillar-matrix td.check { text-align: center; font-weight: 700; color: #059669; }
-      table.pillar-matrix td.dash { text-align: center; color: #9ca3af; }
-      .pricing-grid {
-        display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.1in; margin-top: 0.12in;
+      .section-label {
+        font-size: 0.13in;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #059669;
+        margin-bottom: 0.07in;
       }
-      .pricing-card {
-        background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px;
-        padding: 0.1in; text-align: center;
+      table.matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.12in;
+        margin-bottom: 0.12in;
       }
-      .pricing-card h4 { font-size: 0.095in; color: #047857; margin-bottom: 0.04in; }
-      .pricing-card .rate { font-size: 0.13in; font-weight: 700; color: #059669; }
-      .pricing-card .flat { font-size: 0.075in; color: #64748b; margin-top: 0.03in; line-height: 1.35; }
-      .funding-row {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 0.1in; margin-top: 0.12in;
+      table.matrix th,
+      table.matrix td {
+        border: 1px solid #e2e8f0;
+        padding: 0.06in 0.065in;
+        vertical-align: top;
       }
-      .funding-box {
-        background: #fefce8; border: 1px solid #fde68a; border-radius: 6px; padding: 0.08in;
+      table.matrix th {
+        background: #f8fafc;
+        font-weight: 700;
+        color: #475569;
       }
-      .funding-box h4 { font-size: 0.085in; font-weight: 700; color: #b45309; margin-bottom: 0.03in; }
-      .funding-box p { font-size: 0.078in; color: #78716c; line-height: 1.4; }
-      .terms { font-size: 0.075in; color: #64748b; margin-top: 0.1in; padding-left: 0.12in; border-left: 3px solid #d1fae5; }
-      .cta {
-        margin-top: auto; background: #047857; color: #fff; padding: 0.12in 0.16in;
-        border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.1in;
+      table.matrix th.highlight-col {
+        background: rgba(240, 253, 244, 0.8);
+        color: #059669;
       }
-      .cta h3 { font-size: 0.13in; font-weight: 700; }
-      .cta small { font-size: 0.085in; color: #a7f3d0; }
-      .foot { margin-top: 0.06in; font-size: 0.07in; color: #94a3b8; text-align: center; }
-      .hint { position: fixed; bottom: 12px; right: 12px; padding: 8px 12px; background: #047857; color: #fff; font: 600 12px system-ui; }
+      table.matrix td.center {
+        text-align: center;
+        font-weight: 800;
+        color: #059669;
+      }
+      table.matrix td.dash {
+        text-align: center;
+        color: #cbd5e1;
+      }
+      table.matrix tr.core-row {
+        background: rgba(254, 243, 199, 0.15);
+      }
+      table.matrix tr.core-row td:first-child {
+        border-left: 3px solid #d97706;
+      }
+      .core-tag {
+        display: inline-block;
+        font-size: 0.07in;
+        font-weight: 800;
+        text-transform: uppercase;
+        background: #d97706;
+        color: #fff;
+        padding: 0.02in 0.05in;
+        border-radius: 999px;
+        margin-left: 0.05in;
+      }
+      .feature-desc {
+        font-size: 0.11in;
+        color: #64748b;
+        line-height: 1.35;
+        margin-top: 0.03in;
+      }
+      .page-footer {
+        border-top: 1px solid #f1f5f9;
+        padding-top: 0.08in;
+        margin-top: auto;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.085in;
+        font-weight: 600;
+        color: #94a3b8;
+        letter-spacing: 0.04em;
+      }
+      .page-title {
+        border-bottom: 2px solid rgba(5, 150, 105, 0.15);
+        padding-bottom: 0.1in;
+        margin-bottom: 0.12in;
+      }
+      .page-title h3 {
+        font-size: 0.18in;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #047857;
+      }
+      .page-title p {
+        font-size: 0.13in;
+        color: #64748b;
+        margin-top: 0.04in;
+      }
+      table.billing {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.12in;
+        margin-bottom: 0.14in;
+      }
+      table.billing th,
+      table.billing td {
+        border: 1px solid #e2e8f0;
+        padding: 0.075in 0.08in;
+        vertical-align: top;
+      }
+      table.billing th {
+        background: #f8fafc;
+        font-weight: 700;
+        color: #475569;
+      }
+      table.billing td.right {
+        text-align: right;
+      }
+      table.billing td.bold {
+        font-weight: 700;
+      }
+      .title-ii-badge {
+        display: inline-block;
+        font-size: 0.07in;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #d97706;
+        background: rgba(217, 119, 6, 0.12);
+        padding: 0.025in 0.06in;
+        border-radius: 0.04in;
+        margin-left: 0.05in;
+      }
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.12in;
+        margin-bottom: 0.12in;
+      }
+      .summary-box {
+        border-radius: 0.08in;
+        padding: 0.1in;
+      }
+      .summary-box.green {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+      }
+      .summary-box.gray {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+      }
+      .summary-box h4 {
+        font-size: 0.12in;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 0.07in;
+      }
+      .summary-box.green h4 {
+        color: #059669;
+      }
+      .summary-box.gray h4 {
+        color: #64748b;
+      }
+      .summary-line {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.13in;
+        color: #64748b;
+        margin-bottom: 0.04in;
+      }
+      .summary-line strong {
+        color: #1e293b;
+      }
+      .grand-total {
+        border-top: 1px solid #bbf7d0;
+        margin-top: 0.06in;
+        padding-top: 0.06in;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .grand-total span:last-child {
+        font-size: 0.18in;
+        font-weight: 900;
+        color: #059669;
+      }
+      .funding-item {
+        display: flex;
+        gap: 0.06in;
+        margin-bottom: 0.06in;
+      }
+      .funding-code {
+        font-size: 0.058in;
+        font-weight: 700;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        padding: 0.02in 0.04in;
+        border-radius: 0.03in;
+        flex-shrink: 0;
+        height: fit-content;
+      }
+      .funding-item p {
+        font-size: 0.09in;
+        line-height: 1.4;
+        color: #475569;
+      }
+      .funding-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.08in;
+        margin-top: 0.06in;
+      }
+      .funding-vendor-note {
+        font-size: 0.058in;
+        color: #94a3b8;
+        margin-top: 0.06in;
+        line-height: 1.4;
+      }
+      .flyer-footer {
+        margin-top: 0.08in;
+        text-align: center;
+        font-size: 0.065in;
+        color: #94a3b8;
+      }
+      .hint {
+        position: fixed;
+        bottom: 12px;
+        right: 12px;
+        padding: 8px 12px;
+        background: #047857;
+        color: #fff;
+        font: 600 12px system-ui;
+        border-radius: 6px;
+      }
+
+      @media print {
+        html,
+        body {
+          width: 8.5in;
+          margin: 0;
+          padding: 0;
+        }
+
+        .flyer {
+          width: 100%;
+          padding: 0;
+        }
+
+        .print-sheet {
+          height: 10.5in !important;
+          min-height: 10.5in !important;
+          max-height: 10.5in !important;
+          padding: 0;
+          font-size: 0.12in;
+          line-height: 1.45;
+          overflow: hidden;
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+
+        .print-sheet.page-1 {
+          page-break-after: always;
+          break-after: page;
+        }
+
+        .print-sheet.page-2,
+        .page-break {
+          page-break-before: auto;
+          break-before: auto;
+        }
+
+        table.matrix,
+        table.billing {
+          font-size: 0.12in;
+        }
+
+        .funding-item p {
+          font-size: 0.11in;
+          line-height: 1.4;
+        }
+
+        .flyer-footer {
+          margin-top: 0.08in;
+          font-size: 0.1in;
+        }
+      }
+
+      @media screen {
+        .print-sheet {
+          min-height: 11in;
+          border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .print-sheet:last-of-type {
+          border-bottom: none;
+        }
+      }
     </style>
   </head>
   <body>
-    <p class="hint">Ctrl+P → Letter, backgrounds on</p>
-    <article class="flyer">
-      <p class="eyebrow">Private Schools · Pillar Proposal</p>
-      <header class="head">
-        <img src="/logo.png" alt="LevelUp" width="48" height="48" />
-        <h1>LevelUp EDU</h1>
-      </header>
-      <h2>Private School Pillar Proposal</h2>
-      <p class="sub">
-        Modular school platform for private academies — rewards, classroom management, attendance, homework, and library pillars. Fully compliant with federal funding requirements.
-      </p>
+    <p class="hint">Ctrl+P → Letter (8.5×11), Portrait, backgrounds on</p>
 
-      <div class="school-size">
-        <span>Sample School Size</span>
-        <strong>350 Students</strong>
+    <article class="flyer">
+      <div class="print-sheet page-1">
+      <div class="header-row">
+        <div class="brand-block">
+          <div class="brand-icon">⚡</div>
+          <div>
+            <span class="badge">State & Federal Fund Eligible</span>
+            <h1>LevelUp EDU</h1>
+            <p>Modular School Platform Engineered for Private Academies</p>
+          </div>
+        </div>
+        <div class="prepared-for">
+          <div class="label">Proposal Prepared For</div>
+          <div class="school">St. Jude Academy</div>
+          <div class="date">June 2026</div>
+        </div>
       </div>
 
-      <section class="matrix-section">
-        <h3>LevelUp Modular Matrix</h3>
-        <table class="pillar-matrix">
+      <h2>Build Positive Culture with LevelUp EDU</h2>
+      <p class="intro">
+        LevelUp EDU is a modular school platform built around positive behavior, classroom operations, attendance,
+        and library checkout. The core experience starts with students earning and redeeming rewards, then expands into
+        daily teacher workflows through four product pillars you can mix and match.
+      </p>
+
+      <div class="highlight">
+        <strong>⭐ Highlight: The Rewards Core Wedge</strong>
+        <p>
+          Unlike rigid administrative utilities, our core system starts with students actively earning, saving, and
+          redeeming reward points. Your campus operations naturally flow into this gamified hub, building unprecedented
+          student buy-in and eliminating disjointed teacher subscriptions.
+        </p>
+      </div>
+
+      <div class="print-fill-block flex-1">
+      <div class="section-label">LevelUp EDU Product Pillars</div>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Product Pillar</th>
+            <th>Capabilities</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="core-row">
+            <td>
+              <strong>Rewards</strong><span class="core-tag">Core</span>
+            </td>
+            <td>
+              <div class="feature-desc">
+                Teachers award points, students redeem prizes/coupons, and admins configure the reward economy.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Classroom</strong></td>
+            <td>
+              <div class="feature-desc">
+                Seating layouts, quick awards, classroom tools, room display, and teacher-facing daily management.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Attendance</strong></td>
+            <td>
+              <div class="feature-desc">
+                Class sign-in, attendance logs, on-time rewards, schedules, and parent/staff attendance alerts.
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Library</strong></td>
+            <td>
+              <div class="feature-desc">
+                Catalog management, checkout scans, overdue tracking, library notifications, and optional student
+                self-checkout.
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="page-footer print-sheet-footer">
+        <span>LevelUp EDU Proposal • leveluprewards.app</span>
+        <span>Page 1 of 2</span>
+      </div>
+      </div>
+
+      <div class="print-sheet page-2">
+        <div class="page-title">
+          <h3>Custom Cost Proposal</h3>
+          <p>Custom license values formulated specifically for your institution.</p>
+        </div>
+
+        <div class="section-label">Itemized Platform Proposal</div>
+        <table class="billing">
           <thead>
             <tr>
-              <th>Pillar</th>
-              <th>Rewards Foundation</th>
-              <th>Classroom & Culture</th>
-              <th>Complete Campus</th>
+              <th>Module Description</th>
+              <th class="right">Pricing Model / Rate</th>
+              <th class="right">Enrollment</th>
+              <th class="right">Annual Cost</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td><strong>Rewards Core</strong> — Points, prizes, coupons, kiosk</td>
-              <td class="check">✔</td>
-              <td class="check">✔</td>
-              <td class="check">✔</td>
+              <td>
+                <strong>Rewards Pillar</strong>
+                <div class="feature-desc">
+                  Teachers award points, students redeem prizes/coupons, and admins configure the reward economy.
+                </div>
+              </td>
+              <td class="right">$5.00 / std</td>
+              <td class="right">250</td>
+              <td class="right bold">$1,250.00</td>
             </tr>
             <tr>
-              <td><strong>Classroom Management</strong> — Seating, tools, displays</td>
-              <td class="dash">—</td>
-              <td class="check">✔</td>
-              <td class="check">✔</td>
+              <td>
+                <strong>Classroom Pillar</strong>
+                <div class="feature-desc">
+                  Seating layouts, quick awards, classroom tools, room display, and teacher-facing daily management.
+                </div>
+              </td>
+              <td class="right">$1.50 / std</td>
+              <td class="right">250</td>
+              <td class="right bold">$375.00</td>
             </tr>
             <tr>
-              <td><strong>Attendance</strong> — Sign-in, logs, on-time rewards</td>
-              <td class="dash">—</td>
-              <td class="check">✔</td>
-              <td class="check">✔</td>
+              <td>
+                <strong>Attendance Pillar</strong>
+                <div class="feature-desc">
+                  Class sign-in, attendance logs, on-time rewards, schedules, and parent/staff attendance alerts.
+                </div>
+              </td>
+              <td class="right">$1.30 / std</td>
+              <td class="right">250</td>
+              <td class="right bold">$325.00</td>
             </tr>
             <tr>
-              <td><strong>Homework Rewards</strong> — Completion tracking</td>
-              <td class="dash">—</td>
-              <td class="dash">—</td>
-              <td class="check">✔</td>
+              <td>
+                <strong>Library Pillar</strong>
+                <div class="feature-desc">
+                  Catalog management, checkout scans, overdue tracking, library notifications, and optional student
+                  self-checkout.
+                </div>
+              </td>
+              <td class="right">$2.00 / std</td>
+              <td class="right">250</td>
+              <td class="right bold">$500.00</td>
             </tr>
             <tr>
-              <td><strong>Library</strong> — Checkout, overdue, catalog</td>
-              <td class="dash">—</td>
-              <td class="dash">—</td>
-              <td class="check">✔</td>
+              <td>
+                <strong
+                  >Implementation Training & System Integration<span class="title-ii-badge"
+                    >100% Title II Funding Compliant</span
+                  ></strong
+                >
+                <div class="feature-desc">
+                  Custom data ingestion (SIS Roster mapping), configuration check, 1-on-1 admin dashboard configuration,
+                  and complete teacher professional development onboarding workshops.
+                </div>
+              </td>
+              <td class="right">—</td>
+              <td class="right">Flat Setup</td>
+              <td class="right bold">$950.00</td>
             </tr>
           </tbody>
         </table>
-      </section>
 
-      <div class="pricing-grid">
-        <div class="pricing-card">
-          <h4>Foundation</h4>
-          <div class="rate">$4.50/std</div>
-          <div class="flat">Flat tier: $1,250–$3,750<br />(by school size bracket)</div>
+        <div class="summary-grid">
+          <div class="summary-box green" style="grid-column: 1 / -1">
+            <h4>Proposal Summary</h4>
+            <div class="summary-line"><span>Base Annual Contract:</span><strong>$2,450.00</strong></div>
+            <div class="summary-line"><span>Onboarding & Staff PD:</span><strong>$950.00</strong></div>
+            <div class="grand-total">
+              <span><strong>Annual Combined Budget:</strong></span>
+              <span>$3,400.00</span>
+            </div>
+          </div>
         </div>
-        <div class="pricing-card">
-          <h4>Classroom & Culture</h4>
-          <div class="rate">$7.50/std</div>
-          <div class="flat">Flat tier: $1,950–$5,950<br />(by school size bracket)</div>
+
+        <div class="page-footer print-sheet-footer">
+          <span>LevelUp EDU Proposal • leveluprewards.app</span>
+          <span>Page 2 of 2</span>
         </div>
-        <div class="pricing-card">
-          <h4>Complete Campus</h4>
-          <div class="rate">$10.50/std</div>
-          <div class="flat">Flat tier: $2,750–$7,950<br />(by school size bracket)</div>
-        </div>
+
+        <footer class="flyer-footer">
+          <p>Approved NYC Department of Education (DOE) vendor</p>
+          <p>© 2026 LevelUp EdTech Enterprises LLC</p>
+        </footer>
       </div>
-
-      <div class="funding-row">
-        <div class="funding-box">
-          <h4>Title IV-A</h4>
-          <p>Applies platform license cost toward safe, healthy learning environments (PBIS incentives).</p>
-        </div>
-        <div class="funding-box">
-          <h4>Title II-A</h4>
-          <p>Applies $950–$1,950 onboarding & PD fee toward teacher training (scales with enrollment).</p>
-        </div>
-      </div>
-
-      <p class="terms">
-        • $750 annual platform floor • Quotes locked 90 days • COPPA & FERPA compliant • 97% retention rate • No hidden costs
-      </p>
-
-      <section class="cta">
-        <div>
-          <h3>Ready for board + district conversations</h3>
-          <small>Contact details available on request</small>
-        </div>
-      </section>
-      <footer class="flyer-footer">
-        <p class="flyer-footer__vendor">Approved NYC Department of Education (DOE) vendor</p>
-        <p class="flyer-footer__links">Contact details available on request</p>
-        <p class="flyer-footer__copy">© 2026 LevelUp EdTech Enterprises LLC</p>
-      </footer>
     </article>
   </body>
 </html>

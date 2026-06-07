@@ -33,12 +33,24 @@ const YESHIVA_LAST_NAMES = [
   'Kornbluth', 'Zimmerman', 'Wolfson', 'Braun', 'Werner', 'Perlman', 'Moskowitz', 'Horowitz', 'Frankel', 'Mizrachi',
 ] as const;
 
+const YESHIVA_CATEGORY_NAMES = [
+  'Middos Tovos',
+  'Shteiging',
+  "Gemara B'iyun",
+  'Mishna Mastery',
+  'Tefillah',
+  'Chesed',
+  'Avos Ubanim',
+  'Chavrusa Learning',
+] as const;
+
 const yeshivaStudents = buildBalancedDemoRoster({
   classes: YESHIVA_CLASSES,
   minStudentsPerClass: 20,
   maxStudentsPerClass: 25,
   firstNames: YESHIVA_FIRST_NAMES,
   lastNames: YESHIVA_LAST_NAMES,
+  categoryNames: YESHIVA_CATEGORY_NAMES,
 }).map((student, index) =>
   index < DEMO_STUDENT_THEMES_YESHIVA_ORDER.length
     ? { ...student, theme: DEMO_STUDENT_THEMES_YESHIVA_ORDER[index] }

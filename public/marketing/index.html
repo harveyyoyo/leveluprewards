@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flyers — levelUp EDU (local)</title>
+    <meta
+      name="description"
+      content="Printable flyers for LevelUp school rewards — preview, open, and print. Static local gallery."
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070814;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --card: rgba(255, 255, 255, 0.02);
+        --card-hover: rgba(255, 255, 255, 0.04);
+        --border: rgba(255, 255, 255, 0.08);
+        --accent-a: #c026d3;
+        --accent-b: #06b6d4;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .bg-glow {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        background:
+          radial-gradient(circle at 50% -20%, rgba(120, 119, 198, 0.22), transparent 50%),
+          radial-gradient(circle at 90% 20%, rgba(217, 70, 239, 0.1), transparent 45%),
+          radial-gradient(circle at 10% 80%, rgba(6, 182, 212, 0.1), transparent 45%);
+      }
+      .wrap { position: relative; z-index: 1; max-width: 72rem; margin: 0 auto; padding: 2rem 1.5rem 5rem; }
+      .hero { text-align: center; margin-bottom: 2rem; }
+      .badge {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        border: 1px solid rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.1);
+        color: #67e8f9; border-radius: 999px; padding: 0.35rem 1rem;
+        font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+      }
+      h1 { margin: 1.25rem 0 0; font-size: clamp(2rem, 5vw, 3rem); font-weight: 800; letter-spacing: -0.03em; }
+      .lead { margin: 1rem auto 0; max-width: 42rem; color: var(--muted); font-size: 1.05rem; }
+      .lead strong { color: #e2e8f0; font-weight: 600; }
+      .theme-toggle { margin-top: 2rem; text-align: center; }
+      .theme-toggle p { margin: 0 0 0.75rem; color: var(--muted); font-size: 0.875rem; font-weight: 600; }
+      .theme-buttons {
+        display: inline-flex; gap: 0.25rem; padding: 0.25rem;
+        border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(2,6,23,0.6);
+      }
+      .theme-buttons button {
+        border: 0; border-radius: 0.75rem; padding: 0.5rem 1rem;
+        font-size: 0.875rem; font-weight: 700; cursor: pointer; background: transparent; color: var(--muted);
+      }
+      .theme-buttons button[aria-pressed="true"] {
+        color: white;
+        background: linear-gradient(90deg, var(--accent-a), var(--accent-b));
+        box-shadow: 0 10px 25px rgba(192, 38, 211, 0.25);
+      }
+      .theme-note { margin: 0.75rem auto 0; max-width: 32rem; font-size: 0.75rem; color: #64748b; }
+      .sections { margin-top: 3.5rem; display: grid; gap: 4rem; }
+      .section-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 0.5rem; margin-bottom: 1.5rem; }
+      .section-head h2 { margin: 0; font-size: clamp(1.5rem, 3vw, 1.875rem); font-weight: 800; }
+      .section-head p { margin: 0; color: #64748b; font-size: 0.875rem; }
+      .grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+      .best-of {
+        border-radius: 1.5rem; border: 1px solid rgba(6, 182, 212, 0.2);
+        background: rgba(6, 182, 212, 0.04); padding: 1.5rem;
+      }
+      .best-of > p { margin: 0.5rem 0 0; max-width: 48rem; color: rgba(203, 213, 225, 0.9); font-size: 0.875rem; }
+      .best-grid { margin-top: 1.5rem; display: grid; gap: 1.5rem; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+      .best-wrap { border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.1); background: rgba(2,6,23,0.4); overflow: hidden; }
+      .best-wrap .pick-label {
+        padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.68rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #67e8f9;
+      }
+      .best-wrap .pick-note { margin: 0.25rem 0 0; font-size: 0.75rem; color: var(--muted); text-transform: none; letter-spacing: normal; font-weight: 400; }
+      .card {
+        display: flex; flex-direction: column; overflow: hidden;
+        border-radius: 1.5rem; border: 1px solid var(--card-border, var(--border));
+        background: var(--card); transition: background 0.2s;
+      }
+      .card:hover { background: var(--card-hover); }
+      .card.dim { opacity: 0.4; }
+      .snap {
+        display: block; position: relative; overflow: hidden;
+        border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(15,23,42,0.8);
+        text-decoration: none; color: inherit;
+      }
+      .snap-inner {
+        position: relative; margin: 0 auto; overflow: hidden;
+        display: flex; align-items: flex-start; justify-content: center; padding: 0.75rem 0;
+      }
+      .snap-frame {
+        position: relative; overflow: hidden; border-radius: 2px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.45); outline: 1px solid rgba(255,255,255,0.1);
+      }
+      .snap iframe {
+        position: absolute; left: 0; top: 0; border: 0; background: white; pointer-events: none;
+      }
+      .snap-tag {
+        position: absolute; right: 0.75rem; top: 0.75rem; z-index: 2;
+        border-radius: 999px; border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(0,0,0,0.5); padding: 0.25rem 0.625rem;
+        font-size: 0.625rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      }
+      .snap-hover {
+        position: absolute; inset: 0; z-index: 1; display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,0); opacity: 0; transition: opacity 0.2s, background 0.2s;
+      }
+      .snap:hover .snap-hover { opacity: 1; background: rgba(0,0,0,0.25); }
+      .snap-hover span {
+        border-radius: 999px; border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(0,0,0,0.6); padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 700;
+      }
+      .card-body { padding: 1.25rem; display: flex; flex-direction: column; flex: 1; }
+      .card-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+      .card-title { margin: 0; font-size: 1.125rem; font-weight: 800; }
+      .pill {
+        border-radius: 999px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+        padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em;
+        text-transform: uppercase; color: var(--muted);
+      }
+      .card-desc { margin: 0.375rem 0 0; flex: 1; font-size: 0.875rem; color: var(--muted); }
+      .warn { margin-top: 0.5rem; font-size: 0.75rem; color: rgba(253, 230, 138, 0.8); }
+      .tags { margin-top: 0.75rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .tag {
+        border-radius: 999px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+        padding: 0.125rem 0.625rem; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em;
+        text-transform: uppercase; color: var(--muted);
+      }
+      .card-actions { margin-top: 1rem; }
+      .btn {
+        display: inline-flex; align-items: center; gap: 0.375rem;
+        border-radius: 0.75rem; padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 700;
+        text-decoration: none; border: 0; cursor: pointer;
+      }
+      .btn-primary { color: white; background: linear-gradient(90deg, var(--accent-a), var(--accent-b)); }
+      .btn-disabled { color: white; background: #334155; opacity: 0.5; cursor: not-allowed; }
+      .footer { margin-top: 4rem; text-align: center; color: #64748b; font-size: 0.75rem; }
+      code { color: #94a3b8; }
+    </style>
+  </head>
+  <body>
+    <div class="bg-glow" aria-hidden="true"></div>
+    <div class="wrap">
+      <header class="hero">
+        <div class="badge">Printable flyers · local</div>
+        <h1>Choose your flyer style</h1>
+        <p class="lead">
+          School rewards that students love — pick <strong>Bold Navy</strong> or
+          <strong>Original styles</strong>, then open a preview and use
+          <strong>Ctrl+P</strong> (Letter, backgrounds on) to save as PDF or print.
+        </p>
+        <div class="theme-toggle" role="group" aria-label="Flyer visual style">
+          <p>Visual style</p>
+          <div class="theme-buttons">
+            <button type="button" data-theme="bold" aria-pressed="true">Bold Navy</button>
+            <button type="button" data-theme="classic" aria-pressed="false">Original styles</button>
+          </div>
+          <p class="theme-note" id="theme-note"></p>
+        </div>
+      </header>
+      <div class="sections" id="gallery"></div>
+      <p class="footer">
+        Static gallery — regenerate with <code>npm run generate:flyers-gallery</code>.
+        Serve locally: <code>npx serve public -p 3456</code> → <code>/marketing/</code>
+      </p>
+    </div>
+    <script id="flyers-data" type="application/json">{"flyers":[{"id":"arcade","name":"Arcade Pitch","description":"Arcade energy pitch for PBIS, events, and school-wide engagement.","href":"/marketing/flyer-arcade.html","audience":"general","preview":{"border":"border-fuchsia-500/30","tag":"Arcade"},"tags":["PBIS","Gaming","Events"]},{"id":"scholastic","name":"Scholastic Overview","description":"Parent-friendly overview of points, prizes, and school-wide progress.","href":"/marketing/flyer-scholastic.html","audience":"general","preview":{"border":"border-indigo-300/50","tag":"Classic"},"tags":["Print-friendly","Parents","PBIS"]},{"id":"professional","name":"Professional Brief","description":"Admin and procurement overview with platform capabilities.","href":"/marketing/flyer-professional.html","audience":"general","preview":{"border":"border-slate-400/40","tag":"Admin"},"tags":["DOE","Procurement","Overview"]},{"id":"bold","name":"Bold Navy (Reference)","description":"Canonical Bold Navy flyer—navy background, sky accents, oversized headline, feature blocks.","href":"/marketing/flyer-bold.html","audience":"general","preview":{"border":"border-sky-500/30","tag":"Bold"},"tags":["Hallway","Poster","High contrast"]},{"id":"levelup-rewards-premium","name":"PBIS Overview (Premium)","description":"High-fidelity two-page general guide—student portal overview, automated school-wide routines, and Sole Source procurement specs.","href":"/marketing/levelup-rewards-flyer.html","audience":"general","preview":{"border":"border-fuchsia-500/40","tag":"Premium"},"tags":["Overview","PBIS","Sole Source","Rewards"]},{"id":"sunset","name":"Community Night","description":"Open house and community night pitch with Hall of Fame highlight.","href":"/marketing/flyer-sunset.html","audience":"general","preview":{"border":"border-orange-400/40","tag":"Warm"},"tags":["Open house","Community","Friendly"]},{"id":"retro","name":"Hallway Poster","description":"Bold Navy layout—student-facing scan-and-earn poster for hallways and fairs.","href":"/marketing/flyer-retro.html","audience":"general","preview":{"border":"border-lime-400/40","tag":"Retro"},"tags":["Students","Fair","Fun"]},{"id":"minimal","name":"Quick Overview","description":"Short one-page overview of award, scan, track, and scale.","href":"/marketing/flyer-minimal.html","audience":"general","preview":{"border":"border-white/25","tag":"Minimal"},"tags":["Low ink","Simple","Staff room"]},{"id":"teachers-quickstart","name":"Teacher Quickstart","description":"Staff-room handout for daily use: award points, run raffle moments, and keep classroom momentum moving.","href":"/marketing/flyer-teachers-quickstart.html","audience":"staff","preview":{"border":"border-teal-400/40","tag":"Staff"},"tags":["Teachers","Quickstart","PBIS"]},{"id":"staff-pbis-playbook","name":"PBIS Staff Playbook","description":"Practical coaching flyer for consistent expectations, recognition language, and redemption routines.","href":"/marketing/flyer-staff-pbis-playbook.html","audience":"staff","preview":{"border":"border-lime-400/40","tag":"Playbook"},"tags":["Staff","PBIS","Consistency"]},{"id":"yeshiva-rebbeim-moros","name":"Yeshiva: Rebbeim & Moros Quickstart","description":"Yeshiva staff handout—derech eretz, middos tovos, fast recognition routine, and a live teacher-tool preview.","href":"/marketing/flyer-yeshiva-rebbeim-moros.html","audience":"staff","preview":{"border":"border-sky-300/40","tag":"Yeshiva"},"tags":["Yeshiva","Staff","Middos"]},{"id":"levelup-teachers","name":"Teacher Companion (Premium)","description":"High-fidelity classroom playbook—1-tap positive reinforcement, physical kiosk scans, digital raffle wheels, and classroom incentive ideas.","href":"/marketing/levelup-teachers-flyer.html","audience":"staff","preview":{"border":"border-violet-500/40","tag":"Premium"},"tags":["Teachers","Classroom","Playbook","Raffles"]},{"id":"levelup-rewards-basic-settings","name":"Rewards Basic Settings","description":"Admin handout—point categories, rewards shop setup, coupon printing, and school rules. Shows the student kiosk sign-in screen (not the school login page).","href":"/marketing/levelup-rewards-basic-settings-flyer.html","audience":"staff","preview":{"border":"border-blue-500/40","tag":"Admin"},"tags":["Admin","Setup","Categories","Kiosk"]},{"id":"students-elementary","name":"Elementary Stars","description":"Bright, playful K–5 flyer—simple language about earning stars and picking prizes.","href":"/marketing/flyer-students-elementary.html","audience":"elementary","preview":{"border":"border-amber-400/40","tag":"K–5"},"tags":["Students","K–5","Playful"]},{"id":"students-middle","name":"Middle School Rank","description":"Purple/teal vibe for grades 6–8—leaderboards, streaks, and rewards that feel age-appropriate.","href":"/marketing/flyer-students-middle.html","audience":"middle","preview":{"border":"border-violet-500/40","tag":"6–8"},"tags":["Students","6–8","Leaderboard"]},{"id":"students-high","name":"High School Progress","description":"Mature, minimal design for grades 9–12—autonomy, real privileges, no childish gimmicks.","href":"/marketing/flyer-students-high.html","audience":"high","preview":{"border":"border-yellow-500/35","tag":"9–12"},"tags":["Students","9–12","Autonomy"]},{"id":"students-kiosk-hype","name":"Student Kiosk Hype","description":"Hallway & kiosk backdrop—Scan. Earn. Level Up! Morning scan steps, point stacking, and redemption prizes.","href":"/marketing/flyer-students-kiosk-hype.html","audience":"general","preview":{"border":"border-fuchsia-500/50","tag":"Hype"},"tags":["Students","Kiosk","Hallway"]},{"id":"yeshiva-talmidim","name":"Yeshiva: Talmidim Scan & Earn","description":"Student-facing yeshiva flyer—morning scan, derech eretz, middos tovos, and redeemable rewards (no apps).","href":"/marketing/flyer-yeshiva-talmidim.html","audience":"general","preview":{"border":"border-amber-300/40","tag":"Talmidim"},"tags":["Yeshiva","Students","Kiosk"]},{"id":"levelup-principals","name":"Leadership Brief (Premium)","description":"High-fidelity administrator guide—building-wide PBIS consistency, staff telemetry, NYS Ed Law 2-d compliance, and federal Title I/IV-A procurement specs.","href":"/marketing/levelup-principals-flyer.html","audience":"principal","preview":{"border":"border-cyan-500/40","tag":"Premium"},"tags":["Principals","Procurement","NYS 2-d","Telemetry"]},{"id":"levelup-funding-premium","name":"Funding Guide (Premium)","description":"High-fidelity procurement playbook—Title I & Title IV federal grants, NYS NPSE safety claims, MSR attendance tracking, and direct FAMIS Open-Market purchase orders.","href":"/marketing/levelup-funding-flyer.html","audience":"principal","preview":{"border":"border-emerald-500/45","tag":"Premium"},"tags":["Funding","Procurement","FAMIS","NYS NPSE"]},{"id":"principal-data","name":"Principal: PBIS Data","description":"Evidence-focused one-pager—real-time telemetry, consistency, and redemption insights.","href":"/marketing/flyer-principal-data.html","audience":"principal","preview":{"border":"border-sky-500/40","tag":"Data"},"tags":["Principals","PBIS","Analytics"]},{"id":"principal-rollout","name":"Principal: Rollout Plan","description":"Step-by-step implementation guide—roster import, pilot team, kiosks, and scale-up.","href":"/marketing/flyer-principal-rollout.html","audience":"principal","preview":{"border":"border-emerald-500/40","tag":"Launch"},"tags":["Principals","Onboarding","Timeline"]},{"id":"principal-roi","name":"Principal: Value & Budget","description":"Procurement-friendly comparison—one platform vs. patchwork tools, with vendor contact.","href":"/marketing/flyer-principal-roi.html","audience":"principal","preview":{"border":"border-amber-600/40","tag":"ROI"},"tags":["Principals","Budget","DOE"]},{"id":"students-elementary-2","name":"Quest Board","description":"Star-field adventure theme for K–5—quest cards with point values make earning feel like a game.","href":"/marketing/flyer-students-elementary-2.html","audience":"elementary","preview":{"border":"border-indigo-400/40","tag":"K–5"},"tags":["Students","K–5","Adventure"]},{"id":"students-middle-2","name":"Achievements Unlocked","description":"Dark achievement-card layout for grades 6–8—unlockable badges, streaks, and dual-image grid.","href":"/marketing/flyer-students-middle-2.html","audience":"middle","preview":{"border":"border-blue-500/40","tag":"6–8"},"tags":["Students","6–8","Achievements"]},{"id":"students-high-2","name":"Do Good, Get Rewarded","description":"Black/green editorial for grades 9–12—prize price list, student quote, no-nonsense tone.","href":"/marketing/flyer-students-high-2.html","audience":"high","preview":{"border":"border-green-500/35","tag":"9–12"},"tags":["Students","9–12","Rewards list"]},{"id":"principal-culture","name":"Principal: School Culture","description":"Crimson and white one-pager built around culture pillars—consistency, recognition, accountability.","href":"/marketing/flyer-principal-culture.html","audience":"principal","preview":{"border":"border-rose-600/40","tag":"Culture"},"tags":["Principals","Culture","PBIS"]},{"id":"parents","name":"Parent & Family Guide","description":"Light, welcoming flyer that explains how points work and answers common family questions.","href":"/marketing/flyer-parents.html","audience":"parents","preview":{"border":"border-cyan-400/40","tag":"Families"},"tags":["Parents","Families","Overview"]},{"id":"families-home-portal","name":"Family Home Portal","description":"Parent-facing home access flyer covering student balances, raffle tickets, rewards, and school updates.","href":"/marketing/flyer-families-home-portal.html","audience":"parents","preview":{"border":"border-blue-400/40","tag":"Home"},"tags":["Families","Portal","At home"]},{"id":"parents-privacy-security","name":"Parent: Privacy & Safety","description":"Newsletter-ready sheet—NYS § 2-d, no third-party ads, kiosk-only IDs, and positive-development focus.","href":"/marketing/flyer-parents-privacy-security.html","audience":"parents","preview":{"border":"border-teal-600/50","tag":"Privacy"},"tags":["Parents","Security","Newsletter"]},{"id":"principal-tech","name":"Principal: Tech & Safety","description":"Infrastructure, encryption, FERPA/COPPA/NY Ed Law 2-d, AI safeguards, audit logs, and DPSA documentation.","href":"/marketing/flyer-principal-tech.html","audience":"principal","preview":{"border":"border-slate-500/50","tag":"Safety"},"tags":["Principals","Security","Compliance"]},{"id":"funding-overview","name":"Funding: Procurement Overview","description":"Universal how-to-buy sheet—NYC DOE vendor code, Title I/SIG, NYS nonpublic paths, and § 2-d compliance.","href":"/marketing/flyer-funding-overview.html","audience":"principal","preview":{"border":"border-sky-600/50","tag":"Funding"},"tags":["Procurement","DOE","Budget"]},{"id":"funding-nyc-doe","name":"Funding: NYC DOE","description":"NYC public school procurement—vendor VS00109014, Title I, SIG, tax levy PO steps, and FAMIS guidance.","href":"/marketing/flyer-funding-nyc-doe.html","audience":"principal","preview":{"border":"border-blue-800/50","tag":"NYC"},"tags":["DOE","FAMIS","Title I"]},{"id":"funding-nys-nonpublic","name":"Funding: NYS Nonpublic","description":"Yeshivas & day schools—Title IV Equitable Services, MSR attendance reimbursement, and NPSE safety grant.","href":"/marketing/flyer-funding-nys-nonpublic.html","audience":"principal","preview":{"border":"border-amber-700/50","tag":"Private"},"tags":["Nonpublic","MSR","NPSE"]},{"id":"yeshiva-leadership","name":"Yeshiva: Leadership Brief","description":"Leadership one-pager—derech eretz + attendance + middos tovos outcomes with nonpublic procurement alignment.","href":"/marketing/flyer-yeshiva-leadership.html","audience":"principal","preview":{"border":"border-slate-400/40","tag":"Yeshiva"},"tags":["Yeshiva","Leadership","Nonpublic"]},{"id":"funding-quick-reference","name":"Funding: Quick Reference","description":"Low-ink checklist and budget-bucket table for business managers—public and nonpublic streams on one page.","href":"/marketing/flyer-funding-quick-reference.html","audience":"principal","preview":{"border":"border-zinc-500/50","tag":"Ref"},"tags":["Procurement","Checklist","Print"]},{"id":"it-kiosk-setup","name":"IT: Kiosk Setup Guide","description":"Leave-behind for school IT—hardware specs, Wi-Fi/Ethernet, Firebase pipeline, encryption, plug-and-play deploy.","href":"/marketing/flyer-it-kiosk-setup.html","audience":"principal","preview":{"border":"border-slate-600/50","tag":"IT"},"tags":["IT","Kiosk","Deployment"]},{"id":"private-school-pillar-proposal","name":"Private School Pillar Proposal","description":"Interactive 2-page private-school proposal—pillar matrix, custom billing, and print-ready PDF.","href":"/marketing/flyer-private-school-pillar-proposal.html","audience":"proposals","preview":{"border":"border-emerald-600/45","tag":"Proposal"},"tags":["Private schools","Pillars","Proposal","Pricing"]},{"id":"private-school-funding","name":"Private School Funding Sources","description":"Government and state funding guide for private schools—Title I/II/IV, equitable services, MSR, NPSE, and procurement paths.","href":"/marketing/flyer-private-school-funding.html","audience":"proposals","preview":{"border":"border-amber-600/45","tag":"Funding"},"tags":["Private schools","Funding","Title IV","MSR","NPSE"]},{"id":"feature-houses","name":"School Houses","description":"Spirit houses, sorting ceremony, house parents, point rollups, and Hall of Fame integration.","href":"/marketing/flyer-feature-houses.html","audience":"features","preview":{"border":"border-violet-500/40","tag":"Houses"},"tags":["Houses","Spirit","PBIS"]},{"id":"feature-raffle","name":"Raffle","description":"Points-to-tickets, jackpot reels, spin wheel, or loto cage—with equal-odds and deduction rules.","href":"/marketing/flyer-feature-raffle.html","audience":"features","preview":{"border":"border-amber-500/40","tag":"Raffle"},"tags":["Raffle","Assembly","Fun"]},{"id":"feature-library","name":"School Library","description":"Checkout, due dates, late fees, and on-time bonuses tied to your points economy.","href":"/marketing/flyer-feature-library.html","audience":"features","preview":{"border":"border-emerald-500/40","tag":"Library"},"tags":["Library","Books","Points"]},{"id":"feature-student-portal","name":"Student Home Portal","description":"Passcode-protected home access—balance, house, raffle tickets, and optional parent digest.","href":"/marketing/flyer-feature-student-portal.html","audience":"features","preview":{"border":"border-sky-500/40","tag":"Portal"},"tags":["Student portal","Home","Access"]},{"id":"feature-bulletin","name":"Bulletin Board","description":"Hallway display for incentives, news, and WOW posts—custom themes and live admin posts.","href":"/marketing/flyer-feature-bulletin.html","audience":"features","preview":{"border":"border-yellow-500/40","tag":"Display"},"tags":["Bulletin","Monitor display","Incentives"]},{"id":"feature-engagement","name":"Achievements & Engagement","description":"Optional achievements, badges, levels, streaks, goals, and challenges—toggle what you need.","href":"/marketing/flyer-feature-engagement.html","audience":"features","preview":{"border":"border-fuchsia-500/40","tag":"XP"},"tags":["Achievements","Badges","Streaks"]},{"id":"feature-hall-of-fame","name":"Hall of Fame","description":"Live leaderboards for students, classes, houses, and goals—fullscreen-ready for hallway monitors.","href":"/marketing/flyer-feature-hall-of-fame.html","audience":"features","preview":{"border":"border-amber-500/40","tag":"HoF"},"tags":["Hall of Fame","Leaderboard","Display"]},{"id":"feature-attendance","name":"Attendance & Periods","description":"Configure periods, teacher assignments, reward rules, and class sign-in from one admin tab.","href":"/marketing/flyer-feature-attendance.html","audience":"features","preview":{"border":"border-emerald-600/40","tag":"Attend"},"tags":["Attendance","Periods","PBIS"]},{"id":"feature-notifications","name":"Staff Notifications","description":"Alerts for rewards, attendance, library, milestones, inventory, and optional parent digests.","href":"/marketing/flyer-feature-notifications.html","audience":"features","preview":{"border":"border-violet-500/40","tag":"Alerts"},"tags":["Notifications","Staff","Alerts"]},{"id":"feature-id-cards-themes","name":"ID Cards & Student Themes","description":"Print branded student ID cards and design school or per-student themes for kiosk, shop, and printouts.","href":"/marketing/flyer-feature-id-cards-themes.html","audience":"features","preview":{"border":"border-sky-500/40","tag":"IDs"},"tags":["ID cards","Themes","Branding","Print"]},{"id":"feature-student-kiosk","name":"Student Kiosk (Scan Card)","description":"Touchscreen sign-in—students scan their ID card, type a badge, or use QR/face to open rewards and the prize shop.","href":"/marketing/flyer-feature-student-kiosk.html","audience":"features","preview":{"border":"border-teal-500/40","tag":"Kiosk"},"tags":["Kiosk","Students","Scan card","Rewards"]},{"id":"feature-rewards-shop","name":"Rewards Shop","description":"Feature flyer for prize menus, inventory, point prices, checkout flow, and student-facing shop displays.","href":"/marketing/flyer-feature-rewards-shop.html","audience":"features","preview":{"border":"border-pink-500/40","tag":"Shop"},"tags":["Rewards","Inventory","Shop"]},{"id":"feature-vending-machine","name":"Rewards Vending Machine","description":"Two optional hardware samples—full countertop unit and compact desktop smart vending—plus LevelUp logo, School Rewards branding, ID tap-in, and motor dispense.","href":"/marketing/flyer-feature-vending-machine.html","audience":"features","preview":{"border":"border-amber-600/40","tag":"Vending"},"tags":["Vending","Hardware","Optional","Desktop"]}],"audienceLabels":{"general":"General layouts","staff":"For teachers & staff","elementary":"Elementary (K–5)","middle":"Middle school (6–8)","high":"High school (9–12)","principal":"For principals","parents":"For parents & families","features":"Feature highlights","proposals":"Proposal templates"},"audienceOrder":["proposals","features","staff","elementary","middle","high","parents","principal","general"],"classicFiles":["flyer-arcade.html","flyer-bold.html","flyer-families-home-portal.html","flyer-feature-attendance.html","flyer-feature-bulletin.html","flyer-feature-engagement.html","flyer-feature-hall-of-fame.html","flyer-feature-houses.html","flyer-feature-id-cards-themes.html","flyer-feature-library.html","flyer-feature-notifications.html","flyer-feature-raffle.html","flyer-feature-rewards-shop.html","flyer-feature-student-kiosk.html","flyer-feature-student-portal.html","flyer-minimal.html","flyer-parents.html","flyer-principal-culture.html","flyer-principal-data.html","flyer-principal-roi.html","flyer-principal-rollout.html","flyer-principal-tech.html","flyer-professional.html","flyer-retro.html","flyer-scholastic.html","flyer-staff-pbis-playbook.html","flyer-students-elementary-2.html","flyer-students-elementary.html","flyer-students-high-2.html","flyer-students-high.html","flyer-students-middle-2.html","flyer-students-middle.html","flyer-sunset.html","flyer-teachers-quickstart.html","flyer-private-school-pillar-proposal.html","flyer-private-school-funding.html"],"bestPicks":[{"key":"general","label":"General","flyerId":"levelup-rewards-premium","note":"Most complete all-purpose overview for first-touch conversations."},{"key":"principal","label":"Principal","flyerId":"levelup-principals","note":"Best leadership brief for decision-makers, compliance, and rollout readiness."},{"key":"pillar-rewards","label":"Pillar: Rewards Core","flyerId":"feature-rewards-shop","note":"Strongest one-pager for point economy and redemption workflows."},{"key":"pillar-classroom","label":"Pillar: Classroom Management","flyerId":"levelup-teachers","note":"Most actionable classroom implementation guide for teacher adoption."},{"key":"pillar-attendance","label":"Pillar: Attendance","flyerId":"feature-attendance","note":"Best focused summary of periods, sign-in, and reward rules."},{"key":"pillar-library","label":"Pillar: Library","flyerId":"feature-library","note":"Best dedicated flyer for checkout, due dates, and library incentives."},{"key":"pillar-homework","label":"Pillar: Homework","flyerId":"feature-student-portal","note":"Closest current fit for homework-at-home routines (until a dedicated homework flyer is added)."},{"key":"pillar-office","label":"Pillar: School Office","flyerId":"principal-data","note":"Closest current fit for office-facing operations and admin reporting."}]}</script>
+    <script>
+      const FLYER_WIDTH = 816;
+      const FLYER_HEIGHT = 1056;
+      const SCALE = 0.26;
+      const scaledW = Math.round(FLYER_WIDTH * SCALE);
+      const scaledH = Math.round(FLYER_HEIGHT * SCALE);
+      const BORDER_COLORS = {"border-fuchsia-500/30":"rgba(217, 70, 239, 0.3)","border-fuchsia-500/40":"rgba(217, 70, 239, 0.4)","border-fuchsia-500/50":"rgba(217, 70, 239, 0.5)","border-indigo-300/50":"rgba(165, 180, 252, 0.5)","border-indigo-400/40":"rgba(129, 140, 248, 0.4)","border-slate-400/40":"rgba(148, 163, 184, 0.4)","border-sky-500/30":"rgba(14, 165, 233, 0.3)","border-sky-500/40":"rgba(14, 165, 233, 0.4)","border-sky-600/50":"rgba(2, 132, 199, 0.5)","border-sky-300/40":"rgba(125, 211, 252, 0.4)","border-orange-400/40":"rgba(251, 146, 60, 0.4)","border-lime-400/40":"rgba(163, 230, 53, 0.4)","border-white/25":"rgba(255, 255, 255, 0.25)","border-teal-400/40":"rgba(45, 212, 191, 0.4)","border-teal-600/50":"rgba(13, 148, 136, 0.5)","border-violet-500/40":"rgba(139, 92, 246, 0.4)","border-blue-500/40":"rgba(59, 130, 246, 0.4)","border-blue-400/40":"rgba(96, 165, 250, 0.4)","border-blue-800/50":"rgba(30, 64, 175, 0.5)","border-amber-400/40":"rgba(251, 191, 36, 0.4)","border-amber-300/40":"rgba(252, 211, 77, 0.4)","border-amber-500/35":"rgba(245, 158, 11, 0.35)","border-amber-500/40":"rgba(245, 158, 11, 0.4)","border-amber-600/40":"rgba(217, 119, 6, 0.4)","border-amber-700/50":"rgba(180, 83, 9, 0.5)","border-yellow-500/35":"rgba(234, 179, 8, 0.35)","border-yellow-500/40":"rgba(234, 179, 8, 0.4)","border-cyan-500/40":"rgba(6, 182, 212, 0.4)","border-cyan-400/40":"rgba(34, 211, 238, 0.4)","border-emerald-500/40":"rgba(16, 185, 129, 0.4)","border-emerald-500/45":"rgba(16, 185, 129, 0.45)","border-emerald-600/40":"rgba(5, 150, 105, 0.4)","border-emerald-600/45":"rgba(5, 150, 105, 0.45)","border-rose-600/40":"rgba(225, 29, 72, 0.4)","border-slate-500/50":"rgba(100, 116, 139, 0.5)","border-slate-600/50":"rgba(71, 85, 105, 0.5)","border-zinc-500/50":"rgba(113, 113, 122, 0.5)","border-green-500/35":"rgba(34, 197, 94, 0.35)","border-pink-500/40":"rgba(236, 72, 153, 0.4)"};
+
+      const catalog = JSON.parse(document.getElementById('flyers-data').textContent);
+      const flyersById = Object.fromEntries(catalog.flyers.map((f) => [f.id, f]));
+      let theme = 'bold';
+
+      function hasClassic(href) {
+        const name = href.replace(/^\/marketing\//, '').replace(/^\/marketing\/classic\//, '');
+        return catalog.classicFiles.includes(name);
+      }
+
+      function resolveHref(flyer) {
+        if (theme === 'classic' && hasClassic(flyer.href)) {
+          const name = flyer.href.replace(/^\/marketing\//, '');
+          return '/marketing/classic/' + name;
+        }
+        return flyer.href;
+      }
+
+      function borderColor(token) {
+        return BORDER_COLORS[token] || 'rgba(255, 255, 255, 0.12)';
+      }
+
+      function renderPreview(flyer, href) {
+        const embedSrc = href + (href.includes('?') ? '&' : '?') + 'embed=1';
+        const tag = theme === 'classic' && hasClassic(flyer.href) ? 'Classic' : flyer.preview.tag;
+        return (
+          '<a class="snap" href="' + href + '" target="_blank" rel="noopener noreferrer" aria-label="Open ' + flyer.name + ' flyer">' +
+            '<div class="snap-inner" style="height:' + (scaledH + 24) + 'px">' +
+              '<div class="snap-frame" style="width:' + scaledW + 'px;height:' + scaledH + 'px">' +
+                '<iframe src="' + embedSrc + '" title="' + flyer.name + ' preview" loading="lazy" tabindex="-1" ' +
+                  'style="width:' + FLYER_WIDTH + 'px;height:' + FLYER_HEIGHT + 'px;transform:scale(' + SCALE + ');transform-origin:top left"></iframe>' +
+              '</div>' +
+              '<span class="snap-tag">' + tag + '</span>' +
+              '<span class="snap-hover"><span>Click to open full flyer</span></span>' +
+            '</div>' +
+          '</a>'
+        );
+      }
+
+      function renderCard(flyer) {
+        const href = resolveHref(flyer);
+        const classicOnly = theme === 'classic';
+        const hasClassicLayout = hasClassic(flyer.href);
+        const dim = classicOnly && !hasClassicLayout;
+        const themeLabel = classicOnly && hasClassicLayout ? 'Original styles' : 'Bold Navy';
+
+        let actions;
+        if (classicOnly && !hasClassicLayout) {
+          actions = '<span class="btn btn-disabled">Not available in original style</span>';
+        } else {
+          actions = '<a class="btn btn-primary" href="' + href + '" target="_blank" rel="noopener noreferrer">Open &amp; print ↗</a>';
+        }
+
+        const warn = classicOnly && !hasClassicLayout
+          ? '<p class="warn">Original layout not archived — Bold Navy only.</p>'
+          : '';
+
+        const tags = flyer.tags.map((t) => '<span class="tag">' + t + '</span>').join('');
+
+        return (
+          '<article class="card' + (dim ? ' dim' : '') + '" style="--card-border:' + borderColor(flyer.preview.border) + '">' +
+            renderPreview(flyer, href) +
+            '<div class="card-body">' +
+              '<div class="card-title-row">' +
+                '<h3 class="card-title">' + flyer.name + '</h3>' +
+                '<span class="pill">' + themeLabel + '</span>' +
+              '</div>' +
+              '<p class="card-desc">' + flyer.description + '</p>' +
+              warn +
+              '<div class="tags">' + tags + '</div>' +
+              '<div class="card-actions">' + actions + '</div>' +
+            '</div>' +
+          '</article>'
+        );
+      }
+
+      function flyersForAudience(audience) {
+        const all = catalog.flyers.filter((f) => f.audience === audience);
+        if (theme === 'classic') return all.filter((f) => hasClassic(f.href));
+        return all;
+      }
+
+      function classicCount() {
+        return catalog.flyers.filter((f) => hasClassic(f.href)).length;
+      }
+
+      function updateThemeNote() {
+        const note = document.getElementById('theme-note');
+        if (theme === 'classic') {
+          note.textContent = classicCount() + ' flyers use their earlier distinct layouts (neon, scholastic, quest board, etc.). Newer topics are Bold Navy until an original is added.';
+        } else {
+          note.textContent = 'Unified navy layout with sky accents — regenerated from npm run generate:bold-flyers.';
+        }
+      }
+
+      function renderGallery() {
+        const root = document.getElementById('gallery');
+        const parts = [];
+
+        const picks = catalog.bestPicks
+          .map((pick) => ({ ...pick, flyer: flyersById[pick.flyerId] }))
+          .filter((pick) => pick.flyer);
+
+        if (picks.length) {
+          parts.push(
+            '<section class="best-of" aria-labelledby="flyers-best-of">' +
+              '<h2 id="flyers-best-of">Best of flyers</h2>' +
+              '<p>Curated picks for general outreach, principals, and each product pillar.</p>' +
+              '<div class="best-grid">' +
+                picks.map((pick) =>
+                  '<div class="best-wrap">' +
+                    '<div class="pick-label">' + pick.label +
+                      '<p class="pick-note">' + pick.note + '</p>' +
+                    '</div>' +
+                    renderCard(pick.flyer) +
+                  '</div>'
+                ).join('') +
+              '</div>' +
+            '</section>'
+          );
+        }
+
+        for (const audience of catalog.audienceOrder) {
+          const flyers = flyersForAudience(audience);
+          if (!flyers.length) continue;
+          parts.push(
+            '<section aria-labelledby="flyers-' + audience + '">' +
+              '<div class="section-head">' +
+                '<h2 id="flyers-' + audience + '">' + catalog.audienceLabels[audience] + '</h2>' +
+                '<p>' + flyers.length + ' layout' + (flyers.length === 1 ? '' : 's') + '</p>' +
+              '</div>' +
+              '<div class="grid">' + flyers.map(renderCard).join('') + '</div>' +
+            '</section>'
+          );
+        }
+
+        root.innerHTML = parts.join('');
+        updateThemeNote();
+      }
+
+      document.querySelectorAll('[data-theme]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          theme = btn.getAttribute('data-theme');
+          document.querySelectorAll('[data-theme]').forEach((b) => {
+            b.setAttribute('aria-pressed', b.getAttribute('data-theme') === theme ? 'true' : 'false');
+          });
+          renderGallery();
+        });
+      });
+
+      renderGallery();
+    </script>
+  </body>
+</html>

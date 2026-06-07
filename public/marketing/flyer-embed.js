@@ -4,7 +4,11 @@
       typeof location !== 'undefined' &&
       location.pathname.indexOf('/marketing/classic/') !== -1;
 
-    if (!isClassic) {
+    var isGenerator =
+      typeof location !== 'undefined' &&
+      /flyer-private-school-(pillar-proposal|funding)\.html$/i.test(location.pathname);
+
+    if (!isClassic && !isGenerator) {
       var bold = document.createElement('link');
       bold.rel = 'stylesheet';
       bold.href = '/marketing/flyer-bold-theme.css';

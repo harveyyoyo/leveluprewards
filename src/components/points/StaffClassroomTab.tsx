@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useDeferredValue, useEffect, useMemo } from 'react';
 import { LayoutGrid } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -15,6 +14,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isParentPortalOn } from '@/lib/productPillars';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
+import { ClassroomLaunchMonitorButton } from '@/components/classroom/ClassroomLaunchMonitorButton';
 import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,14 +23,7 @@ import type { Category, Class, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import type { StaffPointsTabVariant } from '@/components/points/StaffPointsTab';
 import { ClassroomTabLayout } from '@/components/points/ClassroomTabLayout';
-
-const BehaviorTimelinePanel = dynamic(
-  () =>
-    import('@/components/classroom/BehaviorTimelinePanel').then((m) => ({
-      default: m.BehaviorTimelinePanel,
-    })),
-  { ssr: false, loading: () => null },
-);
+import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePanel';
 
 const CLASSROOM_SECTION_CARD =
   'w-full overflow-visible border-t-4 border-violet-500 bg-background shadow-md';
@@ -140,8 +133,17 @@ export function StaffClassroomTab({
   );
 
   const headerAction = useMemo(
-    () => <ClassroomManagementHelpWizard sections={sections} />,
-    [sections],
+    () => (
+      <div className="flex flex-wrap items-center gap-3">
+        <ClassroomManagementHelpWizard sections={sections} />
+        <ClassroomLaunchMonitorButton
+          schoolId={schoolId}
+          seatingScope={seatingScope}
+          classes={sortedClasses}
+        />
+      </div>
+    ),
+    [sections, schoolId, seatingScope, sortedClasses],
   );
 
   if (!classroomOn) {

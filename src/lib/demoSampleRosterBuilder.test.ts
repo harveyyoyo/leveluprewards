@@ -46,4 +46,40 @@ describe('buildBalancedDemoRoster', () => {
       expect(v).toBeLessThanOrEqual(25);
     }
   });
+
+  it('distributes categoryPoints when categoryNames provided', () => {
+    const categoryNames = ['Academics', 'Behavior', 'Attendance'];
+    const students = buildBalancedDemoRoster({
+      classes: CLASSES,
+      minStudentsPerClass: 5,
+      maxStudentsPerClass: 5,
+      firstNames: ['Avi'],
+      lastNames: ['Cohen'],
+      categoryNames,
+    });
+
+    for (const s of students) {
+      expect(s.categoryPoints).toBeDefined();
+      const catPoints = s.categoryPoints!;
+      const sum = Object.values(catPoints).reduce((a, b) => a + b, 0);
+      expect(sum).toBe(s.points);
+      for (const key of Object.keys(catPoints)) {
+        expect(categoryNames).toContain(key);
+      }
+    }
+  });
+
+  it('omits categoryPoints when categoryNames not provided', () => {
+    const students = buildBalancedDemoRoster({
+      classes: CLASSES,
+      minStudentsPerClass: 3,
+      maxStudentsPerClass: 3,
+      firstNames: ['Avi'],
+      lastNames: ['Cohen'],
+    });
+
+    for (const s of students) {
+      expect(s.categoryPoints).toBeUndefined();
+    }
+  });
 });

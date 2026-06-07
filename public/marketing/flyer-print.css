@@ -78,12 +78,12 @@ header .brand img,
 }
 
 @media screen {
-  html:not(.embed) {
+  html:not(.embed):not(.flyer-generator) {
     width: 100% !important;
     height: 100% !important;
     background: #0f172a !important; /* Premium dark background */
   }
-  html:not(.embed) body {
+  html:not(.embed):not(.flyer-generator) body {
     width: 100% !important;
     min-height: 100vh !important;
     background: transparent !important;
@@ -94,8 +94,8 @@ header .brand img,
     box-sizing: border-box !important;
     overflow-y: auto !important;
   }
-  html:not(.embed) .flyer,
-  html:not(.embed) article.flyer {
+  html:not(.embed):not(.flyer-generator) .flyer,
+  html:not(.embed):not(.flyer-generator) article.flyer {
     width: 8.5in !important;
     min-height: 11in !important;
     margin: 0 auto !important;

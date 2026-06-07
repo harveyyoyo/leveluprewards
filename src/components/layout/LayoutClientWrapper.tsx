@@ -441,6 +441,7 @@ function LayoutClientWrapperInner({
                 >
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
                     {shouldRenderGlobalHeader &&
+                        !isFullscreenSpecialPage &&
                         (useKioskHoverHeader ? (
                             <HoverRevealHeaderShell
                                 visible={hoverGlobalHeaderVisible}

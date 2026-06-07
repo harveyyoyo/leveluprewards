@@ -2,12 +2,25 @@
 
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronDown, GraduationCap, LayoutGrid, Monitor, Palette, PanelTop } from 'lucide-react';
+import {
+  Award,
+  ChevronDown,
+  GraduationCap,
+  Hash,
+  Monitor,
+  Palette,
+  PanelTop,
+  Sparkles,
+  Volume2,
+  VolumeX,
+  Zap,
+} from 'lucide-react';
 import {
   CLASSROOM_DESIGNS,
   type ClassroomDesign,
 } from '@/components/points/classroomVisualTheme';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
@@ -15,14 +28,23 @@ import {
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Class } from '@/lib/types';
-import type { ClassroomCelebrationEffect, ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
-import { normalizeClassroomDesign } from '@/lib/classroomSeatingChart';
+import type {
+  ClassroomCelebrationEffect,
+  ClassroomMonitorMenuTab,
+  ClassroomSeatingPrefs,
+} from '@/lib/classroomSeatingChart';
+import {
+  MONITOR_MENU_TAB_LABELS,
+  MONITOR_MENU_TAB_ORDER,
+  normalizeClassroomDesign,
+  normalizeMonitorMenuTabs,
+} from '@/lib/classroomSeatingChart';
 import { cn } from '@/lib/utils';
 
 const MONITOR_POPOVER_Z = 'z-[500]';
 
 const CELEBRATION_LABELS: Record<ClassroomCelebrationEffect, string> = {
-  flash: 'Simple flash',
+  flash: 'Flash',
   none: 'None',
   sparkles: 'Sparkles',
   confetti: 'Confetti',
@@ -102,6 +124,96 @@ function MonitorCategoryPopover({
   );
 }
 
+function ClassroomMonitorToolbarOptionsMenu({
+  design,
+  prefs,
+  isFullscreen,
+  rewardsPillarOn,
+  onChange,
+}: {
+  design: ClassroomDesign;
+  prefs: ClassroomSeatingPrefs;
+  isFullscreen: boolean;
+  rewardsPillarOn: boolean;
+  onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
+}) {
+  const menus = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
+
+  const patchMenu = (key: ClassroomMonitorMenuTab, visible: boolean) => {
+    onChange({
+      monitorMenuTabs: {
+        ...menus,
+        [key]: visible,
+      },
+    });
+  };
+
+  return (
+    <MonitorCategoryPopover
+      design={design}
+      isFullscreen={isFullscreen}
+      icon={PanelTop}
+      label="Toolbar options"
+      contentClassName="w-64"
+    >
+      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Toolbar options</p>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold text-foreground">Toolbar buttons</p>
+          <label className="flex cursor-pointer items-start gap-2">
+            <Checkbox
+              className="mt-0.5"
+              checked={prefs.showRandomPicker}
+              onCheckedChange={(v) => onChange({ showRandomPicker: v === true })}
+            />
+            <span className="text-xs leading-snug">
+              <span className="font-semibold">Random picker</span> — button +{' '}
+              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">R</kbd>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2">
+            <Checkbox
+              className="mt-0.5"
+              checked={prefs.showClassAwardButton}
+              onCheckedChange={(v) => onChange({ showClassAwardButton: v === true })}
+            />
+            <span className="text-xs leading-snug">
+              <span className="font-semibold">Class +N award</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-2">
+            <Checkbox
+              className="mt-0.5"
+              checked={prefs.showBurstAward}
+              onCheckedChange={(v) => onChange({ showBurstAward: v === true })}
+            />
+            <span className="text-xs leading-snug">
+              <span className="font-semibold">Burst award</span>
+            </span>
+          </label>
+        </div>
+
+        <div className="space-y-2 border-t border-border/40 pt-3">
+          <p className="text-[11px] font-bold text-foreground">Toolbar menus</p>
+          <p className="text-[10px] text-muted-foreground">
+            Chart style, tap mode, sounds, etc. Layout is on the arrange room bar while editing seats.
+          </p>
+          {MONITOR_MENU_TAB_ORDER.map((key) => {
+            if (key === 'awardSource' && !rewardsPillarOn) return null;
+            return (
+              <label key={key} className="flex cursor-pointer items-center gap-2">
+                <Checkbox checked={menus[key]} onCheckedChange={(v) => patchMenu(key, v === true)} />
+                <span className="text-xs font-medium">{MONITOR_MENU_TAB_LABELS[key]}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </MonitorCategoryPopover>
+  );
+}
+
 function ClassroomMonitorClassMenu({
   design,
   classes,
@@ -147,163 +259,159 @@ function ClassroomMonitorClassMenu({
   );
 }
 
-function ClassroomMonitorDeskDisplayMenu({
+export function ClassroomMonitorQuickControls({
   design,
   prefs,
-  isFullscreen,
+  classes,
+  classId,
+  isFullscreen = false,
+  editMode = false,
+  rewardsPillarOn = false,
   onChange,
+  onClassChange,
+  awardActions,
+  trailing,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
-  isFullscreen: boolean;
+  classes: Class[];
+  classId: string;
+  isFullscreen?: boolean;
+  editMode?: boolean;
+  rewardsPillarOn?: boolean;
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
+  onClassChange?: (classId: string) => void;
+  /** Random / class / burst — left-aligned action buttons, distinct from setting menus. */
+  awardActions?: ReactNode;
+  /** Far-right toolbar slot (embedded activity strip). */
+  trailing?: ReactNode;
 }) {
-  return (
-    <MonitorCategoryPopover
-      design={design}
-      isFullscreen={isFullscreen}
-      icon={Monitor}
-      label="Desk display"
-      contentClassName="w-72"
-    >
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Desk display</p>
-      <div className="space-y-2">
-        <label className="flex cursor-pointer items-start gap-2">
-          <Checkbox
-            className="mt-0.5"
-            checked={prefs.showPointBalances}
-            onCheckedChange={(v) => onChange({ showPointBalances: v === true })}
-          />
-          <span className="text-xs leading-snug">
-            <span className="font-semibold">Point balances</span> — current total on each desk.
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2">
-          <Checkbox
-            className="mt-0.5"
-            checked={prefs.showSessionTotals}
-            onCheckedChange={(v) => onChange({ showSessionTotals: v === true })}
-          />
-          <span className="text-xs leading-snug">
-            <span className="font-semibold">Session badges</span> — session points and last award label.
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2">
-          <Checkbox
-            className="mt-0.5"
-            checked={prefs.showLastName}
-            onCheckedChange={(v) => onChange({ showLastName: v === true })}
-          />
-          <span className="text-xs leading-snug">
-            <span className="font-semibold">Last names</span> — append surname after each desk label.
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2">
-          <Checkbox
-            className="mt-0.5"
-            checked={prefs.showStudentEmoji}
-            onCheckedChange={(v) => onChange({ showStudentEmoji: v === true })}
-          />
-          <span className="text-xs leading-snug">
-            <span className="font-semibold">Student emoji</span> — sticker or theme emoji on avatars.
-          </span>
-        </label>
-      </div>
-    </MonitorCategoryPopover>
-  );
-}
-
-function ClassroomMonitorToolbarOptionsMenu({
-  design,
-  prefs,
-  isFullscreen,
-  rewardsPillarOn,
-  onChange,
-}: {
-  design: ClassroomDesign;
-  prefs: ClassroomSeatingPrefs;
-  isFullscreen: boolean;
-  rewardsPillarOn: boolean;
-  onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
-}) {
+  const activeDesign = normalizeClassroomDesign(prefs.design);
+  const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
   const flyUpValue = !prefs.showKioskFlyUp ? 'off' : prefs.kioskFlyUpSize;
 
+  if (!isFullscreen || editMode) return null;
+
   return (
-    <MonitorCategoryPopover
-      design={design}
-      isFullscreen={isFullscreen}
-      icon={PanelTop}
-      label="Toolbar options"
-      contentClassName="w-[min(100vw-2rem,22rem)] max-h-[min(70vh,520px)] overflow-y-auto"
-    >
-      <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">Toolbar options</p>
+    <div className="flex w-full min-w-0 flex-wrap items-start gap-1.5 sm:items-center sm:gap-2">
+      {awardActions}
 
-      <div className="space-y-4">
-        {rewardsPillarOn ? (
-          <div className="space-y-2">
-            <p className="text-[11px] font-bold text-foreground">Award source</p>
-            <RadioGroup
-              value={prefs.awardSource}
-              onValueChange={(v) => {
-                if (v === 'local' || v === 'categories') onChange({ awardSource: v });
-              }}
-              className="gap-2"
-            >
-              <label className="flex cursor-pointer items-start gap-2">
-                <RadioGroupItem value="local" className="mt-0.5" aria-label="Local rewards" />
-                <span className="text-xs leading-snug">
-                  <span className="font-semibold">Local rewards</span> — classroom quick awards saved to classroom
-                  balance.
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2">
-                <RadioGroupItem value="categories" className="mt-0.5" aria-label="Reward categories" />
-                <span className="text-xs leading-snug">
-                  <span className="font-semibold">Reward categories</span> — Points tab categories sync to rewards
-                  balance.
-                </span>
-              </label>
-            </RadioGroup>
+      {awardActions ? (
+        <span className="mx-0.5 hidden h-6 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
+      ) : null}
+
+      <ClassroomMonitorToolbarOptionsMenu
+        design={design}
+        prefs={prefs}
+        isFullscreen={isFullscreen}
+        rewardsPillarOn={rewardsPillarOn}
+        onChange={onChange}
+      />
+
+      {onClassChange ? (
+        <ClassroomMonitorClassMenu
+          design={design}
+          classes={classes}
+          classId={classId}
+          isFullscreen={isFullscreen}
+          onChange={onClassChange}
+        />
+      ) : null}
+
+      {tabs.style ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Palette}
+          label="Chart style"
+          contentClassName="w-56"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Chart style</p>
+          <div className="space-y-1">
+            {CLASSROOM_DESIGNS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                className={cn(
+                  'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
+                  activeDesign === d.id && 'bg-primary/10 ring-1 ring-primary/30',
+                )}
+                onClick={() => onChange({ design: d.id })}
+              >
+                <span className="font-semibold">{d.label}</span>
+                <span className="block text-xs text-muted-foreground">{d.description}</span>
+              </button>
+            ))}
           </div>
-        ) : null}
+        </MonitorCategoryPopover>
+      ) : null}
 
-        <div className={cn('space-y-2', rewardsPillarOn && 'border-t border-border/40 pt-3')}>
-          <p className="text-[11px] font-bold text-foreground">Show on toolbar</p>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showRandomPicker}
-              onCheckedChange={(v) => onChange({ showRandomPicker: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Random picker</span> — Random button and{' '}
-              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">R</kbd> shortcut.
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showClassAwardButton}
-              onCheckedChange={(v) => onChange({ showClassAwardButton: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Entire class award</span> — Class +N button for everyone on the chart.
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showBurstAward}
-              onCheckedChange={(v) => onChange({ showBurstAward: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Burst award</span> — select several students, then award once.
-            </span>
-          </label>
-        </div>
+      {tabs.deskDisplay ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Monitor}
+          label="Desk display"
+          contentClassName="w-72"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Desk display</p>
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showPointBalances}
+                onCheckedChange={(v) => onChange({ showPointBalances: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">
+                  {rewardsPillarOn ? 'Point balances' : 'Classroom balances'}
+                </span>{' '}
+                — {rewardsPillarOn ? 'rewards total' : 'classroom points total'} on each desk.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showSessionTotals}
+                onCheckedChange={(v) => onChange({ showSessionTotals: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Session badges</span> — session points and last award label.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showLastName}
+                onCheckedChange={(v) => onChange({ showLastName: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Last names</span> — append surname after each desk label.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showStudentEmoji}
+                onCheckedChange={(v) => onChange({ showStudentEmoji: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Student emoji</span> — sticker or theme emoji on avatars.
+              </span>
+            </label>
+          </div>
+        </MonitorCategoryPopover>
+      ) : null}
 
-        <div className="space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[11px] font-bold text-foreground">Tap mode</p>
+      {tabs.tapMode ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Zap}
+          label="Tap mode"
+          contentClassName="w-64"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Tap mode</p>
           <RadioGroup
             value={prefs.instantTap ? 'quick' : 'menu'}
             onValueChange={(v) => {
@@ -324,10 +432,52 @@ function ClassroomMonitorToolbarOptionsMenu({
               </span>
             </label>
           </RadioGroup>
-        </div>
+        </MonitorCategoryPopover>
+      ) : null}
 
-        <div className="space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[11px] font-bold text-foreground">Kiosk fly-up</p>
+      {tabs.awardSource && rewardsPillarOn ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Award}
+          label="Award source"
+          contentClassName="w-72"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Award source</p>
+          <RadioGroup
+            value={prefs.awardSource}
+            onValueChange={(v) => {
+              if (v === 'local' || v === 'categories') onChange({ awardSource: v });
+            }}
+            className="gap-2"
+          >
+            <label className="flex cursor-pointer items-start gap-2">
+              <RadioGroupItem value="local" className="mt-0.5" aria-label="Local rewards" />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Local rewards</span> — classroom quick awards saved to classroom
+                balance.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <RadioGroupItem value="categories" className="mt-0.5" aria-label="Reward categories" />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Reward categories</span> — Points tab categories sync to rewards
+                balance.
+              </span>
+            </label>
+          </RadioGroup>
+        </MonitorCategoryPopover>
+      ) : null}
+
+      {tabs.effects ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Sparkles}
+          label="Effects"
+          contentClassName="w-64"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Kiosk fly-up</p>
           <RadioGroup
             value={flyUpValue}
             onValueChange={(v) => {
@@ -340,7 +490,7 @@ function ClassroomMonitorToolbarOptionsMenu({
                 kioskFlyUpSize: v as ClassroomSeatingPrefs['kioskFlyUpSize'],
               });
             }}
-            className="gap-2"
+            className="mb-4 gap-1"
           >
             {(['off', 'small', 'medium', 'large'] as const).map((size) => (
               <label key={size} className="flex cursor-pointer items-center gap-2">
@@ -351,14 +501,12 @@ function ClassroomMonitorToolbarOptionsMenu({
               </label>
             ))}
           </RadioGroup>
-        </div>
 
-        <div className="space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[11px] font-bold text-foreground">Celebration</p>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Celebration</p>
           <RadioGroup
             value={prefs.celebrationEffect}
             onValueChange={(v) => onChange({ celebrationEffect: v as ClassroomCelebrationEffect })}
-            className="gap-2"
+            className="grid grid-cols-2 gap-1"
           >
             {(Object.keys(CELEBRATION_LABELS) as ClassroomCelebrationEffect[]).map((key) => (
               <label key={key} className="flex cursor-pointer items-center gap-2">
@@ -367,109 +515,54 @@ function ClassroomMonitorToolbarOptionsMenu({
               </label>
             ))}
           </RadioGroup>
-        </div>
-      </div>
-    </MonitorCategoryPopover>
-  );
-}
-
-export function ClassroomMonitorQuickControls({
-  design,
-  prefs,
-  classes,
-  classId,
-  isFullscreen = false,
-  rewardsPillarOn = false,
-  onChange,
-  onClassChange,
-}: {
-  design: ClassroomDesign;
-  prefs: ClassroomSeatingPrefs;
-  classes: Class[];
-  classId: string;
-  isFullscreen?: boolean;
-  rewardsPillarOn?: boolean;
-  onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
-  onClassChange?: (classId: string) => void;
-}) {
-  const activeDesign = normalizeClassroomDesign(prefs.design);
-
-  if (!isFullscreen) return null;
-
-  return (
-    <>
-      {onClassChange ? (
-        <ClassroomMonitorClassMenu
-          design={design}
-          classes={classes}
-          classId={classId}
-          isFullscreen={isFullscreen}
-          onChange={onClassChange}
-        />
+        </MonitorCategoryPopover>
       ) : null}
 
-      <Popover modal>
-        <PopoverTrigger asChild>
-          <MonitorCategoryMenuTrigger design={design} isFullscreen={isFullscreen} icon={Palette} label="Chart style" />
-        </PopoverTrigger>
-        <PopoverContent className={cn(MONITOR_POPOVER_Z, 'w-56 rounded-xl p-2')} align="start" collisionPadding={12}>
-          <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">Chart style</p>
-          <div className="space-y-1">
-            {CLASSROOM_DESIGNS.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                className={cn(
-                  'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
-                  activeDesign === d.id && 'bg-primary/10 ring-1 ring-primary/30',
-                )}
-                onClick={() => onChange({ design: d.id })}
-              >
-                <span className="font-semibold">{d.label}</span>
-                <span className="block text-xs text-muted-foreground">{d.description}</span>
-              </button>
-            ))}
-          </div>
-        </PopoverContent>
-      </Popover>
+      {tabs.defaults ? (
+        <MonitorCategoryPopover
+          design={design}
+          isFullscreen={isFullscreen}
+          icon={Hash}
+          label="Default points"
+          contentClassName="w-48"
+        >
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Default points</p>
+          <Input
+            type="number"
+            min={1}
+            className="h-9 rounded-lg font-bold"
+            value={prefs.defaultPoints}
+            onChange={(e) =>
+              onChange({ defaultPoints: Math.max(1, Number(e.target.value) || prefs.defaultPoints) })
+            }
+          />
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            Used for quick tap, class award, and burst awards.
+          </p>
+        </MonitorCategoryPopover>
+      ) : null}
 
-      <Popover modal>
-        <PopoverTrigger asChild>
-          <MonitorCategoryMenuTrigger design={design} isFullscreen={isFullscreen} icon={LayoutGrid} label="Layout" />
-        </PopoverTrigger>
-        <PopoverContent className={cn(MONITOR_POPOVER_Z, 'w-56 rounded-xl p-3')} align="start" collisionPadding={12}>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Layout</p>
-          <RadioGroup
-            value={prefs.frontAtBottom ? 'bottom' : 'top'}
-            onValueChange={(v) => onChange({ frontAtBottom: v === 'bottom' })}
-            className="gap-2"
-          >
-            <label className="flex cursor-pointer items-center gap-2">
-              <RadioGroupItem value="top" aria-label="Teacher desk at top" />
-              <span className="text-xs font-medium">Teacher desk at top</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2">
-              <RadioGroupItem value="bottom" aria-label="Teacher desk at bottom" />
-              <span className="text-xs font-medium">Teacher desk at bottom</span>
-            </label>
-          </RadioGroup>
-        </PopoverContent>
-      </Popover>
+      {tabs.sounds ? (
+        <button
+          type="button"
+          className={cn(
+            monitorSelectTriggerClass(design, isFullscreen),
+            'inline-flex items-center justify-center px-2 py-2 sm:px-2.5',
+            prefs.awardSounds === false && 'opacity-60',
+          )}
+          aria-label={prefs.awardSounds !== false ? 'Turn award sounds off' : 'Turn award sounds on'}
+          title={prefs.awardSounds !== false ? 'Award sounds on — click to mute' : 'Award sounds off — click to unmute'}
+          onClick={() => onChange({ awardSounds: prefs.awardSounds === false })}
+        >
+          {prefs.awardSounds !== false ? (
+            <Volume2 className="h-4 w-4 shrink-0" aria-hidden />
+          ) : (
+            <VolumeX className="h-4 w-4 shrink-0" aria-hidden />
+          )}
+        </button>
+      ) : null}
 
-      <ClassroomMonitorDeskDisplayMenu
-        design={design}
-        prefs={prefs}
-        isFullscreen={isFullscreen}
-        onChange={onChange}
-      />
-
-      <ClassroomMonitorToolbarOptionsMenu
-        design={design}
-        prefs={prefs}
-        isFullscreen={isFullscreen}
-        rewardsPillarOn={rewardsPillarOn}
-        onChange={onChange}
-      />
-    </>
+      {trailing ? <div className="ml-auto flex shrink-0 items-center">{trailing}</div> : null}
+    </div>
   );
 }

@@ -146,6 +146,8 @@ export function isHallOfFamePointsSort(sortBy: string): boolean {
   return compact === 'points' || compact === 'lifetimepoints';
 }
 
+export const HALL_OF_FAME_AUTOSCROLL_OPENING_PAUSE_MS = 4000;
+
 export function getHallOfFameStageSizeStyle(portrait: boolean): {
   width: string;
   height: string;
@@ -242,7 +244,7 @@ export function parseHallOfFameSearchParams(
     sortBy: settingsDefaults.hallOfFameSortBy ?? 'lifetimePoints',
     scope: settingsDefaults.hallOfFameScope ?? 'all',
     limit: settingsDefaults.hallOfFameLimit ?? 50,
-    podiumSize: settingsDefaults.hallOfFamePodiumSize ?? 3,
+    podiumSize: clampHallOfFamePodiumSize(settingsDefaults.hallOfFamePodiumSize),
     autoScroll: settingsDefaults.hallOfFameAutoScroll ?? false,
     gridLayout: settingsDefaults.hallOfFameGridLayout ?? true,
     gridColumns: clampHallOfFameGridColumns(settingsDefaults.hallOfFameGridColumns),

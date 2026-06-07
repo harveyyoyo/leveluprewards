@@ -77,14 +77,6 @@ export function BehaviorTimelinePanel({
       if (!opts?.silent) setIsLoading(true);
       setError(null);
 
-      if (!opts?.afterProvision && user && isAllowedDeveloperGoogleUser(user)) {
-        try {
-          await ensureDeveloperSchoolAccess(schoolId);
-        } catch {
-          /* callable may be unavailable; still try fetch */
-        }
-      }
-
       let result = await fetchBehaviorNotes(schoolId, firestore);
       if (
         result.error &&

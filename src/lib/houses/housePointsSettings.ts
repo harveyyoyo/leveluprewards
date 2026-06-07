@@ -28,7 +28,9 @@ export function applyHouseWizardSettings(
     houseHallOfFamePodiumSize: draft.hallOfFamePodiumSize,
     houseHallOfFameLimit: 50,
     houseHallOfFameGridLayout: true,
+    houseHallOfFameGridColumns: 3,
     houseHallOfFameAutoScroll: false,
+    houseHallOfFameLayout: 'landscape',
   });
 }
 

@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en" class="flyer-generator">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LevelUp EDU — Government &amp; State Funding Sources</title>
+    <script src="/marketing/flyer-embed.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#f0fdf4',
+                100: '#dcfce7',
+                500: '#059669',
+                600: '#047857',
+                700: '#064e3b',
+                gold: '#d97706',
+                goldLight: '#fef3c7',
+              },
+            },
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --flyer-page-width: 8.5in;
+        --flyer-page-height: 11in;
+        --flyer-page-margin: 0.25in;
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+      }
+
+      html.embed .no-print {
+        display: none !important;
+      }
+
+      #flyer-page {
+        color: #1e293b;
+      }
+
+      .print-sheet {
+        box-sizing: border-box;
+        width: var(--flyer-page-width);
+        height: var(--flyer-page-height);
+        min-height: var(--flyer-page-height);
+        max-height: var(--flyer-page-height);
+        padding: var(--flyer-page-margin);
+        display: flex;
+        flex-direction: column;
+        font-size: 13pt;
+        line-height: 1.45;
+        background: #ffffff;
+        overflow: hidden;
+      }
+
+      .print-sheet-body {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .print-fill-block {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      .print-sheet .border-b-2 {
+        padding-bottom: 0.18in !important;
+        margin-bottom: 0.2in !important;
+      }
+
+      .print-sheet .mb-6 {
+        margin-bottom: 0.18in !important;
+      }
+
+      .print-sheet .mb-4 {
+        margin-bottom: 0.14in !important;
+      }
+
+      .print-sheet .p-3 {
+        padding: 0.14in !important;
+      }
+
+      .print-sheet .rounded-xl {
+        border-radius: 0.1in !important;
+      }
+
+      .print-sheet .w-8,
+      .print-sheet .h-8 {
+        width: 0.55in !important;
+        height: 0.55in !important;
+      }
+
+      .print-sheet h2,
+      .print-sheet .text-2xl {
+        font-size: 24pt !important;
+        line-height: 1.1 !important;
+      }
+
+      .print-sheet h3 {
+        font-size: 18pt !important;
+      }
+
+      .print-sheet .text-base {
+        font-size: 14pt !important;
+      }
+
+      .print-sheet .text-sm,
+      .print-sheet .text-xs {
+        font-size: 12pt !important;
+      }
+
+      .print-sheet .text-\[10px\] {
+        font-size: 11pt !important;
+      }
+
+      .print-sheet p,
+      .print-sheet li {
+        line-height: 1.5 !important;
+      }
+
+      .print-sheet-footer {
+        margin-top: auto;
+        padding-top: 0.14in;
+        font-size: 11pt !important;
+        flex-shrink: 0;
+      }
+
+      .funding-card {
+        break-inside: avoid;
+      }
+
+      .print-sheet .funding-code-badge {
+        font-size: 10pt !important;
+        padding: 0.04in 0.07in !important;
+      }
+
+      .print-sheet .funding-card p {
+        font-size: 11pt !important;
+      }
+
+      .print-sheet .funding-card .funding-tag {
+        font-size: 9pt !important;
+      }
+
+      #funding-grid.funding-count-1 {
+        grid-template-columns: 1fr !important;
+      }
+
+      #funding-grid.funding-count-2,
+      #funding-grid.funding-count-4,
+      #funding-grid.funding-count-6 {
+        grid-template-columns: 1fr 1fr !important;
+      }
+
+      #funding-grid.funding-count-3,
+      #funding-grid.funding-count-5,
+      #funding-grid.funding-count-7 {
+        grid-template-columns: 1fr 1fr !important;
+      }
+
+      #funding-grid .funding-card.span-full {
+        grid-column: 1 / -1;
+      }
+
+      .print-sheet .md\:flex-row {
+        flex-direction: row !important;
+      }
+
+      .print-sheet .md\:items-center {
+        align-items: center !important;
+      }
+
+      .print-sheet .md\:mt-0 {
+        margin-top: 0 !important;
+      }
+
+      .print-sheet .md\:text-right {
+        text-align: right !important;
+      }
+
+      @media screen {
+        html.flyer-generator,
+        html.flyer-generator body {
+          width: 100% !important;
+          max-width: 100vw !important;
+          height: 100dvh !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          background: #f8fafc !important;
+          box-sizing: border-box !important;
+        }
+
+        html.flyer-generator body {
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        @media (min-width: 1024px) {
+          html.flyer-generator body {
+            flex-direction: row !important;
+          }
+
+          .funding-main {
+            flex: 1 1 auto;
+            min-width: 0;
+            height: 100dvh;
+            max-height: 100dvh;
+            overflow-x: hidden;
+            overflow-y: auto;
+          }
+        }
+
+        .control-sidebar {
+          position: sticky;
+          top: 0;
+          z-index: 40;
+          align-self: flex-start;
+          flex-shrink: 0;
+          max-height: 100dvh;
+          overflow: hidden;
+        }
+
+        @media (min-width: 1024px) {
+          .control-sidebar {
+            height: 100dvh;
+            max-height: 100dvh;
+          }
+        }
+
+        .control-sidebar .sidebar-section {
+          margin-bottom: 0.65rem;
+        }
+
+        .control-sidebar .sidebar-section:last-child {
+          margin-bottom: 0;
+        }
+
+        .control-sidebar .sidebar-label {
+          margin-bottom: 0.25rem;
+          font-size: 0.65rem;
+          line-height: 1.2;
+        }
+
+        .control-sidebar .sidebar-card {
+          padding: 0.45rem 0.55rem;
+          border-radius: 0.5rem;
+        }
+
+        .control-sidebar .sidebar-tier {
+          padding: 0.4rem 0.5rem;
+          border-radius: 0.5rem;
+        }
+
+        .control-sidebar .sidebar-tier + .sidebar-tier {
+          margin-top: 0.35rem;
+        }
+
+        .control-sidebar .sidebar-hint {
+          margin-top: 0.25rem;
+          font-size: 0.625rem;
+          line-height: 1.3;
+        }
+
+        .control-sidebar .sidebar-print {
+          margin-top: 0.65rem;
+          padding-bottom: 0;
+        }
+
+        .funding-main {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          flex: 1 1 auto;
+          min-width: 0;
+          min-height: 0;
+          padding: 1rem;
+          background: #e2e8f0;
+          overflow-x: hidden;
+          overflow-y: auto;
+        }
+
+        #flyer-page {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 100%;
+          max-width: var(--flyer-page-width);
+        }
+
+        .print-sheet {
+          flex-shrink: 0;
+          border: 1px solid #cbd5e1;
+          border-radius: 2px;
+          box-shadow:
+            0 1px 3px rgba(15, 23, 42, 0.08),
+            0 8px 24px rgba(15, 23, 42, 0.1);
+        }
+      }
+
+      @media print {
+        @page {
+          size: letter portrait;
+          margin: var(--flyer-page-margin);
+        }
+
+        .no-print {
+          display: none !important;
+        }
+
+        html,
+        body {
+          width: 8.5in !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+
+        body {
+          display: block !important;
+          min-height: 0 !important;
+        }
+
+        .funding-main {
+          display: block !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          height: auto !important;
+          overflow: visible !important;
+          background: #ffffff !important;
+        }
+
+        #flyer-page {
+          display: block !important;
+          width: 100% !important;
+          max-width: none !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+
+        .print-sheet {
+          width: 100% !important;
+          height: 10.5in !important;
+          min-height: 10.5in !important;
+          max-height: 10.5in !important;
+          padding: 0 !important;
+          border: none !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          overflow: hidden !important;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="flex flex-col lg:flex-row">
+    <div
+      class="control-sidebar no-print w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 flex flex-col shrink-0 overflow-y-auto"
+    >
+      <div class="flex-1 min-h-0">
+        <div class="flex items-center space-x-2.5 mb-3">
+          <div class="bg-brand-500 text-white p-2 rounded-lg shadow-md shadow-brand-500/20">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2.5"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-lg font-black text-brand-700 tracking-tight leading-tight">LevelUp EDU</h1>
+            <p class="text-[11px] text-slate-500 leading-tight">Funding Guide Generator</p>
+          </div>
+        </div>
+
+        <div>
+          <div class="sidebar-section">
+            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >Prepared For</label
+            >
+            <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-lg">
+              <button
+                id="btn-prepared-school"
+                type="button"
+                onclick="setPreparedMode('school')"
+                class="py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50"
+              >
+                This School
+              </button>
+              <button
+                id="btn-prepared-generic"
+                type="button"
+                onclick="setPreparedMode('generic')"
+                class="py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800"
+              >
+                Generic
+              </button>
+            </div>
+            <p id="prepared-descriptor" class="sidebar-hint text-slate-500 italic">
+              Names the school on the flyer header.
+            </p>
+          </div>
+
+          <div id="school-name-panel" class="sidebar-section">
+            <label
+              for="input-school-name"
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >School Name</label
+            >
+            <input
+              type="text"
+              id="input-school-name"
+              value="St. Jude Academy"
+              class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+              placeholder="e.g. Grace Christian School"
+            />
+          </div>
+
+          <div class="sidebar-section">
+            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >Funding Sources</label
+            >
+            <div id="funding-source-checkboxes"></div>
+            <p class="sidebar-hint text-slate-500">Select at least one source to print.</p>
+          </div>
+
+          <div class="sidebar-section">
+            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >Quick Filters</label
+            >
+            <div class="grid grid-cols-3 gap-1.5">
+              <button
+                id="btn-filter-all"
+                onclick="setFundingFilter('all')"
+                class="py-1.5 text-[10px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50"
+              >
+                All
+              </button>
+              <button
+                id="btn-filter-federal"
+                onclick="setFundingFilter('federal')"
+                class="py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800 border border-transparent"
+              >
+                Federal
+              </button>
+              <button
+                id="btn-filter-state"
+                onclick="setFundingFilter('state')"
+                class="py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800 border border-transparent"
+              >
+                NYS
+              </button>
+            </div>
+          </div>
+
+          <div class="sidebar-section">
+            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >Flyer Display</label
+            >
+            <label
+              class="sidebar-card flex items-start gap-2 border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition"
+            >
+              <input
+                type="checkbox"
+                id="input-show-vendor"
+                checked
+                class="mt-0.5 text-brand-500 focus:ring-brand-500 rounded"
+              />
+              <div>
+                <p class="text-[11px] font-bold text-slate-800 leading-tight">NYC DOE vendor block</p>
+                <p id="vendor-sidebar-hint" class="sidebar-hint text-slate-500">Vendor code and company details.</p>
+              </div>
+            </label>
+            <label
+              class="sidebar-card flex items-start gap-2 border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition mt-2"
+            >
+              <input
+                type="checkbox"
+                id="input-show-doe-footer"
+                checked
+                class="mt-0.5 text-brand-500 focus:ring-brand-500 rounded"
+              />
+              <div>
+                <p class="text-[11px] font-bold text-slate-800 leading-tight">DOE approval footer</p>
+                <p class="sidebar-hint text-slate-500">Approved NYC Department of Education vendor line.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="no-print sidebar-print space-y-1.5 shrink-0">
+        <button
+          onclick="window.print()"
+          class="w-full bg-brand-500 text-white font-bold text-xs py-2 px-3 rounded-lg shadow-md hover:bg-brand-600 active:translate-y-0.5 transform transition duration-100 flex items-center justify-center space-x-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+            />
+          </svg>
+          <span>Print Funding Guide / Save PDF</span>
+        </button>
+        <p class="text-center text-[9px] text-slate-400 leading-tight">
+          Letter 8.5×11, Portrait, backgrounds on.
+        </p>
+      </div>
+    </div>
+
+    <div class="funding-main flex-1 min-h-0">
+      <div id="flyer-page" class="text-slate-800 relative transition-all duration-150">
+        <div class="print-sheet page-content flex flex-col">
+          <div class="print-sheet-body flex flex-col">
+            <div
+              class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-brand-500/15 pb-6 mb-4"
+            >
+              <div class="flex items-center space-x-4">
+                <div class="bg-brand-500 text-white p-3 rounded-xl print:bg-brand-500">
+                  <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2.5"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <span
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-gold/10 text-brand-gold uppercase tracking-wider"
+                  >
+                    State &amp; Federal Fund Eligible
+                  </span>
+                  <h2 class="text-2xl font-black text-brand-600 tracking-tight">LevelUp EDU</h2>
+                  <p class="text-xs text-slate-500 mt-0.5 font-medium">
+                    Funding guide for private &amp; nonpublic schools
+                  </p>
+                </div>
+              </div>
+              <div class="mt-4 md:mt-0 text-left md:text-right">
+                <p id="flyer-prepared-label" class="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
+                  Prepared for
+                </p>
+                <p id="flyer-school-name" class="text-base font-bold text-slate-800">St. Jude Academy</p>
+                <p class="text-xs text-slate-500" id="flyer-date-string">June 2026</p>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <h3 class="text-base font-extrabold text-slate-800 mb-2">Government &amp; State Funding Sources</h3>
+              <p id="flyer-intro" class="text-xs text-slate-600 leading-relaxed">
+                Private schools may offset platform licenses, onboarding, professional development, and kiosk hardware
+                through federal equitable services and state reimbursement programs. Direct your district or state
+                coordinator to the applicable funding codes below.
+              </p>
+            </div>
+
+            <div class="print-fill-block flex-1 mb-4">
+              <h4 class="text-[10px] font-bold text-brand-600 uppercase tracking-widest mb-3">
+                Applicable Funding Codes
+              </h4>
+              <div
+                id="funding-grid"
+                class="grid gap-3 flex-1 content-start"
+              ></div>
+            </div>
+
+            <div
+              id="vendor-box"
+              class="bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700 leading-relaxed mb-3"
+            >
+              <p class="font-bold text-brand-600 mb-0.5">NYC DOE Approved Vendor</p>
+              <p id="vendor-box-text"></p>
+            </div>
+          </div>
+
+          <div
+            class="print-sheet-footer border-t border-slate-100 pt-3 flex justify-between items-center text-[10px] text-slate-400 font-semibold tracking-wider"
+          >
+            <span>LevelUp EDU Funding Guide · <span id="flyer-footer-web"></span></span>
+            <span id="flyer-source-count">7 sources</span>
+          </div>
+
+          <div id="doe-footer" class="text-center text-[10px] text-slate-400 mt-1">
+            <p>Approved NYC Department of Education (DOE) vendor</p>
+            <p>© 2026 LevelUp EdTech Enterprises LLC</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const NYC_DOE_VENDOR_CODE = 'VS00109014';
+      const VENDOR_ENTITY = 'LevelUp EdTech Enterprises LLC';
+      const VENDOR_WEB = 'leveluprewards.app';
+
+      function getVendorBlockHtml() {
+        return (
+          'Vendor code <strong>' +
+          NYC_DOE_VENDOR_CODE +
+          '</strong> · ' +
+          VENDOR_ENTITY +
+          ' · <span class="font-semibold">' +
+          VENDOR_WEB +
+          '</span>'
+        );
+      }
+
+      const FUNDING_KEYS = [
+        'title4a',
+        'title2a',
+        'title1',
+        'equitable',
+        'nysMsr',
+        'nysNpse',
+        'microPurchase',
+      ];
+
+      const FUNDING_META = {
+        title4a: {
+          code: 'Title IV-A',
+          tag: 'Platform License',
+          category: 'federal',
+          desc: 'Applies platform license costs toward Student Support and Academic Enrichment (SSAE): safe schools, healthy students, and PBIS incentive platforms.',
+        },
+        title2a: {
+          code: 'Title II-A',
+          tag: 'Professional Development',
+          category: 'federal',
+          desc: 'Applies onboarding and teacher professional development ($950–$1,950, scales with enrollment) toward system integration workshops and school culture training.',
+        },
+        title1: {
+          code: 'Title I',
+          tag: 'School Improvement',
+          category: 'federal',
+          desc: 'Eligible under school improvement and parent engagement for building-wide behavior systems, attendance visibility, and family-facing progress.',
+        },
+        equitable: {
+          code: 'Equitable Services',
+          tag: 'Nonpublic Services',
+          category: 'federal',
+          desc: 'Private and nonpublic schools receive proportional federal Title IV-A services through the local district nonpublic coordinator—request an equitable services purchase order.',
+        },
+        nysMsr: {
+          code: 'NYS MSR',
+          tag: 'Attendance Reporting',
+          category: 'state',
+          desc: 'Mandated Services Reimbursement (PAR): automate pupil attendance reporting with class sign-in logs and kiosk check-ins eligible for state reimbursement.',
+        },
+        nysNpse: {
+          code: 'NYS NPSE',
+          tag: 'Safety Equipment',
+          category: 'state',
+          desc: 'Nonpublic Safety Equipment grants may cover arrival accountability kiosks, entry scanning hardware, and campus safety visibility tied to attendance workflows.',
+        },
+        microPurchase: {
+          code: 'Micro-Purchase',
+          tag: 'Local Procurement',
+          category: 'procurement',
+          spanFull: true,
+          desc: 'Sole-source and micro-purchase paths may apply for annual contracts under local procurement thresholds (often up to $25,000)—confirm with your business office.',
+        },
+      };
+
+      const CATEGORY_STYLES = {
+        federal: 'bg-blue-50 border-blue-100',
+        state: 'bg-amber-50 border-amber-100',
+        procurement: 'bg-slate-50 border-slate-200',
+      };
+
+      const CATEGORY_TAG_STYLES = {
+        federal: 'text-blue-700 bg-blue-100/80',
+        state: 'text-amber-800 bg-amber-100/80',
+        procurement: 'text-slate-600 bg-slate-100',
+      };
+
+      const inputSchoolName = document.getElementById('input-school-name');
+      const inputShowVendor = document.getElementById('input-show-vendor');
+      const inputShowDoeFooter = document.getElementById('input-show-doe-footer');
+      const flyerSchoolName = document.getElementById('flyer-school-name');
+      const flyerPreparedLabel = document.getElementById('flyer-prepared-label');
+      const flyerDateString = document.getElementById('flyer-date-string');
+      const flyerIntro = document.getElementById('flyer-intro');
+      const fundingGrid = document.getElementById('funding-grid');
+      const vendorBox = document.getElementById('vendor-box');
+      const vendorBoxText = document.getElementById('vendor-box-text');
+      const vendorSidebarHint = document.getElementById('vendor-sidebar-hint');
+      const doeFooter = document.getElementById('doe-footer');
+      const flyerSourceCount = document.getElementById('flyer-source-count');
+      const fundingSourceCheckboxes = document.getElementById('funding-source-checkboxes');
+      const preparedDescriptor = document.getElementById('prepared-descriptor');
+      const schoolNamePanel = document.getElementById('school-name-panel');
+
+      let preparedMode = 'school';
+      let fundingFilter = 'all';
+
+      const options = { year: 'numeric', month: 'long' };
+      flyerDateString.textContent = new Date().toLocaleDateString('en-US', options);
+      vendorBoxText.innerHTML = getVendorBlockHtml();
+      vendorSidebarHint.textContent = `Vendor code ${NYC_DOE_VENDOR_CODE} and company details.`;
+      document.getElementById('flyer-footer-web').textContent =
+        `${VENDOR_WEB} · NYC Vendor ${NYC_DOE_VENDOR_CODE}`;
+
+      function buildSidebarCheckboxes() {
+        fundingSourceCheckboxes.innerHTML = FUNDING_KEYS.map((key) => {
+          const meta = FUNDING_META[key];
+          const categoryLabel =
+            meta.category === 'federal' ? 'Federal' : meta.category === 'state' ? 'NYS' : 'Procurement';
+          return `
+            <label
+              class="sidebar-tier flex items-center border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition funding-source-label"
+              data-category="${meta.category}"
+            >
+              <input
+                type="checkbox"
+                id="input-funding-${key}"
+                value="${key}"
+                checked
+                class="funding-checkbox text-brand-500 focus:ring-brand-500 mr-2.5 shrink-0 rounded"
+              />
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold text-slate-800 leading-tight">${meta.code}</p>
+                <p class="text-[10px] text-slate-500 leading-tight">${categoryLabel} · ${meta.tag}</p>
+              </div>
+            </label>
+          `;
+        }).join('');
+
+        document.querySelectorAll('.funding-checkbox').forEach((checkbox) => {
+          checkbox.addEventListener('change', (event) => {
+            enforceAtLeastOneSource(event.target);
+            renderFlyer();
+          });
+        });
+      }
+
+      function getIncludedSources() {
+        return FUNDING_KEYS.filter((key) => document.getElementById(`input-funding-${key}`).checked);
+      }
+
+      function enforceAtLeastOneSource(changedInput) {
+        if (getIncludedSources().length > 0) {
+          return;
+        }
+        changedInput.checked = true;
+      }
+
+      function getIntroText(included, generic) {
+        const hasFederal = included.some((key) => FUNDING_META[key].category === 'federal');
+        const hasState = included.some((key) => FUNDING_META[key].category === 'state');
+        const hasProcurement = included.some((key) => FUNDING_META[key].category === 'procurement');
+
+        let scope = 'federal equitable services and state reimbursement programs';
+        if (hasFederal && !hasState) {
+          scope = 'federal equitable services programs';
+        } else if (hasState && !hasFederal) {
+          scope = 'New York State reimbursement and grant programs';
+        } else if (hasProcurement && !hasFederal && !hasState) {
+          scope = 'local procurement pathways';
+        }
+
+        const audience = generic
+          ? 'Private and nonpublic schools'
+          : 'Your campus';
+
+        return `${audience} may offset platform licenses, onboarding, professional development, and kiosk hardware through ${scope}. Direct your district or state coordinator to the applicable funding codes below.`;
+      }
+
+      function renderFundingGrid(included) {
+        const count = included.length;
+        fundingGrid.className = `grid gap-3 flex-1 content-start funding-count-${count}`;
+
+        const shouldSpanLast =
+          count > 1 && count % 2 === 1 && !included[included.length - 1].spanFull;
+
+        fundingGrid.innerHTML = included
+          .map((key, index) => {
+            const meta = FUNDING_META[key];
+            const cardStyle = CATEGORY_STYLES[meta.category] || CATEGORY_STYLES.procurement;
+            const tagStyle = CATEGORY_TAG_STYLES[meta.category] || CATEGORY_TAG_STYLES.procurement;
+            const spanFull =
+              meta.spanFull || (shouldSpanLast && index === included.length - 1);
+            const spanClass = spanFull ? ' span-full' : '';
+
+            return `
+              <div class="funding-card border rounded-xl p-3 ${cardStyle}${spanClass}">
+                <div class="flex items-start gap-2 mb-1.5">
+                  <span class="funding-code-badge shrink-0 font-bold text-slate-700 bg-white border border-slate-200 rounded-md">
+                    ${meta.code}
+                  </span>
+                  <span class="funding-tag text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${tagStyle}">
+                    ${meta.tag}
+                  </span>
+                </div>
+                <p class="text-slate-600 leading-snug">${meta.desc}</p>
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      function updatePreparedHeader(schoolName, generic) {
+        if (generic) {
+          flyerPreparedLabel.textContent = 'Prepared for';
+          flyerSchoolName.textContent = 'Private & Nonpublic Schools';
+          return;
+        }
+
+        flyerPreparedLabel.textContent = 'Funding Guide Prepared For';
+        flyerSchoolName.textContent = schoolName || 'Your Academy';
+      }
+
+      function setPreparedMode(mode) {
+        preparedMode = mode;
+
+        const btnSchool = document.getElementById('btn-prepared-school');
+        const btnGeneric = document.getElementById('btn-prepared-generic');
+        const activeBtn =
+          'py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50';
+        const inactiveBtn =
+          'py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800';
+
+        if (mode === 'school') {
+          btnSchool.className = activeBtn;
+          btnGeneric.className = inactiveBtn;
+          schoolNamePanel.classList.remove('hidden');
+          preparedDescriptor.textContent = 'Names the school on the flyer header.';
+        } else {
+          btnSchool.className = inactiveBtn;
+          btnGeneric.className = activeBtn;
+          schoolNamePanel.classList.add('hidden');
+          preparedDescriptor.textContent = 'Generic header for any private school audience.';
+        }
+
+        renderFlyer();
+      }
+
+      function setFundingFilter(filter) {
+        fundingFilter = filter;
+
+        const btnAll = document.getElementById('btn-filter-all');
+        const btnFederal = document.getElementById('btn-filter-federal');
+        const btnState = document.getElementById('btn-filter-state');
+        const activeBtn =
+          'py-1.5 text-[10px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50';
+        const inactiveBtn =
+          'py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800 border border-transparent';
+
+        btnAll.className = filter === 'all' ? activeBtn : inactiveBtn;
+        btnFederal.className = filter === 'federal' ? activeBtn : inactiveBtn;
+        btnState.className = filter === 'state' ? activeBtn : inactiveBtn;
+
+        FUNDING_KEYS.forEach((key) => {
+          const meta = FUNDING_META[key];
+          const checkbox = document.getElementById(`input-funding-${key}`);
+          let checked = false;
+
+          if (filter === 'all') {
+            checked = true;
+          } else if (filter === 'federal') {
+            checked = meta.category === 'federal' || meta.category === 'procurement';
+          } else if (filter === 'state') {
+            checked = meta.category === 'state' || meta.category === 'procurement';
+          }
+
+          checkbox.checked = checked;
+        });
+
+        if (getIncludedSources().length === 0) {
+          document.getElementById('input-funding-title4a').checked = true;
+        }
+
+        renderFlyer();
+      }
+
+      function renderFlyer() {
+        const schoolName = inputSchoolName.value || 'Your Academy';
+        const generic = preparedMode === 'generic';
+        const included = getIncludedSources();
+
+        updatePreparedHeader(schoolName, generic);
+        flyerIntro.textContent = getIntroText(included, generic);
+        renderFundingGrid(included);
+
+        vendorBox.classList.toggle('hidden', !inputShowVendor.checked);
+        doeFooter.classList.toggle('hidden', !inputShowDoeFooter.checked);
+
+        const countLabel = included.length === 1 ? '1 source' : `${included.length} sources`;
+        flyerSourceCount.textContent = countLabel;
+      }
+
+      inputSchoolName.addEventListener('input', renderFlyer);
+      inputSchoolName.addEventListener('change', renderFlyer);
+      inputShowVendor.addEventListener('change', renderFlyer);
+      inputShowDoeFooter.addEventListener('change', renderFlyer);
+
+      buildSidebarCheckboxes();
+      renderFlyer();
+    </script>
+  </body>
+</html>

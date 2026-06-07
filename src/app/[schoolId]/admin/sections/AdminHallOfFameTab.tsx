@@ -27,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { collection } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { buildHallOfFameHref, clampHallOfFamePodiumSize } from '@/lib/hallOfFameUrlConfig';
+import { buildHallOfFameHref, clampHallOfFamePodiumSize, clampHallOfFameGridColumns } from '@/lib/hallOfFameUrlConfig';
 import type { Class, Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -41,21 +41,21 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   const [scope, setScope] = useState<'all' | string>(settings.hallOfFameScope ?? 'all');
   const [limitCount, setLimitCount] = useState<number>(settings.hallOfFameLimit ?? 50);
   const [podiumSize, setPodiumSize] = useState<number>(
-    clampHallOfFamePodiumSize(settings.hallOfFamePodiumSize ?? 3),
+    clampHallOfFamePodiumSize(settings.hallOfFamePodiumSize),
   );
   const [autoScroll, setAutoScroll] = useState<boolean>(settings.hallOfFameAutoScroll ?? false);
   const [gridLayout, setGridLayout] = useState<boolean>(settings.hallOfFameGridLayout ?? true);
-  const [gridColumns, setGridColumns] = useState<number>(settings.hallOfFameGridColumns ?? 3);
+  const [gridColumns, setGridColumns] = useState<number>(clampHallOfFameGridColumns(settings.hallOfFameGridColumns));
   const [layout, setLayout] = useState<'landscape' | 'portrait'>(settings.hallOfFameLayout ?? 'landscape');
 
   useEffect(() => setRankType(settings.hallOfFameRankType ?? 'students'), [settings.hallOfFameRankType]);
   useEffect(() => setSortBy(settings.hallOfFameSortBy ?? 'lifetimePoints'), [settings.hallOfFameSortBy]);
   useEffect(() => setScope(settings.hallOfFameScope ?? 'all'), [settings.hallOfFameScope]);
   useEffect(() => setLimitCount(settings.hallOfFameLimit ?? 50), [settings.hallOfFameLimit]);
-  useEffect(() => setPodiumSize(clampHallOfFamePodiumSize(settings.hallOfFamePodiumSize ?? 3)), [settings.hallOfFamePodiumSize]);
+  useEffect(() => setPodiumSize(clampHallOfFamePodiumSize(settings.hallOfFamePodiumSize)), [settings.hallOfFamePodiumSize]);
   useEffect(() => setAutoScroll(settings.hallOfFameAutoScroll ?? false), [settings.hallOfFameAutoScroll]);
   useEffect(() => setGridLayout(settings.hallOfFameGridLayout ?? true), [settings.hallOfFameGridLayout]);
-  useEffect(() => setGridColumns(settings.hallOfFameGridColumns ?? 3), [settings.hallOfFameGridColumns]);
+  useEffect(() => setGridColumns(clampHallOfFameGridColumns(settings.hallOfFameGridColumns)), [settings.hallOfFameGridColumns]);
   useEffect(() => setLayout(settings.hallOfFameLayout ?? 'landscape'), [settings.hallOfFameLayout]);
 
   const classesQuery = useMemoFirebase(
@@ -318,7 +318,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
                     <Play className="w-4 h-4 text-emerald-500 fill-emerald-500/20" aria-hidden />
                     Auto-scroll Leaderboard
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Loop through entries on screen. Press Esc to stop.</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Loop through entries on screen. Holds at the top for a few seconds before scrolling. Press Esc to stop.</p>
                 </div>
                 <Switch
                   checked={autoScroll}

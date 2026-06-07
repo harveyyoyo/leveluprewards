@@ -3,7 +3,9 @@ import type { Class, Student } from './types';
 export type DemoRosterStudentSeed = Pick<
   Student,
   'id' | 'firstName' | 'lastName' | 'nfcId' | 'points' | 'classId'
->;
+> & {
+  categoryPoints?: Record<string, number>;
+};
 
 /** Deterministic integer in [min, max] from a numeric seed (stable across runs). */
 export function seededInt(seed: number, min: number, max: number): number {
@@ -29,7 +31,41 @@ export type BuildBalancedDemoRosterInput = {
   firstNames: readonly string[];
   lastNames: readonly string[];
   pickPoints?: (studentIndex: number, classIndex: number) => number;
+  /** Category names to distribute points across. If provided, points will be split among these categories. */
+  categoryNames?: readonly string[];
 };
+
+/**
+ * Distributes total points across categories deterministically using seeded randomness.
+ * Returns a categoryPoints map where values sum to totalPoints.
+ */
+function distributeCategoryPoints(
+  seed: number,
+  totalPoints: number,
+  categoryNames: readonly string[],
+): Record<string, number> {
+  if (categoryNames.length === 0 || totalPoints <= 0) return {};
+
+  const result: Record<string, number> = {};
+  let remaining = totalPoints;
+
+  for (let i = 0; i < categoryNames.length; i++) {
+    const catName = categoryNames[i];
+    if (i === categoryNames.length - 1) {
+      if (remaining > 0) result[catName] = remaining;
+    } else {
+      const weight = seededInt(seed + i * 7919, 5, 30);
+      const portion = Math.floor((totalPoints * weight) / 100);
+      const assigned = Math.min(portion, remaining);
+      if (assigned > 0) {
+        result[catName] = assigned;
+        remaining -= assigned;
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Builds a demo roster with balanced class sizes in the requested range.
@@ -40,6 +76,7 @@ export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): De
   const startId = input.startStudentId ?? 100100;
   let nextNumericId = startId;
   const students: DemoRosterStudentSeed[] = [];
+  const categoryNames = input.categoryNames ?? [];
 
   input.classes.forEach((cls, classIndex) => {
     const classSize = seededInt(
@@ -55,15 +92,21 @@ export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): De
           Math.floor(studentIndex / input.firstNames.length) % input.lastNames.length
         ] ?? 'Demo';
       const id = padDemoStudentId(nextNumericId++);
+      const points =
+        input.pickPoints?.(studentIndex, classIndex) ??
+        seededInt(studentIndex + classIndex * 17, 40, 2200);
+      const categoryPoints =
+        categoryNames.length > 0
+          ? distributeCategoryPoints(studentIndex + classIndex * 31, points, categoryNames)
+          : undefined;
       students.push({
         id,
         firstName,
         lastName,
         nfcId: id,
-        points:
-          input.pickPoints?.(studentIndex, classIndex) ??
-          seededInt(studentIndex + classIndex * 17, 40, 2200),
+        points,
         classId: cls.id,
+        ...(categoryPoints && { categoryPoints }),
       });
     }
   });

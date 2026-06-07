@@ -425,11 +425,21 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     id: 'private-school-pillar-proposal',
     name: 'Private School Pillar Proposal',
     description:
-      'Flyer-style one-pager for private-school proposals—pillar matrix, package tiers, and funding-aligned summary.',
+      'Interactive 2-page private-school proposal—pillar matrix, custom billing, and print-ready PDF.',
     href: '/marketing/flyer-private-school-pillar-proposal.html',
     audience: 'proposals',
     preview: { border: 'border-emerald-600/45', tag: 'Proposal' },
-    tags: ['Private schools', 'Pillars', 'Proposal', 'Funding'],
+    tags: ['Private schools', 'Pillars', 'Proposal', 'Pricing'],
+  },
+  {
+    id: 'private-school-funding',
+    name: 'Private School Funding Sources',
+    description:
+      'Government and state funding guide for private schools—Title I/II/IV, equitable services, MSR, NPSE, and procurement paths.',
+    href: '/marketing/flyer-private-school-funding.html',
+    audience: 'proposals',
+    preview: { border: 'border-amber-600/45', tag: 'Funding' },
+    tags: ['Private schools', 'Funding', 'Title IV', 'MSR', 'NPSE'],
   },
   {
     id: 'feature-houses',

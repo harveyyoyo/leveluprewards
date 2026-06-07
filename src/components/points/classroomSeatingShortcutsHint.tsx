@@ -1,5 +1,8 @@
 'use client';
 
+import type { ReactNode } from 'react';
+import { CLASSROOM_NOTE_SHORTCUTS } from '@/lib/classroom/classroomNoteShortcuts';
+import type { ClassroomDeductConfig } from '@/lib/classroom/classroomDeductSettings';
 import type { ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
 import { cn } from '@/lib/utils';
 
@@ -8,7 +11,7 @@ export type ClassroomSeatingShortcutsHintState = {
   editMode: boolean;
   attendanceEnabled: boolean;
   bathroomEnabled: boolean;
-  /** Live awards monitor — show toolbar copy with Arrange seats. */
+  classroomDeduct?: ClassroomDeductConfig;
   monitorDisplay?: boolean;
   /** @deprecated Use monitorDisplay */
   isFullscreen?: boolean;
@@ -22,70 +25,95 @@ function ShortcutKey({ children }: { children: string }) {
   );
 }
 
-function joinExtras(parts: string[]): string {
-  return parts.filter(Boolean).join(' · ');
-}
-
 export function ClassroomSeatingShortcutsHint({
   prefs,
   editMode,
   attendanceEnabled,
   bathroomEnabled,
+  classroomDeduct,
   monitorDisplay = false,
   isFullscreen = false,
 }: ClassroomSeatingShortcutsHintState) {
   const onMonitor = monitorDisplay || isFullscreen;
+  const deduct = classroomDeduct ?? { enabled: false, points: 0, label: 'Deduct', description: '' };
+
   if (editMode) {
     return (
-      <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-        Drag desks to match your room. Use the grid controls to add rows or columns, then tap{' '}
-        <span className="font-semibold text-foreground">Done arranging</span> when finished.
+      <p className={cn('text-muted-foreground', onMonitor ? 'text-xs' : 'text-sm')}>
+        Drag desks to rearrange. Use the grid controls below for rows and columns.
       </p>
     );
   }
 
-  const tapLine = prefs.instantTap
-    ? `Tap a student to award +${prefs.defaultPoints} points right away.`
-    : 'Tap a student to open the awards menu.';
+  const noteKeyLine = CLASSROOM_NOTE_SHORTCUTS.map(
+    (shortcut) => (
+      <span key={shortcut.key}>
+        <ShortcutKey>{shortcut.key.toUpperCase()}</ShortcutKey> {shortcut.hintLabel}
+      </span>
+    ),
+  ).reduce<ReactNode[]>((acc, item, index) => {
+    if (index > 0) acc.push(' · ');
+    acc.push(item);
+    return acc;
+  }, []);
 
-  const modeLine = prefs.instantTap
-    ? 'Use the Awards tab in the toolbar to switch to the full menu.'
-    : 'Use the Quick tab in the toolbar for one-tap quick awards.';
+  if (!onMonitor) {
+    const tapLine = prefs.instantTap
+      ? `Tap a student to award +${prefs.defaultPoints} points right away.`
+      : 'Tap a student to open the awards menu.';
 
-  const toolbarPlacement = 'next to Arrange seats in the toolbar';
-
-  const extras = joinExtras([
-    'Shift+click = note type picker',
-    prefs.showRandomPicker ? 'R = random student' : '',
-    prefs.showBurstAward ? 'Burst in toolbar' : '',
-    'Ctrl+U = undo last award',
-    attendanceEnabled ? 'Dot = attendance today' : '',
-    bathroomEnabled ? 'Alt+click = bathroom pass' : '',
-    'Arrange seats = edit layout',
-  ]);
+    return (
+      <div className="max-w-2xl space-y-2 text-sm leading-relaxed text-muted-foreground">
+        <p>
+          <span className="font-semibold text-foreground">Awards:</span> {tapLine}
+        </p>
+        <p>
+          Hold {noteKeyLine} and click a student for behavior notes. Shift+click opens the note type picker.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={cn(
-        'space-y-2 leading-relaxed text-muted-foreground',
-        onMonitor ? 'max-w-none text-xs' : 'max-w-2xl text-sm',
-      )}
-    >
+    <div className="space-y-1.5 text-[11px] leading-snug text-muted-foreground sm:text-xs">
       <p>
-        <span className="font-semibold text-foreground">
-          {prefs.instantTap ? 'Quick select' : 'Awards'}:
-        </span>{' '}
-        {tapLine} {modeLine}
+        <span className="font-semibold text-foreground">Awards:</span>{' '}
+        {prefs.instantTap
+          ? `Tap a desk = +${prefs.defaultPoints} points.`
+          : 'Tap a desk = awards menu (pick category or quick award).'}
+        {prefs.showRandomPicker ? (
+          <>
+            {' '}
+            <ShortcutKey>R</ShortcutKey> = random student.
+          </>
+        ) : null}{' '}
+        <ShortcutKey>Ctrl</ShortcutKey>+<ShortcutKey>U</ShortcutKey> = undo last award.
+        {prefs.showBurstAward ? ' Burst on the toolbar = select several desks, award once.' : null}
       </p>
       <p>
-        Hold <ShortcutKey>P</ShortcutKey>, <ShortcutKey>C</ShortcutKey>, <ShortcutKey>I</ShortcutKey>,{' '}
-        <ShortcutKey>W</ShortcutKey>, or <ShortcutKey>H</ShortcutKey> and click a student — each letter opens its
-        own note popup (positive, comment, incident, warning, highlight). Or use the{' '}
-        <span className="font-semibold text-foreground">Quick</span> /{' '}
-        <span className="font-semibold text-foreground">Awards</span> tabs {toolbarPlacement} and pick a note from
-        the menu.
+        <span className="font-semibold text-foreground">Behavior notes:</span> Hold {noteKeyLine} and click a
+        student. Shift+click = choose note type from a menu.
       </p>
-      {extras ? <p className="text-xs sm:text-sm">{extras}</p> : null}
+      {attendanceEnabled || bathroomEnabled || deduct.enabled ? (
+        <p>
+          <span className="font-semibold text-foreground">Other:</span>{' '}
+          {attendanceEnabled ? (
+            <>
+              Colored dot on each desk = class sign-in today (green present, amber late, red absent).{' '}
+            </>
+          ) : null}
+          {bathroomEnabled ? (
+            <>
+              <ShortcutKey>Alt</ShortcutKey>+click = bathroom pass timer.{' '}
+            </>
+          ) : null}
+          {deduct.enabled ? (
+            <>
+              <ShortcutKey>Ctrl</ShortcutKey>+click = deduct {deduct.points} pts ({deduct.label}).
+            </>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }

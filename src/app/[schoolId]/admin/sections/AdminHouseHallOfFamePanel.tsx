@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveAppAbsoluteUrl } from '@/lib/appUrl';
 import { buildHouseHallOfFameHref, isHouseStudentPointsRollupEnabled } from '@/lib/houses/housePointsSettings';
-import { clampHallOfFamePodiumSize } from '@/lib/hallOfFameUrlConfig';
+import { clampHallOfFamePodiumSize, clampHallOfFameGridColumns } from '@/lib/hallOfFameUrlConfig';
 
 export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
   const { settings, updateSettings } = useSettings();
@@ -30,21 +30,29 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
   );
   const [limitCount, setLimitCount] = useState(settings.houseHallOfFameLimit ?? settings.hallOfFameLimit ?? 50);
   const [podiumSize, setPodiumSize] = useState(
-    clampHallOfFamePodiumSize(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize ?? 3),
+    clampHallOfFamePodiumSize(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize),
   );
   const [autoScroll, setAutoScroll] = useState(settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll ?? false);
   const [gridLayout, setGridLayout] = useState(settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout ?? true);
-  const [gridColumns, setGridColumns] = useState(settings.houseHallOfFameGridColumns ?? settings.hallOfFameGridColumns ?? 3);
+  const [gridColumns, setGridColumns] = useState(
+    clampHallOfFameGridColumns(settings.houseHallOfFameGridColumns ?? settings.hallOfFameGridColumns),
+  );
   const [layout, setLayout] = useState<'landscape' | 'portrait'>(
     settings.houseHallOfFameLayout ?? settings.hallOfFameLayout ?? 'landscape',
   );
 
   useEffect(() => setSortBy(settings.houseHallOfFameSortBy ?? settings.hallOfFameSortBy ?? 'lifetimePoints'), [settings.houseHallOfFameSortBy, settings.hallOfFameSortBy]);
   useEffect(() => setLimitCount(settings.houseHallOfFameLimit ?? settings.hallOfFameLimit ?? 50), [settings.houseHallOfFameLimit, settings.hallOfFameLimit]);
-  useEffect(() => setPodiumSize(clampHallOfFamePodiumSize(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize ?? 3)), [settings.houseHallOfFamePodiumSize, settings.hallOfFamePodiumSize]);
+  useEffect(
+    () => setPodiumSize(clampHallOfFamePodiumSize(settings.houseHallOfFamePodiumSize ?? settings.hallOfFamePodiumSize)),
+    [settings.houseHallOfFamePodiumSize, settings.hallOfFamePodiumSize],
+  );
   useEffect(() => setAutoScroll(settings.houseHallOfFameAutoScroll ?? settings.hallOfFameAutoScroll ?? false), [settings.houseHallOfFameAutoScroll, settings.hallOfFameAutoScroll]);
   useEffect(() => setGridLayout(settings.houseHallOfFameGridLayout ?? settings.hallOfFameGridLayout ?? true), [settings.houseHallOfFameGridLayout, settings.hallOfFameGridLayout]);
-  useEffect(() => setGridColumns(settings.houseHallOfFameGridColumns ?? settings.hallOfFameGridColumns ?? 3), [settings.houseHallOfFameGridColumns, settings.hallOfFameGridColumns]);
+  useEffect(
+    () => setGridColumns(clampHallOfFameGridColumns(settings.houseHallOfFameGridColumns ?? settings.hallOfFameGridColumns)),
+    [settings.houseHallOfFameGridColumns, settings.hallOfFameGridColumns],
+  );
   useEffect(() => setLayout(settings.houseHallOfFameLayout ?? settings.hallOfFameLayout ?? 'landscape'), [settings.houseHallOfFameLayout, settings.hallOfFameLayout]);
 
   const studentRollup = isHouseStudentPointsRollupEnabled(settings);
@@ -221,7 +229,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
                   <Play className="w-4 h-4 text-emerald-500" aria-hidden />
                   Auto-scroll
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">Press Esc to stop on the display.</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Holds at the top for a few seconds before scrolling. Press Esc to stop on the display.</p>
               </div>
               <Switch
                 checked={autoScroll}

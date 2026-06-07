@@ -416,23 +416,37 @@ export function ClassroomSessionBadge({
 export function ClassroomTeacherDesk({
   design,
   frontAtBottom = false,
+  leadingAction,
+  trailingAction,
 }: {
   design: ClassroomDesign;
   frontAtBottom?: boolean;
+  /** Arrange seats + optional award buttons — left column. */
+  leadingAction?: ReactNode;
+  /** e.g. Undo — right column. */
+  trailingAction?: ReactNode;
 }) {
   const frontHint = frontAtBottom
     ? 'Front of class — bottom of screen'
     : 'Front of class — top of screen';
   const edgeMargin = frontAtBottom ? 'mt-2' : 'mb-2';
 
+  const wrap = (deskContent: ReactNode) => (
+    <div
+      className={cn(
+        'grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2 sm:gap-x-3',
+        edgeMargin,
+      )}
+    >
+      <div className="flex min-w-0 flex-wrap items-center justify-start gap-2">{leadingAction}</div>
+      <div className="justify-self-center px-1">{deskContent}</div>
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{trailingAction}</div>
+    </div>
+  );
+
   if (design === 'midnight') {
-    return (
-      <div
-        className={cn(
-          'flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-2.5 shadow-inner',
-          edgeMargin,
-        )}
-      >
+    return wrap(
+      <div className="flex items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.06] px-4 py-2.5 shadow-inner">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-600 shadow-lg shadow-indigo-500/30">
           <Monitor className="h-5 w-5 text-white" />
         </div>
@@ -440,33 +454,23 @@ export function ClassroomTeacherDesk({
           <p className="text-sm font-bold tracking-wide text-white">Teacher desk</p>
           <p className="text-[10px] text-white/50">{frontHint}</p>
         </div>
-      </div>
+      </div>,
     );
   }
   if (design === 'brutalist') {
-    return (
-      <div
-        className={cn(
-          'flex shrink-0 items-center justify-center gap-3 border-2 border-foreground bg-yellow-300 px-4 py-2 shadow-[4px_4px_0_0_hsl(var(--foreground))]',
-          frontAtBottom ? 'mt-2' : 'mb-2',
-        )}
-      >
+    return wrap(
+      <div className="flex items-center justify-center gap-3 border-2 border-foreground bg-yellow-300 px-4 py-2 shadow-[4px_4px_0_0_hsl(var(--foreground))]">
         <Monitor className="h-6 w-6 text-foreground" strokeWidth={2.5} />
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-wider text-foreground">Teacher desk</p>
           <p className="text-[10px] font-bold uppercase text-foreground/70">{frontHint}</p>
         </div>
-      </div>
+      </div>,
     );
   }
   if (design === 'playful') {
-    return (
-      <div
-        className={cn(
-          'flex shrink-0 items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg',
-          edgeMargin,
-        )}
-      >
+    return wrap(
+      <div className="flex items-center justify-center gap-3 rounded-3xl border-2 border-white bg-white px-5 py-2.5 shadow-lg">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-md">
           <Monitor className="h-5 w-5" />
         </div>
@@ -474,32 +478,22 @@ export function ClassroomTeacherDesk({
           <p className="text-sm font-bold text-foreground">Teacher desk</p>
           <p className="text-[10px] text-muted-foreground">{frontHint}</p>
         </div>
-      </div>
+      </div>,
     );
   }
   if (design === 'minimal') {
-    return (
-      <div
-        className={cn(
-          'flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-4 py-2',
-          edgeMargin,
-        )}
-      >
+    return wrap(
+      <div className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-border bg-muted/30 px-4 py-2">
         <div className="flex items-center gap-2">
           <Monitor className="h-4 w-4 text-muted-foreground" />
           <p className="text-xs font-semibold text-foreground">Teacher desk</p>
         </div>
         <p className="text-[10px] text-muted-foreground">{frontHint}</p>
-      </div>
+      </div>,
     );
   }
-  return (
-    <div
-      className={cn(
-        'flex shrink-0 items-center justify-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-primary/10 px-5 py-2.5 shadow-sm',
-        edgeMargin,
-      )}
-    >
+  return wrap(
+    <div className="flex items-center justify-center gap-3 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-card to-primary/10 px-5 py-2.5 shadow-sm">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-md">
         <Monitor className="h-5 w-5" />
       </div>
@@ -507,7 +501,108 @@ export function ClassroomTeacherDesk({
         <p className="text-sm font-bold text-foreground">Teacher desk</p>
         <p className="text-[10px] text-muted-foreground">{frontHint}</p>
       </div>
-    </div>
+    </div>,
+  );
+}
+
+function monitorActionButtonClass(
+  design: ClassroomDesign,
+  isFullscreen: boolean,
+  opts?: {
+    primary?: boolean;
+    disabled?: boolean;
+    iconOnly?: boolean;
+    tone?: 'random' | 'class' | 'burst';
+  },
+) {
+  const isDark = design === 'midnight';
+  const iconOnly = opts?.iconOnly === true;
+  const size = iconOnly
+    ? isFullscreen
+      ? 'h-8 w-8 justify-center rounded-lg sm:h-9 sm:w-9'
+      : 'h-9 w-9 justify-center rounded-lg'
+    : isFullscreen
+      ? 'gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] sm:px-3 sm:py-2 sm:text-xs'
+      : 'gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm';
+
+  const tone = opts?.tone;
+  const toneClass =
+    tone === 'random'
+      ? isDark
+        ? 'border-violet-400/60 bg-violet-500/30 text-violet-100 hover:bg-violet-500/45'
+        : design === 'brutalist'
+          ? 'border-violet-700 bg-violet-300 text-violet-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-violet-400'
+          : 'border-violet-400/70 bg-violet-500/15 text-violet-800 hover:bg-violet-500/25 dark:text-violet-200'
+      : tone === 'class'
+        ? isDark
+          ? 'border-emerald-400/60 bg-emerald-500/30 text-emerald-100 hover:bg-emerald-500/45'
+          : design === 'brutalist'
+            ? 'border-emerald-700 bg-emerald-300 text-emerald-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-emerald-400'
+            : 'border-emerald-400/70 bg-emerald-500/15 text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-200'
+        : tone === 'burst'
+          ? opts?.primary
+            ? isDark
+              ? 'border-transparent bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-sky-500/30'
+              : 'border-transparent bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-sky-500/25'
+            : isDark
+              ? 'border-sky-400/60 bg-sky-500/30 text-sky-100 hover:bg-sky-500/45'
+              : design === 'brutalist'
+                ? 'border-sky-700 bg-sky-300 text-sky-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-sky-400'
+                : 'border-sky-400/70 bg-sky-500/15 text-sky-800 hover:bg-sky-500/25 dark:text-sky-200'
+          : null;
+
+  return cn(
+    'inline-flex items-center border-2 font-bold shadow-sm transition hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50',
+    size,
+    toneClass ??
+      (opts?.primary
+        ? isDark
+          ? 'border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-indigo-500/30'
+          : 'border-transparent bg-gradient-to-r from-primary to-primary/85 text-primary-foreground shadow-primary/25'
+        : isDark
+          ? 'border-indigo-400/50 bg-indigo-500/20 text-white hover:border-indigo-300/70 hover:bg-indigo-500/30'
+          : design === 'brutalist'
+            ? 'border-foreground bg-yellow-200 text-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-yellow-300'
+            : 'border-primary/45 bg-primary/12 text-primary hover:border-primary/60 hover:bg-primary/18'),
+  );
+}
+
+export function ClassroomMonitorActionButton({
+  design,
+  isFullscreen = false,
+  icon: Icon,
+  label,
+  primary,
+  disabled,
+  title,
+  onClick,
+  iconOnly = false,
+  tone,
+}: {
+  design: ClassroomDesign;
+  isFullscreen?: boolean;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  primary?: boolean;
+  disabled?: boolean;
+  title?: string;
+  onClick?: () => void;
+  iconOnly?: boolean;
+  tone?: 'random' | 'class' | 'burst';
+}) {
+  const aria = title || label;
+  return (
+    <button
+      type="button"
+      title={aria}
+      aria-label={aria}
+      disabled={disabled}
+      onClick={onClick}
+      className={monitorActionButtonClass(design, isFullscreen, { primary, disabled, iconOnly, tone })}
+    >
+      <Icon className={cn('shrink-0', iconOnly ? 'h-4 w-4' : isFullscreen ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-4 w-4')} aria-hidden />
+      {iconOnly ? null : label}
+    </button>
   );
 }
 
@@ -520,6 +615,8 @@ export function ClassroomToolButton({
   disabled,
   title,
   design,
+  large,
+  deskRow,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
@@ -529,6 +626,9 @@ export function ClassroomToolButton({
   disabled?: boolean;
   title?: string;
   design: ClassroomDesign;
+  large?: boolean;
+  /** Compact pill for the teacher desk action group. */
+  deskRow?: boolean;
 }) {
   const isDark = design === 'midnight';
   return (
@@ -538,19 +638,35 @@ export function ClassroomToolButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all hover:-translate-y-0.5 disabled:pointer-events-none disabled:opacity-50 sm:px-4 sm:py-2.5 sm:text-sm',
+        'inline-flex items-center font-semibold transition-all disabled:pointer-events-none disabled:opacity-50',
+        deskRow
+          ? 'gap-1.5 rounded-xl px-2.5 py-2 text-[11px] hover:-translate-y-px sm:gap-2 sm:px-3 sm:py-2 sm:text-xs'
+          : cn(
+              'gap-2 rounded-xl border hover:-translate-y-0.5',
+              large
+                ? 'px-4 py-2.5 text-sm sm:px-5 sm:py-3 sm:text-base'
+                : 'px-3 py-2 text-xs sm:px-4 sm:py-2.5 sm:text-sm',
+            ),
         primary || active
           ? isDark
             ? 'border-transparent bg-gradient-to-r from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/30'
-            : 'border-transparent bg-gradient-to-r from-primary to-primary/85 text-primary-foreground shadow-md shadow-primary/25'
-          : isDark
-            ? 'border-white/15 bg-white/5 text-white hover:border-white/30'
-            : design === 'brutalist'
-              ? 'border-foreground bg-card text-foreground shadow-[3px_3px_0_0_hsl(var(--foreground))] hover:bg-yellow-100'
-              : 'border-border bg-card text-foreground shadow-sm hover:border-primary/40 hover:text-primary',
+            : deskRow
+              ? 'bg-gradient-to-r from-primary to-primary/85 text-primary-foreground shadow-sm'
+              : 'border-transparent bg-gradient-to-r from-primary to-primary/85 text-primary-foreground shadow-md shadow-primary/25'
+          : deskRow
+            ? isDark
+              ? 'text-white/90 hover:bg-white/10'
+              : design === 'brutalist'
+                ? 'text-foreground hover:bg-yellow-200/80'
+                : 'text-foreground hover:bg-background/80'
+            : isDark
+              ? 'border-white/15 bg-white/5 text-white hover:border-white/30'
+              : design === 'brutalist'
+                ? 'border-foreground bg-card text-foreground shadow-[3px_3px_0_0_hsl(var(--foreground))] hover:bg-yellow-100'
+                : 'border-border bg-card text-foreground shadow-sm hover:border-primary/40 hover:text-primary',
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <Icon className={cn('shrink-0', large ? 'h-5 w-5' : deskRow ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-4 w-4')} />
       {label}
     </button>
   );

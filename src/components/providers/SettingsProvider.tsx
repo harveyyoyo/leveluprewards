@@ -186,6 +186,11 @@ interface Settings {
     classroomQuickTapDescription?: string;
     /** Custom one-tap phrases per behavior note type (positive, comment, etc.). */
     classroomBehaviorQuickOptions?: Partial<Record<'p' | 'c' | 'i' | 'w' | 'h', string[]>>;
+    /** Monitor: Ctrl+click desk deduct (school-wide). */
+    classroomDeductEnabled?: boolean;
+    classroomDeductPoints?: number;
+    classroomDeductLabel?: string;
+    classroomDeductDescription?: string;
     /** If/then classroom alert rules (threshold in time window → auto behavior note). */
     classroomAlertRules?: Array<{
         id: string;
@@ -642,6 +647,10 @@ const defaultSettings: Settings = {
     enableQrLogin: true,
     enableParentView: false,
     enablePrincipalBehaviorTimeline: false,
+    classroomDeductEnabled: false,
+    classroomDeductPoints: 5,
+    classroomDeductLabel: 'Deduct',
+    classroomDeductDescription: 'Point deduction',
     enableClassroomRoomDisplay: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
@@ -783,6 +792,11 @@ const defaultSettings: Settings = {
     hallOfFameGridLayout: true,
     hallOfFameGridColumns: 3,
     hallOfFameLayout: 'landscape',
+    houseHallOfFamePodiumSize: 3,
+    houseHallOfFameAutoScroll: false,
+    houseHallOfFameLayout: 'landscape',
+    houseHallOfFameGridLayout: true,
+    houseHallOfFameGridColumns: 3,
     kioskProfileId: undefined,
     kioskProfiles: {},
 };

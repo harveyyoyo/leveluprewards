@@ -9,9 +9,9 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   seating: {
     title: CLASSROOM_SEATING_SECTION_LABEL,
     checklist: [
-      'Launch Monitor Display for the live seating chart and quick awards.',
-      'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit.',
-      'On the monitor: Class (when you have more than one), Chart style, Layout, Desk display, and Toolbar options.',
+      'Use Launch Monitor Display (top right) for the live seating chart and quick awards.',
+      'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit below.',
+      'On the monitor: Class (multi-class), Chart style, Layout, Desk display, and Toolbar options.',
     ],
   },
   behavior: {

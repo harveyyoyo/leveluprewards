@@ -46,7 +46,8 @@ Newer topics (funding, yeshiva leadership, IT kiosk, etc.) may be **Bold Navy on
 | `flyer-students-kiosk-hype.html` | Students — kiosk hype (hallway / backdrop) |
 | `flyer-parents-privacy-security.html` | Parents — data privacy & safety (newsletter) |
 | `flyer-it-kiosk-setup.html` | IT — kiosk technical specs (leave-behind) |
-| `flyer-private-school-pillar-proposal.html` | Private schools — flyer-style pillar and funding proposal |
+| `flyer-private-school-pillar-proposal.html` | Private schools — interactive 2-page pillar proposal with custom billing |
+| `flyer-private-school-funding.html` | Private schools — government & state funding sources (Title I/II/IV, MSR, NPSE) |
 | `flyer-yeshiva-leadership.html` | Yeshiva — leadership brief (derech eretz, middos, attendance) |
 | `flyer-yeshiva-rebbeim-moros.html` | Yeshiva — rebbeim & moros quickstart (staff handout) |
 | `flyer-yeshiva-talmidim.html` | Yeshiva — talmidim scan & earn (student-facing) |

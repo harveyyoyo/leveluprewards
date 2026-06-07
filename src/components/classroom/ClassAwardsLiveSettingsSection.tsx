@@ -1,27 +1,28 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import {
-  ArrowUpRight,
+  CheckCircle2,
   ExternalLink,
   LayoutGrid,
   LogOut,
+  Monitor,
   ShieldCheck,
-  Users,
+  SlidersHorizontal,
+  Sparkles,
+  XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 import { classroomSessionTimeoutMinFromSettings } from '@/lib/classroom/classroomManagementSettings';
 import { isRewardsPillarOn } from '@/lib/productPillars';
-import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
-import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import {
   ClassroomBehaviorQuickPicksEditor,
   ClassroomSchoolQuickAwardsEditor,
 } from '@/components/classroom/ClassroomLabelsSetupSection';
 import { ClassroomAlertRulesSection } from '@/components/classroom/ClassroomAlertRulesSection';
 import { ClassroomChartPrefsEditor } from '@/components/classroom/ClassroomChartPrefsEditor';
-import { ClassroomSectionFrame } from '@/components/classroom/ClassroomSectionFrame';
+import { ClassroomDeductSettingsEditor } from '@/components/classroom/ClassroomDeductSettingsEditor';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { Class } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const BehaviorTimelinePanel = dynamic(
   () =>
@@ -56,9 +58,38 @@ type ClassAwardsLiveSettingsSectionProps = {
   behaviorNotesRefresh?: number;
 };
 
+function SettingsPanel({
+  icon: Icon,
+  title,
+  iconClassName,
+  dense = false,
+  children,
+}: {
+  icon: typeof SlidersHorizontal;
+  title: string;
+  iconClassName?: string;
+  dense?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-3xl border bg-muted/15',
+        dense ? 'space-y-3 p-4 md:p-5' : 'space-y-5 p-5 md:p-6',
+      )}
+    >
+      <div className={cn('flex items-center gap-2 border-b', dense ? 'pb-2' : 'pb-3')}>
+        <Icon className={iconClassName ?? 'h-4 w-4 text-violet-500'} aria-hidden />
+        <p className="text-sm font-bold tracking-tight">{title}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export function ClassAwardsLiveSettingsSection({
   schoolId,
-  seatingScope,
+  seatingScope: _seatingScope,
   classes,
   settings,
   updateSettings,
@@ -73,262 +104,190 @@ export function ClassAwardsLiveSettingsSection({
 
   const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
 
-  const openMonitorDisplay = useCallback(() => {
-    if (!classes.length) return;
-    const saved =
-      typeof window !== 'undefined' ? localStorage.getItem('defaultClassId')?.trim() : '';
-    const classId =
-      saved && classes.some((c) => c.id === saved) ? saved : (classes[0]?.id ?? '');
-    if (!classId) return;
-    openClassroomFullscreenTab({
-      schoolId,
-      classId,
-      scope: seatingScope,
-    });
-  }, [classes, schoolId, seatingScope]);
-
   return (
-    <ClassroomSectionFrame
-      title={CLASSROOM_SEATING_SECTION_LABEL}
-      icon={LayoutGrid}
-      description="Launch the live awards monitor and configure school-wide classroom tools."
-      headerExtra={
-        <Button
-          type="button"
-          className="gap-2 rounded-xl border-0 bg-gradient-to-r from-violet-500 to-violet-600 font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:scale-[1.02] hover:from-violet-600 hover:to-violet-700 active:scale-[0.98]"
-          disabled={!classes.length}
-          onClick={openMonitorDisplay}
-        >
-          Launch Monitor Display
-          <ArrowUpRight className="h-4 w-4" aria-hidden />
-        </Button>
-      }
-    >
-      <div className="space-y-6">
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">Live monitor</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Open the seating chart and quick awards on a projector, board, or classroom tablet. Use{' '}
-              <span className="font-semibold text-foreground">Class</span> (when you have more than one),{' '}
-              <span className="font-semibold text-foreground">Chart style</span>,{' '}
-              <span className="font-semibold text-foreground">Layout</span>,{' '}
-              <span className="font-semibold text-foreground">Desk display</span>, and{' '}
-              <span className="font-semibold text-foreground">Toolbar options</span> on the monitor — toolbar
-              buttons update live as you change options.
-            </p>
-          </div>
-          {!classes.length ? (
-            <p className="rounded-xl border border-dashed bg-muted/20 px-4 py-5 text-sm text-muted-foreground">
-              Add a class and students before launching the live awards monitor.
-            </p>
-          ) : classes.length > 1 ? (
-            <p className="text-xs text-muted-foreground">
-              Choose the class on the monitor with the <span className="font-semibold text-foreground">Class</span>{' '}
-              menu. Launch opens your last-used class or the first in your list.
-            </p>
-          ) : null}
-        </section>
+    <div className="relative space-y-6">
+      <div className="pointer-events-none absolute top-0 right-0 -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-violet-500/10 to-amber-500/10 blur-3xl" />
 
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">Chart defaults</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Default points, sounds, correction shortcut
-              {rewardsPillarOn ? ', and award source (local vs reward categories)' : ''} — saved for your account
-              on this device. Chart style, layout, desk display, and toolbar options are on the live monitor.
-            </p>
-          </div>
-          <ClassroomChartPrefsEditor
-            schoolId={schoolId}
-            scope={seatingScope}
-            disabled={!canEdit}
-            rewardsPillarOn={rewardsPillarOn}
-          />
-        </section>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+        {rewardsPillarOn ? (
+          <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+            <span className="font-medium">Connected to LevelUp Rewards</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <XCircle className="h-3.5 w-3.5" aria-hidden />
+            <span>Rewards pillar off — classroom-only mode</span>
+          </span>
+        )}
+        {!classes.length ? (
+          <span className="font-medium text-amber-700 dark:text-amber-300">
+            Add a class and students before launching.
+          </span>
+        ) : null}
+        {!rewardsPillarOn ? (
+          <span className="text-muted-foreground">
+            Point totals: turn on <span className="font-semibold text-foreground">Point balances</span> and{' '}
+            <span className="font-semibold text-foreground">Session badges</span> under Desk display on the monitor.
+          </span>
+        ) : null}
+      </div>
 
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">School access</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Who can see behavior data outside your class monitor.
-            </p>
-          </div>
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-                    <Label htmlFor="enable-principal-timeline" className="text-sm font-bold">
-                      Principal timeline
-                    </Label>
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    When on, principals and admins can open a school-wide behavior timeline — all classes,
-                    positives, concerns, and incidents.
-                  </p>
-                </div>
-                <Switch
-                  id="enable-principal-timeline"
-                  checked={principalTimelineOn}
-                  disabled={!canEdit}
-                  onCheckedChange={(v) => updateSettings({ enablePrincipalBehaviorTimeline: v })}
-                />
+      <SettingsPanel icon={SlidersHorizontal} title="Chart defaults">
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Award source and quick deduct are saved school-wide. Default points, sounds, and display options are on
+          the monitor toolbar.
+        </p>
+        <ClassroomChartPrefsEditor
+          schoolId={schoolId}
+          scope={_seatingScope}
+          disabled={!canEdit}
+          rewardsPillarOn={rewardsPillarOn}
+          embedded
+        />
+        <ClassroomDeductSettingsEditor
+          settings={settings}
+          updateSettings={updateSettings}
+          disabled={!canEdit}
+        />
+      </SettingsPanel>
+
+      <SettingsPanel icon={ShieldCheck} title="School access" iconClassName="h-4 w-4 text-indigo-500">
+        <div className="grid gap-3 lg:grid-cols-2">
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="enable-principal-timeline" className="text-sm font-bold">
+                  Principal timeline
+                </Label>
+                <p className="text-[11px] text-muted-foreground">School-wide behavior feed for admins.</p>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-border/40 pt-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl"
-                  disabled={!principalTimelineOn}
-                  onClick={() => setPrincipalPreviewOpen(true)}
-                >
-                  <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden />
-                  Preview principal timeline
-                </Button>
-                {!principalTimelineOn ? (
-                  <p className="self-center text-xs text-muted-foreground">
-                    Turn on to preview the school-wide view.
-                  </p>
-                ) : null}
-              </div>
+              <Switch
+                id="enable-principal-timeline"
+                checked={principalTimelineOn}
+                disabled={!canEdit}
+                onCheckedChange={(v) => updateSettings({ enablePrincipalBehaviorTimeline: v })}
+              />
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-2 h-8 rounded-lg text-xs"
+              disabled={!principalTimelineOn}
+              onClick={() => setPrincipalPreviewOpen(true)}
+            >
+              <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              Preview
+            </Button>
+          </div>
 
-            <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-                    <Label htmlFor="enable-parent-view" className="text-sm font-bold">
-                      Parent portal
-                    </Label>
-                  </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    Off by default. When on, families sign in with the parent email on file to view shared behavior
-                    notes and student points.
-                  </p>
-                </div>
-                <Switch
-                  id="enable-parent-view"
-                  checked={parentPortalOn}
-                  disabled={!canEdit}
-                  onCheckedChange={(v) => updateSettings({ enableParentView: v })}
-                />
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="enable-parent-view" className="text-sm font-bold">
+                  Parent portal
+                </Label>
+                <p className="text-[11px] text-muted-foreground">Families view shared notes and points.</p>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/40 pt-3">
-                <Button asChild variant="outline" size="sm" className="rounded-xl" disabled={!parentPortalOn}>
-                  <Link href={`/${schoolId}/parent`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden />
-                    Open parent portal
-                  </Link>
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Sign-in URL: <span className="font-mono text-foreground">/{schoolId}/parent</span>
-                </p>
-              </div>
+              <Switch
+                id="enable-parent-view"
+                checked={parentPortalOn}
+                disabled={!canEdit}
+                onCheckedChange={(v) => updateSettings({ enableParentView: v })}
+              />
             </div>
+            <Button asChild variant="outline" size="sm" className="mt-2 h-8 rounded-lg text-xs" disabled={!parentPortalOn}>
+              <Link href={`/${schoolId}/parent`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                Open portal
+              </Link>
+            </Button>
           </div>
-        </section>
+        </div>
+      </SettingsPanel>
 
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">Awards & note labels</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              School-wide quick award buttons and behavior-note phrases for every class monitor.
-            </p>
-          </div>
+      <SettingsPanel dense icon={Sparkles} title="Awards & note labels" iconClassName="h-4 w-4 text-amber-500">
+        <p className="text-[11px] text-muted-foreground">
+          School-wide quick-award buttons and behavior-note phrases. Open each category to edit.
+        </p>
+        <div className="space-y-2">
           <ClassroomSchoolQuickAwardsEditor
             settings={settings}
             updateSettings={updateSettings}
             disabled={!canEdit}
+            popup
           />
           <ClassroomBehaviorQuickPicksEditor
             settings={settings}
             updateSettings={updateSettings}
             disabled={!canEdit}
+            popup
           />
-        </section>
+        </div>
+      </SettingsPanel>
 
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">If / then alerts</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Auto-create behavior notes when students hit award or note thresholds in a time window.
-            </p>
-          </div>
-          <ClassroomAlertRulesSection
-            settings={settings}
-            updateSettings={updateSettings}
-            disabled={!canEdit}
-          />
-        </section>
+      <SettingsPanel icon={LayoutGrid} title="If / then alerts">
+        <p className="text-[11px] text-muted-foreground">
+          Auto-create notes when award or note counts hit a threshold in a time window.
+        </p>
+        <ClassroomAlertRulesSection
+          settings={settings}
+          updateSettings={updateSettings}
+          disabled={!canEdit}
+        />
+      </SettingsPanel>
 
-        <section className="space-y-3">
-          <div>
-            <h4 className="text-sm font-black tracking-tight text-foreground">Monitor session</h4>
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              Idle timeout for the live awards monitor on shared classroom devices.
-            </p>
-          </div>
-          <div className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0 space-y-1">
-                <div className="flex items-center gap-2">
-                  <LogOut className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-                  <Label htmlFor="classroom-auto-exit" className="text-sm font-bold">
-                    Auto-exit when idle
-                  </Label>
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Return to the portal after inactivity — separate from staff or kiosk auto-logout.
-                </p>
-              </div>
-              <Switch
-                id="classroom-auto-exit"
-                checked={classroomAutoExitOn}
-                disabled={!canEdit}
-                onCheckedChange={(v) => updateSettings({ classroomAutoLogoutEnabled: v })}
-                aria-label="Enable live monitor auto-exit"
-              />
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border/40 pt-3">
+      <SettingsPanel icon={Monitor} title="Monitor session" iconClassName="h-4 w-4 text-slate-500">
+        <div className="rounded-2xl border bg-card/60 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-0.5">
               <div className="flex items-center gap-2">
-                <Label htmlFor="classroom-idle-minutes" className="text-xs font-semibold text-muted-foreground">
-                  Idle minutes
+                <LogOut className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+                <Label htmlFor="classroom-auto-exit" className="text-sm font-bold">
+                  Auto-exit when idle
                 </Label>
-                <Input
-                  id="classroom-idle-minutes"
-                  type="number"
-                  min={1}
-                  max={1440}
-                  className="h-9 w-20 rounded-xl text-center font-bold"
-                  value={classroomIdleMin}
-                  disabled={!canEdit || !classroomAutoExitOn}
-                  onChange={(e) =>
-                    updateSettings({
-                      classroomSessionTimeoutMs: Math.max(1, parseInt(e.target.value, 10) || 1) * 60_000,
-                    })
-                  }
-                />
               </div>
-              <p className="text-xs text-muted-foreground">
-                {classroomAutoExitOn
-                  ? 'Tap, click, scroll, or keyboard activity resets the timer.'
-                  : 'Live awards monitor stays open until closed manually.'}
+              <p className="text-[11px] text-muted-foreground">
+                Return to the portal after inactivity on shared classroom devices.
               </p>
             </div>
+            <Switch
+              id="classroom-auto-exit"
+              checked={classroomAutoExitOn}
+              disabled={!canEdit}
+              onCheckedChange={(v) => updateSettings({ classroomAutoLogoutEnabled: v })}
+              aria-label="Enable live monitor auto-exit"
+            />
           </div>
-        </section>
-      </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+            <Label htmlFor="classroom-idle-minutes" className="text-[11px] font-semibold text-muted-foreground">
+              Idle minutes
+            </Label>
+            <Input
+              id="classroom-idle-minutes"
+              type="number"
+              min={1}
+              max={1440}
+              className="h-8 w-16 rounded-lg text-center text-sm font-bold"
+              value={classroomIdleMin}
+              disabled={!canEdit || !classroomAutoExitOn}
+              onChange={(e) =>
+                updateSettings({
+                  classroomSessionTimeoutMs: Math.max(1, parseInt(e.target.value, 10) || 1) * 60_000,
+                })
+              }
+            />
+          </div>
+        </div>
+      </SettingsPanel>
 
       <Dialog open={principalPreviewOpen} onOpenChange={setPrincipalPreviewOpen}>
         <DialogContent wide className="max-h-[min(90vh,720px)] overflow-hidden p-0 sm:rounded-2xl">
           <DialogHeader className="border-b px-4 py-3 sm:px-6">
             <DialogTitle>Principal timeline preview</DialogTitle>
             <DialogDescription>
-              School-wide behavior notes from every class — what principals see when this feature is enabled.
+              School-wide behavior notes from every class.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[min(75vh,640px)] overflow-y-auto p-4 sm:p-6">
@@ -341,6 +300,6 @@ export function ClassAwardsLiveSettingsSection({
           </div>
         </DialogContent>
       </Dialog>
-    </ClassroomSectionFrame>
+    </div>
   );
 }

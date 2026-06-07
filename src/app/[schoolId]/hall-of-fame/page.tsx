@@ -22,6 +22,7 @@ import {
   buildPodiumDisplaySlots,
   clampHallOfFamePodiumSize,
   getHallOfFameStageSizeStyle,
+  HALL_OF_FAME_AUTOSCROLL_OPENING_PAUSE_MS,
   isHallOfFamePointsSort,
   type PodiumPlace,
 } from '@/lib/hallOfFameUrlConfig';
@@ -479,6 +480,7 @@ export default function HallOfFamePage() {
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
         const startLoop = (scrollEl: HTMLDivElement) => {
+            scrollEl.scrollTop = 0;
             let scrollDirection = 1;
             const scrollSpeed = 0.5;
             let lastTime = 0;
@@ -509,14 +511,17 @@ export default function HallOfFamePage() {
                         scrollDirection = 1;
                         lastTime = 0;
                         animationId = requestAnimationFrame(handleScroll);
-                    }, 3000);
+                    }, HALL_OF_FAME_AUTOSCROLL_OPENING_PAUSE_MS);
                     return;
                 }
 
                 animationId = requestAnimationFrame(handleScroll);
             };
 
-            animationId = requestAnimationFrame(handleScroll);
+            timeoutId = setTimeout(() => {
+                if (cancelled) return;
+                animationId = requestAnimationFrame(handleScroll);
+            }, HALL_OF_FAME_AUTOSCROLL_OPENING_PAUSE_MS);
         };
 
         const waitForScrollableContent = () => {

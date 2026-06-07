@@ -1,7 +1,15 @@
 'use client';
 
-import { Plus, Sparkles, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronRight, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,15 +34,16 @@ export type ClassroomSchoolLabelsEditorProps = {
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
   disabled?: boolean;
-  /** Tighter layout for the seating-chart settings popover. */
   compact?: boolean;
+  /** Compact summary + dialog instead of inline editor. */
+  popup?: boolean;
 };
 
-export function ClassroomSchoolQuickAwardsEditor({
+function QuickAwardsEditorBody({
   settings,
   updateSettings,
-  disabled = false,
-  compact = false,
+  disabled,
+  compact,
 }: ClassroomSchoolLabelsEditorProps) {
   const quickAwards = normalizeClassroomQuickAwards(settings.classroomQuickAwards);
   const quickTapDescription = resolveClassroomQuickTapDescription(settings);
@@ -72,24 +81,13 @@ export function ClassroomSchoolQuickAwardsEditor({
   };
 
   return (
-    <div className={cn('rounded-xl border bg-muted/20 p-3', compact ? 'border-border/50' : 'border-border/60')}>
-      <div className={cn('mb-3 flex items-start gap-2', compact && 'mb-2')}>
-        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-        <div>
-          <p className={cn('font-bold', compact ? 'text-xs' : 'text-sm')}>Quick award labels</p>
-          <p className={cn('leading-relaxed text-muted-foreground', compact ? 'text-[10px]' : 'text-xs')}>
-            School-wide — Awards menu buttons, quick tap description, and session badges on desks.
-          </p>
-        </div>
-      </div>
-
-      <div className="mb-3 space-y-1.5">
-        <Label className="text-xs font-semibold">Quick tap label</Label>
-        <p className="text-[11px] text-muted-foreground">
-          Saved when teachers quick-award from the chart (one-tap mode).
-        </p>
+    <>
+      <div className={cn('mb-2 flex items-center gap-2', compact && 'mb-1.5')}>
+        <Label className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          Quick tap
+        </Label>
         <Input
-          className="h-9 rounded-lg text-sm"
+          className={cn('min-w-0 flex-1 rounded-md', compact ? 'h-7 text-xs' : 'h-8 text-sm')}
           value={quickTapDescription}
           disabled={disabled}
           onChange={(e) =>
@@ -99,12 +97,11 @@ export function ClassroomSchoolQuickAwardsEditor({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold">Awards menu buttons</Label>
+      <div className={cn('space-y-1.5', compact && 'sm:grid sm:grid-cols-2 sm:gap-x-2 sm:space-y-0')}>
         {quickAwards.map((q, i) => (
-          <div key={q.id} className="flex items-center gap-1.5">
+          <div key={q.id} className="flex items-center gap-1">
             <Input
-              className="h-8 min-w-0 flex-1 rounded-lg text-xs"
+              className="h-7 min-w-0 flex-1 rounded-md text-xs"
               value={q.label}
               disabled={disabled}
               onChange={(e) => patchQuickAward(i, { label: e.target.value })}
@@ -113,7 +110,7 @@ export function ClassroomSchoolQuickAwardsEditor({
             <Input
               type="number"
               min={1}
-              className="h-8 w-16 shrink-0 rounded-lg text-xs"
+              className="h-7 w-12 shrink-0 rounded-md px-1 text-center text-xs"
               value={q.points}
               disabled={disabled}
               onChange={(e) =>
@@ -124,138 +121,226 @@ export function ClassroomSchoolQuickAwardsEditor({
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
               disabled={disabled || quickAwards.length <= 1}
               aria-label={`Remove ${q.label}`}
               onClick={() => removeQuickAward(i)}
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3" />
             </Button>
           </div>
         ))}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-8 rounded-lg text-xs font-bold"
-          disabled={disabled || quickAwards.length >= MAX_CLASSROOM_QUICK_AWARDS}
-          onClick={addQuickAward}
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Add award button
-        </Button>
       </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-1.5 h-7 rounded-md px-2 text-[10px] font-bold"
+        disabled={disabled || quickAwards.length >= MAX_CLASSROOM_QUICK_AWARDS}
+        onClick={addQuickAward}
+      >
+        <Plus className="mr-1 h-3 w-3" />
+        Add
+      </Button>
+    </>
+  );
+}
+
+function BehaviorCategoryEditorBody({
+  shortcutKey,
+  settings,
+  updateSettings,
+  disabled,
+}: ClassroomSchoolLabelsEditorProps & { shortcutKey: ClassroomNoteShortcutKey }) {
+  const behaviorOptions = normalizeBehaviorQuickOptions(settings.classroomBehaviorQuickOptions);
+  const shortcut = CLASSROOM_NOTE_SHORTCUTS.find((s) => s.key === shortcutKey)!;
+  const options = behaviorOptions[shortcutKey] ?? defaultBehaviorQuickOptions()[shortcutKey] ?? [];
+
+  const setBehaviorOptionsForKey = (key: ClassroomNoteShortcutKey, next: string[]) => {
+    const merged: ClassroomBehaviorQuickOptions = { ...behaviorOptions, [key]: next };
+    updateSettings({ classroomBehaviorQuickOptions: merged });
+  };
+
+  const patchBehaviorOption = (index: number, value: string) => {
+    const next = options.map((opt, i) => (i === index ? value : opt));
+    setBehaviorOptionsForKey(shortcutKey, next);
+  };
+
+  const addBehaviorOption = () => {
+    if (options.length >= MAX_BEHAVIOR_QUICK_OPTIONS) return;
+    setBehaviorOptionsForKey(shortcutKey, [...options, '']);
+  };
+
+  const removeBehaviorOption = (index: number) => {
+    if (options.length <= 1) return;
+    setBehaviorOptionsForKey(
+      shortcutKey,
+      options.filter((_, i) => i !== index),
+    );
+  };
+
+  return (
+    <div className="space-y-1">
+      {options.map((opt, i) => (
+        <div key={`${shortcutKey}-${i}`} className="flex items-center gap-1">
+          <Input
+            className="h-8 flex-1 rounded-md text-sm"
+            value={opt}
+            disabled={disabled}
+            onChange={(e) => patchBehaviorOption(i, e.target.value)}
+            placeholder="Phrase"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+            disabled={disabled || options.length <= 1}
+            aria-label="Remove phrase"
+            onClick={() => removeBehaviorOption(i)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-7 rounded-md px-2 text-xs font-semibold"
+        disabled={disabled || options.length >= MAX_BEHAVIOR_QUICK_OPTIONS}
+        onClick={addBehaviorOption}
+      >
+        <Plus className="mr-1 h-3 w-3" />
+        Add phrase
+      </Button>
+      <p className="pt-1 text-[11px] text-muted-foreground">{shortcut.description}</p>
     </div>
   );
 }
 
-export function ClassroomBehaviorQuickPicksEditor({
-  settings,
-  updateSettings,
-  disabled = false,
-  compact = false,
-}: ClassroomSchoolLabelsEditorProps) {
-  const behaviorOptions = normalizeBehaviorQuickOptions(settings.classroomBehaviorQuickOptions);
+export function ClassroomSchoolQuickAwardsEditor(props: ClassroomSchoolLabelsEditorProps) {
+  const { disabled = false, compact = false, popup = false } = props;
+  const quickAwards = normalizeClassroomQuickAwards(props.settings.classroomQuickAwards);
+  const [open, setOpen] = useState(false);
 
-  const setBehaviorOptionsForKey = (key: ClassroomNoteShortcutKey, options: string[]) => {
-    const next: ClassroomBehaviorQuickOptions = { ...behaviorOptions, [key]: options };
-    updateSettings({ classroomBehaviorQuickOptions: next });
-  };
-
-  const patchBehaviorOption = (key: ClassroomNoteShortcutKey, index: number, value: string) => {
-    const current = behaviorOptions[key] ?? defaultBehaviorQuickOptions()[key] ?? [];
-    const next = current.map((opt, i) => (i === index ? value : opt));
-    setBehaviorOptionsForKey(key, next);
-  };
-
-  const addBehaviorOption = (key: ClassroomNoteShortcutKey) => {
-    const current = behaviorOptions[key] ?? defaultBehaviorQuickOptions()[key] ?? [];
-    if (current.length >= MAX_BEHAVIOR_QUICK_OPTIONS) return;
-    setBehaviorOptionsForKey(key, [...current, '']);
-  };
-
-  const removeBehaviorOption = (key: ClassroomNoteShortcutKey, index: number) => {
-    const current = behaviorOptions[key] ?? defaultBehaviorQuickOptions()[key] ?? [];
-    if (current.length <= 1) return;
-    setBehaviorOptionsForKey(
-      key,
-      current.filter((_, i) => i !== index),
+  if (popup) {
+    return (
+      <>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto min-h-9 w-full justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold"
+          disabled={disabled}
+          onClick={() => setOpen(true)}
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-violet-500" aria-hidden />
+            Quick awards
+            <span className="font-normal text-muted-foreground">({quickAwards.length} buttons)</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="max-h-[min(90vh,560px)] overflow-y-auto sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Quick awards</DialogTitle>
+              <DialogDescription>Buttons on the monitor awards menu and quick-tap label.</DialogDescription>
+            </DialogHeader>
+            <QuickAwardsEditorBody {...props} compact />
+          </DialogContent>
+        </Dialog>
+      </>
     );
-  };
-
-  const resetBehaviorOptions = (key: ClassroomNoteShortcutKey) => {
-    const defaults = defaultBehaviorQuickOptions()[key] ?? [];
-    setBehaviorOptionsForKey(key, defaults);
-  };
+  }
 
   return (
-    <div className={cn('rounded-xl border bg-muted/20 p-3', compact ? 'border-border/50' : 'border-border/60')}>
-      <p className={cn('mb-1 font-bold', compact ? 'text-xs' : 'text-sm')}>Behavior note quick picks</p>
-      <p className={cn('mb-3 leading-relaxed text-muted-foreground', compact ? 'text-[10px]' : 'text-xs')}>
-        One-tap phrases in note dialogs (hold P, C, I, W, or H and click a student).
-      </p>
-      <div className="space-y-3">
-        {CLASSROOM_NOTE_SHORTCUTS.map((shortcut) => {
-          const options =
-            behaviorOptions[shortcut.key] ?? defaultBehaviorQuickOptions()[shortcut.key] ?? [];
-          return (
-            <div key={shortcut.key} className="rounded-lg border bg-background/80 p-2.5">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-bold">
-                  <span className="mr-1.5 rounded border bg-muted px-1 font-mono text-[10px] uppercase">
+    <div className={cn('rounded-xl border border-border/50 bg-muted/15', compact ? 'p-2.5' : 'border-border/60 bg-muted/20 p-3')}>
+      <div className={cn('mb-2 flex items-center gap-1.5', compact && 'mb-1.5')}>
+        <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" aria-hidden />
+        <p className={cn('font-bold', compact ? 'text-[11px]' : 'text-sm')}>Quick awards</p>
+      </div>
+      <QuickAwardsEditorBody {...props} compact={compact} />
+    </div>
+  );
+}
+
+export function ClassroomBehaviorQuickPicksEditor(props: ClassroomSchoolLabelsEditorProps) {
+  const { disabled = false, popup = false } = props;
+  const behaviorOptions = normalizeBehaviorQuickOptions(props.settings.classroomBehaviorQuickOptions);
+  const [activeKey, setActiveKey] = useState<ClassroomNoteShortcutKey | null>(null);
+
+  if (popup) {
+    return (
+      <>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {CLASSROOM_NOTE_SHORTCUTS.map((shortcut) => {
+            const count = (behaviorOptions[shortcut.key] ?? defaultBehaviorQuickOptions()[shortcut.key] ?? [])
+              .length;
+            return (
+              <Button
+                key={shortcut.key}
+                type="button"
+                variant="outline"
+                className="h-auto min-h-9 justify-between rounded-xl px-3 py-2 text-left text-xs font-semibold"
+                disabled={disabled}
+                onClick={() => setActiveKey(shortcut.key)}
+              >
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="rounded border bg-muted px-1 font-mono text-[9px] uppercase">
                     {shortcut.key}
                   </span>
-                  {shortcut.popupTitle}
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 rounded-lg px-2 text-[10px] font-semibold"
-                  disabled={disabled}
-                  onClick={() => resetBehaviorOptions(shortcut.key)}
-                >
-                  Reset defaults
-                </Button>
-              </div>
-              <div className="space-y-1.5">
-                {options.map((opt, i) => (
-                  <div key={`${shortcut.key}-${i}`} className="flex items-center gap-1.5">
-                    <Input
-                      className="h-8 flex-1 rounded-lg text-xs"
-                      value={opt}
-                      disabled={disabled}
-                      onChange={(e) => patchBehaviorOption(shortcut.key, i, e.target.value)}
-                      placeholder="Quick pick phrase"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                      disabled={disabled || options.length <= 1}
-                      aria-label="Remove quick pick"
-                      onClick={() => removeBehaviorOption(shortcut.key, i)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 rounded-lg text-[10px] font-bold"
-                  disabled={disabled || options.length >= MAX_BEHAVIOR_QUICK_OPTIONS}
-                  onClick={() => addBehaviorOption(shortcut.key)}
-                >
-                  <Plus className="mr-1 h-3 w-3" />
-                  Add phrase
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+                  <span className="truncate">{shortcut.hintLabel}</span>
+                  <span className="font-normal text-muted-foreground">({count})</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 opacity-50" aria-hidden />
+              </Button>
+            );
+          })}
+        </div>
+        <Dialog open={activeKey != null} onOpenChange={(open) => !open && setActiveKey(null)}>
+          <DialogContent className="max-h-[min(90vh,480px)] overflow-y-auto sm:max-w-md">
+            {activeKey ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {CLASSROOM_NOTE_SHORTCUTS.find((s) => s.key === activeKey)?.popupTitle}
+                  </DialogTitle>
+                  <DialogDescription>
+                    One-tap phrases when holding{' '}
+                    <kbd className="rounded border bg-muted px-1 font-mono text-xs uppercase">{activeKey}</kbd>{' '}
+                    and clicking a student.
+                  </DialogDescription>
+                </DialogHeader>
+                <BehaviorCategoryEditorBody {...props} shortcutKey={activeKey} />
+              </>
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
+
+  return (
+    <div className={cn('rounded-xl border border-border/50 bg-muted/15', props.compact ? 'p-2.5' : 'border-border/60 bg-muted/20 p-3')}>
+      <p className={cn('mb-2 font-bold', props.compact ? 'text-[11px]' : 'text-sm')}>Note quick picks</p>
+      <div className={cn(props.compact ? 'grid gap-2 sm:grid-cols-2' : 'space-y-3')}>
+        {CLASSROOM_NOTE_SHORTCUTS.map((shortcut) => (
+          <div
+            key={shortcut.key}
+            className={cn(
+              props.compact
+                ? 'rounded-md border border-border/40 bg-background/70 p-2'
+                : 'rounded-lg border bg-background/80 p-2.5',
+            )}
+          >
+            <p className="mb-1.5 flex items-center gap-1 text-[11px] font-bold leading-none">
+              <span className="rounded border bg-muted px-1 font-mono text-[9px] uppercase">{shortcut.key}</span>
+              <span className="truncate">{shortcut.hintLabel}</span>
+            </p>
+            <BehaviorCategoryEditorBody {...props} shortcutKey={shortcut.key} />
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -264,7 +349,7 @@ export function ClassroomBehaviorQuickPicksEditor({
 /** @deprecated Use editors on the seating chart Classroom settings (gear) popover. */
 export function ClassroomLabelsSetupSection(props: ClassroomSchoolLabelsEditorProps) {
   return (
-    <div className={props.compact ? 'space-y-4' : 'space-y-5'}>
+    <div className={props.compact ? 'space-y-3' : 'space-y-5'}>
       <ClassroomSchoolQuickAwardsEditor {...props} />
       <ClassroomBehaviorQuickPicksEditor {...props} />
     </div>

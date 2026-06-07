@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { LayoutGrid, BookOpenCheck, Monitor } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -68,15 +68,15 @@ export function ClassroomTabLayout({
   }));
 
   const header = (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <Helper
-        content={`${CLASSROOM_SEATING_SECTION_LABEL} holds monitor launch, school access, award labels, alerts, and session timing. Behavior is your note timeline; Room display mirrors session stats on a separate monitor.`}
+        content={`Launch the live seating chart, set defaults and labels here, then use Chart style / Toolbar options on the monitor.`}
       >
         <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
           <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> {CLASSROOM_TAB_LABEL}
         </CardTitle>
       </Helper>
-      {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+      {headerAction ? <div className="flex shrink-0 flex-wrap items-center gap-3">{headerAction}</div> : null}
     </div>
   );
 
@@ -113,20 +113,36 @@ export function ClassroomTabLayout({
           aria-label={`${CLASSROOM_TAB_LABEL} sections`}
         />
 
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={resolvedSection}
-            initial={reduceMotion ? false : { opacity: 0 }}
-            animate={{
-              opacity: 1,
-              transition: reduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' },
-            }}
-            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, transition: { duration: 0.1 } }}
-            className="focus-visible:outline-none"
-          >
-            {contentBySection[resolvedSection]}
-          </motion.div>
-        </AnimatePresence>
+        <div className="space-y-0">
+          {sections.map((id) => {
+            const active = id === resolvedSection;
+            return (
+              <div
+                key={id}
+                id={`classroom-section-${id}`}
+                role="tabpanel"
+                aria-labelledby={`classroom-section-tab-${id}`}
+                hidden={!active}
+                className={cn(!active && 'hidden')}
+              >
+                {active ? (
+                  <motion.div
+                    initial={reduceMotion ? false : { opacity: 0 }}
+                    animate={{
+                      opacity: 1,
+                      transition: reduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' },
+                    }}
+                    className="focus-visible:outline-none"
+                  >
+                    {contentBySection[id]}
+                  </motion.div>
+                ) : (
+                  contentBySection[id]
+                )}
+              </div>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
