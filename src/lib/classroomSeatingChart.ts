@@ -156,7 +156,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   showRandomPicker: false,
   showClassAwardButton: false,
   showBurstAward: false,
-  awardSource: 'categories',
+  awardSource: 'local',
   awardSounds: true,
   monitorMenuTabs: { ...DEFAULT_MONITOR_MENU_TABS },
   prefsVersion: CLASSROOM_PREFS_VERSION,
@@ -420,8 +420,9 @@ export function visualLayoutPositions(
 }
 
 const SESSION_PREFIX = 'levelup-classroom-session:';
+const SESSION_SYNC_CHANNEL = 'levelup-classroom-session-sync';
 
-function sessionStorageKey(schoolId: string, scope: string, classId: string) {
+export function classroomSessionStorageKey(schoolId: string, scope: string, classId: string) {
   const day = new Date().toISOString().slice(0, 10);
   return `${SESSION_PREFIX}${schoolId}:${scope}:${classId}:${day}`;
 }
@@ -489,7 +490,7 @@ export function loadClassroomSession(
 ): ClassroomSessionData {
   if (typeof window === 'undefined') return EMPTY_SESSION;
   try {
-    const raw = sessionStorage.getItem(sessionStorageKey(schoolId, scope, classId));
+    const raw = sessionStorage.getItem(classroomSessionStorageKey(schoolId, scope, classId));
     if (!raw) return EMPTY_SESSION;
     return normalizeSessionPayload(JSON.parse(raw));
   } catch {
@@ -506,6 +507,39 @@ export function loadClassroomSessionTotals(
   return loadClassroomSession(schoolId, scope, classId).totals;
 }
 
+type ClassroomSessionSyncMessage = {
+  key: string;
+  data: ClassroomSessionData;
+};
+
+function broadcastClassroomSessionUpdate(storageKey: string, data: ClassroomSessionData) {
+  if (typeof BroadcastChannel === 'undefined') return;
+  try {
+    const channel = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+    channel.postMessage({ key: storageKey, data } satisfies ClassroomSessionSyncMessage);
+    channel.close();
+  } catch {
+    /* unsupported */
+  }
+}
+
+/** Listen for session updates from other tabs (teacher monitor → class screen). */
+export function subscribeClassroomSessionUpdates(
+  onUpdate: (storageKey: string, data: ClassroomSessionData) => void,
+): () => void {
+  if (typeof BroadcastChannel === 'undefined') return () => undefined;
+  try {
+    const channel = new BroadcastChannel(SESSION_SYNC_CHANNEL);
+    channel.onmessage = (event: MessageEvent<ClassroomSessionSyncMessage>) => {
+      const { key, data } = event.data ?? {};
+      if (typeof key === 'string' && data && typeof data === 'object') onUpdate(key, data);
+    };
+    return () => channel.close();
+  } catch {
+    return () => undefined;
+  }
+}
+
 export function saveClassroomSession(
   schoolId: string,
   scope: string,
@@ -514,7 +548,9 @@ export function saveClassroomSession(
 ) {
   if (typeof window === 'undefined') return;
   try {
-    sessionStorage.setItem(sessionStorageKey(schoolId, scope, classId), JSON.stringify(data));
+    const key = classroomSessionStorageKey(schoolId, scope, classId);
+    sessionStorage.setItem(key, JSON.stringify(data));
+    broadcastClassroomSessionUpdate(key, data);
   } catch {
     /* quota */
   }

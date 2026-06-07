@@ -171,20 +171,20 @@ function parseBoolParam(raw: string): boolean | null {
   return null;
 }
 
-/** When set, keeps the monitor on a specific leaderboard type (e.g. houses). */
+/**
+ * When set, keeps the monitor on the dedicated house standings board.
+ * General launch links omit this so rank type follows live admin settings.
+ */
 export function parseHallOfFameUrlRankTypePin(
   params: URLSearchParams | null | undefined,
 ): HallOfFameRankType | null {
   if (!params) return null;
 
-  const rankRaw = (params.get('rankType') || params.get('rank') || '').trim();
-  const parsedRank = rankRaw ? parseRankType(rankRaw) : null;
-  if (parsedRank) return parsedRank;
+  const board = (params.get('board') || '').trim().toLowerCase();
+  if (board === 'houses') return 'houses';
 
   const view = (params.get('view') || '').trim().toLowerCase();
   if (view === 'house-standings' || view === 'house_standings') return 'houses';
-  if (view === 'class-standings' || view === 'classes' || view === 'class_standings') return 'classes';
-  if (view === 'goals' || view === 'school-goals' || view === 'school_goals') return 'goals';
 
   return null;
 }
@@ -317,14 +317,7 @@ export function parseHallOfFameSearchParams(
   return config;
 }
 
-/** Build a launch URL for the Hall of Fame display from saved settings. */
-export function buildHallOfFameHref(
-  schoolId: string,
-  settings: HallOfFameSettingsDefaults & { hallOfFameRankType?: HallOfFameRankType },
-): string {
-  const params = new URLSearchParams();
-  params.set('fullscreen', '1');
-  const rankType = settings.hallOfFameRankType ?? 'students';
-  if (rankType !== 'students') params.set('rankType', rankType);
-  return `/${schoolId}/hall-of-fame?${params.toString()}`;
+/** Build a launch URL for the Hall of Fame display (settings update live on the monitor). */
+export function buildHallOfFameHref(schoolId: string): string {
+  return `/${schoolId}/hall-of-fame?fullscreen=1`;
 }

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { CLASSROOM_NOTE_SHORTCUTS } from '@/lib/classroom/classroomNoteShortcuts';
-import type { ClassroomDeductConfig } from '@/lib/classroom/classroomDeductSettings';
+import type { ClassroomNoteDeductConfig } from '@/lib/classroom/classroomNoteDeductSettings';
 import type { ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
 import { cn } from '@/lib/utils';
 
@@ -11,7 +11,9 @@ export type ClassroomSeatingShortcutsHintState = {
   editMode: boolean;
   attendanceEnabled: boolean;
   bathroomEnabled: boolean;
-  classroomDeduct?: ClassroomDeductConfig;
+  classroomNoteDeduct?: ClassroomNoteDeductConfig;
+  /** @deprecated Use classroomNoteDeduct */
+  classroomDeduct?: ClassroomNoteDeductConfig;
   monitorDisplay?: boolean;
   /** @deprecated Use monitorDisplay */
   isFullscreen?: boolean;
@@ -30,12 +32,13 @@ export function ClassroomSeatingShortcutsHint({
   editMode,
   attendanceEnabled,
   bathroomEnabled,
+  classroomNoteDeduct,
   classroomDeduct,
   monitorDisplay = false,
   isFullscreen = false,
 }: ClassroomSeatingShortcutsHintState) {
   const onMonitor = monitorDisplay || isFullscreen;
-  const deduct = classroomDeduct ?? { enabled: false, points: 0, label: 'Deduct', description: '' };
+  const noteDeduct = classroomNoteDeduct ?? classroomDeduct ?? { enabled: false, points: 0, types: [] };
 
   if (editMode) {
     return (
@@ -56,6 +59,12 @@ export function ClassroomSeatingShortcutsHint({
     acc.push(item);
     return acc;
   }, []);
+
+  const deductTypeLabels = noteDeduct.enabled
+    ? CLASSROOM_NOTE_SHORTCUTS.filter((shortcut) => noteDeduct.types.includes(shortcut.key)).map(
+        (shortcut) => shortcut.hintLabel,
+      )
+    : [];
 
   if (!onMonitor) {
     const tapLine = prefs.instantTap
@@ -93,8 +102,11 @@ export function ClassroomSeatingShortcutsHint({
       <p>
         <span className="font-semibold text-foreground">Behavior notes:</span> Hold {noteKeyLine} and click a
         student. Shift+click = choose note type from a menu.
+        {deductTypeLabels.length > 0
+          ? ` Selected note types can deduct −${noteDeduct.points} pts in the note dialog (${deductTypeLabels.join(', ')}).`
+          : ''}
       </p>
-      {attendanceEnabled || bathroomEnabled || deduct.enabled ? (
+      {attendanceEnabled || bathroomEnabled ? (
         <p>
           <span className="font-semibold text-foreground">Other:</span>{' '}
           {attendanceEnabled ? (
@@ -104,12 +116,7 @@ export function ClassroomSeatingShortcutsHint({
           ) : null}
           {bathroomEnabled ? (
             <>
-              <ShortcutKey>Alt</ShortcutKey>+click = bathroom pass timer.{' '}
-            </>
-          ) : null}
-          {deduct.enabled ? (
-            <>
-              <ShortcutKey>Ctrl</ShortcutKey>+click = deduct {deduct.points} pts ({deduct.label}).
+              <ShortcutKey>Alt</ShortcutKey>+click = bathroom pass timer.
             </>
           ) : null}
         </p>

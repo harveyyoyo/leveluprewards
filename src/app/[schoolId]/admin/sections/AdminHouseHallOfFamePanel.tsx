@@ -106,7 +106,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
           </div>
           <h3 className="text-lg font-black tracking-tight text-foreground">Big-screen house leaderboard</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-xl">
-            Monitor link pins <code className="text-[10px]">rankType=houses</code> only — podium size, layout, and other options update live from these settings.
+            Monitor link pins <code className="text-[10px]">board=houses</code> only — podium size, layout, and other house options update live from these settings.
           </p>
         </div>
         <Button asChild className="rounded-xl font-bold shrink-0">

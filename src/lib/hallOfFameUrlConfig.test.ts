@@ -100,6 +100,11 @@ describe('parseHallOfFameSearchParams', () => {
 });
 
 describe('resolveHallOfFameDisplayConfig', () => {
+  it('follows live rank type from admin settings', () => {
+    expect(resolveHallOfFameDisplayConfig({ hallOfFameRankType: 'houses' }).rankType).toBe('houses');
+    expect(resolveHallOfFameDisplayConfig({ hallOfFameRankType: 'students' }).rankType).toBe('students');
+  });
+
   it('follows saved settings for podium size and layout', () => {
     const config = resolveHallOfFameDisplayConfig({
       hallOfFameRankType: 'students',
@@ -167,11 +172,19 @@ describe('hallOfFameUsesClientSideStudentRanking', () => {
 });
 
 describe('parseHallOfFameUrlRankTypePin', () => {
-  it('pins houses from rankType query param', () => {
-    expect(parseHallOfFameUrlRankTypePin(new URLSearchParams({ rankType: 'houses' }))).toBe('houses');
+  it('pins houses from dedicated board=houses param', () => {
+    expect(parseHallOfFameUrlRankTypePin(new URLSearchParams({ board: 'houses' }))).toBe('houses');
   });
 
-  it('returns null when no rank pin is present', () => {
+  it('pins houses from legacy view=house-standings param', () => {
+    expect(parseHallOfFameUrlRankTypePin(new URLSearchParams({ view: 'house-standings' }))).toBe('houses');
+  });
+
+  it('does not pin rank type from general rankType query param', () => {
+    expect(parseHallOfFameUrlRankTypePin(new URLSearchParams({ rankType: 'houses' }))).toBeNull();
+  });
+
+  it('returns null when no house board pin is present', () => {
     expect(parseHallOfFameUrlRankTypePin(new URLSearchParams({ fullscreen: '1' }))).toBeNull();
   });
 });

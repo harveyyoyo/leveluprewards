@@ -111,9 +111,9 @@ export function isClassroomOnlyMode(settings: PillarSettings | null | undefined)
 /** User-facing copy when Classroom uses local balance while Rewards pillar is still on. */
 export const CLASSROOM_LOCAL_REWARDS = {
   tabBody:
-    'Local classroom rewards — desk awards stay on each student’s classroom balance, not kiosk or prize-shop balances. Switch to Reward categories in Toolbar options to sync into the main rewards balance.',
+    'Local rewards — each quick-award button becomes its own category and syncs into the main rewards balance. Switch to Reward categories in Toolbar options to use Points tab categories instead.',
   toastDescription:
-    'Saved as classroom points on the student record (not kiosk/rewards balance).',
+    'Saved to the main rewards balance under this quick-award category.',
 } as const;
 
 /** User-facing copy when Classroom is on but Rewards (student economy) is off. */

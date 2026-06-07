@@ -1309,7 +1309,7 @@ export function SettingsModal() {
                                         <p className="text-[11px] leading-relaxed text-muted-foreground">
                                             Configure idle timeout for the live awards monitor in{' '}
                                             <span className="font-semibold text-foreground">
-                                                Classroom Live → Class Awards Live
+                                                Classroom → Class Awards Live
                                             </span>
                                             .
                                         </p>

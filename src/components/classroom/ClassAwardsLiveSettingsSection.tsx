@@ -22,7 +22,8 @@ import {
 } from '@/components/classroom/ClassroomLabelsSetupSection';
 import { ClassroomAlertRulesSection } from '@/components/classroom/ClassroomAlertRulesSection';
 import { ClassroomChartPrefsEditor } from '@/components/classroom/ClassroomChartPrefsEditor';
-import { ClassroomDeductSettingsEditor } from '@/components/classroom/ClassroomDeductSettingsEditor';
+import { ClassroomLaunchMonitorButton } from '@/components/classroom/ClassroomLaunchMonitorButton';
+import { ClassroomPointDeductionSettingsEditor } from '@/components/classroom/ClassroomPointDeductionSettingsEditor';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -101,12 +102,39 @@ export function ClassAwardsLiveSettingsSection({
   const classroomAutoExitOn = settings.classroomAutoLogoutEnabled !== false;
   const classroomIdleMin = classroomSessionTimeoutMinFromSettings(settings);
   const rewardsPillarOn = isRewardsPillarOn(settings);
+  const studentDisplayOn = settings.classroomStudentDisplayEnabled !== false;
 
   const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
 
   return (
     <div className="relative space-y-6">
       <div className="pointer-events-none absolute top-0 right-0 -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-violet-500/10 to-amber-500/10 blur-3xl" />
+
+      <div className="rounded-3xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-background to-amber-500/5 p-5 md:p-6">
+        <div className="flex flex-wrap items-center gap-3">
+          <ClassroomLaunchMonitorButton
+            schoolId={schoolId}
+            seatingScope={_seatingScope}
+            classes={classes}
+            audience="teacher"
+          />
+          {studentDisplayOn ? (
+            <ClassroomLaunchMonitorButton
+              schoolId={schoolId}
+              seatingScope={_seatingScope}
+              classes={classes}
+              audience="student"
+            />
+          ) : null}
+        </div>
+        <p className="mt-3 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+          Open the teacher monitor for quick awards during the lesson. Use{' '}
+          <span className="font-semibold text-foreground">Launch for class screen</span> on your projector
+          — it mirrors the chart live but hides behavior comments and notes.
+        </p>
+      </div>
+
+      <p className="text-sm font-bold tracking-tight text-foreground">Settings</p>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
         {rewardsPillarOn ? (
@@ -133,24 +161,17 @@ export function ClassAwardsLiveSettingsSection({
         ) : null}
       </div>
 
-      <SettingsPanel icon={SlidersHorizontal} title="Chart defaults">
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Award source and quick deduct are saved school-wide. Default points, sounds, and display options are on
-          the monitor toolbar.
-        </p>
-        <ClassroomChartPrefsEditor
-          schoolId={schoolId}
-          scope={_seatingScope}
-          disabled={!canEdit}
-          rewardsPillarOn={rewardsPillarOn}
-          embedded
-        />
-        <ClassroomDeductSettingsEditor
-          settings={settings}
-          updateSettings={updateSettings}
-          disabled={!canEdit}
-        />
-      </SettingsPanel>
+      {rewardsPillarOn ? (
+        <SettingsPanel icon={SlidersHorizontal} title="Award source">
+          <ClassroomChartPrefsEditor
+            schoolId={schoolId}
+            scope={_seatingScope}
+            disabled={!canEdit}
+            rewardsPillarOn={rewardsPillarOn}
+            embedded
+          />
+        </SettingsPanel>
+      ) : null}
 
       <SettingsPanel icon={ShieldCheck} title="School access" iconClassName="h-4 w-4 text-indigo-500">
         <div className="grid gap-3 lg:grid-cols-2">
@@ -209,7 +230,8 @@ export function ClassAwardsLiveSettingsSection({
 
       <SettingsPanel dense icon={Sparkles} title="Awards & note labels" iconClassName="h-4 w-4 text-amber-500">
         <p className="text-[11px] text-muted-foreground">
-          School-wide quick-award buttons and behavior-note phrases. Open each category to edit.
+          School-wide quick-award buttons and behavior-note phrases. With Local rewards, each quick-award
+          button becomes its own category. Open each section to edit.
         </p>
         <div className="space-y-2">
           <ClassroomSchoolQuickAwardsEditor
@@ -225,6 +247,11 @@ export function ClassAwardsLiveSettingsSection({
             popup
           />
         </div>
+        <ClassroomPointDeductionSettingsEditor
+          settings={settings}
+          updateSettings={updateSettings}
+          disabled={!canEdit}
+        />
       </SettingsPanel>
 
       <SettingsPanel icon={LayoutGrid} title="If / then alerts">
@@ -239,15 +266,37 @@ export function ClassAwardsLiveSettingsSection({
       </SettingsPanel>
 
       <SettingsPanel icon={Monitor} title="Monitor session" iconClassName="h-4 w-4 text-slate-500">
-        <div className="rounded-2xl border bg-card/60 p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 space-y-0.5">
-              <div className="flex items-center gap-2">
-                <LogOut className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
-                <Label htmlFor="classroom-auto-exit" className="text-sm font-bold">
-                  Auto-exit when idle
+        <div className="space-y-3">
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="classroom-student-display" className="text-sm font-bold">
+                  Class screen launch
                 </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Show a second launch button for a read-only class projector view. Behavior comments and
+                  notes are hidden on that screen.
+                </p>
               </div>
+              <Switch
+                id="classroom-student-display"
+                checked={studentDisplayOn}
+                disabled={!canEdit}
+                onCheckedChange={(v) => updateSettings({ classroomStudentDisplayEnabled: v })}
+                aria-label="Enable class screen launch"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <LogOut className="h-4 w-4 shrink-0 text-violet-500" aria-hidden />
+                  <Label htmlFor="classroom-auto-exit" className="text-sm font-bold">
+                    Auto-exit when idle
+                  </Label>
+                </div>
               <p className="text-[11px] text-muted-foreground">
                 Return to the portal after inactivity on shared classroom devices.
               </p>
@@ -260,24 +309,25 @@ export function ClassAwardsLiveSettingsSection({
               aria-label="Enable live monitor auto-exit"
             />
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
-            <Label htmlFor="classroom-idle-minutes" className="text-[11px] font-semibold text-muted-foreground">
-              Idle minutes
-            </Label>
-            <Input
-              id="classroom-idle-minutes"
-              type="number"
-              min={1}
-              max={1440}
-              className="h-8 w-16 rounded-lg text-center text-sm font-bold"
-              value={classroomIdleMin}
-              disabled={!canEdit || !classroomAutoExitOn}
-              onChange={(e) =>
-                updateSettings({
-                  classroomSessionTimeoutMs: Math.max(1, parseInt(e.target.value, 10) || 1) * 60_000,
-                })
-              }
-            />
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-border/40 pt-2">
+              <Label htmlFor="classroom-idle-minutes" className="text-[11px] font-semibold text-muted-foreground">
+                Idle minutes
+              </Label>
+              <Input
+                id="classroom-idle-minutes"
+                type="number"
+                min={1}
+                max={1440}
+                className="h-8 w-16 rounded-lg text-center text-sm font-bold"
+                value={classroomIdleMin}
+                disabled={!canEdit || !classroomAutoExitOn}
+                onChange={(e) =>
+                  updateSettings({
+                    classroomSessionTimeoutMs: Math.max(1, parseInt(e.target.value, 10) || 1) * 60_000,
+                  })
+                }
+              />
+            </div>
           </div>
         </div>
       </SettingsPanel>

@@ -65,6 +65,6 @@ describe('housePointsSettings', () => {
     });
     expect(href).toContain('/demo-school/hall-of-fame?');
     expect(href).toContain('fullscreen=1');
-    expect(href).toContain('rankType=houses');
+    expect(href).toContain('board=houses');
   });
 });

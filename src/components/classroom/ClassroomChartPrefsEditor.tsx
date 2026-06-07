@@ -87,19 +87,26 @@ export function ClassroomChartPrefsEditor({
     <div className={cn('space-y-6', embedded && 'space-y-5')}>
       {rewardsPillarOn ? (
         <SectionShell embedded={embedded} title="Award source">
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Choose where monitor awards are recorded. Saved school-wide; teachers can still switch in Toolbar
+            options on the live monitor.
+          </p>
           <RadioGroup
             value={prefs.awardSource}
             onValueChange={(v) => {
               if (v === 'local' || v === 'categories') patchPrefs({ awardSource: v });
             }}
-            className="grid gap-2 sm:grid-cols-2"
+            className="grid gap-2"
             disabled={disabled}
           >
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border bg-background/80 p-3">
               <RadioGroupItem value="local" className="mt-0.5" disabled={disabled} aria-label="Local rewards" />
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Local rewards</span>
-                <span className="mt-0.5 block text-muted-foreground">Classroom balance only.</span>
+                <span className="mt-0.5 block text-muted-foreground">
+                  Uses your quick-award buttons below. Each button becomes its own category on the student
+                  record and syncs into the main rewards balance.
+                </span>
               </span>
             </label>
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border bg-background/80 p-3">
@@ -111,7 +118,10 @@ export function ClassroomChartPrefsEditor({
               />
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Reward categories</span>
-                <span className="mt-0.5 block text-muted-foreground">Uses Points tab categories.</span>
+                <span className="mt-0.5 block text-muted-foreground">
+                  Uses categories from Points → Categories. Awards count toward kiosk balances, prizes, and
+                  reports using those shared categories.
+                </span>
               </span>
             </label>
           </RadioGroup>

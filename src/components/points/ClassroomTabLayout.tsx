@@ -70,7 +70,7 @@ export function ClassroomTabLayout({
   const header = (
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <Helper
-        content={`Launch the live seating chart, set defaults and labels here, then use Chart style / Toolbar options on the monitor.`}
+        content={`Launch Class Awards Live from this section, configure options under Settings, then use Chart style / Toolbar on the monitor.`}
       >
         <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
           <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> {CLASSROOM_TAB_LABEL}

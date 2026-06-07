@@ -3,21 +3,26 @@
 import { TabWalkthroughWizard } from '@/components/admin/TabWalkthroughWizard';
 import type { TabWalkthroughStep } from '@/lib/tabWalkthrough';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
-import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
+import {
+  CLASS_AWARDS_LIVE_LAUNCH_LABEL,
+  CLASSROOM_SEATING_SECTION_LABEL,
+  CLASSROOM_TAB_LABEL,
+} from '@/lib/classroom/classroomTabSections';
 
 const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
   seating: {
     title: CLASSROOM_SEATING_SECTION_LABEL,
     checklist: [
-      'Use Launch Monitor Display (top right) for the live seating chart and quick awards.',
-      'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit below.',
+      `Use ${CLASS_AWARDS_LIVE_LAUNCH_LABEL} at the top of this section for the live seating chart and quick awards.`,
+      'Use Launch for class screen on your projector — same chart, but behavior comments stay hidden.',
+      'Set award source, school access, award labels, point deductions, if/then alerts, and monitor options under Settings.',
       'On the monitor: Class (multi-class), Chart style, Layout, Desk display, and Toolbar options.',
     ],
   },
   behavior: {
     title: 'Behavior',
     checklist: [
-      `Add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → Launch Monitor Display).`,
+      `Add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → ${CLASS_AWARDS_LIVE_LAUNCH_LABEL}).`,
       'Saved notes appear in the Behavior tab list right away.',
       'Enable Principal in Class Awards Live to preview the school-wide timeline.',
     ],
@@ -26,7 +31,7 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
     title: 'Room display',
     checklist: [
       'Pick a class, customize the headline and modules, then open on your classroom monitor.',
-      'Session leaderboard updates as you award on the live monitor — separate from Launch Monitor Display.',
+      'Session leaderboard updates as you award on the live monitor — separate from Class Awards Live.',
       'Hallway Smart Screen is separate — configure it under Admin → Smart Screen.',
     ],
   },

@@ -84,6 +84,6 @@ export function buildHouseHallOfFameHref(
 ): string {
   const params = new URLSearchParams();
   params.set('fullscreen', '1');
-  params.set('rankType', 'houses');
+  params.set('board', 'houses');
   return `/${schoolId}/hall-of-fame?${params.toString()}`;
 }

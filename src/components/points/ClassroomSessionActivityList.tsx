@@ -8,11 +8,14 @@ import { cn } from '@/lib/utils';
 export function ClassroomSessionActivityList({
   entries,
   compact = false,
+  borderless = false,
   className,
 }: {
   entries: ClassroomSessionActivityEntry[];
   /** Toolbar strip vs fullscreen sidebar. */
   compact?: boolean;
+  /** Render without an inner bordered panel (sits outside toolbar chrome). */
+  borderless?: boolean;
   className?: string;
 }) {
   return (
@@ -29,7 +32,8 @@ export function ClassroomSessionActivityList({
       </div>
       <div
         className={cn(
-          'min-h-0 flex-1 overflow-y-auto rounded-lg border border-border/60 bg-muted/20',
+          'min-h-0 flex-1 overflow-y-auto',
+          borderless ? 'bg-transparent' : 'rounded-lg border border-border/60 bg-muted/20',
           compact ? 'max-h-24 p-1.5' : 'p-2',
         )}
       >
@@ -41,8 +45,11 @@ export function ClassroomSessionActivityList({
               <li
                 key={entry.id}
                 className={cn(
-                  'rounded-md border border-border/40 bg-background/80 px-2 py-1.5',
-                  compact && 'px-1.5 py-1',
+                  borderless
+                    ? 'border-b border-border/30 pb-1.5 last:border-b-0 last:pb-0'
+                    : 'rounded-md border border-border/40 bg-background/80 px-2 py-1.5',
+                  !borderless && compact && 'px-1.5 py-1',
+                  borderless && 'px-0.5',
                 )}
               >
                 <div className="flex items-baseline justify-between gap-2">

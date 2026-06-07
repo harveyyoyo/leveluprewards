@@ -269,8 +269,6 @@ export function ClassroomMonitorQuickControls({
   rewardsPillarOn = false,
   onChange,
   onClassChange,
-  awardActions,
-  trailing,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
@@ -281,10 +279,6 @@ export function ClassroomMonitorQuickControls({
   rewardsPillarOn?: boolean;
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
   onClassChange?: (classId: string) => void;
-  /** Random / class / burst — left-aligned action buttons, distinct from setting menus. */
-  awardActions?: ReactNode;
-  /** Far-right toolbar slot (embedded activity strip). */
-  trailing?: ReactNode;
 }) {
   const activeDesign = normalizeClassroomDesign(prefs.design);
   const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
@@ -294,12 +288,6 @@ export function ClassroomMonitorQuickControls({
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-start gap-1.5 sm:items-center sm:gap-2">
-      {awardActions}
-
-      {awardActions ? (
-        <span className="mx-0.5 hidden h-6 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
-      ) : null}
-
       <ClassroomMonitorToolbarOptionsMenu
         design={design}
         prefs={prefs}
@@ -454,15 +442,15 @@ export function ClassroomMonitorQuickControls({
             <label className="flex cursor-pointer items-start gap-2">
               <RadioGroupItem value="local" className="mt-0.5" aria-label="Local rewards" />
               <span className="text-xs leading-snug">
-                <span className="font-semibold">Local rewards</span> — classroom quick awards saved to classroom
-                balance.
+                <span className="font-semibold">Local rewards</span> — each quick-award button is its own category
+                on the student record and syncs to the main rewards balance.
               </span>
             </label>
             <label className="flex cursor-pointer items-start gap-2">
               <RadioGroupItem value="categories" className="mt-0.5" aria-label="Reward categories" />
               <span className="text-xs leading-snug">
-                <span className="font-semibold">Reward categories</span> — Points tab categories sync to rewards
-                balance.
+                <span className="font-semibold">Reward categories</span> — uses Points tab categories for kiosk,
+                prizes, and reports.
               </span>
             </label>
           </RadioGroup>
@@ -561,8 +549,6 @@ export function ClassroomMonitorQuickControls({
           )}
         </button>
       ) : null}
-
-      {trailing ? <div className="ml-auto flex shrink-0 items-center">{trailing}</div> : null}
     </div>
   );
 }

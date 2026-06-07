@@ -186,11 +186,15 @@ interface Settings {
     classroomQuickTapDescription?: string;
     /** Custom one-tap phrases per behavior note type (positive, comment, etc.). */
     classroomBehaviorQuickOptions?: Partial<Record<'p' | 'c' | 'i' | 'w' | 'h', string[]>>;
-    /** Monitor: Ctrl+click desk deduct (school-wide). */
+    /** Monitor: Ctrl+click desk deduct (legacy; use note deduct settings). */
     classroomDeductEnabled?: boolean;
     classroomDeductPoints?: number;
     classroomDeductLabel?: string;
     classroomDeductDescription?: string;
+    /** Deduct points when saving selected behavior-note types. */
+    classroomNoteDeductEnabled?: boolean;
+    classroomNoteDeductPoints?: number;
+    classroomNoteDeductTypes?: string[];
     /** If/then classroom alert rules (threshold in time window → auto behavior note). */
     classroomAlertRules?: Array<{
         id: string;
@@ -286,6 +290,8 @@ interface Settings {
     classroomAutoLogoutEnabled?: boolean;
     /** Idle time before leaving full-screen classroom (returns to portal). */
     classroomSessionTimeoutMs?: number;
+    /** When false, hide the read-only class screen launch in Class Awards Live. Default on when unset. */
+    classroomStudentDisplayEnabled?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
     kioskAiFunIdleOffSec?: number;
     /** @deprecated Voucher idle timeout removed; print-voucher prompts are always available. */
@@ -651,6 +657,9 @@ const defaultSettings: Settings = {
     classroomDeductPoints: 5,
     classroomDeductLabel: 'Deduct',
     classroomDeductDescription: 'Point deduction',
+    classroomNoteDeductEnabled: false,
+    classroomNoteDeductPoints: 5,
+    classroomNoteDeductTypes: ['c', 'i', 'w'],
     enableClassroomRoomDisplay: false,
     enableMultiAdmin: false,
     enableStudentPortal: false,
@@ -700,6 +709,7 @@ const defaultSettings: Settings = {
     kioskSessionTimeoutSec: 10,
     classroomAutoLogoutEnabled: true,
     classroomSessionTimeoutMs: 15 * 60 * 1000,
+    classroomStudentDisplayEnabled: true,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,

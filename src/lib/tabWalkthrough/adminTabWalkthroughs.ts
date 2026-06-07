@@ -123,21 +123,22 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom Live',
-    subtitle: 'Sections inside the Classroom Live tab',
+    title: 'Classroom',
+    subtitle: 'Sections inside the Classroom tab',
     steps: [
       {
         title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
-          'Launch Monitor Display for the live seating chart and quick awards.',
-          'Set chart defaults, school access, award labels, if/then alerts, and monitor auto-exit in Class Awards Live.',
+          'Launch Class Awards Live for the live seating chart and quick awards.',
+          'Launch for class screen hides behavior comments on the projector view.',
+          'Set chart defaults, school access, award labels, if/then alerts, and monitor options under Settings.',
           'On the monitor: Style, Layout, Desk display, and tap mode / fly-up / celebration next to Arrange seats.',
         ],
       },
       {
         title: 'Behavior',
         checklist: [
-          `Teachers add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → Launch Monitor Display).`,
+          `Teachers add notes from the live monitor (${CLASSROOM_SEATING_SECTION_LABEL} → Launch Class Awards Live).`,
           'Open the Principal preview in Class Awards Live when the school-wide timeline is enabled.',
         ],
       },

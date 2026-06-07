@@ -70,21 +70,7 @@ export function AdminHallOfFameTab({ schoolId }: { schoolId: string }) {
   );
   const { data: categories } = useCollection<Category>(categoriesQuery);
 
-  const fullHref = useMemo(
-    () =>
-      buildHallOfFameHref(schoolId, {
-        hallOfFameRankType: rankType,
-        hallOfFameSortBy: sortBy,
-        hallOfFameScope: scope,
-        hallOfFameLimit: limitCount,
-        hallOfFamePodiumSize: podiumSize,
-        hallOfFameAutoScroll: autoScroll,
-        hallOfFameGridLayout: gridLayout,
-        hallOfFameGridColumns: gridColumns,
-        hallOfFameLayout: layout,
-      }),
-    [schoolId, rankType, sortBy, scope, limitCount, podiumSize, autoScroll, gridLayout, gridColumns, layout],
-  );
+  const fullHref = useMemo(() => buildHallOfFameHref(schoolId), [schoolId]);
 
   const rankOptions = [
     {

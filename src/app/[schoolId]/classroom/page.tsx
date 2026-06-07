@@ -37,6 +37,7 @@ export default function ClassroomFullscreenPage() {
   const schoolId = typeof params.schoolId === 'string' ? params.schoolId : '';
   const classIdFromUrl = (searchParams?.get('classId') || '').trim();
   const scopeFromUrl = (searchParams?.get('scope') || '').trim();
+  const audienceFromUrl = searchParams?.get('audience') === 'student' ? 'student' : 'teacher';
 
   const {
     loginState,
@@ -151,9 +152,10 @@ export default function ClassroomFullscreenPage() {
       params.set('fullscreen', '1');
       params.set('classId', nextClassId);
       if (storageScope) params.set('scope', storageScope);
+      if (audienceFromUrl === 'student') params.set('audience', 'student');
       router.replace(`/${schoolId}/classroom?${params.toString()}`);
     },
-    [router, schoolId, searchParams, storageScope],
+    [audienceFromUrl, router, schoolId, searchParams, storageScope],
   );
 
   useClassroomIdleExit({
@@ -209,9 +211,10 @@ export default function ClassroomFullscreenPage() {
         className="relative z-10 flex flex-col overflow-hidden bg-background"
         style={getHallOfFameStageSizeStyle(false)}
       >
-        <div className="flex h-full min-h-0 w-full flex-col px-3 pt-2 pb-2">
+        <div className="flex h-full min-h-0 w-full flex-col pl-3 pt-2 pb-2 pr-0">
           <ClassroomPointsPanel
             variant="fullscreen"
+            audience={audienceFromUrl}
             schoolId={schoolId}
             students={deferredStudents}
             classes={classes}

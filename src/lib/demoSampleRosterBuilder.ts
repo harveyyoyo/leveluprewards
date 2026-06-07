@@ -86,11 +86,11 @@ export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): De
     );
     for (let seat = 0; seat < classSize; seat += 1) {
       const studentIndex = students.length;
-      const firstName = input.firstNames[studentIndex % input.firstNames.length] ?? 'Student';
+      const nameSeed = studentIndex * 97 + classIndex * 13;
+      const firstName =
+        input.firstNames[seededInt(nameSeed, 0, input.firstNames.length - 1)] ?? 'Student';
       const lastName =
-        input.lastNames[
-          Math.floor(studentIndex / input.firstNames.length) % input.lastNames.length
-        ] ?? 'Demo';
+        input.lastNames[seededInt(nameSeed + 4999, 0, input.lastNames.length - 1)] ?? 'Demo';
       const id = padDemoStudentId(nextNumericId++);
       const points =
         input.pickPoints?.(studentIndex, classIndex) ??

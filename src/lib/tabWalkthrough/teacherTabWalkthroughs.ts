@@ -48,14 +48,15 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   classroom: {
-    title: 'Classroom Live',
+    title: 'Classroom',
     subtitle: 'Same sections as school admin',
     steps: [
       {
         title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
-          'Launch Monitor Display for quick awards during the lesson.',
-          'Chart defaults, access, labels, alerts, and auto-exit live in Class Awards Live.',
+          'Launch Class Awards Live for quick awards during the lesson.',
+          'Launch for class screen on your projector — mirrors the chart without behavior comments.',
+          'Chart defaults, access, labels, alerts, and monitor options live under Settings in Class Awards Live.',
           'Chart style, Layout, Desk display, and Toolbar options on the monitor. Choose Class there when you have more than one.',
         ],
       },

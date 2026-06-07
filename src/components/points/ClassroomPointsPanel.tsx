@@ -22,7 +22,8 @@ import {
   Users,
   MousePointerClick,
 } from 'lucide-react';
-import { openClassroomFullscreenTab } from '@/lib/classroomPointsUrl';
+import { openClassroomFullscreenTab, type ClassroomFullscreenAudience } from '@/lib/classroomPointsUrl';
+import { sanitizeSessionForStudentDisplay } from '@/lib/classroom/classroomStudentDisplay';
 import { isClassroomOnlyMode, isPillarOn, CLASSROOM_LOCAL_REWARDS, CLASSROOM_SESSION_ONLY, isRewardsPillarOn } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
@@ -61,6 +62,8 @@ import {
   loadClassroomLayout,
   loadClassroomPrefs,
   loadClassroomSession,
+  classroomSessionStorageKey,
+  subscribeClassroomSessionUpdates,
   resizeLayout,
   saveClassroomLayout,
   saveClassroomPrefs,
@@ -73,7 +76,11 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
-import { resolveClassroomDeduct } from '@/lib/classroom/classroomDeductSettings';
+import {
+  isNoteDeductType,
+  resolveClassroomNoteDeduct,
+} from '@/lib/classroom/classroomNoteDeductSettings';
+import { getClassroomNoteShortcut } from '@/lib/classroom/classroomNoteShortcuts';
 import { classroomAwardDisplayLabel, type ClassroomAwardLabelContext } from '@/lib/classroom/classroomAwardLabel';
 import {
   ClassroomSeatingShortcutsHint,
@@ -145,6 +152,8 @@ type ClassroomPointsPanelProps = {
   storageScope: string;
   /** Embedded in Points tab vs dedicated fullscreen tab. */
   variant?: 'embedded' | 'fullscreen';
+  /** Teacher monitor (default) or read-only class screen without behavior notes. */
+  audience?: ClassroomFullscreenAudience;
   initialClassId?: string;
   accentColor?: string;
   isGraphic?: boolean;
@@ -177,6 +186,7 @@ function ClassroomPointsPanelInner({
   categories = [],
   storageScope,
   variant = 'embedded',
+  audience = 'teacher',
   initialClassId,
   accentColor = 'hsl(var(--primary))',
   isGraphic = false,
@@ -188,13 +198,14 @@ function ClassroomPointsPanelInner({
 }: ClassroomPointsPanelProps) {
   const deferredStudents = useDeferredValue(students);
   const isFullscreen = variant === 'fullscreen';
+  const isStudentAudience = isFullscreen && audience === 'student';
   const { toast } = useToast();
   const playSound = useArcadeSound({ ignoreSchoolSoundMute: true });
   const { settings } = useSettings();
   const firestore = useFirestore();
   const sessionOnly = sessionOnlyProp ?? isClassroomOnlyMode(settings);
   const rewardsPillarOn = isRewardsPillarOn(settings);
-  const classroomDeduct = useMemo(() => resolveClassroomDeduct(settings), [settings]);
+  const classroomNoteDeduct = useMemo(() => resolveClassroomNoteDeduct(settings), [settings]);
 
   const {
     awardPoints,
@@ -249,13 +260,15 @@ function ClassroomPointsPanelInner({
   }, [isFullscreen, filterClassId, initialClassId, classes]);
   const [layout, setLayout] = useState<ClassroomSeatingLayout | null>(null);
   const [prefs, setPrefs] = useState<ClassroomSeatingPrefs>(DEFAULT_CLASSROOM_PREFS);
-  const useLocalClassroomRewards =
-    sessionOnlyProp !== undefined
-      ? sessionOnlyProp
-      : !rewardsPillarOn || prefs.awardSource === 'local';
-  const localAwardToast = rewardsPillarOn
-    ? CLASSROOM_LOCAL_REWARDS.toastDescription
-    : CLASSROOM_SESSION_ONLY.toastDescription;
+  const sessionOnlyBalance =
+    sessionOnlyProp !== undefined ? sessionOnlyProp : !rewardsPillarOn;
+  const useQuickAwardsMenu = sessionOnlyBalance || prefs.awardSource === 'local';
+  const rewardsModeActive = !sessionOnlyBalance;
+  const localAwardToast = sessionOnlyBalance
+    ? CLASSROOM_SESSION_ONLY.toastDescription
+    : useQuickAwardsMenu
+      ? CLASSROOM_LOCAL_REWARDS.toastDescription
+      : 'Saved to the main rewards balance.';
   const chartQuickAwards = useMemo(
     () => normalizeClassroomQuickAwards(settings.classroomQuickAwards, prefs.quickAwards),
     [settings.classroomQuickAwards, prefs.quickAwards],
@@ -284,10 +297,10 @@ function ClassroomPointsPanelInner({
       editMode,
       attendanceEnabled,
       bathroomEnabled: bathroomTimerOn,
-      classroomDeduct,
+      classroomNoteDeduct,
     });
     return () => onSectionHintChange(null);
-  }, [attendanceEnabled, bathroomTimerOn, classroomDeduct, editMode, isFullscreen, onSectionHintChange, prefs]);
+  }, [attendanceEnabled, bathroomTimerOn, classroomNoteDeduct, editMode, isFullscreen, onSectionHintChange, prefs]);
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pendingAward, setPendingAward] = useState<PendingAward | null>(null);
@@ -481,14 +494,14 @@ function ClassroomPointsPanelInner({
     const next = buildClassroomDeskCatalog(
       deferredStudents,
       filterClassId,
-      useLocalClassroomRewards,
+      sessionOnlyBalance,
       classroomBalances,
       deskCatalogRef.current,
       deskDisplayOptions,
     );
     deskCatalogRef.current = next;
     return next;
-  }, [useLocalClassroomRewards, classroomBalances, deferredStudents, filterClassId, deskDisplayOptions]);
+  }, [sessionOnlyBalance, classroomBalances, deferredStudents, filterClassId, deskDisplayOptions]);
 
   const visualCells = useMemo(
     () => (activeLayout ? visualLayoutPositions(activeLayout, prefs.frontAtBottom) : []),
@@ -544,13 +557,33 @@ function ClassroomPointsPanelInner({
     };
   }, [activeLayout, schoolId, storageScope, effectiveClassId]);
 
+  const reloadSessionData = useCallback(() => {
+    if (!effectiveClassId || effectiveClassId === 'all') return;
+    const loaded = loadClassroomSession(schoolId, storageScope, effectiveClassId);
+    setSessionData(isStudentAudience ? sanitizeSessionForStudentDisplay(loaded) : loaded);
+  }, [effectiveClassId, isStudentAudience, schoolId, storageScope]);
+
   useEffect(() => {
     if (!effectiveClassId || effectiveClassId === 'all') return;
-    setSessionData(loadClassroomSession(schoolId, storageScope, effectiveClassId));
+    reloadSessionData();
     setLastAwardSummary(null);
     setBurstSelected([]);
     setLastAction(null);
-  }, [schoolId, storageScope, effectiveClassId]);
+  }, [effectiveClassId, reloadSessionData]);
+
+  useEffect(() => {
+    if (!isStudentAudience || !effectiveClassId || effectiveClassId === 'all') return;
+    const sessionKey = classroomSessionStorageKey(schoolId, storageScope, effectiveClassId);
+    const unsubscribe = subscribeClassroomSessionUpdates((key, data) => {
+      if (key !== sessionKey) return;
+      setSessionData(sanitizeSessionForStudentDisplay(data));
+    });
+    const pollId = window.setInterval(reloadSessionData, 3000);
+    return () => {
+      unsubscribe();
+      window.clearInterval(pollId);
+    };
+  }, [effectiveClassId, isStudentAudience, reloadSessionData, schoolId, storageScope]);
 
   const placedStudentIds = useMemo(() => {
     if (!activeLayout) return [] as string[];
@@ -671,7 +704,7 @@ function ClassroomPointsPanelInner({
     ) => {
       if (
         studentIds.length === 0 ||
-        (!useLocalClassroomRewards && studentIds.some((id) => awardingStudentIds.has(id)))
+        (rewardsModeActive && studentIds.some((id) => awardingStudentIds.has(id)))
       ) {
         return false;
       }
@@ -720,7 +753,7 @@ function ClassroomPointsPanelInner({
       }
 
       const signedDelta = isDeduct ? -magnitude : magnitude;
-      const rewardsMode = !useLocalClassroomRewards;
+      const rewardsMode = rewardsModeActive;
       const staffish =
         isAdmin ||
         isTeacher ||
@@ -794,7 +827,7 @@ function ClassroomPointsPanelInner({
         });
       };
 
-      if (useLocalClassroomRewards) {
+      if (sessionOnlyBalance) {
         optimisticAction = {
           mode: isDeduct ? 'deduct' : 'award',
           studentIds: [...studentIds],
@@ -838,19 +871,19 @@ function ClassroomPointsPanelInner({
           title: isDeduct
             ? oneStudent
               ? `${getStudentNickname(oneStudent)}: −${magnitude}`
-              : useLocalClassroomRewards
+              : sessionOnlyBalance
                 ? `−${magnitude} classroom pt${magnitude === 1 ? '' : 's'}`
                 : `−${magnitude} from ${count} student(s)`
             : oneStudent
               ? `${getStudentNickname(oneStudent)}: ${awardLabel}`
               : `${awardLabel} (+${magnitude})`,
           description: isDeduct
-            ? useLocalClassroomRewards
+            ? sessionOnlyBalance
               ? localAwardToast
               : count > 1
                 ? `${count} students · −${magnitude} pts each`
                 : `−${magnitude} pts`
-            : useLocalClassroomRewards
+            : sessionOnlyBalance
               ? localAwardToast
               : count > 1
                 ? `${count} students · +${magnitude} pts each`
@@ -858,7 +891,7 @@ function ClassroomPointsPanelInner({
         });
       };
 
-      if (useLocalClassroomRewards) {
+      if (sessionOnlyBalance) {
         playClassroomSound(classroomPointSoundEffect(points, isDeduct));
         showAwardToast();
       } else if (rewardsMode) {
@@ -877,7 +910,7 @@ function ClassroomPointsPanelInner({
       });
 
       if (!result.success) {
-        if (useLocalClassroomRewards && optimisticAction) {
+        if (sessionOnlyBalance && optimisticAction) {
           applySessionDelta(-signedDelta);
           setLastAction((current) => (current === optimisticAction ? null : current));
         }
@@ -885,7 +918,7 @@ function ClassroomPointsPanelInner({
         playClassroomSound('error');
         toast({
           variant: 'destructive',
-          title: useLocalClassroomRewards ? 'Could not save classroom points' : isDeduct ? 'Could not deduct points' : 'Could not award points',
+          title: sessionOnlyBalance ? 'Could not save classroom points' : isDeduct ? 'Could not deduct points' : 'Could not award points',
           description: result.message,
         });
         if (rewardsMode) {
@@ -943,7 +976,8 @@ function ClassroomPointsPanelInner({
       toast,
       schoolId,
       effectiveClassId,
-      useLocalClassroomRewards,
+      sessionOnlyBalance,
+      rewardsModeActive,
       localAwardToast,
       firestore,
       classroomMeta,
@@ -1012,17 +1046,6 @@ function ClassroomPointsPanelInner({
     setPendingAward({ studentId, cellIndex, startedAt: Date.now() });
   };
 
-  const handleDeduct = (studentId: string, cellIndex: number) => {
-    if (editMode || !classroomDeduct.enabled) return;
-    playClassroomSound(CLASSROOM_TAP_SOUND);
-    void applyPointsToStudents(
-      [studentId],
-      -classroomDeduct.points,
-      classroomDeduct.description,
-      { flashCellIndex: cellIndex },
-    );
-  };
-
   const pickRandomStudent = useCallback(() => {
     if (!placedStudentIds.length) return;
     const id = placedStudentIds[Math.floor(Math.random() * placedStudentIds.length)];
@@ -1074,7 +1097,7 @@ function ClassroomPointsPanelInner({
     const teacher = budgetOptions?.currentTeacher ?? null;
     const skipBudget = !budgetOptions || budgetOptions.isAdmin;
     try {
-      const undoRewardsMode = !(useLocalClassroomRewards || lastAction.classroomOnly);
+      const undoRewardsMode = !(sessionOnlyBalance || lastAction.classroomOnly);
       const signedDelta = lastAction.mode === 'award' ? -lastAction.points : lastAction.points;
       const result = await awardClassroomPoints(firestore, {
         schoolId,
@@ -1089,7 +1112,7 @@ function ClassroomPointsPanelInner({
         toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
         return;
       }
-      if (useLocalClassroomRewards || lastAction.classroomOnly) {
+      if (sessionOnlyBalance || lastAction.classroomOnly) {
         setClassroomBalances((prev) => {
           const next = { ...prev };
           for (const id of lastAction.studentIds) {
@@ -1125,7 +1148,7 @@ function ClassroomPointsPanelInner({
     toast,
     schoolId,
     effectiveClassId,
-    useLocalClassroomRewards,
+    sessionOnlyBalance,
     firestore,
     classroomMeta,
     recordSessionAwards,
@@ -1277,7 +1300,7 @@ function ClassroomPointsPanelInner({
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
-    onDeduct: classroomDeduct.enabled ? handleDeduct : undefined,
+    onDeduct: undefined,
     onBehaviorNote: (studentId, shortcutKey, fromHeldKey) => {
       const s = studentById.get(studentId);
       if (!s) return;
@@ -1466,11 +1489,12 @@ function ClassroomPointsPanelInner({
 
   const monitorAwardActions =
     !editMode &&
+    !isStudentAudience &&
     (prefs.showRandomPicker ||
       prefs.showClassAwardButton ||
       prefs.showBurstAward ||
       (prefs.showBurstAward && burstMode && burstSelected.length > 0)) ? (
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
         {prefs.showRandomPicker ? (
           <ClassroomMonitorActionButton
             design={design}
@@ -1581,8 +1605,8 @@ function ClassroomPointsPanelInner({
         prefs={chartPrefsForAwards}
         pendingAward={pendingAward}
         categories={sortedCategories}
-        showCategoryAwards={!useLocalClassroomRewards && sortedCategories.length > 0}
-        showQuickAwards={useLocalClassroomRewards}
+        showCategoryAwards={rewardsModeActive && prefs.awardSource === 'categories' && sortedCategories.length > 0}
+        showQuickAwards={useQuickAwardsMenu}
         onPick={(points, description) => {
           playClassroomSound(CLASSROOM_TAP_SOUND);
           void confirmPendingAward(points, description);
@@ -1610,72 +1634,97 @@ function ClassroomPointsPanelInner({
     <div
       className={cn(
         classroomDesignShellClass(design, isFullscreen),
-        isFullscreen && 'h-full min-h-0 w-full gap-1 p-0',
+        isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
+        !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-col',
       )}
     >
-      {isFullscreen && !editMode ? (
+      {isStudentAudience ? (
+        <div className="shrink-0 border-b border-border/40 bg-muted/15 px-3 py-2 text-center">
+          <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Class screen</p>
+          {effectiveClassName ? (
+            <p className="text-sm font-black tracking-tight text-foreground">{effectiveClassName}</p>
+          ) : null}
+        </div>
+      ) : null}
+      {isFullscreen && !editMode && !isStudentAudience ? (
         <div className="shrink-0 border-b border-border/40 bg-muted/15 px-3 py-2">
           <ClassroomSeatingShortcutsHint
             prefs={prefs}
             editMode={editMode}
             attendanceEnabled={attendanceEnabled}
             bathroomEnabled={bathroomTimerOn}
-            classroomDeduct={classroomDeduct}
+            classroomNoteDeduct={classroomNoteDeduct}
             monitorDisplay
           />
         </div>
       ) : null}
-      {!(isFullscreen && editMode) ? (
-      <div
-        className={cn(
-          classroomControlsBarClass(design),
-          isFullscreen && 'mb-1 shrink-0 p-1.5',
-          'items-start sm:items-center',
-        )}
-      >
-        {isFullscreen && !editMode ? (
-          <ClassroomMonitorQuickControls
-            design={design}
-            prefs={prefs}
-            classes={classes}
-            classId={effectiveClassId ?? ''}
-            isFullscreen={isFullscreen}
-            editMode={editMode}
-            rewardsPillarOn={rewardsPillarOn}
-            onChange={patchPrefs}
-            onClassChange={
-              isFullscreen && classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
-            }
-            awardActions={monitorAwardActions}
-          />
-        ) : (
-          <>
-            {monitorAwardActions}
-            <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
-              {!editMode ? (
-                <ClassroomSessionActivityList entries={sessionActivity} compact />
-              ) : null}
-              {!isFullscreen && (
+      {!(isFullscreen && (editMode || isStudentAudience)) ? (
+        <div
+          className={cn(
+            'flex w-full min-w-0 shrink-0 items-start gap-2 border-b border-border/50 pb-3 sm:items-center',
+            isFullscreen && 'mb-1 px-1',
+          )}
+        >
+          <div
+            className={cn(
+              classroomControlsBarClass(design),
+              'mb-0 min-w-0 flex-1',
+              isFullscreen && 'p-1.5',
+              'items-start sm:items-center',
+            )}
+          >
+            {isFullscreen && !editMode ? (
+              <ClassroomMonitorQuickControls
+                design={design}
+                prefs={prefs}
+                classes={classes}
+                classId={effectiveClassId ?? ''}
+                isFullscreen={isFullscreen}
+                editMode={editMode}
+                rewardsPillarOn={rewardsPillarOn}
+                onChange={patchPrefs}
+                onClassChange={
+                  isFullscreen && classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
+                }
+              />
+            ) : (
+              <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
                 <ClassroomToolButton
                   design={design}
                   icon={Maximize2}
                   label="Full screen"
                   onClick={openFullscreen}
                 />
-              )}
-            </div>
-          </>
-        )}
-      </div>
+              </div>
+            )}
+          </div>
+
+          {monitorAwardActions ? (
+            <span className="hidden h-7 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
+          ) : null}
+
+          {monitorAwardActions}
+        </div>
       ) : null}
 
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-1',
-          isFullscreen && !editMode && 'gap-0',
+          'grid min-h-0 min-w-0 flex-1',
+          !editMode && !isStudentAudience
+            ? 'grid-cols-[minmax(0,1fr)_auto]'
+            : 'grid-cols-1',
+          isFullscreen ? 'w-full' : 'pt-3',
         )}
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden',
+            !editMode &&
+              !isStudentAudience &&
+              'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3',
+            isFullscreen && !editMode && !isStudentAudience && 'mr-0 rounded-r-none border-r-0',
+          )}
+        >
 
       {editMode && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-dashed bg-muted/20 px-3 py-2 text-xs">
@@ -1774,10 +1823,11 @@ function ClassroomPointsPanelInner({
       <div
         className={cn(
           'flex min-h-0 min-w-0 flex-col',
-          isFullscreen ? 'flex-1 overflow-hidden' : 'h-[min(58vh,560px)] min-h-[200px] overflow-visible',
+          isFullscreen ? 'flex-1 overflow-hidden' : 'min-h-[200px] flex-1 overflow-visible',
+          isStudentAudience && 'pointer-events-none select-none',
         )}
       >
-        {!frontAtBottom && teacherDesk}
+        {!frontAtBottom && !isStudentAudience && teacherDesk}
         <ClassroomSeatingGrid
           layoutRows={activeLayout.rows}
           layoutCols={activeLayout.cols}
@@ -1813,7 +1863,7 @@ function ClassroomPointsPanelInner({
           handlersRef={gridHandlersRef}
           fitViewport={isFullscreen}
         />
-        {frontAtBottom && teacherDesk}
+        {frontAtBottom && !isStudentAudience && teacherDesk}
       </div>
 
       {lastAwardSummary && prefs.showSessionTotals && !editMode && !isFullscreen ? (
@@ -1871,7 +1921,9 @@ function ClassroomPointsPanelInner({
           <>Tap once = instant +{prefs.defaultPoints}.</>
           <span className="text-muted-foreground/70">
             · Shift+click behavior note
-            {classroomDeduct.enabled ? ` · Ctrl+click ${classroomDeduct.label.toLowerCase()} (−${classroomDeduct.points})` : ''}
+            {classroomNoteDeduct.enabled
+              ? ` · Some behavior notes can deduct −${classroomNoteDeduct.points} pts`
+              : ''}
             {prefs.showRandomPicker ? ' · R random' : ''}
             {prefs.showBurstAward ? ' · Burst on toolbar' : ''} · Ctrl+U undo · Arrange to flip room
             {attendanceEnabled ? ' · Dot = today attendance' : ''}
@@ -1882,9 +1934,20 @@ function ClassroomPointsPanelInner({
 
         </div>
 
-        {isFullscreen && !editMode ? (
-          <aside className="hidden min-h-0 w-44 shrink-0 border-l border-border/40 bg-muted/10 p-2 sm:flex sm:flex-col lg:w-52">
-            <ClassroomSessionActivityList entries={sessionActivity} className="min-h-0 flex-1" />
+        {!editMode && !isStudentAudience ? (
+          <aside
+            className={cn(
+              'flex min-h-0 flex-col self-stretch border-l border-border/50 bg-muted/10',
+              isFullscreen
+                ? 'w-44 shrink-0 pl-3 pr-2 lg:w-52'
+                : 'hidden w-40 shrink-0 pl-3 pr-1 sm:flex lg:w-48 xl:w-52',
+            )}
+          >
+            <ClassroomSessionActivityList
+              entries={sessionActivity}
+              borderless
+              className="min-h-0 flex-1"
+            />
           </aside>
         ) : null}
       </div>
@@ -1917,6 +1980,23 @@ function ClassroomPointsPanelInner({
           shortcutKey={behaviorNoteShortcutKey}
           suppressHeldShortcutKey={behaviorNoteSuppressHeldKey}
           behaviorQuickOptions={settings.classroomBehaviorQuickOptions}
+          deductPoints={
+            behaviorNoteStudent &&
+            isNoteDeductType(classroomNoteDeduct, behaviorNoteShortcutKey)
+              ? classroomNoteDeduct.points
+              : undefined
+          }
+          onDeductPoints={async (points, noteText) => {
+            if (!behaviorNoteStudent) return;
+            const shortcut = getClassroomNoteShortcut(behaviorNoteShortcutKey);
+            const cellIndex = activeLayout?.cells.findIndex((id) => id === behaviorNoteStudent.id) ?? -1;
+            await applyPointsToStudents(
+              [behaviorNoteStudent.id],
+              -points,
+              `${shortcut.hintLabel}: ${noteText}`,
+              cellIndex >= 0 ? { flashCellIndex: cellIndex } : undefined,
+            );
+          }}
           onSaved={onBehaviorNoteSaved}
         />
       ) : null}

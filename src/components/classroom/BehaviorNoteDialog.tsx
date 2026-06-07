@@ -44,6 +44,8 @@ export function BehaviorNoteDialog({
   shortcutKey = 'c',
   suppressHeldShortcutKey = null,
   behaviorQuickOptions,
+  deductPoints,
+  onDeductPoints,
   onSaved,
 }: {
   open: boolean;
@@ -60,6 +62,9 @@ export function BehaviorNoteDialog({
   /** When set, swallow key repeat from the held shortcut until that key is released. */
   suppressHeldShortcutKey?: ClassroomNoteShortcutKey | null;
   behaviorQuickOptions?: ClassroomBehaviorQuickOptions | null;
+  /** When set, teacher can optionally deduct this many points after saving the note. */
+  deductPoints?: number;
+  onDeductPoints?: (points: number, noteText: string) => void | Promise<void>;
   onSaved?: () => void;
 }) {
   const firestore = useFirestore();
@@ -72,6 +77,7 @@ export function BehaviorNoteDialog({
   const [shareToBulletinBoard, setShareToBulletinBoard] = useState(false);
   const [notifyPrincipal, setNotifyPrincipal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deductOnSave, setDeductOnSave] = useState(true);
   const [heldShortcutReleased, setHeldShortcutReleased] = useState(!suppressHeldShortcutKey);
 
   useEffect(() => {
@@ -80,6 +86,7 @@ export function BehaviorNoteDialog({
     setVisibleToParent(true);
     setShareToBulletinBoard(false);
     setNotifyPrincipal(false);
+    setDeductOnSave(true);
     setHeldShortcutReleased(!suppressHeldShortcutKey);
   }, [open, shortcutKey, student.id, suppressHeldShortcutKey]);
 
@@ -172,6 +179,9 @@ export function BehaviorNoteDialog({
             description: result.bulletinMessage,
           });
         }
+      }
+      if (deductPoints && deductOnSave && onDeductPoints) {
+        await onDeductPoints(deductPoints, note.trim());
       }
       onSaved?.();
       onOpenChange(false);
@@ -266,6 +276,19 @@ export function BehaviorNoteDialog({
                 </p>
               </div>
               <Switch checked={notifyPrincipal} onCheckedChange={setNotifyPrincipal} />
+            </div>
+          ) : null}
+          {deductPoints ? (
+            <div className="flex items-center justify-between rounded-xl border border-rose-500/25 bg-rose-500/5 px-3 py-2">
+              <div>
+                <p className="text-sm font-semibold">Deduct points</p>
+                <p className="text-xs text-muted-foreground">
+                  {deductOnSave
+                    ? `Remove ${deductPoints} point${deductPoints === 1 ? '' : 's'} when this note is saved`
+                    : 'Save the note without changing points'}
+                </p>
+              </div>
+              <Switch checked={deductOnSave} onCheckedChange={setDeductOnSave} />
             </div>
           ) : null}
         </div>

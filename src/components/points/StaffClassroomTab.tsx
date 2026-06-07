@@ -14,7 +14,6 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isParentPortalOn } from '@/lib/productPillars';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
-import { ClassroomLaunchMonitorButton } from '@/components/classroom/ClassroomLaunchMonitorButton';
 import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -133,17 +132,8 @@ export function StaffClassroomTab({
   );
 
   const headerAction = useMemo(
-    () => (
-      <div className="flex flex-wrap items-center gap-3">
-        <ClassroomManagementHelpWizard sections={sections} />
-        <ClassroomLaunchMonitorButton
-          schoolId={schoolId}
-          seatingScope={seatingScope}
-          classes={sortedClasses}
-        />
-      </div>
-    ),
-    [sections, schoolId, seatingScope, sortedClasses],
+    () => <ClassroomManagementHelpWizard sections={sections} />,
+    [sections],
   );
 
   if (!classroomOn) {
