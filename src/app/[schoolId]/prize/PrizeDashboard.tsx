@@ -574,6 +574,7 @@ export function PrizeDashboard({
         rewardPrizes,
         router,
         kioskAiFunInShop,
+        categories,
     ]);
 
     const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
