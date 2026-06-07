@@ -65,6 +65,11 @@ import {
 import { DeveloperRemoteSupportViewer } from '@/components/support/DeveloperRemoteSupportViewer';
 import { DeveloperSchoolInsightsPanel } from '@/components/developer/DeveloperSchoolInsightsPanel';
 import { DeveloperSchoolScreensSheet } from '@/components/developer/DeveloperSchoolScreensSheet';
+import {
+  isJewishOrthodoxSchool,
+  SCHOOL_PROFILE_LABELS,
+  type SchoolProfileType,
+} from '@/lib/schoolProfile';
 
 function schoolAccessPasscodeFrom(data: { schoolAccessPasscode?: string; passcode?: string }): string {
   return (data.schoolAccessPasscode || data.passcode || '').trim();
@@ -80,6 +85,7 @@ interface SchoolInfo {
   passcode?: string;
   schoolAccessPasscode?: string;
   adminPasscode?: string;
+  schoolProfile?: SchoolProfileType;
   appSettings?: {
     payClassroom?: boolean;
     payAttendance?: boolean;
@@ -119,6 +125,7 @@ export default function DeveloperPage() {
   const [editingSchoolName, setEditingSchoolName] = useState('');
   const [editingSchoolAccessPasscode, setEditingSchoolAccessPasscode] = useState('');
   const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
+  const [editingJewishOrthodox, setEditingJewishOrthodox] = useState(false);
   const [pillarSchool, setPillarSchool] = useState<SchoolInfo | null>(null);
   const [editingPillars, setEditingPillars] = useState<Record<ProductPillarKey, boolean>>({
     payClassroom: true,
@@ -459,6 +466,7 @@ export default function DeveloperPage() {
     setEditingSchoolName(school.name);
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+    setEditingJewishOrthodox(isJewishOrthodoxSchool(school, school.id));
 
     if (!firestore) return;
     try {
@@ -468,9 +476,11 @@ export default function DeveloperPage() {
       setEditingSchoolName(data.name);
       setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(data));
       setEditingAdminPasscode(adminPasscodeFrom(data));
+      setEditingJewishOrthodox(isJewishOrthodoxSchool(data, school.id));
     } catch {
       setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(school));
       setEditingAdminPasscode(adminPasscodeFrom(school));
+      setEditingJewishOrthodox(isJewishOrthodoxSchool(school, school.id));
     }
   }
 
@@ -479,12 +489,19 @@ export default function DeveloperPage() {
     setEditingSchoolName('');
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+    setEditingJewishOrthodox(false);
   }
 
   const handleUpdateSchool = async () => {
     if (!editingSchool) return;
 
-    const updates: { name?: string; passcode?: string; schoolAccessPasscode?: string; adminPasscode?: string } = {};
+    const updates: {
+      name?: string;
+      passcode?: string;
+      schoolAccessPasscode?: string;
+      adminPasscode?: string;
+      schoolProfile?: SchoolProfileType;
+    } = {};
     if (editingSchoolName && editingSchoolName !== editingSchool.name) {
       updates.name = editingSchoolName;
     }
@@ -496,6 +513,13 @@ export default function DeveloperPage() {
     }
     if (editingAdminPasscode !== currentAdminPasscode) {
       updates.adminPasscode = editingAdminPasscode;
+    }
+    const nextProfile: SchoolProfileType = editingJewishOrthodox ? 'jewish_orthodox' : 'standard';
+    const currentProfile: SchoolProfileType = isJewishOrthodoxSchool(editingSchool, editingSchool.id)
+      ? 'jewish_orthodox'
+      : 'standard';
+    if (nextProfile !== currentProfile) {
+      updates.schoolProfile = nextProfile;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -824,9 +848,16 @@ export default function DeveloperPage() {
                     >
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
-                      <p className="mt-1 inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
-                        {formatActivePillars(school.appSettings)}
-                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <p className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-muted-foreground border">
+                          {formatActivePillars(school.appSettings)}
+                        </p>
+                        {isJewishOrthodoxSchool(school, school.id) ? (
+                          <p className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-amber-800 border border-amber-500/30 dark:text-amber-200">
+                            {SCHOOL_PROFILE_LABELS.jewish_orthodox}
+                          </p>
+                        ) : null}
+                      </div>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
                         className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
@@ -1431,10 +1462,31 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Edit School: <span className="font-code">{editingSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Update the school&apos;s name or login passcodes.
+                Update the school&apos;s name, login passcodes, or community profile.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
+              <div className="rounded-xl border bg-muted/20 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <Label className="text-sm font-bold">Jewish Orthodox school</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Unlocks community-specific options such as Hebrew dates and Jewish holidays on the bulletin board.
+                      Yeshiva and other Orthodox schools should have this enabled.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={editingJewishOrthodox}
+                    onCheckedChange={setEditingJewishOrthodox}
+                    aria-label="Jewish Orthodox school"
+                  />
+                </div>
+                {editingJewishOrthodox ? (
+                  <p className="text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                    Profile: {SCHOOL_PROFILE_LABELS.jewish_orthodox}
+                  </p>
+                ) : null}
+              </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-school-name" className="text-right">Name</Label>
                 <Input

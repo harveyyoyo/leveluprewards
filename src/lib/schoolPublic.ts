@@ -8,7 +8,16 @@ export function schoolPublicDocRef(db: Firestore, schoolId: string) {
   return doc(db, SCHOOL_PUBLIC_COLLECTION, schoolId.trim().toLowerCase());
 }
 
-const PUBLIC_FIELD_KEYS = ['name', 'logoUrl', 'plan', 'featureOverrides', 'featureSettingsDefaults', 'pillarAccess', 'appSettings'] as const;
+const PUBLIC_FIELD_KEYS = [
+  'name',
+  'logoUrl',
+  'plan',
+  'featureOverrides',
+  'featureSettingsDefaults',
+  'pillarAccess',
+  'schoolProfile',
+  'appSettings',
+] as const;
 
 /**
  * Build the `schoolPublic` document from the main `schools/{id}` fields.

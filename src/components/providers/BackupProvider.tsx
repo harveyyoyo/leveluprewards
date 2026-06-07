@@ -35,6 +35,7 @@ import {
     seedOfficeDemoDataForSchool,
     type OfficeDemoVariant,
 } from '@/lib/office/seedOfficeDemoData';
+import type { SchoolProfileType } from '@/lib/schoolProfile';
 
 interface BackupContextType {
     createSchool: (schoolId: string, name?: string, passcodes?: SchoolPasscodeUpdates) => Promise<CreateSchoolResult | null>;
@@ -57,6 +58,7 @@ type SchoolPasscodeUpdates = {
     passcode?: string;
     schoolAccessPasscode?: string;
     adminPasscode?: string;
+    schoolProfile?: SchoolProfileType;
 };
 
 type CreateSchoolResult = {
@@ -395,6 +397,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 name: schoolData.name,
                 plan: schoolDocData.plan ?? DEFAULT_PLAN,
                 featureOverrides: schoolDocData.featureOverrides ?? {},
+                schoolProfile: cleanId === 'yeshiva' ? 'jewish_orthodox' : 'standard',
                 hasMigratedStudents: true,
                 hasMigratedClasses: true,
                 hasMigratedTeachers: true,
