@@ -76,6 +76,10 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
     return PERMISSION_HINT;
   }
 
+  if (message.includes('missing initial state')) {
+    return 'Google sign-in was interrupted. Open this page in Safari or Chrome (not an in-app browser), then try again.';
+  }
+
   if (code === 'unauthenticated' || codeTail === 'unauthenticated') {
     if (rawMessage.toLowerCase().includes('function must be called while authenticated')) {
       return 'This action needs Firebase Auth. For student kiosks, enable Anonymous under Firebase Console → Authentication → Sign-in method, then refresh the page.';

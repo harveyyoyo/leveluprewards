@@ -26,6 +26,12 @@ import {
 } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import {
+  canUseGoogleRedirectSignIn,
+  consumeGoogleRedirectFailedNotice,
+  googleRedirectRecoveryHint,
+  isGoogleRedirectStateLostError,
+} from '@/lib/google/googleAuthEnvironment';
+import {
   clearGoogleRedirectAttempt,
   clearPendingGoogleRedirect,
   markGoogleRedirectAttempt,
@@ -97,6 +103,19 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     isDeveloperOnly ||
     (typeof sessionStorage !== 'undefined' &&
       sessionStorage.getItem(PENDING_DEVELOPER_LOGIN_KEY) === 'true');
+
+  useEffect(() => {
+    if (!mounted || typeof window === 'undefined') return;
+    if (!consumeGoogleRedirectFailedNotice()) return;
+
+    playSound('error');
+    toast({
+      variant: 'destructive',
+      title: 'Google sign-in could not finish',
+      description: googleRedirectRecoveryHint(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]);
 
   useEffect(() => {
     if (!mounted || typeof window === 'undefined') return;
@@ -328,13 +347,32 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         return;
       }
 
+      if (isGoogleRedirectStateLostError(err)) {
+        clearPendingGoogleRedirect();
+        clearGoogleRedirectAttempt();
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Google sign-in could not finish',
+          description: googleRedirectRecoveryHint(),
+        });
+        return;
+      }
+
       const shouldRedirect =
-        code === 'auth/popup-blocked' ||
-        code === 'auth/popup-closed-by-user' ||
-        code === 'auth/cancelled-popup-request' ||
-        code === 'auth/operation-not-supported-in-this-environment';
+        code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment';
 
       if (shouldRedirect) {
+        if (!canUseGoogleRedirectSignIn()) {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Google sign-in needs a full browser',
+            description: googleRedirectRecoveryHint(),
+          });
+          return;
+        }
+
         if (shouldThrottleGoogleRedirect()) {
           playSound('error');
           toast({

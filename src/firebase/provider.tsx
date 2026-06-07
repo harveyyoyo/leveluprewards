@@ -7,7 +7,16 @@ import { Auth, User, getRedirectResult, onAuthStateChanged, signInAnonymously } 
 import { Functions } from 'firebase/functions';
 import { FirebaseStorage } from 'firebase/storage';
 import { FirebaseErrorListener } from '@/firebase/FirebaseErrorListener';
-import { hasPendingGoogleRedirect } from '@/lib/google/googleAuthRedirect';
+import {
+  isGoogleRedirectStateLostError,
+  markGoogleRedirectFailedNotice,
+  scrubFirebaseAuthRedirectParams,
+} from '@/lib/google/googleAuthEnvironment';
+import {
+  clearGoogleRedirectAttempt,
+  clearPendingGoogleRedirect,
+  hasPendingGoogleRedirect,
+} from '@/lib/google/googleAuthRedirect';
 import { refreshGoogleIdToken, waitForAuthUser } from '@/lib/google/googleAuthSession';
 
 interface FirebaseProviderProps {
@@ -119,7 +128,12 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         }
       } catch (error) {
         console.error("FirebaseProvider: getRedirectResult failed:", error);
-        if (!cancelled) {
+        if (isGoogleRedirectStateLostError(error)) {
+          clearPendingGoogleRedirect();
+          clearGoogleRedirectAttempt();
+          scrubFirebaseAuthRedirectParams();
+          markGoogleRedirectFailedNotice();
+        } else if (!cancelled) {
           setUserAuthState((prev) => ({
             ...prev,
             userError: error instanceof Error ? error : new Error(String(error)),
