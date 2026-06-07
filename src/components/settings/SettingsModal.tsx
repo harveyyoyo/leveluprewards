@@ -1551,6 +1551,23 @@ export function SettingsModal() {
 
                                     <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <div className="flex flex-col pr-4">
+                                            <span className="text-sm font-bold">Login prize previews</span>
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Show faint reward items that pop in and out around the sign-in scan screen to tease the prize shop.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={local.enableKioskLoginPrizeTeasers === true}
+                                            onCheckedChange={(checked) =>
+                                                handleToggle('enableKioskLoginPrizeTeasers', checked)
+                                            }
+                                            disabled={!canManageSchoolSettings}
+                                            aria-label="Login prize previews on kiosk sign-in"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center justify-between border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="flex flex-col pr-4">
                                             <span className="text-sm font-bold">Coupon redeem compliments</span>
                                             <p className="text-[11px] text-muted-foreground">
                                                 After a student scans a coupon, show an AI praise line tied to the coupon category, plus the toss-in-trash reminder.

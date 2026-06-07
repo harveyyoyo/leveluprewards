@@ -105,12 +105,17 @@ export async function verifyAdminPasscodeLogin(
 
   const callableResult = await verifyAdminPasscodeViaCallable(functions, args.schoolId, args.passcode);
   if (callableResult.ok) return callableResult;
-  if (!callableResult.infrastructureFailure) {
+
+  // For Google bypass (empty passcode), the callable and API route may have different
+  // env var / Firestore access — try the API route as a fallback regardless of error type.
+  const isGoogleBypass = args.passcode.trim().length === 0;
+  if (!callableResult.infrastructureFailure && !isGoogleBypass) {
     return { ok: false, message: callableResult.message };
   }
 
   const apiResult = await verifyAdminPasscodeViaApi(auth, args.schoolId, args.passcode);
   if (apiResult.ok) return apiResult;
 
-  return { ok: false, message: apiResult.message };
+  // Return the more specific message from whichever path had a real auth rejection.
+  return { ok: false, message: isGoogleBypass ? callableResult.message : apiResult.message };
 }

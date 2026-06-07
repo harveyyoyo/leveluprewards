@@ -25,6 +25,7 @@ import dynamic from 'next/dynamic';
 import type { StudentFoundMeta } from '@/components/student/StudentScanner';
 import { LevelUpKioskLogo } from '@/components/logos/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/kiosk/KioskSponsorBanner';
+import { KioskLoginPrizeTeasers } from '@/components/kiosk/KioskLoginPrizeTeasers';
 import { KioskWedgeCameraAssist } from '@/components/kiosk/KioskWedgeCameraAssist';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
@@ -2574,11 +2575,12 @@ function StudentLoginPage() {
   return (
     <ErrorBoundary name="StudentLoginPage">
       {/* Single column fills #screen-view so the scanner stays vertically centered in the viewport (not clustered top). */}
-      <div className="flex w-full flex-1 flex-col min-h-dvh" data-kiosk-snapshot-root>
+      <div className="relative flex w-full flex-1 flex-col min-h-dvh" data-kiosk-snapshot-root>
+        <KioskLoginPrizeTeasers schoolId={schoolId} />
         <TooltipProvider>
           <div
             className={cn(
-              'flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans [@media(max-height:720px)]:py-2',
+              'relative z-10 flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 py-4 font-sans [@media(max-height:720px)]:py-2',
               isGraphic
                 ? 'animate-in fade-in zoom-in-95 duration-200 motion-reduce:animate-none motion-reduce:duration-0'
                 : '',

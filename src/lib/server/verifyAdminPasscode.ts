@@ -41,6 +41,17 @@ function isAllowedGoogleAdminBypass(email: string, googleAuth: boolean): boolean
   return isAllowedGoogleEmailOnAllowlist(normalized, getDeveloperGoogleEmailAllowlist());
 }
 
+/** Firestore fallback: check appConfig/global.developerUids (survives missing env vars). */
+async function isDeveloperUid(db: Firestore, uid: string): Promise<boolean> {
+  try {
+    const snap = await db.collection('appConfig').doc('global').get();
+    const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
+    return Array.isArray(list) && list.includes(uid);
+  } catch {
+    return false;
+  }
+}
+
 /** Server-side admin passcode gate (mirrors `verifySchoolPasscode` Cloud Function). */
 export async function verifyAdminPasscodeServer(
   db: Firestore,
@@ -63,7 +74,11 @@ export async function verifyAdminPasscodeServer(
   }
 
   const adminRoleRef = schoolRef.collection('roles_admin').doc(args.uid);
-  const googleAdminBypass = isAllowedGoogleAdminBypass(args.email, googleAuth);
+  // Primary: email allowlist from env var. Fallback: Firestore developer UID list
+  // (survives env var misconfiguration / missing deploys).
+  const googleAdminBypass =
+    isAllowedGoogleAdminBypass(args.email, googleAuth) ||
+    (googleAuth && await isDeveloperUid(db, args.uid));
 
   if (!googleAdminBypass) {
     if (passcode.length === 0) {
@@ -88,3 +103,4 @@ export async function verifyAdminPasscodeServer(
 
   await adminRoleRef.set({ role: 'admin' });
 }
+
