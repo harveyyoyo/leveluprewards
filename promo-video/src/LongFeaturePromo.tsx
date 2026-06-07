@@ -123,6 +123,7 @@ const CinematicFeatureMontage: React.FC = () => {
   const segmentIndex = segments.indexOf(activeSegment);
   const segmentLocalFrame = globalFrame - activeSegment.globalStart;
   const segmentDur = Math.max(1, activeSegment.globalEnd - activeSegment.globalStart);
+  const montageLocalStart = activeSegment.globalStart - timing.introEnd;
   const progress = interpolate(
     globalFrame,
     [timing.introEnd, montageEnd],
@@ -264,8 +265,8 @@ const CinematicFeatureMontage: React.FC = () => {
         emoji={activeSegment.emoji}
         title={activeSegment.label}
         xp={(segmentIndex + 1) * 20}
-        startFrame={segmentLocalFrame > 0 ? 0 : 20}
-        endFrame={Math.min(segmentDur - 10, 100)}
+        startFrame={montageLocalStart + 18}
+        endFrame={montageLocalStart + segmentDur - 12}
         color={activeSegment.color}
       />
     </AbsoluteFill>
