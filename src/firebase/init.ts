@@ -8,7 +8,15 @@ import {
   shouldConnectFunctionsEmulator,
 } from '@/firebase/emulatorConfig';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator } from 'firebase/auth';
+import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  browserSessionPersistence,
+  connectAuthEmulator,
+  getAuth,
+  indexedDBLocalPersistence,
+  initializeAuth,
+} from 'firebase/auth';
 import {
   getFirestore,
   initializeFirestore,
@@ -37,6 +45,26 @@ declare global {
   }
 }
 
+function createAuth(firebaseApp: FirebaseApp, isBrowser: boolean) {
+  if (!isBrowser) {
+    return getAuth(firebaseApp);
+  }
+
+  try {
+    return initializeAuth(firebaseApp, {
+      // IndexedDB survives Safari ITP / storage-partitioned redirect returns better than sessionStorage alone.
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch (error) {
+    const code = String((error as { code?: string })?.code ?? '');
+    if (code === 'auth/already-initialized') {
+      return getAuth(firebaseApp);
+    }
+    throw error;
+  }
+}
+
 export function getSdks(firebaseApp: FirebaseApp) {
   const isBrowser = typeof window !== 'undefined';
   const useEmulators = isBrowser && shouldConnectFirebaseEmulators();
@@ -59,7 +87,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
     firestore = getFirestore(firebaseApp);
   }
 
-  const auth = getAuth(firebaseApp);
+  const auth = createAuth(firebaseApp, isBrowser);
   const functions = getFunctions(firebaseApp, FIREBASE_CLOUD_FUNCTIONS_REGION);
   const storageBucket =
     (firebaseConfig as { storageBucket?: string }).storageBucket || `${firebaseConfig.projectId}.appspot.com`;
