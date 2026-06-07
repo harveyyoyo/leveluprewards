@@ -4,7 +4,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth, type LoginState } from './AuthProvider';
-import { useIsTabletOrMobile } from '@/hooks/use-mobile';
+import { useIsMobile, useIsTabletOrMobile } from '@/hooks/use-mobile';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
@@ -526,12 +526,12 @@ export interface SmartScreenProfile {
     settings: Partial<Settings>;
 }
 
-/** Settings with display mode resolved for rendering (`web` | `app` only). */
+/** Settings with display mode resolved for rendering (`web` | `app` | `mobile`). */
 type ResolvedSettings = Omit<Settings, 'displayMode'> & { displayMode: ResolvedDisplayMode };
 
 interface SettingsContextType {
     settings: ResolvedSettings;
-    /** Stored preferences (includes `displayMode: auto | web | app`). */
+    /** Stored preferences (includes `displayMode: auto | web | app | mobile`). */
     settingsPreferences: Settings;
     updateSettings: (updates: Partial<Settings>) => void;
     planTier: PlanTier;
@@ -1514,7 +1514,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, [isLoaded, isPublicLoginRoute, settings, effectiveLegacyMode]);
 
     const isTabletOrMobile = useIsTabletOrMobile();
-    
+    const isPhone = useIsMobile();
+
     const effectiveSettings = useMemo((): ResolvedSettings => {
         const s = { ...settings, legacyMode: effectiveLegacyMode };
         let displayPreference = normalizeDisplayModePreference(s.displayMode);
@@ -1541,9 +1542,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         return {
             ...s,
-            displayMode: resolveDisplayMode(displayPreference, isTabletOrMobile),
+            displayMode: resolveDisplayMode(displayPreference, { isPhone, isTabletOrMobile }),
         };
-    }, [settings, studentKioskUi, loginState, isTabletOrMobile, effectiveLegacyMode]);
+    }, [settings, studentKioskUi, loginState, isPhone, isTabletOrMobile, effectiveLegacyMode]);
 
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;

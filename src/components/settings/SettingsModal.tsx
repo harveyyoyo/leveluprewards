@@ -601,7 +601,7 @@ export function SettingsModal() {
                                     <ChevronRight className="h-5 w-5 shrink-0 text-sky-700/50 dark:text-sky-400/50" aria-hidden />
                                 </div>
                                 <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
-                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Auto / Web / App layout</span>
+                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Auto / Web / App / Mobile layout</span>
                             </button>
                             <button
                                 type="button"
@@ -1149,7 +1149,7 @@ export function SettingsModal() {
                                  {/* Display Mode */}
                                  <div className="space-y-2">
                                      <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
-                                         {(['auto', 'web', 'app'] as const).map((mode) => {
+                                         {(['auto', 'web', 'app', 'mobile'] as const).map((mode) => {
                                              const roleKey =
                                                  interfaceRole === 'student'
                                                      ? 'studentDisplayMode'
@@ -1175,13 +1175,19 @@ export function SettingsModal() {
                                                              : 'text-muted-foreground hover:text-foreground',
                                                      )}
                                                  >
-                                                     {mode === 'auto' ? 'Auto' : mode === 'web' ? 'Web' : 'App'}
+                                                     {mode === 'auto'
+                                                         ? 'Auto'
+                                                         : mode === 'web'
+                                                           ? 'Web'
+                                                           : mode === 'app'
+                                                             ? 'App'
+                                                             : 'Mobile'}
                                                  </button>
                                              );
                                          })}
                                      </div>
                                      <p className="text-[10px] text-muted-foreground font-medium leading-snug px-1">
-                                         Auto uses app layout on tablets and phones, web on larger screens. Web and App always use that layout.
+                                         Auto uses mobile on phones, app on tablets, and web on larger screens. Mobile keeps only teacher and student essentials.
                                      </p>
                                  </div>
 

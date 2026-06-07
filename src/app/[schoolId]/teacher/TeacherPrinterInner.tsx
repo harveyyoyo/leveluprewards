@@ -34,6 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { cn } from '@/lib/utils';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -2630,7 +2631,7 @@ function TeacherPrinterInnerBody({
 
                 <TeacherPortalShell
                     embedded={embedded}
-                    className={cn('relative z-10', settings.displayMode === 'app' && !embedded && 'pb-24')}
+                    className={cn('relative z-10', isCompactDisplayMode(settings.displayMode) && !embedded && 'pb-24')}
                 >
                     {pendingTeacherAwardCount > 0 && !secretaryMode ? (
                         <div
