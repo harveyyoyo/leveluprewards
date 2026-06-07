@@ -19,6 +19,7 @@ import {
   Shuffle,
   Sparkles,
   Undo2,
+  Redo2,
   Users,
   MousePointerClick,
 } from 'lucide-react';
@@ -262,13 +263,10 @@ function ClassroomPointsPanelInner({
   const [prefs, setPrefs] = useState<ClassroomSeatingPrefs>(DEFAULT_CLASSROOM_PREFS);
   const sessionOnlyBalance =
     sessionOnlyProp !== undefined ? sessionOnlyProp : !rewardsPillarOn;
-  const useQuickAwardsMenu = sessionOnlyBalance || prefs.awardSource === 'local';
   const rewardsModeActive = !sessionOnlyBalance;
   const localAwardToast = sessionOnlyBalance
     ? CLASSROOM_SESSION_ONLY.toastDescription
-    : useQuickAwardsMenu
-      ? CLASSROOM_LOCAL_REWARDS.toastDescription
-      : 'Saved to the main rewards balance.';
+    : CLASSROOM_LOCAL_REWARDS.toastDescription;
   const chartQuickAwards = useMemo(
     () => normalizeClassroomQuickAwards(settings.classroomQuickAwards, prefs.quickAwards),
     [settings.classroomQuickAwards, prefs.quickAwards],
@@ -357,16 +355,12 @@ function ClassroomPointsPanelInner({
     studentLabel: string;
   } | null>(null);
   const [lastAction, setLastAction] = useState<LastClassroomAction | null>(null);
+  const [redoAction, setRedoAction] = useState<LastClassroomAction | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
   const [randomHighlightId, setRandomHighlightId] = useState<string | null>(null);
   const randomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { playEffectAtCell, activeCelebration } = useClassroomCelebrationEffect();
   const design = prefs.design;
-
-  const sortedCategories = useMemo(
-    () => categories.slice().sort((a, b) => a.name.localeCompare(b.name)),
-    [categories],
-  );
 
   const classStudents = useMemo(() => {
     if (filterClassId === 'all') return deferredStudents;
@@ -569,6 +563,7 @@ function ClassroomPointsPanelInner({
     setLastAwardSummary(null);
     setBurstSelected([]);
     setLastAction(null);
+    setRedoAction(null);
   }, [effectiveClassId, reloadSessionData]);
 
   useEffect(() => {
@@ -790,6 +785,7 @@ function ClassroomPointsPanelInner({
           if (effectiveClassId && effectiveClassId !== 'all') {
             startTransition(() => {
               recordSessionAwards(studentIds, magnitude, description);
+              setRedoAction(null);
               setLastAction({
                 mode: 'award',
                 studentIds: [...studentIds],
@@ -837,6 +833,7 @@ function ClassroomPointsPanelInner({
         };
         startTransition(() => {
           applySessionDelta(signedDelta);
+          setRedoAction(null);
           setLastAction(optimisticAction);
         });
       } else {
@@ -945,6 +942,7 @@ function ClassroomPointsPanelInner({
       if (rewardsMode && result.count > 0) {
         const budgetSpent = !isDeduct && !skipBudget && settings.enableTeacherBudgets ? totalCost : undefined;
         startTransition(() => {
+          setRedoAction(null);
           setLastAction({
             mode: isDeduct ? 'deduct' : 'award',
             studentIds: [...studentIds],
@@ -1093,15 +1091,16 @@ function ClassroomPointsPanelInner({
   const handleUndo = useCallback(async () => {
     if (!lastAction || isUndoing) return;
     setIsUndoing(true);
-    const undoLabel = `Undo: ${lastAction.description}`;
+    const actionToUndo = lastAction;
+    const undoLabel = `Undo: ${actionToUndo.description}`;
     const teacher = budgetOptions?.currentTeacher ?? null;
     const skipBudget = !budgetOptions || budgetOptions.isAdmin;
     try {
-      const undoRewardsMode = !(sessionOnlyBalance || lastAction.classroomOnly);
-      const signedDelta = lastAction.mode === 'award' ? -lastAction.points : lastAction.points;
+      const undoRewardsMode = !(sessionOnlyBalance || actionToUndo.classroomOnly);
+      const signedDelta = actionToUndo.mode === 'award' ? -actionToUndo.points : actionToUndo.points;
       const result = await awardClassroomPoints(firestore, {
         schoolId,
-        studentIds: lastAction.studentIds,
+        studentIds: actionToUndo.studentIds,
         signedDelta,
         description: undoLabel,
         rewardsMode: undoRewardsMode,
@@ -1112,29 +1111,33 @@ function ClassroomPointsPanelInner({
         toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
         return;
       }
-      if (sessionOnlyBalance || lastAction.classroomOnly) {
+      if (sessionOnlyBalance || actionToUndo.classroomOnly) {
         setClassroomBalances((prev) => {
           const next = { ...prev };
-          for (const id of lastAction.studentIds) {
+          for (const id of actionToUndo.studentIds) {
             next[id] = Math.max(0, (prev[id] ?? 0) + signedDelta);
           }
           return next;
         });
       } else if (
-        lastAction.mode === 'award' &&
+        actionToUndo.mode === 'award' &&
         !skipBudget &&
         settings.enableTeacherBudgets &&
         teacher &&
-        lastAction.budgetSpent &&
+        actionToUndo.budgetSpent &&
         budgetOptions?.onBudgetSpend
       ) {
-        await budgetOptions.onBudgetSpend(-lastAction.budgetSpent);
+        await budgetOptions.onBudgetSpend(-actionToUndo.budgetSpent);
       }
       if (effectiveClassId && effectiveClassId !== 'all') {
-        recordSessionAwards(lastAction.studentIds, signedDelta, undoLabel);
+        recordSessionAwards(actionToUndo.studentIds, signedDelta, undoLabel);
       }
       playClassroomSound(CLASSROOM_UNDO_SOUND);
-      toast({ title: 'Undone', description: `Reversed last action for ${lastAction.studentIds.length} student(s).` });
+      toast({
+        title: 'Undone',
+        description: `Reversed last action for ${actionToUndo.studentIds.length} student(s).`,
+      });
+      setRedoAction(actionToUndo);
       setLastAction(null);
     } finally {
       setIsUndoing(false);
@@ -1153,6 +1156,26 @@ function ClassroomPointsPanelInner({
     classroomMeta,
     recordSessionAwards,
   ]);
+
+  const handleRedo = useCallback(async () => {
+    if (!redoAction || isUndoing) return;
+    setIsUndoing(true);
+    const actionToRedo = redoAction;
+    try {
+      const signedPoints = actionToRedo.mode === 'deduct' ? -actionToRedo.points : actionToRedo.points;
+      const ok = await applyPointsToStudents(actionToRedo.studentIds, signedPoints, actionToRedo.description);
+      if (ok) {
+        setLastAction(actionToRedo);
+        setRedoAction(null);
+        toast({
+          title: 'Redone',
+          description: `Restored last action for ${actionToRedo.studentIds.length} student(s).`,
+        });
+      }
+    } finally {
+      setIsUndoing(false);
+    }
+  }, [redoAction, isUndoing, applyPointsToStudents, toast]);
 
   useEffect(() => {
     if (editMode) return;
@@ -1206,9 +1229,15 @@ function ClassroomPointsPanelInner({
       ) {
         e.preventDefault();
         pickRandomStudent();
+      } else if (e.key === 'u' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        void handleRedo();
       } else if (e.key === 'u' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         void handleUndo();
+      } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        void handleRedo();
       } else if (e.key === 'Escape') {
         setPendingAward(null);
         clearAutoTimer();
@@ -1217,7 +1246,7 @@ function ClassroomPointsPanelInner({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editMode, pendingAward, pickRandomStudent, handleUndo, clearAutoTimer]);
+  }, [editMode, pendingAward, pickRandomStudent, handleUndo, handleRedo, clearAutoTimer]);
 
   const handleDragStart = (index: number) => {
     if (!editMode) return;
@@ -1473,16 +1502,29 @@ function ClassroomPointsPanelInner({
     />
   );
 
-  const undoButton = !editMode ? (
-    <ClassroomToolButton
-      design={design}
-      icon={Undo2}
-      label="Undo"
-      title={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
-      large
-      onClick={() => void handleUndo()}
-      disabled={!lastAction || isUndoing}
-    />
+  const historyActions = !editMode ? (
+    <div className="flex items-center gap-1">
+      <ClassroomToolButton
+        design={design}
+        icon={Undo2}
+        label="Undo"
+        title={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
+        deskRow
+        iconOnly
+        onClick={() => void handleUndo()}
+        disabled={!lastAction || isUndoing}
+      />
+      <ClassroomToolButton
+        design={design}
+        icon={Redo2}
+        label="Redo"
+        title={redoAction ? 'Redo (Ctrl+Y)' : 'Nothing to redo yet'}
+        deskRow
+        iconOnly
+        onClick={() => void handleRedo()}
+        disabled={!redoAction || isUndoing}
+      />
+    </div>
   ) : null;
 
   const sessionActivity = sessionData.activity ?? [];
@@ -1577,8 +1619,8 @@ function ClassroomPointsPanelInner({
     <ClassroomTeacherDesk
       design={design}
       frontAtBottom={frontAtBottom}
-      leadingAction={arrangeSeatsButton}
-      trailingAction={undoButton}
+      leadingAction={historyActions}
+      trailingAction={arrangeSeatsButton}
     />
   );
 
@@ -1604,9 +1646,6 @@ function ClassroomPointsPanelInner({
         student={pendingStudent}
         prefs={chartPrefsForAwards}
         pendingAward={pendingAward}
-        categories={sortedCategories}
-        showCategoryAwards={rewardsModeActive && prefs.awardSource === 'categories' && sortedCategories.length > 0}
-        showQuickAwards={useQuickAwardsMenu}
         onPick={(points, description) => {
           playClassroomSound(CLASSROOM_TAP_SOUND);
           void confirmPendingAward(points, description);
@@ -1710,19 +1749,15 @@ function ClassroomPointsPanelInner({
       <div
         className={cn(
           'grid min-h-0 min-w-0 flex-1',
-          !editMode && !isStudentAudience
-            ? 'grid-cols-[minmax(0,1fr)_auto]'
-            : 'grid-cols-1',
+          !editMode ? 'grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1',
           isFullscreen ? 'w-full' : 'pt-3',
         )}
       >
         <div
           className={cn(
             'flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden',
-            !editMode &&
-              !isStudentAudience &&
-              'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3',
-            isFullscreen && !editMode && !isStudentAudience && 'mr-0 rounded-r-none border-r-0',
+            !editMode && 'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3',
+            isFullscreen && !editMode && 'mr-0 rounded-r-none border-r-0',
           )}
         >
 
@@ -1934,7 +1969,7 @@ function ClassroomPointsPanelInner({
 
         </div>
 
-        {!editMode && !isStudentAudience ? (
+        {!editMode ? (
           <aside
             className={cn(
               'flex min-h-0 flex-col self-stretch border-l border-border/50 bg-muted/10',
@@ -2010,9 +2045,6 @@ function ClassroomAwardMenu({
   student,
   prefs,
   pendingAward,
-  categories,
-  showCategoryAwards,
-  showQuickAwards,
   onPick,
   onBehaviorNote,
   onPauseAutoAward,
@@ -2021,59 +2053,15 @@ function ClassroomAwardMenu({
   student: Student;
   prefs: ClassroomSeatingPrefs;
   pendingAward: PendingAward;
-  categories: Category[];
-  showCategoryAwards: boolean;
-  showQuickAwards: boolean;
   onPick: (points: number, description: string) => void;
   onBehaviorNote?: () => void;
   onPauseAutoAward: (dropdownOpen: boolean) => void;
   onCancel: () => void;
 }) {
-  const [categoryId, setCategoryId] = useState(() => categories[0]?.id ?? '');
-  const [rubricLevelId, setRubricLevelId] = useState('');
-
-  const selectedCategory = useMemo(
-    () => categories.find((c) => c.id === categoryId),
-    [categories, categoryId],
-  );
-
-  const rubricLevels = useMemo(
-    () => selectedCategory?.rubricLevels ?? [],
-    [selectedCategory],
-  );
-
-  useEffect(() => {
-    if (!categories.length) {
-      setCategoryId('');
-      return;
-    }
-    if (!categories.some((c) => c.id === categoryId)) {
-      setCategoryId(categories[0].id);
-    }
-  }, [categories, categoryId]);
-
-  useEffect(() => {
-    if (rubricLevels.length > 0) {
-      setRubricLevelId(rubricLevels[0].id);
-    } else {
-      setRubricLevelId('');
-    }
-  }, [rubricLevels]);
-
   const secondsLeft = Math.max(
     0,
     Math.ceil((prefs.autoAwardMs - (Date.now() - pendingAward.startedAt)) / 1000),
   );
-
-  const awardFromCategory = () => {
-    if (!selectedCategory) return;
-    const level = rubricLevels.find((l) => l.id === rubricLevelId);
-    if (level) {
-      onPick(level.points, `${selectedCategory.name}: ${level.label}`);
-      return;
-    }
-    onPick(selectedCategory.points, selectedCategory.name);
-  };
 
   const menuBody = (
     <>
@@ -2085,84 +2073,6 @@ function ClassroomAwardMenu({
           </span>
         )}
       </p>
-      {showCategoryAwards && (
-        <div
-          className="mb-2 space-y-1.5 rounded-xl border bg-muted/20 p-2"
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <Label className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-            Point category
-          </Label>
-          <Select
-            value={categoryId || undefined}
-            onOpenChange={onPauseAutoAward}
-            onValueChange={(id) => setCategoryId(id)}
-          >
-            <SelectTrigger className="h-9 rounded-lg text-xs font-semibold">
-              <SelectValue placeholder="Choose category…" />
-            </SelectTrigger>
-            <SelectContent className="z-[350] max-h-[min(50vh,16rem)]" position="popper">
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="text-xs">
-                  <span className="flex items-center gap-2">
-                    {c.color ? (
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: c.color }}
-                      />
-                    ) : null}
-                    <span>
-                      {c.name}{' '}
-                      <span className="text-muted-foreground">(+{c.points})</span>
-                    </span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {rubricLevels.length > 0 && (
-            <Select
-              value={rubricLevelId || undefined}
-              onOpenChange={onPauseAutoAward}
-              onValueChange={(id) => setRubricLevelId(id)}
-            >
-              <SelectTrigger className="h-9 rounded-lg text-xs font-semibold">
-                <SelectValue placeholder="Level…" />
-              </SelectTrigger>
-              <SelectContent className="z-[350]" position="popper">
-                {rubricLevels.map((level) => (
-                  <SelectItem key={level.id} value={level.id} className="text-xs">
-                    {level.label} (+{level.points})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Button
-            type="button"
-            size="sm"
-            className="h-9 w-full rounded-lg text-xs font-bold"
-            disabled={!selectedCategory}
-            onClick={(e) => {
-              e.stopPropagation();
-              awardFromCategory();
-            }}
-          >
-            Award{' '}
-            {selectedCategory
-              ? rubricLevels.find((l) => l.id === rubricLevelId)?.points ?? selectedCategory.points
-              : ''}{' '}
-            pts
-          </Button>
-        </div>
-      )}
-      {!showCategoryAwards && !showQuickAwards ? (
-        <p className="mb-2 rounded-xl border border-dashed bg-muted/20 px-3 py-4 text-center text-xs text-muted-foreground">
-          No reward categories yet. Add them under Points → Categories, or switch to Local rewards in Toolbar
-          options.
-        </p>
-      ) : null}
-      {showQuickAwards ? (
       <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
         {prefs.quickAwards.map((q) => {
           const isDefault =
@@ -2196,7 +2106,6 @@ function ClassroomAwardMenu({
           );
         })}
       </div>
-      ) : null}
       {onBehaviorNote ? (
         <Button
           type="button"

@@ -137,6 +137,7 @@ import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/students/studentKiosk';
 import { setStudentKioskSignedIn } from '@/lib/students/studentLayoutChrome';
 import { studentSeesWelcomeBackOverlay, studentSeesWelcomePage } from '@/lib/students/studentWelcome';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
+import { studentCanAffordPrizeByCategory } from '@/lib/prizes/prizeCategoryEligibility';
 import { prizeAppearsInRewardsShop, resolveAiFunApiMode, withUnifiedAiFunPrize } from '@/lib/aiJokePrize';
 import { floorRaffleFullTickets, parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import {
@@ -1357,13 +1358,13 @@ function StudentDashboardInner({
           (p) =>
             prizeAppearsInRewardsShop(p, { enablePrizeAiSurprise: kioskAiFunInShop }) &&
             prizeIsListed(p) &&
-            p.points <= student.points &&
+            studentCanAffordPrizeByCategory(student, p, categories || []) &&
             studentSeesPrizeByTeachers(student, p) &&
             (!p.classId || student.classId === p.classId),
         )
         .sort((a, b) => b.points - a.points);
     },
-    [rewardPrizes, student, kioskAiFunInShop],
+    [rewardPrizes, student, kioskAiFunInShop, categories],
   );
 
   if (studentLoading || !student || !schoolId) {

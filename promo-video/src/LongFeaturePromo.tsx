@@ -5,27 +5,35 @@ import { CinematicBg, GoldSparkles, BrowserMockup, LevelUpLogoAnimated, Achievem
 import { loadFont as loadOutfit } from "@remotion/google-fonts/Outfit";
 import { loadFont as loadJakarta } from "@remotion/google-fonts/PlusJakartaSans";
 
-const { fontFamily: outfit } = loadOutfit();
-const { fontFamily: jakarta } = loadJakarta();
+const { fontFamily: outfit } = loadOutfit("normal", {
+  weights: ["600", "700", "800"],
+  subsets: ["latin"],
+});
+const { fontFamily: jakarta } = loadJakarta("normal", {
+  weights: ["400", "600", "700"],
+  subsets: ["latin"],
+});
 
 const INTRO_DURATION = 235; // fits intro.mp3 (227 frames)
 const OUTRO_DURATION = 220; // fits outro.mp3 (210 frames)
 
+import { CAPTURE_PATHS } from "./promo/captureLibraryPaths";
+
 const FEATURES_LIST = [
-  { id: "themes", title: "Custom Branding", video: "capture-library/features/admin-branding-theme.mp4", audio: "voiceover/feature/epic/themes.mp3", emoji: "🎨", duration: 260 },
-  { id: "houses", title: "House Points", video: "capture-library/features/admin-houses.mp4", audio: "voiceover/feature/epic/houses.mp3", emoji: "🏰", duration: 175 },
-  { id: "library", title: "Prize Library", video: "capture-library/features/admin-library.mp4", audio: "voiceover/feature/epic/library.mp3", emoji: "🎁", duration: 140 },
-  { id: "idCards", title: "Student ID Cards", video: "capture-library/admin/admin-id-card-preview.mp4", audio: "voiceover/feature/epic/idCards.mp3", emoji: "🪪", duration: 175 },
-  { id: "portal", title: "Teacher Portal", video: "capture-library/teacher/teacher-tabs-cycle.mp4", audio: "voiceover/feature/epic/portal.mp3", emoji: "👩‍🏫", duration: 165 },
-  { id: "attendance", title: "Attendance Tracking", video: "capture-library/features/admin-attendance.mp4", audio: "voiceover/feature/epic/attendance.mp3", emoji: "✅", duration: 145 },
-  { id: "badges", title: "Custom Badges", video: "capture-library/features/admin-badges.mp4", audio: "voiceover/feature/epic/badges.mp3", emoji: "🏅", duration: 145 },
-  { id: "bulletin", title: "Bulletin Board", video: "capture-library/features/bulletin-board.mp4", audio: "voiceover/feature/epic/bulletin.mp3", emoji: "📌", duration: 185 },
-  { id: "hallOfFame", title: "Hall of Fame", video: "capture-library/features/hall-of-fame.mp4", audio: "voiceover/feature/epic/hallOfFame.mp3", emoji: "🏆", duration: 215 },
-  { id: "raffle", title: "Live Raffles", video: "capture-library/features/teacher-raffle.mp4", audio: "voiceover/feature/epic/raffle.mp3", emoji: "🎟️", duration: 175 },
-  { id: "notifications", title: "Notifications", video: "capture-library/features/admin-notifications.mp4", audio: "voiceover/feature/epic/notifications.mp3", emoji: "🔔", duration: 185 },
-  { id: "kiosk", title: "Student Kiosk", video: "capture-library/student-kiosk/kiosk-signin-rewards.mp4", audio: "voiceover/feature/epic/kiosk.mp3", emoji: "🎮", duration: 195 },
-  { id: "prizes", title: "Instant Coupons", video: "capture-library/action/action-print-coupons.mp4", audio: "voiceover/feature/epic/prizes.mp3", emoji: "🖨️", duration: 175 },
-  { id: "analytics", title: "Live Analytics", video: "capture-library/features/admin-stats.mp4", audio: "voiceover/feature/epic/analytics.mp3", emoji: "📊", duration: 145 },
+  { id: "themes", title: "Custom Branding", video: CAPTURE_PATHS.adminBrandingTheme, audio: "voiceover/feature/epic/themes.mp3", emoji: "🎨", duration: 260 },
+  { id: "houses", title: "House Points", video: CAPTURE_PATHS.adminHouses, audio: "voiceover/feature/epic/houses.mp3", emoji: "🏰", duration: 175 },
+  { id: "library", title: "Prize Library", video: CAPTURE_PATHS.adminLibrary, audio: "voiceover/feature/epic/library.mp3", emoji: "🎁", duration: 140 },
+  { id: "idCards", title: "Student ID Cards", video: CAPTURE_PATHS.adminIdCard, audio: "voiceover/feature/epic/idCards.mp3", emoji: "🪪", duration: 175 },
+  { id: "portal", title: "Teacher Portal", video: CAPTURE_PATHS.teacherPortal, audio: "voiceover/feature/epic/portal.mp3", emoji: "👩‍🏫", duration: 165 },
+  { id: "attendance", title: "Attendance Tracking", video: CAPTURE_PATHS.adminAttendance, audio: "voiceover/feature/epic/attendance.mp3", emoji: "✅", duration: 145 },
+  { id: "badges", title: "Custom Badges", video: CAPTURE_PATHS.adminBadges, audio: "voiceover/feature/epic/badges.mp3", emoji: "🏅", duration: 145 },
+  { id: "bulletin", title: "Bulletin Board", video: CAPTURE_PATHS.bulletinBoard, audio: "voiceover/feature/epic/bulletin.mp3", emoji: "📌", duration: 185 },
+  { id: "hallOfFame", title: "Hall of Fame", video: CAPTURE_PATHS.hallOfFame, audio: "voiceover/feature/epic/hallOfFame.mp3", emoji: "🏆", duration: 215 },
+  { id: "raffle", title: "Live Raffles", video: CAPTURE_PATHS.teacherRaffle, audio: "voiceover/feature/epic/raffle.mp3", emoji: "🎟️", duration: 175 },
+  { id: "notifications", title: "Notifications", video: CAPTURE_PATHS.adminNotifications, audio: "voiceover/feature/epic/notifications.mp3", emoji: "🔔", duration: 185 },
+  { id: "kiosk", title: "Student Kiosk", video: CAPTURE_PATHS.kioskSigninRewards, audio: "voiceover/feature/epic/kiosk.mp3", emoji: "🎮", duration: 195 },
+  { id: "prizes", title: "Instant Coupons", video: CAPTURE_PATHS.printCoupons, audio: "voiceover/feature/epic/prizes.mp3", emoji: "🖨️", duration: 175 },
+  { id: "analytics", title: "Live Analytics", video: CAPTURE_PATHS.adminStats, audio: "voiceover/feature/epic/analytics.mp3", emoji: "📊", duration: 145 },
 ];
 
 let runningStart = INTRO_DURATION;

@@ -2,6 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
+import { useFirestore } from '@/firebase';
+import { prefetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import {
   CheckCircle2,
   ExternalLink,
@@ -21,7 +23,6 @@ import {
   ClassroomSchoolQuickAwardsEditor,
 } from '@/components/classroom/ClassroomLabelsSetupSection';
 import { ClassroomAlertRulesSection } from '@/components/classroom/ClassroomAlertRulesSection';
-import { ClassroomChartPrefsEditor } from '@/components/classroom/ClassroomChartPrefsEditor';
 import { ClassroomLaunchMonitorButton } from '@/components/classroom/ClassroomLaunchMonitorButton';
 import { ClassroomPointDeductionSettingsEditor } from '@/components/classroom/ClassroomPointDeductionSettingsEditor';
 import type { Settings } from '@/components/providers/SettingsProvider';
@@ -104,7 +105,13 @@ export function ClassAwardsLiveSettingsSection({
   const rewardsPillarOn = isRewardsPillarOn(settings);
   const studentDisplayOn = settings.classroomStudentDisplayEnabled !== false;
 
+  const firestore = useFirestore();
   const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
+
+  const openPrincipalPreview = () => {
+    prefetchBehaviorNotes(schoolId, firestore);
+    setPrincipalPreviewOpen(true);
+  };
 
   return (
     <div className="relative space-y-6">
@@ -161,18 +168,6 @@ export function ClassAwardsLiveSettingsSection({
         ) : null}
       </div>
 
-      {rewardsPillarOn ? (
-        <SettingsPanel icon={SlidersHorizontal} title="Award source">
-          <ClassroomChartPrefsEditor
-            schoolId={schoolId}
-            scope={_seatingScope}
-            disabled={!canEdit}
-            rewardsPillarOn={rewardsPillarOn}
-            embedded
-          />
-        </SettingsPanel>
-      ) : null}
-
       <SettingsPanel icon={ShieldCheck} title="School access" iconClassName="h-4 w-4 text-indigo-500">
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="rounded-2xl border bg-card/60 p-3">
@@ -196,7 +191,7 @@ export function ClassAwardsLiveSettingsSection({
               size="sm"
               className="mt-2 h-8 rounded-lg text-xs"
               disabled={!principalTimelineOn}
-              onClick={() => setPrincipalPreviewOpen(true)}
+              onClick={openPrincipalPreview}
             >
               <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Preview
@@ -332,7 +327,13 @@ export function ClassAwardsLiveSettingsSection({
         </div>
       </SettingsPanel>
 
-      <Dialog open={principalPreviewOpen} onOpenChange={setPrincipalPreviewOpen}>
+      <Dialog
+        open={principalPreviewOpen}
+        onOpenChange={(open) => {
+          if (open) prefetchBehaviorNotes(schoolId, firestore);
+          setPrincipalPreviewOpen(open);
+        }}
+      >
         <DialogContent wide className="max-h-[min(90vh,720px)] overflow-hidden p-0 sm:rounded-2xl">
           <DialogHeader className="border-b px-4 py-3 sm:px-6">
             <DialogTitle>Principal timeline preview</DialogTitle>

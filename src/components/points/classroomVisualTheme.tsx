@@ -204,7 +204,7 @@ function DeskInner({
         {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="text-[9px] tabular-nums text-muted-foreground sm:text-[10px]">
+          <div className="text-xs font-bold tabular-nums text-muted-foreground sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         )}
@@ -220,7 +220,7 @@ function DeskInner({
           {avatar}
           <div className="line-clamp-2 text-center text-[10px] font-semibold text-white sm:text-xs">{name}</div>
           {showBalance && (
-            <div className="text-[9px] tabular-nums text-indigo-200 sm:text-[10px]">
+            <div className="text-xs font-bold tabular-nums text-indigo-200 sm:text-sm">
               {points.toLocaleString()} pts
             </div>
           )}
@@ -235,7 +235,7 @@ function DeskInner({
         {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-bold sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="rounded-full bg-foreground/5 px-2 py-0.5 text-[9px] font-semibold tabular-nums sm:text-[10px]">
+          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         )}
@@ -249,7 +249,7 @@ function DeskInner({
         {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-black uppercase sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="text-[9px] font-bold tabular-nums sm:text-[10px]">{points.toLocaleString()} PTS</div>
+          <div className="text-xs font-black tabular-nums sm:text-sm">{points.toLocaleString()} PTS</div>
         )}
       </>
     );
@@ -262,10 +262,10 @@ function DeskInner({
       <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
       {showBalance && (
         <div className="flex items-baseline gap-0.5">
-          <span className="text-[10px] font-bold tabular-nums text-primary sm:text-xs">
+          <span className="text-sm font-black tabular-nums text-primary sm:text-base">
             {points.toLocaleString()}
           </span>
-          <span className="text-[9px] text-muted-foreground">pts</span>
+          <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">pts</span>
         </div>
       )}
     </>
@@ -389,9 +389,9 @@ export function ClassroomSessionBadge({
       {sessionPts !== 0 ? (
         <span
           className={cn(
-            'rounded-md px-1 font-black leading-none',
+            'rounded-md px-1.5 font-black leading-none',
             sessionPts > 0 ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white',
-            tight ? 'text-[8px]' : 'text-[9px]',
+            tight ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm',
           )}
         >
           {sessionPts > 0 ? '+' : ''}
@@ -401,8 +401,8 @@ export function ClassroomSessionBadge({
       {lastAwardLabel ? (
         <span
           className={cn(
-            'max-w-full truncate rounded border border-emerald-500/30 bg-background/95 px-1 font-semibold leading-tight text-emerald-800 shadow-sm dark:text-emerald-200',
-            tight ? 'text-[7px]' : 'text-[8px]',
+            'max-w-full truncate rounded border border-emerald-500/30 bg-background/95 px-1.5 font-semibold leading-tight text-emerald-800 shadow-sm dark:text-emerald-200',
+            tight ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-xs',
           )}
           title={lastAwardLabel}
         >
@@ -617,6 +617,7 @@ export function ClassroomToolButton({
   design,
   large,
   deskRow,
+  iconOnly,
 }: {
   icon: ComponentType<{ className?: string }>;
   label: string;
@@ -629,18 +630,25 @@ export function ClassroomToolButton({
   large?: boolean;
   /** Compact pill for the teacher desk action group. */
   deskRow?: boolean;
+  iconOnly?: boolean;
 }) {
   const isDark = design === 'midnight';
+  const aria = title || label;
   return (
     <button
       type="button"
-      title={title}
+      title={aria}
+      aria-label={aria}
       disabled={disabled}
       onClick={onClick}
       className={cn(
         'inline-flex items-center font-semibold transition-all disabled:pointer-events-none disabled:opacity-50',
         deskRow
-          ? 'gap-1.5 rounded-xl px-2.5 py-2 text-[11px] hover:-translate-y-px sm:gap-2 sm:px-3 sm:py-2 sm:text-xs'
+          ? cn(
+              iconOnly
+                ? 'justify-center rounded-xl p-2 sm:p-2.5'
+                : 'gap-1.5 rounded-xl px-2.5 py-2 text-[11px] hover:-translate-y-px sm:gap-2 sm:px-3 sm:py-2 sm:text-xs',
+            )
           : cn(
               'gap-2 rounded-xl border hover:-translate-y-0.5',
               large
@@ -666,8 +674,19 @@ export function ClassroomToolButton({
                 : 'border-border bg-card text-foreground shadow-sm hover:border-primary/40 hover:text-primary',
       )}
     >
-      <Icon className={cn('shrink-0', large ? 'h-5 w-5' : deskRow ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-4 w-4')} />
-      {label}
+      <Icon
+        className={cn(
+          'shrink-0',
+          iconOnly && deskRow
+            ? 'h-4 w-4 sm:h-[1.125rem] sm:w-[1.125rem]'
+            : large
+              ? 'h-5 w-5'
+              : deskRow
+                ? 'h-3.5 w-3.5 sm:h-4 sm:w-4'
+                : 'h-4 w-4',
+        )}
+      />
+      {iconOnly ? null : label}
     </button>
   );
 }

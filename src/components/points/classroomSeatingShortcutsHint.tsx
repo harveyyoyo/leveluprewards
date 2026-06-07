@@ -89,7 +89,7 @@ export function ClassroomSeatingShortcutsHint({
         <span className="font-semibold text-foreground">Awards:</span>{' '}
         {prefs.instantTap
           ? `Tap a desk = +${prefs.defaultPoints} points.`
-          : 'Tap a desk = awards menu (pick category or quick award).'}
+          : 'Tap a desk = awards menu (pick a quick award).'}
         {prefs.showRandomPicker ? (
           <>
             {' '}

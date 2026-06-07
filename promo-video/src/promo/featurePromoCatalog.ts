@@ -1,5 +1,7 @@
 /** Feature segments for the long widescreen showcase promo */
 
+import { CAPTURE_PATHS } from "./captureLibraryPaths";
+
 
 
 export type FeatureClipConfig = {
@@ -114,7 +116,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#60a5fa",
 
-    clip: clip("capture-library/student-kiosk/kiosk-signin-rewards.mp4", 1.1),
+    clip: clip(CAPTURE_PATHS.kioskSigninRewards, 1.1),
 
   },
 
@@ -132,7 +134,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#7dd3fc",
 
-    clip: clip("capture-library/admin/admin-id-card-preview.mp4", 1.05),
+    clip: clip(CAPTURE_PATHS.adminIdCard, 1.05),
 
   },
 
@@ -150,7 +152,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#fb923c",
 
-    clip: clip("capture-library/features/admin-branding-theme.mp4", 1.04),
+    clip: clip(CAPTURE_PATHS.adminBrandingTheme, 1.04),
 
   },
 
@@ -168,7 +170,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#fbbf24",
 
-    clip: clip("capture-library/student-kiosk/kiosk-prizes-hover.mp4", 1.08),
+    clip: clip(CAPTURE_PATHS.kioskPrizesHover, 1.08),
 
   },
 
@@ -186,7 +188,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#2dd4bf",
 
-    clip: clip("capture-library/teacher/teacher-classes-tab.mp4", 1.05),
+    clip: clip(CAPTURE_PATHS.teacherClassroom, 1.05),
 
   },
 
@@ -204,7 +206,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#c084fc",
 
-    clip: clip("capture-library/action/action-print-coupons.mp4", 1.1),
+    clip: clip(CAPTURE_PATHS.printCoupons, 1.1),
 
   },
 
@@ -222,7 +224,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#f472b6",
 
-    clip: clip("capture-library/features/teacher-raffle.mp4", 1.06),
+    clip: clip(CAPTURE_PATHS.teacherRaffle, 1.06),
 
   },
 
@@ -240,7 +242,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#a78bfa",
 
-    clip: clip("capture-library/features/admin-houses.mp4", 1.06),
+    clip: clip(CAPTURE_PATHS.adminHouses, 1.06),
 
   },
 
@@ -258,7 +260,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#fde047",
 
-    clip: clip("capture-library/features/hall-of-fame.mp4", 1.04),
+    clip: clip(CAPTURE_PATHS.hallOfFame, 1.04),
 
   },
 
@@ -276,7 +278,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#22d3ee",
 
-    clip: clip("capture-library/features/admin-notifications.mp4", 1.05),
+    clip: clip(CAPTURE_PATHS.adminNotifications, 1.05),
 
   },
 
@@ -294,7 +296,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#2dd4bf",
 
-    clip: clip("capture-library/features/bulletin-board.mp4", 1.05),
+    clip: clip(CAPTURE_PATHS.bulletinBoard, 1.05),
 
   },
 
@@ -312,7 +314,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#818cf8",
 
-    clip: clip("capture-library/features/admin-library.mp4", 1.06),
+    clip: clip(CAPTURE_PATHS.adminLibrary, 1.06),
 
   },
 
@@ -330,7 +332,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#4ade80",
 
-    clip: clip("capture-library/features/admin-badges.mp4", 1.06),
+    clip: clip(CAPTURE_PATHS.adminBadges, 1.06),
 
   },
 
@@ -348,7 +350,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#60a5fa",
 
-    clip: clip("capture-library/features/admin-stats.mp4", 1.04),
+    clip: clip(CAPTURE_PATHS.adminStats, 1.04),
 
   },
 
@@ -366,7 +368,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#34d399",
 
-    clip: clip("capture-library/features/admin-attendance.mp4", 1.06),
+    clip: clip(CAPTURE_PATHS.adminAttendance, 1.06),
 
   },
 

@@ -1,17 +1,19 @@
 /** Capture-library clips aligned to widescreen voice lines. */
 
+import { CAPTURE_PATHS } from "./captureLibraryPaths";
+
 export type CaptureClip = {
   src: string;
   playbackRate: number;
   trimBeforeSec: number;
 };
 
-const clip = (
-  path: string,
+const fromPath = (
+  src: string,
   playbackRate = 1.05,
   trimBeforeSec = 0,
 ): CaptureClip => ({
-  src: `capture-library/${path}`,
+  src,
   playbackRate,
   trimBeforeSec,
 });
@@ -20,12 +22,12 @@ const clip = (
 export const INTRO_LOGO_ONLY_FRAMES = 105;
 
 export const CAPTURE_CLIPS = {
-  scanEntry: clip("student-kiosk/kiosk-type-entry.mp4"),
-  earnPoints: clip("student-kiosk/kiosk-new-points-on-entry.mp4", 1.08),
-  prizeShop: clip("student-kiosk/student-kiosk.mp4", 1.08),
-  signInPoints: clip("student-kiosk/kiosk-signin-welcome-points.mp4", 1.08),
-  idCard: clip("admin/admin-id-card-preview.mp4", 1.05),
-  portalHub: clip("portal/portal-hub-overview.mp4", 1.05),
+  scanEntry: fromPath(CAPTURE_PATHS.kioskScanEntry, 1.08),
+  earnPoints: fromPath(CAPTURE_PATHS.kioskNewPoints, 1.08),
+  prizeShop: fromPath(CAPTURE_PATHS.studentKiosk, 1.08),
+  signInPoints: fromPath(CAPTURE_PATHS.kioskSignInPoints, 1.08),
+  idCard: fromPath(CAPTURE_PATHS.adminIdCard, 1.05),
+  portalHub: fromPath(CAPTURE_PATHS.portalHub, 1.05),
 } as const;
 
 /** Clips + on-screen copy aligned to each widescreen voice line. */

@@ -158,14 +158,11 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Student kiosk always uses hover reveal; staff portals only when hide header is enabled. */
-    const useKioskHoverHeader =
-      (isStudentKioskSurface || (isStaffPortalRoute && hideHeaderEnabled)) && canShowGlobalHeader;
-    /** Student homepage (if scroll-hide enabled): tuck header while scrolling; reveal at scroll top. */
+    /** Student kiosk: top-edge hover reveal (locked viewport, internal scroll). */
+    const useKioskHoverHeader = isStudentKioskSurface && canShowGlobalHeader;
+    /** Hide header on scroll down; reveal at scroll top or when scrolling up. */
     const usePortalScrollHeader =
-      hideHeaderEnabled &&
-      isStudentHomePage &&
-      canShowGlobalHeader;
+      hideHeaderEnabled && canShowGlobalHeader && !isStudentKioskSurface;
     const hoverGlobalHeaderVisible = useTopEdgeRevealChrome(useKioskHoverHeader);
     const sidebarScrollHeaderVisible = useScrollTopRevealChrome(usePortalScrollHeader);
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
@@ -465,22 +462,15 @@ function LayoutClientWrapperInner({
                         id="screen-view"
                         className={cn(
                             'flex-1 min-w-0',
+                            usePortalScrollHeader && 'pt-[var(--global-header-height,5rem)]',
                             hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskSurface
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'
                                     : isStaffPortalRoute
-                                        ? cn(
-                                            staffPortalMainClassName(staffPortalWide),
-                                            usePortalScrollHeader &&
-                                              'pt-[var(--global-header-height,5rem)]',
-                                          )
+                                        ? staffPortalMainClassName(staffPortalWide)
                                         : isStudentHomePage
-                                            ? cn(
-                                                'relative z-10 mx-auto w-full max-w-7xl',
-                                                usePortalScrollHeader &&
-                                                  'pt-[var(--global-header-height,5rem)]',
-                                              )
+                                            ? 'relative z-10 mx-auto w-full max-w-7xl'
                                         : isPortalChoosePage || isSmartScreenPage
                                             ? 'relative z-10 w-full max-w-none'
                                             : 'relative z-10 mx-auto w-full max-w-7xl',

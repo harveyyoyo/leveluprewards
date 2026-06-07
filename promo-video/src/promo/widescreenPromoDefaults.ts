@@ -9,7 +9,7 @@ export const defaultWidescreenPromoProps: WidescreenPromoProps = {
     studentHomeEnd: 540,
     dashboardEnd: 699,
     actionEnd: 699,
-    total: 759,
+    total: 819,
   },
   narration: [
     {

@@ -164,7 +164,7 @@ export function BehaviorNoteDialog({
         pointsLabel,
         pointsAmount,
       };
-      emitBehaviorNoteSaved(savedNote);
+      emitBehaviorNoteSaved(schoolId, savedNote);
       toast({ title: shortcut.toastTitle });
       if (shortcut.kind === 'positive' && shareToBulletinBoard) {
         if (result.bulletinPosted) {

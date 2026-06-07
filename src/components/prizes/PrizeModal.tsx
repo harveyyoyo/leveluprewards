@@ -16,7 +16,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Prize, PrizeAiFunReward, Teacher, Class } from '@/lib/types';
+import type { Prize, PrizeAiFunReward, Teacher, Class, Category } from '@/lib/types';
 import DynamicIcon from '../DynamicIcon';
 import { Switch } from '../ui/switch';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -26,6 +26,7 @@ import { cn, CATEGORY_COLOR_PALETTE } from '@/lib/utils';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ImagePlus, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface PrizeModalProps {
   isOpen: boolean;
@@ -33,11 +34,12 @@ interface PrizeModalProps {
   prize: Prize | null;
   teachers: Teacher[];
   allClasses: Class[];
+  categories?: Category[];
   /** When a teacher opens this modal from the teacher portal, set so new prizes record ownership for edit rights. */
   creatorTeacherId?: string;
 }
 
-export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, creatorTeacherId }: PrizeModalProps) {
+export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, categories = [], creatorTeacherId }: PrizeModalProps) {
   const { addPrize, updatePrize, schoolId } = useAppContext();
   const { storage, firestore } = useFirebase();
   const { settings } = useSettings();
@@ -50,6 +52,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
   const [cardColor, setCardColor] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [classId, setClassId] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [aiFunRewardKind, setAiFunRewardKind] = useState<PrizeAiFunReward>('joke');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [stripImage, setStripImage] = useState(false);
@@ -83,6 +86,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         const tidFromIds = (prize.teacherIds || []).find((id) => typeof id === 'string' && id.length > 0);
         setTeacherId(prize.teacherId || tidFromIds || '');
         setClassId(prize.classId || '');
+        setCategoryIds([...(prize.categoryIds || [])]);
         setAiFunRewardKind((prize.aiFunReward as PrizeAiFunReward) || 'joke');
       } else { // Create mode
         setName('');
@@ -94,6 +98,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
         setCardColor('');
         setTeacherId(creatorTeacherId || '');
         setClassId('');
+        setCategoryIds([]);
       }
       setPendingFile(null);
       setStripImage(false);
@@ -113,6 +118,21 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
     }
     setPendingFile(file);
     setStripImage(false);
+  };
+
+  const selectableCategories = useMemo(() => {
+    const list = [...categories].sort((a, b) => a.name.localeCompare(b.name));
+    if (!creatorTeacherId) {
+      return list.filter((c) => !c.teacherId);
+    }
+    return list.filter((c) => !c.teacherId || c.teacherId === creatorTeacherId);
+  }, [categories, creatorTeacherId]);
+
+  const toggleCategoryId = (id: string, checked: boolean) => {
+    setCategoryIds((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev, id];
+      return prev.filter((x) => x !== id);
+    });
   };
 
   const handleSave = async () => {
@@ -146,6 +166,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
       offerPrintTicketOnRedeem,
       teacherId: teacherId || undefined,
       classId: classId || undefined,
+      categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
       cardColor: trimmedCardColor || undefined,
       ...(prize?.aiFunReward && prize.aiFunReward !== 'picker' ? { aiFunReward: aiFunRewardKind } : {}),
     };
@@ -322,6 +343,33 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cre
                 </Select>
               </div>
             </div>
+            {selectableCategories.length > 0 ? (
+              <div className="space-y-2 rounded-lg border p-3 shadow-sm">
+                <Label>Point categories (optional)</Label>
+                <p className="text-xs text-muted-foreground">
+                  When selected, students redeem using combined balance from these categories only. Leave
+                  empty to spend from any rewards balance.
+                </p>
+                <div className="max-h-40 space-y-2 overflow-y-auto pr-1">
+                  {selectableCategories.map((cat) => (
+                    <label key={cat.id} className="flex cursor-pointer items-start gap-2 rounded-lg border bg-background/80 p-2">
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={categoryIds.includes(cat.id)}
+                        onCheckedChange={(v) => toggleCategoryId(cat.id, v === true)}
+                      />
+                      <span className="min-w-0 text-xs leading-snug">
+                        <span className="font-semibold">{cat.name}</span>
+                        {cat.teacherId ? (
+                          <span className="ml-1 text-muted-foreground">(teacher)</span>
+                        ) : null}
+                        <span className="block text-muted-foreground">Default award: {cat.points} pts</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="rounded-lg border p-3 shadow-sm space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="space-y-0.5 min-w-0">

@@ -93,7 +93,7 @@ export const DEFAULT_MONITOR_MENU_TABS: ClassroomMonitorMenuTabs = {
   style: true,
   deskDisplay: true,
   tapMode: true,
-  awardSource: true,
+  awardSource: false,
   effects: true,
   defaults: true,
   sounds: true,

@@ -998,6 +998,11 @@ function TeacherPrizeManager({
 
     const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
     const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
+    const categoriesQuery = useMemoFirebase(
+        () => (schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null),
+        [firestore, schoolId],
+    );
+    const { data: categories } = useCollection<Category>(categoriesQuery);
 
     const currentTeacher = teachers?.find((t) => t.id === teacherId);
     const teachersForPrizeModal = currentTeacher ? [currentTeacher] : [];
@@ -1030,6 +1035,7 @@ function TeacherPrizeManager({
                 prize={null}
                 teachers={teachersForPrizeModal}
                 allClasses={classes || []}
+                categories={categories || []}
                 creatorTeacherId={teacherId}
             />
         </>

@@ -46,6 +46,11 @@ export function ClassroomTabLayout({
   const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
   const [section, setSection] = useState<ClassroomTabSection>(activeDefault);
+  const [mountedSections, setMountedSections] = useState<Set<ClassroomTabSection>>(
+    () => new Set([activeDefault]),
+  );
+
+  const resolvedSection = sections.includes(section) ? section : sections[0];
 
   useEffect(() => {
     if (!sections.includes(section)) {
@@ -53,13 +58,21 @@ export function ClassroomTabLayout({
     }
   }, [sections, section]);
 
+  useEffect(() => {
+    setMountedSections((prev) => {
+      if (prev.has(resolvedSection)) return prev;
+      const next = new Set(prev);
+      next.add(resolvedSection);
+      return next;
+    });
+  }, [resolvedSection]);
+
   const contentBySection: Record<ClassroomTabSection, React.ReactNode> = {
     seating: seatingContent,
     behavior: behaviorContent,
     'room-display': roomDisplayContent,
   };
 
-  const resolvedSection = sections.includes(section) ? section : sections[0];
   const hasMultiple = sections.length >= 2;
   const sectionItems = sections.map((id) => ({
     id,
@@ -115,6 +128,7 @@ export function ClassroomTabLayout({
 
         <div className="space-y-0">
           {sections.map((id) => {
+            if (!mountedSections.has(id)) return null;
             const active = id === resolvedSection;
             return (
               <div
@@ -125,20 +139,17 @@ export function ClassroomTabLayout({
                 hidden={!active}
                 className={cn(!active && 'hidden')}
               >
-                {active ? (
-                  <motion.div
-                    initial={reduceMotion ? false : { opacity: 0 }}
-                    animate={{
-                      opacity: 1,
-                      transition: reduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' },
-                    }}
-                    className="focus-visible:outline-none"
-                  >
-                    {contentBySection[id]}
-                  </motion.div>
-                ) : (
-                  contentBySection[id]
-                )}
+                <motion.div
+                  initial={false}
+                  animate={
+                    active && !reduceMotion
+                      ? { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } }
+                      : { opacity: 1, transition: { duration: 0 } }
+                  }
+                  className="focus-visible:outline-none"
+                >
+                  {contentBySection[id]}
+                </motion.div>
               </div>
             );
           })}

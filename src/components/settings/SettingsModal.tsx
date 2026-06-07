@@ -1352,7 +1352,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Portal pages tuck the header while you scroll and bring it back at the top. Student kiosks reveal it when you move the pointer to the top edge.
+                                                Tuck the header while you scroll on any portal page; it returns at the top or when you scroll up. Student kiosks reveal it when you move the pointer to the top edge.
                                             </p>
                                         </div>
                                         <Switch

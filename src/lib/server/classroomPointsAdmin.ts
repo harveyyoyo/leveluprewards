@@ -1,4 +1,5 @@
 import type { DocumentData, DocumentReference, Firestore, Transaction } from 'firebase-admin/firestore';
+import { classroomAwardCategoryKey } from '@/lib/classroom/classroomRewardCategories';
 import { applyCategoryPointsByPeriod, applyPointsByPeriod } from '@/lib/db/helpers';
 
 export type ClassroomAwardMeta = {
@@ -245,10 +246,11 @@ export async function applyRewardsPointsAdmin(
           const currentPoints = Number(data.points ?? 0);
           const newPoints = currentPoints + signedDelta;
           const newLifetime = Number(data.lifetimePoints ?? 0) + signedDelta;
+          const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
           const categoryPoints = {
             ...((data.categoryPoints as Record<string, number> | undefined) ?? {}),
           };
-          categoryPoints[desc] = (categoryPoints[desc] || 0) + signedDelta;
+          categoryPoints[categoryKey] = (categoryPoints[categoryKey] || 0) + signedDelta;
           const pointsByPeriodUpdate = applyPointsByPeriod(
             data.pointsByPeriod as Record<string, number> | undefined,
             signedDelta,
@@ -256,7 +258,7 @@ export async function applyRewardsPointsAdmin(
           );
           const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
             data.categoryPointsByPeriod as Record<string, Record<string, number>> | undefined,
-            desc,
+            categoryKey,
             signedDelta,
             now,
           );

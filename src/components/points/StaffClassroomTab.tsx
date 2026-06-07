@@ -3,7 +3,8 @@
 import { useDeferredValue, useEffect, useMemo } from 'react';
 import { LayoutGrid } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useFirestore } from '@/firebase';
+import { prefetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import {
@@ -57,6 +58,7 @@ export function StaffClassroomTab({
   const deferredStudents = useDeferredValue(students ?? []);
   const { loginState } = useAppContext();
   const { user } = useFirebase();
+  const firestore = useFirestore();
   const { settings, updateSettings } = useSettings();
   const classroomOn = isClassroomPillarOn(settings);
   const isAdminVariant = variant === 'admin';
@@ -73,6 +75,11 @@ export function StaffClassroomTab({
       /* save path retries provisioning */
     });
   }, [classroomOn, loginState, schoolId, user]);
+
+  useEffect(() => {
+    if (!classroomOn || !schoolId) return;
+    prefetchBehaviorNotes(schoolId, firestore);
+  }, [classroomOn, schoolId, firestore]);
 
   const sortedClasses = useMemo(
     () => (classes ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),

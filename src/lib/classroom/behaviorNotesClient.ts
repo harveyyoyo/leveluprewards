@@ -7,6 +7,15 @@ import {
 } from '@/lib/db/behaviorNotes';
 import type { BehaviorNote } from '@/lib/types';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
+import { writeBehaviorNotesCache } from '@/lib/classroom/behaviorNotesCache';
+
+type BehaviorNotesFetchResult = {
+  notes: BehaviorNote[];
+  error?: string;
+  status?: number;
+};
+
+const inflightBySchool = new Map<string, Promise<BehaviorNotesFetchResult>>();
 
 export type SaveBehaviorNoteRequest = CreateBehaviorNoteInput & {
   schoolId: string;
@@ -73,14 +82,10 @@ function shouldTryClientFallback(status?: number, message?: string): boolean {
   );
 }
 
-export async function fetchBehaviorNotes(
+async function fetchBehaviorNotesOnce(
   schoolId: string,
-  firestore: Firestore | null = null,
-): Promise<{
-  notes: BehaviorNote[];
-  error?: string;
-  status?: number;
-}> {
+  firestore: Firestore | null,
+): Promise<BehaviorNotesFetchResult> {
   const params = new URLSearchParams({ schoolId });
   const headers = await authHeaders();
 
@@ -99,6 +104,7 @@ export async function fetchBehaviorNotes(
       createdAt: parseBehaviorNoteCreatedAt(n.createdAt),
       visibleToParent: n.visibleToParent !== false,
     })) as BehaviorNote[];
+    writeBehaviorNotesCache(schoolId, notes);
     return { notes };
   }
 
@@ -107,6 +113,7 @@ export async function fetchBehaviorNotes(
   if (firestore && shouldTryClientFallback(res.status, error)) {
     try {
       const notes = await listBehaviorNotes(firestore, schoolId);
+      writeBehaviorNotesCache(schoolId, notes);
       return { notes };
     } catch (e) {
       const formatted = formatBehaviorNotesError(error, res.status, (e as Error).message);
@@ -115,6 +122,32 @@ export async function fetchBehaviorNotes(
   }
 
   return { notes: [], error, status: res.status };
+}
+
+export async function fetchBehaviorNotes(
+  schoolId: string,
+  firestore: Firestore | null = null,
+): Promise<BehaviorNotesFetchResult> {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid) return { notes: [] };
+
+  const existing = inflightBySchool.get(sid);
+  if (existing) return existing;
+
+  const promise = fetchBehaviorNotesOnce(sid, firestore).finally(() => {
+    if (inflightBySchool.get(sid) === promise) {
+      inflightBySchool.delete(sid);
+    }
+  });
+  inflightBySchool.set(sid, promise);
+  return promise;
+}
+
+/** Warm the in-memory cache while the user is on another Classroom section. */
+export function prefetchBehaviorNotes(schoolId: string, firestore: Firestore | null = null) {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid) return;
+  void fetchBehaviorNotes(sid, firestore);
 }
 
 export async function saveBehaviorNote(

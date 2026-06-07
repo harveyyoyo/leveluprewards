@@ -348,6 +348,11 @@ export interface Prize {
   scanCode?: string;
   /** Optional accent for printed shelf / scan cards (hex, e.g. #3b82f6). Requires color printing in settings. */
   cardColor?: string;
+  /**
+   * When set, redemption requires enough combined balance in these Points → Categories ids.
+   * Omit or empty = spend from total rewards balance (any category).
+   */
+  categoryIds?: string[];
 }
 
 export interface Achievement {

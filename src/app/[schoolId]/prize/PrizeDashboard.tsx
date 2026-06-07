@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Student, Prize, PrizeAiFunReward } from '@/lib/types';
+import type { Student, Prize, PrizeAiFunReward, Category } from '@/lib/types';
 import {
     Gift,
     LogOut,
@@ -75,6 +75,7 @@ import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeSho
 import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
+import { studentCanAffordPrizeByCategory, studentPrizeCategoryBalance, prizeHasCategoryRestriction } from '@/lib/prizes/prizeCategoryEligibility';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
@@ -215,6 +216,7 @@ function ConfirmRedemptionDialog({
     onConfirm,
     onPickupVoucher,
     isRedeeming = false,
+    categories = [],
     hasTheme = false,
     themeSurfaceStyle,
     primaryForeground = '#ffffff',
@@ -227,6 +229,7 @@ function ConfirmRedemptionDialog({
     /** Redeem with pickup voucher (barcode for separate kiosk) when prize allows print vouchers. */
     onPickupVoucher?: (quantity: number, aiFunUserPick?: PrizeAiFunReward) => void,
     isRedeeming?: boolean,
+    categories?: Category[],
     hasTheme?: boolean,
     themeSurfaceStyle?: CSSProperties,
     primaryForeground?: string,
@@ -236,13 +239,17 @@ function ConfirmRedemptionDialog({
     const playSound = useArcadeSound();
 
     const studentPoints = student && typeof student.points === 'number' ? student.points : 0;
+    const spendablePoints =
+        student && prize && prizeHasCategoryRestriction(prize)
+            ? studentPrizeCategoryBalance(student, prize, categories)
+            : studentPoints;
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
     const aiPrize = isAiFunPrize(prize);
     const pickerSurprise = prize?.aiFunReward === 'picker';
     /** Free (0 pt) prizes are not limited by balance; cap + optional stock count. */
     const maxByPoints =
         !prize ? 1 :
-        prizePoints > 0 ? Math.max(0, Math.floor(studentPoints / prizePoints)) :
+        prizePoints > 0 ? Math.max(0, Math.floor(spendablePoints / prizePoints)) :
         FREE_PRIZE_MAX_QTY;
     const maxByStock =
         prize && typeof prize.stockCount === 'number' ? prize.stockCount : Number.POSITIVE_INFINITY;
@@ -264,7 +271,7 @@ function ConfirmRedemptionDialog({
 
     const effectiveQty = aiPrize ? 1 : quantity;
     const totalCost = prizePoints * effectiveQty;
-    const canAfford = studentPoints >= totalCost;
+    const canAfford = studentCanAffordPrizeByCategory(student, prize, categories, effectiveQty);
     const remainingPoints = studentPoints - totalCost;
 
     const handleQuantityChange = (amount: number) => {
@@ -507,6 +514,11 @@ export function PrizeDashboard({
 
     const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
     const { data: prizes, isLoading: prizesLoading, error: prizesError } = useCollection<Prize>(prizesQuery);
+    const categoriesQuery = useMemoFirebase(
+        () => (schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null),
+        [firestore, schoolId],
+    );
+    const { data: categories } = useCollection<Category>(categoriesQuery);
     const rewardPrizes = useMemo(
         () => withUnifiedAiFunPrize(prizes, {
             enablePrizeAiSurprise: kioskAiFunInShop,
@@ -549,8 +561,7 @@ export function PrizeDashboard({
             return teacherMatch && classMatch;
         });
         const match = visible.find((p) => p.id === redeemId);
-        const pts = student.points || 0;
-        if (match && pts >= (match.points || 0)) {
+        if (match && studentCanAffordPrizeByCategory(student, match, categories || [])) {
             setConfirmingPrize(match);
         }
         router.replace(`/${schoolId}/prize`, { scroll: false });
@@ -1065,8 +1076,8 @@ export function PrizeDashboard({
             case 'price-desc': return bp - ap;
             case 'name': return (a.name || '').localeCompare(b.name || '');
             case 'affordable': {
-                const aAfford = (student.points || 0) >= ap ? 0 : 1;
-                const bAfford = (student.points || 0) >= bp ? 0 : 1;
+                const aAfford = studentCanAffordPrizeByCategory(student, a, categories || []) ? 0 : 1;
+                const bAfford = studentCanAffordPrizeByCategory(student, b, categories || []) ? 0 : 1;
                 if (aAfford !== bAfford) return aAfford - bAfford;
                 return ap - bp;
             }
@@ -1409,6 +1420,7 @@ export function PrizeDashboard({
                     student={student}
                     prize={confirmingPrize}
                     isRedeeming={isRedeeming}
+                    categories={categories || []}
                     hasTheme={!!activeTheme}
                     themeSurfaceStyle={themeSurfaceStyle}
                     primaryForeground={primaryForeground}

@@ -15,7 +15,7 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
     checklist: [
       `Use ${CLASS_AWARDS_LIVE_LAUNCH_LABEL} at the top of this section for the live seating chart and quick awards.`,
       'Use Launch for class screen on your projector — same chart, but behavior comments stay hidden.',
-      'Set award source, school access, award labels, point deductions, if/then alerts, and monitor options under Settings.',
+      'Set school access, award labels, point deductions, if/then alerts, and monitor options under Settings.',
       'On the monitor: Class (multi-class), Chart style, Layout, Desk display, and Toolbar options.',
     ],
   },

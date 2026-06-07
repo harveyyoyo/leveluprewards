@@ -5,6 +5,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
+import { classroomAwardCategoryKey } from '@/lib/classroom/classroomRewardCategories';
 import { applyCategoryPointsByPeriod, applyPointsByPeriod } from '@/lib/db/helpers';
 import {
   readHouseRollupSnaps,
@@ -188,12 +189,13 @@ export async function applyRewardsPointsToStudents(
           if (signedDelta > 0) {
             const newPoints = Number(studentData.points ?? 0) + signedDelta;
             const newLifetime = (studentData.lifetimePoints || 0) + signedDelta;
+            const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
             const categoryPointsUpdate = { ...studentData.categoryPoints };
-            categoryPointsUpdate[desc] = (categoryPointsUpdate[desc] || 0) + signedDelta;
+            categoryPointsUpdate[categoryKey] = (categoryPointsUpdate[categoryKey] || 0) + signedDelta;
             const pointsByPeriodUpdate = applyPointsByPeriod(studentData.pointsByPeriod, signedDelta, now);
             const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
               studentData.categoryPointsByPeriod,
-              desc,
+              categoryKey,
               signedDelta,
               now,
             );

@@ -1,4 +1,5 @@
 import type { Student } from '@/lib/types';
+import { displayCategoryKey } from '@/lib/classroom/classroomRewardCategories';
 
 export type StudentPointTypeTotal = {
   label: string;
@@ -12,7 +13,7 @@ function safePoints(value: unknown): number {
 
 export function getStudentPointTypeTotals(student: Pick<Student, 'points' | 'lifetimePoints' | 'categoryPoints'>): StudentPointTypeTotal[] {
   const byType = Object.entries(student.categoryPoints || {})
-    .map(([label, value]) => ({ label: label.trim() || 'Uncategorized', points: safePoints(value) }))
+    .map(([label, value]) => ({ label: displayCategoryKey(label), points: safePoints(value) }))
     .filter((row) => row.points > 0)
     .sort((a, b) => b.points - a.points || a.label.localeCompare(b.label));
 

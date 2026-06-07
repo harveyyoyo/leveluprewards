@@ -1,5 +1,6 @@
 import React from "react";
-import { AbsoluteFill, Sequence, Video, Audio, staticFile, useVideoConfig, spring, useCurrentFrame, interpolate } from "remotion";
+import { Video } from "@remotion/media";
+import { AbsoluteFill, Sequence, Audio, staticFile, useVideoConfig, spring, useCurrentFrame, interpolate } from "remotion";
 import {
   MY_COMP_BANNERS,
   MY_COMP_INTRO_END,
@@ -49,7 +50,7 @@ const FONT_STYLE = `
 `;
 
 export const MyComposition = () => {
-  const { fps, width, height } = useVideoConfig();
+  const { fps, height } = useVideoConfig();
   const frame = useCurrentFrame();
 
   const INTRO_END = MY_COMP_INTRO_END;
@@ -182,7 +183,7 @@ export const MyComposition = () => {
       )}
 
       {/* SEQUENCE 1: Portrait Intro (0s - 4s) */}
-      <Sequence from={0} durationInFrames={INTRO_END}>
+      <Sequence durationInFrames={INTRO_END}>
         <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", zIndex: 20, padding: "0 60px" }}>
           <div style={{ textAlign: "center" }}>
             <h1 
@@ -288,7 +289,8 @@ export const MyComposition = () => {
                   <Video
                     src={staticFile(clip.src)}
                     playbackRate={clip.playbackRate}
-                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    objectFit="contain"
+                    style={{ width: "100%", height: "100%" }}
                     volume={0}
                     muted
                   />
@@ -403,7 +405,6 @@ export const MyComposition = () => {
                 color: "white",
                 letterSpacing: "-0.5px",
                 transform: `scale(${outroScale * outroButtonPulse})`,
-                transition: "transform 0.1s ease-in-out"
               }}
             >
               leveluprewards.app

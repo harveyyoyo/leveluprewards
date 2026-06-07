@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
 import { useFirestore } from '@/firebase';
+import { peekBehaviorNotesCache } from '@/lib/classroom/behaviorNotesCache';
 import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
 import { useFirebase } from '@/firebase';
@@ -67,14 +68,28 @@ export function BehaviorTimelinePanel({
 }) {
   const firestore = useFirestore();
   const { user } = useFirebase();
-  const [rows, setRows] = useState<BehaviorNote[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [rows, setRows] = useState<BehaviorNote[]>(() => peekBehaviorNotesCache(schoolId) ?? []);
+  const [isLoading, setIsLoading] = useState(() => !peekBehaviorNotesCache(schoolId));
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
+
+  useEffect(() => {
+    const cached = peekBehaviorNotesCache(schoolId);
+    if (cached) {
+      setRows(cached);
+      setIsLoading(false);
+    } else {
+      setRows([]);
+      setIsLoading(true);
+    }
+    setError(null);
+  }, [schoolId]);
 
   const load = useCallback(
     async (opts?: { silent?: boolean; afterProvision?: boolean }) => {
       if (!schoolId) return;
-      if (!opts?.silent) setIsLoading(true);
+      const hasCache = !!peekBehaviorNotesCache(schoolId);
+      const silent = opts?.silent || hasCache;
+      if (!silent) setIsLoading(true);
       setError(null);
 
       let result = await fetchBehaviorNotes(schoolId, firestore);
@@ -96,12 +111,15 @@ export function BehaviorTimelinePanel({
       }
 
       if (result.error) {
-        setError({ message: result.error, status: result.status });
-        if (!opts?.silent) setRows([]);
+        if (!silent) {
+          setError({ message: result.error, status: result.status });
+          setRows([]);
+        }
       } else {
         setRows(result.notes);
+        setError(null);
       }
-      if (!opts?.silent) setIsLoading(false);
+      if (!silent) setIsLoading(false);
     },
     [schoolId, firestore, user],
   );

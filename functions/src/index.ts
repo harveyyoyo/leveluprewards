@@ -1864,6 +1864,117 @@ exports.libraryReturnServer = functions
   });
 
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
+
+const CLASSROOM_TEACHER_CATEGORY_PREFIX = "__cm__:";
+
+function classroomTeacherCategoryKey(teacherId: string, label: string): string {
+  const tid = String(teacherId || "").trim();
+  const clean = String(label || "").trim();
+  if (!tid || !clean) return clean;
+  return `${CLASSROOM_TEACHER_CATEGORY_PREFIX}${tid}:${clean}`;
+}
+
+function isTeacherScopedCategoryKey(key: string): boolean {
+  return key.startsWith(CLASSROOM_TEACHER_CATEGORY_PREFIX);
+}
+
+function displayCategoryKey(key: string): string {
+  if (!isTeacherScopedCategoryKey(key)) return String(key || "").trim() || "Uncategorized";
+  const rest = key.slice(CLASSROOM_TEACHER_CATEGORY_PREFIX.length);
+  const colon = rest.indexOf(":");
+  return colon >= 0 ? rest.slice(colon + 1).trim() || "Uncategorized" : rest.trim();
+}
+
+function prizeCategoryIds(prize: any): string[] {
+  return Array.isArray(prize?.categoryIds)
+    ? prize.categoryIds.filter((id: unknown): id is string => typeof id === "string" && id.length > 0)
+    : [];
+}
+
+function studentCategoryBalance(categoryPoints: Record<string, number>, category: any): number {
+  const cp = categoryPoints || {};
+  const name = String(category?.name || "").trim();
+  if (!name) return 0;
+  const safe = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+  };
+  if (category?.teacherId) {
+    return safe(cp[classroomTeacherCategoryKey(String(category.teacherId), name)]);
+  }
+  const plain = safe(cp[name]);
+  if (plain > 0) return plain;
+  let scopedTotal = 0;
+  for (const [key, value] of Object.entries(cp)) {
+    if (!isTeacherScopedCategoryKey(key)) continue;
+    if (displayCategoryKey(key).toLowerCase() === name.toLowerCase()) scopedTotal += safe(value);
+  }
+  return scopedTotal;
+}
+
+function studentPrizeCategoryBalance(student: any, prize: any, categories: any[]): number {
+  const ids = new Set(prizeCategoryIds(prize));
+  if (ids.size === 0) return Math.max(0, Math.round(Number(student?.points || 0)));
+  const cp = (student?.categoryPoints || {}) as Record<string, number>;
+  return categories
+    .filter((c) => ids.has(String(c.id)))
+    .reduce((sum, cat) => sum + studentCategoryBalance(cp, cat), 0);
+}
+
+function deductCategoryPointsForPrize(
+  categoryPoints: Record<string, number>,
+  prize: any,
+  categories: any[],
+  cost: number,
+): Record<string, number> | null {
+  const ids = new Set(prizeCategoryIds(prize));
+  const linked = categories.filter((c) => ids.has(String(c.id)));
+  if (linked.length === 0 || cost <= 0) return { ...categoryPoints };
+  const next = { ...categoryPoints };
+  let remaining = cost;
+  const safe = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+  };
+  for (const category of linked) {
+    if (remaining <= 0) break;
+    const name = String(category?.name || "").trim();
+    if (!name) continue;
+    if (category?.teacherId) {
+      const key = classroomTeacherCategoryKey(String(category.teacherId), name);
+      const available = safe(next[key]);
+      const take = Math.min(available, remaining);
+      if (take > 0) {
+        next[key] = available - take;
+        if (next[key] <= 0) delete next[key];
+        remaining -= take;
+      }
+      continue;
+    }
+    const plainAvailable = safe(next[name]);
+    const plainTake = Math.min(plainAvailable, remaining);
+    if (plainTake > 0) {
+      next[name] = plainAvailable - plainTake;
+      if (next[name] <= 0) delete next[name];
+      remaining -= plainTake;
+    }
+    if (remaining <= 0) break;
+    for (const [key, value] of Object.entries(next)) {
+      if (remaining <= 0) break;
+      if (!isTeacherScopedCategoryKey(key)) continue;
+      if (displayCategoryKey(key).toLowerCase() !== name.toLowerCase()) continue;
+      const available = safe(value);
+      const take = Math.min(available, remaining);
+      if (take > 0) {
+        next[key] = available - take;
+        if (next[key] <= 0) delete next[key];
+        remaining -= take;
+      }
+    }
+  }
+  return remaining <= 0 ? next : null;
+}
+
 exports.redeemPrizeServer = functions
   .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
   .https.onCall(
@@ -1954,6 +2065,34 @@ exports.redeemPrizeServer = functions
         throw new functions.https.HttpsError("failed-precondition", "Not enough points.");
       }
 
+      const prizeCategoryIdList = prizeCategoryIds(prize);
+      let categoryPointsUpdate: Record<string, number> | null = null;
+      if (prizeCategoryIdList.length > 0) {
+        const categoriesSnap = await tx.get(
+          db.collection("schools").doc(schoolId).collection("categories"),
+        );
+        const categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        const categoryBalance = studentPrizeCategoryBalance(student, prize, categories);
+        if (categoryBalance < totalCost) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "Not enough points in the required categories.",
+          );
+        }
+        categoryPointsUpdate = deductCategoryPointsForPrize(
+          (student.categoryPoints || {}) as Record<string, number>,
+          prize,
+          categories,
+          totalCost,
+        );
+        if (!categoryPointsUpdate) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "Not enough points in the required categories.",
+          );
+        }
+      }
+
       const studentClassId = typeof student.classId === "string" ? student.classId : "";
       if (typeof prize.classId === "string" && prize.classId && prize.classId !== studentClassId) {
         throw new functions.https.HttpsError("failed-precondition", "This prize is not available for this student.");
@@ -2014,7 +2153,10 @@ exports.redeemPrizeServer = functions
         activityData.prizeId = prizeId;
       }
 
-      tx.update(studentRef, { points: studentPoints - totalCost });
+      tx.update(studentRef, {
+        points: studentPoints - totalCost,
+        ...(categoryPointsUpdate ? { categoryPoints: categoryPointsUpdate } : {}),
+      });
       tx.set(activityRef, activityData);
 
       if (typeof prize.stockCount === "number") {

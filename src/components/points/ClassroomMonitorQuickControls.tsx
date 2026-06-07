@@ -3,7 +3,6 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  Award,
   ChevronDown,
   GraduationCap,
   Hash,
@@ -199,15 +198,12 @@ function ClassroomMonitorToolbarOptionsMenu({
           <p className="text-[10px] text-muted-foreground">
             Chart style, tap mode, sounds, etc. Layout is on the arrange room bar while editing seats.
           </p>
-          {MONITOR_MENU_TAB_ORDER.map((key) => {
-            if (key === 'awardSource' && !rewardsPillarOn) return null;
-            return (
+          {MONITOR_MENU_TAB_ORDER.filter((key) => key !== 'awardSource').map((key) => (
               <label key={key} className="flex cursor-pointer items-center gap-2">
                 <Checkbox checked={menus[key]} onCheckedChange={(v) => patchMenu(key, v === true)} />
                 <span className="text-xs font-medium">{MONITOR_MENU_TAB_LABELS[key]}</span>
               </label>
-            );
-          })}
+            ))}
         </div>
       </div>
     </MonitorCategoryPopover>
@@ -417,40 +413,6 @@ export function ClassroomMonitorQuickControls({
               <RadioGroupItem value="menu" className="mt-0.5" aria-label="Show awards menu" />
               <span className="text-xs leading-snug">
                 <span className="font-semibold">Show awards menu</span> — tap opens the full awards menu.
-              </span>
-            </label>
-          </RadioGroup>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.awardSource && rewardsPillarOn ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Award}
-          label="Award source"
-          contentClassName="w-72"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Award source</p>
-          <RadioGroup
-            value={prefs.awardSource}
-            onValueChange={(v) => {
-              if (v === 'local' || v === 'categories') onChange({ awardSource: v });
-            }}
-            className="gap-2"
-          >
-            <label className="flex cursor-pointer items-start gap-2">
-              <RadioGroupItem value="local" className="mt-0.5" aria-label="Local rewards" />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Local rewards</span> — each quick-award button is its own category
-                on the student record and syncs to the main rewards balance.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <RadioGroupItem value="categories" className="mt-0.5" aria-label="Reward categories" />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Reward categories</span> — uses Points tab categories for kiosk,
-                prizes, and reports.
               </span>
             </label>
           </RadioGroup>

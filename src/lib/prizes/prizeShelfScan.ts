@@ -4,7 +4,8 @@ import { prizeAppearsInRewardsShop } from '@/lib/aiJokePrize';
 import { lookupPrizeByScanCode } from '@/lib/db/lookup';
 import { isPrizeScanCode, normalizeScanInput } from '@/lib/prizes/prizeScanCode';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
-import type { Prize, Student } from '@/lib/types';
+import { studentCanAffordPrizeByCategory, studentPrizeCategoryBalance, prizeHasCategoryRestriction } from '@/lib/prizes/prizeCategoryEligibility';
+import type { Prize, Student, Category } from '@/lib/types';
 
 export type PrizeShelfScanFailure = {
   title: string;
@@ -13,6 +14,7 @@ export type PrizeShelfScanFailure = {
 
 export type PrizeShelfScanResolveOptions = {
   enablePrizeAiSurprise: boolean;
+  categories?: Category[];
   /** When false, affordability is not required (e.g. staff desk opens confirm elsewhere). Default true. */
   requireAffordable?: boolean;
 };
@@ -84,10 +86,16 @@ export async function resolvePrizeShelfScanForStudent(
   }
 
   const requireAffordable = options.requireAffordable !== false;
-  const studentPoints = typeof student.points === 'number' ? student.points : 0;
+  const categories = options.categories || [];
+  const spendable =
+    prizeHasCategoryRestriction(prize)
+      ? studentPrizeCategoryBalance(student, prize, categories)
+      : typeof student.points === 'number'
+        ? student.points
+        : 0;
   const cost = typeof prize.points === 'number' ? prize.points : 0;
-  if (requireAffordable && studentPoints < cost) {
-    const shortfall = Math.max(0, cost - studentPoints);
+  if (requireAffordable && !studentCanAffordPrizeByCategory(student, prize, categories)) {
+    const shortfall = Math.max(0, cost - spendable);
     return {
       error: {
         title: 'Not enough points',

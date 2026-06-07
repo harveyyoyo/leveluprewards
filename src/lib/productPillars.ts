@@ -108,12 +108,11 @@ export function isClassroomOnlyMode(settings: PillarSettings | null | undefined)
   return isClassroomPillarOn(settings) && !isRewardsPillarOn(settings);
 }
 
-/** User-facing copy when Classroom uses local balance while Rewards pillar is still on. */
+/** User-facing copy when Classroom awards sync into the main rewards balance. */
 export const CLASSROOM_LOCAL_REWARDS = {
   tabBody:
-    'Local rewards — each quick-award button becomes its own category and syncs into the main rewards balance. Switch to Reward categories in Toolbar options to use Points tab categories instead.',
-  toastDescription:
-    'Saved to the main rewards balance under this quick-award category.',
+    'Each quick-award button becomes its own category on the student record and counts toward the main rewards balance when LevelUp Rewards is on.',
+  toastDescription: 'Saved to the main rewards balance under this quick-award category.',
 } as const;
 
 /** User-facing copy when Classroom is on but Rewards (student economy) is off. */

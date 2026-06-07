@@ -2523,6 +2523,7 @@ function AdminDashboardInner() {
           prize={editingPrize}
           teachers={teachers || []}
           allClasses={classes || []}
+          categories={categories || []}
         />
         <CategoryModal
           isOpen={isCategoryModalOpen}

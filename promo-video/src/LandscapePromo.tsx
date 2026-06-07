@@ -11,7 +11,6 @@ import {
   Audio,
 } from "remotion";
 import {
-  LANDSCAPE_CLIPS,
   LANDSCAPE_SEGMENTS,
   LANDSCAPE_TIMING,
 } from "./promo/landscapePromoTiming";
@@ -141,7 +140,7 @@ const LandscapeMontage: React.FC = () => {
         }}
       >
         <LandscapeBrowser scale={cardScale} rotateY={rotateY} kenBurn={kenBurn}>
-          <Sequence from={0} durationInFrames={loginDur}>
+          <Sequence durationInFrames={loginDur}>
             <ClipScreenshot src="walkthrough-login.png" />
           </Sequence>
           <Sequence from={loginDur} durationInFrames={selectorDur}>

@@ -736,7 +736,9 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
                 message: 'Pickup voucher issued locally.',
               };
             }
-            const result = await getDb().then((db) => db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride, options));
+            const result = await getDb().then((db) =>
+              db.redeemPrize(firestore, schoolId, studentId, prize, quantity, pointsOverride, options, categories || []),
+            );
             return {
               success: result.success,
               activityId: result.activityId,
@@ -799,6 +801,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     loginState,
     schoolId,
     settings.enablePrizeAiSurprise,
+    categories,
   ]);
 
   const fulfillPrizeVoucherFromScan_ = useCallback(

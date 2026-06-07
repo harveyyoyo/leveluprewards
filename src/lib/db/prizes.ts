@@ -10,10 +10,15 @@ import {
   Firestore,
   type UpdateData,
 } from 'firebase/firestore';
-import type { Student, Prize, HistoryItem } from '../types';
+import { prizeRestrictionTeacherIds } from '@/lib/prizes/prizeUtils';
+import {
+  deductCategoryPointsForPrize,
+  prizeHasCategoryRestriction,
+  studentCanAffordPrizeByCategory,
+} from '@/lib/prizes/prizeCategoryEligibility';
+import type { Category, Student, Prize, HistoryItem } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
-import { prizeRestrictionTeacherIds } from '@/lib/prizes/prizeUtils';
 import { AI_FUN_UNIFIED_PRIZE_ID } from '@/lib/aiJokePrize';
 import { derivePrizeScanCode, generatePrizeScanCode, isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
 import { prizeCardColorForId } from '@/lib/prizes/prizeCardColor';
@@ -100,7 +105,7 @@ export const addPrize = async (firestore: Firestore, schoolId: string, prizeData
 export const updatePrize = async (firestore: Firestore, schoolId: string, updatedPrize: Prize) => {
   const prizeDocRef = doc(firestore, 'schools', schoolId, 'prizes', updatedPrize.id);
   try {
-    const { stockCount, imageUrl, cardColor, teacherId, teacherIds, vendingMotor, aiFunReward, id, ...rest } = updatedPrize;
+    const { stockCount, imageUrl, cardColor, teacherId, teacherIds, vendingMotor, aiFunReward, categoryIds, id, ...rest } = updatedPrize;
     const payload = removeUndefined({ ...rest } as unknown as Record<string, unknown>) as Record<string, unknown>;
     if (stockCount === undefined) {
       payload.stockCount = deleteField();
@@ -127,6 +132,12 @@ export const updatePrize = async (firestore: Firestore, schoolId: string, update
       payload.aiFunReward = deleteField();
     } else {
       payload.aiFunReward = aiFunReward;
+    }
+    const catIds = [...(categoryIds || [])].filter((id): id is string => typeof id === 'string' && id.length > 0);
+    if (catIds.length > 0) {
+      payload.categoryIds = catIds;
+    } else {
+      payload.categoryIds = deleteField();
     }
     const ids = [...(teacherIds || [])].filter((tid): tid is string => typeof tid === 'string' && tid.length > 0);
     if (ids.length > 0) {
@@ -164,6 +175,7 @@ export const redeemPrize = async (
   quantity: number,
   pointsOverride?: number,
   options?: { markFulfilled?: boolean },
+  categories: Category[] = [],
 ): Promise<{ success: boolean; activityId: string; redeemedAt: number; totalCost: number }> => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const prizeRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
@@ -196,8 +208,36 @@ export const redeemPrize = async (
         }
       }
 
+      if (
+        !studentCanAffordPrizeByCategory(studentData, prizeData as Prize, categories, quantity) &&
+        typeof pointsOverride !== 'number'
+      ) {
+        throw new Error(
+          prizeHasCategoryRestriction(prizeData as Prize)
+            ? 'Not enough points in the required categories.'
+            : 'Not enough points.',
+        );
+      }
+
+      if (typeof pointsOverride === 'number' && studentData.points < totalCost) {
+        throw new Error('Not enough points.');
+      }
+
+      const categoryPointsUpdate = prizeHasCategoryRestriction(prizeData as Prize)
+        ? deductCategoryPointsForPrize(
+            { ...(studentData.categoryPoints || {}) },
+            prizeData as Prize,
+            categories,
+            totalCost,
+          )
+        : null;
+
+      if (prizeHasCategoryRestriction(prizeData as Prize) && !categoryPointsUpdate) {
+        throw new Error('Not enough points in the required categories.');
+      }
+
       if (studentData.points < totalCost) {
-        throw new Error("Not enough points.");
+        throw new Error('Not enough points.');
       }
 
       const restrictionIds = prizeRestrictionTeacherIds(prizeData as Prize);
@@ -209,7 +249,11 @@ export const redeemPrize = async (
         teacherId: restrictionIds[0] ?? prizeData.teacherId,
       };
 
-      transaction.update(studentRef, { points: studentData.points - totalCost, updatedAt: redeemedAt });
+      transaction.update(studentRef, {
+        points: studentData.points - totalCost,
+        ...(categoryPointsUpdate ? { categoryPoints: categoryPointsUpdate } : {}),
+        updatedAt: redeemedAt,
+      });
       transaction.set(activityRef, removeUndefined(newHistoryItem as unknown as Record<string, unknown>));
 
       if (typeof prizeData.stockCount === 'number') {
