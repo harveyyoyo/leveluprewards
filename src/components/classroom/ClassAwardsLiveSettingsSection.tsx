@@ -17,6 +17,11 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { classroomSessionTimeoutMinFromSettings } from '@/lib/classroom/classroomManagementSettings';
+import {
+  classroomMonitorPointsDisplayLabel,
+  normalizeClassroomMonitorPointsDisplay,
+  type ClassroomMonitorPointsDisplay,
+} from '@/lib/classroom/classroomMonitorDisplaySettings';
 import { isRewardsPillarOn } from '@/lib/productPillars';
 import {
   ClassroomBehaviorQuickPicksEditor,
@@ -30,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
   DialogContent,
@@ -104,6 +110,11 @@ export function ClassAwardsLiveSettingsSection({
   const classroomIdleMin = classroomSessionTimeoutMinFromSettings(settings);
   const rewardsPillarOn = isRewardsPillarOn(settings);
   const studentDisplayOn = settings.classroomStudentDisplayEnabled !== false;
+  const pointsDisplay = normalizeClassroomMonitorPointsDisplay(settings.classroomMonitorPointsDisplay);
+  const includeSessionLastAward = settings.classroomMonitorIncludeSessionLastAward !== false;
+  const includeLastName = settings.classroomMonitorIncludeLastName === true;
+  const includeStudentEmoji = settings.classroomMonitorIncludeStudentEmoji === true;
+  const balanceLabel = rewardsPillarOn ? 'LevelUp reward balance' : 'Classroom point balance';
 
   const firestore = useFirestore();
   const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
@@ -162,8 +173,7 @@ export function ClassAwardsLiveSettingsSection({
         ) : null}
         {!rewardsPillarOn ? (
           <span className="text-muted-foreground">
-            Point totals: turn on <span className="font-semibold text-foreground">Point balances</span> and{' '}
-            <span className="font-semibold text-foreground">Session badges</span> under Desk display on the monitor.
+            Configure point display below — teachers can still adjust on the live monitor toolbar.
           </span>
         ) : null}
       </div>
@@ -258,6 +268,101 @@ export function ClassAwardsLiveSettingsSection({
           updateSettings={updateSettings}
           disabled={!canEdit}
         />
+      </SettingsPanel>
+
+      <SettingsPanel icon={Monitor} title="Desk display" iconClassName="h-4 w-4 text-emerald-500">
+        <p className="text-[11px] text-muted-foreground">
+          Default for the live monitor and class screen. Session totals are on-screen only and can be reset
+          without changing stored student points.
+        </p>
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <p className="text-sm font-bold">How to show point totals</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Choose whether desks show {balanceLabel.toLowerCase()}, session totals earned today, both, or
+              neither.
+            </p>
+            <RadioGroup
+              value={pointsDisplay}
+              disabled={!canEdit}
+              onValueChange={(v) =>
+                updateSettings({
+                  classroomMonitorPointsDisplay: v as ClassroomMonitorPointsDisplay,
+                })
+              }
+              className="mt-3 gap-2"
+            >
+              {(['off', 'balance', 'session', 'both'] as const).map((mode) => (
+                <label key={mode} className="flex cursor-pointer items-start gap-2">
+                  <RadioGroupItem value={mode} className="mt-0.5" aria-label={classroomMonitorPointsDisplayLabel(mode)} />
+                  <span className="text-xs leading-snug">
+                    <span className="font-semibold">{classroomMonitorPointsDisplayLabel(mode)}</span>
+                    {mode === 'balance' ? (
+                      <span className="block text-[10px] text-muted-foreground">{balanceLabel}</span>
+                    ) : null}
+                    {mode === 'session' ? (
+                      <span className="block text-[10px] text-muted-foreground">
+                        Resets with the monitor Reset screen button — stored points stay the same.
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <p className="text-sm font-bold">What to include on desks</p>
+            <div className="mt-3 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="classroom-include-session-label" className="text-sm font-bold">
+                    Last award label
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Show the latest quick-award phrase under session totals.
+                  </p>
+                </div>
+                <Switch
+                  id="classroom-include-session-label"
+                  checked={includeSessionLastAward}
+                  disabled={!canEdit || pointsDisplay === 'off' || pointsDisplay === 'balance'}
+                  onCheckedChange={(v) => updateSettings({ classroomMonitorIncludeSessionLastAward: v })}
+                />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="classroom-include-last-name" className="text-sm font-bold">
+                    Last names
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">Append surname after each desk label.</p>
+                </div>
+                <Switch
+                  id="classroom-include-last-name"
+                  checked={includeLastName}
+                  disabled={!canEdit}
+                  onCheckedChange={(v) => updateSettings({ classroomMonitorIncludeLastName: v })}
+                />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="classroom-include-student-emoji" className="text-sm font-bold">
+                    Student emoji
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Sticker or theme emoji on avatars (photo still wins when set).
+                  </p>
+                </div>
+                <Switch
+                  id="classroom-include-student-emoji"
+                  checked={includeStudentEmoji}
+                  disabled={!canEdit}
+                  onCheckedChange={(v) => updateSettings({ classroomMonitorIncludeStudentEmoji: v })}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </SettingsPanel>
 
       <SettingsPanel icon={Monitor} title="Monitor session" iconClassName="h-4 w-4 text-slate-500">

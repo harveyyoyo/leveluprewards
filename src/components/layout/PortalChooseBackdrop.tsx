@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
+import { cn } from '@/lib/utils';
 
 const NOISE_SVG =
   'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")';
@@ -13,6 +14,7 @@ export function PortalChooseBackdrop() {
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const isBrandAppearance =
     settings.colorScheme === 'default' || settings.colorScheme === 'sapphire';
+  const isSapphire = settings.colorScheme === 'sapphire';
   const showPortalLocalDecor =
     !animBackdrop &&
     !settings.legacyMode &&
@@ -29,12 +31,18 @@ export function PortalChooseBackdrop() {
       <div
         className="absolute inset-0 opacity-[0.14]"
         style={{
-          backgroundImage:
-            'linear-gradient(to right, hsl(var(--primary) / 0.14) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--primary) / 0.1) 1px, transparent 1px)',
+          backgroundImage: isSapphire
+            ? 'linear-gradient(to right, hsl(var(--primary) / 0.12) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--chart-2) / 0.12) 1px, transparent 1px)'
+            : 'linear-gradient(to right, hsl(var(--primary) / 0.14) 1px, transparent 1px), linear-gradient(to bottom, hsl(var(--primary) / 0.1) 1px, transparent 1px)',
           backgroundSize: '48px 48px',
         }}
       />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_100%_0%,hsl(var(--primary)/0.14),transparent_58%)]" />
+      <div
+        className="absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_100%_0%,hsl(var(--primary)/0.14),transparent_58%)]"
+      />
+      {isSapphire ? (
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_65%_at_0%_100%,hsl(var(--chart-2)/0.16),transparent_55%)]" />
+      ) : null}
       {showPortalLocalDecor ? (
         <>
           <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: NOISE_SVG }} />
@@ -46,12 +54,18 @@ export function PortalChooseBackdrop() {
           <motion.div
             animate={{ x: [0, -20, 0], y: [0, 26, 0] }}
             transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
-            className="absolute bottom-14 left-16 h-[420px] w-[420px] rounded-full bg-chart-2/20 blur-[135px]"
+            className={cn(
+              'absolute bottom-14 left-16 h-[420px] w-[420px] rounded-full blur-[135px]',
+              isSapphire ? 'bg-chart-2/28' : 'bg-chart-2/20',
+            )}
           />
           <motion.div
             animate={{ x: [0, 18, 0], y: [0, -28, 0] }}
             transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-            className="absolute top-1/2 left-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chart-3/18 blur-[160px]"
+            className={cn(
+              'absolute top-1/2 left-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]',
+              isSapphire ? 'bg-chart-2/16' : 'bg-chart-3/18',
+            )}
           />
         </>
       ) : null}

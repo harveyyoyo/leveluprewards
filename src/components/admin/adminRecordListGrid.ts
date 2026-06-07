@@ -7,9 +7,16 @@ export const TEACHERS_LIST_GRID_COLS =
 export const DESK_STAFF_LIST_GRID_COLS =
   '2.25rem minmax(0, 0.85fr) minmax(0, 1fr) minmax(3.5rem, 0.7fr)';
 
-/** Prizes shop — row actions, name, inline settings toolbar. */
-export const PRIZES_LIST_GRID_COLS =
-  '4.25rem minmax(0, 1fr) minmax(0, 1fr)';
+/** Prizes shop — act, name, then one column per inline setting. */
+export function prizesListGridColumns(options: { vendingEnabled: boolean }) {
+  const base =
+    '4.25rem minmax(0, 1fr) 3rem 3rem 1.75rem 1.75rem 1.75rem 4.25rem';
+  const motor = options.vendingEnabled ? ' 1.75rem' : '';
+  return `${base}${motor} minmax(2.5rem, 3.5rem)`;
+}
+
+/** @deprecated Prefer `prizesListGridColumns({ vendingEnabled })`. */
+export const PRIZES_LIST_GRID_COLS = prizesListGridColumns({ vendingEnabled: false });
 
 export const adminRecordListGridClassName =
   'grid w-full min-w-0 [&>*]:min-w-0 [&_button]:min-h-0 [&_button]:min-w-0';

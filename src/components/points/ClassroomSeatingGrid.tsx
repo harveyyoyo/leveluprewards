@@ -58,6 +58,7 @@ type SeatingDeskCellProps = {
   sessionLastLabel: string | null;
   showBalance: boolean;
   showSessionTotals: boolean;
+  showSessionLastAward: boolean;
   tight: boolean;
   fitViewport: boolean;
   editMode: boolean;
@@ -107,6 +108,7 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.sessionLastLabel === next.sessionLastLabel &&
     prev.showBalance === next.showBalance &&
     prev.showSessionTotals === next.showSessionTotals &&
+    prev.showSessionLastAward === next.showSessionLastAward &&
     prev.tight === next.tight &&
     prev.fitViewport === next.fitViewport &&
     prev.editMode === next.editMode &&
@@ -143,6 +145,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   sessionLastLabel,
   showBalance,
   showSessionTotals,
+  showSessionLastAward,
   tight,
   fitViewport,
   editMode,
@@ -334,6 +337,7 @@ export type ClassroomSeatingGridProps = {
   sessionLastAwards: Record<string, { label: string; points: number; at: number }>;
   showBalance: boolean;
   showSessionTotals: boolean;
+  showSessionLastAward: boolean;
   density: 'normal' | 'cozy' | 'tight';
   gridGap: number;
   editMode: boolean;
@@ -372,6 +376,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   sessionLastAwards,
   showBalance,
   showSessionTotals,
+  showSessionLastAward,
   density,
   gridGap,
   editMode,
@@ -476,10 +481,13 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               accentColor={accentColor}
               sessionPts={studentId ? sessionTotals[studentId] ?? 0 : 0}
               sessionLastLabel={
-                studentId && showSessionTotals ? sessionLastAwards[studentId]?.label ?? null : null
+                studentId && showSessionTotals && showSessionLastAward
+                  ? sessionLastAwards[studentId]?.label ?? null
+                  : null
               }
               showBalance={showBalance}
               showSessionTotals={showSessionTotals}
+              showSessionLastAward={showSessionLastAward}
               tight={density === 'tight'}
               fitViewport={fitViewport}
               editMode={editMode}

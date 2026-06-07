@@ -9,6 +9,7 @@ import {
   Monitor,
   Palette,
   PanelTop,
+  RotateCcw,
   Sparkles,
   Volume2,
   VolumeX,
@@ -265,6 +266,7 @@ export function ClassroomMonitorQuickControls({
   rewardsPillarOn = false,
   onChange,
   onClassChange,
+  onResetSessionDisplay,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
@@ -275,6 +277,7 @@ export function ClassroomMonitorQuickControls({
   rewardsPillarOn?: boolean;
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
   onClassChange?: (classId: string) => void;
+  onResetSessionDisplay?: () => void;
 }) {
   const activeDesign = normalizeClassroomDesign(prefs.design);
   const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
@@ -360,7 +363,19 @@ export function ClassroomMonitorQuickControls({
                 onCheckedChange={(v) => onChange({ showSessionTotals: v === true })}
               />
               <span className="text-xs leading-snug">
-                <span className="font-semibold">Session badges</span> — session points and last award label.
+                <span className="font-semibold">Session badges</span> — session points earned on this screen.
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showSessionLastAward ?? true}
+                disabled={!prefs.showSessionTotals}
+                onCheckedChange={(v) => onChange({ showSessionLastAward: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Last award label</span> — latest quick-award phrase on session
+                badges.
               </span>
             </label>
             <label className="flex cursor-pointer items-start gap-2">
@@ -509,6 +524,22 @@ export function ClassroomMonitorQuickControls({
           ) : (
             <VolumeX className="h-4 w-4 shrink-0" aria-hidden />
           )}
+        </button>
+      ) : null}
+
+      {onResetSessionDisplay ? (
+        <button
+          type="button"
+          className={cn(
+            monitorSelectTriggerClass(design, isFullscreen),
+            'inline-flex items-center gap-1.5',
+          )}
+          aria-label="Reset session display"
+          title="Clear on-screen session totals. Stored student points are not changed."
+          onClick={onResetSessionDisplay}
+        >
+          <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
+          <span>Reset screen</span>
         </button>
       ) : null}
     </div>

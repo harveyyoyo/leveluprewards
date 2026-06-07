@@ -28,9 +28,8 @@ import { AutoCircularToggles } from '@/components/admin/AutoCircularToggles';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
 import {
-  PRIZES_LIST_GRID_COLS,
+  prizesListGridColumns,
   adminRecordListGridCompactGapClassName,
-  adminRecordListGridActionsCellClassName,
   adminRecordListGridClassName,
   adminRecordListGridNameCellClassName,
   adminRecordListGridStyle,
@@ -89,7 +88,26 @@ export function AdminPrizesTab({
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
 
-  const prizeListGridStyle = adminRecordListGridStyle(PRIZES_LIST_GRID_COLS);
+  const prizeListGridStyle = useMemo(
+    () => adminRecordListGridStyle(prizesListGridColumns({ vendingEnabled })),
+    [vendingEnabled],
+  );
+
+  const prizeListHeaderColumns = useMemo(() => {
+    const columns = [
+      { label: 'Act', className: 'text-center' },
+      { label: 'Item', className: 'text-left' },
+      { label: 'Pts', className: 'text-center' },
+      { label: 'Qty', className: 'text-center' },
+      { label: 'Stk', className: 'text-center' },
+      { label: 'Vch', className: 'text-center' },
+      { label: 'Tch', className: 'text-center' },
+      { label: 'Cls', className: 'text-center' },
+    ];
+    if (vendingEnabled) columns.push({ label: 'Mtr', className: 'text-center' });
+    columns.push({ label: 'Del', className: 'text-center' });
+    return columns;
+  }, [vendingEnabled]);
 
   const tablePrizes = useMemo(
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
@@ -330,12 +348,8 @@ export function AdminPrizesTab({
         <AdminRecordListScroll>
         <ul className="flex w-full min-w-0 flex-col gap-1.5">
           <AdminRecordListHeader
-            gridColumns={PRIZES_LIST_GRID_COLS}
-            columns={[
-              { label: 'Act', className: 'text-center' },
-              { label: 'Item', className: 'text-left' },
-              { label: 'Settings', className: 'text-right' },
-            ]}
+            gridColumns={prizesListGridColumns({ vendingEnabled })}
+            columns={prizeListHeaderColumns}
           />
           {prizeListItems.map((item) =>
             item.kind === 'section' ? (
@@ -483,8 +497,7 @@ export function AdminPrizesTab({
 
                     <div
                       className={cn(
-                        'flex flex-nowrap items-center justify-end gap-1',
-                        adminRecordListGridActionsCellClassName,
+                        'flex items-center justify-center gap-0.5',
                       )}
                       onClick={(e) => e.stopPropagation()}
                     >
@@ -494,7 +507,7 @@ export function AdminPrizesTab({
                         disabled={!canEditFull}
                         aria-label="Points"
                         title="Point cost"
-                        className="h-7 w-12 shrink-0 text-[10px] px-1 tabular-nums"
+                        className="h-7 w-full min-w-0 text-[10px] px-1 tabular-nums"
                         defaultValue={String(p.points ?? 0)}
                         key={`points-${p.id}-${p.points}`}
                         onBlur={(e) => {
@@ -503,13 +516,15 @@ export function AdminPrizesTab({
                           if (next !== p.points) onUpdatePrize({ ...p, points: next });
                         }}
                       />
+                    </div>
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       <Input
                         type="number"
                         min={0}
                         disabled={!canEditFull}
                         aria-label="Stock on hand"
                         title="Stock quantity"
-                        className="h-7 w-12 shrink-0 text-[10px] px-1 tabular-nums"
+                        className="h-7 w-full min-w-0 text-[10px] px-1 tabular-nums"
                         placeholder="∞"
                         defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
                         key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
@@ -519,19 +534,21 @@ export function AdminPrizesTab({
                           if (next !== p.stockCount) onUpdatePrize({ ...p, stockCount: next });
                         }}
                       />
-                      <AutoCircularToggles
-                        record={p}
-                        defs={[
-                          { key: 'inStock', label: 'In Stock', shortLabel: 'Stk' },
-                          { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
-                        ]}
-                        wrap={false}
-                        containerClassName="shrink-0 flex-nowrap gap-0.5"
-                        toggleButtonClassName="h-7 w-7 text-[8px]"
-                        onToggle={(key, val) => {
-                          onUpdatePrize({ ...p, [key]: val });
-                        }}
-                      />
+                    </div>
+                    <AutoCircularToggles
+                      record={p}
+                      defs={[
+                        { key: 'inStock', label: 'In Stock', shortLabel: 'Stk' },
+                        { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
+                      ]}
+                      wrap={false}
+                      containerClassName="contents"
+                      toggleButtonClassName="h-7 w-7 text-[8px] justify-self-center"
+                      onToggle={(key, val) => {
+                        onUpdatePrize({ ...p, [key]: val });
+                      }}
+                    />
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       {mode === 'teacher' ? (
                         <div
                           className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background"
@@ -609,13 +626,15 @@ export function AdminPrizesTab({
                           </PopoverContent>
                         </Popover>
                       )}
+                    </div>
+                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                       <Select
                         value={p.classId || 'all'}
                         disabled={!canEditFull}
                         onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                       >
                         <SelectTrigger
-                          className="h-7 w-[4.25rem] shrink-0 px-1 text-[9px] [&>span]:truncate"
+                          className="h-7 w-full min-w-0 px-1 text-[9px] [&>span]:truncate"
                           title="Class restriction"
                         >
                           <SelectValue placeholder="All" />
@@ -627,7 +646,9 @@ export function AdminPrizesTab({
                           ))}
                         </SelectContent>
                       </Select>
-                      {vendingEnabled ? (
+                    </div>
+                    {vendingEnabled ? (
+                      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
@@ -681,7 +702,12 @@ export function AdminPrizesTab({
                             </div>
                           </PopoverContent>
                         </Popover>
-                      ) : null}
+                      </div>
+                    ) : null}
+                    <div
+                      className="flex items-center justify-end gap-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {canRemoveSelf && teacherId ? (
                         <Button
                           type="button"

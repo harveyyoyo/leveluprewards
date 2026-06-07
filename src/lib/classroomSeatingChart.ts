@@ -44,6 +44,8 @@ export type ClassroomSeatingPrefs = {
   showPointBalances: boolean;
   /** Show points earned this session on each desk. */
   showSessionTotals: boolean;
+  /** When session badges are on, show the latest award label under the session total. */
+  showSessionLastAward: boolean;
   /** Append last name after the desk label (nickname or first name). */
   showLastName: boolean;
   /** Show student sticker / theme emoji on each desk avatar (photo still wins when set). */
@@ -133,7 +135,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 19;
+export const CLASSROOM_PREFS_VERSION = 20;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -143,6 +145,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   instantTap: true,
   showPointBalances: true,
   showSessionTotals: true,
+  showSessionLastAward: true,
   showLastName: false,
   showStudentEmoji: false,
   correctionPoints: 0,
@@ -291,6 +294,8 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
           : DEFAULT_CLASSROOM_PREFS.instantTap,
       showPointBalances: parsed.showPointBalances ?? DEFAULT_CLASSROOM_PREFS.showPointBalances,
       showSessionTotals: parsed.showSessionTotals ?? DEFAULT_CLASSROOM_PREFS.showSessionTotals,
+      showSessionLastAward:
+        parsed.showSessionLastAward ?? DEFAULT_CLASSROOM_PREFS.showSessionLastAward,
       showLastName: parsed.showLastName ?? DEFAULT_CLASSROOM_PREFS.showLastName,
       showStudentEmoji: parsed.showStudentEmoji ?? DEFAULT_CLASSROOM_PREFS.showStudentEmoji,
       correctionPoints: parsed.correctionPoints ?? DEFAULT_CLASSROOM_PREFS.correctionPoints,
@@ -554,6 +559,17 @@ export function saveClassroomSession(
   } catch {
     /* quota */
   }
+}
+
+/** Clears on-screen session totals only — does not change stored student points. */
+export function clearClassroomSession(
+  schoolId: string,
+  scope: string,
+  classId: string,
+): ClassroomSessionData {
+  const empty: ClassroomSessionData = { totals: {}, lastAward: {}, activity: [] };
+  saveClassroomSession(schoolId, scope, classId, empty);
+  return empty;
 }
 
 export function applyClassroomSessionAward(

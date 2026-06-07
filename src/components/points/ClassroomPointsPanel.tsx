@@ -60,6 +60,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import {
   applyClassroomSessionAward,
   buildInitialLayout,
+  clearClassroomSession,
   loadClassroomLayout,
   loadClassroomPrefs,
   loadClassroomSession,
@@ -77,6 +78,7 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
+import { resolveEffectiveDeskDisplayPrefs } from '@/lib/classroom/classroomMonitorDisplaySettings';
 import {
   isNoteDeductType,
   resolveClassroomNoteDeduct,
@@ -279,6 +281,10 @@ function ClassroomPointsPanelInner({
     }),
     [prefs, chartQuickAwards, settings],
   );
+  const effectiveDeskDisplay = useMemo(
+    () => resolveEffectiveDeskDisplayPrefs(settings, prefs),
+    [settings, prefs],
+  );
   const awardLabelContext = useMemo<ClassroomAwardLabelContext>(
     () => ({
       ...chartPrefsForAwards,
@@ -465,14 +471,14 @@ function ClassroomPointsPanelInner({
 
   const deskDisplayOptions = useMemo(
     () => ({
-      showLastName: prefs.showLastName,
-      showStudentEmoji: prefs.showStudentEmoji,
+      showLastName: effectiveDeskDisplay.showLastName,
+      showStudentEmoji: effectiveDeskDisplay.showStudentEmoji,
       defaultStudentTheme: settings.defaultStudentTheme,
       studentThemesEnabled: settings.enableStudentThemes !== false,
     }),
     [
-      prefs.showLastName,
-      prefs.showStudentEmoji,
+      effectiveDeskDisplay.showLastName,
+      effectiveDeskDisplay.showStudentEmoji,
       settings.defaultStudentTheme,
       settings.enableStudentThemes,
     ],
@@ -556,6 +562,19 @@ function ClassroomPointsPanelInner({
     const loaded = loadClassroomSession(schoolId, storageScope, effectiveClassId);
     setSessionData(isStudentAudience ? sanitizeSessionForStudentDisplay(loaded) : loaded);
   }, [effectiveClassId, isStudentAudience, schoolId, storageScope]);
+
+  const resetSessionDisplay = useCallback(() => {
+    if (!effectiveClassId || effectiveClassId === 'all') return;
+    const cleared = clearClassroomSession(schoolId, storageScope, effectiveClassId);
+    setSessionData(isStudentAudience ? sanitizeSessionForStudentDisplay(cleared) : cleared);
+    setLastAwardSummary(null);
+    setFlyUpCell(null);
+    setFlashCell(null);
+    toast({
+      title: 'Session display reset',
+      description: 'On-screen session totals cleared. Student points are unchanged.',
+    });
+  }, [effectiveClassId, isStudentAudience, schoolId, storageScope, toast]);
 
   useEffect(() => {
     if (!effectiveClassId || effectiveClassId === 'all') return;
@@ -1722,6 +1741,7 @@ function ClassroomPointsPanelInner({
                 editMode={editMode}
                 rewardsPillarOn={rewardsPillarOn}
                 onChange={patchPrefs}
+                onResetSessionDisplay={resetSessionDisplay}
                 onClassChange={
                   isFullscreen && classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
                 }
@@ -1874,8 +1894,9 @@ function ClassroomPointsPanelInner({
           accentColor={accentColor}
           sessionTotals={sessionData.totals}
           sessionLastAwards={sessionData.lastAward}
-          showBalance={prefs.showPointBalances}
-          showSessionTotals={prefs.showSessionTotals}
+          showBalance={effectiveDeskDisplay.showPointBalances}
+          showSessionTotals={effectiveDeskDisplay.showSessionTotals}
+          showSessionLastAward={effectiveDeskDisplay.showSessionLastAward}
           density={density}
           gridGap={gridGap}
           editMode={editMode}
@@ -1901,7 +1922,7 @@ function ClassroomPointsPanelInner({
         {frontAtBottom && !isStudentAudience && teacherDesk}
       </div>
 
-      {lastAwardSummary && prefs.showSessionTotals && !editMode && !isFullscreen ? (
+      {lastAwardSummary && effectiveDeskDisplay.showSessionTotals && !editMode && !isFullscreen ? (
         <p
           className="mt-2 shrink-0 text-center text-[11px] leading-snug text-muted-foreground sm:text-xs"
           aria-live="polite"

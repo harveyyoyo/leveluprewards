@@ -313,14 +313,14 @@ const COMPLEMENT_PALETTES: Partial<Record<NavColorScheme, readonly string[]>> = 
     '178 42% 45%',
   ],
   sapphire: [
-    // Amber complements for sapphire primary — slightly richer for nav rings & accents
-    '40 65% 52%',
-    '36 58% 50%',
-    '44 62% 54%',
-    '32 54% 48%',
-    '48 64% 56%',
-    '34 52% 46%',
-    '42 58% 58%',
+    // Amber complements for sapphire primary
+    '40 70% 48%',
+    '36 64% 46%',
+    '44 68% 50%',
+    '32 60% 44%',
+    '48 70% 52%',
+    '34 58% 42%',
+    '42 64% 54%',
   ],
   plum: [
     // Sage/green complements for plum primary

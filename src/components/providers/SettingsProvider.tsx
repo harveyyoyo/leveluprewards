@@ -292,6 +292,14 @@ interface Settings {
     classroomSessionTimeoutMs?: number;
     /** When false, hide the read-only class screen launch in Class Awards Live. Default on when unset. */
     classroomStudentDisplayEnabled?: boolean;
+    /** Live monitor / class screen: how desk point totals are shown. */
+    classroomMonitorPointsDisplay?: 'off' | 'balance' | 'session' | 'both';
+    /** Include the latest award label on session badges. Default on when unset. */
+    classroomMonitorIncludeSessionLastAward?: boolean;
+    /** Append student last names on seating chart desks. */
+    classroomMonitorIncludeLastName?: boolean;
+    /** Show student sticker / theme emoji on desk avatars. */
+    classroomMonitorIncludeStudentEmoji?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
     kioskAiFunIdleOffSec?: number;
     /** @deprecated Voucher idle timeout removed; print-voucher prompts are always available. */
@@ -563,10 +571,10 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
         swatchColors: ['#d86143', '#5967a6'],
     },
     sapphire: {
-        bg: 'bg-amber-50/70',
+        bg: 'bg-amber-50',
         card: 'bg-white',
         accent: 'text-blue-800',
-        border: 'border-amber-200/80',
+        border: 'border-amber-300/70',
         label: 'Sapphire + amber',
         swatch: 'bg-[linear-gradient(135deg,#2557a7,#cf9b32)]',
         swatchColors: ['#2557a7', '#cf9b32'],
@@ -697,7 +705,7 @@ const defaultSettings: Settings = {
     defaultStudentTheme: {
         fontScale: 1.1,
         fontTracking: 0.02,
-        background: '#f7f4ed',
+        background: '#f3ece0',
         text: '#020617',
         primary: '#2557a7',
         cardBackground: '#ffffff',
@@ -710,6 +718,10 @@ const defaultSettings: Settings = {
     classroomAutoLogoutEnabled: true,
     classroomSessionTimeoutMs: 15 * 60 * 1000,
     classroomStudentDisplayEnabled: true,
+    classroomMonitorPointsDisplay: 'both',
+    classroomMonitorIncludeSessionLastAward: true,
+    classroomMonitorIncludeLastName: false,
+    classroomMonitorIncludeStudentEmoji: false,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,

@@ -394,31 +394,31 @@ html[data-office-portal] .office-content-pane {
 
 @layer base {
   :root {
-    --background: 42 42% 97%;
+    --background: 42 48% 96%;
     --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
+    --card: 40 35% 99%;
     --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
+    --popover: 40 35% 99%;
     --popover-foreground: 222 47% 11%;
     /* Sapphire + amber default appearance */
     --primary: 217 64% 40%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 40 56% 84%;
-    --secondary-foreground: 40 42% 22%;
-    --muted: 42 36% 94%;
+    --secondary: 40 62% 78%;
+    --secondary-foreground: 40 44% 20%;
+    --muted: 42 44% 91%;
     --muted-foreground: 217 26% 36%;
-    --accent: 40 58% 92%;
-    --accent-foreground: 40 45% 26%;
+    --accent: 40 64% 88%;
+    --accent-foreground: 40 48% 24%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 42 34% 84%;
-    --input: 42 34% 84%;
-    --ring: 40 65% 52%;
+    --border: 40 40% 78%;
+    --input: 40 40% 78%;
+    --ring: 40 70% 46%;
     --chart-1: 217 64% 40%;
-    --chart-2: 40 65% 52%;
-    --chart-3: 217 58% 48%;
-    --chart-4: 40 58% 58%;
-    --chart-5: 199 89% 48%;
+    --chart-2: 40 70% 48%;
+    --chart-3: 40 62% 56%;
+    --chart-4: 40 65% 54%;
+    --chart-5: 217 58% 48%;
     --radius: 0.75rem;
   }
 
@@ -838,30 +838,31 @@ html[data-color-scheme="default"] body {
 [data-color-scheme="sapphire"] {
   --primary: 217 64% 40%;
   --primary-foreground: 210 40% 98%;
-  --background: 42 42% 97%;
-  --card: 0 0% 100%;
+  --background: 42 48% 96%;
+  --card: 40 35% 99%;
   --card-foreground: 222 47% 11%;
-  --accent: 40 58% 92%;
-  --accent-foreground: 40 45% 26%;
-  --secondary: 40 56% 84%;
-  --secondary-foreground: 40 42% 22%;
-  --border: 42 34% 84%;
-  --muted: 42 36% 94%;
+  --accent: 40 64% 88%;
+  --accent-foreground: 40 48% 24%;
+  --secondary: 40 62% 78%;
+  --secondary-foreground: 40 44% 20%;
+  --border: 40 40% 78%;
+  --muted: 42 44% 91%;
   --muted-foreground: 217 26% 36%;
-  --ring: 40 65% 52%;
+  --ring: 40 70% 46%;
   --chart-1: 217 64% 40%;
-  --chart-2: 40 65% 52%;
-  --chart-3: 217 58% 48%;
-  --chart-4: 40 58% 58%;
-  --chart-5: 199 89% 48%;
+  --chart-2: 40 70% 48%;
+  --chart-3: 40 62% 56%;
+  --chart-4: 40 65% 54%;
+  --chart-5: 217 58% 48%;
 }
 
 html[data-color-scheme="sapphire"] body {
   background-color: hsl(var(--background));
   background-image:
-    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.14) 0%, transparent 52%),
-    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.2) 0%, transparent 48%),
-    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-2) / 0.14) 0%, transparent 54%);
+    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.12) 0%, transparent 52%),
+    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.26) 0%, transparent 48%),
+    radial-gradient(ellipse 95% 80% at 4% 88%, hsl(var(--chart-2) / 0.16) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-2) / 0.18) 0%, transparent 54%);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
@@ -1056,21 +1057,21 @@ html[data-color-scheme="sapphire"] body {
   --background: 220 72% 5%;
   --card: 222 47% 11%;
   --card-foreground: 210 40% 98%;
-  --accent: 40 58% 20%;
+  --accent: 40 62% 24%;
   --accent-foreground: 40 92% 84%;
-  --secondary: 40 56% 20%;
+  --secondary: 40 60% 22%;
   --secondary-foreground: 40 92% 88%;
-  --border: 220 50% 24%;
-  --muted: 220 40% 14%;
-  --muted-foreground: 220 30% 72%;
+  --border: 40 28% 26%;
+  --muted: 40 32% 15%;
+  --muted-foreground: 40 24% 74%;
   --primary: 217 64% 40%;
   --primary-foreground: 210 40% 98%;
-  --ring: 40 65% 52%;
+  --ring: 40 70% 46%;
   --chart-1: 217 64% 40%;
-  --chart-2: 40 65% 52%;
-  --chart-3: 217 58% 48%;
-  --chart-4: 40 58% 58%;
-  --chart-5: 199 89% 48%;
+  --chart-2: 40 70% 48%;
+  --chart-3: 40 62% 56%;
+  --chart-4: 40 65% 54%;
+  --chart-5: 217 58% 48%;
 }
 
 .dark[data-color-scheme="coral"] {
@@ -1121,16 +1122,16 @@ html.dark[data-dark-colorize="on"] body {
 html.dark[data-dark-colorize="on"][data-color-scheme="sapphire"] {
   --primary: 217 64% 44%;
   --primary-foreground: 210 40% 98%;
-  --ring: 40 65% 52%;
-  --secondary: 40 56% 22%;
+  --ring: 40 70% 46%;
+  --secondary: 40 62% 26%;
   --secondary-foreground: 210 40% 98%;
-  --accent: 40 58% 24%;
+  --accent: 40 64% 28%;
   --accent-foreground: 210 40% 98%;
   --chart-1: 217 64% 48%;
-  --chart-2: 40 65% 56%;
-  --chart-3: 217 58% 52%;
-  --chart-4: 40 58% 62%;
-  --chart-5: 199 89% 48%;
+  --chart-2: 40 70% 52%;
+  --chart-3: 40 62% 58%;
+  --chart-4: 40 65% 56%;
+  --chart-5: 217 58% 52%;
 }
 
 html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
