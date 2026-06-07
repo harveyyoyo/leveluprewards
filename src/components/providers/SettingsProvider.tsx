@@ -23,7 +23,7 @@ import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrin
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/students/studentWelcome';
-import { LEVELUP_BRAND_CREAM_HEX, LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import {
     normalizeDisplayModePreference,
     resolveDisplayMode,
@@ -563,10 +563,10 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
         swatchColors: ['#d86143', '#5967a6'],
     },
     sapphire: {
-        bg: 'bg-blue-50',
+        bg: 'bg-amber-50/70',
         card: 'bg-white',
         accent: 'text-blue-800',
-        border: 'border-blue-200',
+        border: 'border-amber-200/80',
         label: 'Sapphire + amber',
         swatch: 'bg-[linear-gradient(135deg,#2557a7,#cf9b32)]',
         swatchColors: ['#2557a7', '#cf9b32'],
@@ -585,7 +585,7 @@ const colorSchemes: Record<ColorScheme, { bg: string; card: string; accent: stri
 const defaultSettings: Settings = {
     graphicMode: 'classic',
     displayMode: 'auto',
-    colorScheme: 'default',
+    colorScheme: 'sapphire',
     customAppearanceColors: {},
     soundEnabled: true,
     language: 'English',
@@ -697,11 +697,11 @@ const defaultSettings: Settings = {
     defaultStudentTheme: {
         fontScale: 1.1,
         fontTracking: 0.02,
-        background: '#eff6ff',
+        background: '#f7f4ed',
         text: '#020617',
-        primary: LEVELUP_BRAND_PRIMARY_HEX,
+        primary: '#2557a7',
         cardBackground: '#ffffff',
-        accent: LEVELUP_BRAND_CREAM_HEX,
+        accent: '#cf9b32',
     },
     adminAutoLogoutEnabled: true,
     adminSessionTimeoutMs: 5 * 60 * 1000,
@@ -814,7 +814,7 @@ const defaultSettings: Settings = {
 const publicLoginSettings: Partial<Settings> = {
     graphicMode: 'classic',
     displayMode: 'web',
-    colorScheme: 'default',
+    colorScheme: 'sapphire',
     soundEnabled: false,
     darkMode: false,
     darkModeColorized: false,
@@ -1424,7 +1424,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     // Apply color scheme data attribute and any saved color overrides.
     useEffect(() => {
         if (!isLoaded) return;
-        let scheme = settings.colorScheme ?? 'default';
+        let scheme = settings.colorScheme ?? 'sapphire';
         if (studentKioskUi && settings.studentColorScheme) {
             scheme = settings.studentColorScheme;
         } else if (loginState === 'teacher' && settings.teacherColorScheme) {
@@ -1496,7 +1496,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         else root.classList.remove('dark');
 
         root.classList.toggle('legacy', !!next.legacyMode);
-        root.setAttribute('data-color-scheme', next.colorScheme ?? 'default');
+        root.setAttribute('data-color-scheme', next.colorScheme ?? 'sapphire');
         root.removeAttribute('data-dark-colorize');
         THEMED_ROOT_PROPS.forEach((prop) => root.style.removeProperty(prop));
     }, [isLoaded, isPublicLoginRoute, settings, effectiveLegacyMode]);

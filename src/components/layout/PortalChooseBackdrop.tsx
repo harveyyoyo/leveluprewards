@@ -11,11 +11,12 @@ const NOISE_SVG =
 export function PortalChooseBackdrop() {
   const { settings } = useSettings();
   const animBackdrop = globalAnimatedBackdropActive(settings);
-  const isDefaultScheme = settings.colorScheme === 'default';
+  const isBrandAppearance =
+    settings.colorScheme === 'default' || settings.colorScheme === 'sapphire';
   const showPortalLocalDecor =
     !animBackdrop &&
     !settings.legacyMode &&
-    (isDefaultScheme ||
+    (isBrandAppearance ||
       (settings.graphicMode === 'graphics' && !!settings.enableAnimatedBackground));
 
   if (animBackdrop) return null;

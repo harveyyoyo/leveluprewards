@@ -86,7 +86,7 @@ export function adminAddOnTabTriggerStyle(
   settings: Pick<Settings, 'colorScheme' | 'darkMode'>,
   isActive: boolean,
 ): CSSProperties {
-  const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'default', !!settings.darkMode);
+  const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'sapphire', !!settings.darkMode);
   const dark = !!settings.darkMode;
 
   const bgAlpha = isActive ? (dark ? 0.2 : 0.12) : dark ? 0.08 : 0.05;
@@ -106,7 +106,7 @@ export function adminAddOnTabMenuItemStyle(
   tabId: string,
   settings: Pick<Settings, 'colorScheme' | 'darkMode'>,
 ): CSSProperties {
-  const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'default', !!settings.darkMode);
+  const mild = adminTabMildAccentTriplet(tabId, settings.colorScheme ?? 'sapphire', !!settings.darkMode);
   const dark = !!settings.darkMode;
 
   return {
@@ -123,7 +123,7 @@ export function adminPerTabAppearanceProps(
   enabled: boolean,
 ): { style?: CSSProperties } {
   if (!enabled) return {};
-  const scheme = settings.colorScheme ?? 'default';
+  const scheme = settings.colorScheme ?? 'sapphire';
   const primaryTriplet = adminTabMildAccentTriplet(tabId, scheme, !!settings.darkMode);
   const ringTriplet = complementTripletByIndex(adminTabPaletteIndex(tabId), scheme as NavColorScheme);
   const mildRing = (() => {

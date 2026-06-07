@@ -48,7 +48,7 @@ export function StudentKioskOptionsMenu({ schoolId, student, classLabel = 'Unass
 
   const darkMode = settings.studentDarkMode ?? settings.darkMode;
   const darkColorized = settings.studentDarkModeColorized ?? settings.darkModeColorized ?? false;
-  const colorScheme = (settings.studentColorScheme ?? settings.colorScheme ?? 'default') as ColorScheme;
+  const colorScheme = (settings.studentColorScheme ?? settings.colorScheme ?? 'sapphire') as ColorScheme;
   const themesEnabled = settings.enableStudentThemes !== false;
   const studentName =
     `${student.firstName}${student.lastName ? ` ${student.lastName}` : ''}`.trim() || student.firstName;

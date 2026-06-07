@@ -51,7 +51,7 @@ export function appearanceVarsForSurface(
   settings: Pick<Settings, 'colorScheme' | 'customAppearanceColors' | 'darkMode'>,
   navId: string,
 ): CSSProperties {
-  const scheme = settings.colorScheme ?? 'default';
+  const scheme = settings.colorScheme ?? 'sapphire';
   const custom = settings.customAppearanceColors?.[scheme];
   const primaryHsl = custom?.primary ? hexToHslTriplet(custom.primary) : null;
   const secondaryHsl = custom?.secondary ? hexToHslTriplet(custom.secondary) : null;

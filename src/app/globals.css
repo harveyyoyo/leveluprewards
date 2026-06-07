@@ -394,31 +394,31 @@ html[data-office-portal] .office-content-pane {
 
 @layer base {
   :root {
-    --background: 218 55% 93%;
+    --background: 42 42% 97%;
     --foreground: 222 47% 11%;
-    --card: 214 40% 98%;
+    --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    --popover: 214 40% 98%;
+    --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    /* LevelUp logo arrow (oklch 0.28 0.06 252) — see LEVELUP_BRAND_PRIMARY_HEX */
-    --primary: 211 62% 17%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 214 45% 88%;
-    --secondary-foreground: 211 45% 22%;
-    --muted: 214 38% 90%;
-    --muted-foreground: 215 24% 34%;
-    --accent: 211 58% 88%;
-    --accent-foreground: 211 52% 22%;
+    /* Sapphire + amber default appearance */
+    --primary: 217 64% 40%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 40 56% 84%;
+    --secondary-foreground: 40 42% 22%;
+    --muted: 42 36% 94%;
+    --muted-foreground: 217 26% 36%;
+    --accent: 40 58% 92%;
+    --accent-foreground: 40 45% 26%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 36% 82%;
-    --input: 214 36% 82%;
-    --ring: 199 80% 40%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 340 80% 60%;
-    --chart-3: 40 90% 60%;
-    --chart-4: 110 60% 50%;
-    --chart-5: 280 70% 60%;
+    --border: 42 34% 84%;
+    --input: 42 34% 84%;
+    --ring: 40 65% 52%;
+    --chart-1: 217 64% 40%;
+    --chart-2: 40 65% 52%;
+    --chart-3: 217 58% 48%;
+    --chart-4: 40 58% 58%;
+    --chart-5: 199 89% 48%;
     --radius: 0.75rem;
   }
 
@@ -838,22 +838,38 @@ html[data-color-scheme="default"] body {
 [data-color-scheme="sapphire"] {
   --primary: 217 64% 40%;
   --primary-foreground: 210 40% 98%;
-  --background: 220 78% 98%;
+  --background: 42 42% 97%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
-  --accent: 40 56% 94%;
-  --accent-foreground: 40 42% 28%;
-  --secondary: 40 54% 86%;
-  --secondary-foreground: 40 42% 24%;
-  --border: 217 46% 84%;
-  --muted: 217 34% 96%;
-  --muted-foreground: 217 28% 38%;
-  --ring: 40 62% 50%;
+  --accent: 40 58% 92%;
+  --accent-foreground: 40 45% 26%;
+  --secondary: 40 56% 84%;
+  --secondary-foreground: 40 42% 22%;
+  --border: 42 34% 84%;
+  --muted: 42 36% 94%;
+  --muted-foreground: 217 26% 36%;
+  --ring: 40 65% 52%;
   --chart-1: 217 64% 40%;
-  --chart-2: 40 62% 50%;
-  --chart-3: 160 84% 39%;
-  --chart-4: 347 77% 50%;
+  --chart-2: 40 65% 52%;
+  --chart-3: 217 58% 48%;
+  --chart-4: 40 58% 58%;
   --chart-5: 199 89% 48%;
+}
+
+html[data-color-scheme="sapphire"] body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.14) 0%, transparent 52%),
+    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.2) 0%, transparent 48%),
+    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-2) / 0.14) 0%, transparent 54%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-color-scheme="sapphire"] body {
+    background-attachment: scroll;
+  }
 }
 
 [data-color-scheme="coral"] {
@@ -1040,20 +1056,20 @@ html[data-color-scheme="default"] body {
   --background: 220 72% 5%;
   --card: 222 47% 11%;
   --card-foreground: 210 40% 98%;
-  --accent: 40 58% 18%;
-  --accent-foreground: 40 92% 82%;
-  --secondary: 40 58% 18%;
-  --secondary-foreground: 40 92% 86%;
+  --accent: 40 58% 20%;
+  --accent-foreground: 40 92% 84%;
+  --secondary: 40 56% 20%;
+  --secondary-foreground: 40 92% 88%;
   --border: 220 50% 24%;
   --muted: 220 40% 14%;
   --muted-foreground: 220 30% 72%;
   --primary: 217 64% 40%;
   --primary-foreground: 210 40% 98%;
-  --ring: 40 62% 50%;
+  --ring: 40 65% 52%;
   --chart-1: 217 64% 40%;
-  --chart-2: 40 62% 50%;
-  --chart-3: 160 84% 39%;
-  --chart-4: 347 77% 50%;
+  --chart-2: 40 65% 52%;
+  --chart-3: 217 58% 48%;
+  --chart-4: 40 58% 58%;
   --chart-5: 199 89% 48%;
 }
 
@@ -1100,6 +1116,21 @@ html.dark[data-dark-colorize="on"] body {
   html.dark[data-dark-colorize="on"] body {
     background-attachment: scroll;
   }
+}
+
+html.dark[data-dark-colorize="on"][data-color-scheme="sapphire"] {
+  --primary: 217 64% 44%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 65% 52%;
+  --secondary: 40 56% 22%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 40 58% 24%;
+  --accent-foreground: 210 40% 98%;
+  --chart-1: 217 64% 48%;
+  --chart-2: 40 65% 56%;
+  --chart-3: 217 58% 52%;
+  --chart-4: 40 58% 62%;
+  --chart-5: 199 89% 48%;
 }
 
 html.dark[data-dark-colorize="on"][data-color-scheme="default"] {

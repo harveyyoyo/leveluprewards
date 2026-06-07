@@ -46,8 +46,8 @@ const YESHIVA_CATEGORY_NAMES = [
 
 const yeshivaStudents = buildBalancedDemoRoster({
   classes: YESHIVA_CLASSES,
-  minStudentsPerClass: 20,
-  maxStudentsPerClass: 25,
+  minStudentsPerClass: 22,
+  maxStudentsPerClass: 22,
   firstNames: YESHIVA_FIRST_NAMES,
   lastNames: YESHIVA_LAST_NAMES,
   categoryNames: YESHIVA_CATEGORY_NAMES,

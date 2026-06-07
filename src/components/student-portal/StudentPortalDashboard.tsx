@@ -278,7 +278,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
         </Card>
       ) : null}
 
-      {settings.payLibrary !== false ? (
+      {settings.payLibrary !== false && myLibraryBooks.length > 0 ? (
         <StudentPortalMyBooksCard items={myLibraryBooks} />
       ) : null}
 

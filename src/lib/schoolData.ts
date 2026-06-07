@@ -48,8 +48,8 @@ const SCHOOL_ABC_CATEGORY_NAMES = [
 
 const schoolAbcStudents = buildBalancedDemoRoster({
   classes: SCHOOL_ABC_CLASSES,
-  minStudentsPerClass: 15,
-  maxStudentsPerClass: 20,
+  minStudentsPerClass: 18,
+  maxStudentsPerClass: 18,
   firstNames: SCHOOL_ABC_FIRST_NAMES,
   lastNames: SCHOOL_ABC_LAST_NAMES,
   categoryNames: SCHOOL_ABC_CATEGORY_NAMES,

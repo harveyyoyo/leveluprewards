@@ -290,15 +290,6 @@ function StudentDashboardInner({
   const showManualCoupon = !showCameraCoupon && settings.kioskCouponRedemptionManualEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
   const libraryKioskCheckoutOn = isLibraryStudentKioskCheckoutEnabled(settings);
-  const libraryScanHint = libraryKioskCheckoutOn
-    ? ' Scan the LIB sticker on a library book here to check out or return (same place as coupons).'
-    : '';
-  const libraryCheckoutNote = libraryKioskCheckoutOn
-    ? 'Library books: scan the LIB sticker on the book cover (same scanner as coupons) to check out or return.'
-    : undefined;
-  const couponHelperText = showCameraCoupon
-    ? `Scan a coupon with the device camera.${libraryScanHint} Use Logout on this card to exit.`
-    : `Scan or type a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`;
   const prefersReducedMotion = useReducedMotion();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
@@ -398,6 +389,18 @@ function StudentDashboardInner({
     () => myLibraryBooks.filter((i) => computeDaysOverdue(i.dueAt) > 0),
     [myLibraryBooks],
   );
+  const hasLibraryCheckouts = myLibraryBooks.length > 0;
+  const libraryScanHint =
+    libraryKioskCheckoutOn && hasLibraryCheckouts
+      ? ' Scan the LIB sticker on a library book here to check out or return (same place as coupons).'
+      : '';
+  const libraryCheckoutNote =
+    libraryKioskCheckoutOn && hasLibraryCheckouts
+      ? 'Library books: scan the LIB sticker on the book cover (same scanner as coupons) to check out or return.'
+      : undefined;
+  const couponHelperText = showCameraCoupon
+    ? `Scan a coupon with the device camera.${libraryScanHint} Use Logout on this card to exit.`
+    : `Scan or type a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`;
   const studentClassLabel = useMemo(() => {
     if (!student?.classId || !classes?.length) return 'Unassigned';
     return classes.find((c) => c.id === student.classId)?.name ?? 'Unassigned';

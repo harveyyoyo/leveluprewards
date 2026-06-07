@@ -1129,7 +1129,7 @@ export function AdminBrandingTab({
                     const p = settings.kioskProfiles?.[activePreviewProfileId];
                     if (!p) return null;
 
-                    const activeTheme = p.settings?.colorScheme || settings.colorScheme || 'default';
+                    const activeTheme = p.settings?.colorScheme || settings.colorScheme || 'sapphire';
                     const activeMode = (p.settings?.graphicMode || settings.graphicMode || 'graphics') as string;
                     const isDark = p.settings?.darkMode !== undefined ? p.settings.darkMode : !!settings.darkMode;
 
@@ -1429,7 +1429,7 @@ export function AdminBrandingTab({
                     updatedAt: Date.now(),
                     settings: {
                       graphicMode: 'graphics' as const,
-                      colorScheme: 'default' as const,
+                      colorScheme: 'sapphire' as const,
                       kioskLoginTabScanEnabled: true,
                       kioskLoginTabFaceEnabled: true,
                       kioskLoginTabCardEnabled: true,
@@ -1510,7 +1510,7 @@ export function AdminBrandingTab({
                 <div className="space-y-2">
                   <Label className="text-xs font-bold">Color Theme</Label>
                   <Select
-                    value={editingProfileSettings.colorScheme || 'default'}
+                    value={editingProfileSettings.colorScheme || 'sapphire'}
                     onValueChange={(val) =>
                       setEditingProfileSettings((prev) => ({
                         ...prev,
