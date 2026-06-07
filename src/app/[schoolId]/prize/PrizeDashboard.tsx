@@ -46,6 +46,7 @@ import {
     Printer,
 } from 'lucide-react';
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -1190,7 +1191,7 @@ export function PrizeDashboard({
                               'pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2',
                               settings.enableThemeAnimations && !!activeTheme && 'theme-theme-elements-animated theme-motion-override',
                               activeTheme && 'student-theme-surface',
-                              settings.displayMode === 'app' && 'pb-24',
+                              isCompactDisplayMode(settings.displayMode) && 'pb-24',
                               (!student || !activeTheme) &&
                                   (animBackdrop ? 'bg-transparent text-foreground' : 'bg-background text-foreground'),
                           ),

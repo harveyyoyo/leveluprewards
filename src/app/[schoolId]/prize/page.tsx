@@ -14,6 +14,7 @@ import { useActiveStudentSession } from '@/hooks/useActiveStudentSession';
 import type { StudentFoundMeta } from '@/components/student/StudentScanner';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { cn } from '@/lib/utils';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { PrizeDashboard } from './PrizeDashboard';
@@ -147,7 +148,7 @@ export default function PrizePage() {
     return (
         <TooltipProvider>
             <div
-              className={cn("min-h-[80vh] flex flex-col items-center justify-center", settings.displayMode === 'app' && 'pb-24')}
+              className={cn("min-h-[80vh] flex flex-col items-center justify-center", isCompactDisplayMode(settings.displayMode) && 'pb-24')}
               style={appearanceVarsForSurface(settings, 'prize') as CSSProperties}
             >
                 <StudentScanner

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { Megaphone, ExternalLink } from 'lucide-react';
 
 /**
@@ -90,7 +91,7 @@ export function KioskSponsorBanner({ className, previewOverride }: { className?:
 
     const isStatic = speed === 'static';
     const isPreview = !!previewOverride;
-    const isAppMode = settings.displayMode === 'app';
+    const isAppMode = isCompactDisplayMode(settings.displayMode);
 
     const bannerStyleClass = (bannerStyle && styleMap[bannerStyle]) || styleMap.primary;
 

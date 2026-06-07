@@ -13,6 +13,7 @@ import type { Student, Class, House, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import {
   parseHallOfFameUrlRankTypePin,
@@ -736,7 +737,7 @@ export default function HallOfFamePage() {
               className={cn(
                 "w-full h-full flex flex-col min-h-0",
                 isFullscreen ? "px-3 pt-2 pb-2" : "px-4 sm:px-8 pt-8 md:pt-12",
-                !isFullscreen && (settings.displayMode === 'app' ? 'pb-24' : 'pb-12'),
+                !isFullscreen && (isCompactDisplayMode(settings.displayMode) ? 'pb-24' : 'pb-12'),
               )}
             >
                 <div className={cn(

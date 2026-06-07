@@ -15,6 +15,7 @@ import { preloadBarcodeScanStack } from '@/lib/barcodeCameraScan';
 import { syncKioskBarcodeCameraWarm } from '@/lib/barcodeCameraSession';
 import { readKioskLoginTab } from '@/lib/kiosk/kioskSessionPrefs';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
@@ -1499,7 +1500,7 @@ function StudentDashboardInner({
             : "pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2",
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           effectiveTheme && 'student-theme-surface',
-          settings.displayMode === 'app' && 'pb-6',
+          isCompactDisplayMode(settings.displayMode) && 'pb-6',
           'pb-[max(0.5rem,env(safe-area-inset-bottom))]'
         )}
         style={effectiveTheme ? ({

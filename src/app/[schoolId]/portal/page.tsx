@@ -32,6 +32,7 @@ import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSec
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
+import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
 
 type PortalArea = {
     id: string;
@@ -83,16 +84,16 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
 
 function WhereToDrawnTitle({
     accentColor,
-    displayMode,
+    compactDisplay,
     glowColor,
 }: {
     accentColor: string;
-    displayMode: string;
+    compactDisplay: boolean;
     glowColor?: string;
 }) {
     const titleClassName = cn(
         'font-headline portal-choose-title-depth relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
-        displayMode === 'app'
+        compactDisplay
             ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
             : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
     );
@@ -173,7 +174,7 @@ export default function PortalPage() {
                 : !!prefersReducedMotion,
     );
     const kioskPortrait = isKioskPortraitDisplay(settings);
-    const isAppDisplay = settings.displayMode === 'app';
+    const compactDisplay = isCompactDisplayMode(settings.displayMode);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -310,6 +311,9 @@ export default function PortalPage() {
             ]
           : []),
     ];
+    const visiblePortals = portals.filter((area) =>
+        isPortalAreaOnDisplayMode(area.id, settings.displayMode),
+    );
 
     return (
         <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
@@ -318,17 +322,17 @@ export default function PortalPage() {
             <div
                 className={cn(
                     'relative z-[10] flex h-full min-h-0 w-full flex-col',
-                    isAppDisplay ? 'overflow-x-hidden overflow-y-auto overscroll-contain' : 'overflow-hidden',
-                    isAppDisplay
+                    compactDisplay ? 'overflow-x-hidden overflow-y-auto overscroll-contain' : 'overflow-hidden',
+                    compactDisplay
                         ? 'px-4 pb-3 pt-2 sm:pb-4 sm:pt-4 md:py-10'
                         : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
-                    portalChoosePageShellClass(kioskPortrait, isAppDisplay),
+                    portalChoosePageShellClass(kioskPortrait, compactDisplay),
                 )}
             >
                 <div
                     className={cn(
                         'flex min-h-full w-full flex-1 flex-col items-center',
-                        isAppDisplay
+                        compactDisplay
                             ? 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8'
                             : 'justify-start gap-10 sm:gap-12 md:gap-16',
                     )}
@@ -338,7 +342,7 @@ export default function PortalPage() {
                     <div
                         className={cn(
                             'flex w-full shrink-0 flex-col items-center justify-center px-1 text-center md:min-h-0',
-                            isAppDisplay ? 'pb-1 pt-0 md:pb-0' : '',
+                            compactDisplay ? 'pb-1 pt-0 md:pb-0' : '',
                         )}
                     >
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
@@ -347,8 +351,8 @@ export default function PortalPage() {
                                     className={cn(
                                         'font-headline portal-choose-title-depth inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         kioskPortrait
-                                            ? portalChooseTitleClass(true, isAppDisplay)
-                                            : isAppDisplay
+                                            ? portalChooseTitleClass(true, compactDisplay)
+                                            : compactDisplay
                                               ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
                                               : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
                                     )}
@@ -364,7 +368,7 @@ export default function PortalPage() {
                             ) : (
                                 <WhereToDrawnTitle
                                     accentColor={whereToAccentColor}
-                                    displayMode={settings.displayMode}
+                                    compactDisplay={compactDisplay}
                                     glowColor={whereToGlowColor}
                                 />
                             )}
@@ -377,7 +381,7 @@ export default function PortalPage() {
                             'mx-auto w-full shrink-0 pb-safe md:mt-0',
                             kioskPortrait
                                 ? ''
-                                : isAppDisplay
+                                : compactDisplay
                                   ? 'max-w-[min(24rem,calc(100%-0.5rem))] sm:max-w-xl'
                                   : 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl',
                             portalChooseGridClass(kioskPortrait),
@@ -390,10 +394,10 @@ export default function PortalPage() {
                             animate="show"
                             className={cn(
                                 'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
-                                kioskPortrait || isAppDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
+                                kioskPortrait || compactDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
                             )}
                         >
-                    {portals.map((area, index) => {
+                    {visiblePortals.map((area, index) => {
                         const Icon = area.icon;
                         const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
                         const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
@@ -402,17 +406,16 @@ export default function PortalPage() {
                         const needsTeacherLogin =
                             area.id === 'print' &&
                             (loginState === 'school' || loginState === 'admin' || loginState === 'developer');
-                        const isAppDisplay = settings.displayMode === 'app';
                         const portalCard = (
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
                                         'portal-choose-card relative overflow-hidden rounded-2xl border-2 bg-card',
-                                        isAppDisplay ? 'text-left' : 'text-center',
+                                        compactDisplay ? 'text-left' : 'text-center',
                                         portalCardHoverEffects &&
                                             'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-hover:border-foreground/25 group-active:translate-y-0',
                                         'flex h-full min-h-0 w-full flex-col justify-center',
-                                        isAppDisplay
+                                        compactDisplay
                                             ? 'px-4 py-4 sm:px-5 sm:py-5'
                                             : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
                                     )}
@@ -420,7 +423,7 @@ export default function PortalPage() {
                                         borderColor: `${rainbowColor}55`,
                                     }}
                                 >
-                                    {isAppDisplay ? (
+                                    {compactDisplay ? (
                                     <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
                                         <div
                                             className={cn(

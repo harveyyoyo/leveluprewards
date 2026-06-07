@@ -23,6 +23,7 @@ import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
+import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -213,8 +214,10 @@ function LayoutClientWrapperInner({
     const shouldRenderGlobalHeader = canShowGlobalHeader && !schoolScopedChromePending;
 
     const dockSchoolId = contextSchoolId ?? routeSchoolId ?? null;
+    const compactDisplay = isCompactDisplayMode(settings.displayMode);
+    const mobileDisplay = isMobileDisplayMode(settings.displayMode);
     const showPortalBottomDockPadding =
-      settings.displayMode === 'app' &&
+      compactDisplay &&
       isInitialized &&
       !!dockSchoolId &&
       loginState !== 'loggedOut' &&
@@ -223,7 +226,7 @@ function LayoutClientWrapperInner({
       !hideAppChrome &&
       !isStudentRewardsPage &&
       !isFullscreenSpecialPage;
-    const useCompactSiteFooter = settings.displayMode === 'app' && isPortalChoosePage;
+    const useCompactSiteFooter = compactDisplay && isPortalChoosePage;
 
     useEffect(() => {
         const runWhenIdle = (cb: () => void, timeout = 1200) => {
@@ -490,9 +493,14 @@ function LayoutClientWrapperInner({
                         </div>
                     )}
                     {nonCriticalUiReady && settings.showIntroWizard && <IntroWizard />}
-                    {nonCriticalUiReady && !hideAppChrome && !isFullscreenSpecialPage && !isStudentRewardsPage && <StaffAiHelpButton />}
+                    {nonCriticalUiReady &&
+                      !hideAppChrome &&
+                      !isFullscreenSpecialPage &&
+                      !isStudentRewardsPage &&
+                      !mobileDisplay && <StaffAiHelpButton />}
                     {!hideAppChrome &&
                       !isFullscreenSpecialPage &&
+                      !mobileDisplay &&
                       // Prevent a "flash of animated background" before settings hydrate from storage.
                       nonCriticalUiReady &&
                       isLoaded &&

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { canAccessStaffAiHelp } from '@/lib/staffAiHelpAccess';
+import { isCompactDisplayMode } from '@/lib/displayMode';
 import { RemoteSupportSharePanel } from '@/components/support/RemoteSupportSharePanel';
 import {
   Sheet,
@@ -190,7 +191,7 @@ export function StaffAiHelpButton() {
 
   if (!show) return null;
 
-  const isApp = settings.displayMode === 'app';
+  const isApp = isCompactDisplayMode(settings.displayMode);
   const canSend = Boolean(schoolId) && !sending;
   const canSendSupport = Boolean(schoolId) && !supportSending && supportText.trim().length > 0;
 

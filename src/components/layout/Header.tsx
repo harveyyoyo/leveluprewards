@@ -45,6 +45,11 @@ import {
   staffPortalHeaderWrapClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
+import {
+  isCompactDisplayMode,
+  isDockItemOnDisplayMode,
+  type ResolvedDisplayMode,
+} from '@/lib/displayMode';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -203,8 +208,14 @@ export default function Header() {
   const colorClasses = portalTextClass;
   const hoverColorClasses = portalHoverTextClass;
 
+  const resolvedDisplayMode = settings.displayMode as ResolvedDisplayMode;
+  const compactDisplay = isCompactDisplayMode(resolvedDisplayMode);
+  const visibleDockItems = portalDockItems.filter((item) =>
+    isDockItemOnDisplayMode(item.id, resolvedDisplayMode),
+  );
+
   const portalDockNav =
-    settings.displayMode === 'app' && showPortalDock && portalDockItems.length > 0 ? (
+    compactDisplay && showPortalDock && visibleDockItems.length > 0 ? (
       <nav
         className={cn(
           'fixed bottom-0 left-0 right-0 z-[100] border-t py-3 pb-[max(1rem,env(safe-area-inset-bottom))] no-print',
@@ -215,7 +226,7 @@ export default function Header() {
         aria-label="Portal shortcuts"
       >
         <div className="mx-auto flex max-w-lg items-center justify-around">
-          {portalDockItems.map(({ id, href, icon: Icon, label, color }) => {
+          {visibleDockItems.map(({ id, href, icon: Icon, label, color }) => {
             const isActive = isPortalDockActive(id);
             const colorKey = color as PortalColorKey;
             const activeClass = isActive
@@ -358,8 +369,8 @@ export default function Header() {
     </span>
   );
 
-  // --- APP MODE HEADER ---
-  if (settings.displayMode === 'app') {
+  // --- COMPACT HEADER (app + mobile) ---
+  if (compactDisplay) {
     return (
       <div id="levelup-global-app-header" className="w-full">
         <div className={cn('w-full min-w-0', headerWrapClassName)}>
