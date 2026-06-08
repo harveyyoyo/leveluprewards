@@ -14,7 +14,7 @@ import { firebaseConfig } from '@/firebase/config';
  *  3. When `requireSchoolStaff` is set, the body must include a `schoolId` and
  *     the caller must have a staff role doc (admin, teacher, secretary,
  *     prizeClerk, or reports) under that school, or be listed in
- *     `appConfig/global.developerUids` (same anonymous Firebase
+ *     `appConfig/developerAllowlist.uids` (same anonymous Firebase
  *     UID added by dev login + `addDeveloperMe`). Verified via the Firestore
  *     REST API with the caller's ID token so security rules apply.
  *  4. Per-user + per-IP rate limits (sliding window).
@@ -199,7 +199,7 @@ async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<bo
 
   const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
     projectId
-  )}/databases/(default)/documents/appConfig/global`;
+  )}/databases/(default)/documents/appConfig/developerAllowlist`;
 
   let allowed = false;
   try {
@@ -213,12 +213,12 @@ async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<bo
     }
     const body = (await res.json()) as {
       fields?: {
-        developerUids?: {
+        uids?: {
           arrayValue?: { values?: Array<{ stringValue?: string }> };
         };
       };
     };
-    const values = body.fields?.developerUids?.arrayValue?.values;
+    const values = body.fields?.uids?.arrayValue?.values;
     if (Array.isArray(values)) {
       allowed = values.some((v) => v?.stringValue === uid);
     }
@@ -271,7 +271,7 @@ export interface GuardOptions {
    * When true, the request body must include a `schoolId` string and the
    * authenticated user must have a staff role doc (admin, teacher, secretary,
    * prizeClerk, or reports) under that school, or appear in
-   * `appConfig/global.developerUids`. Enforced via the Firestore REST API with
+   * `appConfig/developerAllowlist.uids`. Enforced via the Firestore REST API with
    * the caller's ID token.
    */
   requireSchoolStaff?: boolean;
@@ -439,7 +439,7 @@ export async function guardAiRoute(
 }
 
 /**
- * Developer console AI routes — Bearer token + `appConfig/global.developerUids` only.
+ * Developer console AI routes — Bearer token + `appConfig/developerAllowlist.uids` only.
  */
 export async function guardDeveloperRoute(
   req: NextRequest,

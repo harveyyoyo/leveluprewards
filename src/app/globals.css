@@ -486,30 +486,12 @@ html[data-office-portal] .office-content-pane {
    */
   html[data-smart-screen-theme] body {
     background-image: none !important;
+    background-color: var(--smart-screen-page-bg, #f5f7fb) !important;
+    color: var(--smart-screen-page-text, #0f172a) !important;
   }
 
-  html[data-smart-screen-theme='daylight'] body {
-    background-color: #f5f7fb !important;
-    color: #0f172a !important;
-  }
-
-  html[data-smart-screen-theme='daylight'] {
-    color-scheme: light;
-  }
-
-  html[data-smart-screen-theme='midnight'] body {
-    background-color: #020817 !important;
-    color: #ffffff !important;
-  }
-
-  html[data-smart-screen-theme='studio'] body {
-    background-color: #090806 !important;
-    color: #ffffff !important;
-  }
-
-  html[data-smart-screen-theme='midnight'],
-  html[data-smart-screen-theme='studio'] {
-    color-scheme: dark;
+  html[data-smart-screen-theme] {
+    color-scheme: var(--smart-screen-color-scheme, light);
   }
 
   html[data-smart-screen-theme] [data-smart-screen-root] :where(

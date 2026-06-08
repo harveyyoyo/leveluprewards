@@ -41,11 +41,11 @@ function isAllowedGoogleAdminBypass(email: string, googleAuth: boolean): boolean
   return isAllowedGoogleEmailOnAllowlist(normalized, getDeveloperGoogleEmailAllowlist());
 }
 
-/** Firestore fallback: check appConfig/global.developerUids (survives missing env vars). */
+/** Firestore fallback: check appConfig/developerAllowlist.uids (survives missing env vars). */
 async function isDeveloperUid(db: Firestore, uid: string): Promise<boolean> {
   try {
-    const snap = await db.collection('appConfig').doc('global').get();
-    const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
+    const snap = await db.collection('appConfig').doc('developerAllowlist').get();
+    const list = snap.exists ? (snap.data()?.uids as string[] | undefined) : undefined;
     return Array.isArray(list) && list.includes(uid);
   } catch {
     return false;

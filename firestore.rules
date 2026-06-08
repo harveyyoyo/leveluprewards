@@ -158,16 +158,21 @@ service cloud.firestore {
     }
 
     function isDeveloper() {
-      return isAuth() && exists(/databases/$(database)/documents/appConfig/global)
-        && 'developerUids' in get(/databases/$(database)/documents/appConfig/global).data
-        && request.auth.uid in get(/databases/$(database)/documents/appConfig/global).data.developerUids;
+      return isAuth() && exists(/databases/$(database)/documents/appConfig/developerAllowlist)
+        && 'uids' in get(/databases/$(database)/documents/appConfig/developerAllowlist).data
+        && request.auth.uid in get(/databases/$(database)/documents/appConfig/developerAllowlist).data.uids;
     }
 
     // Global app configuration (e.g. app logo, name, tagline)
     match /appConfig/{docId} {
       // Public read so login page can show app logo before user signs in.
-      allow read: if true;
+      allow read: if docId == 'global';
       allow write: if false;
+    }
+
+    match /appConfig/developerAllowlist {
+      allow read: if isAuth() && request.auth.uid in resource.data.uids;
+      allow write: if false; // Only mutated via Admin SDK
     }
 
     // Minimal tenant metadata for student portal and public deep links (no secrets).

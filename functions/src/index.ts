@@ -754,7 +754,7 @@ exports.verifyBackupIntegrity = functions.https.onCall(
 
 exports.scheduledFullBackup = functions
   .runWith({ timeoutSeconds: 540, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 2 * * 0")
   .timeZone("UTC")
   .onRun(async () => {
     const schoolsSnap = await admin.firestore().collection("schools").get();
@@ -885,14 +885,14 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
 // Developer allow-list (appConfig/global.developerUids) for attendance etc.
 // ========================================================================
 
-const APP_CONFIG_GLOBAL = "global";
+const APP_CONFIG_DEV_ALLOWLIST = "developerAllowlist";
 
 async function isDeveloper(context: functions.https.CallableContext): Promise<boolean> {
   if (!context.auth?.uid) return false;
   const db = admin.firestore();
-  const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
+  const globalRef = db.collection("appConfig").doc(APP_CONFIG_DEV_ALLOWLIST);
   const snap = await globalRef.get();
-  const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
+  const list = snap.exists ? (snap.data()?.uids as string[] | undefined) : undefined;
   return Array.isArray(list) && list.includes(context.auth!.uid);
 }
 
@@ -933,9 +933,9 @@ exports.addDeveloperMe = functions.https.onCall(
     }
 
     const db = admin.firestore();
-    const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
+    const globalRef = db.collection("appConfig").doc(APP_CONFIG_DEV_ALLOWLIST);
     await globalRef.set(
-      { developerUids: FieldValue.arrayUnion(context.auth!.uid) },
+      { uids: FieldValue.arrayUnion(context.auth!.uid) },
       { merge: true }
     );
     return { success: true };

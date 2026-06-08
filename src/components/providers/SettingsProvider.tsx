@@ -23,6 +23,7 @@ import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrin
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { STUDENT_WELCOME_STYLES_LIVE } from '@/lib/students/studentWelcome';
+import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 import {
     normalizeDisplayModePreference,
@@ -59,20 +60,54 @@ type AppearanceColorPair = {
 
 type AppearanceColorOverrides = Partial<Record<ColorScheme, AppearanceColorPair>>;
 
-interface Settings {
+export interface AppearanceSettings {
     graphicMode: 'classic' | 'graphics';
     displayMode: DisplayModePreference;
     colorScheme: ColorScheme;
     customAppearanceColors?: AppearanceColorOverrides;
-    soundEnabled: boolean;
     language: string;
     darkMode: boolean;
-    /** When dark mode is on, adds richer accents and a subtle color wash on the page background. */
     darkModeColorized?: boolean;
-    // Theme visuals
     enableThemeAnimations: boolean;
-    /** When false, kiosk, rewards shop, and ID cards ignore per-student and school default themes (data is kept). */
     enableStudentThemes: boolean;
+    studentDarkMode?: boolean;
+    studentDarkModeColorized?: boolean;
+    studentEnableAnimatedBackground?: boolean;
+    studentAnimatedBackgroundStyle?: string;
+    studentAudioTheme?: 'retro_arcade' | 'modern_chime' | 'sci_fi_synth';
+    studentColorScheme?: ColorScheme;
+    studentDisplayMode?: DisplayModePreference;
+}
+
+export interface FeatureSettings {
+    enableAchievements: boolean;
+    enableBadges: boolean;
+    enableLevels: boolean;
+    enableStreaks: boolean;
+    enableGoals: boolean;
+    enableHouses: boolean;
+    housesRollupPoints: boolean;
+    housePointsSource?: 'studentRollup' | 'manual';
+    showHouseOnStudentKiosk: boolean;
+    enableChallenges: boolean;
+    enableTeacherCharts: boolean;
+    enableAdminAnalytics: boolean;
+    enableWeeklyRaffle: boolean;
+    enableClassroomRoomDisplay?: boolean;
+    enableClassLeaderboard: boolean;
+    enableClassAccumulations: boolean;
+    enableShoutouts: boolean;
+    enablePrizeImages: boolean;
+    enablePrizeAiSurprise: boolean;
+    enableCouponRedeemCompliments?: boolean;
+    enablePrizeCategories: boolean;
+    enableWishlist: boolean;
+    enableSeasonalPrizes: boolean;
+    enableVendingMachine: boolean;
+}
+
+interface Settings extends AppearanceSettings, FeatureSettings {
+    soundEnabled: boolean;
     // Engagement
     enableAchievements: boolean;
     enableBadges: boolean;
@@ -134,16 +169,8 @@ interface Settings {
     enableClassAccumulations: boolean;
     enableShoutouts: boolean;
     // Prize/Rewards shop
-    enablePrizeImages: boolean;
-    enablePrizeAiSurprise: boolean;
-    /** When on, the student kiosk adds an AI compliment (by coupon category) when a coupon is redeemed. */
-    enableCouponRedeemCompliments?: boolean;
     /** Point cost for the built-in Fun AI reward shown when AI surprise is enabled. */
     prizeAiSurpriseDefaultPoints: number;
-    enablePrizeCategories: boolean;
-    enableWishlist: boolean;
-    enableSeasonalPrizes: boolean;
-    enableVendingMachine: boolean;
     /** When on, include the student's theme emoji (or school default theme) on printed prize redeem vouchers. */
     enableStudentEmojiOnPrizeTickets: boolean;
     enableColorPrinting: boolean;
@@ -378,7 +405,7 @@ interface Settings {
     smartScreenEnabled?: boolean;
     smartScreenTitle?: string;
     smartScreenMessage?: string;
-    smartScreenTheme?: 'midnight' | 'daylight' | 'studio';
+    smartScreenTheme?: SmartScreenTheme;
     smartScreenLayout?: 'mirror' | 'dashboard' | 'portrait';
     /** Optional US ZIP code. When set, Smart Screen uses it for both weather and timezone. */
     smartScreenLocationZip?: string;
@@ -763,7 +790,7 @@ const defaultSettings: Settings = {
     smartScreenEnabled: false,
     smartScreenTitle: 'Smart Screen',
     smartScreenMessage: 'Make today count.',
-    smartScreenTheme: 'midnight',
+    smartScreenTheme: 'daylight',
     smartScreenLayout: 'mirror',
     smartScreenLocationZip: '',
     smartScreenWeatherLabel: 'Clear focus',
@@ -1598,7 +1625,53 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             isPillarAvailable,
             isLoaded 
         }}>
-            {children}
+            <AppearanceContext.Provider value={{
+                graphicMode: effectiveSettings.graphicMode,
+                displayMode: effectiveSettings.displayMode,
+                colorScheme: effectiveSettings.colorScheme,
+                customAppearanceColors: effectiveSettings.customAppearanceColors,
+                language: effectiveSettings.language,
+                darkMode: effectiveSettings.darkMode,
+                darkModeColorized: effectiveSettings.darkModeColorized,
+                enableThemeAnimations: effectiveSettings.enableThemeAnimations,
+                enableStudentThemes: effectiveSettings.enableStudentThemes,
+                studentDarkMode: effectiveSettings.studentDarkMode,
+                studentDarkModeColorized: effectiveSettings.studentDarkModeColorized,
+                studentEnableAnimatedBackground: effectiveSettings.studentEnableAnimatedBackground,
+                studentAnimatedBackgroundStyle: effectiveSettings.studentAnimatedBackgroundStyle,
+                studentAudioTheme: effectiveSettings.studentAudioTheme,
+                studentColorScheme: effectiveSettings.studentColorScheme,
+                studentDisplayMode: effectiveSettings.studentDisplayMode
+            }}>
+                <FeaturesContext.Provider value={{
+                    enableAchievements: effectiveSettings.enableAchievements,
+                    enableBadges: effectiveSettings.enableBadges,
+                    enableLevels: effectiveSettings.enableLevels,
+                    enableStreaks: effectiveSettings.enableStreaks,
+                    enableGoals: effectiveSettings.enableGoals,
+                    enableHouses: effectiveSettings.enableHouses,
+                    housesRollupPoints: effectiveSettings.housesRollupPoints,
+                    housePointsSource: effectiveSettings.housePointsSource,
+                    showHouseOnStudentKiosk: effectiveSettings.showHouseOnStudentKiosk,
+                    enableChallenges: effectiveSettings.enableChallenges,
+                    enableTeacherCharts: effectiveSettings.enableTeacherCharts,
+                    enableAdminAnalytics: effectiveSettings.enableAdminAnalytics,
+                    enableWeeklyRaffle: effectiveSettings.enableWeeklyRaffle,
+                    enableClassroomRoomDisplay: effectiveSettings.enableClassroomRoomDisplay,
+                    enableClassLeaderboard: effectiveSettings.enableClassLeaderboard,
+                    enableClassAccumulations: effectiveSettings.enableClassAccumulations,
+                    enableShoutouts: effectiveSettings.enableShoutouts,
+                    enablePrizeImages: effectiveSettings.enablePrizeImages,
+                    enablePrizeAiSurprise: effectiveSettings.enablePrizeAiSurprise,
+                    enableCouponRedeemCompliments: effectiveSettings.enableCouponRedeemCompliments,
+                    enablePrizeCategories: effectiveSettings.enablePrizeCategories,
+                    enableWishlist: effectiveSettings.enableWishlist,
+                    enableSeasonalPrizes: effectiveSettings.enableSeasonalPrizes,
+                    enableVendingMachine: effectiveSettings.enableVendingMachine
+                }}>
+                    {children}
+                </FeaturesContext.Provider>
+            </AppearanceContext.Provider>
         </SettingsContext.Provider>
     );
 }
@@ -1606,5 +1679,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 export function useSettings() {
     const ctx = useContext(SettingsContext);
     if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
+    return ctx;
+}
+
+export const AppearanceContext = createContext<AppearanceSettings | null>(null);
+export const FeaturesContext = createContext<FeatureSettings | null>(null);
+
+export function useAppearance() {
+    const ctx = useContext(AppearanceContext);
+    if (!ctx) throw new Error('useAppearance must be used within SettingsProvider');
+    return ctx;
+}
+
+export function useFeatures() {
+    const ctx = useContext(FeaturesContext);
+    if (!ctx) throw new Error('useFeatures must be used within SettingsProvider');
     return ctx;
 }

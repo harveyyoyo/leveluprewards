@@ -13,7 +13,13 @@ import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
+import {
+  DEFAULT_BULLETIN_SUBTITLE,
+  bulletinLogoBoxClass,
+  getBulletinBoardCardClassName,
+  getBulletinBoardItemClassName,
+  getBulletinBoardPageClassName,
+} from '@/lib/bulletinBoard';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
@@ -106,6 +112,7 @@ export default function BulletinBoardDisplay() {
   const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim() || DEFAULT_BULLETIN_SUBTITLE;
   const schoolLogoUrl = schoolMeta?.logoUrl;
   const logoSize = settings.bulletinLogoSize || 'md';
+  const bulletinItemClassName = getBulletinBoardItemClassName(settings.bulletinTheme);
 
   if (!isInitialized || !VIEWER_LOGIN_STATES.has(loginState)) {
     return (
@@ -126,7 +133,7 @@ export default function BulletinBoardDisplay() {
       className={cn(
         'min-h-screen text-foreground font-sans flex flex-col',
         isFullscreen ? 'w-full max-w-none mx-0 p-4 md:p-8' : 'p-4 md:p-8 max-w-4xl mx-auto items-center',
-        animBackdrop ? 'bg-transparent' : 'bg-background',
+        animBackdrop ? 'bg-transparent' : getBulletinBoardPageClassName(settings.bulletinTheme),
       )}
       style={{
         ['--primary' as string]: rainbowTripletForNavId('admin', settings.colorScheme),
@@ -183,13 +190,7 @@ export default function BulletinBoardDisplay() {
           </CardHeader>
         </Card>
       ) : (
-        <Card
-          className={cn(
-            'w-full shadow-2xl border-t-8 border-indigo-500 backdrop-blur-md',
-            getBulletinBoardCardClassName(settings.bulletinTheme),
-            animBackdrop ? 'bg-card/92' : 'bg-card/80',
-          )}
-        >
+        <Card className={cn('w-full shadow-2xl', getBulletinBoardCardClassName(settings.bulletinTheme))}>
           {schoolLogoUrl ? (
             <div className="flex justify-center pt-8">
               <img
@@ -219,10 +220,7 @@ export default function BulletinBoardDisplay() {
                 </div>
                 <div className="space-y-2">
                   {(bulletinPosts || []).slice(0, 10).map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm"
-                    >
+                    <div key={p.id} className={cn('p-3 backdrop-blur-md', bulletinItemClassName)}>
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="text-2xl select-none" role="img" aria-label="celebration">
                           {p.emoji || '🎉'}
@@ -258,10 +256,7 @@ export default function BulletinBoardDisplay() {
                 {sortedBulletin
                   .filter((i) => i.active !== false)
                   .map((inc) => (
-                    <div
-                      key={inc.id}
-                      className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between gap-3 shadow-sm"
-                    >
+                    <div key={inc.id} className={cn('p-3 backdrop-blur-md', bulletinItemClassName)}>
                       <div className="flex items-center gap-3 min-w-0">
                         <span className="text-2xl select-none" role="img" aria-label="incentive">
                           {inc.icon || '🎯'}

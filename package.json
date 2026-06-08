@@ -102,6 +102,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@vladmandic/face-api": "^1.7.15",
     "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
     "barcode-detector": "^2.3.1",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
@@ -113,6 +114,7 @@
     "firebase": "^11.9.1",
     "firebase-admin": "^13.8.0",
     "framer-motion": "^12.35.0",
+    "gsap": "^3.15.0",
     "html-to-image": "^1.11.13",
     "jose": "^5.10.0",
     "jsbarcode": "^3.12.3",
@@ -131,7 +133,8 @@
     "recharts": "^2.15.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
