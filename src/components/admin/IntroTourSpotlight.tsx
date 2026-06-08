@@ -12,8 +12,34 @@ export type SpotlightRect = {
 
 const SPOTLIGHT_PADDING = 10;
 
+function isVisibleIntroTourElement(el: Element): boolean {
+  const rect = el.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+    return false;
+  }
+  return true;
+}
+
+/** Prefer a visible match when multiple nodes share the same tour id. */
 export function queryIntroTourTarget(targetId: string): Element | null {
-  return document.querySelector(`[data-intro-tour="${targetId}"]`);
+  const nodes = document.querySelectorAll(`[data-intro-tour="${targetId}"]`);
+  if (nodes.length === 0) return null;
+  if (nodes.length === 1) return nodes[0];
+
+  let best: Element | null = null;
+  let bestScore = -1;
+  for (const el of nodes) {
+    if (!isVisibleIntroTourElement(el)) continue;
+    const rect = el.getBoundingClientRect();
+    const score = rect.width * rect.height + rect.right;
+    if (score > bestScore) {
+      bestScore = score;
+      best = el;
+    }
+  }
+  return best ?? nodes[0];
 }
 
 export function measureIntroTourTarget(targetId?: string): SpotlightRect | null {

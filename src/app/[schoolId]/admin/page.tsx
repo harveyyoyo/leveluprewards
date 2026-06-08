@@ -143,6 +143,7 @@ import {
   isAdminAddOnTabValue,
 } from '@/lib/adminTabColorScheme';
 import { ADMIN_SETTINGS_TAB_VALUES } from '@/components/settings/settingsModalConfig';
+import { useIntroTourStaffTabListener } from '@/lib/introTourStaffTab';
 
 const tabLoader = () => (
   <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
@@ -538,6 +539,11 @@ function AdminDashboardInner() {
   const [showPurgeFlash, setShowPurgeFlash] = useState(false);
 
   const [activeMainTab, setActiveMainTab] = useState('welcome');
+
+  const handleIntroTourStaffTab = useCallback((tabValue: string) => {
+    setActiveMainTab(tabValue);
+  }, []);
+  useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
   useEffect(() => {
     const tab = normalizeStaffPortalTabValue(searchParams.get('tab')?.trim().toLowerCase() || '');

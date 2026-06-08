@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, Fragment, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useCallback, Fragment, type ReactNode } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -36,6 +36,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { isCompactDisplayMode } from '@/lib/displayMode';
 import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
+import { useIntroTourStaffTabListener } from '@/lib/introTourStaffTab';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -2089,6 +2090,11 @@ function TeacherPrinterInnerBody({
 
     const [activeTeacherTab, setActiveTeacherTab] = useState(defaultTab);
     const [pendingTeacherAwardCount, setPendingTeacherAwardCount] = useState(0);
+
+    const handleIntroTourStaffTab = useCallback((tabValue: string) => {
+        setActiveTeacherTab(tabValue);
+    }, []);
+    useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
     const toggleTeacherPinnedAddOn = (tabValue: string, pinned: boolean) => {
         const now = settings.teacherPinnedAddOnTabs || [];

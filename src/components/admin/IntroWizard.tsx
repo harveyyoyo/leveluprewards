@@ -15,6 +15,14 @@ import {
   measureIntroTourTarget,
   type SpotlightRect,
 } from '@/components/admin/IntroTourSpotlight';
+import {
+  STAFF_AI_HELP_TOUR_TARGET,
+  WIZARD_HELP_BUTTON_CLOSING,
+} from '@/lib/wizardHelpCopy';
+import {
+  dispatchIntroTourSelectStaffTab,
+  parseStaffTabFromIntroTourTarget,
+} from '@/lib/introTourStaffTab';
 
 const STORAGE_KEY = 'arcade_intro_wizard_step_v4';
 
@@ -35,6 +43,8 @@ type IntroStep = {
   advanceOnTarget?: string;
   /** Shown when `advanceOnRoute` is not satisfied yet. */
   navigateHint?: string;
+  /** Open this staff sidebar tab when the step is shown (admin/teacher). */
+  selectTab?: string;
 };
 
 const steps: IntroStep[] = [
@@ -42,13 +52,14 @@ const steps: IntroStep[] = [
     id: 'welcome',
     title: `Welcome to ${APP_NAME}`,
     body:
-      'We will go one step at a time. Each step highlights something on the screen. Take your time — use Next only when you are ready to move on.',
+      'Click here to start a walkthrough of your school rewards portal. Each step highlights one place in the app so you can try it yourself.',
     onRoute: '/portal',
   },
   {
     id: 'portal-hub',
     title: 'School portal',
-    body: 'This is your home hub. Each card opens a different part of the school app.',
+    body:
+      'This hub is your front door. Cards open Admin (school setup), Teacher Portal (coupons and redemptions), Student Kiosk (in-school sign-in), and more when enabled.',
     onRoute: '/portal',
     target: 'portal-hub',
     requireTarget: true,
@@ -56,17 +67,18 @@ const steps: IntroStep[] = [
   {
     id: 'portal-admin',
     title: 'Open Admin Portal',
-    body: 'You are in Admin. Tap Next to tour the left sidebar.',
+    body:
+      'Admin is where you configure the school — students, classes, staff, point categories, prizes, displays, and optional programs (library, attendance, houses, and more under Add more).',
     onRoute: '/portal',
     target: 'portal-admin',
     advanceOnRoute: '/admin',
-    navigateHint: 'Tap Admin Portal (highlighted), sign in if prompted, then tap Next.',
+    navigateHint: 'Tap Admin Portal (highlighted). Sign in with Google or the school passcode if asked, then tap Next.',
   },
   {
     id: 'admin-sidebar',
     title: 'Admin sidebar',
     body:
-      'Admin sections are listed in the left sidebar — not across the top. Scroll the list on smaller screens if you do not see every item.',
+      'Core sections live in the left sidebar. Use Add more to pin optional tabs (Hall of Fame, Displays, Library, Notifications, and others). Scroll on smaller screens if you do not see every item.',
     onRoute: '/admin',
     target: 'staff-nav-sidebar',
     requireTarget: true,
@@ -74,7 +86,8 @@ const steps: IntroStep[] = [
   {
     id: 'admin-students',
     title: 'Students',
-    body: 'Students — add your roster, import CSV, and print ID cards. Tap this row in the sidebar to open the tab.',
+    body:
+      'Students — build your roster (New Student or Import CSV), assign classes and teachers, print ID cards, and use bulk tools for IDs, moves, and kiosk options.',
     onRoute: '/admin',
     target: 'staff-tab-students',
     requireTarget: true,
@@ -82,7 +95,8 @@ const steps: IntroStep[] = [
   {
     id: 'admin-classes',
     title: 'Classes',
-    body: 'Classes — create class groups and assign a primary teacher. Link students here or from the Students tab.',
+    body:
+      'Classes — create class groups, set a primary teacher for attendance and reports, and assign students here or from the Students tab.',
     onRoute: '/admin',
     target: 'staff-tab-classes',
     requireTarget: true,
@@ -90,7 +104,8 @@ const steps: IntroStep[] = [
   {
     id: 'admin-teachers',
     title: 'Teachers & staff',
-    body: 'Teachers & staff — add and setup teacher, secretary, prize clerk accounts.',
+    body:
+      'Teachers & staff — add teachers (with optional point budgets), desk accounts (secretary, prize clerk, librarian, reports), and control who can sign in from the portal.',
     onRoute: '/admin',
     target: 'staff-tab-teachers',
     requireTarget: true,
@@ -98,7 +113,8 @@ const steps: IntroStep[] = [
   {
     id: 'admin-points',
     title: 'Points',
-    body: 'Points — set up reward categories, print coupon sheets, and manage coupon inventory.',
+    body:
+      'Points — define reward categories and default values, award or deduct points manually, print coupon sheets, and audit coupon inventory. Teachers print from their own Points tab using these categories.',
     onRoute: '/admin',
     target: 'staff-tab-categories',
     requireTarget: true,
@@ -106,7 +122,8 @@ const steps: IntroStep[] = [
   {
     id: 'admin-prizes',
     title: 'Prizes',
-    body: 'Prizes — build the rewards shop students see at the kiosk.',
+    body:
+      'Prizes — build the rewards catalog and stock levels students see at the kiosk. Print shelf cards for barcode pickup; teachers mark orders delivered in Redemptions.',
     onRoute: '/admin',
     target: 'staff-tab-prizes',
     requireTarget: true,
@@ -114,25 +131,27 @@ const steps: IntroStep[] = [
   {
     id: 'header-home',
     title: 'Back to portal',
-    body: 'You are back on the school portal. Tap Next to open Teacher Portal.',
+    body: 'You are on the portal hub again. Tap Next to open Teacher Portal.',
     extraRoutes: ['/admin', '/teacher'],
-    target: 'header-home',
+    target: 'header-portal-home',
     advanceOnRoute: '/portal',
-    navigateHint: 'Tap the home icon in the header (highlighted), then tap Next.',
+    navigateHint: 'Tap the house icon in the top-right header (highlighted), then tap Next.',
   },
   {
     id: 'portal-teacher',
     title: 'Open Teacher Portal',
-    body: 'You are in the Teacher portal. Tap Next to walk through printing coupons.',
+    body:
+      'Teacher Portal is where staff print coupon sheets, add or deduct points, manage class prizes, and fulfill kiosk redemptions.',
     onRoute: '/portal',
     target: 'portal-print',
     advanceOnRoute: '/teacher',
-    navigateHint: 'Tap Teacher Portal (highlighted), sign in if prompted, then tap Next.',
+    navigateHint: 'Tap Teacher Portal (highlighted). Choose your name and passcode if prompted, then tap Next.',
   },
   {
     id: 'teacher-points-tab',
     title: 'Teacher — Points',
-    body: 'In the left sidebar, open Points (print coupons and award points).',
+    body:
+      'The Points tab opens here — print scannable coupon sheets or use Manually Add/Deduct Points for one-off awards without printing.',
     onRoute: '/teacher',
     target: 'staff-tab-coupons',
     requireTarget: true,
@@ -140,24 +159,28 @@ const steps: IntroStep[] = [
   {
     id: 'teacher-print',
     title: 'Print coupons',
-    body: 'Choose a category and point value, then use Generate & print. Note one coupon code for kiosk testing.',
+    body:
+      'Pick a category and point value, then Generate & print a sheet of unique codes. Hand a code to a student — they redeem it at the kiosk to bank points.',
     onRoute: '/teacher',
     target: 'coupon-print-panel',
     requireTarget: true,
-    navigateHint: 'Open the Points tab in the left sidebar first so this panel appears.',
+    selectTab: 'coupons',
   },
   {
     id: 'teacher-generate',
     title: 'Generate & print',
-    body: 'This button creates a printable sheet of scannable coupon codes.',
+    body:
+      'This creates a printable PDF of scannable coupon codes (10 or 30 per page). Save one code to test at the kiosk in the next section.',
     onRoute: '/teacher',
     target: 'coupon-generate-btn',
     requireTarget: true,
+    selectTab: 'coupons',
   },
   {
     id: 'portal-student',
     title: 'Open Student Kiosk',
-    body: 'You are on the Student Kiosk. Tap Next to try sign-in and redemption.',
+    body:
+      'The Student Kiosk is a shared in-school screen: students sign in, redeem coupon codes for points, and browse or claim prizes.',
     onRoute: '/portal',
     target: 'portal-redeem',
     advanceOnRoute: '/student',
@@ -166,7 +189,8 @@ const steps: IntroStep[] = [
   {
     id: 'kiosk-login',
     title: 'Student Kiosk sign-in',
-    body: 'Students sign in here with a card, camera, or typed ID.',
+    body:
+      'Students identify themselves with an ID card tap, barcode scan, face match (if enabled), or by typing their Student ID.',
     onRoute: '/student',
     target: 'kiosk-login',
     requireTarget: true,
@@ -174,7 +198,7 @@ const steps: IntroStep[] = [
   {
     id: 'kiosk-type-tab',
     title: 'Type your ID',
-    body: 'For this tour, open the Type tab to enter a student ID by hand.',
+    body: 'For this demo, open the Type tab to enter a Student ID manually (useful when a card reader is not connected).',
     onRoute: '/student',
     target: 'kiosk-login-type-tab',
     requireTarget: true,
@@ -183,7 +207,7 @@ const steps: IntroStep[] = [
   {
     id: 'kiosk-type-id',
     title: 'Test student 100',
-    body: 'Enter 100 as the Student ID. Use the full ID from your roster if 100 is not found.',
+    body: 'Enter 100 as the Student ID. If your school uses longer IDs (for example 100100), use the ID printed on the student card instead.',
     onRoute: '/student',
     target: 'kiosk-login-id',
     requireTarget: true,
@@ -192,7 +216,7 @@ const steps: IntroStep[] = [
   {
     id: 'kiosk-identify',
     title: 'Identify Student',
-    body: 'Tap Identify Student to sign in. Next unlocks once the redeem panel appears.',
+    body: 'Tap Identify Student to open the signed-in kiosk. Next unlocks when the redeem panel appears.',
     onRoute: '/student',
     target: 'kiosk-login-submit',
     requireTarget: true,
@@ -202,7 +226,8 @@ const steps: IntroStep[] = [
   {
     id: 'kiosk-redeem',
     title: 'Redeem a coupon',
-    body: 'After sign-in, type or scan a coupon code in the center panel to add points.',
+    body:
+      'Type or scan a printed coupon code here. A successful redeem adds those points to the student balance (try a code from the sheet you printed earlier).',
     onRoute: '/student',
     target: 'kiosk-redeem',
     requireTarget: true,
@@ -210,8 +235,9 @@ const steps: IntroStep[] = [
   },
   {
     id: 'kiosk-more-prizes',
-    title: 'More prizes',
-    body: 'Eligible rewards shows a preview rail. Tap More prizes to open the full shop on this page.',
+    title: 'Prize shop',
+    body:
+      'Eligible rewards shows what this student can afford. Tap More prizes to open the full shop and redeem points for prizes (pickup is completed at the teacher Redemptions tab).',
     onRoute: '/student',
     target: 'kiosk-more-prizes',
     requireTarget: true,
@@ -220,26 +246,27 @@ const steps: IntroStep[] = [
   {
     id: 'header-home-student-portal',
     title: 'Back to portal',
-    body: 'Return to the school portal to open the Student home portal.',
+    body: 'Return to the portal hub to open the Student home portal (optional home access for students).',
     extraRoutes: ['/student'],
-    target: 'header-home',
+    target: 'header-portal-home',
     advanceOnRoute: '/portal',
-    navigateHint: 'Tap the home icon in the header (highlighted), then tap Next.',
+    navigateHint: 'Tap the house icon in the top-right header (highlighted), then tap Next.',
   },
   {
     id: 'portal-student-home',
     title: 'Student home portal',
-    body: 'This is the student’s own page for points and activity — separate from the in-school kiosk.',
+    body:
+      'Student home is a separate sign-in for students (or families) to view points, badges, goals, and house standings from home — not for redeeming coupons (that stays on the kiosk).',
     onRoute: '/portal',
     target: 'portal-student-home',
     advanceOnRoute: '/student-home',
     navigateHint:
-      'Tap Student home portal (highlighted). Enable it in Admin → Student home portal if the card is missing.',
+      'Tap Student home portal (highlighted). If the card is missing, turn it on under Admin → Student home portal.',
   },
   {
     id: 'student-portal-login',
     title: 'Student home sign-in',
-    body: 'Students enter their ID here to view points at home.',
+    body: 'Students enter the same Student ID they use at school. Some schools also require a personal portal passcode.',
     onRoute: '/student-home',
     target: 'student-portal-login',
     requireTarget: true,
@@ -247,7 +274,7 @@ const steps: IntroStep[] = [
   {
     id: 'student-portal-id',
     title: 'Test student 100',
-    body: 'Type 100 in the Student ID field (same test student as the kiosk).',
+    body: 'Type 100 in the Student ID field — the same test student you used at the kiosk.',
     onRoute: '/student-home',
     target: 'student-portal-id',
     requireTarget: true,
@@ -255,7 +282,7 @@ const steps: IntroStep[] = [
   {
     id: 'student-portal-continue',
     title: 'Continue',
-    body: 'Tap Continue to sign in. Next unlocks when the dashboard loads.',
+    body: 'Tap Continue to sign in. If your school uses portal passcodes, enter it when prompted. Next unlocks when the dashboard loads.',
     onRoute: '/student-home',
     target: 'student-portal-continue',
     requireTarget: true,
@@ -265,7 +292,8 @@ const steps: IntroStep[] = [
   {
     id: 'student-portal-dashboard',
     title: 'Student dashboard',
-    body: 'Signed-in students see points, badges, goals, and house standings. Redemption still happens at the kiosk.',
+    body:
+      'Students see their point balance, point types, badges, goals, library checkouts, and house standings. Prize pickup still happens in person after a kiosk redemption.',
     onRoute: '/student-home',
     target: 'student-portal-dashboard',
     requireTarget: true,
@@ -273,29 +301,31 @@ const steps: IntroStep[] = [
   {
     id: 'teacher-redemptions-tab',
     title: 'Teacher Portal again',
-    body: 'Select Redemptions in the left sidebar to fulfill prize pickups.',
+    body:
+      'When a student claims a prize at the kiosk, staff fulfill the pickup in Teacher Portal → Redemptions.',
+    onRoute: '/portal',
+    extraRoutes: ['/student-home', '/student'],
+    target: 'portal-print',
     advanceOnRoute: '/teacher',
-    target: 'staff-tab-redemptions',
-    requireTarget: true,
-    navigateHint: 'Use the home icon, open Teacher Portal, then tap Next.',
+    selectTab: 'redemptions',
+    navigateHint: 'Tap the house icon, open Teacher Portal from the hub, then tap Next.',
   },
   {
     id: 'teacher-redemptions',
     title: 'Mark delivered',
-    body: 'When a student picks up a prize, mark the order delivered here so stock and history stay correct.',
+    body:
+      'Pending orders list kiosk prize requests. Mark delivered when the student picks up the item so stock counts and history stay accurate.',
     onRoute: '/teacher',
     target: 'teacher-redemptions',
     requireTarget: true,
-    navigateHint: 'Open the Redemptions tab in the left sidebar first.',
+    selectTab: 'redemptions',
   },
   {
     id: 'finish',
     title: 'You are ready',
-    body:
-      'Open Hall of Fame from the portal for leaderboards. Close this tour with × anytime. Replay it from Settings → Interface → Show Welcome Tour (it restarts when you reload the portal).',
-    onRoute: '/portal',
-    extraRoutes: ['/hall-of-fame', '/student-home'],
-    target: 'portal-hub',
+    body: `You have toured Admin setup, teacher coupons, the student kiosk, and student home. Open Hall of Fame from the portal for live leaderboards. ${WIZARD_HELP_BUTTON_CLOSING} Close with × anytime, or replay from Settings → Interface → Show Welcome Tour (reload the portal to restart).`,
+    extraRoutes: ['/portal', '/hall-of-fame', '/student-home', '/admin', '/teacher', '/student'],
+    target: STAFF_AI_HELP_TOUR_TARGET,
   },
 ];
 
@@ -359,38 +389,82 @@ type TourCardPlacement = {
   style?: CSSProperties;
 };
 
-/** Keep the tour card off the highlighted element and use high-contrast sizing. */
+/** Minimum gap between the tour card and any viewport edge (incl. safe area). */
+const TOUR_EDGE_PX = 24;
+const TOUR_CARD_ESTIMATE_PX = 280;
+
+const TOUR_CARD_SHELL_CLASS =
+  'pointer-events-auto max-h-[calc(100dvh-3rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] overflow-y-auto overscroll-contain';
+
+function tourCardWidthClass(): string {
+  return 'w-[min(calc(100vw-3rem),28rem)]';
+}
+
+function clampTourTop(preferredTop: number, vh: number): number {
+  return Math.max(
+    TOUR_EDGE_PX,
+    Math.min(preferredTop, vh - TOUR_CARD_ESTIMATE_PX - TOUR_EDGE_PX),
+  );
+}
+
+function centeredTourTop(vh: number): number {
+  return clampTourTop((vh - TOUR_CARD_ESTIMATE_PX) / 2, vh);
+}
+
+/** Keep the tour card off the highlighted element, with padding from all screen edges. */
 function getTourCardPlacement(rect: SpotlightRect | null): TourCardPlacement {
-  const base = 'fixed z-[200] w-[min(100%-2rem,28rem)]';
+  const base = cn('fixed z-[200]', tourCardWidthClass(), TOUR_CARD_SHELL_CLASS);
   if (!rect || typeof window === 'undefined') {
-    return { className: cn(base, 'bottom-6 left-1/2 -translate-x-1/2') };
+    return { className: cn(base, 'left-1/2 -translate-x-1/2'), style: { bottom: TOUR_EDGE_PX } };
   }
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const rectBottom = rect.top + rect.height;
-  const spaceBelow = vh - rectBottom;
+  const spaceBelow = vh - rectBottom - TOUR_EDGE_PX;
   const isWide = rect.width > vw * 0.45;
   const isTall = rect.height > vh * 0.4;
 
   if (isWide || isTall) {
-    if (spaceBelow >= 160) {
+    if (spaceBelow >= TOUR_CARD_ESTIMATE_PX) {
       return {
         className: cn(base, 'left-1/2 -translate-x-1/2'),
-        style: { top: Math.min(rectBottom + 12, vh - 220) },
+        style: { top: clampTourTop(rectBottom + 12, vh) },
       };
     }
-    return { className: cn(base, 'top-6 left-1/2 -translate-x-1/2') };
+    return {
+      className: cn(base, 'left-1/2 -translate-x-1/2'),
+      style: { top: TOUR_EDGE_PX },
+    };
   }
 
   const centerX = rect.left + rect.width / 2;
   if (centerX > vw * 0.55) {
-    return { className: cn(base, 'top-1/2 -translate-y-1/2 left-4 sm:left-8') };
+    return {
+      className: cn(base, 'left-6 sm:left-8'),
+      style: { top: centeredTourTop(vh) },
+    };
   }
   if (centerX < vw * 0.45) {
-    return { className: cn(base, 'top-1/2 -translate-y-1/2 right-4 sm:right-8 left-auto') };
+    return {
+      className: cn(base, 'right-6 sm:right-8 left-auto'),
+      style: { top: centeredTourTop(vh) },
+    };
   }
-  return { className: cn(base, 'bottom-6 left-1/2 -translate-x-1/2') };
+  return { className: cn(base, 'left-1/2 -translate-x-1/2'), style: { bottom: TOUR_EDGE_PX } };
+}
+
+function getWelcomeTourCardPlacement(): TourCardPlacement {
+  if (typeof window === 'undefined') {
+    return {
+      className: cn('fixed z-[200]', tourCardWidthClass(), TOUR_CARD_SHELL_CLASS, 'left-1/2 -translate-x-1/2'),
+      style: { top: TOUR_EDGE_PX },
+    };
+  }
+  return {
+    className: cn('fixed z-[200]', tourCardWidthClass(), TOUR_CARD_SHELL_CLASS, 'left-1/2 -translate-x-1/2'),
+    style: { top: centeredTourTop(window.innerHeight) },
+  };
 }
 
 export function IntroWizard() {
@@ -401,19 +475,25 @@ export function IntroWizard() {
   const [, setMeasureTick] = useState(0);
 
   const isWizardEnabled = settings.showIntroWizard !== false;
-  const isOnPortal = routeEndsWith(pathname, '/portal');
 
   useEffect(() => {
     if (!isWizardEnabled) return;
-    if (isOnPortal) {
-      setDismissed(false);
-      setStepIndex(0);
-      window.localStorage.removeItem(STORAGE_KEY);
-      window.localStorage.removeItem('arcade_intro_wizard_step');
-      window.localStorage.removeItem('arcade_intro_wizard_step_v2');
-      window.localStorage.removeItem('arcade_intro_wizard_step_v3');
-      return;
+
+    const isPortal = routeEndsWith(pathname, '/portal');
+    if (isPortal) {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      const isHardReload = nav?.type === 'reload';
+      if (isHardReload) {
+        setDismissed(false);
+        setStepIndex(0);
+        window.localStorage.removeItem(STORAGE_KEY);
+        window.localStorage.removeItem('arcade_intro_wizard_step');
+        window.localStorage.removeItem('arcade_intro_wizard_step_v2');
+        window.localStorage.removeItem('arcade_intro_wizard_step_v3');
+        return;
+      }
     }
+
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored !== null) {
       const parsed = parseInt(stored, 10);
@@ -421,7 +501,7 @@ export function IntroWizard() {
         setStepIndex(parsed);
       }
     }
-  }, [isWizardEnabled, isOnPortal, pathname]);
+  }, [isWizardEnabled, pathname]);
 
   // Re-check target visibility after route changes and layout settles.
   useEffect(() => {
@@ -435,13 +515,27 @@ export function IntroWizard() {
   }, []);
 
   const currentStep = steps[stepIndex];
+
+  // Open the relevant staff sidebar tab when a step describes that section.
+  useEffect(() => {
+    if (!isWizardEnabled || dismissed || !currentStep) return;
+    const tab =
+      currentStep.selectTab ?? parseStaffTabFromIntroTourTarget(currentStep.target);
+    if (!tab) return;
+    const id = window.setTimeout(() => dispatchIntroTourSelectStaffTab(tab), 80);
+    return () => window.clearTimeout(id);
+  }, [isWizardEnabled, dismissed, currentStep, stepIndex, pathname]);
   const ready = currentStep ? canAdvance(currentStep, pathname) : false;
   const spotlightRect = useMemo(
     () => (currentStep?.target ? measureIntroTourTarget(currentStep.target) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- measureTick drives re-measure
     [currentStep?.target, pathname, stepIndex, ready],
   );
-  const tourCardPlacement = useMemo(() => getTourCardPlacement(spotlightRect), [spotlightRect]);
+  const isWelcomeStep = currentStep?.id === 'welcome';
+  const tourCardPlacement = useMemo(() => {
+    if (isWelcomeStep) return getWelcomeTourCardPlacement();
+    return getTourCardPlacement(spotlightRect);
+  }, [isWelcomeStep, spotlightRect]);
 
   const handleNext = () => {
     if (!ready) return;
@@ -477,7 +571,10 @@ export function IntroWizard() {
 
   return (
     <>
-      <IntroTourSpotlight targetId={currentStep.target} active={Boolean(currentStep.target)} />
+      <IntroTourSpotlight
+        targetId={currentStep.target}
+        active={Boolean(currentStep.target) && !isWelcomeStep}
+      />
       <AnimatePresence mode="wait">
         <motion.div
           key={stepIndex}
@@ -505,18 +602,20 @@ export function IntroWizard() {
                 </Button>
               </div>
               <p className="text-base font-medium leading-relaxed text-foreground">{description}</p>
-              <div
-                className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary"
-                aria-hidden
-              >
-                <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
-                Try it out now
-              </div>
+              {!isWelcomeStep ? (
+                <div
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary"
+                  aria-hidden
+                >
+                  <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
+                  Try it out now
+                </div>
+              ) : null}
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex justify-between items-center w-full gap-3">
                 <div className="text-xs font-semibold text-foreground/80 shrink-0">
-                  Step {stepIndex + 1} of {steps.length}
+                  {isWelcomeStep ? 'Getting started' : `Step ${stepIndex + 1} of ${steps.length}`}
                 </div>
                 <div className="flex gap-2">
                   {stepIndex > 0 && (
@@ -529,7 +628,7 @@ export function IntroWizard() {
                     disabled={!ready}
                     className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
                   >
-                    {isLast ? 'Finish' : 'Next'}
+                    {isLast ? 'Finish' : isWelcomeStep ? 'Start walkthrough' : 'Next'}
                     {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
                   </Button>
                 </div>

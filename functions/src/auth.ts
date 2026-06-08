@@ -522,12 +522,14 @@ exports.addDeveloperMe = functions.https.onCall(
     requireAuth(context);
 
     const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
-    const provider = context.auth?.token?.firebase?.sign_in_provider;
     const allowlistStr = process.env.DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST || "";
     const allowlist = allowlistStr.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
 
+    // Use the identity-aware check so an anonymous session linked to Google
+    // (sign_in_provider stays "anonymous", but firebase.identities has google.com)
+    // is accepted on the first sign-in instead of forcing a second attempt.
     const isGoogleDev =
-      provider === "google.com" && email && isAllowedGoogleEmailOnAllowlist(email, allowlist);
+      isGoogleAuthenticated(context) && email && isAllowedGoogleEmailOnAllowlist(email, allowlist);
 
     if (!isGoogleDev) {
       throw new functions.https.HttpsError(
