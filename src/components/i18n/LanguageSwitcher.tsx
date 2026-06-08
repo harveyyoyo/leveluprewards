@@ -14,27 +14,28 @@ import { cn } from '@/lib/utils';
 
 type LanguageSwitcherProps = {
   className?: string;
-  compact?: boolean;
+  /** Show icon + "Language" label beside the dropdown (recommended on portal). */
+  showLabel?: boolean;
 };
 
-export function LanguageSwitcher({ className, compact = false }: LanguageSwitcherProps) {
-  const { locale, setLocale, localeOptions } = useTranslation();
+export function LanguageSwitcher({ className, showLabel = true }: LanguageSwitcherProps) {
+  const { locale, setLocale, localeOptions, t } = useTranslation();
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      {!compact ? (
-        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-          <Languages className="h-3.5 w-3.5" aria-hidden />
-          <span className="sr-only">Language</span>
-        </span>
-      ) : null}
+    <div
+      className={cn(
+        'flex items-center gap-2 rounded-xl border border-border/60 bg-background/90 px-2.5 py-1.5 shadow-sm backdrop-blur-sm',
+        className,
+      )}
+    >
+      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+        <Languages className="h-4 w-4 shrink-0" aria-hidden />
+        {showLabel ? <span>{t('settings.language.title')}</span> : null}
+      </span>
       <Select value={locale} onValueChange={(value) => setLocale(value as AppLocale)}>
         <SelectTrigger
-          className={cn(
-            'h-9 rounded-xl border-border/70 bg-background/80 font-semibold',
-            compact ? 'w-[7.5rem]' : 'w-[9.5rem]',
-          )}
-          aria-label="Choose language"
+          className="h-8 w-[6.75rem] rounded-lg border-border/70 bg-background font-semibold shadow-none sm:w-[7.25rem]"
+          aria-label={t('settings.language.title')}
         >
           <SelectValue />
         </SelectTrigger>

@@ -334,8 +334,8 @@ export default function PortalPage() {
                     portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
-                <div className="absolute end-3 top-3 z-20 sm:end-4 sm:top-4">
-                    <LanguageSwitcher compact />
+                <div className="pointer-events-auto absolute end-3 top-3 z-30 sm:end-4 sm:top-4">
+                    <LanguageSwitcher />
                 </div>
                 <div
                     className={cn(
