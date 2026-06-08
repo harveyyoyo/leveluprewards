@@ -94,6 +94,7 @@ export function ManualPointsAwardDialog({
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'has_nfc' | 'no_nfc'>('all');
   const [lastAction, setLastAction] = useState<LastManualAction | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categoryList = useMemo(() => categories ?? [], [categories]);
 
@@ -218,46 +219,51 @@ export function ManualPointsAwardDialog({
       }
     }
 
-    const result = await awardPointsToMultipleStudents(
-      selectedStudentIds,
-      points,
-      selectedCategory.name,
-    );
+    setIsSubmitting(true);
+    try {
+      const result = await awardPointsToMultipleStudents(
+        selectedStudentIds,
+        points,
+        selectedCategory.name,
+      );
 
-    if (result.success) {
-      if (
-        !skipBudget &&
-        settings.enableTeacherBudgets &&
-        teacher &&
-        !(result as { queued?: boolean }).queued &&
-        budgetOptions?.onBudgetSpend
-      ) {
-        await budgetOptions.onBudgetSpend(totalCost);
-      }
-      playSound('success');
-      const queued = !!(result as { queued?: boolean }).queued;
-      toast({
-        title: queued ? 'Saved for later' : 'Points Awarded!',
-        description: queued
-          ? result.message
-          : `Awarded ${points} points to ${result.count} student(s).`,
-      });
-      if (!queued) {
-        setLastAction({
-          mode: 'award',
-          studentIds: [...selectedStudentIds],
-          points,
-          description: selectedCategory.name,
-          budgetSpent: !skipBudget && settings.enableTeacherBudgets && teacher ? totalCost : undefined,
-        });
-        setSelectedStudentIds([]);
-        if (categoryList.length > 0) {
-          setAwardValue(categoryList[0].points.toString());
+      if (result.success) {
+        if (
+          !skipBudget &&
+          settings.enableTeacherBudgets &&
+          teacher &&
+          !(result as { queued?: boolean }).queued &&
+          budgetOptions?.onBudgetSpend
+        ) {
+          await budgetOptions.onBudgetSpend(totalCost);
         }
+        playSound('success');
+        const queued = !!(result as { queued?: boolean }).queued;
+        toast({
+          title: queued ? 'Saved for later' : 'Points Awarded!',
+          description: queued
+            ? result.message
+            : `Awarded ${points} points to ${result.count} student(s).`,
+        });
+        if (!queued) {
+          setLastAction({
+            mode: 'award',
+            studentIds: [...selectedStudentIds],
+            points,
+            description: selectedCategory.name,
+            budgetSpent: !skipBudget && settings.enableTeacherBudgets && teacher ? totalCost : undefined,
+          });
+          setSelectedStudentIds([]);
+          if (categoryList.length > 0) {
+            setAwardValue(categoryList[0].points.toString());
+          }
+        }
+      } else {
+        playSound('error');
+        toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
       }
-    } else {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Failed to award points', description: result.message });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -279,25 +285,30 @@ export function ManualPointsAwardDialog({
       return;
     }
 
-    const result = await deductPointsFromMultipleStudents(selectedStudentIds, points, awardReason);
+    setIsSubmitting(true);
+    try {
+      const result = await deductPointsFromMultipleStudents(selectedStudentIds, points, awardReason);
 
-    if (result.success) {
-      playSound('swoosh');
-      toast({
-        title: 'Points Deducted!',
-        description: `Deducted ${points} points from ${result.count} student(s).`,
-      });
-      setLastAction({
-        mode: 'deduct',
-        studentIds: [...selectedStudentIds],
-        points,
-        description: awardReason.trim(),
-      });
-      setSelectedStudentIds([]);
-      setAwardReason('');
-    } else {
-      playSound('error');
-      toast({ variant: 'destructive', title: 'Failed to deduct points', description: result.message });
+      if (result.success) {
+        playSound('swoosh');
+        toast({
+          title: 'Points Deducted!',
+          description: `Deducted ${points} points from ${result.count} student(s).`,
+        });
+        setLastAction({
+          mode: 'deduct',
+          studentIds: [...selectedStudentIds],
+          points,
+          description: awardReason.trim(),
+        });
+        setSelectedStudentIds([]);
+        setAwardReason('');
+      } else {
+        playSound('error');
+        toast({ variant: 'destructive', title: 'Failed to deduct points', description: result.message });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -560,10 +571,17 @@ export function ManualPointsAwardDialog({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
               <Button
                 onClick={awardMode === 'award' ? handleAwardPoints : handleDeductPoints}
-                className="h-14 flex-1 rounded-2xl font-black uppercase tracking-widest text-white"
+                disabled={isSubmitting}
+                className="h-14 flex-1 rounded-2xl font-black uppercase tracking-widest text-white disabled:opacity-80"
                 style={{ backgroundColor: accentColor }}
               >
-                {awardMode === 'award' ? 'Award Points' : 'Deduct Points'}
+                {isSubmitting
+                  ? awardMode === 'award'
+                    ? 'Awarding…'
+                    : 'Deducting…'
+                  : awardMode === 'award'
+                    ? 'Award Points'
+                    : 'Deduct Points'}
               </Button>
               <Button
                 type="button"

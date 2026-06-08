@@ -697,11 +697,17 @@ function AdminDashboardInner() {
         value: 'recess',
         label: 'Recess',
         icon: DoorOpen,
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'recess'),
-        enable: () => updateSettings({ enableRecess: true, adminHiddenAddOnTabs: removeHidden('recess') }),
+        isOn: (s) => s.enableRecess !== false,
+        enable: () =>
+          updateSettings({
+            enableRecess: true,
+            recessStudentKioskEnabled: true,
+            adminHiddenAddOnTabs: removeHidden('recess'),
+          }),
         disable: () =>
           updateSettings({
             enableRecess: false,
+            recessStudentKioskEnabled: false,
             adminHiddenAddOnTabs: removeHidden('recess'),
             adminPinnedAddOnTabs: removePinned('recess'),
           }),
@@ -940,6 +946,7 @@ function AdminDashboardInner() {
         break;
       case 'recess':
         patch.enableRecess = true;
+        patch.recessStudentKioskEnabled = true;
         break;
       case 'notifications':
         patch.enableNotifications = true;
@@ -1016,6 +1023,7 @@ function AdminDashboardInner() {
           break;
         case 'recess':
           patch.enableRecess = false;
+          patch.recessStudentKioskEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
@@ -1170,6 +1178,7 @@ function AdminDashboardInner() {
           break;
         case 'recess':
           patch.enableRecess = false;
+          patch.recessStudentKioskEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
@@ -2575,6 +2584,8 @@ function AdminDashboardInner() {
           setIsOpen={setIsLibraryModalOpen}
           item={editingLibraryItem}
           onSave={handleSaveLibraryItem}
+          upcTaken={libraryUpcTaken}
+          schoolId={schoolId}
         />
         <StudentActivityModal
           isOpen={!!activityStudent}

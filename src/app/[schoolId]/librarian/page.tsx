@@ -242,6 +242,8 @@ export default function LibrarianPage() {
           setIsOpen={setIsLibraryModalOpen}
           item={editingLibraryItem}
           onSave={handleSaveLibraryItem}
+          upcTaken={libraryUpcTaken}
+          schoolId={schoolId}
         />
       </div>
       </StaffPortalLayoutProvider>

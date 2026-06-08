@@ -82,6 +82,10 @@ interface Settings {
     enableGoals: boolean;
     /** Recess tab: check students out for a break/bathroom with live timers and a return log. */
     enableRecess?: boolean;
+    /** Student kiosk: self-service bathroom/break checkout card after sign-in. */
+    recessStudentKioskEnabled?: boolean;
+    /** Max minutes before a recess trip is flagged over limit. */
+    recessMaxMinutes?: number;
     /** School house system: rosters, house totals, sorting ceremony, Hall of Fame. */
     enableHouses: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
@@ -615,7 +619,9 @@ const defaultSettings: Settings = {
     enableLevels: false,
     enableStreaks: false,
     enableGoals: false,
-    enableRecess: false,
+    enableRecess: true,
+    recessStudentKioskEnabled: true,
+    recessMaxMinutes: 10,
     enableHouses: false,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,

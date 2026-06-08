@@ -3,16 +3,13 @@
 import { useMemo, useState } from 'react';
 import {
   DoorOpen,
-  Footprints,
-  GlassWater,
-  HeartPulse,
-  Building2,
   Timer,
   CheckCircle2,
   Clock,
   Info,
   History,
-  type LucideIcon,
+  Monitor,
+  Printer,
 } from 'lucide-react';
 import { collection, limit, orderBy, query } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -34,53 +31,17 @@ import {
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-
-type ReasonMeta = {
-  value: RecessReason;
-  label: string;
-  icon: LucideIcon;
-  /** Static Tailwind classes (full strings so the JIT compiler keeps them). */
-  badge: string;
-};
-
-const REASONS: ReasonMeta[] = [
-  {
-    value: 'bathroom',
-    label: 'Bathroom',
-    icon: DoorOpen,
-    badge: 'border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-200',
-  },
-  {
-    value: 'break',
-    label: 'Break',
-    icon: Footprints,
-    badge: 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-200',
-  },
-  {
-    value: 'water',
-    label: 'Water',
-    icon: GlassWater,
-    badge: 'border-sky-500/40 bg-sky-500/10 text-sky-700 dark:text-sky-200',
-  },
-  {
-    value: 'nurse',
-    label: 'Nurse',
-    icon: HeartPulse,
-    badge: 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-200',
-  },
-  {
-    value: 'office',
-    label: 'Office',
-    icon: Building2,
-    badge: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200',
-  },
-];
-
-const REASON_BY_VALUE = new Map(REASONS.map((r) => [r.value, r]));
-
-function reasonBadgeClasses(reason: RecessReason): string {
-  return REASON_BY_VALUE.get(reason)?.badge ?? 'border-border bg-muted text-muted-foreground';
-}
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { Switch } from '@/components/ui/switch';
+import {
+  RECESS_REASONS,
+  KIOSK_RECESS_REASONS,
+  RECESS_REASON_BY_VALUE,
+  recessReasonBadgeClasses,
+} from '@/lib/recess/recessReasons';
+import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import { recessPassScanCodeFor } from '@/lib/recess/recessPassScanCode';
+import { RecessPassPrintSheet } from '@/components/recess/RecessPassPrintSheet';
 
 const LIMIT_OPTIONS = [5, 10, 15] as const;
 
@@ -99,13 +60,15 @@ function formatClock(ts: number): string {
 export function AdminRecessTab({ schoolId, students }: { schoolId: string; students: Student[] }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { settings, updateSettings } = useSettings();
+  const maxMinutes = resolveRecessMaxMinutes(settings);
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [reason, setReason] = useState<RecessReason>('bathroom');
   const [note, setNote] = useState('');
-  const [maxMinutes, setMaxMinutes] = useState<number>(10);
   const [pickerKey, setPickerKey] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [printingPasses, setPrintingPasses] = useState(false);
 
   const activePasses = useActiveRecessPasses(schoolId, true);
 
@@ -152,7 +115,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
       });
       toast({
         title: 'Checked out',
-        description: `${studentDisplayName(selectedStudent)} is out for ${REASON_BY_VALUE.get(reason)?.label.toLowerCase()}.`,
+        description: `${studentDisplayName(selectedStudent)} is out for ${RECESS_REASON_BY_VALUE.get(reason)?.label.toLowerCase()}.`,
       });
       resetSelection();
     } catch {
@@ -237,6 +200,106 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
 
+      <StaffPortalSectionCard>
+        <StaffPortalSectionCardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <StaffPortalSectionCardTitle className="flex items-center gap-2">
+              <Printer className="h-4 w-4 text-primary" aria-hidden />
+              Printable recess passes
+            </StaffPortalSectionCardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl font-bold"
+              onClick={() => setPrintingPasses(true)}
+            >
+              <Printer className="mr-2 h-4 w-4" aria-hidden />
+              Print pass cards
+            </Button>
+          </div>
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Print one laminated card per category. Students sign in with their ID at the kiosk, then scan the
+            matching pass at the coupon scanner. Scan the same pass again when they return.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {KIOSK_RECESS_REASONS.map((meta) => {
+              const Icon = meta.icon;
+              return (
+                <div
+                  key={meta.value}
+                  className={cn(
+                    'rounded-xl border-2 p-4',
+                    meta.badge,
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-5 w-5" aria-hidden />
+                    <span className="font-bold">{meta.label}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed opacity-80">{meta.kioskDescription}</p>
+                  <p className="mt-3 font-mono text-sm font-black tracking-wide">
+                    {recessPassScanCodeFor(meta.value)}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Nurse and office passes ({recessPassScanCodeFor('nurse')}, {recessPassScanCodeFor('office')}) are
+            included when you print — use them from the staff checkout section below.
+          </p>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
+
+      {printingPasses ? (
+        <RecessPassPrintSheet
+          passes={RECESS_REASONS}
+          schoolId={schoolId}
+          onReady={() => {
+            window.print();
+            setPrintingPasses(false);
+          }}
+        />
+      ) : null}
+
+      <StaffPortalSectionCard>
+        <StaffPortalSectionCardHeader>
+          <StaffPortalSectionCardTitle className="flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-primary" aria-hidden />
+            Student kiosk scanning
+          </StaffPortalSectionCardTitle>
+        </StaffPortalSectionCardHeader>
+        <StaffPortalSectionCardContent className="space-y-4">
+          <div className="flex items-start justify-between gap-4 rounded-xl border bg-muted/30 p-4">
+            <div className="space-y-1">
+              <Label htmlFor="recess-kiosk-enabled" className="text-sm font-semibold">
+                Accept recess pass scans
+              </Label>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                When enabled, the student kiosk coupon scanner recognizes printed passes (RCBATH, RCBREAK,
+                RCWATER). Nothing appears on screen until a pass is scanned — then the student sees an
+                &ldquo;out of room&rdquo; timer until they scan the pass again.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Flow: student ID → recess pass scan (out) → recess pass scan again (back).
+              </p>
+            </div>
+            <Switch
+              id="recess-kiosk-enabled"
+              checked={settings.recessStudentKioskEnabled !== false}
+              onCheckedChange={(checked) =>
+                updateSettings({
+                  enableRecess: checked ? true : settings.enableRecess,
+                  recessStudentKioskEnabled: checked,
+                })
+              }
+            />
+          </div>
+        </StaffPortalSectionCardContent>
+      </StaffPortalSectionCard>
+
       {/* Check a student out */}
       <StaffPortalSectionCard>
         <StaffPortalSectionCardHeader>
@@ -253,7 +316,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
           <div className="space-y-2">
             <Label className="text-xs font-semibold">Reason</Label>
             <div className="flex flex-wrap gap-2">
-              {REASONS.map((r) => {
+              {RECESS_REASONS.map((r) => {
                 const Icon = r.icon;
                 const active = reason === r.value;
                 return (
@@ -298,7 +361,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                   <button
                     key={m}
                     type="button"
-                    onClick={() => setMaxMinutes(m)}
+                    onClick={() => updateSettings({ recessMaxMinutes: m })}
                     aria-pressed={maxMinutes === m}
                     className={cn(
                       'flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
@@ -357,7 +420,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
               {outNow.map((pass) => {
                 const elapsed = now - (pass.startedAt || now);
                 const over = isBathroomOverLimit(elapsed, maxMinutes);
-                const meta = REASON_BY_VALUE.get(pass.reason);
+                const meta = RECESS_REASON_BY_VALUE.get(pass.reason);
                 const Icon = meta?.icon ?? DoorOpen;
                 return (
                   <li
@@ -371,7 +434,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                       <span
                         className={cn(
                           'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border',
-                          reasonBadgeClasses(pass.reason),
+                          recessReasonBadgeClasses(pass.reason),
                         )}
                       >
                         <Icon className="h-4 w-4" aria-hidden />
@@ -426,7 +489,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
           ) : (
             <ul className="divide-y divide-border">
               {logRows.map((row) => {
-                const meta = REASON_BY_VALUE.get(row.reason);
+                const meta = RECESS_REASON_BY_VALUE.get(row.reason);
                 return (
                   <li key={row.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <div className="min-w-0">

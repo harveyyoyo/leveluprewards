@@ -318,11 +318,11 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     value: 'recess',
     label: 'Recess',
     icon: DoorOpen,
-    kind: 'addon',
+    kind: 'core',
     roles: ['admin'],
     title: 'Check students out for a break or bathroom',
     description: 'Sign students out for a quick break or bathroom and time how long they are gone.',
-    isEnabled: (s) => !!s.enableRecess,
+    isEnabled: (s) => s.enableRecess !== false,
   },
   {
     value: 'notifications',

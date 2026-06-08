@@ -390,6 +390,14 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Use Recent returns to review who was out, why, and for how long.',
         ],
       },
+      {
+        title: 'Print passes & kiosk scanning',
+        checklist: [
+          'Print pass cards from Printable recess passes — one card per category (Bathroom, Break, Water).',
+          'Turn on Accept recess pass scans under Student kiosk scanning.',
+          'At /student: student scans ID, then scans RCBATH / RCBREAK / RCWATER at the coupon scanner. Scan the same pass again to return.',
+        ],
+      },
     ],
   },
 };

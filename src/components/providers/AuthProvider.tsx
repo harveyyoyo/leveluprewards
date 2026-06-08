@@ -87,6 +87,8 @@ async function getRoleDocForSessionRestore(
 export type LogoutOptions = {
     staffNavigateTo?: 'portal' | 'teacher' | 'student' | 'office';
     studentNavigateTo?: 'portal' | 'student';
+    /** Set when auto-logout fired after idle timeout (shows a one-time notice). */
+    reason?: 'idle-timeout';
 };
 
 function isOfficeLogoutSurface(): boolean {
@@ -314,6 +316,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ) {
             // When leaving a privileged staff session, return to the school chooser (Portal),
             // not directly into student kiosk mode.
+            if (options?.reason === 'idle-timeout' && typeof window !== 'undefined') {
+                try {
+                    sessionStorage.setItem('staffIdleLogoutNotice', loginState);
+                } catch {
+                    // ignore quota / private mode
+                }
+            }
             localStorage.setItem('loginState', 'school');
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('school');

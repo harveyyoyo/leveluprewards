@@ -44,6 +44,7 @@ Optional for production-parity auth work (see `.agent/knowledge/deployment.md`):
 | `AUTH_GATE_SIGNING_SECRET` | Signed school gate cookie (32+ random chars) |
 | `DISABLE_AUTH_SESSION_EDGE` | Set to `1` if matching current production rollback |
 | `OPENAI_API_KEY` / `GEMINI_API_KEY` | AI parse routes only |
+| `GOOGLE_BOOKS_API_KEY` | Library ISBN lookups (avoids Google Books 429 rate limiting; optional) |
 
 ### Commands agents can run
 

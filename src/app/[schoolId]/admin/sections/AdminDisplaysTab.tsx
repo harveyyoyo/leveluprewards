@@ -9,6 +9,7 @@ import {
   Megaphone,
   Monitor,
   Tag,
+  Trophy,
 } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
@@ -26,14 +27,16 @@ import type { Settings } from '@/components/providers/SettingsProvider';
 import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 import {
   buildBulletinDisplayHref,
+  buildHallOfFameDisplayHref,
   buildSmartScreenDisplayHref,
 } from '@/lib/displays/displayRoutes';
 import { SmartScreenSettingsPanel } from './displays/SmartScreenSettingsPanel';
 import { BulletinSettingsPanel } from './displays/BulletinSettingsPanel';
 import { BulletinIncentivesPanel } from './displays/BulletinIncentivesPanel';
+import { AdminHallOfFameTab } from './AdminHallOfFameTab';
 import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
-type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'incentives';
+type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'hall-of-fame' | 'incentives';
 
 type AdminDisplaysTabProps = {
   schoolId: string;
@@ -64,10 +67,12 @@ export function AdminDisplaysTab({
 
   const bulletinEnabled = settings.bulletinEnabled !== false;
   const smartScreenEnabled = !!settings.smartScreenEnabled;
+  const hallOfFameEnabled = !!settings.enableClassLeaderboard;
   const activeIncentiveCount = sortedIncentives.filter((item) => item.active !== false).length;
 
   const smartHref = useMemo(() => buildSmartScreenDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
   const bulletinHref = useMemo(() => buildBulletinDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
+  const hallOfFameHref = useMemo(() => buildHallOfFameDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
 
   return (
     <StaffPortalSectionCard className="w-full overflow-hidden">
@@ -80,7 +85,7 @@ export function AdminDisplaysTab({
             </StaffPortalSectionCardTitle>
           </Helper>
           <p className="text-xs text-muted-foreground">
-            Smart Screen for live dashboards · Bulletin board for incentives and celebrations
+            Smart Screen for live dashboards · Bulletin board for incentives · Hall of Fame leaderboards
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -99,6 +104,13 @@ export function AdminDisplaysTab({
               <ArrowUpRight className="h-4 w-4" aria-hidden />
             </Link>
           </Button>
+          <Button asChild variant="outline" className="gap-2 rounded-xl">
+            <Link href={hallOfFameHref} target="_blank" rel="noopener noreferrer">
+              <Trophy className="h-4 w-4" aria-hidden />
+              Hall of Fame
+              <ArrowUpRight className="h-4 w-4" aria-hidden />
+            </Link>
+          </Button>
         </div>
       </StaffPortalSectionCardHeader>
 
@@ -110,6 +122,7 @@ export function AdminDisplaysTab({
             { id: 'overview', label: 'Overview', icon: LayoutGrid },
             { id: 'smart-screen', label: 'Smart Screen', icon: Monitor, badge: smartScreenEnabled ? 'On' : 'Off' },
             { id: 'bulletin', label: 'Bulletin board', icon: Megaphone, badge: bulletinEnabled ? 'On' : 'Off' },
+            { id: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy, badge: hallOfFameEnabled ? 'On' : 'Off' },
             { id: 'incentives', label: 'Incentives', icon: Tag, badge: activeIncentiveCount },
           ]}
           value={section}
@@ -119,7 +132,7 @@ export function AdminDisplaysTab({
 
         {section === 'overview' ? (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <button
                 type="button"
                 onClick={() => setSection('smart-screen')}
@@ -183,6 +196,38 @@ export function AdminDisplaysTab({
                   Configure bulletin →
                 </p>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setSection('hall-of-fame')}
+                className={cn(
+                  'group rounded-2xl border p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg',
+                  hallOfFameEnabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/10',
+                )}
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <span className="flex items-center gap-2 text-sm font-black">
+                    <Trophy className="h-5 w-5 text-primary" />
+                    Hall of Fame
+                  </span>
+                  <span
+                    className={cn(
+                      'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide',
+                      hallOfFameEnabled
+                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    {hallOfFameEnabled ? 'Enabled' : 'Off'}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Big-screen leaderboards with podium and rankings for students, classes, houses, or school goals.
+                </p>
+                <p className="mt-3 text-xs font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                  Configure Hall of Fame →
+                </p>
+              </button>
             </div>
 
             <div className="rounded-2xl border bg-muted/10 p-4 space-y-3">
@@ -202,6 +247,13 @@ export function AdminDisplaysTab({
                   <Link href={bulletinHref} target="_blank" rel="noopener noreferrer">
                     <Megaphone className="h-4 w-4" aria-hidden />
                     Open Bulletin
+                    <ArrowUpRight className="h-4 w-4" aria-hidden />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="sm" className="rounded-xl gap-2">
+                  <Link href={hallOfFameHref} target="_blank" rel="noopener noreferrer">
+                    <Trophy className="h-4 w-4" aria-hidden />
+                    Open Hall of Fame
                     <ArrowUpRight className="h-4 w-4" aria-hidden />
                   </Link>
                 </Button>
@@ -241,6 +293,8 @@ export function AdminDisplaysTab({
             sortedIncentives={sortedIncentives}
           />
         ) : null}
+
+        {section === 'hall-of-fame' ? <AdminHallOfFameTab schoolId={schoolId} /> : null}
 
         {section === 'incentives' ? <BulletinIncentivesPanel schoolId={schoolId} /> : null}
       </StaffPortalSectionCardContent>

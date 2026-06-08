@@ -34,7 +34,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages, DoorOpen
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
@@ -241,6 +241,13 @@ export function SettingsModal() {
             }
             if (key === 'payAttendance' && value === false) {
                 next = { ...next, enableClassSignIn: false, enableAttendance: false, enableBathroomTimer: false };
+            }
+            if (key === 'recessStudentKioskEnabled' && typeof value === 'boolean') {
+                next = {
+                    ...next,
+                    recessStudentKioskEnabled: value,
+                    enableRecess: value ? true : next.enableRecess,
+                };
             }
             return next;
         });
@@ -1503,6 +1510,32 @@ export function SettingsModal() {
                                         {!canManageSchoolSettings ? (
                                             <p className="text-[11px] text-muted-foreground">Admin only.</p>
                                         ) : null}
+
+                                    <div className="flex items-start justify-between gap-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <div className="min-w-0 space-y-1">
+                                            <p className="flex items-center gap-2 text-sm font-bold">
+                                                <DoorOpen className="h-4 w-4 text-primary" aria-hidden />
+                                                Bathroom &amp; break checkout
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                                Accept printed recess pass barcodes (RCBATH, RCBREAK, RCWATER) at the
+                                                coupon scanner after a student signs in. Print passes in Admin → Recess.
+                                            </p>
+                                        </div>
+                                        <Switch
+                                            checked={
+                                                local.enableRecess !== false &&
+                                                local.recessStudentKioskEnabled !== false
+                                            }
+                                            onCheckedChange={(checked) => {
+                                                handleToggle('recessStudentKioskEnabled', checked);
+                                                if (checked) handleToggle('enableRecess', true);
+                                            }}
+                                            disabled={!canManageSchoolSettings}
+                                            aria-label="Bathroom and break checkout on student kiosk"
+                                        />
+                                    </div>
+
                                         {canManageSchoolSettings && local.kioskLoginTabFaceEnabled === true ? (
                                             <button
                                                 type="button"
@@ -1812,16 +1845,15 @@ export function SettingsModal() {
                                                         disabled={!!unavailablePillarHint('payAttendance') || (enabledCount === 1 && (local.payAttendance ?? true))}
                                                     />
                                                 </div>
-                                                <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payHomework') && 'opacity-60')}>
+                                                <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl opacity-60">
                                                     <div>
-                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">levelup home work</h4>
-                                                        <p className="text-[10px] text-muted-foreground">{unavailablePillarHint('payHomework') ?? 'Product included in paid subscription'}</p>
+                                                        <h4 className="font-bold text-sm text-foreground uppercase tracking-tight flex items-center gap-2">
+                                                            levelup home work
+                                                            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground border border-border/60 rounded-full px-1.5 py-0.5">Coming soon</span>
+                                                        </h4>
+                                                        <p className="text-[10px] text-muted-foreground">Coming soon — not available yet</p>
                                                     </div>
-                                                    <Switch
-                                                        checked={(local.payHomework ?? true) && !unavailablePillarHint('payHomework')}
-                                                        onCheckedChange={(val) => handleToggle('payHomework', val)}
-                                                        disabled={!!unavailablePillarHint('payHomework') || (enabledCount === 1 && (local.payHomework ?? true))}
-                                                    />
+                                                    <Switch checked={false} disabled aria-label="levelup home work (coming soon)" />
                                                 </div>
                                                 <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payLibrary') && 'opacity-60')}>
                                                     <div>

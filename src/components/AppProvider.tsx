@@ -263,7 +263,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
           arm();
           return;
         }
-        logoutRef.current();
+        logoutRef.current({ reason: 'idle-timeout' });
       }, idleMs);
     };
 
@@ -272,7 +272,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         if (typeof document !== 'undefined' && document.querySelector('[data-settings-open="true"]')) {
           arm();
         } else {
-          logoutRef.current();
+          logoutRef.current({ reason: 'idle-timeout' });
         }
       }
     };

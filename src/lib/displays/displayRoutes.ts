@@ -1,4 +1,4 @@
-export type DisplayView = 'smart' | 'bulletin';
+export type DisplayView = 'smart' | 'bulletin' | 'hall-of-fame';
 
 export const LEGACY_DISPLAY_TAB_VALUES = ['bulletinboard', 'smart-screen'] as const;
 
@@ -19,14 +19,28 @@ export function normalizeStaffPortalTabValues(tabValues: readonly string[]): str
 export function displaysFeatureEnabled(settings: {
   bulletinEnabled?: boolean;
   smartScreenEnabled?: boolean;
+  enableClassLeaderboard?: boolean;
 }): boolean {
-  return settings.bulletinEnabled !== false || !!settings.smartScreenEnabled;
+  return (
+    settings.bulletinEnabled !== false ||
+    !!settings.smartScreenEnabled ||
+    !!settings.enableClassLeaderboard
+  );
 }
 
 export function parseDisplayView(value: string | null | undefined): DisplayView {
   const normalized = (value || '').trim().toLowerCase();
   if (normalized === 'bulletin' || normalized === 'bulletin-board' || normalized === 'board') {
     return 'bulletin';
+  }
+  if (
+    normalized === 'hall-of-fame' ||
+    normalized === 'halloffame' ||
+    normalized === 'hall_of_fame' ||
+    normalized === 'fame' ||
+    normalized === 'leaderboard'
+  ) {
+    return 'hall-of-fame';
   }
   return 'smart';
 }
@@ -52,12 +66,26 @@ export function buildBulletinDisplayHref(schoolId: string, options: { fullscreen
   return `/${schoolId}/displays?${params.toString()}`;
 }
 
+export function buildHallOfFameDisplayHref(
+  schoolId: string,
+  options: { fullscreen?: boolean } = {},
+): string {
+  const params = new URLSearchParams();
+  params.set('view', 'hall-of-fame');
+  if (options.fullscreen) params.set('fullscreen', '1');
+  return `/${schoolId}/displays?${params.toString()}`;
+}
+
 export function buildDisplayHref(
   schoolId: string,
   view: DisplayView,
   options: SmartScreenHrefOptions = {},
 ): string {
-  return view === 'bulletin'
-    ? buildBulletinDisplayHref(schoolId, { fullscreen: options.fullscreen })
-    : buildSmartScreenDisplayHref(schoolId, options);
+  if (view === 'bulletin') {
+    return buildBulletinDisplayHref(schoolId, { fullscreen: options.fullscreen });
+  }
+  if (view === 'hall-of-fame') {
+    return buildHallOfFameDisplayHref(schoolId, { fullscreen: options.fullscreen });
+  }
+  return buildSmartScreenDisplayHref(schoolId, options);
 }

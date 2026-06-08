@@ -31,9 +31,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
-import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import { isSchoolLibraryBarcode, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { LibraryBookBulkIntakeScanner } from './LibraryBookBulkIntakeScanner';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { useAppContext } from '@/components/AppProvider';
 import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
@@ -167,6 +166,7 @@ export function LibraryManagementPanel({
   const handlePrintAll = () => printItems(sortedItems, labelFormat);
   const handlePrintSelected = () => printItems(selectedItems, labelFormat);
   const handlePrintOne = (item: LibraryItem) => printItems([item], labelFormat);
+  const handlePrintLibStickers = () => printItems(libStickerItems, labelFormat);
 
   const handleConfirmedDelete = async (item: LibraryItem) => {
     const ok = await confirm({
@@ -188,6 +188,11 @@ export function LibraryManagementPanel({
 
   const checkedOutCount = useMemo(
     () => (libraryItems ?? []).filter((i) => i.status === 'checked_out').length,
+    [libraryItems],
+  );
+
+  const libStickerItems = useMemo(
+    () => (libraryItems ?? []).filter((i) => isSchoolLibraryBarcode(i.upc)),
     [libraryItems],
   );
 
@@ -411,12 +416,25 @@ export function LibraryManagementPanel({
                   <Printer className="h-4 w-4" /> Print all
                 </Button>
 
-                <Button
-                  onClick={onAddLibraryItem}
-                  className="rounded-xl h-10 font-bold shadow-sm gap-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
-                >
-                  <Plus className="h-4 w-4" /> Add manual book
-                </Button>
+                {libStickerItems.length > 0 ? (
+                  <Button
+                    variant="outline"
+                    className="rounded-xl h-10 font-bold border-primary/30 bg-primary/5 hover:bg-primary/10 text-xs gap-1.5"
+                    onClick={handlePrintLibStickers}
+                    title="Print sticker labels for items with generated LIB barcodes"
+                  >
+                    <Printer className="h-4 w-4" /> LIB labels ({libStickerItems.length})
+                  </Button>
+                ) : null}
+
+                {!hasIntakeTab && (
+                  <Button
+                    onClick={onAddLibraryItem}
+                    className="rounded-xl h-10 font-bold shadow-sm gap-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
+                  >
+                    <Plus className="h-4 w-4" /> Add manual book
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -535,6 +553,15 @@ export function LibraryManagementPanel({
                             </p>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[10px] font-semibold text-muted-foreground">
                               <span className="font-mono bg-muted/40 rounded px-1 text-[9px] text-muted-foreground shrink-0">{item.upc}</span>
+                              {isSchoolLibraryBarcode(item.upc) ? (
+                                <Badge variant="outline" className="text-[8px] font-bold uppercase rounded-md py-0 px-1 border-primary/30 text-primary">
+                                  LIB sticker
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[8px] font-bold uppercase rounded-md py-0 px-1 border-emerald-500/30 text-emerald-700">
+                                  Book barcode
+                                </Badge>
+                              )}
                               {item.category && (
                                 <span className="flex items-center gap-1 shrink-0">
                                   <Layers className="h-3 w-3" /> {item.category}
@@ -660,37 +687,30 @@ export function LibraryManagementPanel({
             <TabsContent value="intake" className="space-y-6 outline-none mt-4">
               <Card className="rounded-2xl border border-primary/20 overflow-hidden shadow-md bg-background/50">
                 <CardHeader className="py-4 bg-secondary/25 border-b border-border/20">
-                  <Helper content="Fast cataloging using external hardware scanner or barcode camera.">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <SlidersHorizontal className="h-4 w-4 text-primary" /> Book Scanner Registration
-                    </CardTitle>
-                  </Helper>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <Helper content="Fast cataloging using external hardware scanner or barcode camera.">
+                      <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <SlidersHorizontal className="h-4 w-4 text-primary" /> Book Scanner Registration
+                      </CardTitle>
+                    </Helper>
+                    <Button
+                      onClick={onAddLibraryItem}
+                      className="rounded-xl h-10 font-bold shadow-sm gap-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
+                    >
+                      <Plus className="h-4 w-4" /> Add manual book
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <Tabs defaultValue="bulk" className="w-full">
-                    <TabsList className="grid w-full max-w-sm grid-cols-2 rounded-xl bg-muted/60 p-1 border border-border/20">
-                      <TabsTrigger value="bulk" className="rounded-lg text-xs font-bold py-1.5">
-                        Bulk register
-                      </TabsTrigger>
-                      <TabsTrigger value="single" className="rounded-lg text-xs font-bold py-1.5">
-                        Single register
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="bulk" className="mt-4 outline-none">
-                      <LibraryBookBulkIntakeScanner
-                        onRegister={onRegisterFromScan}
-                        upcTaken={upcTaken}
-                        libraryItems={libraryItems}
-                      />
-                    </TabsContent>
-                    <TabsContent value="single" className="mt-4 outline-none">
-                      <LibraryBookIntakeScanner
-                        onRegister={onRegisterFromScan}
-                        upcTaken={upcTaken}
-                        libraryItems={libraryItems}
-                      />
-                    </TabsContent>
-                  </Tabs>
+                  <p className="text-xs text-muted-foreground mb-4 rounded-lg border border-dashed bg-muted/30 px-3 py-2">
+                    Scan the barcode <strong className="text-foreground">on the book</strong> (not a LIB checkout sticker).
+                    ISBNs are looked up online, then AI if configured. Checkout uses the book&apos;s own barcode when possible — only items without one get a generated LIB code.
+                  </p>
+                  <LibraryBookIntakeScanner
+                    onRegister={onRegisterFromScan}
+                    upcTaken={upcTaken}
+                    libraryItems={libraryItems}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

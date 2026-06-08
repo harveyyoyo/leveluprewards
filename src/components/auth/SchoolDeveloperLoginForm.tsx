@@ -238,12 +238,14 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   // FirebaseProvider consumes getRedirectResult first; we watch `firebaseUser` instead.
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading || !firebaseUser) return;
-    if (loginState === 'school') return;
     if (schoolLoginIntentRef.current) return;
     if (!isDeveloperOnly && !isDeveloper) return;
     if (!allowDeveloperLogin || !isAllowedGoogleEmail) return;
     const pendingDeveloper = shouldCompleteDeveloperLogin();
     if (!isDeveloperOnly && !pendingDeveloper) return;
+    // School chooser sessions are normal here (/developer or after Google redirect).
+    // Only skip auto-login when a school passcode submit is in flight on /login.
+    if (loginState === 'school' && !isDeveloperOnly && !pendingDeveloper) return;
     void completeDeveloperLogin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

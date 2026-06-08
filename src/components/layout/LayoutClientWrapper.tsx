@@ -24,6 +24,7 @@ import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayout
 import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
 import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 import { useTranslation } from '@/components/providers/LocaleProvider';
+import { useToast } from '@/hooks/use-toast';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -117,6 +118,7 @@ function LayoutClientWrapperInner({
     const searchParams = useSearchParams();
     const { settings, isLoaded } = useSettings();
     const { loginState, schoolId: contextSchoolId, isKioskLocked, isInitialized } = useAppContext();
+    const { toast } = useToast();
     const [nonCriticalUiReady, setNonCriticalUiReady] = useState(false);
     const devChunkReloadGuard = useRef(false);
     const isLoginPage =
@@ -241,6 +243,30 @@ function LayoutClientWrapperInner({
 
         return runWhenIdle(() => setNonCriticalUiReady(true));
     }, []);
+
+    useEffect(() => {
+        if (!isInitialized || typeof window === 'undefined') return;
+        let role: string | null = null;
+        try {
+            role = sessionStorage.getItem('staffIdleLogoutNotice');
+            if (role) sessionStorage.removeItem('staffIdleLogoutNotice');
+        } catch {
+            return;
+        }
+        if (!role) return;
+        const roleLabel =
+            role === 'admin'
+                ? 'Admin'
+                : role === 'teacher'
+                  ? 'Teacher'
+                  : role === 'secretary'
+                    ? 'Secretary'
+                    : 'Staff';
+        toast({
+            title: `${roleLabel} session timed out`,
+            description: 'Enter the admin passcode again to continue where you left off.',
+        });
+    }, [isInitialized, toast]);
 
     useEffect(() => {
         if (!routeSchoolId) return;

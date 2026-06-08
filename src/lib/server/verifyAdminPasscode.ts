@@ -82,10 +82,6 @@ export async function verifyAdminPasscodeServer(
 
   if (!googleAdminBypass) {
     if (passcode.length === 0) {
-      const existingAdmin = await adminRoleRef.get();
-      if (existingAdmin.exists && existingAdmin.data()?.role === 'admin') {
-        return;
-      }
       throw new VerifyAdminPasscodeError('invalid-argument', 'A valid passcode is required.');
     }
 

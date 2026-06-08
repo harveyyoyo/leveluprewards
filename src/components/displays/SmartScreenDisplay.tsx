@@ -113,16 +113,16 @@ function ModuleCard({
   return (
     <div
       className={cn(
-        'min-h-0 overflow-hidden rounded-2xl border shadow-xl',
+        'flex min-h-0 flex-col overflow-hidden rounded-2xl border shadow-xl',
         compact ? 'p-2.5' : 'p-4',
         theme.panel,
       )}
     >
-      <div className={cn('flex items-center gap-2', compact ? 'mb-1.5' : 'mb-3')}>
+      <div className={cn('flex shrink-0 items-center gap-1.5', compact ? 'mb-1' : 'mb-3')}>
         <span className={cn('shrink-0', theme.accent)}>{icon}</span>
         <p className={cn('truncate font-black', compact ? 'text-[11px]' : 'text-base')}>{title}</p>
       </div>
-      {children}
+      <div className="min-h-0 flex-1">{children}</div>
     </div>
   );
 }
@@ -219,9 +219,12 @@ export function SmartScreenDisplay({
   const isDashboard = layout === 'dashboard';
   const isMirror = !isPortrait && !isDashboard;
   const compact = isPortrait || isDashboard || previewCompact;
+  // Module cards are always space-constrained (many cards share a fixed-height panel),
+  // so they use compact typography even in the large mirror layout where the hero stays big.
+  const modulesCompact = compact || isMirror;
   const shellHeight = isPreview
     ? 'h-full'
-    : 'h-[calc(100dvh-1rem)] sm:h-[calc(100dvh-1.5rem)] lg:h-[calc(100dvh-2.5rem)]';
+    : 'h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2.5rem)] lg:h-[calc(100dvh-3rem)]';
   const showWeather = readScreenSetting('smartScreenShowWeather', schoolSettings, screenSettings) !== false;
   const showStats = readScreenSetting('smartScreenShowStats', schoolSettings, screenSettings) !== false;
   const showCompliments = readScreenSetting('smartScreenShowCompliments', schoolSettings, screenSettings) !== false;
@@ -289,28 +292,30 @@ export function SmartScreenDisplay({
 
   if (showWeather) {
     modules.push(
-      <ModuleCard key="weather" title="Weather" icon={<CloudSun className="h-5 w-5" />} theme={theme} compact={compact}>
-        <p className={cn('truncate font-black', compact ? 'text-lg' : 'text-2xl')}>{displayWeatherLabel}</p>
-        <p className={cn('mt-1 font-black leading-none', compact ? 'text-3xl' : 'text-5xl')}>
+      <ModuleCard key="weather" title="Weather" icon={<CloudSun className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
+        <p className={cn('truncate font-black', modulesCompact ? 'text-lg' : 'text-2xl')}>{displayWeatherLabel}</p>
+        <p className={cn('mt-1 font-black leading-none', modulesCompact ? 'text-3xl' : 'text-5xl')}>
           {displayWeatherTemp}
-          <span className={compact ? 'text-base' : 'text-2xl'}> deg</span>
+          <span className={modulesCompact ? 'text-base' : 'text-2xl'}> deg</span>
         </p>
-        <p className={cn('mt-1 truncate text-[10px] font-black uppercase tracking-wide', theme.quiet)}>
-          {locationLabel} - {locationSource}
-        </p>
+        {!modulesCompact ? (
+          <p className={cn('mt-1 truncate text-[10px] font-black uppercase tracking-wide', theme.quiet)}>
+            {locationLabel} - {locationSource}
+          </p>
+        ) : null}
       </ModuleCard>,
     );
   }
 
   if (showSchedule) {
     modules.push(
-      <ModuleCard key="schedule" title="Today" icon={<CalendarDays className="h-5 w-5" />} theme={theme} compact={compact}>
-        <p className={cn('font-black', compact ? 'text-sm' : 'text-lg')}>School is in motion</p>
+      <ModuleCard key="schedule" title="Today" icon={<CalendarDays className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
+        <p className={cn('font-black', modulesCompact ? 'text-sm' : 'text-lg')}>School is in motion</p>
         <div className="mt-2 grid grid-cols-3 gap-1.5 text-center">
           {['Arrive', 'Learn', 'Level up'].map((label) => (
             <div
               key={label}
-              className={cn('rounded-xl border px-1.5 py-2 font-black', compact ? 'text-[10px]' : 'text-xs', theme.badge)}
+              className={cn('rounded-xl border px-1.5 py-2 font-black', modulesCompact ? 'text-[10px]' : 'text-xs', theme.badge)}
             >
               {label}
             </div>
@@ -322,22 +327,22 @@ export function SmartScreenDisplay({
 
   if (showJewishHolidays && upcomingHolidays.length > 0) {
     modules.push(
-      <ModuleCard key="holidays" title="Jewish holidays" icon={<Star className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="holidays" title="Jewish holidays" icon={<Star className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
           {upcomingHolidays.map((holiday) => (
             <div key={holiday.id} className="rounded-xl border border-current/10 px-2 py-1.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className={cn('truncate font-black', compact ? 'text-xs' : 'text-sm')}>{holiday.nameEn}</p>
+                  <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{holiday.nameEn}</p>
                   <p
-                    className={cn('truncate font-semibold', compact ? 'text-[10px]' : 'text-xs', theme.quiet)}
+                    className={cn('truncate font-semibold', modulesCompact ? 'text-[10px]' : 'text-xs', theme.quiet)}
                     dir="rtl"
                     lang="he"
                   >
                     {holiday.nameHe}
                   </p>
                 </div>
-                <p className={cn('shrink-0 font-black uppercase', compact ? 'text-[9px]' : 'text-[10px]', theme.quiet)}>
+                <p className={cn('shrink-0 font-black uppercase', modulesCompact ? 'text-[9px]' : 'text-[10px]', theme.quiet)}>
                   {holiday.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </p>
               </div>
@@ -350,24 +355,24 @@ export function SmartScreenDisplay({
 
   if (showCompliments) {
     modules.push(
-      <ModuleCard key="compliment" title="Compliment" icon={<Heart className="h-5 w-5" />} theme={theme} compact={compact}>
-        <p className={cn('font-black leading-snug', compact ? 'text-sm' : 'text-xl')}>{compliment}</p>
+      <ModuleCard key="compliment" title="Compliment" icon={<Heart className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
+        <p className={cn('font-black leading-snug', modulesCompact ? 'text-sm' : 'text-xl')}>{compliment}</p>
       </ModuleCard>,
     );
   }
 
   if (showFocus) {
     modules.push(
-      <ModuleCard key="focus" title="Focus skill" icon={<Lightbulb className="h-5 w-5" />} theme={theme} compact={compact}>
-        <p className={cn('font-black leading-snug', compact ? 'text-sm' : 'text-xl')}>{focusSkill}</p>
+      <ModuleCard key="focus" title="Focus skill" icon={<Lightbulb className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
+        <p className={cn('font-black leading-snug', modulesCompact ? 'text-sm' : 'text-xl')}>{focusSkill}</p>
       </ModuleCard>,
     );
   }
 
   if (showQuote) {
     modules.push(
-      <ModuleCard key="quote" title="Learning quote" icon={<Sparkles className="h-5 w-5" />} theme={theme} compact={compact}>
-        <p className={cn('font-black leading-snug', compact ? 'text-sm' : 'text-xl')}>{learningQuote}</p>
+      <ModuleCard key="quote" title="Learning quote" icon={<Sparkles className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
+        <p className={cn('font-black leading-snug', modulesCompact ? 'text-sm' : 'text-xl')}>{learningQuote}</p>
       </ModuleCard>,
     );
   }
@@ -379,7 +384,7 @@ export function SmartScreenDisplay({
         title="School stats"
         icon={<ChartNoAxesColumnIncreasing className="h-5 w-5" />}
         theme={theme}
-        compact={compact}
+        compact={modulesCompact}
       >
         <div className="grid grid-cols-3 gap-1.5 text-center">
           {[
@@ -389,7 +394,7 @@ export function SmartScreenDisplay({
           ].map(([label, value]) => (
             <div key={label} className={cn('rounded-xl border p-2', theme.badge)}>
               <p className="text-[9px] font-black uppercase opacity-75">{label}</p>
-              <p className={cn('font-black', compact ? 'text-base' : 'text-2xl')}>{value}</p>
+              <p className={cn('font-black', modulesCompact ? 'text-base' : 'text-2xl')}>{value}</p>
             </div>
           ))}
         </div>
@@ -399,19 +404,19 @@ export function SmartScreenDisplay({
 
   if (showLeaderboard) {
     modules.push(
-      <ModuleCard key="leaders" title="Top students" icon={<Trophy className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="leaders" title="Top students" icon={<Trophy className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
-          {topStudents.slice(0, compact ? 3 : 5).map((student, index) => (
+          {topStudents.slice(0, modulesCompact ? 3 : 5).map((student, index) => (
             <div key={student.id} className="flex items-center gap-2">
               <span
                 className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[10px] font-black', theme.badge)}
               >
                 {index + 1}
               </span>
-              <span className={cn('min-w-0 flex-1 truncate font-black', compact ? 'text-xs' : 'text-sm')}>
+              <span className={cn('min-w-0 flex-1 truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>
                 {displayStudentNameOnSharedBoard(student, privacyMode)}
               </span>
-              <span className={cn('font-black', compact ? 'text-[11px]' : 'text-sm')}>
+              <span className={cn('font-black', modulesCompact ? 'text-[11px]' : 'text-sm')}>
                 {(student.lifetimePoints ?? student.points ?? 0).toLocaleString()}
               </span>
             </div>
@@ -426,7 +431,7 @@ export function SmartScreenDisplay({
 
   if (showHouses) {
     modules.push(
-      <ModuleCard key="houses" title="House standings" icon={<Star className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="houses" title="House standings" icon={<Star className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
           {topHouses.length > 0 ? (
             topHouses.map((house) => {
@@ -434,8 +439,8 @@ export function SmartScreenDisplay({
               return (
                 <div key={house.id}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className={cn('truncate font-black', compact ? 'text-xs' : 'text-sm')}>{house.name}</p>
-                    <p className={cn('font-black', compact ? 'text-[11px]' : 'text-sm')}>{points.toLocaleString()}</p>
+                    <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{house.name}</p>
+                    <p className={cn('font-black', modulesCompact ? 'text-[11px]' : 'text-sm')}>{points.toLocaleString()}</p>
                   </div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-current/12">
                     <div
@@ -456,10 +461,10 @@ export function SmartScreenDisplay({
 
   if (showClasses) {
     modules.push(
-      <ModuleCard key="classes" title="Class spotlight" icon={<Users className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="classes" title="Class spotlight" icon={<Users className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         {classSpotlight ? (
           <>
-            <p className={cn('truncate font-black', compact ? 'text-lg' : 'text-2xl')}>{classSpotlight.name}</p>
+            <p className={cn('truncate font-black', modulesCompact ? 'text-lg' : 'text-2xl')}>{classSpotlight.name}</p>
             <p className={cn('mt-1 text-sm font-semibold', theme.quiet)}>
               {classCount > 0 ? `${classCount} students learning today` : 'Ready for a strong day'}
             </p>
@@ -473,17 +478,17 @@ export function SmartScreenDisplay({
 
   if (showBirthdays) {
     modules.push(
-      <ModuleCard key="birthdays" title="Birthdays" icon={<Cake className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="birthdays" title="Birthdays" icon={<Cake className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         {birthdayStudents.length > 0 ? (
           <div className="space-y-1">
             {birthdayStudents.map((student) => (
-              <p key={student.id} className={cn('truncate font-black', compact ? 'text-sm' : 'text-lg')}>
+              <p key={student.id} className={cn('truncate font-black', modulesCompact ? 'text-sm' : 'text-lg')}>
                 {displayStudentNameOnSharedBoard(student, privacyMode)}
               </p>
             ))}
           </div>
         ) : (
-          <p className={cn('font-black leading-snug', compact ? 'text-sm' : 'text-xl')}>
+          <p className={cn('font-black leading-snug', modulesCompact ? 'text-sm' : 'text-xl')}>
             Celebrate someone with kindness today.
           </p>
         )}
@@ -493,12 +498,12 @@ export function SmartScreenDisplay({
 
   if (showBulletin) {
     modules.push(
-      <ModuleCard key="bulletin" title="Bulletin" icon={<Megaphone className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="bulletin" title="Bulletin" icon={<Megaphone className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
-          {activeBulletin.slice(0, compact ? 2 : 4).map((item) => (
+          {activeBulletin.slice(0, modulesCompact ? 2 : 4).map((item) => (
             <div key={item.id} className="rounded-xl border border-current/10 px-2 py-1.5">
-              <p className={cn('truncate font-black', compact ? 'text-xs' : 'text-sm')}>{item.title}</p>
-              {item.description && !compact ? (
+              <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{item.title}</p>
+              {item.description && !modulesCompact ? (
                 <p className={cn('mt-0.5 line-clamp-1 text-xs font-semibold', theme.quiet)}>{item.description}</p>
               ) : null}
             </div>
@@ -513,15 +518,15 @@ export function SmartScreenDisplay({
 
   if (showRewards) {
     modules.push(
-      <ModuleCard key="rewards" title="Rewards to chase" icon={<Gift className="h-5 w-5" />} theme={theme} compact={compact}>
+      <ModuleCard key="rewards" title="Rewards to chase" icon={<Gift className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="grid grid-cols-1 gap-1.5">
-          {activePrizes.slice(0, compact ? 3 : 4).map((prize) => (
+          {activePrizes.slice(0, modulesCompact ? 3 : 4).map((prize) => (
             <div
               key={prize.id}
               className="flex items-center justify-between gap-2 rounded-xl border border-current/10 px-2 py-1.5"
             >
-              <p className={cn('truncate font-black', compact ? 'text-xs' : 'text-sm')}>{prize.name}</p>
-              <p className={cn('shrink-0 font-black uppercase', compact ? 'text-[10px]' : 'text-xs', theme.accent)}>
+              <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{prize.name}</p>
+              <p className={cn('shrink-0 font-black uppercase', modulesCompact ? 'text-[10px]' : 'text-xs', theme.accent)}>
                 {prize.points.toLocaleString()} pts
               </p>
             </div>
@@ -669,7 +674,7 @@ export function SmartScreenDisplay({
             isPortrait && 'grid-cols-2 grid-rows-6 gap-2',
             (isDashboard || (previewCompact && !isPortrait)) &&
               'grid-cols-2 grid-rows-3 gap-2 sm:gap-3 lg:grid-cols-4 lg:grid-rows-3',
-            isMirror && !previewCompact && 'grid-cols-2 gap-2 sm:gap-3 content-start',
+            isMirror && !previewCompact && 'grid-cols-2 gap-2 sm:gap-3 [grid-auto-rows:minmax(0,1fr)]',
           )}
         >
           {modules}

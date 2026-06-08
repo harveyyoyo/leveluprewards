@@ -68,22 +68,21 @@ describe('verifyAdminPasscodeServer', () => {
     expect(adminSet).toHaveBeenCalledWith({ role: 'admin' });
   });
 
-  it('accepts an existing admin role when passcode is blank', async () => {
-    const { db, adminGet, adminSet } = createMockDb({
+  it('requires a passcode even when an admin role already exists', async () => {
+    const { db } = createMockDb({
       schoolData: { adminPasscode: '1234' },
       existingAdmin: true,
     });
 
-    await verifyAdminPasscodeServer(db, {
-      uid: 'uid-test',
-      email: '',
-      firebase: undefined,
-      schoolId: 'schoolabc',
-      passcode: '',
-    });
-
-    expect(adminGet).toHaveBeenCalled();
-    expect(adminSet).not.toHaveBeenCalled();
+    await expect(
+      verifyAdminPasscodeServer(db, {
+        uid: 'uid-test',
+        email: '',
+        firebase: undefined,
+        schoolId: 'schoolabc',
+        passcode: '',
+      }),
+    ).rejects.toMatchObject({ code: 'invalid-argument' } satisfies Partial<VerifyAdminPasscodeError>);
   });
 
   it('throws not-found for an unknown school', async () => {

@@ -447,6 +447,8 @@ export function TeacherStaffPortalAddonTabPanels({
           setIsOpen={setIsLibraryModalOpen}
           item={editingLibraryItem}
           onSave={handleSaveLibraryItem}
+          upcTaken={libraryUpcTaken}
+          schoolId={schoolId}
         />
       ) : null}
 

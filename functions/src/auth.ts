@@ -413,10 +413,6 @@ exports.verifySchoolPasscode = functions.https.onCall(
 
     if (!googleAdminBypass) {
       if (passcode.length === 0) {
-        const existingAdmin = await adminRoleRef.get();
-        if (existingAdmin.exists && existingAdmin.data()?.role === "admin") {
-          return { success: true };
-        }
         throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
       }
       const schoolData = schoolDoc.data()!;

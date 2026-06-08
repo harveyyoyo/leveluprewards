@@ -93,7 +93,6 @@ export function SmartScreenSettingsPanel({
   const [activeProfileId, setActiveProfileId] = useState<string>('default');
   const [newProfileName, setNewProfileName] = useState('');
   const [draft, setDraft] = useState<SmartScreenSettingsSnapshot>({});
-  const [previewWidescreen, setPreviewWidescreen] = useState(false);
   const savedSnapshotRef = useRef('');
 
   const smartScreenProfiles = settings.smartScreenProfiles || {};
@@ -199,7 +198,6 @@ export function SmartScreenSettingsPanel({
     [activeProfile?.id, schoolId],
   );
 
-  const enabled = !!readDraftSetting('smartScreenEnabled');
   const activeTheme = (readDraftSetting('smartScreenTheme') as string) || DEFAULT_SMART_SCREEN_THEME;
   const activeLayout = (readDraftSetting('smartScreenLayout') as SmartScreenLayout) || 'mirror';
   const isDashboardLayout = activeLayout === 'dashboard';
@@ -207,8 +205,8 @@ export function SmartScreenSettingsPanel({
     SMART_SCREEN_THEME_OPTIONS.find((option) => option.id === activeTheme) ?? SMART_SCREEN_THEME_OPTIONS[0];
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
+    <div className="flex flex-col gap-4">
+      <div className="order-2 rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-bold">Screen versions</p>
           <span className="rounded-md border bg-background px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-muted-foreground">
@@ -261,7 +259,7 @@ export function SmartScreenSettingsPanel({
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border bg-muted/10">
+      <div className="order-1 overflow-hidden rounded-xl border bg-muted/10">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-background/80 px-3 py-2.5 sm:px-4">
           <div className="flex items-center gap-2">
             <Settings2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -284,20 +282,8 @@ export function SmartScreenSettingsPanel({
           )}
         </div>
 
-        <div
-          className={cn(
-            'flex min-h-[26rem] flex-col',
-            previewWidescreen ? 'h-[min(82dvh,900px)]' : 'h-[min(80dvh,860px)] lg:flex-row',
-          )}
-        >
-          <div
-            className={cn(
-              'flex min-h-0 flex-col p-2.5 sm:p-3',
-              previewWidescreen
-                ? 'min-h-0 flex-1'
-                : 'h-[min(42dvh,400px)] shrink-0 border-b lg:h-full lg:w-auto lg:max-w-[62%] lg:border-b-0 lg:border-r',
-            )}
-          >
+        <div className="flex h-[min(80dvh,860px)] min-h-[26rem] flex-col lg:flex-row">
+          <div className="flex h-[min(42dvh,400px)] min-h-0 shrink-0 flex-col border-b p-2.5 sm:p-3 lg:h-full lg:w-auto lg:max-w-[62%] lg:border-b-0 lg:border-r">
             <SmartScreenScaledPreview
               layout="docked"
               schoolId={schoolId}
@@ -305,24 +291,12 @@ export function SmartScreenSettingsPanel({
               draftSettings={draft}
               screenProfileName={activeProfile?.name}
               isJewishOrthodox={isJewishOrthodoxSchool}
-              widescreen={previewWidescreen}
-              onWidescreenChange={setPreviewWidescreen}
               onOrientationChange={(orientation) => updateDraft({ smartScreenLayout: orientation })}
               className="h-full min-h-0"
             />
           </div>
 
-          {!previewWidescreen ? (
           <div className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-3.5">
-            <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border bg-background px-2.5 py-2">
-              <span className="text-xs font-bold">Enable Smart Screen</span>
-              <Switch
-                checked={enabled}
-                onCheckedChange={(checked) => updateDraft({ smartScreenEnabled: checked })}
-                aria-label="Enable Smart Screen"
-              />
-            </label>
-
             <SettingsSection title="Content">
               <div className="space-y-2">
                 <Input
@@ -464,7 +438,6 @@ export function SmartScreenSettingsPanel({
               </div>
             </SettingsSection>
           </div>
-          ) : null}
         </div>
       </div>
     </div>

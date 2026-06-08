@@ -56,6 +56,12 @@ import {
   isLibraryStudentKioskCheckoutEnabled,
 } from '@/lib/library/libraryPolicy';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
+import { StudentKioskRecessCheckoutCard } from '@/components/student-kiosk/StudentKioskRecessCheckoutCard';
+import {
+  isRecessStudentKioskEnabled,
+  resolveRecessMaxMinutes,
+} from '@/lib/recess/recessKioskSettings';
+import { RECESS_REASON_BY_VALUE } from '@/lib/recess/recessReasons';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
 import { StudentKioskProfileExtras } from '@/components/student-kiosk/StudentKioskProfileExtras';
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
@@ -293,6 +299,8 @@ function StudentDashboardInner({
   const showManualCoupon = !showCameraCoupon && settings.kioskCouponRedemptionManualEnabled !== false;
   const couponSectionEnabled = showManualCoupon || showCameraCoupon;
   const libraryKioskCheckoutOn = isLibraryStudentKioskCheckoutEnabled(settings);
+  const recessKioskCheckoutOn = isRecessStudentKioskEnabled(settings);
+  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
   const prefersReducedMotion = useReducedMotion();
   const authFetch = useAuthFetch();
   const isGraphic = settings.graphicMode === 'graphics';
@@ -397,13 +405,19 @@ function StudentDashboardInner({
     libraryKioskCheckoutOn && hasLibraryCheckouts
       ? ' Scan the LIB sticker on a library book here to check out or return (same place as coupons).'
       : '';
+  const recessScanHint = recessKioskCheckoutOn
+    ? ' After signing in, scan a recess pass (RCBATH, RCBREAK, RCWATER) here to check out; scan the pass again when you return.'
+    : '';
   const libraryCheckoutNote =
     libraryKioskCheckoutOn && hasLibraryCheckouts
       ? 'Library books: scan the LIB sticker on the book cover (same scanner as coupons) to check out or return.'
       : undefined;
+  const recessCheckoutNote = recessKioskCheckoutOn
+    ? 'Recess: scan your printed bathroom/break/water pass at this scanner (after your student ID). Scan the pass again to check back in.'
+    : undefined;
   const couponHelperText = showCameraCoupon
-    ? `Scan a coupon with the device camera.${libraryScanHint} Use Logout on this card to exit.`
-    : `Scan or type a coupon code to add points.${libraryScanHint} Use Logout on this card to exit.`;
+    ? `Scan a coupon with the device camera.${recessScanHint}${libraryScanHint} Use Logout on this card to exit.`
+    : `Scan or type a coupon code to add points.${recessScanHint}${libraryScanHint} Use Logout on this card to exit.`;
   const studentClassLabel = useMemo(() => {
     if (!student?.classId || !classes?.length) return 'Unassigned';
     return classes.find((c) => c.id === student.classId)?.name ?? 'Unassigned';
@@ -875,9 +889,56 @@ function StudentDashboardInner({
       return;
     }
 
+    // Recess pass scan (physical bathroom/break/water cards)
+    if (recessKioskCheckoutOn && firestore && schoolId) {
+      try {
+        const { performRecessPassScan } = await import('@/lib/recess/recessKioskScan');
+        const { isRecessPassScanCode } = await import('@/lib/recess/recessPassScanCode');
+        if (isRecessPassScanCode(raw)) {
+          const result = await performRecessPassScan(
+            firestore,
+            schoolId,
+            student,
+            raw,
+            recessMaxMinutes,
+          );
+          if (result.action === 'checkout') {
+            playSound('success');
+            const reasonLabel =
+              RECESS_REASON_BY_VALUE.get(result.reason)?.label ?? result.reason;
+            toast({
+              title: 'Checked out',
+              description: `You are out for ${reasonLabel}. Scan the same pass again when you return.`,
+            });
+            setCouponCode('');
+            return;
+          }
+          if (result.action === 'checkin') {
+            playSound('success');
+            toast({
+              title: 'Welcome back',
+              description: 'You are checked in. Have a great rest of class!',
+            });
+            setCouponCode('');
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Recess pass scan error:', e);
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Recess pass',
+          description: 'Could not update your checkout. Ask a teacher for help.',
+        });
+        setCouponCode('');
+        return;
+      }
+    }
+
     const code = raw.toUpperCase();
 
-    // 1. Check Library Item first (when student kiosk checkout is enabled)
+    // Library item scan (when student kiosk checkout is enabled)
     if (libraryKioskCheckoutOn && firestore && schoolId) {
       try {
         const { performLibraryCheckoutOrReturn } = await import('@/lib/library/libraryOperations');
@@ -988,6 +1049,8 @@ function StudentDashboardInner({
     toast,
     playSound,
     libraryKioskCheckoutOn,
+    recessKioskCheckoutOn,
+    recessMaxMinutes,
     settings.enableGoals,
     settings.enableCouponRedeemCompliments,
     authFetch,
@@ -1661,6 +1724,17 @@ function StudentDashboardInner({
             fullPrizeShopOpen && 'hidden',
           )}
         >
+          {recessKioskCheckoutOn && schoolId && student ? (
+            <StudentKioskRecessCheckoutCard
+              schoolId={schoolId}
+              student={student}
+              themed={!!effectiveTheme}
+              primaryForeground={primaryForeground}
+              maxMinutes={recessMaxMinutes}
+              onActivity={resetLogoutTimer}
+            />
+          ) : null}
+
           {libraryKioskCheckoutOn && schoolId && myLibraryBooks.length > 0 ? (
             <StudentLibraryCheckoutsCard
               schoolId={schoolId}
@@ -1727,6 +1801,7 @@ function StudentDashboardInner({
             primaryForeground={primaryForeground}
             couponHelperText={couponHelperText}
             libraryCheckoutNote={libraryCheckoutNote}
+            recessCheckoutNote={recessCheckoutNote}
             couponCode={couponCode}
             setCouponCode={setCouponCode}
             showManualCoupon={showManualCoupon}

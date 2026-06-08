@@ -103,6 +103,32 @@ service cloud.firestore {
         && request.resource.data.date is number;
     }
 
+    function recessReasonOk(reason) {
+      return reason in ['bathroom', 'break', 'water', 'nurse', 'office'];
+    }
+
+    function isRecessKioskCheckoutWrite(schoolId, studentId) {
+      return hasKioskSession(schoolId)
+        && request.resource.data.studentId == studentId
+        && request.resource.data.startedAt is number
+        && recessReasonOk(request.resource.data.reason);
+    }
+
+    function isRecessKioskCheckinDelete(schoolId, studentId) {
+      return hasKioskSession(schoolId)
+        && resource.data.studentId == studentId;
+    }
+
+    function isRecessKioskLogCreate(schoolId) {
+      return hasKioskSession(schoolId)
+        && request.resource.data.studentId is string
+        && request.resource.data.startedAt is number
+        && request.resource.data.returnedAt is number
+        && request.resource.data.durationMs is number
+        && request.resource.data.overLimit is bool
+        && recessReasonOk(request.resource.data.reason);
+    }
+
     function isLibraryCheckoutUpdate() {
       return isAuth()
         && (
@@ -549,13 +575,18 @@ service cloud.firestore {
       }
 
       match /recessActive/{studentId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
-        allow create, update, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId)
+          || hasKioskSession(schoolId);
+        allow create, update: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper()
+          || isRecessKioskCheckoutWrite(schoolId, studentId);
+        allow delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper()
+          || isRecessKioskCheckinDelete(schoolId, studentId);
       }
 
       match /recessLog/{entryId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
-        allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper()
+          || isRecessKioskLogCreate(schoolId);
         allow update, delete: if isAdmin(schoolId) || isDeveloper();
       }
 
