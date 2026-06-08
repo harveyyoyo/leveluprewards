@@ -1,22 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  CalendarCheck,
-  Database,
-  Loader2,
-  RefreshCw,
   School,
-  Ticket,
-  Users,
 } from 'lucide-react';
 import { useFunctions } from '@/firebase';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -66,76 +55,6 @@ function CountGrid({ counts, keys }: { counts: Record<string, number>; keys: Arr
 function schoolDisplayName(row: { schoolId: string; name: string }): string {
   const name = row.name?.trim();
   return name || row.schoolId;
-}
-
-function FleetTable({
-  fleet,
-  selectedId,
-  onSelect,
-}: {
-  fleet: DeveloperFleetSchoolSummary[];
-  selectedId: string | null;
-  onSelect: (school: DeveloperFleetSchoolSummary) => void;
-}) {
-  const sorted = useMemo(
-    () =>
-      [...fleet].sort((a, b) =>
-        schoolDisplayName(a).localeCompare(schoolDisplayName(b), undefined, { sensitivity: 'base' }),
-      ),
-    [fleet],
-  );
-
-  return (
-    <div className="overflow-x-auto rounded-lg border">
-      <table className="w-full min-w-[640px] text-sm">
-        <thead>
-          <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-            <th className="px-3 py-2 font-semibold">School</th>
-            <th className="px-3 py-2 font-semibold">Engagement</th>
-            <th className="px-3 py-2 font-semibold tabular-nums">Students</th>
-            <th className="px-3 py-2 font-semibold tabular-nums">Active 30d</th>
-            <th className="px-3 py-2 font-semibold tabular-nums">Sign-ins 30d</th>
-            <th className="px-3 py-2 font-semibold tabular-nums">Coupons 30d</th>
-            <th className="px-3 py-2 font-semibold">Last backup</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((row) => {
-            const eng = engagementLabel(row.engagementScore);
-            const active = selectedId === row.schoolId;
-            return (
-              <tr
-                key={row.schoolId}
-                className={cn(
-                  'cursor-pointer border-b transition-colors hover:bg-accent/40',
-                  active && 'bg-accent/60',
-                )}
-                onClick={() => onSelect(row)}
-              >
-                <td className="px-3 py-2.5">
-                  <p className="text-sm font-bold truncate max-w-[220px]">{schoolDisplayName(row)}</p>
-                  <p className="font-mono text-xs text-muted-foreground truncate max-w-[220px]">{row.schoolId}</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">{formatActivePillars(row.pillars)}</p>
-                </td>
-                <td className="px-3 py-2.5">
-                  <Badge variant={eng.variant} className="tabular-nums">
-                    {row.engagementScore} · {eng.label}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2.5 tabular-nums">{row.students.count}</td>
-                <td className="px-3 py-2.5 tabular-nums">{row.students.activeStudents30d}</td>
-                <td className="px-3 py-2.5 tabular-nums">{row.attendance.last30d}</td>
-                <td className="px-3 py-2.5 tabular-nums">{row.coupons.usedLast30d}</td>
-                <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                  {formatRelativeTime(row.backup.lastBackupAt)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
 }
 
 function SchoolDetailBody({ detail, generatedAt }: { detail: DeveloperSchoolUsageDetail; generatedAt: number }) {
@@ -385,17 +304,19 @@ export function DeveloperSchoolInsightsPanel({
   focusSchoolId,
   onInspectSchool,
   onFocusSchool,
+  showHealthCoach = false,
 }: {
   /** When set (e.g. from school list row), opens the detail sheet for that school. */
   focusSchoolId?: string | null;
   onInspectSchool?: (schoolId: string) => void;
-  /** Notify parent when user should jump to a school (alerts, AI coach). */
-  onFocusSchool?: (schoolId: string) => void;
+  /** Notify parent when focus changes (alerts, AI coach, or sheet closed). */
+  onFocusSchool?: (schoolId: string | null) => void;
+  /** Fleet health coach card (sidebar). Insights open per school from the school list. */
+  showHealthCoach?: boolean;
 }) {
   const functions = useFunctions();
   const [fleet, setFleet] = useState<DeveloperFleetSchoolSummary[] | null>(null);
   const [generatedAt, setGeneratedAt] = useState<number | null>(null);
-  const [fleetLoading, setFleetLoading] = useState(false);
   const [fleetError, setFleetError] = useState<string | null>(null);
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -409,7 +330,6 @@ export function DeveloperSchoolInsightsPanel({
       setFleetError('Cloud Functions unavailable.');
       return;
     }
-    setFleetLoading(true);
     setFleetError(null);
     try {
       const fn = httpsCallable<Record<string, never>, DeveloperUsageInsightsResponse>(
@@ -422,8 +342,6 @@ export function DeveloperSchoolInsightsPanel({
       setGeneratedAt(res.data.generatedAt);
     } catch (e: unknown) {
       setFleetError((e as Error)?.message || 'Could not load fleet insights. Deploy getDeveloperSchoolUsageInsights.');
-    } finally {
-      setFleetLoading(false);
     }
   }, [functions]);
 
@@ -495,7 +413,11 @@ export function DeveloperSchoolInsightsPanel({
   }, [loadFleet]);
 
   useEffect(() => {
-    if (!focusSchoolId || focusSchoolId === lastFocusHandled.current) return;
+    if (!focusSchoolId) {
+      lastFocusHandled.current = null;
+      return;
+    }
+    if (focusSchoolId === lastFocusHandled.current) return;
     lastFocusHandled.current = focusSchoolId;
     const match = fleet?.find((s) => s.schoolId === focusSchoolId);
     if (match) {
@@ -521,117 +443,27 @@ export function DeveloperSchoolInsightsPanel({
     onInspectSchool?.(focusSchoolId);
   }, [focusSchoolId, fleet, functions, loadDetail, onInspectSchool, openSchool]);
 
-  const fleetTotals = useMemo(() => {
-    if (!fleet?.length) return null;
-    return {
-      schools: fleet.length,
-      students: fleet.reduce((s, r) => s + r.students.count, 0),
-      signIns30d: fleet.reduce((s, r) => s + r.attendance.last30d, 0),
-      coupons30d: fleet.reduce((s, r) => s + r.coupons.usedLast30d, 0),
-      activeStudents: fleet.reduce((s, r) => s + r.students.activeStudents30d, 0),
-    };
-  }, [fleet]);
-
   return (
     <>
-      <DeveloperSchoolHealthCoach
-        fleet={fleet}
-        generatedAt={generatedAt}
-        detail={detail}
-        onFocusSchool={handleFocusSchoolId}
-      />
+      {showHealthCoach ? (
+        <DeveloperSchoolHealthCoach
+          fleet={fleet}
+          generatedAt={generatedAt}
+          detail={detail}
+          onFocusSchool={handleFocusSchoolId}
+        />
+      ) : null}
 
-      <Card className="shadow-md border-primary/20">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <BarChart3 className="h-5 w-5 text-primary" aria-hidden />
-                School usage insights
-              </CardTitle>
-              <CardDescription className="text-pretty mt-1">
-                Fleet-wide engagement, inventory, attendance, coupons, library, and sampled activity per school.
-                Click a row for the full report.
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              disabled={fleetLoading}
-              onClick={() => void loadFleet()}
-            >
-              {fleetLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="mr-2 h-4 w-4" />
-              )}
-              Refresh fleet
-            </Button>
-          </div>
-          {generatedAt ? (
-            <p className="text-xs text-muted-foreground">
-              Last updated {new Date(generatedAt).toLocaleString()}
-            </p>
-          ) : null}
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {fleetTotals ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              <StatTile label="Schools" value={fleetTotals.schools} />
-              <StatTile label="Students" value={fleetTotals.students.toLocaleString()} />
-              <StatTile label="Active students 30d" value={fleetTotals.activeStudents} />
-              <StatTile label="Sign-ins 30d" value={fleetTotals.signIns30d} />
-              <StatTile label="Coupons 30d" value={fleetTotals.coupons30d} />
-            </div>
-          ) : null}
-
-          {fleetError ? (
-            <p className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/5 p-3">
-              {fleetError}
-            </p>
-          ) : null}
-
-          {fleetLoading && !fleet ? (
-            <div className="space-y-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : fleet && fleet.length > 0 ? (
-            <FleetTable
-              fleet={fleet}
-              selectedId={selectedSummary?.schoolId ?? null}
-              onSelect={openSchool}
-            />
-          ) : !fleetLoading ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No schools to analyze.</p>
-          ) : null}
-
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground pt-1">
-            <span className="inline-flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> Roster size
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <CalendarCheck className="h-3.5 w-3.5" /> Attendance log
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Ticket className="h-3.5 w-3.5" /> Coupons
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <BookOpen className="h-3.5 w-3.5" /> Library
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Activity className="h-3.5 w-3.5" /> Sampled activities
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <Database className="h-3.5 w-3.5" /> Backups
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <Sheet
+        open={sheetOpen}
+        onOpenChange={(open) => {
+          setSheetOpen(open);
+          if (!open) {
+            lastFocusHandled.current = null;
+            onFocusSchool?.(null);
+          }
+        }}
+      >
         <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2 text-base">
@@ -648,6 +480,10 @@ export function DeveloperSchoolInsightsPanel({
                 <Skeleton key={i} className="h-10 w-full" />
               ))}
             </div>
+          ) : fleetError ? (
+            <p className="mt-8 text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/5 p-3">
+              {fleetError}
+            </p>
           ) : detail && generatedAt ? (
             <SchoolDetailBody detail={detail} generatedAt={generatedAt} />
           ) : (

@@ -8,7 +8,7 @@ import { collection, doc, getDoc, setDoc, query, getDocs, orderBy, limit } from 
 import { schoolPublicDocRef, mainSchoolDocToPublicPayload } from '@/lib/schoolPublic';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import {
-  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset, MonitorSmartphone,
+  Plus, Trash2, Server, Pencil, Database, Download, Upload, ShieldCheck, LifeBuoy, RefreshCw, Link2, Check, Loader2, Image as ImageIcon, LogOut, Headset, MonitorSmartphone, BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -70,6 +70,7 @@ import {
   SCHOOL_PROFILE_LABELS,
   type SchoolProfileType,
 } from '@/lib/schoolProfile';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 function schoolAccessPasscodeFrom(data: { schoolAccessPasscode?: string; passcode?: string }): string {
   return (data.schoolAccessPasscode || data.passcode || '').trim();
@@ -773,11 +774,6 @@ export default function DeveloperPage() {
           </Card>
         </header>
 
-        <DeveloperSchoolInsightsPanel
-          focusSchoolId={insightFocusSchoolId}
-          onFocusSchool={setInsightFocusSchoolId}
-        />
-
         <DeveloperSchoolScreensSheet
           schoolId={screensSchool?.id ?? ''}
           schoolName={screensSchool?.name ?? ''}
@@ -805,7 +801,7 @@ export default function DeveloperPage() {
                     </CardTitle>
                   </Helper>
                   <CardDescription>
-                    Create schools, sync the student portal index, and use each row for plans, backups, migration, and edits. Click a school name to open full usage insights.
+                    Create schools, sync the student portal index, and use each row for plans, backups, migration, and edits.
                   </CardDescription>
                 </div>
                 <Separator />
@@ -841,11 +837,7 @@ export default function DeveloperPage() {
               <ul className="space-y-2">
                 {allSchools && [...allSchools].sort((a, b) => a.id.localeCompare(b.id)).map((school) => (
                   <li key={school.id} className="flex flex-wrap gap-2 items-center justify-between rounded-xl border bg-secondary/80 p-3 shadow-sm">
-                    <div
-                      onClick={() => setInsightFocusSchoolId(school.id)}
-                      className="min-w-0 flex-1 cursor-pointer rounded-md p-2 -m-2 transition-colors hover:bg-accent/50"
-                      title="Open usage insights"
-                    >
+                    <div className="min-w-0 flex-1 p-2 -m-2">
                       <p className="font-bold font-code break-all">{school.id}</p>
                       <p className="text-sm text-muted-foreground">{school.name}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -857,9 +849,14 @@ export default function DeveloperPage() {
                             {SCHOOL_PROFILE_LABELS.jewish_orthodox}
                           </p>
                         ) : null}
+                        {isPublicSampleSchoolId(school.id) ? (
+                          <p className="inline-flex items-center rounded-md bg-sky-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-sky-800 border border-sky-500/30 dark:text-sky-200">
+                            Demo school
+                          </p>
+                        ) : null}
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); handleCopyUrl(school.id); }}
+                        onClick={() => handleCopyUrl(school.id)}
                         className="mt-1 flex items-center gap-1.5 text-xs text-primary hover:underline font-medium"
                       >
                         {copiedId === school.id ? <Check className="w-3 h-3" /> : <Link2 className="w-3 h-3" />}
@@ -867,10 +864,7 @@ export default function DeveloperPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setScreensSchool(school);
-                        }}
+                        onClick={() => setScreensSchool(school)}
                         className="mt-1 flex items-center gap-1.5 text-xs text-sky-600 hover:underline font-medium dark:text-sky-400"
                       >
                         <MonitorSmartphone className="w-3 h-3" aria-hidden />
@@ -878,6 +872,20 @@ export default function DeveloperPage() {
                       </button>
                     </div>
                     <div className="flex items-center gap-0.5">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setInsightFocusSchoolId(school.id)}
+                          >
+                            <BarChart3 className="w-4 h-4 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Usage insights for this school.</p>
+                        </TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -1009,6 +1017,87 @@ export default function DeveloperPage() {
 
             <Card>
               <CardHeader className="pb-3">
+                <CardTitle className="text-base">Demo school: yeshiva</CardTitle>
+                <CardDescription>
+                  Jewish Orthodox sample school on the public login page. Reset restores default rewards and School Office data.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  variant="outline"
+                  className="w-full justify-center"
+                  onClick={() => void devResetSampleSchool('yeshiva')}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+                  Reset yeshiva to defaults
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Demo school: schoolabc</CardTitle>
+                <CardDescription>
+                  General sample school on the public login page. Reset restores default data. Face login tools apply to this demo only.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-center"
+                  onClick={() => void devResetSampleSchool('schoolabc')}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" aria-hidden />
+                  Reset schoolabc to defaults
+                </Button>
+                <Separator />
+                <p className="text-sm text-muted-foreground">
+                  Face login stores embeddings in Firestore <code className="rounded bg-muted px-1 py-0.5 text-xs">faceAuth</code>. &quot;Unclear match&quot; means two or more enabled enrollments scored nearly the same.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={faceEnrollmentBusy}
+                    onClick={() => void loadFaceEnrollments('schoolabc')}
+                  >
+                    List face enrollments
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={faceEnrollmentBusy}
+                    onClick={() => void clearSampleFaceEnrollments('schoolabc', ['100'])}
+                  >
+                    Clear orphans (keep student 100)
+                  </Button>
+                </div>
+                {faceEnrollmentSchool === 'schoolabc' && faceEnrollments ? (
+                  <ul className="rounded-md border bg-muted/30 p-3 text-sm">
+                    {faceEnrollments.length === 0 ? (
+                      <li className="text-muted-foreground">No faceAuth documents.</li>
+                    ) : (
+                      faceEnrollments.map((row) => (
+                        <li key={row.studentId} className="font-mono text-xs">
+                          {row.studentId}
+                          {' · '}
+                          {row.enabled ? 'enabled' : 'disabled'}
+                          {' · '}
+                          {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <DeveloperSchoolInsightsPanel
+              showHealthCoach
+              focusSchoolId={insightFocusSchoolId}
+              onFocusSchool={setInsightFocusSchoolId}
+            />
+
+            <Card>
+              <CardHeader className="pb-3">
                 <Helper content="Stored in this browser only (localStorage). Visit the home page / to see the result.">
                   <CardTitle className="text-base">Home page (/) logo</CardTitle>
                 </Helper>
@@ -1047,69 +1136,6 @@ export default function DeveloperPage() {
                     </Label>
                   </div>
                 </RadioGroup>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Sample Schools</CardTitle>
-                <CardDescription>
-                  Reset built-in demo schools to default data (rewards + School Office). This wipes local changes for that sample only.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                <Button
-                  variant="outline"
-                  onClick={() => void devResetSampleSchool('yeshiva')}
-                  className="justify-center sm:flex-1"
-                >
-                  <span className="font-semibold">Reset &quot;yeshiva&quot;</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => void devResetSampleSchool('schoolabc')}
-                  className="justify-center sm:flex-1"
-                >
-                  <span className="font-semibold">Reset &quot;schoolabc&quot;</span>
-                </Button>
-              </CardContent>
-              <CardContent className="space-y-3 border-t pt-4">
-                <p className="text-sm text-muted-foreground">
-                  Face login stores embeddings in Firestore <code className="rounded bg-muted px-1 py-0.5 text-xs">faceAuth</code> (not visible in Admin student list unless you open each student). &quot;Unclear match&quot; means two or more enabled enrollments scored nearly the same.
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <Button
-                    variant="secondary"
-                    disabled={faceEnrollmentBusy}
-                    onClick={() => void loadFaceEnrollments('schoolabc')}
-                  >
-                    List face enrollments (schoolabc)
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={faceEnrollmentBusy}
-                    onClick={() => void clearSampleFaceEnrollments('schoolabc', ['100'])}
-                  >
-                    Clear orphans (keep 100)
-                  </Button>
-                </div>
-                {faceEnrollmentSchool === 'schoolabc' && faceEnrollments ? (
-                  <ul className="rounded-md border bg-muted/30 p-3 text-sm">
-                    {faceEnrollments.length === 0 ? (
-                      <li className="text-muted-foreground">No faceAuth documents.</li>
-                    ) : (
-                      faceEnrollments.map((row) => (
-                        <li key={row.studentId} className="font-mono text-xs">
-                          {row.studentId}
-                          {' · '}
-                          {row.enabled ? 'enabled' : 'disabled'}
-                          {' · '}
-                          {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                ) : null}
               </CardContent>
             </Card>
 
