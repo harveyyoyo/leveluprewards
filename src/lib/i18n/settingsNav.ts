@@ -4,7 +4,6 @@ import type { TranslationParams } from '@/lib/i18n/translate';
 type Translator = (key: string, params?: TranslationParams) => string;
 
 const INTERFACE_KEY: Record<string, string> = {
-  'settings-interface-language': 'language',
   'settings-interface-appearance': 'colors',
   'settings-interface-motion': 'motion',
   'settings-interface-layout': 'layout',
