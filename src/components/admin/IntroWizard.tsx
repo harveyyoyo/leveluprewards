@@ -90,7 +90,7 @@ const steps: IntroStep[] = [
   {
     id: 'admin-teachers',
     title: 'Teachers & staff',
-    body: 'Teachers & staff — teacher logins, budgets, and desk accounts (secretary, prize clerk, etc.).',
+    body: 'Teachers & staff — add and setup teacher, secretary, prize clerk accounts.',
     onRoute: '/admin',
     target: 'staff-tab-teachers',
     requireTarget: true,
@@ -504,6 +504,7 @@ export function IntroWizard() {
                   <X className="w-4 h-4" />
                 </Button>
               </div>
+              <p className="text-base font-medium leading-relaxed text-foreground">{description}</p>
               <div
                 className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary"
                 aria-hidden
@@ -511,7 +512,6 @@ export function IntroWizard() {
                 <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
                 Try it out now
               </div>
-              <p className="text-base font-medium leading-relaxed text-foreground">{description}</p>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="flex justify-between items-center w-full gap-3">
