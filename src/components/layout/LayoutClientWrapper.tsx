@@ -24,6 +24,7 @@ import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShe
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
 import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -94,11 +95,12 @@ interface LayoutClientWrapperProps {
 
 /** Next.js requires `useSearchParams()` to sit under `<Suspense>` or dev SSR/recovery can loop with “missing required error components”. */
 function LayoutChromeSuspenseFallback() {
+    const { t } = useTranslation();
     return (
         <TooltipProvider>
             <div className="min-h-screen min-h-dvh flex flex-col bg-background">
                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm font-medium animate-pulse">
-                    Loading…
+                    {t('layout.loading')}
                 </div>
             </div>
             <Toaster />

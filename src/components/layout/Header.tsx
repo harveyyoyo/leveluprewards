@@ -51,6 +51,7 @@ import {
   type ResolvedDisplayMode,
 } from '@/lib/displayMode';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -84,6 +85,7 @@ export default function Header() {
   const params = useParams<{ schoolId?: string }>();
   const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const playSound = useArcadeSound();
   const { firestore } = useFirebase();
   const schoolDocRef = useSchoolMetadataDocRef();
@@ -145,17 +147,17 @@ export default function Header() {
   const syncStatusDescription = useMemo(() => {
     switch (syncStatus) {
       case 'synced':
-        return 'Firestore is connected and syncing in real time. (This is not the same as “production” vs localhost.)';
+        return t('header.sync.synced');
       case 'syncing':
-        return 'Connecting to Firestore…';
+        return t('header.sync.syncing');
       case 'offline':
-        return 'Browser appears offline; data may not sync until you are back online.';
+        return t('header.sync.offline');
       case 'error':
-        return 'Firestore sync error; check the browser console for details.';
+        return t('header.sync.error');
       default:
         return `Connection status: ${syncStatus}`;
     }
-  }, [syncStatus]);
+  }, [syncStatus, t]);
 
   const portalDockItems = useMemo(() => {
     if (!schoolId) return [];
@@ -167,21 +169,21 @@ export default function Header() {
       label: string;
       color: 'destructive' | 'chart-2' | 'chart-1';
     }> = [
-      { id: 'admin', href: adminHref, icon: UserCog, label: 'Admin', color: 'destructive' },
-      { id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: 'Teacher', color: 'chart-2' },
+      { id: 'admin', href: adminHref, icon: UserCog, label: t('header.dock.admin'), color: 'destructive' },
+      { id: 'print', href: `/${schoolId}/teacher`, icon: Printer, label: t('header.dock.teacher'), color: 'chart-2' },
     ];
     items.push({
       id: 'redeem',
       href: `/${schoolId}/student`,
       icon: GraduationCap,
-      label: 'Student',
+      label: t('header.dock.student'),
       color: 'chart-1',
     });
     if (!isRewardsPillarOn(settings)) {
       return items.filter((item) => item.id !== 'redeem');
     }
     return items;
-  }, [schoolId, isAdmin, settings]);
+  }, [schoolId, isAdmin, settings, t]);
 
   const showPortalDock =
     !!schoolId && loginState !== 'loggedOut' && loginState !== 'student' && !isKioskLocked;
@@ -224,7 +226,7 @@ export default function Header() {
             ? 'border-border bg-background/90 shadow-[0_-8px_28px_hsl(222_47%_11%/0.35)] backdrop-blur-md'
             : 'border-border bg-card shadow-[0_-8px_28px_hsl(var(--primary)/0.1)]',
         )}
-        aria-label="Portal shortcuts"
+        aria-label={t('header.dock.shortcuts')}
       >
         <div className="mx-auto flex max-w-lg items-center justify-around">
           {visibleDockItems.map(({ id, href, icon: Icon, label, color }) => {
@@ -271,16 +273,15 @@ export default function Header() {
   const webHomeHref = schoolId ? centerHref : '/';
   const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
   const isSchoolGateSession = loginState === 'school' && !!schoolId;
-  const isPortalChoosePage = typeof pathname === 'string' && /\/portal\/?$/.test(pathname);
   const canLogout =
     loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
   const paidProducts: string[] = [];
-  if (settings.payRewards ?? true) paidProducts.push('Rewards');
-  if (settings.payClassroom ?? true) paidProducts.push('Classroom');
-  if (settings.payAttendance ?? true) paidProducts.push('Attendance');
-  if (settings.payHomework ?? true) paidProducts.push('Homework');
-  if (settings.payLibrary ?? true) paidProducts.push('Library');
+  if (settings.payRewards ?? true) paidProducts.push(t('header.products.rewards'));
+  if (settings.payClassroom ?? true) paidProducts.push(t('header.products.classroom'));
+  if (settings.payAttendance ?? true) paidProducts.push(t('header.products.attendance'));
+  if (settings.payHomework ?? true) paidProducts.push(t('header.products.homework'));
+  if (settings.payLibrary ?? true) paidProducts.push(t('header.products.library'));
   const paidProductsLabel = paidProducts.join(' • ');
   const adminSideTabHeader =
     !!schoolId &&
@@ -397,7 +398,7 @@ export default function Header() {
                 href={centerHref}
                 data-home-button="true"
                 className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all flex items-center gap-1"
-                aria-label="Home"
+                aria-label={t('common.home')}
               >
                 <Home className="h-5 w-5 sm:h-6 sm:w-6" />
               </Link>
@@ -437,17 +438,17 @@ export default function Header() {
                     variant="ghost"
                     size="icon"
                     className="h-9 w-9 shrink-0 rounded-xl text-primary"
-                    aria-label="Account"
+                    aria-label={t('header.account.label')}
                   >
                     <User className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>{t('header.account.label')}</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
                     {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
-                    {isDeveloperSupportSession ? 'End support session' : 'Sign out'}
+                    {isDeveloperSupportSession ? t('header.account.endSupportSession') : t('header.account.signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -458,14 +459,12 @@ export default function Header() {
                 href={webHomeHref}
                 data-home-button="true"
                 className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
-                aria-label="Home"
+                aria-label={t('common.home')}
                 title="Home"
               >
                 <Home className="h-5 w-5" />
               </Link>
             ) : null}
-
-            {isPortalChoosePage ? <LanguageSwitcher /> : null}
 
             <SettingsModal />
           </div>
@@ -573,7 +572,7 @@ export default function Header() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('header.account.label')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="gap-2 font-semibold" onClick={handleLogout}>
                   {isDeveloperSupportSession ? <ArrowRightLeft className="h-4 w-4" /> : <LogOut className="h-4 w-4" />}
@@ -594,8 +593,6 @@ export default function Header() {
               <Home className="h-5 w-5" />
             </Link>
           ) : null}
-
-          {isPortalChoosePage ? <LanguageSwitcher /> : null}
 
           <SettingsModal />
         </div>

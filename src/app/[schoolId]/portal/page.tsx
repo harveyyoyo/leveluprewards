@@ -29,7 +29,7 @@ import {
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
 import { isClassroomPillarOn, isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
-import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import { normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import type { TranslationParams } from '@/lib/i18n/translate';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
@@ -65,7 +65,10 @@ function roleLabel(
     t: (key: string, params?: TranslationParams) => string,
 ) {
     if (option.type === 'teacher') {
-        return leadershipPersonnelLabel(normalizeTeacherPersonnelRole(option.personnelRole));
+        const role = normalizeTeacherPersonnelRole(option.personnelRole);
+        if (role === 'principal') return t('portal.roles.principal');
+        if (role === 'divisionHead') return t('portal.roles.divisionHead');
+        return t('portal.roles.teacher');
     }
     if (option.type === 'secretary') return t('portal.roles.couponPrinting');
     if (option.type === 'prizeClerk') return t('portal.roles.prizeDesk');

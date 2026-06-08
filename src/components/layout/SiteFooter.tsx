@@ -5,6 +5,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { getContactFormHref, SITE_LEGAL_UMBRELLA } from '@/lib/appBranding';
 import { staffPortalFooterInnerClassName } from '@/components/staff/staffPortalNavStyles';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export function SiteFooter({
   compact = false,
@@ -14,6 +15,7 @@ export function SiteFooter({
   staffPortalWide?: boolean;
 }) {
   const playSound = useArcadeSound();
+  const { t } = useTranslation();
 
   return (
     <footer className="border-t border-border/60 bg-background/85 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -28,14 +30,14 @@ export function SiteFooter({
                 {SITE_LEGAL_UMBRELLA}
               </p>
               <p className="text-[11px] leading-tight font-semibold text-muted-foreground/75">
-                © 2026 LevelUp EdTech Enterprises LLC. All rights reserved.{' '}
+                {t('common.allRightsReserved')}{' '}
                 <span className="text-muted-foreground/50">|</span>{' '}
                 <Link
                   href="/terms"
                   onClick={() => playSound('click')}
                   className="underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                  Terms of Service
+                  {t('footer.terms')}
                 </Link>{' '}
                 <span className="text-muted-foreground/50">|</span>{' '}
                 <Link
@@ -43,7 +45,7 @@ export function SiteFooter({
                   onClick={() => playSound('click')}
                   className="underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                  Privacy Policy
+                  {t('footer.privacy')}
                 </Link>{' '}
                 <span className="text-muted-foreground/50">|</span>{' '}
                 <Link
@@ -51,7 +53,7 @@ export function SiteFooter({
                   onClick={() => playSound('click')}
                   className="underline underline-offset-4 hover:text-foreground transition-colors"
                 >
-                  Contact Us
+                  {t('footer.contact')}
                 </Link>
               </p>
             </>

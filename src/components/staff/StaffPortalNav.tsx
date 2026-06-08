@@ -16,6 +16,9 @@ import type { StaffPortalTabView } from '@/lib/staffPortal';
 import { staffPortalTabTriggerClassName } from './staffPortalNavStyles';
 import { StaffPortalAddFeatureTabsMenu } from './StaffPortalAddFeatureTabsMenu';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
+import { useTranslation } from '@/components/providers/LocaleProvider';
+import { localizeStaffPortalTabs } from '@/lib/i18n/staffLabels';
+import { resolveLabel } from '@/lib/i18n/resolveLabel';
 import { StaffPortalSidebarTabRow } from './StaffPortalSidebarTabRow';
 
 export type StaffPortalNavProps = {
@@ -54,8 +57,15 @@ export function StaffPortalNav({
   onTurnAllOn,
   onTurnAllOff,
 }: StaffPortalNavProps) {
+  const { t } = useTranslation();
   const portalLabel =
-    role === 'admin' ? 'Admin portal' : role === 'secretary' ? 'Coupon printing' : 'Teacher portal';
+    role === 'admin'
+      ? t('staff.nav.adminPortal')
+      : role === 'secretary'
+        ? t('staff.nav.couponPrinting')
+        : t('staff.nav.teacherPortal');
+  const localizedMainTabs = localizeStaffPortalTabs(mainTabs, t);
+  const localizedAddMoreTabs = localizeStaffPortalTabs(addMoreTabs, t);
 
   if (mainTabs.length === 0) return null;
 
@@ -63,11 +73,11 @@ export function StaffPortalNav({
     role === 'admin' ? 'admin-portal-section' : role === 'secretary' ? 'secretary-portal-section' : 'teacher-portal-section';
 
   const handleTabSelect = (value: string) => {
-    if (mainTabs.some((t) => t.value === value)) {
+    if (localizedMainTabs.some((tab) => tab.value === value)) {
       onTabChange(value);
       return;
     }
-    const addTab = addMoreTabs.find((t) => t.value === value);
+    const addTab = localizedAddMoreTabs.find((tab) => tab.value === value);
     if (addTab && onAddTab) {
       onAddTab(value);
       return;
@@ -79,7 +89,7 @@ export function StaffPortalNav({
     addMoreMenu ??
     (addMoreTabs.length > 0 || onTurnAllOn || onTurnAllOff ? (
       <StaffPortalAddFeatureTabsMenu
-        tabs={addMoreTabs}
+        tabs={localizedAddMoreTabs}
         onAddTab={onAddTab ?? onTabChange}
         onTurnAllOn={onTurnAllOn}
         onTurnAllOff={onTurnAllOff}
@@ -98,29 +108,29 @@ export function StaffPortalNav({
             className="h-12 w-full rounded-xl font-bold"
             aria-label={`${portalLabel} section`}
           >
-            <SelectValue placeholder="Choose a section" />
+            <SelectValue placeholder={t('staff.nav.chooseSection')} />
           </SelectTrigger>
           <SelectContent position="popper" className="max-h-[min(70vh,440px)]">
             <SelectGroup>
               <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Current tabs
+                {t('staff.nav.currentTabs')}
               </SelectLabel>
-              {mainTabs.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
+              {localizedMainTabs.map((tab) => (
+                <SelectItem key={tab.value} value={tab.value}>
+                  {tab.label}
                 </SelectItem>
               ))}
             </SelectGroup>
-            {addMoreTabs.length > 0 ? (
+            {localizedAddMoreTabs.length > 0 ? (
               <>
                 <SelectSeparator />
                 <SelectGroup>
                   <SelectLabel className="pl-8 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                    Add more tabs
+                    {t('staff.nav.addMoreTabs')}
                   </SelectLabel>
-                  {addMoreTabs.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
+                  {localizedAddMoreTabs.map((tab) => (
+                    <SelectItem key={tab.value} value={tab.value}>
+                      {tab.label}
                     </SelectItem>
                   ))}
                 </SelectGroup>
@@ -139,25 +149,27 @@ export function StaffPortalNav({
           aria-label={`${portalLabel} main tabs`}
           endAction={addMoreDropdown}
         >
-          {mainTabs.map((t) => {
-            const Icon = t.icon;
-            const isActive = activeTab === t.value;
-            const removable = removableTabValues?.has(t.value) ?? false;
+          {localizedMainTabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.value;
+            const removable = removableTabValues?.has(tab.value) ?? false;
             return (
               <StaffPortalSidebarTabRow
-                key={t.value}
-                value={t.value}
+                key={tab.value}
+                value={tab.value}
                 isActive={isActive}
-                onSelect={() => handleTabSelect(t.value)}
+                onSelect={() => handleTabSelect(tab.value)}
                 triggerClassName={staffPortalTabTriggerClassName()}
-                title={t.title ?? t.label}
+                title={tab.title ?? tab.label}
                 removable={removable}
-                removeLabel={`Remove ${t.label} from sidebar`}
-                onRemove={removable && onRemoveTab ? () => onRemoveTab(t.value) : undefined}
+                removeLabel={resolveLabel(t, 'staff.nav.removeFromSidebar', 'Remove {label} from sidebar', {
+                  label: tab.label,
+                })}
+                onRemove={removable && onRemoveTab ? () => onRemoveTab(tab.value) : undefined}
                 wrapperClassName="flex w-full shrink-0"
               >
                 <Icon className="w-4 h-4 shrink-0" aria-hidden />
-                {t.label}
+                {tab.label}
               </StaffPortalSidebarTabRow>
             );
           })}

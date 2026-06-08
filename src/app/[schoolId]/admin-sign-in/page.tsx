@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 /** Same-school path only; prevents open redirects. */
 function destinationAfterAdminLogin(redirectParam: string | null, schoolId: string): string | null {
@@ -48,11 +49,12 @@ function destinationAfterAdminLogin(redirectParam: string | null, schoolId: stri
 }
 
 function AdminSignInLoading() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
       <span className="text-muted-foreground text-sm font-medium flex items-center gap-2">
         <Loader2 className="h-5 w-5 animate-spin shrink-0" aria-hidden />
-        Loading…
+        {t('common.loading')}
       </span>
     </div>
   );
@@ -68,6 +70,7 @@ function AdminSignInContent() {
   const { user } = useFirebase();
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   const schoolId = useMemo(
     () => (params.schoolId || activeSchoolId || '').trim().toLowerCase(),
@@ -92,7 +95,7 @@ function AdminSignInContent() {
     onSuccess: redirectAfterAdminLogin,
     onError: (message) => {
       playSound('error');
-      toast({ variant: 'destructive', title: 'Admin sign-in failed', description: message });
+      toast({ variant: 'destructive', title: t('portal.adminPasscode.signInFailedTitle'), description: message });
     },
   });
 
@@ -110,7 +113,7 @@ function AdminSignInContent() {
         playSound('error');
         toast({
           variant: 'destructive',
-          title: 'Missing passcode',
+          title: t('portal.adminPasscode.missingTitle'),
           description: authResult.message,
         });
         return;
@@ -119,7 +122,7 @@ function AdminSignInContent() {
         playSound('error');
         toast({
           variant: 'destructive',
-          title: 'Login failed',
+          title: t('portal.adminPasscode.loginFailedTitle'),
           description: authResult.message,
         });
         setPasscode('');
@@ -141,7 +144,7 @@ function AdminSignInContent() {
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center p-8">
         <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
-          {canBypassAdminPasscode ? 'Signing in with Google…' : 'Loading…'}
+          {canBypassAdminPasscode ? t('common.signingIn') : t('common.loading')}
         </Button>
       </div>
     );
@@ -155,7 +158,7 @@ function AdminSignInContent() {
             <ShieldCheck className="h-8 w-8" aria-hidden="true" />
           </div>
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-black tracking-tight">Admin sign-in</CardTitle>
+            <CardTitle className="text-2xl font-black tracking-tight">{t('portal.adminPasscode.signInTitle')}</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -170,7 +173,7 @@ function AdminSignInContent() {
           >
             <div className="space-y-2">
               <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
-                Admin passcode
+                {t('portal.adminPasscode.title')}
               </Label>
               <Input
                 id="passcode"
@@ -187,10 +190,10 @@ function AdminSignInContent() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Signing in...
+                  {t('common.signingIn')}
                 </>
               ) : (
-                'Sign in'
+                t('common.signIn')
               )}
             </Button>
           </form>

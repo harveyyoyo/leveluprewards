@@ -26,6 +26,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import type { Prize } from '@/lib/types';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 /** Shared max width for redeem coupon, activity, and other center-stack kiosk controls. */
 export const studentKioskCenterStackClass = 'w-full min-w-0 max-w-xl mx-auto sm:max-w-2xl';
@@ -49,6 +50,7 @@ export function StudentKioskLogoutControls({
   onLogout: () => void;
   className?: string;
 }) {
+  const { t: tr } = useTranslation();
   const t = themed.active;
   const maxSec = Math.max(1, sessionTimeoutSec);
   const progress = Math.min(1, Math.max(0, logoutTimer / maxSec));
@@ -92,13 +94,13 @@ export function StudentKioskLogoutControls({
             !t && 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
           )}
           style={lockedPillStyle}
-          aria-label="Kiosk locked"
+          aria-label={tr('student.kiosk.lockedAria')}
         >
           <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
           </span>
-          Locked
+          {tr('student.kiosk.locked')}
         </div>
       ) : autoLogoutEnabled ? (
         <div
@@ -163,9 +165,9 @@ export function StudentKioskLogoutControls({
                 }
               : undefined
           }
-          aria-label="No auto-logout"
+          aria-label={tr('student.kiosk.noAutoLogout')}
         >
-          Session stays open
+          {tr('student.kiosk.sessionStaysOpen')}
         </div>
       )}
       <Button
@@ -185,9 +187,9 @@ export function StudentKioskLogoutControls({
             : undefined
         }
         onClick={onLogout}
-        aria-label="Log out now"
+        aria-label={tr('student.kiosk.logOutNowAria')}
       >
-        Logout
+        {tr('student.kiosk.logOutNow')}
       </Button>
     </div>
   );
