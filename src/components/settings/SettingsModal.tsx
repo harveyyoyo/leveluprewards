@@ -34,7 +34,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
@@ -761,11 +761,6 @@ export function SettingsModal() {
                                 </div>
 
                                 <div className="min-w-0 space-y-4">
-                                    <SchoolLanguageSetting
-                                        language={local.language}
-                                        onLanguageChange={(value) => handleToggle('language', value)}
-                                        disabled={!canOpenSettings}
-                                    />
                                     <div
                                         id="settings-interface-appearance"
                                         className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
@@ -773,6 +768,14 @@ export function SettingsModal() {
                                         <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                             <Palette className="w-3.5 h-3.5" /> Appearance
                                         </p>
+
+                                        <SchoolLanguageSetting
+                                            language={local.language}
+                                            onLanguageChange={(value) => handleToggle('language', value)}
+                                            disabled={!canOpenSettings}
+                                            showSectionHeader={false}
+                                            className="mb-4 border-0 bg-transparent p-0 dark:bg-transparent"
+                                        />
 
                                         {/* Color Scheme */}
                                         {(() => {

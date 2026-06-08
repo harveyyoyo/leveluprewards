@@ -276,6 +276,7 @@ function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings } = useSettings();
+  const { t: tr } = useTranslation();
   const { kioskAiFunActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
     settings.kioskAiFunIdleOffSec,
     isKioskLocked,
@@ -516,8 +517,8 @@ function StudentDashboardInner({
   const handleManualLogout = useCallback(() => {
     playSound('swoosh');
     onDone();
-    toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
-  }, [onDone, playSound, toast]);
+    toast({ title: tr('student.kiosk.loggedOut'), description: tr('student.kiosk.loggedOutDescription') });
+  }, [onDone, playSound, toast, tr]);
 
   const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
@@ -531,12 +532,12 @@ function StudentDashboardInner({
     if (isKioskLocked) return;
     if (logoutTimer <= 0) {
       onDone();
-      toast({ title: 'Session ended', description: 'Returning to kiosk home.' });
+      toast({ title: tr('student.kiosk.sessionEnded'), description: tr('student.kiosk.sessionEndedDescription') });
       return;
     }
-    const timerId = window.setTimeout(() => setLogoutTimer((t) => t - 1), 1000);
+    const timerId = window.setTimeout(() => setLogoutTimer((n) => n - 1), 1000);
     return () => window.clearTimeout(timerId);
-  }, [isKioskLocked, kioskAutoLogoutOn, logoutTimer, onDone, toast]);
+  }, [isKioskLocked, kioskAutoLogoutOn, logoutTimer, onDone, toast, tr]);
 
   useEffect(() => {
     if (isKioskLocked || !kioskAutoLogoutOn) return;
@@ -1932,14 +1933,17 @@ function StudentDashboardInner({
                 style={themeSurfaceStyle}
               >
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Redeem prize?</AlertDialogTitle>
+                  <AlertDialogTitle>{tr('student.kiosk.redeemPrize')}</AlertDialogTitle>
                   <AlertDialogDescription
                     className="break-words [overflow-wrap:anywhere]"
                     style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
                   >
-                    Redeem{' '}
+                    {tr('student.kiosk.redeem')}{' '}
                     <span className="text-xl font-black sm:text-2xl [overflow-wrap:anywhere]">{confirmingPrize?.name}</span>
-                    {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
+                    {confirmingPrize
+                      ? ` ${tr('student.kiosk.redeemConfirmFor', { points: (confirmingPrize.points || 0).toLocaleString() })}`
+                      : ''}
+                    ?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 {confirmingPrize?.aiFunReward === 'picker' ? (
@@ -2433,11 +2437,11 @@ function StudentLoginPage() {
     playSound('swoosh');
     if (activeStudentIdRef.current) {
       finishStudentSession();
-      toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
+      toast({ title: t('student.kiosk.loggedOut'), description: t('student.kiosk.loggedOutDescription') });
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [finishStudentSession, playSound, router, schoolId, toast]);
+  }, [finishStudentSession, playSound, router, schoolId, t, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
@@ -2489,7 +2493,7 @@ function StudentLoginPage() {
       >
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground font-medium animate-pulse">Opening staff prize desk…</p>
+          <p className="text-muted-foreground font-medium animate-pulse">{t('student.kiosk.openingPrizeDesk')}</p>
         </div>
       </div>
     );

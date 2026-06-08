@@ -8,7 +8,7 @@ const settings = {
   },
   hub: {
     interfaceTitle: 'ממשק ותצוגה',
-    interfaceDescription: 'צבעים, מצב כהה, תנועה, צליל ופריסת Auto / Web / App',
+    interfaceDescription: 'שפה, צבעים, מצב כהה, תנועה, צליל ופריסת Auto / Web / App',
     schoolTitle: 'הגדרות בית ספר',
     schoolDescription: 'מפגשים, התנהגות קיוסק, הדפסה ותכונות אופציונליות',
     pillarsTitle: 'עמודי מוצר',

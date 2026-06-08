@@ -45,6 +45,7 @@ import {
   isGoogleOAuthRedirectMismatchError,
 } from '@/lib/google/googleOAuthSetupHint';
 import { navigateAfterSchoolLogin } from '@/lib/auth/syncFirebaseSessionCookie';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export type SchoolDeveloperLoginFormMode = 'full' | 'developer-only';
 
@@ -79,6 +80,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const pathname = usePathname();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const { auth, user: firebaseUser } = useFirebase();
 
@@ -125,9 +127,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Secure session could not start',
-        description:
-          'Your passcode was accepted, but the server could not open the portal session. Please try again or contact support.',
+        title: t('auth.sessionFailedTitle'),
+        description: t('auth.sessionFailedDescription'),
       });
     };
 
@@ -225,7 +226,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         triggerShake();
         toast({
           variant: 'destructive',
-          title: 'Developer sign-in failed',
+          title: t('auth.developerSignInFailed'),
           description: result.message,
         });
       }
@@ -278,7 +279,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     if (!auth) {
       toast({
         variant: 'destructive',
-        title: 'Google sign-in unavailable',
+        title: t('auth.googleUnavailable'),
         description: 'Firebase auth is still loading. Wait a moment and try again.',
       });
       return;
@@ -312,7 +313,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       playSound('success');
       const allowed = isAllowedDeveloperGoogleUser(result.user);
       toast({
-        title: allowed ? 'Google sign-in complete' : 'Google sign-in complete (no dev access)',
+        title: allowed ? t('auth.googleComplete') : t('auth.googleCompleteNoAccess'),
         description: allowed
           ? 'Developer mode is now available on this device.'
           : 'This Google account is not on the developer allowlist.',
@@ -330,7 +331,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         playSound('error');
         toast({
           variant: 'destructive',
-          title: 'Google sign-in disabled',
+          title: t('auth.googleDisabled'),
           description:
             'This Firebase project has Google sign-in turned off. Enable it in Firebase Console → Authentication → Sign-in method (Google), then try again.',
         });
@@ -341,7 +342,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         playSound('error');
         toast({
           variant: 'destructive',
-          title: 'Google OAuth redirect mismatch',
+          title: t('auth.googleRedirectMismatch'),
           description: googleOAuthRedirectMismatchHint(),
         });
         return;
@@ -377,7 +378,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
           playSound('error');
           toast({
             variant: 'destructive',
-            title: 'Google sign-in still starting',
+            title: t('auth.googleStillStarting'),
             description:
               'Wait a few seconds for the previous Google redirect to finish, or refresh the page and try again.',
           });
@@ -406,7 +407,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Google sign-in failed',
+        title: t('auth.googleFailed'),
         description:
           (code ? `${code}: ` : '') +
           (e?.message?.trim() || 'Please try again or check that popups are allowed.'),
@@ -425,8 +426,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login failed',
-        description: 'Enter the local developer passcode (DEV_DEVELOPER_PASSCODE in .env.local).',
+        title: t('common.loginFailed'),
+        description: t('auth.developerPasscodeRequired'),
       });
       return;
     }
@@ -439,7 +440,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         triggerShake();
         toast({
           variant: 'destructive',
-          title: 'Developer sign-in failed',
+          title: t('auth.developerSignInFailed'),
           description: result.message,
         });
         return;
@@ -475,8 +476,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login failed',
-        description: 'Please enter a School ID.',
+        title: t('common.loginFailed'),
+        description: t('auth.enterSchoolId'),
       });
       return;
     }
@@ -485,8 +486,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login failed',
-        description: 'Please enter a School ID and passcode.',
+        title: t('common.loginFailed'),
+        description: t('auth.enterSchoolIdAndPasscode'),
       });
       return;
     }
@@ -496,8 +497,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       triggerShake();
       toast({
         variant: 'destructive',
-        title: 'Login failed',
-        description: 'Enter the school access passcode to continue.',
+        title: t('common.loginFailed'),
+        description: t('auth.enterSchoolPasscode'),
       });
       return;
     }
@@ -520,7 +521,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         triggerShake();
         toast({
           variant: 'destructive',
-          title: 'Login failed',
+          title: t('common.loginFailed'),
           description: result.message,
         });
         return;
@@ -530,7 +531,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       if (!auth) {
         toast({
           variant: 'destructive',
-          title: 'Secure session could not start',
+          title: t('auth.sessionFailedTitle'),
           description: 'Firebase auth is still loading. Refresh the page and try again.',
         });
         return;
@@ -541,7 +542,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         triggerShake();
         toast({
           variant: 'destructive',
-          title: 'Secure session could not start',
+          title: t('auth.sessionFailedTitle'),
           description:
             'Your school was accepted, but this browser could not open a secure session. Please try again.',
         });
@@ -562,8 +563,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       setSchoolPasscode('');
       // Focus will naturally shift to the passcode input via the existing autofocus effect.
       toast({
-        title: 'Demo school selected',
-        description: 'Enter the school passcode to continue.',
+        title: t('auth.demoSchoolSelected'),
+        description: t('auth.demoSchoolPasscodeHint'),
       });
       return;
     }
@@ -573,10 +574,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground p-6 text-center">
         <div className="animate-pulse mb-4 text-primary font-bold text-xl uppercase tracking-tighter">
-          Loading {APP_NAME}…
+          {t('auth.loadingApp', { appName: APP_NAME })}
         </div>
         <p className="text-xs text-muted-foreground opacity-60">
-          Preparing your school reward experience
+          {t('auth.preparingExperience')}
         </p>
       </div>
     );
@@ -595,7 +596,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             <Link
               href={getLevelUpLogoHref()}
               className="flex items-center justify-center gap-4 no-underline outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-xl"
-              aria-label={`${APP_NAME} — school sign-in`}
+              aria-label={t('auth.schoolSignInAria', { appName: APP_NAME })}
             >
               {appLogoUrl ? (
                 <div className="h-14 w-14 rounded-2xl overflow-hidden bg-muted border border-border/70 flex items-center justify-center">
@@ -621,23 +622,14 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
               {isDeveloperOnly ? (
                 <>
-                  {allowDevPasscodeLogin ? (
-                    <>
-                      Sign in with a local developer passcode (no Google) or your allowed Google account.
-                      School staff should use{' '}
-                    </>
-                  ) : (
-                    <>
-                      Sign in with your allowed Google account for system-wide tools. School staff should use{' '}
-                    </>
-                  )}
+                  {allowDevPasscodeLogin ? t('auth.developerOnlyPasscodeHint') : t('auth.developerOnlyGoogleHint')}
                   <a href="/login" className="font-medium text-foreground underline underline-offset-2">
                     /login
                   </a>
                   .
                 </>
               ) : (
-              <>Enter your school&apos;s ID to open sign-in options for students and staff.</>
+              <>{t('auth.enterSchoolIdHint')}</>
               )}
             </p>
           </div>
@@ -656,13 +648,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             {!isDeveloperOnly && !isDeveloper && (
               <div className="space-y-2">
                 <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
-                  School ID
+                  {t('auth.schoolId')}
                 </Label>
                 <input
                   id="schoolId"
                   ref={schoolIdRef}
                   className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
-                  placeholder="e.g. schoolabc"
+                  placeholder={t('auth.schoolIdPlaceholder')}
                   value={schoolId}
                   onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
                   autoComplete="username"
@@ -672,7 +664,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
               <div className="space-y-2">
                 <Label htmlFor="developerPasscode" className="text-xs font-semibold text-muted-foreground">
-                  Local developer passcode
+                  {t('auth.developerPasscode')}
                 </Label>
                 <input
                   id="developerPasscode"
@@ -681,29 +673,27 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   value={developerPasscode}
                   onChange={(e) => setDeveloperPasscode(e.target.value)}
                   autoComplete="off"
-                  placeholder="No Google account needed"
+                  placeholder={t('auth.passcodePlaceholder')}
                 />
               </div>
             )}
             {(!isDeveloperOnly && !isDeveloper) && (
               hasGoogleUser && !googleSchoolLoginError ? (
                 <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
-                  Signed in with Google as{' '}
-                  <span className="font-mono text-foreground">{googleEmail || 'your account'}</span>.
+                  {t('auth.signedInAsGoogle')}{' '}
+                  <span className="font-mono text-foreground">{googleEmail || t('auth.yourAccount')}</span>.
                   {isAllowedGoogleEmail
-                    ? ' As a developer, you can continue without a passcode.'
-                    : ' If you already have access to this school, continue without a passcode.'}
+                    ? ` ${t('auth.developerNoPasscode')}`
+                    : ` ${t('auth.schoolAccessNoPasscode')}`}
                 </p>
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="passcode" className="text-xs font-semibold text-muted-foreground">
-                    Access Passcode
+                    {t('auth.accessPasscode')}
                   </Label>
                   {googleSchoolLoginError && (
                     <p className="text-xs text-muted-foreground leading-relaxed rounded-xl border border-border/70 bg-background/60 px-4 py-3">
-                      Signed in with Google as{' '}
-                      <span className="font-mono text-foreground">{googleEmail || 'your account'}</span>, but we
-                      could not find existing access for this school. Enter the school passcode to continue.
+                      {t('auth.googleNoSchoolAccess', { email: googleEmail || t('auth.yourAccount') })}
                     </p>
                   )}
                   <input
@@ -725,7 +715,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (
                 <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Initializing developer portal session…</span>
+                  <span>{t('auth.initializingDeveloper')}</span>
                 </div>
               ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
                 <button
@@ -738,25 +728,25 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   aria-label={
                     isDeveloperOnly || isDeveloper
                       ? allowDevPasscodeLogin && developerPasscode.trim()
-                        ? 'Sign in with developer passcode'
+                        ? t('auth.signInDeveloperPasscode')
                         : isAllowedGoogleEmail
-                          ? 'Continue to developer portal'
-                          : 'Sign in with Google'
-                      : 'Sign in to school'
+                          ? t('auth.continueDeveloperPortal')
+                          : t('auth.signInWithGoogle')
+                      : t('auth.signInToSchool')
                   }
                   disabled={isSubmitting || isGoogleSigningIn}
                   className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
                 >
                   {(isSubmitting || isGoogleSigningIn) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
                   {isSubmitting || isGoogleSigningIn
-                    ? 'Signing in...'
+                    ? t('auth.signingIn')
                     : isDeveloperOnly || isDeveloper
                       ? allowDevPasscodeLogin && developerPasscode.trim()
-                        ? 'Sign in with passcode'
+                        ? t('auth.signInWithPasscode')
                         : isAllowedGoogleEmail
-                          ? 'Continue to developer portal'
-                          : 'Sign in with Google'
-                      : 'Continue'}
+                          ? t('auth.continueDeveloperPortal')
+                          : t('auth.signInWithGoogle')
+                      : t('auth.continue')}
                 </button>
               )}
 
@@ -764,7 +754,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 <div className="rounded-xl border border-border/70 bg-background/60 p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-muted-foreground">Developer mode locked</p>
+                      <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
                       <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
                         {googleSignInBlocked === 'operation-not-allowed'
                           ? 'Google sign-in is disabled for this Firebase project. Enable Google in Firebase Console → Authentication → Sign-in method.'
@@ -782,10 +772,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                       )}
                     >
                       {googleSignInBlocked === 'operation-not-allowed'
-                        ? 'Google not enabled'
+                        ? t('auth.googleNotEnabled')
                         : isGoogleSigningIn
-                          ? 'Signing in…'
-                          : 'Sign in with Google'}
+                          ? t('auth.signingIn')
+                          : t('auth.signInWithGoogle')}
                     </button>
                   </div>
                 </div>
@@ -794,9 +784,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
               {allowDeveloperLogin && hasGoogleUser && !isAllowedGoogleEmail && (
                 <div className="rounded-xl border border-border/70 bg-background/60 p-3 space-y-3">
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground">Developer mode locked</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t('auth.developerModeLocked')}</p>
                     <p className="mt-1 text-xs text-muted-foreground/80 leading-relaxed">
-                      Signed in as <span className="font-mono text-foreground">{googleEmail || '(unknown)'}</span>. This Google account is not allowed for developer access.
+                      {t('auth.googleNotAllowed', { email: googleEmail || '(unknown)' })}
                     </p>
                   </div>
                   <button
@@ -808,10 +798,10 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                     {isGoogleSigningIn ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
-                        Opening Google…
+                        {t('auth.openingGoogle')}
                       </>
                     ) : (
-                      'Use a different Google account'
+                      t('auth.useDifferentGoogleAccount')
                     )}
                   </button>
                 </div>
@@ -824,7 +814,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                     onClick={() => setIsDeveloper(!isDeveloper)}
                     className="font-medium text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:underline"
                   >
-                    {isDeveloper ? '← Return to School Login' : 'Developer? Click here'}
+                    {isDeveloper ? t('auth.returnToSchoolLogin') : t('auth.developerClickHere')}
                   </button>
                 </div>
               )}
@@ -833,7 +823,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
             {!isDeveloperOnly && !isDeveloper && (
               <details className="mt-2 rounded-xl border border-border/70 bg-background/60 group">
                 <summary className="cursor-pointer list-none px-4 py-2.5 text-xs font-semibold text-muted-foreground flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl">
-                  <span>Try a demo school</span>
+                  <span>{t('auth.tryDemoSchool')}</span>
                   <span className="text-muted-foreground/60 group-open:rotate-180 transition-transform">▾</span>
                 </summary>
                 <div className="px-3 pb-3 pt-1 flex gap-2">

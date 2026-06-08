@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import type { Student } from '@/lib/types';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 /** Optional spacing below the student name bar when not inside a spaced flex column. */
 export const studentKioskHeaderGapClass =
@@ -29,6 +30,7 @@ export function StudentKioskTopBar({
   nameExtras,
   trailingActions,
 }: StudentKioskTopBarProps) {
+  const { t } = useTranslation();
   const displayName = `${student.firstName}${student.lastName ? ` ${student.lastName}` : ''}`.trim();
 
   return (
@@ -53,7 +55,7 @@ export function StudentKioskTopBar({
             className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
             style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
           >
-            Welcome back
+            {t('student.kiosk.welcomeBack')}
           </p>
             <div className="mt-1.5 flex min-w-0 items-center gap-2 sm:mt-2 sm:gap-2.5 [@media(max-height:760px)]:mt-0 [@media(max-height:760px)]:gap-1.5">
             <div
@@ -110,7 +112,7 @@ export function StudentKioskTopBar({
               className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
               style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
             >
-              Balance
+              {t('student.kiosk.balance')}
             </p>
             <p
               className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
@@ -137,6 +139,7 @@ export function StudentKioskPointCategoriesPanel({
   themed,
   footer,
 }: StudentKioskPointCategoriesPanelProps) {
+  const { t } = useTranslation();
   if (totals.length === 0 && !footer) return footer ?? null;
 
   return (
@@ -160,7 +163,7 @@ export function StudentKioskPointCategoriesPanel({
             className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-75 sm:text-xs"
             style={themed ? { color: 'var(--theme-page-text)' } : undefined}
           >
-            Categories
+            {t('student.kiosk.categories')}
           </p>
           <ul className="space-y-1.5">
             {totals.map((row) => (
