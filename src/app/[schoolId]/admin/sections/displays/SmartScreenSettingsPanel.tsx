@@ -31,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { LiveScreenPreview } from '@/components/admin/LiveScreenPreview';
 import { cn } from '@/lib/utils';
 import { SMART_SCREEN_THEME_OPTIONS } from '@/lib/smartScreenThemes';
 import type { Settings } from '@/components/providers/SettingsProvider';
@@ -73,6 +72,8 @@ const SMART_SCREEN_PROFILE_SETTING_KEYS = [
   'smartScreenShowBulletin',
   'smartScreenShowRewards',
   'smartScreenShowSchedule',
+  'smartScreenShowHebrewDate',
+  'smartScreenShowJewishHolidays',
 ] as const;
 
 type SmartScreenProfileSettingKey = (typeof SMART_SCREEN_PROFILE_SETTING_KEYS)[number];
@@ -81,14 +82,14 @@ type SmartScreenSettingsPanelProps = {
   schoolId: string;
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
-  showPreview?: boolean;
+  isJewishOrthodoxSchool?: boolean;
 };
 
 export function SmartScreenSettingsPanel({
   schoolId,
   settings,
   updateSettings,
-  showPreview = true,
+  isJewishOrthodoxSchool = false,
 }: SmartScreenSettingsPanelProps) {
   const [activeProfileId, setActiveProfileId] = useState<string>('default');
   const [newProfileName, setNewProfileName] = useState('');
@@ -159,20 +160,13 @@ export function SmartScreenSettingsPanel({
     if (activeProfileId === profileId) setActiveProfileId('default');
   };
 
-  const selectedLayout = ((readScreenSetting('smartScreenLayout') as string) || 'mirror') as 'mirror' | 'dashboard' | 'portrait';
-  const selectedTheme = ((readScreenSetting('smartScreenTheme') as string) || 'midnight') as 'midnight' | 'daylight' | 'studio';
-  const selectedZip = (readScreenSetting('smartScreenLocationZip') as string) || '';
-
   const fullHref = useMemo(
     () =>
       buildSmartScreenDisplayHref(schoolId, {
         fullscreen: true,
-        layout: selectedLayout,
-        theme: selectedTheme,
-        zip: selectedZip,
         screenProfileId: activeProfile?.id,
       }),
-    [activeProfile?.id, schoolId, selectedLayout, selectedTheme, selectedZip],
+    [activeProfile?.id, schoolId],
   );
 
   const enabled = !!readScreenSetting('smartScreenEnabled');
@@ -184,7 +178,7 @@ export function SmartScreenSettingsPanel({
           <div>
             <p className="text-sm font-bold">Screen versions</p>
             <p className="text-[11px] text-muted-foreground">
-              Create multiple versions and open a unique URL on each hallway monitor.
+              Create multiple versions and open a unique URL on each hallway monitor. Open displays update live from these settings.
             </p>
           </div>
           <div className="rounded-lg border bg-background px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
@@ -378,6 +372,47 @@ export function SmartScreenSettingsPanel({
               </div>
             </div>
 
+            {isJewishOrthodoxSchool ? (
+              <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-bold flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-amber-700 dark:text-amber-300" aria-hidden />
+                    Jewish calendar
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Available because this school is marked as Jewish Orthodox in Developer.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold">Hebrew date</span>
+                      <span className="block text-[11px] text-muted-foreground">Show today&apos;s Hebrew date under the clock.</span>
+                    </span>
+                    <Switch
+                      checked={readScreenSetting('smartScreenShowHebrewDate') === true}
+                      onCheckedChange={(checked) => updateScreenSettings({ smartScreenShowHebrewDate: checked })}
+                      aria-label="Show Hebrew date on Smart Screen"
+                    />
+                  </label>
+                  <label className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border bg-background px-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold flex items-center gap-1.5">
+                        <Star className="h-3.5 w-3.5 text-amber-600" aria-hidden />
+                        Jewish holidays
+                      </span>
+                      <span className="block text-[11px] text-muted-foreground">Show upcoming holidays as a Smart Screen module.</span>
+                    </span>
+                    <Switch
+                      checked={readScreenSetting('smartScreenShowJewishHolidays') === true}
+                      onCheckedChange={(checked) => updateScreenSettings({ smartScreenShowJewishHolidays: checked })}
+                      aria-label="Show Jewish holidays on Smart Screen"
+                    />
+                  </label>
+                </div>
+              </div>
+            ) : null}
+
             <div className="rounded-xl border bg-background p-3">
               <p className="mb-3 text-xs font-black uppercase tracking-wider text-muted-foreground">Modules</p>
               <div className="space-y-2">
@@ -413,7 +448,6 @@ export function SmartScreenSettingsPanel({
         </div>
       </div>
 
-      {showPreview ? <LiveScreenPreview href={fullHref} title="Smart Screen preview" /> : null}
     </div>
   );
 }

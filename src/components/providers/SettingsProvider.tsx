@@ -37,6 +37,7 @@ import {
 } from '@/lib/legacyMode';
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 
 type ColorScheme =
     | 'default'
@@ -371,11 +372,6 @@ interface Settings {
     bulletinShowWowBadge?: boolean;
     /** '1' = single column; '2' = responsive two-column grid on wide screens. */
     bulletinColumns?: '1' | '2';
-    /** Jewish Orthodox schools only: show today's Hebrew date on the bulletin display. */
-    bulletinShowHebrewDate?: boolean;
-    /** Jewish Orthodox schools only: show upcoming Jewish holidays on the bulletin display. */
-    bulletinShowJewishHolidays?: boolean;
-
     // Smart Screen (admin-managed shared display)
     smartScreenEnabled?: boolean;
     smartScreenTitle?: string;
@@ -398,6 +394,10 @@ interface Settings {
     smartScreenShowBulletin?: boolean;
     smartScreenShowRewards?: boolean;
     smartScreenShowSchedule?: boolean;
+    /** Jewish Orthodox schools only: show today's Hebrew date on Smart Screen. */
+    smartScreenShowHebrewDate?: boolean;
+    /** Jewish Orthodox schools only: show upcoming Jewish holidays on Smart Screen. */
+    smartScreenShowJewishHolidays?: boolean;
     /** Multiple named Smart Screen versions; open with `?screenProfileId=<id>`. */
     smartScreenProfiles?: Record<string, SmartScreenProfile>;
     // Special Occasions
@@ -756,8 +756,6 @@ const defaultSettings: Settings = {
     bulletinLogoSize: 'md',
     bulletinShowWowBadge: true,
     bulletinColumns: '2',
-    bulletinShowHebrewDate: false,
-    bulletinShowJewishHolidays: false,
 
     smartScreenEnabled: false,
     smartScreenTitle: 'Smart Screen',
@@ -779,6 +777,8 @@ const defaultSettings: Settings = {
     smartScreenShowBulletin: true,
     smartScreenShowRewards: true,
     smartScreenShowSchedule: true,
+    smartScreenShowHebrewDate: false,
+    smartScreenShowJewishHolidays: false,
     smartScreenProfiles: {},
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
@@ -1284,6 +1284,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         }
         setIsLoaded(true);
     }, [schoolId, isInitialized, applyEntitlements, stableRemoteAppSettingsJson, stableFeatureDefaultsJson, loginState, pathname]);
+
+    /** Hallway displays: always mirror Firestore appSettings so open fullscreen tabs update live. */
+    useEffect(() => {
+        if (!isLoaded || !schoolId || !stableRemoteAppSettingsJson || !isDisplaySettingsRoute(pathname)) return;
+        try {
+            const remote = JSON.parse(stableRemoteAppSettingsJson) as Partial<Settings>;
+            const next = applyEntitlements({ ...defaultSettings, ...remote });
+            setSettings(next);
+            const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState, pathname);
+            localStorage.setItem(settingsKey, JSON.stringify(next));
+        } catch (error) {
+            console.error('Failed to sync live display settings', error);
+        }
+    }, [isLoaded, schoolId, stableRemoteAppSettingsJson, pathname, loginState, applyEntitlements]);
 
     useEffect(() => {
         if (!isLoaded) return;

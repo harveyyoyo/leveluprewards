@@ -19,8 +19,6 @@ import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
 import { rainbowTripletForNavId, complementTripletForNavId } from '@/lib/rainbowNav';
 import { springCinematic } from '@/lib/animation';
-import { BulletinHebrewCalendarBar } from '@/components/bulletin/BulletinHebrewCalendarBar';
-import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
 type BulletinIncentive = {
   id: string;
@@ -56,7 +54,6 @@ export default function BulletinBoardDisplay() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useSettings();
-  const { isJewishOrthodox } = useSchoolProfile();
   const firestore = useFirestore();
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const isFullscreen = (searchParams?.get('fullscreen') || '').trim() === '1';
@@ -109,8 +106,6 @@ export default function BulletinBoardDisplay() {
   const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim() || DEFAULT_BULLETIN_SUBTITLE;
   const schoolLogoUrl = schoolMeta?.logoUrl;
   const logoSize = settings.bulletinLogoSize || 'md';
-  const showHebrewDate = isJewishOrthodox && settings.bulletinShowHebrewDate === true;
-  const showJewishHolidays = isJewishOrthodox && settings.bulletinShowJewishHolidays === true;
 
   if (!isInitialized || !VIEWER_LOGIN_STATES.has(loginState)) {
     return (
@@ -176,14 +171,6 @@ export default function BulletinBoardDisplay() {
           {bulletinSubtitle}
         </p>
       </motion.div>
-
-      {bulletinEnabled && (showHebrewDate || showJewishHolidays) ? (
-        <BulletinHebrewCalendarBar
-          showHebrewDate={showHebrewDate}
-          showJewishHolidays={showJewishHolidays}
-          className={cn('mb-6', isFullscreen ? 'max-w-none' : 'max-w-4xl')}
-        />
-      ) : null}
 
       {!bulletinEnabled ? (
         <Card className={cn('border-dashed w-full', isFullscreen ? 'max-w-none' : 'max-w-2xl')}>

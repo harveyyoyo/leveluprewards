@@ -33,9 +33,7 @@ export function parseDisplayView(value: string | null | undefined): DisplayView 
 
 type SmartScreenHrefOptions = {
   fullscreen?: boolean;
-  layout?: string;
-  theme?: string;
-  zip?: string;
+  /** Named screen version — layout, theme, and modules come from saved app settings live. */
   screenProfileId?: string;
 };
 
@@ -43,9 +41,6 @@ export function buildSmartScreenDisplayHref(schoolId: string, options: SmartScre
   const params = new URLSearchParams();
   params.set('view', 'smart');
   if (options.fullscreen) params.set('fullscreen', '1');
-  if (options.layout) params.set('layout', options.layout);
-  if (options.theme) params.set('theme', options.theme);
-  if (options.zip && /^\d{5}$/.test(options.zip)) params.set('zip', options.zip);
   if (options.screenProfileId) params.set('screenProfileId', options.screenProfileId);
   return `/${schoolId}/displays?${params.toString()}`;
 }
