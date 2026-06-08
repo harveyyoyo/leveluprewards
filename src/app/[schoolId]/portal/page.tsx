@@ -7,7 +7,6 @@ import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypa
 import { GraduationCap, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
-import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -334,9 +333,6 @@ export default function PortalPage() {
                     portalChoosePageShellClass(kioskPortrait, isAppDisplay),
                 )}
             >
-                <div className="pointer-events-auto absolute end-3 top-3 z-30 sm:end-4 sm:top-4">
-                    <LanguageSwitcher />
-                </div>
                 <div
                     className={cn(
                         'flex min-h-full w-full flex-1 flex-col items-center',
