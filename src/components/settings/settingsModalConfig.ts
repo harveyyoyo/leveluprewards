@@ -30,12 +30,14 @@ export const FEATURE_SECTION_NAV = [
 ] as const;
 
 export const INTERFACE_SECTION_NAV = [
+    { id: 'settings-interface-language', label: 'Language' },
     { id: 'settings-interface-appearance', label: 'Colors' },
     { id: 'settings-interface-motion', label: 'Motion' },
     { id: 'settings-interface-layout', label: 'Layout' },
 ] as const;
 
 export const GENERAL_SECTION_NAV = [
+    { id: 'settings-general-language', label: 'Language' },
     { id: 'settings-general-sessions', label: 'Sessions' },
     { id: 'settings-general-kiosk', label: 'Kiosk' },
     { id: 'settings-general-printing', label: 'Printing' },

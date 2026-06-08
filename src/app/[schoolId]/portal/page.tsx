@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { Book, GraduationCap, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { GraduationCap, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -28,8 +29,8 @@ import {
     portalChooseTitleClass,
 } from '@/lib/kioskPortraitLayout';
 import { isClassroomPillarOn, isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
-import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import type { TranslationParams } from '@/lib/i18n/translate';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
@@ -59,16 +60,19 @@ function staffLoginKey(option: StaffPortalLoginOption) {
     return option.id;
 }
 
-function roleLabel(option: StaffPortalLoginOption) {
+function roleLabel(
+    option: StaffPortalLoginOption,
+    t: (key: string, params?: TranslationParams) => string,
+) {
     if (option.type === 'teacher') {
         return leadershipPersonnelLabel(normalizeTeacherPersonnelRole(option.personnelRole));
     }
-    if (option.type === 'secretary') return 'Coupon printing';
-    if (option.type === 'prizeClerk') return 'Prize desk';
-    if (option.type === 'librarian') return 'Library';
-    if (option.type === 'office') return 'School Office';
-    if (option.type === 'houseCoordinator') return 'Houses';
-    return 'Reports';
+    if (option.type === 'secretary') return t('portal.roles.couponPrinting');
+    if (option.type === 'prizeClerk') return t('portal.roles.prizeDesk');
+    if (option.type === 'librarian') return t('portal.roles.library');
+    if (option.type === 'office') return t('portal.roles.schoolOffice');
+    if (option.type === 'houseCoordinator') return t('portal.roles.houses');
+    return t('portal.roles.reports');
 }
 
 function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
@@ -83,10 +87,12 @@ function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']
 }
 
 function WhereToDrawnTitle({
+    title,
     accentColor,
     compactDisplay,
     glowColor,
 }: {
+    title: string;
     accentColor: string;
     compactDisplay: boolean;
     glowColor?: string;
@@ -116,7 +122,7 @@ function WhereToDrawnTitle({
                     y: { duration: 0.28, ease: easePremium, delay: 0.04 },
                 }}
             >
-                Where to?
+                {title}
             </motion.span>
             <motion.svg
                 className="pointer-events-none absolute left-[13%] top-[86%] h-[0.14em] w-[74%] overflow-visible"
@@ -148,6 +154,7 @@ function WhereToDrawnTitle({
 }
 
 export default function PortalPage() {
+    const { t, dir } = useTranslation();
     const { loginState, isInitialized, schoolId, isAdmin, isOffice, login, logout } = useAppContext();
     const { canBypassAdminPasscode, loginAsAdminViaGoogle } = useAdminGooglePasscodeBypass({
         schoolId,
@@ -239,7 +246,7 @@ export default function PortalPage() {
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Loading Portal...
+                    {t('portal.loading')}
                 </Button>
             </div>
         );
@@ -256,8 +263,8 @@ export default function PortalPage() {
                   {
                       id: 'admin',
                       href: `/${schoolId}/admin`,
-                      title: 'Admin Portal',
-                      description: 'Manage students, classes, teachers, points, prizes and much more...',
+                      title: t('portal.adminPortal.title'),
+                      description: t('portal.adminPortal.description'),
                       icon: UserCog,
                   },
               ]
@@ -266,8 +273,8 @@ export default function PortalPage() {
                       {
                           id: 'admin',
                           href: `/${schoolId}/admin`,
-                          title: 'Admin Portal',
-                          description: 'Manage students, classes, teachers, points, prizes and much more...',
+                          title: t('portal.adminPortal.title'),
+                          description: t('portal.adminPortal.description'),
                           icon: UserCog,
                       },
                   ]
@@ -277,12 +284,14 @@ export default function PortalPage() {
                   {
                       id: 'print',
                       href: `/${schoolId}/teacher`,
-                      title: 'Teacher Portal',
+                      title: t('portal.teacherPortal.title'),
                       description: isRewardsPillarOn(settings)
-                        ? 'Staff portal with teacher tabs — points, classes, prizes, and reports.'
+                        ? t('portal.teacherPortal.descriptionRewards')
                         : isClassroomPillarOn(settings)
-                          ? `Classroom Management — ${CLASSROOM_SEATING_SECTION_LABEL}, session tracking, and room display.`
-                          : 'Staff portal for your school.',
+                          ? t('portal.teacherPortal.descriptionClassroom', {
+                                section: t('classroom.seatingSection'),
+                            })
+                          : t('portal.teacherPortal.descriptionDefault'),
                       icon: Printer,
                   },
               ]
@@ -292,9 +301,8 @@ export default function PortalPage() {
               {
                   id: 'redeem',
                   href: `/${schoolId}/student`,
-                  title: 'Student Kiosk',
-                  description:
-                      'Scan your card to redeem coupon codes, view points, and open the prize shop.',
+                  title: t('portal.studentKiosk.title'),
+                  description: t('portal.studentKiosk.description'),
                   icon: GraduationCap,
               },
             ]
@@ -304,8 +312,8 @@ export default function PortalPage() {
               {
                   id: 'parent',
                   href: `/${schoolId}/parent`,
-                  title: 'Parent Portal',
-                  description: 'View your child’s points, behavior notes, and today’s attendance.',
+                  title: t('portal.parentPortal.title'),
+                  description: t('portal.parentPortal.description'),
                   icon: Users,
               },
             ]
@@ -363,10 +371,11 @@ export default function PortalPage() {
                                             : undefined,
                                     }}
                                 >
-                                    Where to?
+                                    {t('portal.whereTo')}
                                 </h2>
                             ) : (
                                 <WhereToDrawnTitle
+                                    title={t('portal.whereTo')}
                                     accentColor={whereToAccentColor}
                                     compactDisplay={compactDisplay}
                                     glowColor={whereToGlowColor}
@@ -448,6 +457,7 @@ export default function PortalPage() {
                                         <ArrowUpRight
                                             className={cn(
                                                 'h-5 w-5 shrink-0 opacity-70 sm:h-6 sm:w-6',
+                                                dir === 'rtl' && '-scale-x-100',
                                                 portalCardHoverEffects &&
                                                     'transition-opacity duration-200 ease-out group-hover:opacity-100',
                                             )}
@@ -500,9 +510,8 @@ export default function PortalPage() {
                                                     playSound('error');
                                                     toast({
                                                         variant: 'destructive',
-                                                        title: 'Admin sign-in failed',
-                                                        description:
-                                                            'Could not sign in with your Google account. Try again or use the admin passcode.',
+                                                        title: t('portal.adminPasscode.signInFailedTitle'),
+                                                        description: t('portal.adminPasscode.signInFailedDescription'),
                                                     });
                                                     setAdminDialogOpen(true);
                                                     return;
@@ -562,15 +571,15 @@ export default function PortalPage() {
                 >
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="font-headline font-black tracking-tight">Admin passcode</DialogTitle>
+                            <DialogTitle className="font-headline font-black tracking-tight">{t('portal.adminPasscode.title')}</DialogTitle>
                             <DialogDescription>
-                                Enter the admin passcode for this school to open the admin dashboard.
+                                {t('portal.adminPasscode.description')}
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-2">
                             <div className="space-y-2">
                                 <Label htmlFor="admin-passcode" className="text-xs font-semibold text-muted-foreground">
-                                    Passcode
+                                    {t('common.passcode')}
                                 </Label>
                                 <Input
                                     id="admin-passcode"
@@ -590,8 +599,8 @@ export default function PortalPage() {
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
-                                                    title: 'Missing passcode',
-                                                    description: 'Enter the admin passcode to continue.',
+                                                    title: t('portal.adminPasscode.missingTitle'),
+                                                    description: t('portal.adminPasscode.missingDescription'),
                                                 });
                                                 return;
                                             }
@@ -602,7 +611,7 @@ export default function PortalPage() {
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
-                                                    title: 'Login failed',
+                                                    title: t('portal.adminPasscode.loginFailedTitle'),
                                                     description: authResult.message,
                                                 });
                                                 setAdminPasscode('');
@@ -625,7 +634,7 @@ export default function PortalPage() {
                                 onClick={() => setAdminDialogOpen(false)}
                                 disabled={adminSubmitting}
                             >
-                                Back
+                                {t('common.back')}
                             </Button>
                             <Button
                                 type="button"
@@ -639,8 +648,8 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Missing passcode',
-                                                description: 'Enter the admin passcode to continue.',
+                                                title: t('portal.adminPasscode.missingTitle'),
+                                                description: t('portal.adminPasscode.missingDescription'),
                                             });
                                             return;
                                         }
@@ -651,7 +660,7 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Login failed',
+                                                title: t('portal.adminPasscode.loginFailedTitle'),
                                                 description: authResult.message,
                                             });
                                             setAdminPasscode('');
@@ -666,10 +675,10 @@ export default function PortalPage() {
                                 {adminSubmitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                                        Signing in...
+                                        {t('common.signingIn')}
                                     </>
                                 ) : (
-                                    'Continue'
+                                    t('common.continue')
                                 )}
                             </Button>
                         </DialogFooter>
@@ -686,9 +695,9 @@ export default function PortalPage() {
                 }}>
                     <DialogContent className="sm:max-w-md">
                         <DialogHeader>
-                            <DialogTitle className="font-headline font-black tracking-tight">Staff sign-in</DialogTitle>
+                            <DialogTitle className="font-headline font-black tracking-tight">{t('portal.staffSignIn.title')}</DialogTitle>
                             <DialogDescription>
-                                Select your name and enter your passcode to open staff tools.
+                                {t('portal.staffSignIn.description')}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -709,9 +718,8 @@ export default function PortalPage() {
                                                 playSound('error');
                                                 toast({
                                                     variant: 'destructive',
-                                                    title: 'Admin sign-in failed',
-                                                    description:
-                                                        'Could not sign in with your Google account. Try again or use the admin passcode.',
+                                                    title: t('portal.adminPasscode.signInFailedTitle'),
+                                                    description: t('portal.adminPasscode.signInFailedDescription'),
                                                 });
                                                 setAdminDialogOpen(true);
                                                 return;
@@ -728,40 +736,37 @@ export default function PortalPage() {
                                 }}
                             >
                                 <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
-                                Sign in as admin
+                                {t('portal.staffSignIn.signInAsAdmin')}
                             </Button>
                         )}
 
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="text-xs font-semibold text-muted-foreground">
-                                    Select your name
+                                    {t('portal.staffSignIn.selectName')}
                                 </Label>
                                 <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
                                     <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus={!isAdmin}>
-                                        <SelectValue placeholder={staffOptions.length ? 'Choose your name' : 'No staff accounts yet'} />
+                                        <SelectValue placeholder={staffOptions.length ? t('portal.staffSignIn.chooseName') : t('portal.staffSignIn.noStaffAccounts')} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {staffOptions.map((opt) => (
                                             <SelectItem key={opt.id} value={staffLoginKey(opt)}>
-                                                {opt.label}{opt.type === 'teacher' && !opt.personnelRole ? '' : ` - ${roleLabel(opt)}`}
+                                                {opt.label}{opt.type === 'teacher' && !opt.personnelRole ? '' : ` - ${roleLabel(opt, t)}`}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                                 {!staffOptions.length && (
                                     <p className="text-xs text-muted-foreground">
-                                        Ask an admin to open <span className="font-semibold">Admin</span> once (any tab) so the
-                                        staff list publishes, or add the account under{' '}
-                                        <span className="font-semibold">Admin → Teachers → Desk staff</span> with{' '}
-                                        <span className="font-semibold">Library catalog &amp; checkouts</span> checked.
+                                        {t('portal.staffSignIn.noStaffHint')}
                                     </p>
                                 )}
                             </div>
                              <div className="space-y-4 py-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="teacher-passcode" className="text-xs font-semibold text-muted-foreground">
-                                        Passcode
+                                        {t('common.passcode')}
                                     </Label>
                                     <Input
                                         id="teacher-passcode"
@@ -781,8 +786,8 @@ export default function PortalPage() {
                                                     playSound('error');
                                                     toast({
                                                         variant: 'destructive',
-                                                        title: 'Missing info',
-                                                        description: 'Select your name and enter a passcode to continue.',
+                                                        title: t('portal.staffSignIn.missingInfoTitle'),
+                                                        description: t('portal.staffSignIn.missingInfoDescription'),
                                                     });
                                                     return;
                                                 }
@@ -791,8 +796,8 @@ export default function PortalPage() {
                                                     playSound('error');
                                                     toast({
                                                         variant: 'destructive',
-                                                        title: 'Choose a staff account from the list',
-                                                        description: 'Please select your name again.',
+                                                        title: t('portal.staffSignIn.chooseAccountTitle'),
+                                                        description: t('portal.staffSignIn.chooseAccountDescription'),
                                                     });
                                                     return;
                                                 }
@@ -834,7 +839,7 @@ export default function PortalPage() {
                                 onClick={() => setTeacherDialogOpen(false)}
                                 disabled={teacherSubmitting}
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                             <Button
                                 type="button"
@@ -849,8 +854,8 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Missing info',
-                                                description: 'Select your name and enter a passcode to continue.',
+                                                title: t('portal.staffSignIn.missingInfoTitle'),
+                                                description: t('portal.staffSignIn.missingInfoDescription'),
                                             });
                                             return;
                                         }
@@ -859,8 +864,8 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Choose a staff account from the list',
-                                                description: 'Please select your name again.',
+                                                title: t('portal.staffSignIn.chooseAccountTitle'),
+                                                description: t('portal.staffSignIn.chooseAccountDescription'),
                                             });
                                             return;
                                         }
@@ -877,7 +882,7 @@ export default function PortalPage() {
                                             playSound('error');
                                             toast({
                                                 variant: 'destructive',
-                                                title: 'Login failed',
+                                                title: t('portal.adminPasscode.loginFailedTitle'),
                                                 description: authResult.message,
                                             });
                                             setTeacherPasscode('');
@@ -892,10 +897,10 @@ export default function PortalPage() {
                                 {teacherSubmitting ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                                        Signing in...
+                                        {t('common.signingIn')}
                                     </>
                                 ) : (
-                                    'Continue'
+                                    t('common.continue')
                                 )}
                             </Button>
                         </DialogFooter>

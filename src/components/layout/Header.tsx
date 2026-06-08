@@ -50,6 +50,7 @@ import {
   isDockItemOnDisplayMode,
   type ResolvedDisplayMode,
 } from '@/lib/displayMode';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -270,6 +271,7 @@ export default function Header() {
   const webHomeHref = schoolId ? centerHref : '/';
   const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
   const isSchoolGateSession = loginState === 'school' && !!schoolId;
+  const isPortalChoosePage = typeof pathname === 'string' && /\/portal\/?$/.test(pathname);
   const canLogout =
     loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
@@ -463,6 +465,8 @@ export default function Header() {
               </Link>
             ) : null}
 
+            {isPortalChoosePage ? <LanguageSwitcher /> : null}
+
             <SettingsModal />
           </div>
         </header>
@@ -590,6 +594,8 @@ export default function Header() {
               <Home className="h-5 w-5" />
             </Link>
           ) : null}
+
+          {isPortalChoosePage ? <LanguageSwitcher /> : null}
 
           <SettingsModal />
         </div>

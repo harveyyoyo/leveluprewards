@@ -34,8 +34,10 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
 } from 'lucide-react';
+import { useTranslation } from '@/components/providers/LocaleProvider';
+import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
@@ -93,6 +95,7 @@ export function SettingsModal() {
         loginState === 'admin' ||
         loginState === 'developer';
     const { settings, settingsPreferences, updateSettings, isPillarAvailable } = useSettings();
+    const { t } = useTranslation();
     const playSound = useArcadeSound();
     const { toast } = useToast();
     const [draft, setDraft] = useState<AppSettings | null>(null);
@@ -587,6 +590,30 @@ export function SettingsModal() {
                                 onClick={() => {
                                     setView('interface');
                                     if (local.soundEnabled) playSound('click');
+                                    requestAnimationFrame(() => jumpToSettingsSection('settings-interface-language'));
+                                }}
+                                className={cn(
+                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all sm:col-span-2',
+                                    'border-violet-200 dark:border-violet-900/50 bg-violet-50/80 dark:bg-violet-950/20',
+                                    'hover:bg-violet-100/80 dark:hover:bg-violet-950/35',
+                                )}
+                            >
+                                <div className="flex w-full items-start justify-between gap-2">
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500 text-white shadow-inner">
+                                        <Languages className="h-5 w-5" />
+                                    </span>
+                                    <ChevronRight className="h-5 w-5 shrink-0 text-violet-700/50 dark:text-violet-400/50" aria-hidden />
+                                </div>
+                                <span className="font-black text-violet-900 dark:text-violet-100">{t('settings.language.title')}</span>
+                                <span className="text-xs leading-snug text-violet-800/90 dark:text-violet-200/80">
+                                    {t('settings.language.description')}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setView('interface');
+                                    if (local.soundEnabled) playSound('click');
                                 }}
                                 className={cn(
                                     'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all',
@@ -752,7 +779,12 @@ export function SettingsModal() {
                                     </div>
                                 </div>
 
-                                <div className="min-w-0">
+                                <div className="min-w-0 space-y-4">
+                                    <SchoolLanguageSetting
+                                        language={local.language}
+                                        onLanguageChange={(value) => handleToggle('language', value)}
+                                        disabled={!canOpenSettings}
+                                    />
                                     <div
                                         id="settings-interface-appearance"
                                         className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
@@ -1245,6 +1277,13 @@ export function SettingsModal() {
                                     <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden />
                                 </Button>
                             </div>
+                            <SchoolLanguageSetting
+                                id="settings-general-language"
+                                language={local.language}
+                                onLanguageChange={(value) => handleToggle('language', value)}
+                                disabled={!canOpenSettings}
+                            />
+
                             <div
                                 id="settings-general-sessions"
                                 className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
