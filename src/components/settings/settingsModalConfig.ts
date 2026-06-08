@@ -69,6 +69,7 @@ export const ADMIN_SETTINGS_TAB_VALUES = new Set([
     'displays',
     'library',
     'houses',
+    'recess',
     'raffle',
     'attendance',
     'insights',

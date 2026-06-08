@@ -473,6 +473,39 @@ export interface BathroomLogEntry {
   teacherName?: string;
 }
 
+/** Why a student is checked out via the Recess tab. */
+export type RecessReason = 'bathroom' | 'break' | 'water' | 'nurse' | 'office';
+
+/** A student who is currently checked out for a break/bathroom (one doc per student). */
+export interface RecessPassActive {
+  studentId: string;
+  studentName?: string;
+  classId?: string;
+  reason: RecessReason;
+  /** Optional free-text detail (e.g. "with counselor"). */
+  note?: string;
+  startedAt: number;
+  staffId?: string;
+  staffName?: string;
+}
+
+/** A completed recess/break checkout, kept for the activity log. */
+export interface RecessLogEntry {
+  id?: string;
+  studentId: string;
+  studentName?: string;
+  classId?: string;
+  reason: RecessReason;
+  note?: string;
+  startedAt: number;
+  returnedAt: number;
+  durationMs: number;
+  overLimit: boolean;
+  maxMinutes?: number;
+  staffId?: string;
+  staffName?: string;
+}
+
 export type RecordClassSignInReason =
   | 'recorded'
   | 'duplicate_same_session'

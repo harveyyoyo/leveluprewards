@@ -548,6 +548,17 @@ service cloud.firestore {
         allow update, delete: if isAdmin(schoolId) || isDeveloper();
       }
 
+      match /recessActive/{studentId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
+        allow create, update, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+      }
+
+      match /recessLog/{entryId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isReports(schoolId);
+        allow create: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
+        allow update, delete: if isAdmin(schoolId) || isDeveloper();
+      }
+
       // Face auth descriptors are private and only accessible via Admin SDK / Cloud Functions.
       match /faceAuth/{studentId} {
         allow read, write: if false;

@@ -80,6 +80,8 @@ interface Settings {
     enableLevels: boolean;
     enableStreaks: boolean;
     enableGoals: boolean;
+    /** Recess tab: check students out for a break/bathroom with live timers and a return log. */
+    enableRecess?: boolean;
     /** School house system: rosters, house totals, sorting ceremony, Hall of Fame. */
     enableHouses: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
@@ -613,6 +615,7 @@ const defaultSettings: Settings = {
     enableLevels: false,
     enableStreaks: false,
     enableGoals: false,
+    enableRecess: false,
     enableHouses: false,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,

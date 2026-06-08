@@ -16,8 +16,8 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
-   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices,
- } from 'lucide-react';
+   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices, DoorOpen,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -244,6 +244,10 @@ const AdminStudentPortalTab = dynamic(
 );
 const AdminHousesTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminHousesTab'), 'AdminHousesTab'),
+  { loading: tabLoader, ssr: false },
+);
+const AdminRecessTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminRecessTab'), 'AdminRecessTab'),
   { loading: tabLoader, ssr: false },
 );
 import { getReadableErrorMessage } from '@/lib/errorMessage';
@@ -690,6 +694,19 @@ function AdminDashboardInner() {
           }),
       },
       {
+        value: 'recess',
+        label: 'Recess',
+        icon: DoorOpen,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'recess'),
+        enable: () => updateSettings({ enableRecess: true, adminHiddenAddOnTabs: removeHidden('recess') }),
+        disable: () =>
+          updateSettings({
+            enableRecess: false,
+            adminHiddenAddOnTabs: removeHidden('recess'),
+            adminPinnedAddOnTabs: removePinned('recess'),
+          }),
+      },
+      {
         value: 'notifications',
         label: 'Notifications',
         icon: Bell,
@@ -921,6 +938,9 @@ function AdminDashboardInner() {
       case 'houses':
         patch.enableHouses = true;
         break;
+      case 'recess':
+        patch.enableRecess = true;
+        break;
       case 'notifications':
         patch.enableNotifications = true;
         break;
@@ -993,6 +1013,10 @@ function AdminDashboardInner() {
         case 'houses':
           patch.enableHouses = false;
           nextHidden = nextHidden.filter((x) => x !== 'houses');
+          break;
+        case 'recess':
+          patch.enableRecess = false;
+          nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -1143,6 +1167,10 @@ function AdminDashboardInner() {
         case 'houses':
           patch.enableHouses = false;
           nextHidden = nextHidden.filter((x) => x !== 'houses');
+          break;
+        case 'recess':
+          patch.enableRecess = false;
+          nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -2261,6 +2289,12 @@ function AdminDashboardInner() {
               onUpdateStudent={updateStudent}
               onUpdateTeacher={updateTeacher}
             />
+          </TabsContent>
+
+          <TabsContent value="recess" className={scrollingAdminTabClassName}>
+            {activeMainTab === 'recess' ? (
+              <AdminRecessTab schoolId={schoolId!} students={students ?? []} />
+            ) : null}
           </TabsContent>
 
           <TabsContent value="notifications" className={scrollingAdminTabClassName}>

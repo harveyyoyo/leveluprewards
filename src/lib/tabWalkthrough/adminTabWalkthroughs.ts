@@ -219,12 +219,12 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   },
   displays: {
     title: 'Displays tab',
-    subtitle: 'Smart Screen and bulletin board for monitors and hallways',
+    subtitle: 'Smart Screen, bulletin board, and Hall of Fame for monitors and hallways',
     steps: [
       {
         title: 'Pick your display type',
         checklist: [
-          'Use Overview to compare Smart Screen (live dashboard) and Bulletin board (incentives focus).',
+          'Use Overview to compare Smart Screen (live dashboard), Bulletin board (incentives focus), and Hall of Fame (leaderboards).',
           'Open the full-screen links on hallway monitors, lobby TVs, or gym projectors.',
         ],
       },
@@ -233,6 +233,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Smart Screen: set title, daily message, layout, theme, and which modules to show.',
           'Bulletin: set board title, theme, and manage point-earning incentives.',
+          'Hall of Fame: choose rank type (students, classes, houses, goals), podium, grid, and layout.',
         ],
       },
     ],
@@ -358,6 +359,35 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Set per-student passcodes when required; use Unlock after too many failures.',
           'Reset browser clears a stuck device without changing the passcode.',
+        ],
+      },
+    ],
+  },
+  recess: {
+    title: 'Recess tab',
+    subtitle: 'Check students out for a break or bathroom',
+    steps: [
+      {
+        title: 'When to use it',
+        checklist: [
+          'Use it any time a student leaves the room or activity: bathroom, water, a movement break, the nurse, or the office.',
+          'It answers one question instantly — "who is out of the room right now, and for how long?"',
+          'Great for the front desk, a hallway monitor, or any room without the full Classroom bathroom timer.',
+        ],
+      },
+      {
+        title: 'Check a student out',
+        checklist: [
+          'Find the student by name, pick a reason (Bathroom, Break, Water, Nurse, Office), then Check out.',
+          'A live timer starts and the student appears in the "Out now" list.',
+          'Cards turn red once a student is gone longer than the time limit so you can follow up.',
+        ],
+      },
+      {
+        title: 'Check them back in',
+        checklist: [
+          'Tap Check in when the student returns — the timer stops and the trip is saved to the log.',
+          'Use Recent returns to review who was out, why, and for how long.',
         ],
       },
     ],
