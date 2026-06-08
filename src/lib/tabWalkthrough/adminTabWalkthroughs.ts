@@ -10,7 +10,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         title: 'Add your first student',
         checklist: [
           'Click New Student and enter name, class, and Student ID.',
-          'Assign at least one class so the kiosk knows their group.',
+          'Optional: assign a class for teacher scope, attendance, and report filters.',
           'Optional: link teachers if points should be scoped.',
         ],
         example: { heading: 'Quick test', rows: ['One student in "Room 101" with a memorable ID like 1001.'] },

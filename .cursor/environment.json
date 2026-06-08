@@ -1,3 +1,9 @@
 {
-  "install": "npm install && npm install --prefix functions"
+  "install": "npm install && npm install --prefix functions",
+  "ports": [
+    {
+      "name": "Next.js dev server",
+      "port": 3000
+    }
+  ]
 }

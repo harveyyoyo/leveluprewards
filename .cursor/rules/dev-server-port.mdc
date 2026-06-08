@@ -1,0 +1,13 @@
+---
+description: Cursor agents must use local dev server port 3000
+alwaysApply: true
+---
+
+# Local dev server port (3000)
+
+Always use **port 3000** for `npm run dev` and local URLs.
+
+- Start dev: `npm run dev` (binds `127.0.0.1:3000` via `scripts/dev-with-warmup.cjs`; `PORT` defaults to `3000`).
+- Do **not** set `PORT` to another value (e.g. 3001). If port 3000 is busy, stop the other process instead of switching ports.
+- Local URLs: `http://127.0.0.1:3000/{schoolId}/portal`, `http://localhost:3000/{schoolId}/office`.
+- Browser automation: open `http://127.0.0.1:3000/...`, not `0.0.0.0` or alternate ports.

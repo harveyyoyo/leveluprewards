@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { WizardHelpButtonClosing } from '@/components/support/WizardHelpButtonClosing';
 
 export type AttendanceWizardVariant = 'admin' | 'teacher';
 
@@ -173,6 +174,7 @@ export function AttendanceSetupWizard({ variant }: { variant: AttendanceWizardVa
               </ul>
             </div>
           ) : null}
+          {last ? <WizardHelpButtonClosing className="border-t border-border/60 pt-3" /> : null}
         </div>
 
         <div className="flex justify-between gap-2 pt-2">

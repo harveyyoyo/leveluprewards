@@ -15,6 +15,10 @@ const portal = {
     title: 'Student Kiosk',
     description: 'Scan your card to redeem coupon codes, view points, and open the prize shop.',
   },
+  studentHome: {
+    title: 'Student home portal',
+    description: 'Students sign in from home to view points, badges, goals, and house standings.',
+  },
   parentPortal: {
     title: 'Parent Portal',
     description: "View your child's points, behavior notes, and today's attendance.",

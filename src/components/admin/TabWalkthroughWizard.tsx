@@ -12,6 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import type { TabWalkthroughConfig } from '@/lib/tabWalkthrough';
+import { WizardHelpButtonClosing } from '@/components/support/WizardHelpButtonClosing';
 
 type TabWalkthroughWizardProps = TabWalkthroughConfig & {
   triggerLabel?: string;
@@ -83,6 +84,7 @@ export function TabWalkthroughWizard({
               </ul>
             </div>
           ) : null}
+          {last ? <WizardHelpButtonClosing className="border-t border-border/60 pt-3" /> : null}
         </div>
 
         <div className="flex justify-between gap-2 pt-2">

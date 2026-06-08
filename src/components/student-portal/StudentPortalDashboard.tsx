@@ -158,7 +158,11 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8" data-kiosk-snapshot-root>
+    <div
+      className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8"
+      data-kiosk-snapshot-root
+      data-intro-tour="student-portal-dashboard"
+    >
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-widest text-primary">Student home</p>

@@ -30,6 +30,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
+import { WizardHelpButtonClosing } from '@/components/support/WizardHelpButtonClosing';
 
 export type NotificationRecipient = 'parents' | 'students' | 'staff';
 
@@ -478,6 +479,7 @@ export function NotificationSetupWizard({
               We&apos;ll turn on the matching switches in your school settings. Messages still skip anyone without
               contact info on file.
             </p>
+            <WizardHelpButtonClosing className="text-xs" />
           </div>
         )}
 

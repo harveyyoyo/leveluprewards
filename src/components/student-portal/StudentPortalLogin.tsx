@@ -113,7 +113,7 @@ export function StudentPortalLogin({
 
   return (
     <>
-      <Card className="w-full max-w-lg border-t-8 border-primary shadow-lg">
+      <Card className="w-full max-w-lg border-t-8 border-primary shadow-lg" data-intro-tour="student-portal-login">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <GraduationCap className="h-8 w-8" aria-hidden />
@@ -135,6 +135,7 @@ export function StudentPortalLogin({
               <Input
                 id="portal-student-id"
                 ref={inputRef}
+                data-intro-tour="student-portal-id"
                 value={badgeId}
                 onChange={(e) => setBadgeId(e.target.value)}
                 placeholder="Type your ID"
@@ -144,7 +145,12 @@ export function StudentPortalLogin({
                 disabled={busy}
               />
             </div>
-            <Button type="submit" className="w-full h-12 rounded-xl font-bold" disabled={busy || !badgeId.trim()}>
+            <Button
+              type="submit"
+              data-intro-tour="student-portal-continue"
+              className="w-full h-12 rounded-xl font-bold"
+              disabled={busy || !badgeId.trim()}
+            >
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden /> : null}
               Continue
             </Button>

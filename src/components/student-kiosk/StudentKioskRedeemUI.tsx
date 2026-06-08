@@ -658,6 +658,7 @@ export function StudentKioskRedeemHero({
 
   return (
     <Card
+      data-intro-tour="kiosk-redeem"
       className={cn(
         'relative z-20 shrink-0 origin-center overflow-hidden rounded-2xl border-2 shadow-lg backdrop-blur-md transition-transform duration-300 sm:rounded-3xl [@media(max-height:760px)]:rounded-xl',
         studentKioskCenterStackClass,
@@ -793,6 +794,7 @@ export function StudentKioskMorePrizesButton({
     return (
       <Button
         type="button"
+        data-intro-tour="kiosk-more-prizes"
         onClick={onClick}
         className={cn(
           'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
@@ -816,6 +818,7 @@ export function StudentKioskMorePrizesButton({
   return (
     <Button
       asChild
+      data-intro-tour="kiosk-more-prizes"
       className={cn(
         'h-12 w-full shrink-0 text-sm font-black uppercase tracking-wide shadow-md sm:h-14 sm:text-base',
         !t && 'bg-gradient-to-r from-primary to-primary/90',

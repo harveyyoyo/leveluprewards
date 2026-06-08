@@ -50,6 +50,7 @@ import {
 } from '@/lib/houses/housePointsSettings';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { clampHallOfFamePodiumSize } from '@/lib/hallOfFameUrlConfig';
+import { WizardHelpButtonClosing } from '@/components/support/WizardHelpButtonClosing';
 
 const STEP_LABELS = ['Start', 'Houses', 'Points', 'Roster', 'Display', 'Done'] as const;
 
@@ -494,6 +495,7 @@ export function HouseSetupWizard({
                 </Link>
               </Button>
             </div>
+            <WizardHelpButtonClosing className="text-xs" />
           </div>
         )}
 

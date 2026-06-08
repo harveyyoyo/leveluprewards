@@ -2,10 +2,7 @@ import type { FeatureShowcasePromoProps } from "./featurePromoSchema";
 import type { FeaturePromoVariantId } from "./featurePromoScripts";
 
 /** Auto-generated — npm run generate:voiceover:feature */
-export const defaultFeaturePromoPropsByVariant: Record<
-  FeaturePromoVariantId,
-  FeatureShowcasePromoProps
-> = {
+export const defaultFeaturePromoPropsByVariant = {
   epic: {
     variantId: "epic",
     timing: {
@@ -761,6 +758,54 @@ export const defaultFeaturePromoPropsByVariant: Record<
     musicStyle: "calm",
     musicSrc: "background-music.mp3",
   }
+} as Record<FeaturePromoVariantId, FeatureShowcasePromoProps>;
+
+defaultFeaturePromoPropsByVariant.aurora = {
+  ...defaultFeaturePromoPropsByVariant.warm,
+  variantId: "aurora",
+  visualTheme: "aurora",
+  copy: {
+    introEyebrow: "Fresh feature tour",
+    introTagline: "Bright tools for everyday motivation",
+    montageTitle: "A clearer rewards routine",
+    montageSubtitle: "Kiosk · ID cards · Prizes · Displays",
+    outroHeadline: "Make rewards feel new",
+    outroSubline: "Warm for students · Simple for staff",
+  },
+  musicVolume: 0.22,
+  musicStyle: "calm",
+};
+
+defaultFeaturePromoPropsByVariant.chalkboard = {
+  ...defaultFeaturePromoPropsByVariant.pro,
+  variantId: "chalkboard",
+  visualTheme: "chalkboard",
+  copy: {
+    introEyebrow: "Classroom-ready overview",
+    introTagline: "Practical rewards without extra clutter",
+    montageTitle: "Tools teachers can keep using",
+    montageSubtitle: "Daily flow · Live sync · Real routines",
+    outroHeadline: "Built for the school day",
+    outroSubline: "Steady, clear, and easy to roll out",
+  },
+  musicVolume: 0.21,
+  musicStyle: "default",
+};
+
+defaultFeaturePromoPropsByVariant.arcade = {
+  ...defaultFeaturePromoPropsByVariant.hype,
+  variantId: "arcade",
+  visualTheme: "arcade",
+  copy: {
+    introEyebrow: "Reward mode",
+    introTagline: "Fast scans, bright wins, real momentum",
+    montageTitle: "Turn points into action",
+    montageSubtitle: "Scan · Earn · Redeem · Celebrate",
+    outroHeadline: "Keep the energy going",
+    outroSubline: "Kiosk-first · Student-loved · Staff-ready",
+  },
+  musicVolume: 0.27,
+  musicStyle: "upbeat",
 };
 
 export function getDefaultFeaturePromoProps(

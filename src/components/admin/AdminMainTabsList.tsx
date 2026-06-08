@@ -73,6 +73,7 @@ function AdminMainTabsListVertical({
           role="tablist"
           aria-orientation="vertical"
           className={scrollableListClassName}
+          data-intro-tour="staff-nav-sidebar"
           {...props}
         >
           {children}

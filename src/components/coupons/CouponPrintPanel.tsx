@@ -498,6 +498,7 @@ export function CouponPrintPanel({
 
   return (
     <Card
+      data-intro-tour="coupon-print-panel"
       className={cn(
         'w-full border-t-4 shadow-md overflow-hidden',
         isGraphic
@@ -869,6 +870,7 @@ export function CouponPrintPanel({
 
               <Button
                 type="button"
+                data-intro-tour="coupon-generate-btn"
                 onClick={() => void handlePrintSheet()}
                 className={cn(
                   'w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95 group',

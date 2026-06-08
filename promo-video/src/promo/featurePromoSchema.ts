@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FEATURE_PROMO_VARIANTS } from "./featurePromoScripts";
+import type { FeatureVisualThemeId } from "./featureVisualThemes";
 
 const narrationCueSchema = z.object({
   id: z.string(),
@@ -34,6 +35,7 @@ const openAiVoiceSchema = z.enum([
 ]);
 
 const musicStyleSchema = z.enum(["default", "calm", "upbeat", "cinematic"]);
+const visualThemeSchema = z.enum(["neon", "aurora", "chalkboard", "arcade"]);
 
 const variantIdSchema = z.enum(
   FEATURE_PROMO_VARIANTS.map((v) => v.id) as [
@@ -42,6 +44,9 @@ const variantIdSchema = z.enum(
     "pro",
     "hype",
     "story",
+    "aurora",
+    "chalkboard",
+    "arcade",
   ],
 );
 
@@ -64,8 +69,10 @@ export const FeatureShowcasePromoSchema = z.object({
   musicDuckRatio: z.number().min(0).max(1),
   musicStyle: musicStyleSchema.optional(),
   musicSrc: z.string().optional(),
+  visualTheme: visualThemeSchema.optional(),
 });
 
 export type FeatureShowcasePromoProps = z.infer<typeof FeatureShowcasePromoSchema>;
+export type FeaturePromoVisualThemeId = FeatureVisualThemeId;
 export type FeatureNarrationCue = FeatureShowcasePromoProps["narration"][number];
 export type FeatureTimingProps = FeatureShowcasePromoProps["timing"];

@@ -22,8 +22,8 @@ type HoverRevealHeaderShellProps = {
   /** When false, the header fully slides off-screen (no peek strip). */
   peekWhenHidden?: boolean;
   /**
-   * spacer: in-flow height reserve (kiosk hover reveal).
-   * overlay: fixed header + CSS var height — stable page scroll on staff portals.
+   * spacer: in-flow height reserve below a fixed header.
+   * overlay: fixed header + CSS var height — tuck/reveal on scroll.
    */
   layout?: 'spacer' | 'overlay';
 };

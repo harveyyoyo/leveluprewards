@@ -1371,7 +1371,7 @@ export function SettingsModal() {
                                         <div className="flex flex-col min-w-0 pr-4">
                                             <span className="text-sm font-bold">Hide header</span>
                                             <p className="text-[11px] text-muted-foreground">
-                                                Tuck the header while you scroll on any portal page; it returns at the top or when you scroll up. Student kiosks reveal it when you move the pointer to the top edge.
+                                                Tuck the header while you scroll on portal pages; it returns at the top or when you scroll up. Student kiosk always hides the header the same way.
                                             </p>
                                         </div>
                                         <Switch
@@ -1750,7 +1750,7 @@ export function SettingsModal() {
                                             <span className="text-sm font-bold">Show Welcome Tour</span>
                                         </div>
                                         <Switch
-                                            checked={local.showIntroWizard}
+                                            checked={local.showIntroWizard !== false}
                                             onCheckedChange={(checked) => handleToggle('showIntroWizard', checked)}
                                         />
                                     </div>

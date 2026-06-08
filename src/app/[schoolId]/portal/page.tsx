@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -310,6 +310,17 @@ export default function PortalPage() {
               },
             ]
           : []),
+        ...(settings.enableStudentPortal === true && isRewardsPillarOn(settings)
+          ? [
+              {
+                  id: 'student-home',
+                  href: `/${schoolId}/student-home`,
+                  title: t('portal.studentHome.title'),
+                  description: t('portal.studentHome.description'),
+                  icon: Home,
+              },
+            ]
+          : []),
         ...(isParentPortalOn(settings)
           ? [
               {
@@ -401,6 +412,7 @@ export default function PortalPage() {
                     >
                         <motion.div
                             ref={gridRef}
+                            data-intro-tour="portal-hub"
                             variants={prefersReducedMotion ? undefined : staggerContainer}
                             initial={prefersReducedMotion ? false : 'hidden'}
                             animate="show"
@@ -500,6 +512,7 @@ export default function PortalPage() {
                             <Link
                                 key={area.id}
                                 href={area.href}
+                                data-intro-tour={`portal-${area.id}`}
                                 onClick={(e) => {
                                     playSound('click');
                                     if (area.id === 'admin' && !isAdmin) {

@@ -42,6 +42,7 @@ export function StaffPortalSidebarTabRow({
   return (
     <div
       className={cn('group/tab-row relative w-full min-w-0', wrapperClassName)}
+      data-intro-tour={`staff-tab-${value}`}
       {...wrapperProps}
     >
       {onSelect ? (

@@ -751,7 +751,9 @@ export function StudentScanner({
                 toast({ variant: 'destructive', title: 'Demo camera', description: err });
             }}
         />
-        <div className={cn(
+        <div
+            data-intro-tour="kiosk-login"
+            className={cn(
             "w-full max-w-md rounded-[2.5rem] p-4 transition-all duration-700 relative z-10 [@media(max-height:720px)]:max-w-sm [@media(max-height:720px)]:rounded-3xl [@media(max-height:720px)]:p-3",
             isGraphic ? 'bg-card/90 backdrop-blur-2xl border border-border shadow-xl shadow-primary/10' : 'bg-card shadow-lg border border-border'
         )}>
@@ -779,7 +781,11 @@ export function StudentScanner({
                             </TabsTrigger>
                         )}
                         {typeEnabled && (
-                            <TabsTrigger value="manual" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
+                            <TabsTrigger
+                                value="manual"
+                                data-intro-tour="kiosk-login-type-tab"
+                                className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all"
+                            >
                                 <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
                             </TabsTrigger>
                         )}
@@ -844,6 +850,7 @@ export function StudentScanner({
                             </div>
                             <div className="py-4 [@media(max-height:720px)]:py-2">
                                 <Input
+                                    data-intro-tour="kiosk-login-id"
                                     value={nfcId}
                                     onChange={e => setNfcId(e.target.value)}
                                     className={cn("h-16 text-3xl font-black text-center tracking-[0.5em] rounded-2xl transition-all", isGraphic ? 'bg-background/50 border-border text-foreground' : 'border-border bg-muted/30 text-foreground')}
@@ -852,7 +859,11 @@ export function StudentScanner({
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
-                            <Button onClick={() => handleLookup(nfcId)} className={cn("w-full h-12 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}>
+                            <Button
+                                data-intro-tour="kiosk-login-submit"
+                                onClick={() => handleLookup(nfcId)}
+                                className={cn("w-full h-12 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}
+                            >
                                 Identify Student
                             </Button>
                         </div>

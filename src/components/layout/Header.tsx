@@ -397,6 +397,7 @@ export default function Header() {
               <Link
                 href={centerHref}
                 data-home-button="true"
+                data-intro-tour="header-home"
                 className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all flex items-center gap-1"
                 aria-label={t('common.home')}
               >
@@ -458,6 +459,7 @@ export default function Header() {
               <Link
                 href={webHomeHref}
                 data-home-button="true"
+                data-intro-tour="header-home"
                 className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
                 aria-label={t('common.home')}
                 title="Home"
@@ -507,7 +509,8 @@ export default function Header() {
         {/* Left: Branding */}
         <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
-            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true">
+            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true"
+              data-intro-tour="header-home">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -586,6 +589,7 @@ export default function Header() {
             <Link
               href={webHomeHref}
               data-home-button="true"
+              data-intro-tour="header-home"
               className="rounded-xl p-2 text-slate-500 hover:text-primary hover:bg-primary/10 transition-all active:scale-90 flex items-center shrink-0"
               aria-label="Home"
               title="Home"

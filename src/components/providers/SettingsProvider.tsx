@@ -695,7 +695,7 @@ const defaultSettings: Settings = {
     bathroomMaxMinutes: 5,
     bathroomRequirePresent: true,
     enableHelperMode: true,
-    showIntroWizard: false,
+    showIntroWizard: true,
     enableTeacherBudgets: false,
     enableTeacherGeneratedCouponsTab: false,
     enableHomework: false,
@@ -1272,11 +1272,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }));
             }
         } else {
-            // No settings for this school, use defaults and show the intro wizard once.
+            // No settings for this school, use defaults (welcome tour on unless turned off in Settings).
             const initialSettings: Settings = {
                 ...defaultSettings,
                 ...featureDefaultsFromRemote,
-                showIntroWizard: !!schoolId,
                 // Demo school: apply sky theme and sound to match production
                 ...(schoolId === 'schoolabc' ? { 
                     colorScheme: 'sky' as ColorScheme, 

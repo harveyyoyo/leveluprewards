@@ -2,7 +2,15 @@ import type { FeatureSegmentId } from "./featurePromoCatalog";
 
 
 
-export type FeaturePromoVariantId = "epic" | "warm" | "pro" | "hype" | "story";
+export type FeaturePromoVariantId =
+  | "epic"
+  | "warm"
+  | "pro"
+  | "hype"
+  | "story"
+  | "aurora"
+  | "chalkboard"
+  | "arcade";
 
 
 
@@ -61,6 +69,8 @@ export type FeaturePromoScriptVariant = {
   /** Optional MP3 in promo-video/public/ */
 
   musicSrc?: string;
+
+  visualTheme?: "neon" | "aurora" | "chalkboard" | "arcade";
 
   copy: {
 
@@ -599,6 +609,132 @@ export const FEATURE_PROMO_VARIANTS: FeaturePromoScriptVariant[] = [
       },
 
     ],
+
+  },
+
+  {
+
+    id: "aurora",
+
+    compositionId: "FeaturePromoAurora",
+
+    label: "Aurora / fresh",
+
+    description: "Clean teal, rose, and gold treatment for modern school reels.",
+
+    ttsVoice: "coral",
+
+    ttsInstructions:
+
+      "Friendly educator talking to parents at an open house. Conversational, relaxed, slight smile — never salesy or robotic.",
+
+    musicVolume: 0.22,
+
+    musicStyle: "calm",
+
+    visualTheme: "aurora",
+
+    copy: {
+
+      introEyebrow: "Fresh feature tour",
+
+      introTagline: "Bright tools for everyday motivation",
+
+      montageTitle: "A clearer rewards routine",
+
+      montageSubtitle: "Kiosk · ID cards · Prizes · Displays",
+
+      outroHeadline: "Make rewards feel new",
+
+      outroSubline: "Warm for students · Simple for staff",
+
+    },
+
+    cues: [],
+
+  },
+
+  {
+
+    id: "chalkboard",
+
+    compositionId: "FeaturePromoChalkboard",
+
+    label: "Chalkboard / educator",
+
+    description: "Grounded classroom palette with chalky gold and blue accents.",
+
+    ttsVoice: "sage",
+
+    ttsInstructions:
+
+      "Clear product walkthrough for school administrators. Steady pace, plain language, trustworthy — like a demo on a video call, not a TV ad.",
+
+    musicVolume: 0.21,
+
+    musicStyle: "default",
+
+    visualTheme: "chalkboard",
+
+    copy: {
+
+      introEyebrow: "Classroom-ready overview",
+
+      introTagline: "Practical rewards without extra clutter",
+
+      montageTitle: "Tools teachers can keep using",
+
+      montageSubtitle: "Daily flow · Live sync · Real routines",
+
+      outroHeadline: "Built for the school day",
+
+      outroSubline: "Steady, clear, and easy to roll out",
+
+    },
+
+    cues: [],
+
+  },
+
+  {
+
+    id: "arcade",
+
+    compositionId: "FeaturePromoArcade",
+
+    label: "Arcade / energetic",
+
+    description: "High-contrast cyan, gold, and coral for punchier social tests.",
+
+    ttsVoice: "ash",
+
+    ttsInstructions:
+
+      "Upbeat school promo for social feeds. Short phrases, natural energy — still human, not shouting or over-produced.",
+
+    musicVolume: 0.27,
+
+    musicStyle: "upbeat",
+
+    visualTheme: "arcade",
+
+    copy: {
+
+      introEyebrow: "Reward mode",
+
+      introTagline: "Fast scans, bright wins, real momentum",
+
+      montageTitle: "Turn points into action",
+
+      montageSubtitle: "Scan · Earn · Redeem · Celebrate",
+
+      outroHeadline: "Keep the energy going",
+
+      outroSubline: "Kiosk-first · Student-loved · Staff-ready",
+
+    },
+
+    cues: [],
 
   },
 

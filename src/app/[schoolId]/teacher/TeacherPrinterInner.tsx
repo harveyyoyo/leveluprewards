@@ -683,7 +683,22 @@ function TeacherRosterTab({
         return `${cls?.name || 'Unassigned'}${classOwned ? ' · class roster' : ''}`;
     };
 
-    const renderStudentInfo = (student: Student) => {
+    const renderStudentInfo = (student: Student, minimal: boolean = false) => {
+        if (minimal) {
+            return (
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                        <p className="min-w-0 font-bold leading-tight sm:truncate">
+                            {getStudentNickname(student)} {student.lastName}
+                        </p>
+                        <span className="text-[10px] font-medium text-muted-foreground bg-foreground/5 px-1.5 py-0.5 rounded-md truncate">
+                            {renderClassLabel(student)}
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+
         const hasParentContact = !!(student.parentEmail?.trim() || student.parentPhone?.trim());
         const hasStudentContact = !!(student.studentEmail?.trim() || student.studentPhone?.trim());
         const pointTypeLine = formatStudentPointTypes(student, 5);
@@ -762,10 +777,10 @@ function TeacherRosterTab({
                         />
                     </div>
 
-                    <div className="grid gap-6">
+                    <div className="flex flex-col gap-6">
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On my roster ({roster.length})</Label>
-                            <ScrollArea className={cn("h-[calc(100vh-24rem)] max-h-[420px] min-h-[300px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <div className={cn("overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
                                 <div className="space-y-2 pr-3">
                                     {roster.map((student) => {
                                         const directlyLinked = (student.teacherIds || []).includes(teacherId);
@@ -793,16 +808,16 @@ function TeacherRosterTab({
                                         <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students on your roster.</p>
                                     ) : null}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </div>
 
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add students ({addable.length})</Label>
-                            <ScrollArea className={cn("h-[calc(100vh-24rem)] max-h-[420px] min-h-[300px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <div className={cn("overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
                                 <div className="space-y-2 pr-3">
                                     {addable.map((student) => (
                                         <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
-                                            {renderStudentInfo(student)}
+                                            {renderStudentInfo(student, true)}
                                             <Button
                                                 type="button"
                                                 variant="outline"
@@ -819,7 +834,7 @@ function TeacherRosterTab({
                                         <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students to add.</p>
                                     ) : null}
                                 </div>
-                            </ScrollArea>
+                            </div>
                         </div>
                     </div>
                 </CardContent>
@@ -908,7 +923,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
     }, [redemptions, filterType, teacherId]);
 
     return (
-        <Card className="md:col-span-2 border-t-8 border-chart-3 shadow-lg">
+        <Card className="md:col-span-2 border-t-8 border-chart-3 shadow-lg" data-intro-tour="teacher-redemptions">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2 text-xl font-black">

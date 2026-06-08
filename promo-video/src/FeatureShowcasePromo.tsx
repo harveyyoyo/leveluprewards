@@ -29,10 +29,13 @@ import {
 } from "./promo/landscapeShared";
 import { outfit } from "./promo/shared";
 import { resolveMusicSrc, usePromoMusicVolume } from "./promo/promoMusic";
-import { BRAND } from "./promo/theme";
 import type { FeatureShowcasePromoProps } from "./promo/featurePromoSchema";
 import { FeatureShowcasePromoSchema } from "./promo/featurePromoSchema";
 import { FeatureVoiceover } from "./FeatureVoiceover";
+import {
+  getFeatureVisualTheme,
+  type FeatureVisualTheme,
+} from "./promo/featureVisualThemes";
 
 export { FeatureShowcasePromoSchema };
 export {
@@ -64,7 +67,8 @@ const FeatureClipVideo: React.FC<{ clip: FeatureClipConfig }> = ({ clip }) => {
 const FeatureMontage: React.FC<{
   timing: FeatureShowcasePromoProps["timing"];
   copy: FeatureShowcasePromoProps["copy"];
-}> = ({ timing, copy }) => {
+  visualTheme: FeatureVisualTheme;
+}> = ({ timing, copy, visualTheme }) => {
   const frame = useCurrentFrame();
   const globalFrame = frame + timing.introEnd;
   const { fps } = useVideoConfig();
@@ -97,8 +101,12 @@ const FeatureMontage: React.FC<{
 
   return (
     <AbsoluteFill>
-      <ProgressRail progress={progress} color={activeSegment.color} />
-      <Sparkles count={18} seed="feature-montage" />
+      <ProgressRail
+        progress={progress}
+        color={activeSegment.color}
+        theme={visualTheme}
+      />
+      <Sparkles count={18} seed="feature-montage" theme={visualTheme} />
 
       <div
         style={{
@@ -115,7 +123,7 @@ const FeatureMontage: React.FC<{
             fontWeight: 700,
             letterSpacing: 3,
             textTransform: "uppercase",
-            color: BRAND.cyan,
+            color: visualTheme.tertiary,
           }}
         >
           {copy.montageSubtitle}
@@ -126,7 +134,7 @@ const FeatureMontage: React.FC<{
             fontSize: 36,
             fontWeight: 800,
             margin: "6px 0 0",
-            background: `linear-gradient(90deg, ${BRAND.pink}, ${BRAND.cyan})`,
+            background: `linear-gradient(90deg, ${visualTheme.primary}, ${visualTheme.tertiary})`,
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}
@@ -146,7 +154,12 @@ const FeatureMontage: React.FC<{
           gap: 40,
         }}
       >
-        <LandscapeBrowser scale={cardScale} rotateY={rotateY} kenBurn={kenBurn}>
+        <LandscapeBrowser
+          scale={cardScale}
+          rotateY={rotateY}
+          kenBurn={kenBurn}
+          theme={visualTheme}
+        >
           <Series>
             {segments.map((seg, i) => (
               <Series.Sequence
@@ -168,6 +181,7 @@ const FeatureMontage: React.FC<{
           color={activeSegment.color}
           accent={activeSegment.accent}
           localFrame={segmentLocalFrame}
+          theme={visualTheme}
         />
       </div>
 
@@ -175,6 +189,7 @@ const FeatureMontage: React.FC<{
         globalFrame={globalFrame}
         boundaries={getFeatureFlashBoundaries(timing)}
         flashFrames={FLASH_FRAMES}
+        theme={visualTheme}
       />
     </AbsoluteFill>
   );
@@ -188,7 +203,9 @@ export const FeatureShowcasePromo: React.FC<FeatureShowcasePromoProps> = ({
   musicDuckRatio,
   musicStyle,
   musicSrc,
+  visualTheme,
 }) => {
+  const theme = getFeatureVisualTheme(visualTheme);
   const montageEnd =
     timing.segmentEnds[timing.segmentEnds.length - 1] ?? timing.introEnd;
   const musicVol = usePromoMusicVolume({
@@ -200,26 +217,27 @@ export const FeatureShowcasePromo: React.FC<FeatureShowcasePromoProps> = ({
   });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: BRAND.bg, color: "white" }}>
+    <AbsoluteFill style={{ backgroundColor: theme.bg, color: "white" }}>
       <Audio
         src={staticFile(resolveMusicSrc(musicSrc))}
         volume={musicVol}
         loop
       />
       <FeatureVoiceover narration={narration} timing={timing} />
-      <LandscapeBackground totalFrames={timing.total} />
+      <LandscapeBackground totalFrames={timing.total} theme={theme} />
       <Sequence durationInFrames={timing.introEnd}>
         <LandscapeIntro
           eyebrow={copy.introEyebrow}
           tagline={copy.introTagline}
+          theme={theme}
         />
-        <Sparkles count={20} seed="feature-intro" />
+        <Sparkles count={20} seed="feature-intro" theme={theme} />
       </Sequence>
       <Sequence
         from={timing.introEnd}
         durationInFrames={montageEnd - timing.introEnd}
       >
-        <FeatureMontage timing={timing} copy={copy} />
+        <FeatureMontage timing={timing} copy={copy} visualTheme={theme} />
       </Sequence>
       <Sequence
         from={montageEnd}
@@ -228,8 +246,9 @@ export const FeatureShowcasePromo: React.FC<FeatureShowcasePromoProps> = ({
         <LandscapeOutro
           headline={copy.outroHeadline}
           subline={copy.outroSubline}
+          theme={theme}
         />
-        <Sparkles count={24} seed="feature-outro" />
+        <Sparkles count={24} seed="feature-outro" theme={theme} />
       </Sequence>
     </AbsoluteFill>
   );

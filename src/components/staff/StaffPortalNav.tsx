@@ -98,7 +98,7 @@ export function StaffPortalNav({
 
   return (
     <>
-      <div className="lg:hidden">
+      <div className="lg:hidden" data-intro-tour="staff-nav-sidebar">
         <Label htmlFor={mobileSelectId} className="sr-only">
           {portalLabel} section
         </Label>

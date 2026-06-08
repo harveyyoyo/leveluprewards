@@ -45,6 +45,7 @@ import {
   defaultClassroomWizardDraft,
   type ClassroomSetupWizardDraft,
 } from '@/lib/classroom/classroomManagementSettings';
+import { WizardHelpButtonClosing } from '@/components/support/WizardHelpButtonClosing';
 
 const STEP_LABELS = ['Start', 'Roster', 'Awards', 'Done'] as const;
 
@@ -352,6 +353,7 @@ export function ClassroomSetupWizard({
             <p className="text-xs text-muted-foreground">
               Teachers: Portal → Points → <strong>Classroom</strong> for daily quick awards.
             </p>
+            <WizardHelpButtonClosing className="text-xs" />
           </div>
         )}
 

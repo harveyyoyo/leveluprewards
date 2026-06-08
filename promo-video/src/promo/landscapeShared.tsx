@@ -8,8 +8,9 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import { BRAND } from "./theme";
 import { jakarta, outfit } from "./shared";
+import type { FeatureVisualTheme } from "./featureVisualThemes";
+import { FEATURE_VISUAL_THEMES } from "./featureVisualThemes";
 
 const GlowOrb: React.FC<{ style: React.CSSProperties }> = ({ style }) => (
   <div
@@ -23,9 +24,10 @@ const GlowOrb: React.FC<{ style: React.CSSProperties }> = ({ style }) => (
   />
 );
 
-export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
-  totalFrames,
-}) => {
+export const LandscapeBackground: React.FC<{
+  totalFrames: number;
+  theme?: FeatureVisualTheme;
+}> = ({ totalFrames, theme = FEATURE_VISUAL_THEMES.neon }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
   const drift = interpolate(frame, [0, totalFrames], [0, 1], {
@@ -38,8 +40,7 @@ export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(125deg, #03020a 0%, #0a0618 40%, #04030a 100%)",
+          background: theme.backgroundGradient,
         }}
       />
       <GlowOrb
@@ -48,8 +49,7 @@ export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
           left: -100 + drift * 140,
           width: width * 0.55,
           height: height * 0.7,
-          background:
-            "radial-gradient(circle, rgba(255, 0, 127, 0.22) 0%, transparent 70%)",
+          background: `radial-gradient(circle, ${theme.glowA} 0%, transparent 70%)`,
         }}
       />
       <GlowOrb
@@ -58,17 +58,16 @@ export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
           right: -60,
           width: width * 0.45,
           height: height * 0.55,
-          background:
-            "radial-gradient(circle, rgba(127, 0, 255, 0.2) 0%, transparent 72%)",
+          background: `radial-gradient(circle, ${theme.glowB} 0%, transparent 72%)`,
         }}
       />
       <div
         style={{
           position: "absolute",
           inset: 0,
-          opacity: 0.04,
-          backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
+          opacity: theme.gridOpacity,
+          backgroundImage: `linear-gradient(${theme.gridColor} 1px, transparent 1px),
+            linear-gradient(90deg, ${theme.gridColor} 1px, transparent 1px)`,
           backgroundSize: "64px 64px",
         }}
       />
@@ -79,9 +78,11 @@ export const LandscapeBackground: React.FC<{ totalFrames: number }> = ({
 export const LandscapeIntro: React.FC<{
   eyebrow?: string;
   tagline?: string;
+  theme?: FeatureVisualTheme;
 }> = ({
   eyebrow = "School Rewards System",
   tagline = "Motivate · Reward · Elevate",
+  theme = FEATURE_VISUAL_THEMES.neon,
 }) => {
   const frame = useCurrentFrame();
   const { fps, width } = useVideoConfig();
@@ -113,7 +114,7 @@ export const LandscapeIntro: React.FC<{
         style={{
           position: "absolute",
           inset: 0,
-          background: `rgba(255, 0, 127, ${flash * 0.35})`,
+          background: `rgba(${theme.introFlash}, ${flash * 0.35})`,
           pointerEvents: "none",
         }}
       />
@@ -126,7 +127,7 @@ export const LandscapeIntro: React.FC<{
           height: 4,
           borderRadius: 4,
           filter: "blur(2px)",
-          background: `linear-gradient(90deg, transparent, ${BRAND.cyan}, transparent)`,
+          background: `linear-gradient(90deg, transparent, ${theme.tertiary}, transparent)`,
         }}
       />
       <div
@@ -135,7 +136,7 @@ export const LandscapeIntro: React.FC<{
           width: 520,
           height: 520,
           borderRadius: "50%",
-          border: `2px solid rgba(255, 0, 127, ${0.15 + titlePop * 0.25})`,
+          border: `2px solid ${theme.primary}66`,
           transform: `scale(${0.6 + titlePop * 0.5})`,
           opacity: titlePop,
         }}
@@ -148,7 +149,7 @@ export const LandscapeIntro: React.FC<{
             fontWeight: 700,
             letterSpacing: 8,
             textTransform: "uppercase",
-            color: BRAND.cyan,
+            color: theme.tertiary,
             margin: 0,
             opacity: subtitleIn,
           }}
@@ -164,10 +165,10 @@ export const LandscapeIntro: React.FC<{
             letterSpacing: -6,
             margin: "16px 0 0",
             transform: `scale(${titlePop})`,
-            background: `linear-gradient(135deg, ${BRAND.pink} 0%, ${BRAND.purple} 50%, ${BRAND.cyan} 100%)`,
+            background: `linear-gradient(135deg, ${theme.primary} 0%, ${theme.secondary} 50%, ${theme.tertiary} 100%)`,
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
-            filter: `drop-shadow(0 0 40px rgba(255, 0, 127, ${titlePop * 0.5}))`,
+            filter: `drop-shadow(0 0 40px ${theme.primary}88)`,
           }}
         >
           LevelUp
@@ -178,7 +179,7 @@ export const LandscapeIntro: React.FC<{
             width: lineWidth,
             margin: "28px auto 0",
             borderRadius: 4,
-            background: `linear-gradient(90deg, ${BRAND.pink}, ${BRAND.cyan})`,
+            background: `linear-gradient(90deg, ${theme.primary}, ${theme.tertiary})`,
           }}
         />
         <p
@@ -186,7 +187,7 @@ export const LandscapeIntro: React.FC<{
             fontFamily: jakarta,
             fontSize: 32,
             fontWeight: 600,
-            color: BRAND.textMuted,
+            color: theme.textMuted,
             marginTop: 24,
             opacity: subtitleIn,
           }}
@@ -201,9 +202,11 @@ export const LandscapeIntro: React.FC<{
 export const LandscapeOutro: React.FC<{
   headline?: string;
   subline?: string;
+  theme?: FeatureVisualTheme;
 }> = ({
   headline = "Transform your classroom",
   subline = "Teachers · Students · Admins — one portal.",
+  theme = FEATURE_VISUAL_THEMES.neon,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -235,7 +238,7 @@ export const LandscapeOutro: React.FC<{
           width: 700,
           height: 700,
           borderRadius: "50%",
-          border: `3px solid rgba(127, 0, 255, ${0.25 * scale})`,
+          border: `3px solid ${theme.secondary}66`,
           transform: `scale(${ring})`,
           opacity: 0.6,
         }}
@@ -249,7 +252,7 @@ export const LandscapeOutro: React.FC<{
             lineHeight: 1.02,
             margin: 0,
             transform: `scale(${scale})`,
-            background: `linear-gradient(135deg, ${BRAND.pink}, ${BRAND.purple}, ${BRAND.cyan})`,
+            background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary}, ${theme.tertiary})`,
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}
@@ -260,7 +263,7 @@ export const LandscapeOutro: React.FC<{
           style={{
             fontFamily: jakarta,
             fontSize: 32,
-            color: BRAND.textMuted,
+            color: theme.textMuted,
             marginTop: 20,
             marginBottom: 48,
           }}
@@ -272,8 +275,8 @@ export const LandscapeOutro: React.FC<{
             display: "inline-block",
             padding: "24px 64px",
             borderRadius: 60,
-            background: `linear-gradient(135deg, ${BRAND.pink}, ${BRAND.purple})`,
-            boxShadow: `0 0 60px rgba(255, 0, 127, 0.55), 0 20px 50px rgba(0,0,0,0.5)`,
+            background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`,
+            boxShadow: `0 0 60px ${theme.primary}88, 0 20px 50px rgba(0,0,0,0.5)`,
             fontFamily: outfit,
             fontSize: 36,
             fontWeight: 700,
@@ -292,7 +295,13 @@ export const SegmentFlash: React.FC<{
   globalFrame: number;
   boundaries: number[];
   flashFrames?: number;
-}> = ({ globalFrame, boundaries, flashFrames = 5 }) => {
+  theme?: FeatureVisualTheme;
+}> = ({
+  globalFrame,
+  boundaries,
+  flashFrames = 5,
+  theme = FEATURE_VISUAL_THEMES.neon,
+}) => {
   const hit = boundaries.some(
     (b) => globalFrame >= b && globalFrame < b + flashFrames,
   );
@@ -313,7 +322,8 @@ export const SegmentFlash: React.FC<{
   return (
     <AbsoluteFill
       style={{
-        background: `linear-gradient(135deg, rgba(76,201,240,${opacity * 0.25}), rgba(255,0,127,${opacity * 0.2}))`,
+        background: `linear-gradient(135deg, ${theme.tertiary}44, ${theme.primary}33)`,
+        opacity,
         pointerEvents: "none",
         zIndex: 50,
       }}
@@ -329,7 +339,17 @@ export const LandscapeSidebar: React.FC<{
   color: string;
   accent: string;
   localFrame: number;
-}> = ({ segmentIndex, emoji, label, tagline, color, accent, localFrame }) => {
+  theme?: FeatureVisualTheme;
+}> = ({
+  segmentIndex,
+  emoji,
+  label,
+  tagline,
+  color,
+  accent,
+  localFrame,
+  theme = FEATURE_VISUAL_THEMES.neon,
+}) => {
   const { fps } = useVideoConfig();
   const slide = spring({
     fps,
@@ -370,7 +390,31 @@ export const LandscapeSidebar: React.FC<{
       >
         {String(segmentIndex + 1).padStart(2, "0")}
       </span>
-      <span style={{ fontSize: 72, marginBottom: 18 }}>{emoji}</span>
+      <div
+        title={emoji}
+        style={{
+          width: 74,
+          height: 30,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 20,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: i === 1 ? 30 : 14,
+              height: 14,
+              borderRadius: 999,
+              background: i === 1 ? color : accent,
+              boxShadow: `0 0 24px ${i === 1 ? color : accent}`,
+              opacity: i === 2 ? 0.65 : 1,
+            }}
+          />
+        ))}
+      </div>
       <h3
         style={{
           fontFamily: outfit,
@@ -397,7 +441,7 @@ export const LandscapeSidebar: React.FC<{
           fontFamily: jakarta,
           fontSize: 28,
           lineHeight: 1.45,
-          color: BRAND.textMuted,
+          color: theme.textMuted,
           margin: 0,
           maxWidth: 360,
         }}
@@ -413,19 +457,26 @@ export const LandscapeBrowser: React.FC<{
   scale: number;
   rotateY: number;
   kenBurn: number;
-}> = ({ children, scale, rotateY, kenBurn }) => (
+  theme?: FeatureVisualTheme;
+}> = ({
+  children,
+  scale,
+  rotateY,
+  kenBurn,
+  theme = FEATURE_VISUAL_THEMES.neon,
+}) => (
   <div
     style={{
       width: 1360,
       height: 765,
       borderRadius: 20,
-      border: "1px solid rgba(255, 255, 255, 0.14)",
-      background: "#0c0a1a",
+      border: `1px solid ${theme.browserBorder}`,
+      background: theme.browserBg,
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
       boxShadow: `0 50px 120px -20px rgba(0,0,0,0.9),
-        0 0 80px rgba(127, 0, 255, 0.35),
+        0 0 80px ${theme.browserGlow},
         inset 0 1px 0 rgba(255,255,255,0.08)`,
       transform: `scale(${scale}) perspective(1600px) rotateY(${rotateY}deg)`,
     }}
@@ -433,7 +484,7 @@ export const LandscapeBrowser: React.FC<{
     <div
       style={{
         height: 44,
-        background: "linear-gradient(180deg, #1a1830, #121124)",
+        background: theme.browserTop,
         borderBottom: "1px solid rgba(255,255,255,0.08)",
         display: "flex",
         alignItems: "center",
@@ -459,8 +510,8 @@ export const LandscapeBrowser: React.FC<{
           textAlign: "center",
           fontFamily: jakarta,
           fontSize: 13,
-          color: "#94a3b8",
-          background: "rgba(0,0,0,0.4)",
+          color: theme.addressText,
+          background: theme.addressBg,
           borderRadius: 8,
           padding: "5px 0",
         }}
@@ -484,7 +535,8 @@ export const LandscapeBrowser: React.FC<{
 export const ProgressRail: React.FC<{
   progress: number;
   color: string;
-}> = ({ progress, color }) => (
+  theme?: FeatureVisualTheme;
+}> = ({ progress, color, theme = FEATURE_VISUAL_THEMES.neon }) => (
   <div
     style={{
       position: "absolute",
@@ -493,7 +545,7 @@ export const ProgressRail: React.FC<{
       right: 64,
       height: 4,
       borderRadius: 4,
-      background: "rgba(255,255,255,0.08)",
+      background: theme.railTrack,
       zIndex: 20,
     }}
   >
@@ -502,16 +554,21 @@ export const ProgressRail: React.FC<{
         width: `${progress * 100}%`,
         height: "100%",
         borderRadius: 4,
-        background: `linear-gradient(90deg, ${color}, ${BRAND.cyan})`,
+        background: `linear-gradient(90deg, ${color}, ${theme.tertiary})`,
         boxShadow: `0 0 20px ${color}`,
       }}
     />
   </div>
 );
 
-export const Sparkles: React.FC<{ count?: number; seed?: string }> = ({
+export const Sparkles: React.FC<{
+  count?: number;
+  seed?: string;
+  theme?: FeatureVisualTheme;
+}> = ({
   count = 12,
   seed = "sparks",
+  theme = FEATURE_VISUAL_THEMES.neon,
 }) => {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
@@ -533,9 +590,9 @@ export const Sparkles: React.FC<{ count?: number; seed?: string }> = ({
               width: size,
               height: size,
               borderRadius: "50%",
-              background: BRAND.cyan,
+              background: theme.sparkle,
               opacity: twinkle * 0.6,
-              boxShadow: `0 0 ${size * 3}px ${BRAND.cyan}`,
+              boxShadow: `0 0 ${size * 3}px ${theme.sparkle}`,
             }}
           />
         );
