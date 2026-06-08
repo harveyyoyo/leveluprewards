@@ -799,7 +799,11 @@ exports.verifySchoolPasscode = functions.https.onCall(
 
     const uid = context.auth!.uid;
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(uid);
-    const googleAdminBypass = isAllowedGoogleAdminBypass(context);
+    // Primary: email allowlist from env var. Fallback: Firestore developer UID list
+    // (survives env var misconfiguration / missing deploys).
+    const googleAdminBypass =
+      isAllowedGoogleAdminBypass(context) ||
+      (isGoogleAuthenticated(context) && await isDeveloper(context));
 
     if (!googleAdminBypass) {
       if (passcode.length === 0) {

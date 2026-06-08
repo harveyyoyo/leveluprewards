@@ -57,6 +57,7 @@
     "promo:editor": "npm run editor --prefix promo-video",
     "generate:bold-flyers": "node scripts/generate-bold-flyers.mjs",
     "generate:flyers-gallery": "node scripts/generate-flyers-gallery.mjs",
+    "serve:flyers": "serve public -p 3456",
     "export:classic-flyers": "node scripts/export-classic-flyers.mjs",
     "capture:flyer-screenshots": "node scripts/capture-marketing-flyer-screenshots.mjs",
     "capture:marketing-weak": "node scripts/recapture-marketing-weak.mjs",

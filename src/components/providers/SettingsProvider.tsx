@@ -338,6 +338,8 @@ interface Settings {
      * Independent of the "Camera coupon scan" setting. Default off.
      */
     kioskWedgeDemoCameraEnabled?: boolean;
+    /** Faint prize previews that pop in/out around the student kiosk sign-in scan screen. */
+    enableKioskLoginPrizeTeasers?: boolean;
     // Sponsor Banner (displayed at the bottom/top of student kiosk screens)
     kioskSponsorEnabled: boolean;
     kioskSponsorMessage: string;
@@ -739,6 +741,7 @@ const defaultSettings: Settings = {
     kioskCouponRedemptionCameraEnabled: false,
     kioskCouponRedemptionInput: 'manual',
     kioskWedgeDemoCameraEnabled: false,
+    enableKioskLoginPrizeTeasers: false,
     kioskSponsorEnabled: false,
     kioskSponsorMessage: '',
     kioskSponsorLogoUrl: '',

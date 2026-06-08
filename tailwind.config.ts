@@ -134,6 +134,10 @@ export default {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
+        'kiosk-prize-teaser': {
+          '0%, 100%': { opacity: '0', transform: 'scale(0.5)' },
+          '14%, 72%': { opacity: '1', transform: 'scale(1)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -148,6 +152,7 @@ export default {
         wiggle: 'wiggle 1s ease-in-out infinite',
         rise: 'rise 0.6s ease-out both',
         shimmer: 'shimmer 4s ease-in-out infinite',
+        'kiosk-prize-teaser': 'kiosk-prize-teaser ease-in-out both',
       },
     },
   },
