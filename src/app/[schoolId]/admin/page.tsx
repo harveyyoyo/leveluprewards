@@ -67,6 +67,8 @@ import { StudentActivityModal } from '@/components/student/StudentActivityModal'
 import DynamicIcon from '@/components/DynamicIcon';
 import { Switch } from '@/components/ui/switch';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { isMobileDisplayMode } from '@/lib/displayMode';
+import { MobileDisplayUnavailable } from '@/components/layout/MobileDisplayUnavailable';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import {
   Tooltip,
@@ -1667,6 +1669,15 @@ function AdminDashboardInner() {
 
   const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
   const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
+
+  if (schoolId && isMobileDisplayMode(settings.displayMode)) {
+    return (
+      <TooltipProvider>
+        <StaffPortalDocumentTitle title="School admin" />
+        <MobileDisplayUnavailable schoolId={schoolId} area="admin" />
+      </TooltipProvider>
+    );
+  }
 
   return (
     <TooltipProvider>

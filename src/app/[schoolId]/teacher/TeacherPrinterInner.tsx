@@ -34,7 +34,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { cn } from '@/lib/utils';
-import { isCompactDisplayMode } from '@/lib/displayMode';
+import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -2057,12 +2057,14 @@ function TeacherPrinterInnerBody({
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
+    const mobileDisplay = isMobileDisplayMode(settings.displayMode);
 
     const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
     const { isWide } = useStaffPortalLayout();
     const { mainTabs, addMoreTabs, allTabValues, defaultTab, addOnTabDefs } = useStaffPortalTabs({
         role: staffPortalRole,
         settings,
+        resolvedDisplayMode: settings.displayMode,
         pinnedAddOnValues: settings.teacherPinnedAddOnTabs || [],
         mainTabOrder: settings.teacherMainTabOrder,
     });
@@ -2272,6 +2274,8 @@ function TeacherPrinterInnerBody({
                         onRemoveTab={(value) => toggleTeacherPinnedAddOn(value, false)}
                         onTurnAllOn={enableAllTeacherAddOnTabs}
                         onTurnAllOff={disableAllTeacherAddOnTabs}
+                        forceCompactNav={mobileDisplay}
+                        hideAddMore={mobileDisplay}
                     />
                 </div>
             ) : null}
@@ -2640,6 +2644,11 @@ function TeacherPrinterInnerBody({
                         >
                             <strong className="font-bold">Offline awards pending:</strong>{' '}
                             {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
+                        </div>
+                    ) : null}
+                    {mobileDisplay && !embedded && !secretaryMode ? (
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-950 dark:text-emerald-100">
+                            <strong className="font-bold">Mobile mode:</strong> only Points, Students, Redemptions, and Attendance are shown here. Switch to Web or App in Settings for the full teacher portal.
                         </div>
                     ) : null}
                     {embedded && settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (

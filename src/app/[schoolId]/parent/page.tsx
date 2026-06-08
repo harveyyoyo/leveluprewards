@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isParentPortalOn } from '@/lib/productPillars';
+import { isMobileDisplayMode } from '@/lib/displayMode';
+import { MobileDisplayUnavailable } from '@/components/layout/MobileDisplayUnavailable';
 import { ParentPortalLogin } from '@/components/parent-portal/ParentPortalLogin';
 import { ParentPortalDashboardView } from '@/components/parent-portal/ParentPortalDashboardView';
 import { Button } from '@/components/ui/button';
@@ -53,6 +55,10 @@ export default function ParentPortalPage() {
         ) : null}
       </div>
     );
+  }
+
+  if (schoolId && isMobileDisplayMode(settings.displayMode)) {
+    return <MobileDisplayUnavailable schoolId={schoolId} area="parent" />;
   }
 
   return (

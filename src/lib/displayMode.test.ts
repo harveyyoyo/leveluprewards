@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  displayModeLabel,
   isCompactDisplayMode,
   isDockItemOnDisplayMode,
   isPortalAreaOnDisplayMode,
+  isStaffPortalTabOnDisplayMode,
   normalizeDisplayModePreference,
   resolveDisplayMode,
+  staffPortalMobileDefaultTab,
 } from './displayMode';
 
 describe('displayMode', () => {
@@ -46,5 +49,22 @@ describe('displayMode', () => {
     expect(isPortalAreaOnDisplayMode('redeem', 'mobile')).toBe(true);
     expect(isDockItemOnDisplayMode('admin', 'mobile')).toBe(false);
     expect(isDockItemOnDisplayMode('print', 'app')).toBe(true);
+  });
+
+  it('limits mobile teacher tabs and blocks admin tabs', () => {
+    expect(isStaffPortalTabOnDisplayMode('welcome', 'teacher', 'mobile')).toBe(false);
+    expect(isStaffPortalTabOnDisplayMode('coupons', 'teacher', 'mobile')).toBe(true);
+    expect(isStaffPortalTabOnDisplayMode('students', 'admin', 'mobile')).toBe(false);
+    expect(isStaffPortalTabOnDisplayMode('coupons', 'secretary', 'mobile')).toBe(true);
+  });
+
+  it('picks a mobile default teacher tab from allowed values', () => {
+    expect(staffPortalMobileDefaultTab('teacher', ['roster', 'reports'])).toBe('roster');
+    expect(staffPortalMobileDefaultTab('secretary', ['coupons'])).toBe('coupons');
+  });
+
+  it('labels resolved modes for settings UI', () => {
+    expect(displayModeLabel('mobile')).toBe('Mobile');
+    expect(displayModeLabel('web')).toBe('Web');
   });
 });

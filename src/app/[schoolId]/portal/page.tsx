@@ -32,7 +32,7 @@ import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSec
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
-import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
+import { isCompactDisplayMode, isMobileDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
 
 type PortalArea = {
     id: string;
@@ -175,6 +175,7 @@ export default function PortalPage() {
     );
     const kioskPortrait = isKioskPortraitDisplay(settings);
     const compactDisplay = isCompactDisplayMode(settings.displayMode);
+    const mobileDisplay = isMobileDisplayMode(settings.displayMode);
 
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -345,14 +346,21 @@ export default function PortalPage() {
                             compactDisplay ? 'pb-1 pt-0 md:pb-0' : '',
                         )}
                     >
+                        {mobileDisplay ? (
+                            <p className="mb-2 max-w-md text-xs font-semibold leading-snug text-emerald-700 dark:text-emerald-300">
+                                Mobile mode — teacher and student essentials only. Switch to Web or App in Settings for admin tools.
+                            </p>
+                        ) : null}
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">
-                            {reduceWhereToMotion ? (
+                            {reduceWhereToMotion || mobileDisplay ? (
                                 <h2
                                     className={cn(
                                         'font-headline portal-choose-title-depth inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         kioskPortrait
                                             ? portalChooseTitleClass(true, compactDisplay)
-                                            : compactDisplay
+                                            : mobileDisplay
+                                              ? 'px-2 py-1 text-4xl sm:text-5xl'
+                                              : compactDisplay
                                               ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
                                               : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
                                     )}
@@ -363,7 +371,7 @@ export default function PortalPage() {
                                             : undefined,
                                     }}
                                 >
-                                    Where to?
+                                    {mobileDisplay ? 'Quick access' : 'Where to?'}
                                 </h2>
                             ) : (
                                 <WhereToDrawnTitle
@@ -441,9 +449,11 @@ export default function PortalPage() {
                                             <h3 className="text-lg font-black leading-snug tracking-tight text-foreground sm:text-xl">
                                                 {area.title}
                                             </h3>
-                                            <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
-                                                {area.description}
-                                            </p>
+                                            {!mobileDisplay ? (
+                                                <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
+                                                    {area.description}
+                                                </p>
+                                            ) : null}
                                         </div>
                                         <ArrowUpRight
                                             className={cn(

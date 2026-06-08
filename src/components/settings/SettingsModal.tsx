@@ -37,7 +37,7 @@ import {
     Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace
 } from 'lucide-react';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
-import { normalizeDisplayModePreference } from '@/lib/displayMode';
+import { displayModeLabel, normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -1189,6 +1189,17 @@ export function SettingsModal() {
                                      <p className="text-[10px] text-muted-foreground font-medium leading-snug px-1">
                                          Auto uses mobile on phones, app on tablets, and web on larger screens. Mobile keeps only teacher and student essentials.
                                      </p>
+                                     {normalizeDisplayModePreference(
+                                         interfaceRole === 'student'
+                                             ? local.studentDisplayMode ?? local.displayMode
+                                             : interfaceRole === 'teacher'
+                                               ? local.teacherDisplayMode ?? local.displayMode
+                                               : local.displayMode,
+                                     ) === 'auto' ? (
+                                         <p className="text-[10px] font-bold leading-snug px-1 text-emerald-700 dark:text-emerald-300">
+                                             Auto is using {displayModeLabel(settings.displayMode)} on this device.
+                                         </p>
+                                     ) : null}
                                  </div>
 
                                  {interfaceRole === 'student' && (

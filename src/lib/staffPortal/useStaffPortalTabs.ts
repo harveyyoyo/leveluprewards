@@ -12,6 +12,11 @@ import {
   staffPortalTabsForRole,
 } from './tabRegistry';
 import type { StaffPortalRole, StaffPortalTabDef, StaffPortalTabView } from './types';
+import {
+  isStaffPortalTabOnDisplayMode,
+  staffPortalMobileDefaultTab,
+  type ResolvedDisplayMode,
+} from '@/lib/displayMode';
 
 function toTabView(def: StaffPortalTabDef): StaffPortalTabView {
   return { value: def.value, label: def.label, icon: def.icon, title: def.title };
@@ -20,6 +25,8 @@ function toTabView(def: StaffPortalTabDef): StaffPortalTabView {
 export type UseStaffPortalTabsOptions = {
   role: StaffPortalRole;
   settings: Settings;
+  /** Resolved layout mode (`web` | `app` | `mobile`) for mobile tab trimming. */
+  resolvedDisplayMode?: ResolvedDisplayMode;
   /** Admin: pinned add-on tab values shown in the main row */
   pinnedAddOnValues?: string[];
   /** Admin: persisted main tab order */
@@ -38,6 +45,15 @@ export type UseStaffPortalTabsResult = {
   addOnTabDefs: StaffPortalTabDef[];
 };
 
+function filterTabsForDisplayMode(
+  tabs: StaffPortalTabView[],
+  role: StaffPortalRole,
+  resolvedDisplayMode?: ResolvedDisplayMode,
+): StaffPortalTabView[] {
+  if (!resolvedDisplayMode) return tabs;
+  return tabs.filter((tab) => isStaffPortalTabOnDisplayMode(tab.value, role, resolvedDisplayMode));
+}
+
 /**
  * Role-filtered staff portal tabs — admin and teacher share one registry + canonical order.
  */
@@ -45,6 +61,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
   const {
     role,
     settings,
+    resolvedDisplayMode,
     pinnedAddOnValues = [],
     mainTabOrder,
   } = options;
@@ -56,12 +73,17 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     const addOnViews = addOnDefs.map(toTabView);
 
     if (role === 'secretary') {
-      const main = core.filter((t) => t.value === 'coupons');
+      const main = filterTabsForDisplayMode(
+        core.filter((t) => t.value === 'coupons'),
+        role,
+        resolvedDisplayMode,
+      );
+      const allTabValues = filterTabsForDisplayMode(main, role, resolvedDisplayMode).map((t) => t.value);
       return {
         mainTabs: main,
         addMoreTabs: [],
-        allTabValues: main.map((t) => t.value),
-        defaultTab: staffPortalDefaultTab(role, settings),
+        allTabValues,
+        defaultTab: staffPortalMobileDefaultTab(role, allTabValues),
         coreTabs: main,
         addOnTabDefs: [],
       };
@@ -70,19 +92,36 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
     const pinnedSet = new Set(pinnedAddOnValues.map(normalizeStaffPortalTabValue));
     const pinnedExtras = addOnViews.filter((t) => pinnedSet.has(t.value));
     const availableMain = [...core, ...pinnedExtras];
-    const main = staffPortalOrderMainTabs(availableMain, mainTabOrder);
+    const main = filterTabsForDisplayMode(
+      staffPortalOrderMainTabs(availableMain, mainTabOrder),
+      role,
+      resolvedDisplayMode,
+    );
     const mainValues = new Set(main.map((t) => t.value));
-    const addMore = staffPortalSortTabs(addOnViews.filter((t) => !mainValues.has(t.value)));
+    const addMore = filterTabsForDisplayMode(
+      staffPortalSortTabs(addOnViews.filter((t) => !mainValues.has(t.value))),
+      role,
+      resolvedDisplayMode,
+    );
+    const allTabValues = filterTabsForDisplayMode(
+      allDefs.map(toTabView),
+      role,
+      resolvedDisplayMode,
+    ).map((t) => t.value);
+    const defaultTab =
+      resolvedDisplayMode === 'mobile'
+        ? staffPortalMobileDefaultTab(role, allTabValues)
+        : staffPortalDefaultTab(role, settings);
 
     return {
       mainTabs: main,
       addMoreTabs: addMore,
-      allTabValues: allDefs.map((t) => t.value),
-      defaultTab: staffPortalDefaultTab(role, settings),
-      coreTabs: core,
+      allTabValues,
+      defaultTab,
+      coreTabs: filterTabsForDisplayMode(core, role, resolvedDisplayMode),
       addOnTabDefs: addOnDefs,
     };
-  }, [role, settings, pinnedAddOnValues, mainTabOrder]);
+  }, [role, settings, resolvedDisplayMode, pinnedAddOnValues, mainTabOrder]);
 }
 
 export function staffPortalTabIsValid(

@@ -1546,6 +1546,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         };
     }, [settings, studentKioskUi, loginState, isPhone, isTabletOrMobile, effectiveLegacyMode]);
 
+    useEffect(() => {
+        if (!isLoaded) return;
+        document.documentElement.setAttribute('data-display-mode', effectiveSettings.displayMode);
+    }, [isLoaded, effectiveSettings.displayMode]);
+
     const isTeacherAllowed = useCallback((key: string) => {
         if (!isAllowed(key)) return false;
         if (loginState !== 'teacher') return true;
