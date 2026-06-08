@@ -1,4 +1,5 @@
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const APP_CONFIG_GLOBAL = 'global';
 
@@ -13,8 +14,8 @@ export async function resolveSchoolGateScopes(uid: string, schoolId: string): Pr
   const sid = schoolId.trim().toLowerCase();
   const scopes = new Set<string>();
 
-  const globalSnap = await db.collection('appConfig').doc(APP_CONFIG_GLOBAL).get();
-  const devList = globalSnap.exists ? (globalSnap.data()?.developerUids as unknown) : undefined;
+  const globalSnap = await db.collection('appConfig').doc('developerAllowlist').get();
+  const devList = globalSnap.exists ? (globalSnap.data()?.uids as unknown) : undefined;
   if (Array.isArray(devList) && devList.includes(uid)) {
     scopes.add('dev');
   }

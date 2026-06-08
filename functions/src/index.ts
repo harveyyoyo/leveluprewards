@@ -754,8 +754,8 @@ exports.verifyBackupIntegrity = functions.https.onCall(
 
 exports.scheduledFullBackup = functions
   .runWith({ timeoutSeconds: 540, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
-  .timeZone("UTC")
+  .pubsub.schedule("0 2 * * 0")
+  .timeZone("Etc/UTC")
   .onRun(async () => {
     const schoolsSnap = await admin.firestore().collection("schools").get();
     let succeeded = 0;
@@ -890,10 +890,14 @@ const APP_CONFIG_GLOBAL = "global";
 async function isDeveloper(context: functions.https.CallableContext): Promise<boolean> {
   if (!context.auth?.uid) return false;
   const db = admin.firestore();
-  const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
-  const snap = await globalRef.get();
-  const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
-  return Array.isArray(list) && list.includes(context.auth!.uid);
+  try {
+    const doc = await db.collection("appConfig").doc("developerAllowlist").get();
+    if (!doc.exists) return false;
+    const data = doc.data();
+    return Array.isArray(data?.uids) && data!.uids.includes(context.auth.uid);
+  } catch (e) {
+    return false;
+  }
 }
 
 async function requireDeveloper(context: functions.https.CallableContext): Promise<void> {

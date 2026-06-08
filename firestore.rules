@@ -158,15 +158,17 @@ service cloud.firestore {
     }
 
     function isDeveloper() {
-      return isAuth() && exists(/databases/$(database)/documents/appConfig/global)
-        && 'developerUids' in get(/databases/$(database)/documents/appConfig/global).data
-        && request.auth.uid in get(/databases/$(database)/documents/appConfig/global).data.developerUids;
+      return isAuth() && exists(/databases/$(database)/documents/appConfig/developerAllowlist)
+        && 'uids' in get(/databases/$(database)/documents/appConfig/developerAllowlist).data
+        && request.auth.uid in get(/databases/$(database)/documents/appConfig/developerAllowlist).data.uids;
     }
 
     // Global app configuration (e.g. app logo, name, tagline)
     match /appConfig/{docId} {
       // Public read so login page can show app logo before user signs in.
-      allow read: if true;
+      allow read: if docId == 'global';
+      // Only developers can read the allowlist itself.
+      allow read: if docId == 'developerAllowlist' && isDeveloper();
       allow write: if false;
     }
 

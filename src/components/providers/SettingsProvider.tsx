@@ -38,6 +38,7 @@ import {
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
+import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 
 type ColorScheme =
     | 'default'
@@ -378,7 +379,7 @@ interface Settings {
     smartScreenEnabled?: boolean;
     smartScreenTitle?: string;
     smartScreenMessage?: string;
-    smartScreenTheme?: 'midnight' | 'daylight' | 'studio';
+    smartScreenTheme?: SmartScreenTheme;
     smartScreenLayout?: 'mirror' | 'dashboard' | 'portrait';
     /** Optional US ZIP code. When set, Smart Screen uses it for both weather and timezone. */
     smartScreenLocationZip?: string;
@@ -905,6 +906,8 @@ export type { AppearanceColorOverrides, ColorScheme, Settings };
 export type { DisplayModePreference } from '@/lib/displayMode';
 
 const SettingsContext = createContext<SettingsContextType | null>(null);
+const AppearanceContext = createContext<Pick<SettingsContextType, 'settings' | 'updateSettings'> | null>(null);
+const FeaturesContext = createContext<Pick<SettingsContextType, 'settings' | 'updateSettings' | 'isFeatureAllowed' | 'pillarAccess' | 'isPillarAvailable'> | null>(null);
 
 /** Per-browser settings: kiosk, teacher, and staff keep separate theme and UI prefs on shared devices. */
 function getLocalArcadeSettingsKey(
@@ -1598,7 +1601,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             isPillarAvailable,
             isLoaded 
         }}>
-            {children}
+            <AppearanceContext.Provider value={{ settings: effectiveSettings, updateSettings }}>
+                <FeaturesContext.Provider value={{ 
+                    settings: effectiveSettings, 
+                    updateSettings, 
+                    isFeatureAllowed: loginState === 'teacher' ? isTeacherAllowed : isAllowed,
+                    pillarAccess,
+                    isPillarAvailable
+                }}>
+                    {children}
+                </FeaturesContext.Provider>
+            </AppearanceContext.Provider>
         </SettingsContext.Provider>
     );
 }
@@ -1606,5 +1619,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 export function useSettings() {
     const ctx = useContext(SettingsContext);
     if (!ctx) throw new Error('useSettings must be used within SettingsProvider');
+    return ctx;
+}
+
+export function useAppearance() {
+    const ctx = useContext(AppearanceContext);
+    if (!ctx) throw new Error('useAppearance must be used within SettingsProvider');
+    return ctx;
+}
+
+export function useFeatures() {
+    const ctx = useContext(FeaturesContext);
+    if (!ctx) throw new Error('useFeatures must be used within SettingsProvider');
     return ctx;
 }

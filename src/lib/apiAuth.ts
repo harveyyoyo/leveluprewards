@@ -199,7 +199,7 @@ async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<bo
 
   const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(
     projectId
-  )}/databases/(default)/documents/appConfig/global`;
+  )}/databases/(default)/documents/appConfig/developerAllowlist`;
 
   let allowed = false;
   try {
@@ -213,12 +213,12 @@ async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<bo
     }
     const body = (await res.json()) as {
       fields?: {
-        developerUids?: {
+        uids?: {
           arrayValue?: { values?: Array<{ stringValue?: string }> };
         };
       };
     };
-    const values = body.fields?.developerUids?.arrayValue?.values;
+    const values = body.fields?.uids?.arrayValue?.values;
     if (Array.isArray(values)) {
       allowed = values.some((v) => v?.stringValue === uid);
     }

@@ -50,7 +50,7 @@ import {
   isDockItemOnDisplayMode,
   type ResolvedDisplayMode,
 } from '@/lib/displayMode';
-import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+// import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 
 function schoolNameCacheKey(schoolId: string) {

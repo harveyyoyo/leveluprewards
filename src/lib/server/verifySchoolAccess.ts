@@ -78,8 +78,8 @@ async function hasSchoolRole(db: Firestore, schoolId: string, uid: string): Prom
 }
 
 async function isDeveloperUid(db: Firestore, uid: string): Promise<boolean> {
-  const snap = await db.collection('appConfig').doc(APP_CONFIG_GLOBAL).get();
-  const list = snap.exists ? (snap.data()?.developerUids as string[] | undefined) : undefined;
+  const snap = await db.collection('appConfig').doc('developerAllowlist').get();
+  const list = snap.exists ? (snap.data()?.uids as string[] | undefined) : undefined;
   return Array.isArray(list) && list.includes(uid);
 }
 
