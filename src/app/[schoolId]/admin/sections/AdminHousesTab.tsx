@@ -1,17 +1,13 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Link from 'next/link';
 import {
   Home,
   Plus,
-  RefreshCw,
-  Wand2,
-  ExternalLink,
+  RotateCcw,
   Loader2,
   FlaskConical,
   Sparkles,
-  MoreHorizontal,
   LayoutGrid,
   Users,
   Settings,
@@ -35,13 +31,6 @@ import {
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import { Helper } from '@/components/ui/helper';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Switch } from '@/components/ui/switch';
@@ -298,6 +287,33 @@ export function AdminHousesTab({
     }
   };
 
+  const handleResetHouses = async () => {
+    if (sortedHouses.length === 0) return;
+    const ok = await confirm({
+      title: 'Reset all houses?',
+      description: `This permanently deletes all ${sortedHouses.length} house${
+        sortedHouses.length === 1 ? '' : 's'
+      } and unassigns every student. House standings and points will be cleared. This cannot be undone.`,
+      confirmLabel: 'Reset houses',
+      destructive: true,
+    });
+    if (!ok) return;
+    setBusy('reset');
+    try {
+      for (const house of sortedHouses) {
+        const houseStudents = (students || []).filter((s) => s.houseId === house.id);
+        await onDeleteHouse(house.id, houseStudents);
+      }
+      toast({ title: 'Houses reset', description: 'All houses were removed and students unassigned.' });
+      setMainSection('overview');
+      setExpandedHouseIds(new Set());
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not reset houses' });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const handleTransfer = async (student: Student, toHouseId: string) => {
     await onUpdateStudent({ ...student, houseId: toHouseId });
     const toHouse = sortedHouses.find((h) => h.id === toHouseId);
@@ -334,11 +350,6 @@ export function AdminHousesTab({
         (r.house.motto?.toLowerCase().includes(q) ?? false),
     );
   }, [standingsRows, houseSearch]);
-
-  const goToHouseRoster = (houseId: string) => {
-    setMainSection('rosters');
-    setExpandedHouseIds(new Set([houseId]));
-  };
 
   const openPointsAdjust = (house: House) => {
     setPointsAdjustHouse(house);
@@ -390,47 +401,6 @@ export function AdminHousesTab({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />
-          <Button
-            variant="default"
-            className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0"
-            onClick={() => setWizardOpen(true)}
-          >
-            <Sparkles className="mr-2 h-4 w-4" /> Setup wizard
-          </Button>
-          <Button className="rounded-xl" onClick={() => openEditor(null)}>
-            <Plus className="mr-2 h-4 w-4" /> Add house
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="rounded-xl" aria-label="More house actions">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem asChild>
-                <Link href={sortingHref} target="_blank" rel="noopener noreferrer" className="cursor-pointer">
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  Sorting ceremony
-                  <ExternalLink className="ml-auto h-3.5 w-3.5 opacity-50" />
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={busy !== null} onClick={() => setSampleDialogOpen(true)}>
-                <FlaskConical className="mr-2 h-4 w-4" />
-                Populate sample
-              </DropdownMenuItem>
-              {sortedHouses.length > 0 ? (
-                <DropdownMenuItem disabled={busy !== null} onClick={() => void runSyncTotals()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync from students
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setMainSection('setup')}>
-                <Settings className="mr-2 h-4 w-4" />
-                House settings
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </StaffPortalSectionCardHeader>
 
@@ -470,21 +440,10 @@ export function AdminHousesTab({
               />
             ) : null}
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Ranked standings
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl text-xs"
-                  onClick={() => setMainSection('rosters')}
-                >
-                  Manage all rosters
-                </Button>
-              </div>
-              <AdminHousesOverviewGrid rows={standingsRows} onManageHouse={goToHouseRoster} />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Ranked standings
+              </p>
+              <AdminHousesOverviewGrid rows={standingsRows} />
             </div>
           </div>
         ) : null}
@@ -625,6 +584,49 @@ export function AdminHousesTab({
 
         {mainSection === 'setup' ? (
           <div className="space-y-6">
+            <div className="flex flex-col gap-3 rounded-2xl border bg-muted/20 p-4 md:p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">House setup</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Create teams, run the guided setup, or reset everything to start over.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 rounded-xl shrink-0"
+                  onClick={() => setWizardOpen(true)}
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden />
+                  Setup wizard
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="gap-2 rounded-xl shrink-0"
+                  onClick={() => openEditor(null)}
+                >
+                  <Plus className="h-4 w-4" aria-hidden />
+                  Add house
+                </Button>
+                {sortedHouses.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 rounded-xl shrink-0 text-destructive hover:text-destructive"
+                    disabled={busy !== null}
+                    onClick={() => void handleResetHouses()}
+                  >
+                    <RotateCcw className="h-4 w-4" aria-hidden />
+                    Reset houses
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
             <div className="space-y-4 rounded-2xl border bg-muted/20 p-4 md:p-5">
               <p className="text-sm font-bold text-foreground">House settings</p>
               <div className="flex items-center justify-between gap-3">

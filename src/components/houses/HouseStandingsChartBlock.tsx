@@ -92,8 +92,6 @@ const FORMAT_OPTIONS: {
   { id: 'thermometer', label: 'Thermometer', icon: Thermometer },
 ];
 
-const CHART_FORMAT_OPTIONS = FORMAT_OPTIONS.filter((o) => o.id !== 'bars');
-
 const CHART_MARGIN = { top: 8, right: 8, left: 0, bottom: 48 };
 const HORIZONTAL_MARGIN = { top: 8, right: 12, left: 4, bottom: 8 };
 
@@ -480,6 +478,14 @@ function HouseStandingsChartBody({
     return <HouseStandingsThermometerView rows={rows} maxPts={maxPts} />;
   }
 
+  if (format === 'bars') {
+    return (
+      <p className="py-6 text-center text-xs text-muted-foreground">
+        Inline bars are shown in the ranked standings below. Pick another format above to see a chart here.
+      </p>
+    );
+  }
+
   return null;
 }
 
@@ -516,7 +522,7 @@ export function HouseStandingsChartBlock({ houses, students, format, onFormatCha
     return cfg;
   }, [rows]);
 
-  if (houses.length < 2 || format === 'bars') return null;
+  if (houses.length < 2) return null;
 
   return (
     <div className="rounded-2xl border bg-muted/15 p-4 space-y-3">
@@ -531,7 +537,7 @@ export function HouseStandingsChartBlock({ houses, students, format, onFormatCha
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {CHART_FORMAT_OPTIONS.map((opt) => {
+              {FORMAT_OPTIONS.map((opt) => {
                 const Icon = opt.icon;
                 return (
                   <SelectItem key={opt.id} value={opt.id}>

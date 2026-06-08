@@ -1,7 +1,5 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { HouseStandingsInlineCell } from '@/components/houses/HouseStandingsInlineCell';
 import type { HouseStandingsRow } from '@/lib/houses/houseStandings';
@@ -9,11 +7,10 @@ import { cn } from '@/lib/utils';
 
 type Props = {
   rows: HouseStandingsRow[];
-  onManageHouse: (houseId: string) => void;
   className?: string;
 };
 
-export function AdminHousesOverviewGrid({ rows, onManageHouse, className }: Props) {
+export function AdminHousesOverviewGrid({ rows, className }: Props) {
   if (rows.length === 0) return null;
 
   return (
@@ -45,16 +42,6 @@ export function AdminHousesOverviewGrid({ rows, onManageHouse, className }: Prop
               </div>
             </div>
             <HouseStandingsInlineCell row={row} />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="w-full justify-between rounded-xl text-xs font-semibold"
-              onClick={() => onManageHouse(row.id)}
-            >
-              Manage roster
-              <ChevronRight className="h-4 w-4 opacity-60" aria-hidden />
-            </Button>
           </article>
         );
       })}
