@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { verifyParentPortal } from '@/lib/parentPortal/parentPortalClient';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export function ParentPortalLogin({
   schoolId,
@@ -19,6 +20,7 @@ export function ParentPortalLogin({
   const [parentEmail, setParentEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,39 +39,39 @@ export function ParentPortalLogin({
   return (
     <Card className="w-full max-w-md border-t-4 border-violet-500 shadow-lg">
       <CardHeader>
-        <CardTitle className="text-xl font-black">Parent sign-in</CardTitle>
+        <CardTitle className="text-xl font-black">{t('parent.portal.signInTitle')}</CardTitle>
         <CardDescription>
-          Use your child&apos;s student ID (from their card) and the parent email on file at school.
+          {t('parent.portal.signInDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="parent-student-id">Student ID</Label>
+            <Label htmlFor="parent-student-id">{t('parent.portal.studentId')}</Label>
             <Input
               id="parent-student-id"
               value={studentLookup}
               onChange={(e) => setStudentLookup(e.target.value)}
-              placeholder="From student ID card"
+              placeholder={t('parent.portal.studentIdPlaceholder')}
               autoComplete="off"
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="parent-email">Parent email</Label>
+            <Label htmlFor="parent-email">{t('parent.portal.parentEmail')}</Label>
             <Input
               id="parent-email"
               type="email"
               value={parentEmail}
               onChange={(e) => setParentEmail(e.target.value)}
-              placeholder="Email on file with the school"
+              placeholder={t('parent.portal.parentEmailPlaceholder')}
               autoComplete="email"
               required
             />
           </div>
           {error ? <p className="text-sm font-medium text-destructive">{error}</p> : null}
           <Button type="submit" className="w-full rounded-xl font-bold" disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'View my child'}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t('parent.portal.viewMyChild')}
           </Button>
         </form>
       </CardContent>

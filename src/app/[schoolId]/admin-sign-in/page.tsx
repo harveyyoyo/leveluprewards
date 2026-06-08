@@ -201,7 +201,7 @@ function AdminSignInContent() {
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
             <Link href={backHref} onClick={() => playSound('click')}>
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
-              Back
+              {t('common.back')}
             </Link>
           </Button>
 

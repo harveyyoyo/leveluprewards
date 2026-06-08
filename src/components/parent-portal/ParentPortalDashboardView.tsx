@@ -17,6 +17,7 @@ import {
   formatBehaviorNoteDateTime,
   formatBehaviorNoteTime,
 } from '@/lib/classroom/behaviorNoteTime';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export function ParentPortalDashboardView({
   schoolId,
@@ -29,6 +30,7 @@ export function ParentPortalDashboardView({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [signingOut, setSigningOut] = useState(false);
+  const { t } = useTranslation();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -61,7 +63,7 @@ export function ParentPortalDashboardView({
     return (
       <div className="flex items-center gap-2 text-muted-foreground py-12">
         <Loader2 className="h-5 w-5 animate-spin" />
-        Loading…
+        {t('parent.portal.loading')}
       </div>
     );
   }
@@ -70,9 +72,9 @@ export function ParentPortalDashboardView({
     return (
       <Card className="max-w-lg w-full">
         <CardContent className="pt-6 space-y-4">
-          <p className="text-sm text-destructive">{error || 'Could not load dashboard.'}</p>
+          <p className="text-sm text-destructive">{error || t('parent.portal.loadError')}</p>
           <Button variant="outline" onClick={() => void load()}>
-            Retry
+            {t('parent.portal.retry')}
           </Button>
         </CardContent>
       </Card>
@@ -90,7 +92,7 @@ export function ParentPortalDashboardView({
         </div>
         <Button variant="outline" size="sm" className="gap-2 rounded-xl" onClick={handleSignOut} disabled={signingOut}>
           <LogOut className="h-4 w-4" />
-          Sign out
+          {t('parent.portal.signOut')}
         </Button>
       </div>
 
@@ -102,12 +104,14 @@ export function ParentPortalDashboardView({
           <p className="text-4xl font-black tabular-nums">{data.student.points.toLocaleString()}</p>
           {data.student.rewardsPillarOn && data.student.classroomPoints > 0 ? (
             <p className="text-xs text-muted-foreground">
-              Classroom points (separate): {data.student.classroomPoints.toLocaleString()}
+              {t('parent.portal.classroomPointsSeparate', {
+                points: data.student.classroomPoints.toLocaleString(),
+              })}
             </p>
           ) : null}
           {!data.student.rewardsPillarOn ? (
             <p className="text-xs text-muted-foreground">
-              Saved from classroom quick awards — not the school kiosk or prize shop balance.
+              {t('parent.portal.classroomOnlyNote')}
             </p>
           ) : null}
         </CardContent>
@@ -116,19 +120,21 @@ export function ParentPortalDashboardView({
       {data.attendanceToday ? (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Today&apos;s attendance</CardTitle>
+            <CardTitle className="text-base">{t('parent.portal.todaysAttendance')}</CardTitle>
           </CardHeader>
           <CardContent>
             {data.attendanceToday.signedIn ? (
               <Badge variant="outline" className="bg-emerald-500/10 text-emerald-800">
-                {data.attendanceToday.onTime === false ? 'Signed in (late)' : 'Signed in on time'}
+                {data.attendanceToday.onTime === false
+                  ? t('parent.portal.signedInLate')
+                  : t('parent.portal.signedInOnTime')}
                 {data.attendanceToday.signedInAt
                   ? ` · ${format(data.attendanceToday.signedInAt, 'h:mm a')}`
                   : ''}
               </Badge>
             ) : (
               <Badge variant="outline" className="bg-muted text-muted-foreground">
-                Not signed in yet today
+                {t('parent.portal.notSignedInToday')}
               </Badge>
             )}
           </CardContent>
@@ -137,11 +143,11 @@ export function ParentPortalDashboardView({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Recent points activity</CardTitle>
+          <CardTitle className="text-base">{t('parent.portal.recentActivity')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           {data.recentActivity.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recent activity.</p>
+            <p className="text-sm text-muted-foreground">{t('parent.portal.noRecentActivity')}</p>
           ) : (
             data.recentActivity.slice(0, 12).map((row, i) => (
               <div key={`${row.date}-${i}`} className="flex justify-between gap-3 text-sm border-b border-border/50 pb-2 last:border-0">
@@ -161,11 +167,11 @@ export function ParentPortalDashboardView({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Teacher notes</CardTitle>
+          <CardTitle className="text-base">{t('parent.portal.teacherNotes')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.behaviorNotes.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No notes shared with parents yet.</p>
+            <p className="text-sm text-muted-foreground">{t('parent.portal.noTeacherNotes')}</p>
           ) : (
             data.behaviorNotes.map((n, i) => (
               <div key={`${n.createdAt}-${i}`} className="rounded-xl border bg-muted/20 p-3 text-sm space-y-2">

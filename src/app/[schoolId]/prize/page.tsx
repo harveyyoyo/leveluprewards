@@ -18,6 +18,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { PrizeDashboard } from './PrizeDashboard';
 import { StudentKioskTransitionFlash } from '@/components/student/StudentKioskTransitionFlash';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 const StudentScanner = dynamic(
     () =>
@@ -45,6 +46,7 @@ export default function PrizePage() {
         meta?: StudentFoundMeta | { source: 'manual' };
     } | null>(null);
     const playSound = useArcadeSound();
+    const { t } = useTranslation();
 
     useEffect(() => {
         const linkedStudentId = searchParams.get('student')?.trim();
@@ -82,8 +84,8 @@ export default function PrizePage() {
         if (schoolId) {
             router.replace(`/${schoolId}/student`);
         }
-        toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
-    }, [handleDone, playSound, router, schoolId, toast]);
+        toast({ title: t('student.kiosk.loggedOut'), description: t('student.kiosk.loggedOutDescription') });
+    }, [handleDone, playSound, router, schoolId, t, toast]);
 
     const onScannerStudent = useCallback(
         (id: string, meta?: StudentFoundMeta) => {
@@ -103,7 +105,7 @@ export default function PrizePage() {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-muted-foreground p-6">
                 <Loader2 className="h-8 w-8 animate-spin" aria-hidden />
-                <p className="text-sm font-medium">Opening staff prize desk…</p>
+                <p className="text-sm font-medium">{t('student.kiosk.openingPrizeDesk')}</p>
             </div>
         );
     }
@@ -113,7 +115,7 @@ export default function PrizePage() {
             <div className="min-h-screen flex items-center justify-center">
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Loading Kiosk...
+                    {t('student.kiosk.loading')}
                 </Button>
             </div>
         );
