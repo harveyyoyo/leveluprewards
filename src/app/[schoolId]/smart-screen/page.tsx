@@ -32,6 +32,8 @@ import {
   type SmartScreenTheme,
 } from '@/lib/smartScreenThemes';
 import type { Class, House, Prize, Student } from '@/lib/types';
+import { formatTodayHebrewDate, getUpcomingJewishHolidays } from '@/lib/hebrewCalendar';
+import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
 type BulletinIncentive = {
   id: string;
@@ -75,6 +77,8 @@ type SmartScreenScopedSettings = Pick<
   | 'smartScreenShowBulletin'
   | 'smartScreenShowRewards'
   | 'smartScreenShowSchedule'
+  | 'smartScreenShowHebrewDate'
+  | 'smartScreenShowJewishHolidays'
 >;
 
 const VIEWER_LOGIN_STATES = new Set([
@@ -234,10 +238,10 @@ export default function SmartScreenPage() {
   const searchParams = useSearchParams();
   const { loginState, isInitialized, schoolId } = useAppContext();
   const { settings } = useSettings();
+  const { isJewishOrthodox } = useSchoolProfile();
   const firestore = useFirestore();
   const [now, setNow] = useState(() => new Date());
   const [locationInfo, setLocationInfo] = useState<SmartScreenLocationInfo | null>(null);
-  const queryZipOverride = (searchParams.get('zip') || '').trim();
   const screenProfileId = (searchParams.get('screenProfileId') || '').trim();
   const activeScreenProfile = screenProfileId ? settings.smartScreenProfiles?.[screenProfileId] : null;
   const activeProfileSettings = activeScreenProfile?.settings ?? {};
@@ -291,7 +295,7 @@ export default function SmartScreenPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const zip = (/^\d{5}$/.test(queryZipOverride) ? queryZipOverride : configuredZip || '').trim();
+    const zip = (configuredZip || '').trim();
 
     const loadLocation = async () => {
       try {
@@ -313,7 +317,7 @@ export default function SmartScreenPage() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [configuredZip, queryZipOverride]);
+  }, [configuredZip]);
 
   useEffect(() => {
     if (isInitialized && !VIEWER_LOGIN_STATES.has(loginState)) {
@@ -363,10 +367,7 @@ export default function SmartScreenPage() {
       .slice(0, 3);
   }, [houses]);
 
-  const themeKey =
-    validSmartScreenTheme(searchParams.get('theme')) ||
-    validSmartScreenTheme(readScreenSetting('smartScreenTheme')) ||
-    'midnight';
+  const themeKey = validSmartScreenTheme(readScreenSetting('smartScreenTheme')) || 'midnight';
   const theme = SMART_SCREEN_THEME_CLASSES[themeKey];
 
   useEffect(() => {
@@ -379,7 +380,7 @@ export default function SmartScreenPage() {
     return <LoadingScreen label="Loading Smart Screen..." themeKey={themeKey} />;
   }
 
-  const layout = validLayout(searchParams.get('layout')) || readScreenSetting('smartScreenLayout') || 'mirror';
+  const layout = validLayout(readScreenSetting('smartScreenLayout')) || 'mirror';
   const isPortrait = layout === 'portrait';
   const isDashboard = layout === 'dashboard';
   const compact = isPortrait || isDashboard;
@@ -395,7 +396,13 @@ export default function SmartScreenPage() {
   const showBulletin = readScreenSetting('smartScreenShowBulletin') !== false;
   const showRewards = readScreenSetting('smartScreenShowRewards') !== false;
   const showSchedule = readScreenSetting('smartScreenShowSchedule') !== false;
+  const showHebrewDate = isJewishOrthodox && readScreenSetting('smartScreenShowHebrewDate') === true;
+  const showJewishHolidays = isJewishOrthodox && readScreenSetting('smartScreenShowJewishHolidays') === true;
   const enabled = !!readScreenSetting('smartScreenEnabled');
+  const hebrewDateLabel = formatTodayHebrewDate(now);
+  const upcomingHolidays = showJewishHolidays
+    ? getUpcomingJewishHolidays({ from: now, limit: compact ? 2 : 4 })
+    : [];
   const schoolName =
     schoolMeta?.name ||
     (schoolId ? schoolId.replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) : 'School');
@@ -451,6 +458,30 @@ export default function SmartScreenPage() {
           {['Arrive', 'Learn', 'Level up'].map((label) => (
             <div key={label} className={cn('rounded-xl border px-1.5 py-2 font-black', compact ? 'text-[10px]' : 'text-xs', theme.badge)}>
               {label}
+            </div>
+          ))}
+        </div>
+      </ModuleCard>,
+    );
+  }
+
+  if (showJewishHolidays && upcomingHolidays.length > 0) {
+    modules.push(
+      <ModuleCard key="holidays" title="Jewish holidays" icon={<Star className="h-5 w-5" />} theme={theme} compact={compact}>
+        <div className="space-y-1.5">
+          {upcomingHolidays.map((holiday) => (
+            <div key={holiday.id} className="rounded-xl border border-current/10 px-2 py-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className={cn('truncate font-black', compact ? 'text-xs' : 'text-sm')}>{holiday.nameEn}</p>
+                  <p className={cn('truncate font-semibold', compact ? 'text-[10px]' : 'text-xs', theme.quiet)} dir="rtl" lang="he">
+                    {holiday.nameHe}
+                  </p>
+                </div>
+                <p className={cn('shrink-0 font-black uppercase', compact ? 'text-[9px]' : 'text-[10px]', theme.quiet)}>
+                  {holiday.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -698,6 +729,15 @@ export default function SmartScreenPage() {
             <p className={cn('mt-2 font-bold', isPortrait ? 'text-sm' : 'text-2xl', theme.quiet)}>
               {formatDate(now, displayTimeZone)}
             </p>
+            {showHebrewDate ? (
+              <p
+                className={cn('mt-1 font-black text-amber-700 dark:text-amber-200', isPortrait ? 'text-sm' : 'text-xl')}
+                dir="rtl"
+                lang="he"
+              >
+                {hebrewDateLabel}
+              </p>
+            ) : null}
             <p className={cn('mt-3 max-w-4xl font-black leading-tight', isPortrait ? 'line-clamp-2 text-base' : compact ? 'line-clamp-2 text-2xl' : 'text-4xl')}>
               {message}
             </p>
