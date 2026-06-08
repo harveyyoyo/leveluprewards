@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { StaffPortalTabView } from '@/lib/staffPortal';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 type StaffPortalAddFeatureTabsMenuProps = {
   tabs: StaffPortalTabView[];
@@ -34,6 +35,7 @@ export function StaffPortalAddFeatureTabsMenu({
   className,
   getTabStyle,
 }: StaffPortalAddFeatureTabsMenuProps) {
+  const { t } = useTranslation();
   const hasBulkActions = !!(onTurnAllOn || onTurnAllOff);
   if (tabs.length === 0 && !hasBulkActions) return null;
 
@@ -50,7 +52,7 @@ export function StaffPortalAddFeatureTabsMenu({
           aria-label="Add feature tab"
         >
           <Settings className="w-4 h-4" aria-hidden />
-          Add more
+          {t('staff.nav.addMore')}
           <ChevronDown className="w-4 h-4 opacity-70" aria-hidden />
         </button>
       </DropdownMenuTrigger>
@@ -67,13 +69,13 @@ export function StaffPortalAddFeatureTabsMenu({
         {onTurnAllOn ? (
           <DropdownMenuItem className="gap-2 font-semibold" onSelect={() => onTurnAllOn()}>
             <Power className="h-4 w-4 opacity-75" aria-hidden />
-            Turn all on
+            {t('staff.nav.turnAllOn')}
           </DropdownMenuItem>
         ) : null}
         {onTurnAllOff ? (
           <DropdownMenuItem className="gap-2 font-semibold" onSelect={() => onTurnAllOff()}>
             <PowerOff className="h-4 w-4 opacity-75" aria-hidden />
-            Turn all off
+            {t('staff.nav.turnAllOff')}
           </DropdownMenuItem>
         ) : null}
         {hasBulkActions && tabs.length > 0 ? <DropdownMenuSeparator /> : null}

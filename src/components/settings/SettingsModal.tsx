@@ -38,6 +38,11 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
+import {
+    translateFeaturesNav,
+    translateGeneralNav,
+    translateInterfaceNav,
+} from '@/lib/i18n/settingsNav';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
 import type { StudentTheme } from '@/lib/types';
@@ -296,13 +301,13 @@ export function SettingsModal() {
     };
 
     const viewTitle: Record<SettingsView, string> = {
-        hub: 'Settings',
-        interface: 'Interface & display',
-        general: 'School settings',
-        features: 'School settings',
-        pillars: 'Product Pillars',
-        device: 'Kiosk device setup',
-        faceEnrollments: 'Face login enrollments',
+        hub: t('settings.views.hub'),
+        interface: t('settings.views.interface'),
+        general: t('settings.views.general'),
+        features: t('settings.views.features'),
+        pillars: t('settings.views.pillars'),
+        device: t('settings.views.device'),
+        faceEnrollments: t('settings.views.faceEnrollments'),
     };
 
     const openSettingsView = useCallback(
@@ -561,10 +566,10 @@ export function SettingsModal() {
                                     className="h-8 w-8 -ml-2 rounded-full hover:bg-muted"
                                     aria-label={
                                         view === 'faceEnrollments'
-                                            ? 'Back to school settings'
+                                            ? t('settings.back.toSchoolSettings')
                                             : view === 'features' && canManageSchoolSettings
-                                              ? 'Back to general settings'
-                                              : 'Back to settings menu'
+                                              ? t('settings.back.toGeneral')
+                                              : t('settings.back.toMenu')
                                     }
                                 >
                                     <ArrowLeft className="h-4 w-4" />
@@ -573,9 +578,9 @@ export function SettingsModal() {
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
                                 {viewTitle[view]}
                                 {view === 'features' ? (
-                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">&middot; Advanced</span>
+                                    <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">&middot; {t('settings.views.advancedSuffix')}</span>
                                 ) : view === 'general' ? (
-                                    <span className="ml-2 text-sm font-bold text-muted-foreground">&middot; General</span>
+                                    <span className="ml-2 text-sm font-bold text-muted-foreground">&middot; {t('settings.views.generalSuffix')}</span>
                                 ) : null}
                             </DialogTitle>
                         </div>
@@ -585,30 +590,6 @@ export function SettingsModal() {
                 <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-4">
                     {view === 'hub' && (
                         <div className="grid gap-3 sm:grid-cols-2 pt-1">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setView('interface');
-                                    if (local.soundEnabled) playSound('click');
-                                    requestAnimationFrame(() => jumpToSettingsSection('settings-interface-language'));
-                                }}
-                                className={cn(
-                                    'flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-all sm:col-span-2',
-                                    'border-violet-200 dark:border-violet-900/50 bg-violet-50/80 dark:bg-violet-950/20',
-                                    'hover:bg-violet-100/80 dark:hover:bg-violet-950/35',
-                                )}
-                            >
-                                <div className="flex w-full items-start justify-between gap-2">
-                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500 text-white shadow-inner">
-                                        <Languages className="h-5 w-5" />
-                                    </span>
-                                    <ChevronRight className="h-5 w-5 shrink-0 text-violet-700/50 dark:text-violet-400/50" aria-hidden />
-                                </div>
-                                <span className="font-black text-violet-900 dark:text-violet-100">{t('settings.language.title')}</span>
-                                <span className="text-xs leading-snug text-violet-800/90 dark:text-violet-200/80">
-                                    {t('settings.language.description')}
-                                </span>
-                            </button>
                             <button
                                 type="button"
                                 onClick={() => {
@@ -627,8 +608,8 @@ export function SettingsModal() {
                                     </span>
                                     <ChevronRight className="h-5 w-5 shrink-0 text-sky-700/50 dark:text-sky-400/50" aria-hidden />
                                 </div>
-                                <span className="font-black text-sky-900 dark:text-sky-100">Interface &amp; display</span>
-                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">Accent colors, dark mode, motion, sound, and Auto / Web / App layout</span>
+                                <span className="font-black text-sky-900 dark:text-sky-100">{t('settings.hub.interfaceTitle')}</span>
+                                <span className="text-xs leading-snug text-sky-800/90 dark:text-sky-200/80">{t('settings.hub.interfaceDescription')}</span>
                             </button>
                             <button
                                 type="button"
@@ -645,9 +626,9 @@ export function SettingsModal() {
                                     </span>
                                     <ChevronRight className="h-5 w-5 shrink-0 text-indigo-700/50 dark:text-indigo-400/50" aria-hidden />
                                 </div>
-                                <span className="font-black text-indigo-900 dark:text-indigo-100">School settings</span>
+                                <span className="font-black text-indigo-900 dark:text-indigo-100">{t('settings.hub.schoolTitle')}</span>
                                 <span className="text-xs leading-snug text-indigo-800/90 dark:text-indigo-200/80">
-                                    Sessions, kiosk behavior, printing, and optional features
+                                    {t('settings.hub.schoolDescription')}
                                 </span>
                             </button>
                             {canManageSchoolSettings && (
@@ -669,8 +650,8 @@ export function SettingsModal() {
                                         </span>
                                         <ChevronRight className="h-5 w-5 shrink-0 text-emerald-700/50 dark:text-emerald-400/50" aria-hidden />
                                     </div>
-                                    <span className="font-black text-emerald-900 dark:text-emerald-100">Product Pillars</span>
-                                    <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">Select active paid plan products</span>
+                                    <span className="font-black text-emerald-900 dark:text-emerald-100">{t('settings.hub.pillarsTitle')}</span>
+                                    <span className="text-xs leading-snug text-emerald-800/90 dark:text-emerald-200/80">{t('settings.hub.pillarsDescription')}</span>
                                 </button>
                             )}
                             {isStudentKioskUiContext(loginState, pathname, schoolId) && (
@@ -692,7 +673,7 @@ export function SettingsModal() {
                                         </span>
                                         <ChevronRight className="h-5 w-5 shrink-0 text-amber-700/50 dark:text-amber-400/50" aria-hidden />
                                     </div>
-                                    <span className="font-black text-amber-900 dark:text-amber-100">Kiosk device setup</span>
+                                    <span className="font-black text-amber-900 dark:text-amber-100">{t('settings.hub.deviceTitle')}</span>
                                     <span className="text-xs leading-snug text-amber-800/90 dark:text-amber-200/80">
                                         Link this physical screen to a centralized Kiosk Profile (Portrait layout, sound options, active login tabs, etc.)
                                     </span>
@@ -704,8 +685,8 @@ export function SettingsModal() {
                     {view === 'interface' && (
                         <>
                              <SettingsSectionJumpNav
-                                sections={INTERFACE_SECTION_NAV}
-                                ariaLabel="Interface settings sections"
+                                sections={translateInterfaceNav(INTERFACE_SECTION_NAV, t)}
+                                ariaLabel={t('settings.views.interface')}
                                 onJump={jumpToSettingsSection}
                             />
 
@@ -1255,8 +1236,8 @@ export function SettingsModal() {
                     {view === 'general' && (
                         <div className="space-y-4">
                             <SettingsSectionJumpNav
-                                sections={GENERAL_SECTION_NAV}
-                                ariaLabel="General school settings sections"
+                                sections={translateGeneralNav(GENERAL_SECTION_NAV, t)}
+                                ariaLabel={t('settings.views.general')}
                                 onJump={jumpToSettingsSection}
                             />
                             <div className="flex items-center justify-end">
@@ -1271,13 +1252,6 @@ export function SettingsModal() {
                                     <ChevronRight className="ml-1 h-3.5 w-3.5" aria-hidden />
                                 </Button>
                             </div>
-                            <SchoolLanguageSetting
-                                id="settings-general-language"
-                                language={local.language}
-                                onLanguageChange={(value) => handleToggle('language', value)}
-                                disabled={!canOpenSettings}
-                            />
-
                             <div
                                 id="settings-general-sessions"
                                 className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50"
@@ -1957,7 +1931,7 @@ export function SettingsModal() {
                             </div>
 
                             <SettingsSectionJumpNav
-                                sections={FEATURE_SECTION_NAV}
+                                sections={translateFeaturesNav(FEATURE_SECTION_NAV, t)}
                                 ariaLabel="Advanced setting categories"
                                 onJump={jumpToSettingsSection}
                             />

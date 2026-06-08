@@ -1,0 +1,27 @@
+const common = {
+  loading: 'טוען…',
+  back: 'חזרה',
+  cancel: 'ביטול',
+  continue: 'המשך',
+  passcode: 'קוד גישה',
+  signingIn: 'מתחבר…',
+  signIn: 'כניסה',
+  signOut: 'יציאה',
+  home: 'בית',
+  account: 'חשבון',
+  save: 'שמירה',
+  close: 'סגירה',
+  search: 'חיפוש',
+  yes: 'כן',
+  no: 'לא',
+  on: 'פעיל',
+  off: 'כבוי',
+  loginFailed: 'הכניסה נכשלה',
+  missingPasscode: 'חסר קוד גישה',
+  admin: 'מנהל',
+  teacher: 'מורה',
+  student: 'תלמיד',
+  allRightsReserved: '© 2026 LevelUp EdTech Enterprises LLC. כל הזכויות שמורות.',
+};
+
+export default { common };

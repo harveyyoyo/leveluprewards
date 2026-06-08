@@ -1,0 +1,27 @@
+const common = {
+  loading: 'Loading…',
+  back: 'Back',
+  cancel: 'Cancel',
+  continue: 'Continue',
+  passcode: 'Passcode',
+  signingIn: 'Signing in…',
+  signIn: 'Sign in',
+  signOut: 'Sign out',
+  home: 'Home',
+  account: 'Account',
+  save: 'Save',
+  close: 'Close',
+  search: 'Search',
+  yes: 'Yes',
+  no: 'No',
+  on: 'On',
+  off: 'Off',
+  loginFailed: 'Login failed',
+  missingPasscode: 'Missing passcode',
+  admin: 'Admin',
+  teacher: 'Teacher',
+  student: 'Student',
+  allRightsReserved: '© 2026 LevelUp EdTech Enterprises LLC. All rights reserved.',
+};
+
+export default { common };

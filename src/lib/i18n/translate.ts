@@ -1,4 +1,4 @@
-import type { MessageTree } from '@/lib/i18n/messages/en';
+import type { MessageTree } from '@/lib/i18n/messages/types';
 
 type Primitive = string | number | boolean | null | undefined;
 

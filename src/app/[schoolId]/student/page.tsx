@@ -15,6 +15,7 @@ import { preloadBarcodeScanStack } from '@/lib/barcodeCameraScan';
 import { syncKioskBarcodeCameraWarm } from '@/lib/barcodeCameraSession';
 import { readKioskLoginTab } from '@/lib/kiosk/kioskSessionPrefs';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
@@ -2198,6 +2199,7 @@ function StudentDashboardInner({
 
 function StudentKioskPageFallback() {
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const animBackdrop = globalAnimatedBackdropActive(settings);
   return (
     <div
@@ -2208,7 +2210,7 @@ function StudentKioskPageFallback() {
     >
       <div className="text-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-        <p className="text-muted-foreground font-medium animate-pulse">Loading kiosk…</p>
+        <p className="text-muted-foreground font-medium animate-pulse">{t('student.kiosk.loading')}</p>
       </div>
     </div>
   );
@@ -2221,6 +2223,7 @@ function StudentLoginPage() {
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const { firestore, auth, functions } = useFirebase();
@@ -2500,7 +2503,7 @@ function StudentLoginPage() {
     )}>
       <div className="text-center space-y-4">
         <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-        <p className="text-muted-foreground font-medium animate-pulse">Loading kiosk…</p>
+        <p className="text-muted-foreground font-medium animate-pulse">{t('student.kiosk.loading')}</p>
       </div>
     </div>;
   }
@@ -2515,15 +2518,14 @@ function StudentLoginPage() {
       >
         <GraduationCap className="h-10 w-10 text-muted-foreground" aria-hidden />
         <div className="max-w-md space-y-2">
-          <h1 className="text-xl font-black">Student kiosk is off</h1>
+          <h1 className="text-xl font-black">{t('student.kiosk.off')}</h1>
           <p className="text-sm text-muted-foreground">
-            The Rewards product is not enabled for this school. Turn on levelup rewards in Settings →
-            Product pillars, or use the staff portal for classroom tools.
+            {t('student.kiosk.offDescription')}
           </p>
         </div>
         {schoolId ? (
           <Button asChild variant="outline">
-            <Link href={`/${schoolId}/portal`}>Back to portal</Link>
+            <Link href={`/${schoolId}/portal`}>{t('student.kiosk.backToPortal')}</Link>
           </Button>
         ) : null}
       </div>
