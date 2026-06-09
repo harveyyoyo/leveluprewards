@@ -29,7 +29,10 @@ export default function SmartScreenRouteView() {
   const { isJewishOrthodox } = useSchoolProfile();
   const screenProfileId = (searchParams.get('screenProfileId') || '').trim();
   const activeScreenProfile = screenProfileId ? settings.smartScreenProfiles?.[screenProfileId] : null;
-  const activeProfileSettings = activeScreenProfile?.settings ?? {};
+  const activeProfileSettings = useMemo(
+    () => activeScreenProfile?.settings ?? {},
+    [activeScreenProfile],
+  );
 
   const screenSettings = useMemo(
     () => buildSmartScreenSettingsSnapshot(settings, activeProfileSettings),

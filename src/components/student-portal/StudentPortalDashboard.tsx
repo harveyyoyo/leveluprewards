@@ -93,7 +93,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   }, [auth, schoolId, studentId]);
 
   const student = data?.student ?? null;
-  const activities = data?.activities ?? [];
+  const activities = useMemo(() => data?.activities ?? [], [data?.activities]);
   const prizes = useMemo(() => data?.prizes ?? [], [data?.prizes]);
   const badges = data?.badges ?? [];
   const houses = useMemo(() => data?.houses ?? [], [data?.houses]);
