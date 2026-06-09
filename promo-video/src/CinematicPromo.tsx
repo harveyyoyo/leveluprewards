@@ -75,7 +75,8 @@ const CinematicVoiceBeat: React.FC<{
   segmentTotal: number;
 }> = ({ beatId, durationFrames, xpStart, xpEnd, segmentIndex, segmentTotal }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
   const beat = WIDESCREEN_BEATS[beatId];
   const enter = spring({
     fps,
@@ -101,7 +102,7 @@ const CinematicVoiceBeat: React.FC<{
         style={{
           position: "absolute",
           top: 56,
-          right: 72,
+          right: isPortrait ? 48 : 72,
           zIndex: 16,
           fontFamily: outfit,
           fontSize: 13,
@@ -118,34 +119,43 @@ const CinematicVoiceBeat: React.FC<{
           position: "absolute",
           inset: 0,
           display: "flex",
+          flexDirection: isPortrait ? "column" : "row",
           alignItems: "center",
-          padding: "0 72px",
-          gap: 64,
+          justifyContent: "center",
+          padding: isPortrait ? "130px 54px 190px" : "0 72px",
+          gap: isPortrait ? 58 : 64,
         }}
       >
         <div
           style={{
-            flex: 1,
+            flex: isPortrait ? "0 0 auto" : 1,
+            width: isPortrait ? "100%" : undefined,
             opacity: enter,
-            transform: `translateX(${interpolate(enter, [0, 1], [-80, 0])}px) scale(${kenBurn})`,
+            transform: isPortrait
+              ? `translateY(${interpolate(enter, [0, 1], [-70, 0])}px) scale(${kenBurn})`
+              : `translateX(${interpolate(enter, [0, 1], [-80, 0])}px) scale(${kenBurn})`,
             transformOrigin: "center center",
           }}
         >
-          <BrowserMockup style={{ height: 660 }}>
+          <BrowserMockup style={{ height: isPortrait ? 650 : 660 }}>
             <PromoClipVideo clip={beat.clip} />
           </BrowserMockup>
         </div>
         <div
           style={{
-            flex: "0 0 38%",
+            flex: isPortrait ? "0 0 auto" : "0 0 38%",
+            width: isPortrait ? "100%" : undefined,
             opacity: enter,
-            transform: `translateX(${interpolate(enter, [0, 1], [80, 0])}px)`,
+            textAlign: isPortrait ? "center" : "left",
+            transform: isPortrait
+              ? `translateY(${interpolate(enter, [0, 1], [70, 0])}px)`
+              : `translateX(${interpolate(enter, [0, 1], [80, 0])}px)`,
           }}
         >
           <p
             style={{
               fontFamily: outfit,
-              fontSize: 18,
+              fontSize: isPortrait ? 22 : 18,
               fontWeight: 700,
               letterSpacing: 4,
               textTransform: "uppercase",
@@ -158,9 +168,9 @@ const CinematicVoiceBeat: React.FC<{
           <h2
             style={{
               fontFamily: outfit,
-              fontSize: 68,
+              fontSize: isPortrait ? 78 : 68,
               fontWeight: 800,
-              lineHeight: 1.05,
+              lineHeight: isPortrait ? 1.0 : 1.05,
               letterSpacing: -2,
               margin: 0,
               color: CINEMATIC.offWhite,
@@ -369,7 +379,8 @@ const TouchscreenGraphic: React.FC = () => (
 
 const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
   const enter = spring({
     fps,
     frame: frame - startFrame,
@@ -387,9 +398,9 @@ const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
       style={{
         position: "absolute",
         left: "50%",
-        bottom: 70,
-        width: 620,
-        height: 250,
+        bottom: isPortrait ? 210 : 70,
+        width: isPortrait ? width - 150 : 620,
+        height: isPortrait ? 230 : 250,
         borderRadius: 36,
         border: `3px solid ${CINEMATIC.gold}`,
         background: `linear-gradient(135deg, ${CINEMATIC.offWhite}, #fff8d7)`,
@@ -405,7 +416,7 @@ const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
           top: 34,
           left: 42,
           fontFamily: outfit,
-          fontSize: 34,
+          fontSize: isPortrait ? 32 : 34,
           fontWeight: 900,
           color: CINEMATIC.navy,
         }}
@@ -417,13 +428,13 @@ const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
           position: "absolute",
           right: 44,
           top: 34,
-          width: 86,
-          height: 86,
+          width: isPortrait ? 76 : 86,
+          height: isPortrait ? 76 : 86,
           borderRadius: "50%",
           background: CINEMATIC.cyan,
           color: CINEMATIC.navy,
           fontFamily: outfit,
-          fontSize: 48,
+          fontSize: isPortrait ? 40 : 48,
           fontWeight: 900,
           display: "flex",
           alignItems: "center",
@@ -461,6 +472,8 @@ const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
 
 const ScanOnlyScene: React.FC = () => {
   const frame = useCurrentFrame();
+  const { width, height } = useVideoConfig();
+  const isPortrait = height > width;
   const durationFrames = CT.outroEnd - CT.feature3End;
   const progress = interpolate(frame, [0, durationFrames], [0.72, 0.88], {
     extrapolateRight: "clamp",
@@ -480,12 +493,12 @@ const ScanOnlyScene: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: 78,
-          left: 72,
-          right: 72,
+          top: isPortrait ? 118 : 78,
+          left: isPortrait ? 58 : 72,
+          right: isPortrait ? 58 : 72,
           display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 34,
+          gridTemplateColumns: isPortrait ? "1fr" : "repeat(3, 1fr)",
+          gap: isPortrait ? 22 : 34,
         }}
       >
         <NoInputGraphic label="keyboard" startFrame={0} color={CINEMATIC.cyan}>
@@ -504,7 +517,7 @@ const ScanOnlyScene: React.FC = () => {
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: 356,
+          bottom: isPortrait ? 500 : 356,
           textAlign: "center",
           opacity: scanText,
           transform: `translateY(${interpolate(scanText, [0, 1], [34, 0])}px)`,
@@ -513,7 +526,7 @@ const ScanOnlyScene: React.FC = () => {
         <div
           style={{
             fontFamily: outfit,
-            fontSize: 72,
+            fontSize: isPortrait ? 70 : 72,
             lineHeight: 1,
             fontWeight: 900,
             letterSpacing: -1,
@@ -528,7 +541,7 @@ const ScanOnlyScene: React.FC = () => {
         emoji="ID"
         title="Scan-first flow"
         xp={120}
-        startFrame={104}
+        startFrame={132}
         color={CINEMATIC.green}
       />
       <XPBar progress={progress} />
@@ -538,7 +551,8 @@ const ScanOnlyScene: React.FC = () => {
 
 const OutroScene: React.FC = () => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
   const copy = defaultWidescreenPromoProps.copy;
   const outroDuration = CT.total - CT.outroEnd;
   const fadeIn = interpolate(frame, [0, 22], [0, 1], {
@@ -621,10 +635,10 @@ const OutroScene: React.FC = () => {
         <h2
           style={{
             fontFamily: outfit,
-            fontSize: 110,
+            fontSize: isPortrait ? 118 : 110,
             fontWeight: 800,
             lineHeight: 0.9,
-            letterSpacing: -4,
+            letterSpacing: isPortrait ? -2 : -4,
             margin: "0 0 12px",
             transform: `scale(${headlineE})`,
             background: `linear-gradient(135deg,${CINEMATIC.offWhite} 0%,${CINEMATIC.gold} 50%,${CINEMATIC.offWhite} 100%)`,
@@ -640,7 +654,7 @@ const OutroScene: React.FC = () => {
         <p
           style={{
             fontFamily: jakarta,
-            fontSize: 24,
+            fontSize: isPortrait ? 30 : 24,
             color: CINEMATIC.textMuted,
             margin: "20px 0 48px",
             transform: `scale(${headlineE})`,
@@ -653,12 +667,12 @@ const OutroScene: React.FC = () => {
         <div
           style={{
             display: "inline-block",
-            padding: "26px 72px",
+            padding: isPortrait ? "28px 58px" : "26px 72px",
             borderRadius: 60,
             background: `linear-gradient(135deg,${CINEMATIC.gold},#c9a830)`,
             boxShadow: `0 0 70px rgba(245,200,66,0.55), 0 24px 60px rgba(0,0,0,0.5)`,
             fontFamily: outfit,
-            fontSize: 38,
+            fontSize: isPortrait ? 36 : 38,
             fontWeight: 800,
             color: CINEMATIC.navy,
             letterSpacing: -0.5,

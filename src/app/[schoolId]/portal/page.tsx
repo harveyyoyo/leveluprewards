@@ -460,7 +460,7 @@ export default function PortalPage() {
                                             <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
                                                 {area.description}
                                             </p>
-                                            {isAdmin && settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
+                                            {settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
                                                 <div className="pt-1 z-20 pointer-events-auto">
                                                     <div
                                                         role="button"
@@ -530,7 +530,7 @@ export default function PortalPage() {
                                                 <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base pointer-events-none">
                                                     {area.description}
                                                 </p>
-                                                {isAdmin && settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
+                                                {settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
                                                     <div className="pt-2 pointer-events-auto">
                                                         <div
                                                             role="button"
@@ -634,6 +634,25 @@ export default function PortalPage() {
                         );
                     })}
                 </motion.div>
+                
+                {settings.enableHelperMode && (
+                    <div className="mt-8 md:mt-12 flex justify-center pb-8 z-10 relative">
+                        <Button
+                            variant="outline"
+                            className="rounded-full shadow-sm bg-background/50 backdrop-blur-sm border-primary/20 hover:bg-secondary/80 text-foreground/80 font-semibold px-6 transition-all"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.localStorage.removeItem('arcade_tour_progress_welcome');
+                                updateSettings({ activeTourId: null });
+                                setTimeout(() => updateSettings({ activeTourId: 'welcome' }), 50);
+                            }}
+                        >
+                            <HelpCircle className="mr-2 h-4 w-4 text-primary/70" />
+                            Start Welcome Tour
+                        </Button>
+                    </div>
+                )}
                 
                 </div>
                 </div>

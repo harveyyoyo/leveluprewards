@@ -294,7 +294,8 @@ export const AchievementBadge: React.FC<{
   color = CINEMATIC.gold,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, width, height } = useVideoConfig();
+  const isPortrait = height > width;
 
   if (frame < startFrame) return null;
   if (endFrame !== undefined && frame >= endFrame) return null;
@@ -327,9 +328,10 @@ export const AchievementBadge: React.FC<{
     <div
       style={{
         position: "absolute",
-        bottom: 86,
-        right: 86,
+        bottom: isPortrait ? 70 : 86,
+        right: isPortrait ? "50%" : 86,
         transform: `translateY(${interpolate(enter, [0, 1], [120, 0])}px) scale(${enter * shimmer})`,
+        transformOrigin: "center center",
         opacity: enter * exitOpacity,
         zIndex: 60,
       }}
@@ -338,21 +340,23 @@ export const AchievementBadge: React.FC<{
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 30,
+          gap: isPortrait ? 22 : 30,
           background: `linear-gradient(135deg, ${CINEMATIC.navyMid}, ${CINEMATIC.navyLight})`,
           border: `2px solid ${color}`,
           borderRadius: 34,
-          padding: "34px 50px",
+          padding: isPortrait ? "28px 36px" : "34px 50px",
           boxShadow: `0 0 86px ${color}70, 0 38px 84px rgba(0,0,0,0.6)`,
-          minWidth: 620,
+          width: isPortrait ? Math.min(width - 120, 760) : undefined,
+          minWidth: isPortrait ? undefined : 620,
+          transform: isPortrait ? "translateX(50%)" : undefined,
         }}
       >
-        <span style={{ fontSize: 96, lineHeight: 1 }}>{emoji}</span>
+        <span style={{ fontSize: isPortrait ? 74 : 96, lineHeight: 1 }}>{emoji}</span>
         <div>
           <div
             style={{
               fontFamily: outfit,
-              fontSize: 17,
+              fontSize: isPortrait ? 14 : 17,
               fontWeight: 700,
               letterSpacing: 4.5,
               textTransform: "uppercase",
@@ -365,7 +369,7 @@ export const AchievementBadge: React.FC<{
           <div
             style={{
               fontFamily: outfit,
-              fontSize: 42,
+              fontSize: isPortrait ? 30 : 42,
               fontWeight: 800,
               color: CINEMATIC.offWhite,
               lineHeight: 1.1,
@@ -376,7 +380,7 @@ export const AchievementBadge: React.FC<{
           <div
             style={{
               fontFamily: jakarta,
-              fontSize: 24,
+              fontSize: isPortrait ? 18 : 24,
               color: CINEMATIC.textMuted,
               marginTop: 4,
             }}

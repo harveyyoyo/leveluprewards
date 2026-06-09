@@ -8,6 +8,8 @@ export const adminTourSteps: IntroStep[] = [
     title: 'Admin Portal',
     body: 'Welcome to the Admin Portal! This is where you build your school — load students, define classes, add staff, and set up your reward point categories.',
     onRoute: '/admin',
+    target: 'portal-admin',
+    navigateHint: 'Click the Admin Portal card to begin!',
   },
   {
     id: 'admin-sidebar',

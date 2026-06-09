@@ -37,6 +37,7 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
   const frame = useCurrentFrame();
   const { fps, width, height } = useVideoConfig();
   const beat = WIDESCREEN_BEATS.intro;
+  const isPortrait = height > width;
 
   const titleIn = interpolate(frame, [0, 18], [0, 1], {
     extrapolateLeft: "clamp",
@@ -50,18 +51,23 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
     config: { damping: 26, stiffness: 68, mass: 1.05 },
   });
 
-  const leftColumnX = width * 0.13;
+  const leftColumnX = isPortrait ? width * 0.5 : width * 0.13;
   const logoCenterX = interpolate(
     slideProgress,
     [0, 1],
     [width * 0.5, leftColumnX],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
-  const logoCenterY = height * 0.5;
+  const logoCenterY = isPortrait
+    ? interpolate(slideProgress, [0, 1], [height * 0.43, 230], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      })
+    : height * 0.5;
   const logoScale = interpolate(
     slideProgress,
     [0, 1],
-    [variant === "cinematic" ? 1.55 : 3.2, 1],
+    [variant === "cinematic" ? 1.55 : 3.2, isPortrait ? 0.95 : 1],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
@@ -208,11 +214,15 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
       <div
         style={{
           position: "absolute",
-          right: variant === "cinematic" ? 48 : 40,
-          top: "50%",
-          transform: `translateY(-50%) scale(${browserScale})`,
+          right: isPortrait ? "auto" : variant === "cinematic" ? 48 : 40,
+          left: isPortrait ? 54 : "auto",
+          top: isPortrait ? 450 : "50%",
+          width: isPortrait ? width - 108 : "auto",
+          transform: isPortrait
+            ? `scale(${browserScale * 0.68})`
+            : `translateY(-50%) scale(${browserScale})`,
           opacity: browserOpacity,
-          transformOrigin: "center center",
+          transformOrigin: isPortrait ? "top left" : "center center",
           zIndex: 10,
         }}
       >
@@ -245,11 +255,11 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
             position: "absolute",
             left: 72,
             right: 72,
-            bottom: 78,
+            bottom: isPortrait ? 110 : 78,
             zIndex: 18,
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 28,
+            gridTemplateColumns: isPortrait ? "1fr" : "repeat(3, 1fr)",
+            gap: isPortrait ? 18 : 28,
             opacity: wordBurstOpacity,
             transform: `translateY(${interpolate(wordBurstProgress, [0, 1], [40, 0])}px)`,
           }}
@@ -269,12 +279,12 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
               <div
                 key={item.label}
                 style={{
-                  minHeight: 124,
+                  minHeight: isPortrait ? 112 : 124,
                   borderRadius: 24,
                   border: `2px solid ${item.color}77`,
                   background: `linear-gradient(135deg, rgba(10,22,40,0.86), ${item.color}24)`,
                   boxShadow: `0 26px 80px rgba(0,0,0,0.34), 0 0 42px ${item.color}44`,
-                  padding: "24px 28px",
+                  padding: isPortrait ? "22px 28px" : "24px 28px",
                   transform: `scale(${interpolate(pop, [0, 1], [0.82, 1])})`,
                   transformOrigin: "center center",
                 }}
@@ -282,7 +292,7 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
                 <div
                   style={{
                     fontFamily: outfit,
-                    fontSize: 44,
+                    fontSize: isPortrait ? 48 : 44,
                     lineHeight: 1,
                     fontWeight: 900,
                     letterSpacing: 0,
@@ -295,7 +305,7 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
                 <div
                   style={{
                     fontFamily: jakarta,
-                    fontSize: 18,
+                    fontSize: isPortrait ? 16 : 18,
                     fontWeight: 800,
                     letterSpacing: 2,
                     textTransform: "uppercase",

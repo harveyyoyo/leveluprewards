@@ -7,6 +7,8 @@ export const teacherTourSteps: IntroStep[] = [
     title: 'Teacher Portal',
     body: 'Welcome to the Teacher Portal! Teachers come here to print point coupons, manage class rewards, and fulfill student prize redemptions.',
     onRoute: '/teacher',
+    target: 'portal-print',
+    navigateHint: 'Click the Teacher Portal card to begin!',
   },
   {
     id: 'teacher-points-tab',
