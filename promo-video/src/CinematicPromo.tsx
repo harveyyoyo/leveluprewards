@@ -54,7 +54,12 @@ const CinematicIntroScene: React.FC = () => {
         durationFrames={CT.introEnd}
         variant="cinematic"
         logo={
-          <LevelUpLogoAnimated startFrame={0} size={200} cream="#f0e8c8" />
+          <LevelUpLogoAnimated
+            startFrame={0}
+            size={200}
+            cream="#f0e8c8"
+            showSubline={false}
+          />
         }
       />
     </AbsoluteFill>
