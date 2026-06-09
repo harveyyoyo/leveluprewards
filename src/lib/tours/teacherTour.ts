@@ -19,8 +19,17 @@ export const teacherTourSteps: IntroStep[] = [
     requireTarget: true,
   },
   {
+    id: 'teacher-print-section',
+    title: 'Print Coupons Tab',
+    body: 'Click the "Print coupons" section at the top of the panel to see the print settings.',
+    onRoute: '/teacher',
+    target: 'section-tab-print',
+    requireTarget: true,
+    selectTab: 'coupons',
+  },
+  {
     id: 'teacher-print',
-    title: 'Print Coupons',
+    title: 'Select Category',
     body: 'Just select a category and value, then generate a sheet of unique codes to hand out to students.',
     onRoute: '/teacher',
     target: 'coupon-print-panel',

@@ -72,6 +72,7 @@ export function ContentSectionTreeNav({
               <TabsTrigger
                 key={item.id}
                 value={item.id}
+                data-intro-tour={`section-tab-${item.id}`}
                 className={cn(
                   'group flex min-h-11 w-full min-w-0 items-center justify-start gap-2 whitespace-normal rounded-lg border border-transparent px-3 py-2.5 text-left text-xs font-semibold leading-tight text-muted-foreground transition-[color,background-color,box-shadow,border-color] duration-200',
                   'hover:border-border/60 hover:bg-background/70 hover:text-foreground',
