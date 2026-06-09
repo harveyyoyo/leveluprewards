@@ -327,19 +327,24 @@ export function IntroWizard() {
                       Back
                     </Button>
                   )}
-                  <Button
-                    onClick={handleNext}
-                    disabled={!ready}
-                    className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
-                  >
-                    {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
-                    {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
-                  </Button>
+                  {!ready ? (
+                    <div className="flex items-center text-sm font-bold text-primary animate-pulse pr-2">
+                      Action required...
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={handleNext}
+                      className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
+                    >
+                      {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
+                      {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
+                    </Button>
+                  )}
                 </div>
               </div>
               {!ready ? (
                 <p className="text-sm font-medium text-foreground/85 mt-3 leading-snug">
-                  Try the highlighted control now — Next unlocks when you&apos;re done.
+                  Click the highlighted control now. The tour will automatically continue!
                 </p>
               ) : null}
             </CardContent>
