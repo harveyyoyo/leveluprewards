@@ -1,20 +1,20 @@
 'use client';
 
-import { Megaphone, Palette, Settings2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Megaphone, Palette } from 'lucide-react';
+import { BulletinBoardScaledPreview, type BulletinBoardPreviewLayout } from '@/components/displays/BulletinBoardScaledPreview';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
+import { buildBulletinDisplayHref } from '@/lib/displays/displayRoutes';
 import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES } from '@/lib/bulletinBoard';
-import { cn } from '@/lib/utils';
 import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 
 type BulletinSettingsPanelProps = {
   schoolId: string;
   settings: {
-    bulletinEnabled?: boolean;
     bulletinTitle?: string;
     bulletinSubtitle?: string;
     bulletinTheme?: string;
@@ -27,182 +27,149 @@ type BulletinSettingsPanelProps = {
 };
 
 export function BulletinSettingsPanel({
+  schoolId,
   settings,
   updateSettings,
   sortedIncentives,
 }: BulletinSettingsPanelProps) {
-  const bulletinEnabled = settings.bulletinEnabled !== false;
+  const [layout, setLayout] = useState<BulletinBoardPreviewLayout>('landscape');
+
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinTheme = settings.bulletinTheme || 'default';
   const bulletinLogoSize = settings.bulletinLogoSize || 'md';
   const bulletinShowWowBadge = settings.bulletinShowWowBadge !== false;
   const bulletinColumns = settings.bulletinColumns || '2';
 
+  const fullHref = useMemo(() => buildBulletinDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
+  const activeIncentiveCount = (sortedIncentives || []).filter((i) => i.active !== false).length;
+
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border bg-muted/10 p-4">
-        <div className="mb-4 flex items-center gap-2">
-          <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <p className="text-sm font-bold">Bulletin board settings</p>
-          <StaffPortalTabInfoPopover
-            sections={[staffPortalTabInfoSection('Configure the bulletin board display. Incentives are managed in the Incentives section. Open the full-screen Bulletin link to see changes live.')]}
-            ariaLabel="About bulletin board settings"
+    <div className="overflow-hidden rounded-xl border bg-muted/10">
+      <div className="flex h-[min(80dvh,860px)] min-h-[26rem] flex-col lg:flex-row">
+        <div className="flex h-[min(42dvh,400px)] min-h-0 shrink-0 flex-col border-b p-2.5 sm:p-3 lg:h-full lg:w-1/2 lg:max-w-[50%] lg:shrink-0 lg:border-b-0 lg:border-r">
+          <BulletinBoardScaledPreview
+            layout={layout}
+            className="h-full min-h-0"
+            openDisplayHref={fullHref}
+            onLayoutChange={setLayout}
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="md:col-span-2 flex flex-col gap-3 rounded-xl border bg-background px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-bold">Enable bulletin board</p>
-              <p className="text-[11px] text-muted-foreground">Show the board on hallway displays opened from the Bulletin link above.</p>
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-3 sm:p-3.5">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTitle">
+                Bulletin board title
+              </Label>
+              <Input
+                id="bulletinTitle"
+                value={bulletinTitle}
+                onChange={(e) => updateSettings({ bulletinTitle: e.target.value })}
+                placeholder="e.g., Monthly Challenges"
+                className="rounded-lg text-sm"
+              />
             </div>
-            <div
-              className="flex shrink-0 items-center gap-1 rounded-xl border bg-muted/40 p-1"
-              role="group"
-              aria-label="Bulletin board on or off"
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-9 min-w-[72px] rounded-lg px-4 text-xs font-black uppercase tracking-wide',
-                  bulletinEnabled
-                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                onClick={() => updateSettings({ bulletinEnabled: true })}
-              >
-                On
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-9 min-w-[72px] rounded-lg px-4 text-xs font-black uppercase tracking-wide',
-                  !bulletinEnabled
-                    ? 'bg-background text-foreground shadow-sm ring-1 ring-border'
-                    : 'text-muted-foreground hover:text-foreground',
-                )}
-                onClick={() => updateSettings({ bulletinEnabled: false })}
-              >
-                Off
-              </Button>
-            </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTitle">
-              Bulletin board title
-            </Label>
-            <Input
-              id="bulletinTitle"
-              value={bulletinTitle}
-              onChange={(e) => updateSettings({ bulletinTitle: e.target.value })}
-              placeholder="e.g., Monthly Challenges"
-              className="rounded-xl"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTheme">
-              Board theme
-            </Label>
-            <div className="flex flex-wrap gap-2 pt-1 max-h-[140px] overflow-y-auto pr-1">
-              {PRESET_BULLETIN_THEMES.map((theme) => (
-                <Button
-                  key={theme.id}
-                  type="button"
-                  variant={bulletinTheme === theme.id ? 'default' : 'outline'}
-                  className="text-xs h-8 px-3 rounded-full font-bold transition-all uppercase tracking-wide flex items-center gap-1 shrink-0"
-                  onClick={() => updateSettings({ bulletinTheme: theme.id })}
-                >
-                  <Palette className="w-3 h-3" />
-                  {theme.name}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-2 space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinSubtitle">
-              Tagline (under the title)
-            </Label>
-            <Textarea
-              id="bulletinSubtitle"
-              value={settings.bulletinSubtitle ?? ''}
-              onChange={(e) => updateSettings({ bulletinSubtitle: e.target.value })}
-              placeholder={DEFAULT_BULLETIN_SUBTITLE}
-              rows={2}
-              className="rounded-xl resize-y min-h-[72px] text-sm"
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Shown on the live Board page. Leave blank to use the default sentence.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground">School logo size</Label>
-            <div className="flex flex-wrap gap-2">
-              {(['sm', 'md', 'lg'] as const).map((sz) => (
-                <Button
-                  key={sz}
-                  type="button"
-                  size="sm"
-                  variant={bulletinLogoSize === sz ? 'default' : 'outline'}
-                  className="rounded-xl capitalize font-bold text-xs"
-                  onClick={() => updateSettings({ bulletinLogoSize: sz })}
-                >
-                  {sz === 'sm' ? 'Small' : sz === 'md' ? 'Medium' : 'Large'}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase text-muted-foreground">Incentive grid</Label>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={bulletinColumns === '2' ? 'default' : 'outline'}
-                className="rounded-xl font-bold text-xs"
-                onClick={() => updateSettings({ bulletinColumns: '2' })}
-              >
-                Two columns (wide screens)
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={bulletinColumns === '1' ? 'default' : 'outline'}
-                className="rounded-xl font-bold text-xs"
-                onClick={() => updateSettings({ bulletinColumns: '1' })}
-              >
-                Single column
-              </Button>
-            </div>
-          </div>
-
-          <div className="md:col-span-2 flex items-center justify-between rounded-xl border bg-background px-4 py-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold">“Wowed Design” flair in preview</p>
-              <p className="text-[11px] text-muted-foreground">
-                Decorative footer in the student kiosk card only (not on the live Board page).
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinSubtitle">
+                Tagline (under the title)
+              </Label>
+              <Textarea
+                id="bulletinSubtitle"
+                value={settings.bulletinSubtitle ?? ''}
+                onChange={(e) => updateSettings({ bulletinSubtitle: e.target.value })}
+                placeholder={DEFAULT_BULLETIN_SUBTITLE}
+                rows={2}
+                className="min-h-[72px] resize-y rounded-lg text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Shown on the live board page. Leave blank to use the default sentence.
               </p>
             </div>
-            <Switch
-              checked={bulletinShowWowBadge}
-              onCheckedChange={(checked) => updateSettings({ bulletinShowWowBadge: checked })}
-            />
-          </div>
 
-          <div className="md:col-span-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground pt-1">
-            <span className="font-semibold text-foreground/80">Active incentives:</span>
-            <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
-              {(sortedIncentives || []).filter((i) => i.active !== false).length}
-            </span>
-            <span className="text-xs">Total incentives: {(sortedIncentives || []).length}</span>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground" htmlFor="bulletinTheme">
+                Board theme
+              </Label>
+              <div className="flex max-h-[140px] flex-wrap gap-2 overflow-y-auto pt-1 pr-1">
+                {PRESET_BULLETIN_THEMES.map((theme) => (
+                  <Button
+                    key={theme.id}
+                    type="button"
+                    variant={bulletinTheme === theme.id ? 'default' : 'outline'}
+                    className="flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-bold uppercase tracking-wide"
+                    onClick={() => updateSettings({ bulletinTheme: theme.id })}
+                  >
+                    <Palette className="h-3 w-3" />
+                    {theme.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">School logo size</Label>
+              <div className="flex flex-wrap gap-2">
+                {(['sm', 'md', 'lg'] as const).map((sz) => (
+                  <Button
+                    key={sz}
+                    type="button"
+                    size="sm"
+                    variant={bulletinLogoSize === sz ? 'default' : 'outline'}
+                    className="rounded-lg text-xs font-bold capitalize"
+                    onClick={() => updateSettings({ bulletinLogoSize: sz })}
+                  >
+                    {sz === 'sm' ? 'Small' : sz === 'md' ? 'Medium' : 'Large'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Incentive grid</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={bulletinColumns === '2' ? 'default' : 'outline'}
+                  className="rounded-lg text-xs font-bold"
+                  onClick={() => updateSettings({ bulletinColumns: '2' })}
+                >
+                  Two columns (wide screens)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={bulletinColumns === '1' ? 'default' : 'outline'}
+                  className="rounded-lg text-xs font-bold"
+                  onClick={() => updateSettings({ bulletinColumns: '1' })}
+                >
+                  Single column
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border bg-background px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold">“Wowed Design” flair in kiosk</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Decorative footer in the student kiosk card only (not on the live board page).
+                </p>
+              </div>
+              <Switch
+                checked={bulletinShowWowBadge}
+                onCheckedChange={(checked) => updateSettings({ bulletinShowWowBadge: checked })}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-2 font-semibold text-foreground/80">
+                <Megaphone className="h-4 w-4 text-ring" aria-hidden />
+                Active incentives
+              </span>
+              <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
+                {activeIncentiveCount}
+              </span>
+              <span className="text-xs">Total: {(sortedIncentives || []).length}</span>
           </div>
         </div>
       </div>

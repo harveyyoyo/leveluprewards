@@ -34,7 +34,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages, Megaphone
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
@@ -2133,6 +2133,41 @@ export function SettingsModal() {
                                     label="Class Accumulations"
                                     desc="Class standings (combined balances by class) live on Hall of Fame. This toggle is for future advanced options; it does not show class standings on the student kiosk."
                                     icon={<UsersRound className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    canEditAdminSettings={canManageSchoolSettings}
+                                />
+                            </div>
+
+                            <div id="settings-features-displays" className="scroll-mt-[5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-2 border border-slate-100 dark:border-slate-800/50">
+                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 px-3 pt-3 pb-2 flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Displays</p>
+                                <SettingsFeatureRow
+                                    id="smartScreenEnabled"
+                                    label="Smart Screen"
+                                    desc="Live hallway dashboard with clock, weather, leaders, houses, rewards, and bulletin items."
+                                    icon={<Monitor className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    isImplemented={true}
+                                    canEditAdminSettings={canManageSchoolSettings}
+                                />
+                                <SettingsFeatureRow
+                                    id="bulletinEnabled"
+                                    label="Bulletin board"
+                                    desc="Focused board for point-earning incentives and celebration posts on hallway TVs."
+                                    icon={<Megaphone className="w-5 h-5" />}
+                                    settings={local}
+                                    onToggle={handleToggle}
+                                    getEnabled={(s) => s.bulletinEnabled !== false}
+                                    isImplemented={true}
+                                    canEditAdminSettings={canManageSchoolSettings}
+                                />
+                                <SettingsFeatureRow
+                                    id="enableClassLeaderboard"
+                                    label="Hall of Fame"
+                                    desc="Big-screen leaderboards with podium and rankings for students, classes, houses, or school goals."
+                                    icon={<Trophy className="w-5 h-5" />}
                                     settings={local}
                                     onToggle={handleToggle}
                                     isImplemented={true}

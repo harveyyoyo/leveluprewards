@@ -1,10 +1,11 @@
 'use client';
 
-import { Book, AlertTriangle, Calendar } from 'lucide-react';
+import { Book, AlertTriangle, BookMarked, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { LibraryItem } from '@/lib/types';
 import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
+import type { StudentLibraryBookRead } from '@/lib/library/libraryStudentHistory';
 
 /**
  * Student portal "My Books" card – shows the student's currently
@@ -14,9 +15,11 @@ import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
  */
 export function StudentPortalMyBooksCard({
   items,
+  booksRead = [],
   isLoading,
 }: {
   items: LibraryItem[];
+  booksRead?: StudentLibraryBookRead[];
   isLoading?: boolean;
 }) {
   if (isLoading) {
@@ -58,7 +61,7 @@ export function StudentPortalMyBooksCard({
               : 'Return books at the school library or kiosk before the due date.'}
         </CardDescription>
       </CardHeader>
-      {items.length > 0 ? (
+      {items.length > 0 || booksRead.length > 0 ? (
         <CardContent className="space-y-2 pt-0">
           {/* Overdue items first */}
           {[...overdueItems, ...onTimeItems].map((item) => {
@@ -96,6 +99,37 @@ export function StudentPortalMyBooksCard({
               </div>
             );
           })}
+          {booksRead.length > 0 ? (
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                <BookMarked className="h-4 w-4" aria-hidden />
+                Books you&apos;ve read
+                <Badge variant="outline" className="ml-auto tabular-nums">
+                  {booksRead.length}
+                </Badge>
+              </p>
+              <ul className="space-y-2">
+                {booksRead.map((book) => (
+                  <li
+                    key={`${book.title}-${book.returnedAt}`}
+                    className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2"
+                  >
+                    <p className="text-sm font-bold truncate">{book.title}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Returned{' '}
+                      {book.returnedAt
+                        ? new Date(book.returnedAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })
+                        : '—'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </CardContent>
       ) : null}
     </Card>

@@ -57,6 +57,7 @@ import {
   getLibraryPolicyFromSettings,
   isLibraryStudentKioskCheckoutEnabled,
 } from '@/lib/library/libraryPolicy';
+import { listStudentLibraryBooksRead } from '@/lib/library/libraryStudentHistory';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
 import { StudentKioskRecessCheckoutCard } from '@/components/student-kiosk/StudentKioskRecessCheckoutCard';
 import {
@@ -336,6 +337,24 @@ export function StudentDashboardInner({
     () => myLibraryBooks.filter((i) => computeDaysOverdue(i.dueAt) > 0),
     [myLibraryBooks],
   );
+
+  const libraryActivitiesQuery = useMemoFirebase(
+    () =>
+      schoolId && settings.payLibrary !== false && libraryKioskCheckoutOn
+        ? query(
+            collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'),
+            orderBy('date', 'desc'),
+            limit(120),
+          )
+        : null,
+    [firestore, schoolId, studentId, settings.payLibrary, libraryKioskCheckoutOn],
+  );
+  const { data: libraryActivities } = useCollection<HistoryItem>(libraryActivitiesQuery);
+  const libraryBooksRead = useMemo(
+    () => listStudentLibraryBooksRead(libraryActivities),
+    [libraryActivities],
+  );
+
   const hasLibraryCheckouts = myLibraryBooks.length > 0;
   const libraryScanHint =
     libraryKioskCheckoutOn
@@ -1477,6 +1496,7 @@ export function StudentDashboardInner({
       <StudentLibraryCheckoutsCard
         schoolId={schoolId}
         items={myLibraryBooks}
+        booksRead={libraryBooksRead}
         themed={!!effectiveTheme}
         topAlert={overdueLibraryBooks.length > 0}
         kioskCheckoutEnabled

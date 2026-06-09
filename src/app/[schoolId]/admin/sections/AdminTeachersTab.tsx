@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, GraduationCap, Home, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
+import { Book, Building2, ChevronDown, Copy, Edit, FileText, Gift, GraduationCap, Home, IdCard, Minus, Plus, Printer, Trash2, User, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -29,6 +29,8 @@ import { teacherPortalKey } from '@/lib/syncSchoolStaffDirectory';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
 import type { Class, StaffAccount, StaffAccountRole, Student, Teacher } from '@/lib/types';
+import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
+import { allStaffIdCardSubjects } from '@/lib/staff/staffIdCardSubject';
 import { isLeadershipPersonnel, leadershipPersonnelLabel } from '@/lib/teacherPersonnelRole';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
@@ -83,6 +85,8 @@ export function AdminTeachersTab({
   onUpdateClass,
   onSaveStaffAccount,
   onDeleteStaffAccount,
+  onPreviewStaffIdCard,
+  onOpenStaffIdPrintSetup,
 }: {
   teachers: Teacher[] | null | undefined;
   staffAccounts: StaffAccount[] | null | undefined;
@@ -97,6 +101,8 @@ export function AdminTeachersTab({
   onUpdateClass?: (updatedClass: Class) => Promise<void>;
   onSaveStaffAccount: (account: StaffAccount | Omit<StaffAccount, 'id'>) => Promise<void>;
   onDeleteStaffAccount: (accountId: string) => Promise<void>;
+  onPreviewStaffIdCard?: (subject: StaffIdCardSubject) => void;
+  onOpenStaffIdPrintSetup?: (subjects: StaffIdCardSubject[]) => void;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffAccount | null>(null);
@@ -270,8 +276,17 @@ export function AdminTeachersTab({
     <StaffPortalTabPanel
       tabValue="teachers"
       trailing={
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <TabWalkthroughHeaderAction />
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              disabled={allStaffIdCardSubjects(teachers, staffAccounts).length === 0}
+              onClick={() => onOpenStaffIdPrintSetup?.(allStaffIdCardSubjects(teachers, staffAccounts))}
+            >
+              <Printer className="mr-2 h-4 w-4" />
+              Print all staff ID cards
+            </Button>
             <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
               <Plus className="mr-2 h-4 w-4" /> Add desk staff
             </Button>
@@ -390,6 +405,16 @@ export function AdminTeachersTab({
                   </div>
                   <div className="flex items-center justify-end gap-0.5">
                     {renderCopyLinkButton(teacherPortalKey(t))}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                      onClick={() => onPreviewStaffIdCard?.({ kind: 'teacher', teacher: t })}
+                      title="Preview staff ID card"
+                      aria-label="Preview staff ID card"
+                    >
+                      <IdCard className="h-3.5 w-3.5" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -679,6 +704,16 @@ export function AdminTeachersTab({
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                    onClick={() => onPreviewStaffIdCard?.({ kind: 'teacher', teacher: t })}
+                    title="Preview staff ID card"
+                    aria-label="Preview staff ID card"
+                  >
+                    <IdCard className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-7 w-7 shrink-0 text-destructive hover:bg-destructive/10"
                     onClick={() => onDeleteTeacher(t.id)}
                     title="Delete leadership staff"
@@ -762,6 +797,16 @@ export function AdminTeachersTab({
                 </div>
                 <div className="flex items-center justify-end gap-0.5">
                   {renderCopyLinkButton(`${account.role}:${account.id}`)}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-ring hover:bg-ring/10"
+                    onClick={() => onPreviewStaffIdCard?.({ kind: 'staffAccount', account })}
+                    title="Preview staff ID card"
+                    aria-label="Preview staff ID card"
+                  >
+                    <IdCard className="h-3.5 w-3.5" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

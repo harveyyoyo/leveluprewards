@@ -583,7 +583,7 @@ export function staffPortalDefaultTab(
 const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   students: 'Manage enrollments, ID cards, kiosk access, and per-student options.',
   classes: 'Create class groups, assign teachers, and organize students.',
-  teachers: 'Manage teachers, leaders, desk staff, passcodes, and portal access.',
+  teachers: 'Manage teachers, leaders, desk staff, passcodes, portal access, and staff ID cards.',
   prizes: 'Manage reward shop items, costs, stock, and redemption settings.',
   categories:
     'Set up point categories, print coupons, review inventory, and adjust balances.',

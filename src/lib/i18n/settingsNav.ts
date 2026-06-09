@@ -20,6 +20,7 @@ const GENERAL_KEY: Record<string, string> = {
 const FEATURES_KEY: Record<string, string> = {
   'settings-features-core': 'core',
   'settings-features-recognition': 'recognition',
+  'settings-features-displays': 'displays',
   'settings-features-shop': 'shop',
   'settings-features-students': 'students',
 };

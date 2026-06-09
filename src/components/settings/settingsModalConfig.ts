@@ -25,6 +25,7 @@ export function parseSettingsViewFromQuery(value: string | null): SettingsView |
 export const FEATURE_SECTION_NAV = [
     { id: 'settings-features-core', label: 'Core' },
     { id: 'settings-features-recognition', label: 'Recognition' },
+    { id: 'settings-features-displays', label: 'Displays' },
     { id: 'settings-features-shop', label: 'Shop' },
     { id: 'settings-features-students', label: 'Students' },
 ] as const;
@@ -47,6 +48,9 @@ export const GENERAL_SECTION_NAV = [
 export const IMPLEMENTED_FEATURE_TOGGLE_KEYS = [
     'enableTeacherBudgets',
     'enableClassAccumulations',
+    'smartScreenEnabled',
+    'bulletinEnabled',
+    'enableClassLeaderboard',
     'enablePrizeAiSurprise',
     'enableVendingMachine',
     'enableStudentEmojiOnPrizeTickets',

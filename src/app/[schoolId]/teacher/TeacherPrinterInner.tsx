@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import type { Coupon, Category, Teacher, Student, Class, HistoryItem, Prize, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, AttendanceRewardRule, CouponRedemptionScope, HomeworkAssignment } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices } from 'lucide-react';
+import { ArrowLeft, Printer, Plus, LogIn, LogOut, UserCheck, Award, User, Search, Users, Minus, Gift, Loader2, Trash2, Edit, Filter, Ticket, Clock, History, FileText, BookOpen, Target, X, Dices, IdCard } from 'lucide-react';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import {
@@ -78,6 +78,13 @@ import {
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { AdminPrizesTab } from '@/app/[schoolId]/admin/sections/AdminPrizesTab';
 import { PrizeModal } from '@/components/prizes/PrizeModal';
+import { StudentIdCard } from '@/components/student/StudentIdCard';
+import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
+import { StaffIdCardPreviewDialog } from '@/components/staff/StaffIdCardPreviewDialog';
+import { usePrint } from '@/components/providers/PrintProvider';
+import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
+import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
+import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import {
     COUPONS_PER_PRINT_PAGE,
     COUPON_PRINT_PAGE_SIZE_OPTIONS,
@@ -593,19 +600,33 @@ function TeacherClassesTab({
 
 function TeacherRosterTab({
     teacherId,
+    currentTeacher,
+    schoolId,
     allStudents,
     rosterStudents,
     classes,
 }: {
     teacherId: string;
+    currentTeacher?: Teacher | null;
+    schoolId: string | null;
     allStudents: Student[];
     rosterStudents: Student[];
     classes: Class[];
 }) {
     const { updateStudent } = useAppContext();
+    const { settings } = useSettings();
+    const { setStudentsToPrint, setStaffIdCardsToPrint } = usePrint();
     const { toast } = useToast();
+    const firestore = useFirestore();
+    const schoolDocRef = useMemoFirebase(() => (firestore && schoolId ? doc(firestore, 'schools', schoolId) : null), [firestore, schoolId]);
+    const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
+    const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
+    const { data: appConfig } = useDoc<{ appLogoUrl?: string; appName?: string; appTagline?: string }>(appConfigRef);
     const [search, setSearch] = useState('');
     const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
+    const [studentIdPreview, setStudentIdPreview] = useState<Student | null>(null);
+    const [studentIdPrintJob, setStudentIdPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
+    const [staffIdPreview, setStaffIdPreview] = useState<StaffIdCardSubject | null>(null);
 
     const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
     const classIdsForTeacher = useMemo(
@@ -652,6 +673,38 @@ function TeacherRosterTab({
         const cls = student.classId ? classMap.get(student.classId) : undefined;
         const classOwned = !!student.classId && classIdsForTeacher.has(student.classId);
         return `${cls?.name || 'Unassigned'}${classOwned ? ' · class roster' : ''}`;
+    };
+
+    const schoolName = schoolData?.name?.trim() || 'School';
+    const appLogoUrl = appConfig?.appLogoUrl ?? null;
+    const appName = appConfig?.appName?.trim() || APP_NAME;
+    const appTagline = appConfig?.appTagline?.trim() ?? APP_TAGLINE;
+
+    const printStudentIdCards = (studentsToPrint: Student[], cornerStyle?: 'rounded' | 'rectangular') => {
+        if (!schoolId) {
+            toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
+            return;
+        }
+        setStudentsToPrint({
+            students: studentsToPrint,
+            classes,
+            schoolId,
+            cornerStyle,
+            ...resolveIdCardPrintJobOptions(settings),
+        });
+    };
+
+    const printStaffIdCard = (subject: StaffIdCardSubject, cornerStyle?: 'rounded' | 'rectangular') => {
+        if (!schoolId) {
+            toast({ variant: 'destructive', title: 'Cannot print staff ID card', description: 'Missing schoolId.' });
+            return;
+        }
+        setStaffIdCardsToPrint({
+            subjects: [subject],
+            schoolId,
+            cornerStyle,
+            ...resolveIdCardPrintJobOptions(settings),
+        });
     };
 
     const renderStudentInfo = (student: Student, minimal: boolean = false) => {
@@ -720,9 +773,35 @@ function TeacherRosterTab({
     };
 
     return (
+        <>
         <StaffPortalTabPanel
             tabValue="roster"
-            trailing={<TabWalkthroughHeaderAction />}
+            trailing={
+                <div className="flex flex-wrap items-center gap-2">
+                    {currentTeacher ? (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => setStaffIdPreview({ kind: 'teacher', teacher: currentTeacher })}
+                        >
+                            <IdCard className="mr-2 h-4 w-4" />
+                            My staff ID card
+                        </Button>
+                    ) : null}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-xl"
+                        disabled={roster.length === 0}
+                        onClick={() => setStudentIdPrintJob({ students: roster, classes })}
+                    >
+                        <Printer className="mr-2 h-4 w-4" />
+                        Print roster IDs
+                    </Button>
+                    <TabWalkthroughHeaderAction />
+                </div>
+            }
         >
             <StaffPortalSectionCard className="w-full overflow-hidden">
                 <StaffPortalSectionCardContent className="p-4 md:p-6 space-y-6">
@@ -746,6 +825,17 @@ function TeacherRosterTab({
                                         return (
                                             <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
                                                 {renderStudentInfo(student)}
+                                                <div className="flex shrink-0 items-center gap-2">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-9 w-9 rounded-xl"
+                                                        onClick={() => setStudentIdPreview(student)}
+                                                        title="Preview student ID card"
+                                                    >
+                                                        <IdCard className="h-4 w-4 text-ring" />
+                                                    </Button>
                                                 {directlyLinked ? (
                                                     <Button
                                                         type="button"
@@ -760,6 +850,7 @@ function TeacherRosterTab({
                                                 ) : (
                                                     <Badge variant="outline" className="shrink-0">Class</Badge>
                                                 )}
+                                                </div>
                                             </div>
                                         );
                                     })}
@@ -799,6 +890,78 @@ function TeacherRosterTab({
                 </StaffPortalSectionCardContent>
             </StaffPortalSectionCard>
         </StaffPortalTabPanel>
+
+        {studentIdPrintJob ? (
+            <IdCardPrintSetupDialog
+                open
+                onOpenChange={(open) => {
+                    if (!open) setStudentIdPrintJob(null);
+                }}
+                students={studentIdPrintJob.students}
+                classes={studentIdPrintJob.classes}
+                onConfirm={(args) => {
+                    printStudentIdCards(args.students, args.cornerStyle);
+                    setStudentIdPrintJob(null);
+                }}
+            />
+        ) : null}
+
+        {studentIdPreview ? (
+            <Dialog open onOpenChange={(open) => !open && setStudentIdPreview(null)}>
+                <DialogContent size="xl" className="!flex flex-col gap-2 overflow-x-hidden pt-12 sm:pt-14">
+                    <DialogHeader className="shrink-0 space-y-1 pr-8">
+                        <DialogTitle className="text-lg">Student ID card preview</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex shrink-0 flex-col items-center justify-center overflow-visible px-2 pb-6 pt-2 sm:pb-10 sm:pt-4">
+                        <div className="student-id-card-screen-preview flex justify-center origin-center scale-[1.1] sm:scale-[1.18]">
+                            <StudentIdCard
+                                student={studentIdPreview}
+                                schoolName={schoolName}
+                                schoolLogoUrl={schoolData?.logoUrl ?? null}
+                                className={classMap.get(studentIdPreview.classId || '')?.name || 'Unassigned'}
+                                isColorEnabled={settings.enableColorPrinting}
+                                appLogoUrl={appLogoUrl}
+                                appName={appName}
+                                appTagline={appTagline}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter className="shrink-0">
+                        <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setStudentIdPreview(null)}>
+                            Close
+                        </Button>
+                        <Button
+                            type="button"
+                            className="rounded-xl"
+                            onClick={() => {
+                                const s = studentIdPreview;
+                                setStudentIdPreview(null);
+                                if (s) requestAnimationFrame(() => printStudentIdCards([s]));
+                            }}
+                        >
+                            <Printer className="mr-2 h-4 w-4" aria-hidden />
+                            Print
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        ) : null}
+
+        <StaffIdCardPreviewDialog
+            subject={staffIdPreview}
+            open={!!staffIdPreview}
+            onOpenChange={(open) => {
+                if (!open) setStaffIdPreview(null);
+            }}
+            schoolName={schoolName}
+            schoolLogoUrl={schoolData?.logoUrl ?? null}
+            appLogoUrl={appLogoUrl}
+            appName={appName}
+            appTagline={appTagline}
+            isColorEnabled={settings.enableColorPrinting}
+            onPrint={(subject) => printStaffIdCard(subject)}
+        />
+        </>
     );
 }
 
@@ -2443,6 +2606,8 @@ function TeacherPrinterInnerBody({
                             <TeacherPortalTabPane tabId="roster" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                     <TeacherRosterTab
                                         teacherId={teacherId}
+                                        currentTeacher={currentTeacher}
+                                        schoolId={schoolId}
                                         allStudents={students || []}
                                         rosterStudents={studentsForTeacherActions}
                                         classes={classes || []}

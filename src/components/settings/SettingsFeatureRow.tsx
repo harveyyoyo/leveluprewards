@@ -28,6 +28,7 @@ export function SettingsFeatureRow({
     isImplemented = true,
     canEditAdminSettings = true,
     blockHint,
+    getEnabled,
 }: {
     id: string;
     label: string;
@@ -39,9 +40,11 @@ export function SettingsFeatureRow({
     isImplemented?: boolean;
     canEditAdminSettings?: boolean;
     blockHint?: string;
+    getEnabled?: (settings: Record<string, unknown>) => boolean;
 }) {
     const filter = useContext(FeatureFilterContext);
-    const isEnabled = Boolean((settings as Record<string, unknown>)[id]);
+    const settingsRecord = settings as Record<string, unknown>;
+    const isEnabled = getEnabled ? getEnabled(settingsRecord) : Boolean(settingsRecord[id]);
     const blockedByConfig = Boolean(blockHint);
     const canUse = isImplemented && !blockedByConfig;
 

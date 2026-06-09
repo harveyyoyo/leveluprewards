@@ -14,6 +14,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Prize, Student } from '@/lib/types';
+import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
+import { staffIdCardDisplayName } from '@/lib/staff/staffIdCardSubject';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import { Printer } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -22,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 type CornerStyle = 'rounded' | 'rectangular';
 type StudentPrintConfirm = (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
 type PrizePrintConfirm = (args: { prizes: Prize[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
+type StaffPrintConfirm = (args: { subjects: StaffIdCardSubject[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
 
 type IdCardPrintSetupDialogProps =
   | {
@@ -38,6 +41,13 @@ type IdCardPrintSetupDialogProps =
       onOpenChange: (open: boolean) => void;
       prizes: Prize[];
       onConfirm: PrizePrintConfirm;
+    }
+  | {
+      variant: 'staff';
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      subjects: StaffIdCardSubject[];
+      onConfirm: StaffPrintConfirm;
     };
 
 export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
@@ -53,6 +63,12 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
       if (n === 1) return `1 prize card — ${props.prizes[0].name}`;
       return `${n} prize cards`;
     }
+    if (props.variant === 'staff') {
+      const n = props.subjects.length;
+      if (n === 0) return 'No staff cards in this print run.';
+      if (n === 1) return `1 staff card — ${staffIdCardDisplayName(props.subjects[0])}`;
+      return `${n} staff ID cards`;
+    }
     const n = props.students.length;
     if (n === 0) return 'No students in this print run.';
     if (n === 1) {
@@ -63,14 +79,24 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
     return `${n} students`;
   }, [props]);
 
-  const itemCount = props.variant === 'prize' ? props.prizes.length : props.students.length;
+  const itemCount =
+    props.variant === 'prize'
+      ? props.prizes.length
+      : props.variant === 'staff'
+        ? props.subjects.length
+        : props.students.length;
 
   const handlePrint = () => {
     if (itemCount === 0) {
       toast({
         variant: 'destructive',
         title: 'Nothing to print',
-        description: props.variant === 'prize' ? 'There are no prize cards in this run.' : 'There are no students in this run.',
+        description:
+          props.variant === 'prize'
+            ? 'There are no prize cards in this run.'
+            : props.variant === 'staff'
+              ? 'There are no staff ID cards in this run.'
+              : 'There are no students in this run.',
       });
       return;
     }
@@ -78,13 +104,25 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
     const printerOptions = resolveIdCardPrintJobOptions(settings);
     if (props.variant === 'prize') {
       props.onConfirm({ prizes: props.prizes, cornerStyle, ...printerOptions });
+    } else if (props.variant === 'staff') {
+      props.onConfirm({ subjects: props.subjects, cornerStyle, ...printerOptions });
     } else {
       props.onConfirm({ students: props.students, classes: props.classes, cornerStyle, ...printerOptions });
     }
   };
 
-  const title = props.variant === 'prize' ? 'Print prize cards' : 'Print ID cards';
-  const cardLabel = props.variant === 'prize' ? 'prize shelf cards' : 'ID cards';
+  const title =
+    props.variant === 'prize'
+      ? 'Print prize cards'
+      : props.variant === 'staff'
+        ? 'Print staff ID cards'
+        : 'Print ID cards';
+  const cardLabel =
+    props.variant === 'prize'
+      ? 'prize shelf cards'
+      : props.variant === 'staff'
+        ? 'staff ID cards'
+        : 'ID cards';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

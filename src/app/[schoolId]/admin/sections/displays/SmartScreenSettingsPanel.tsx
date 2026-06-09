@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
-  ArrowUpRight,
   CalendarDays,
   Cake,
   ChartNoAxesColumnIncreasing,
@@ -12,7 +10,6 @@ import {
   Heart,
   Lightbulb,
   Megaphone,
-  Settings2,
   Sparkles,
   Star,
   Trash2,
@@ -206,17 +203,11 @@ export function SmartScreenSettingsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="order-2 rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-xs font-bold">Screen versions</p>
-          <span className="rounded-md border bg-background px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-muted-foreground">
-            {activeProfile ? activeProfile.name : 'School default'}
-          </span>
-        </div>
+      <div className="rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
           <Select value={activeProfileId} onValueChange={setActiveProfileId}>
             <SelectTrigger className="h-9 rounded-lg bg-background text-sm">
-              <SelectValue />
+              <SelectValue placeholder={activeProfile ? activeProfile.name : 'School default'} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="default">School default</SelectItem>
@@ -227,24 +218,17 @@ export function SmartScreenSettingsPanel({
               ))}
             </SelectContent>
           </Select>
-          <div className="flex gap-1.5">
-            {activeProfile ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 rounded-lg text-rose-600"
-                onClick={() => deleteProfile(activeProfile.id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            ) : null}
-            <Button asChild variant="outline" size="sm" className="h-9 rounded-lg gap-1 px-2.5 text-xs">
-              <Link href={fullHref} target="_blank" rel="noopener noreferrer">
-                Open URL <ArrowUpRight className="h-3.5 w-3.5" />
-              </Link>
+          {activeProfile ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-lg text-rose-600"
+              onClick={() => deleteProfile(activeProfile.id)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
             </Button>
-          </div>
+          ) : null}
         </div>
         <div className="mt-2 flex gap-2">
           <Input
@@ -259,31 +243,9 @@ export function SmartScreenSettingsPanel({
         </div>
       </div>
 
-      <div className="order-1 overflow-hidden rounded-xl border bg-muted/10">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b bg-background/80 px-3 py-2.5 sm:px-4">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-            <p className="text-xs font-bold">Editor</p>
-          </div>
-          {hasUnsavedChanges ? (
-            <div className="flex items-center gap-1.5">
-              <span className="rounded-full border border-amber-300/50 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
-                Unsaved
-              </span>
-              <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg px-2 text-xs" onClick={discardDraft}>
-                Discard
-              </Button>
-              <Button type="button" size="sm" className="h-7 rounded-lg px-2.5 text-xs" onClick={saveDraft}>
-                Save
-              </Button>
-            </div>
-          ) : (
-            <span className="text-[10px] font-semibold text-muted-foreground">Saved</span>
-          )}
-        </div>
-
+      <div className="overflow-hidden rounded-xl border bg-muted/10">
         <div className="flex h-[min(80dvh,860px)] min-h-[26rem] flex-col lg:flex-row">
-          <div className="flex h-[min(42dvh,400px)] min-h-0 shrink-0 flex-col border-b p-2.5 sm:p-3 lg:h-full lg:w-auto lg:max-w-[62%] lg:border-b-0 lg:border-r">
+          <div className="flex h-[min(42dvh,400px)] min-h-0 shrink-0 flex-col border-b p-2.5 sm:p-3 lg:h-full lg:w-1/2 lg:max-w-[50%] lg:shrink-0 lg:border-b-0 lg:border-r">
             <SmartScreenScaledPreview
               layout="docked"
               schoolId={schoolId}
@@ -291,12 +253,26 @@ export function SmartScreenSettingsPanel({
               draftSettings={draft}
               screenProfileName={activeProfile?.name}
               isJewishOrthodox={isJewishOrthodoxSchool}
+              openDisplayHref={fullHref}
               onOrientationChange={(orientation) => updateDraft({ smartScreenLayout: orientation })}
               className="h-full min-h-0"
             />
           </div>
 
           <div className="min-h-0 min-w-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 sm:p-3.5">
+            {hasUnsavedChanges ? (
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <span className="rounded-full border border-amber-300/50 bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                  Unsaved
+                </span>
+                <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg px-2 text-xs" onClick={discardDraft}>
+                  Discard
+                </Button>
+                <Button type="button" size="sm" className="h-7 rounded-lg px-2.5 text-xs" onClick={saveDraft}>
+                  Save
+                </Button>
+              </div>
+            ) : null}
             <SettingsSection title="Content">
               <div className="space-y-2">
                 <Input

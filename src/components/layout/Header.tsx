@@ -45,6 +45,7 @@ import {
   staffPortalHeaderWrapClassName,
 } from '@/components/staff/staffPortalNavStyles';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
+import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutToggle';
 import {
   isCompactDisplayMode,
   isDockItemOnDisplayMode,
@@ -467,6 +468,8 @@ export default function Header() {
               </Link>
             ) : null}
 
+            <StaffPortalLayoutToggle variant="ghost" />
+
             <SettingsModal />
           </div>
         </header>
@@ -595,6 +598,8 @@ export default function Header() {
               <Home className="h-5 w-5" />
             </Link>
           ) : null}
+
+          <StaffPortalLayoutToggle variant="ghost" />
 
           <SettingsModal />
         </div>

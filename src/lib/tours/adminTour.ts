@@ -38,7 +38,7 @@ export const adminTourSteps: IntroStep[] = [
   {
     id: 'admin-teachers',
     title: 'Staff & Teachers',
-    body: 'Invite your team! You can assign point budgets and give specific permissions like "Prize Clerk" or "Secretary".',
+    body: 'Add your staff and teachers here! You can assign point budgets and give specific permissions like "Prize Clerk" or "Secretary".',
     onRoute: '/admin',
     target: 'staff-tab-teachers',
     requireTarget: true,
@@ -61,8 +61,8 @@ export const adminTourSteps: IntroStep[] = [
   },
   {
     id: 'admin-finish',
-    title: 'Need Help?',
-    body: 'Click here anytime to ask our AI assistant for help or to contact tech support.',
+    title: 'Explore More',
+    body: 'You are all set! From here, you can click the Home icon (top left) to go back and take the Teacher Tour, or you can ask the AI assistant here to show you the "Features Tour" to learn about all the additional tabs.',
     onRoute: '/admin',
     target: STAFF_AI_HELP_TOUR_TARGET,
   },

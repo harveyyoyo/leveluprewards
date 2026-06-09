@@ -146,41 +146,41 @@ export function staffPortalSectionCardClassName(className?: string) {
 /** Section toolbar header — simple row inside the card. */
 export function staffPortalSectionCardHeaderClassName(className?: string) {
   return cn(
+    'flex flex-col gap-2 border-b border-border/50 bg-transparent px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between',
     className,
-    'flex flex-col gap-3 border-b border-border/50 bg-transparent px-5 py-4 sm:flex-row sm:items-center sm:justify-between',
   );
 }
 
 export function staffPortalSectionCardTitleClassName(className?: string) {
-  return cn(className, 'text-lg font-bold tracking-tight text-foreground flex items-center gap-2');
+  return cn('flex items-center gap-2 text-base font-semibold tracking-tight text-foreground', className);
 }
 
 /** Tab-level page title (matches sidebar label). */
 export function staffPortalTabHeaderTitleClassName(className?: string) {
   return cn(
+    'flex items-center gap-2 text-base font-semibold leading-none tracking-tight text-foreground sm:text-lg',
     className,
-    'text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2.5',
   );
 }
 
 /** Tab-level header icon beside the title. */
 export function staffPortalTabHeaderIconClassName(className?: string) {
-  return cn('h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6', className);
+  return cn('h-4 w-4 shrink-0 text-primary sm:h-[1.125rem] sm:w-[1.125rem]', className);
 }
 
 /** Shared shell — rounded cream panel above tab content (Hall of Fame reference). */
 export function staffPortalTabPageHeaderShellClassName(className?: string) {
   return cn(
-    className,
-    'rounded-2xl border border-border/50 bg-secondary/80 shadow-sm',
-    'px-5 py-5 sm:px-6 sm:py-6',
+    'rounded-xl border border-border/50 bg-secondary/80 shadow-sm',
+    'px-3 py-2 sm:px-4 sm:py-2.5',
     'dark:bg-secondary/30 dark:border-border/60',
+    className,
   );
 }
 
 /** Standard gap between tab header panel and content card. */
 export function staffPortalTabPanelClassName(className?: string) {
-  return cn('flex min-w-0 w-full flex-col gap-4', className);
+  return cn('flex min-w-0 w-full flex-col gap-2.5', className);
 }
 
 /** Section title / header icons — theme second accent (amber in sapphire). */

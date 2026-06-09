@@ -23,6 +23,12 @@ const header = {
     homework: 'Homework',
     library: 'Library',
   },
+  layout: {
+    wide: 'Wide layout',
+    standard: 'Standard layout',
+    useWide: 'Use wide full-screen layout',
+    useStandard: 'Use standard centered layout',
+  },
 };
 
 export default { header };

@@ -95,6 +95,8 @@ import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
+import { StaffIdCardPreviewDialog } from '@/components/staff/StaffIdCardPreviewDialog';
+import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { StaffPortalAddFeatureTabsMenu } from '@/components/staff/StaffPortalAddFeatureTabsMenu';
 import { StaffPortalSidebarTabRow } from '@/components/staff/StaffPortalSidebarTabRow';
@@ -289,7 +291,7 @@ function AdminDashboardInner() {
     addHouse, updateHouse, deleteHouse,
     deleteCategory, addCategory, updateCategory,
     addTeacher, updateTeacher, deleteTeacher,
-    addPrize, updatePrize, deletePrize, uploadStudents, uploadClassesFromCsv, uploadTeachersFromCsv, setStudentsToPrint,
+    addPrize, updatePrize, deletePrize, uploadStudents, uploadClassesFromCsv, uploadTeachersFromCsv, setStudentsToPrint, setStaffIdCardsToPrint,
     updateStudent,
     achievements, achievementsLoading,
     badges, badgesLoading,
@@ -1112,6 +1114,8 @@ function AdminDashboardInner() {
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
+  const [staffIdPrintJob, setStaffIdPrintJob] = useState<StaffIdCardSubject[] | null>(null);
+  const [staffIdPreview, setStaffIdPreview] = useState<StaffIdCardSubject | null>(null);
 
   const handleOpenIdCardPrintSetup = (args: { students: Student[]; classes: Class[] }) => {
     if (args.students.length === 0) {
@@ -1123,6 +1127,31 @@ function AdminDashboardInner() {
       return;
     }
     setIdCardPrintJob(args);
+  };
+
+  const handleOpenStaffIdPrintSetup = (subjects: StaffIdCardSubject[]) => {
+    if (subjects.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No staff to print',
+        description: 'Add teachers or desk staff first.',
+      });
+      return;
+    }
+    setStaffIdPrintJob(subjects);
+  };
+
+  const handlePrintStaffIdCards = (subjects: StaffIdCardSubject[], cornerStyle?: 'rounded' | 'rectangular') => {
+    if (!schoolId) {
+      toast({ variant: 'destructive', title: 'Cannot print staff ID cards', description: 'Missing schoolId.' });
+      return;
+    }
+    setStaffIdCardsToPrint({
+      subjects,
+      schoolId,
+      cornerStyle,
+      ...resolveIdCardPrintJobOptions(settings),
+    });
   };
 
   // All attendance dashboard state + orchestration lives behind one hook so
@@ -1948,6 +1977,8 @@ function AdminDashboardInner() {
                   toast({ variant: 'destructive', title: 'Delete failed', description: getReadableErrorMessage(e, 'Delete failed.') });
                 }
               }}
+              onPreviewStaffIdCard={(subject) => setStaffIdPreview(subject)}
+              onOpenStaffIdPrintSetup={handleOpenStaffIdPrintSetup}
             />
           </TabsContent>
 
@@ -2271,6 +2302,21 @@ function AdminDashboardInner() {
               }
               setStudentsToPrint({ ...args, schoolId });
               setIdCardPrintJob(null);
+            }}
+          />
+        ) : null}
+
+        {staffIdPrintJob ? (
+          <IdCardPrintSetupDialog
+            variant="staff"
+            open
+            onOpenChange={(o) => {
+              if (!o) setStaffIdPrintJob(null);
+            }}
+            subjects={staffIdPrintJob}
+            onConfirm={(args) => {
+              handlePrintStaffIdCards(args.subjects, args.cornerStyle);
+              setStaffIdPrintJob(null);
             }}
           />
         ) : null}
@@ -2645,6 +2691,20 @@ function AdminDashboardInner() {
             </DialogContent>
           </Dialog>
         )}
+        <StaffIdCardPreviewDialog
+          subject={staffIdPreview}
+          open={!!staffIdPreview}
+          onOpenChange={(open) => {
+            if (!open) setStaffIdPreview(null);
+          }}
+          schoolName={schoolData?.name?.trim() || 'School'}
+          schoolLogoUrl={schoolData?.logoUrl ?? null}
+          appLogoUrl={appConfigGlobal?.appLogoUrl ?? null}
+          appName={appConfigGlobal?.appName?.trim() || undefined}
+          appTagline={appConfigGlobal?.appTagline?.trim() || undefined}
+          isColorEnabled={settings.enableColorPrinting}
+          onPrint={(subject) => handlePrintStaffIdCards([subject])}
+        />
         <AchievementModal
           isOpen={isBadgeModalOpen}
           setIsOpen={setIsBadgeModalOpen}

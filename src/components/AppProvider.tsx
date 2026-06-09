@@ -66,6 +66,7 @@ interface AppContextType {
   // Print
   setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => void;
   setStudentsToPrint: (data: { students: Student[], classes: Class[], schoolId: string; printerType?: 'dtc4500e' }) => void;
+  setStaffIdCardsToPrint: (data: { subjects: import('@/lib/staff/staffIdCardSubject').StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
   printPrizeTickets: (tickets: any[]) => void;
   // CRUD
   addStudent: (student: Omit<Student, 'id' | 'points' | 'lifetimePoints'>) => Promise<void>;

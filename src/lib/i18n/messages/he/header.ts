@@ -23,6 +23,12 @@ const header = {
     homework: 'שיעורי בית',
     library: 'ספרייה',
   },
+  layout: {
+    wide: 'פריסה רחבה',
+    standard: 'פריסה רגילה',
+    useWide: 'מעבר לפריסה רחבה במסך מלא',
+    useStandard: 'מעבר לפריסה ממורכזת רגילה',
+  },
 };
 
 export default { header };

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, BookOpen, Calendar } from 'lucide-react';
+import { AlertTriangle, BookOpen, BookMarked, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import {
   formatDueDate,
   type LibraryPolicySettings,
 } from '@/lib/library/libraryPolicy';
+import type { StudentLibraryBookRead } from '@/lib/library/libraryStudentHistory';
 
 export function StudentLibraryCheckoutsCard({
   schoolId,
@@ -23,9 +24,11 @@ export function StudentLibraryCheckoutsCard({
   libraryPoints,
   libraryFineBalance,
   categoryPoints,
+  booksRead = [],
 }: {
   schoolId: string;
   items: LibraryItem[];
+  booksRead?: StudentLibraryBookRead[];
   themed?: boolean;
   /** Emphasize overdue returns at top of kiosk. */
   topAlert?: boolean;
@@ -172,6 +175,37 @@ export function StudentLibraryCheckoutsCard({
             </Link>
           );
         })}
+        {booksRead.length > 0 ? (
+          <div className="pt-2 mt-2 border-t border-border/50 space-y-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <BookMarked className="h-3.5 w-3.5" aria-hidden />
+              Books you&apos;ve read
+              <Badge variant="outline" className="ml-auto text-[9px]">
+                {booksRead.length}
+              </Badge>
+            </p>
+            <ul className={cn('space-y-1.5', booksRead.length > 4 ? 'max-h-32 overflow-y-auto' : '')}>
+              {booksRead.map((book) => (
+                <li
+                  key={`${book.title}-${book.returnedAt}`}
+                  className="rounded-lg border border-border/50 bg-muted/15 px-2.5 py-1.5"
+                >
+                  <p className="text-xs font-semibold truncate">{book.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Returned{' '}
+                    {book.returnedAt
+                      ? new Date(book.returnedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

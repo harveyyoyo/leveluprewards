@@ -22,7 +22,6 @@ import { Button } from '@/components/ui/button';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
-import { cn } from '@/lib/utils';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 import {
@@ -65,9 +64,6 @@ export function AdminDisplaysTab({
     return [...incentives].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   }, [incentives]);
 
-  const bulletinEnabled = settings.bulletinEnabled !== false;
-  const smartScreenEnabled = !!settings.smartScreenEnabled;
-  const hallOfFameEnabled = !!settings.enableClassLeaderboard;
   const activeIncentiveCount = sortedIncentives.filter((item) => item.active !== false).length;
 
   const smartHref = useMemo(() => buildSmartScreenDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
@@ -111,9 +107,9 @@ export function AdminDisplaysTab({
           fullWidth
           items={[
             { id: 'overview', label: 'Overview', icon: LayoutGrid },
-            { id: 'smart-screen', label: 'Smart Screen', icon: Monitor, badge: smartScreenEnabled ? 'On' : 'Off' },
-            { id: 'bulletin', label: 'Bulletin board', icon: Megaphone, badge: bulletinEnabled ? 'On' : 'Off' },
-            { id: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy, badge: hallOfFameEnabled ? 'On' : 'Off' },
+            { id: 'smart-screen', label: 'Smart Screen', icon: Monitor },
+            { id: 'bulletin', label: 'Bulletin board', icon: Megaphone },
+            { id: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy },
             { id: 'incentives', label: 'Incentives', icon: Tag, badge: activeIncentiveCount },
           ]}
           value={section}
@@ -127,26 +123,11 @@ export function AdminDisplaysTab({
               <button
                 type="button"
                 onClick={() => setSection('smart-screen')}
-                className={cn(
-                  'group rounded-2xl border p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg',
-                  smartScreenEnabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/10',
-                )}
+                className="group rounded-2xl border bg-muted/10 p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg"
               >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm font-black">
-                    <Monitor className="h-5 w-5 text-ring" />
-                    Smart Screen
-                  </span>
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide',
-                      smartScreenEnabled
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {smartScreenEnabled ? 'Enabled' : 'Off'}
-                  </span>
+                <div className="mb-3 flex items-center gap-2 text-sm font-black">
+                  <Monitor className="h-5 w-5 text-ring" />
+                  Smart Screen
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Clock, weather, leaders, houses, rewards, and bulletin items on one live dashboard for hallways and gyms.
@@ -159,26 +140,11 @@ export function AdminDisplaysTab({
               <button
                 type="button"
                 onClick={() => setSection('bulletin')}
-                className={cn(
-                  'group rounded-2xl border p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg',
-                  bulletinEnabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/10',
-                )}
+                className="group rounded-2xl border bg-muted/10 p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg"
               >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm font-black">
-                    <Megaphone className="h-5 w-5 text-ring" />
-                    Bulletin board
-                  </span>
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide',
-                      bulletinEnabled
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {bulletinEnabled ? 'Enabled' : 'Off'}
-                  </span>
+                <div className="mb-3 flex items-center gap-2 text-sm font-black">
+                  <Megaphone className="h-5 w-5 text-ring" />
+                  Bulletin board
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Focused board for point-earning incentives and celebration posts — great for office TVs and staff areas.
@@ -191,26 +157,11 @@ export function AdminDisplaysTab({
               <button
                 type="button"
                 onClick={() => setSection('hall-of-fame')}
-                className={cn(
-                  'group rounded-2xl border p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg',
-                  hallOfFameEnabled ? 'bg-primary/5 border-primary/20' : 'bg-muted/10',
-                )}
+                className="group rounded-2xl border bg-muted/10 p-5 text-left transition-all hover:border-primary/35 hover:shadow-lg"
               >
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-sm font-black">
-                    <Trophy className="h-5 w-5 text-ring" />
-                    Hall of Fame
-                  </span>
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide',
-                      hallOfFameEnabled
-                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {hallOfFameEnabled ? 'Enabled' : 'Off'}
-                  </span>
+                <div className="mb-3 flex items-center gap-2 text-sm font-black">
+                  <Trophy className="h-5 w-5 text-ring" />
+                  Hall of Fame
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
                   Big-screen leaderboards with podium and rankings for students, classes, houses, or school goals.

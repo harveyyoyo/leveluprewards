@@ -649,7 +649,7 @@ const defaultSettings: Settings = {
     notificationParentWeeklyDigestEnabled: false,
     privacyStudentNameDisplayMode: 'full',
     enableTeacherOfflineAwardQueue: true,
-    enableClassLeaderboard: false,
+    enableClassLeaderboard: true,
     enableClassAccumulations: false,
     enableShoutouts: false,
     enablePrizeImages: false,
@@ -775,7 +775,7 @@ const defaultSettings: Settings = {
     bulletinShowWowBadge: true,
     bulletinColumns: '2',
 
-    smartScreenEnabled: false,
+    smartScreenEnabled: true,
     smartScreenTitle: 'Smart Screen',
     smartScreenMessage: 'Make today count.',
     smartScreenTheme: 'midnight',

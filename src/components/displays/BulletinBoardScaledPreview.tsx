@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import type { HallOfFameLayout } from '@/lib/hallOfFameUrlConfig';
 import {
   DISPLAY_PREVIEW_WIDE_TALL_OPTIONS,
   DisplayPreviewToolbar,
@@ -12,19 +11,24 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-const HallOfFamePreviewFrame = dynamic(() => import('@/components/displays/HallOfFameRouteView'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-background text-xs font-semibold text-muted-foreground">
-      Loading preview…
-    </div>
-  ),
-});
+const BulletinBoardPreviewFrame = dynamic(
+  () => import('@/app/[schoolId]/bulletin-board/BulletinBoardDisplay'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-full w-full items-center justify-center bg-background text-xs font-semibold text-muted-foreground">
+        Loading preview…
+      </div>
+    ),
+  },
+);
+
+export type BulletinBoardPreviewLayout = 'landscape' | 'portrait';
 
 const LANDSCAPE_STAGE = { width: 1280, height: 720 };
 const PORTRAIT_STAGE = { width: 720, height: 1280 };
 
-function stageForLayout(layout: HallOfFameLayout) {
+function stageForLayout(layout: BulletinBoardPreviewLayout) {
   return layout === 'portrait' ? PORTRAIT_STAGE : LANDSCAPE_STAGE;
 }
 
@@ -58,19 +62,19 @@ function useFitScale(
   return scale;
 }
 
-type HallOfFameScaledPreviewProps = {
-  layout: HallOfFameLayout;
+type BulletinBoardScaledPreviewProps = {
+  layout: BulletinBoardPreviewLayout;
   className?: string;
   openDisplayHref?: string;
-  onLayoutChange?: (layout: HallOfFameLayout) => void;
+  onLayoutChange?: (layout: BulletinBoardPreviewLayout) => void;
 };
 
-export function HallOfFameScaledPreview({
+export function BulletinBoardScaledPreview({
   layout,
   className,
   openDisplayHref,
   onLayoutChange,
-}: HallOfFameScaledPreviewProps) {
+}: BulletinBoardScaledPreviewProps) {
   const containerRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -98,7 +102,7 @@ export function HallOfFameScaledPreview({
     };
   }, [modalOpen]);
 
-  const previewFrame = <HallOfFamePreviewFrame variant="preview" previewLayout={layout} />;
+  const previewFrame = <BulletinBoardPreviewFrame variant="preview" previewLayout={layout} />;
 
   const previewToolbar = (
     <DisplayPreviewToolbar
@@ -143,7 +147,7 @@ export function HallOfFameScaledPreview({
               className="fixed inset-0 z-[250] flex flex-col bg-black/70 p-4 sm:p-8"
               role="dialog"
               aria-modal="true"
-              aria-label="Hall of Fame preview"
+              aria-label="Bulletin board preview"
               onClick={() => setModalOpen(false)}
             >
               <div

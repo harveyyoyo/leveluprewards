@@ -688,7 +688,7 @@ export function SmartScreenDisplay({
             isPreview ? 'absolute inset-x-3 bottom-3' : 'fixed inset-x-4 bottom-4 mx-auto max-w-xl',
           )}
         >
-          Smart Screen is currently off. Turn it on from Admin → Displays.
+          Smart Screen is currently off. Turn it on from Settings → Features → Displays.
         </div>
       ) : null}
 

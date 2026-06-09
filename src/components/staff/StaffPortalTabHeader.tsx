@@ -6,7 +6,6 @@ import {
   staffPortalTabInfoSection,
   type StaffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
-import { StaffPortalSectionCardTitle } from '@/components/staff/StaffPortalSection';
 import { staffPortalTabByValue, staffPortalTabDescription } from '@/lib/staffPortal';
 import {
   staffPortalTabHeaderIconClassName,
@@ -38,7 +37,7 @@ export function StaffPortalTabHeader({
   subtitle,
   infoSections,
   infoAriaLabel,
-  hideSubtitle = false,
+  hideSubtitle = true,
   showIcon = true,
   iconClassName,
   titleClassName,
@@ -57,37 +56,30 @@ export function StaffPortalTabHeader({
   return (
     <div
       className={cn(
-        'flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between',
+        'flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2',
         className,
       )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <StaffPortalSectionCardTitle
-            className={staffPortalTabHeaderTitleClassName(titleClassName)}
-          >
-            {showIcon && Icon ? (
-              <Icon className={staffPortalTabHeaderIconClassName(iconClassName)} aria-hidden />
-            ) : null}
-            {resolvedTitle}
-          </StaffPortalSectionCardTitle>
-          {sections.length > 0 ? (
-            <StaffPortalTabInfoPopover
-              sections={sections}
-              ariaLabel={infoAriaLabel ?? `About ${resolvedTitle}`}
-            />
+      <div className="flex min-w-0 items-center gap-1">
+        <h2 className={staffPortalTabHeaderTitleClassName(titleClassName)}>
+          {showIcon && Icon ? (
+            <Icon className={staffPortalTabHeaderIconClassName(iconClassName)} aria-hidden />
           ) : null}
-        </div>
-        {!hideSubtitle && resolvedSubtitle ? (
-          <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            {resolvedSubtitle}
-          </p>
+          <span className="truncate">{resolvedTitle}</span>
+        </h2>
+        {sections.length > 0 ? (
+          <StaffPortalTabInfoPopover
+            sections={sections}
+            ariaLabel={infoAriaLabel ?? `About ${resolvedTitle}`}
+            className="h-7 w-7 rounded-md"
+          />
         ) : null}
       </div>
+      {!hideSubtitle && resolvedSubtitle ? (
+        <p className="w-full text-sm leading-snug text-muted-foreground">{resolvedSubtitle}</p>
+      ) : null}
       {trailing ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pl-4">
-          {trailing}
-        </div>
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{trailing}</div>
       ) : null}
     </div>
   );

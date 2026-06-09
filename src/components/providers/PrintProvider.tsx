@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import dynamic from 'next/dynamic';
 import type { Coupon, Student, Class, Prize, LibraryItem } from '@/lib/types';
+import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -38,6 +39,16 @@ const StudentIdDTCPrintSheet = dynamic(
     { ssr: false },
 );
 
+const StaffIdPrintSheet = dynamic(
+    () => import('@/components/staff/StaffIdPrintSheet').then((m) => ({ default: m.StaffIdPrintSheet })),
+    { ssr: false },
+);
+
+const StaffIdDTCPrintSheet = dynamic(
+    () => import('@/components/staff/StaffIdDTCPrintSheet').then((m) => ({ default: m.StaffIdDTCPrintSheet })),
+    { ssr: false },
+);
+
 const PrizeRedeemTicketPrintSheet = dynamic(
     () => import('@/components/prizes/PrizeRedeemTicketPrintSheet').then((m) => ({ default: m.PrizeRedeemTicketPrintSheet })),
     { ssr: false },
@@ -63,6 +74,7 @@ interface PrintContextType {
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
     setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
+    setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
     setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => void;
 }
 
@@ -88,6 +100,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
+    const [staffIdPrintData, setStaffIdPrintData] = useState<{ subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
     const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
@@ -188,6 +201,25 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         }
     }, [prizeIdPrintData, playSound]);
 
+    const staffIdPrintTriggered = useRef(false);
+    const triggerStaffIdPrint = React.useCallback(() => {
+        if (staffIdPrintData && staffIdPrintData.subjects.length > 0 && !staffIdPrintTriggered.current) {
+            staffIdPrintTriggered.current = true;
+            const afterPrint = () => {
+                setStaffIdPrintData(null);
+                staffIdPrintTriggered.current = false;
+                window.removeEventListener('afterprint', afterPrint);
+            };
+            window.addEventListener('afterprint', afterPrint);
+            playSound('swoosh');
+            waitForPrintBarcodes().finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.print());
+                });
+            });
+        }
+    }, [staffIdPrintData, playSound]);
+
     const libraryPrintTriggered = useRef(false);
     const triggerLibraryStickerPrint = React.useCallback(() => {
         if (libraryPrintJob && libraryPrintJob.items.length > 0 && !libraryPrintTriggered.current) {
@@ -233,6 +265,14 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     return;
                 }
                 setPrizeIdPrintData({ ...data, schoolId: sid });
+            },
+            setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+                const sid = (data?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print staff ID cards', description: 'Missing schoolId.' });
+                    return;
+                }
+                setStaffIdPrintData({ ...data, schoolId: sid });
             },
             setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => {
                 const sid = (options?.schoolId ?? '').trim();
@@ -288,6 +328,17 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
             )}
             {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
                 <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={prizeIdPrintData.schoolId} onReady={triggerPrizeIdPrint} />
+            )}
+            {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType !== 'dtc4500e' && (
+                <StaffIdPrintSheet
+                    subjects={staffIdPrintData.subjects}
+                    schoolId={staffIdPrintData.schoolId}
+                    onReady={triggerStaffIdPrint}
+                    cornerStyle={staffIdPrintData.cornerStyle}
+                />
+            )}
+            {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType === 'dtc4500e' && (
+                <StaffIdDTCPrintSheet subjects={staffIdPrintData.subjects} schoolId={staffIdPrintData.schoolId} onReady={triggerStaffIdPrint} />
             )}
             {libraryPrintJob && libraryPrintJob.items.length > 0 && (
                 <LibraryBarcodePrintSheet

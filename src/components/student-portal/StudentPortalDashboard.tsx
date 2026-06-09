@@ -15,6 +15,7 @@ import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { HouseHallOfFameCard } from '@/components/houses/HouseHallOfFameCard';
 import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
+import { listStudentLibraryBooksRead } from '@/lib/library/libraryStudentHistory';
 import { StudentPortalMyBooksCard } from './StudentPortalMyBooksCard';
 import { StudentPortalMyHouseCard } from './StudentPortalMyHouseCard';
 import { useSchoolSurfaceSnapshotReporter } from '@/hooks/useSchoolSurfaceSnapshotReporter';
@@ -101,6 +102,10 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
   const myLibraryBooks = useMemo(
     () => (data?.libraryCheckouts ?? []).filter((item) => item.status === 'checked_out'),
     [data?.libraryCheckouts],
+  );
+  const libraryBooksRead = useMemo(
+    () => listStudentLibraryBooksRead(activities),
+    [activities],
   );
 
   const visiblePrizes = useMemo(
@@ -282,8 +287,8 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
         </Card>
       ) : null}
 
-      {settings.payLibrary !== false && myLibraryBooks.length > 0 ? (
-        <StudentPortalMyBooksCard items={myLibraryBooks} />
+      {settings.payLibrary !== false && (myLibraryBooks.length > 0 || libraryBooksRead.length > 0) ? (
+        <StudentPortalMyBooksCard items={myLibraryBooks} booksRead={libraryBooksRead} />
       ) : null}
 
       <Card>

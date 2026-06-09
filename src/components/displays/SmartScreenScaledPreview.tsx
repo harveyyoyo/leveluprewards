@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Monitor, Smartphone, X } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
+import { DisplayPreviewToolbar } from '@/components/displays/DisplayPreviewToolbar';
 import { SmartScreenDisplay } from '@/components/displays/SmartScreenDisplay';
 import { useSmartScreenDisplayData } from '@/hooks/useSmartScreenDisplayData';
 import {
@@ -106,7 +107,7 @@ type SmartScreenScaledPreviewProps = {
   screenProfileName?: string | null;
   isJewishOrthodox?: boolean;
   className?: string;
-  headerAction?: ReactNode;
+  openDisplayHref?: string;
   layout?: SmartScreenPreviewLayout;
   onOrientationChange?: (orientation: PreviewOrientation) => void;
 };
@@ -118,7 +119,7 @@ export function SmartScreenScaledPreview({
   screenProfileName,
   isJewishOrthodox = false,
   className,
-  headerAction,
+  openDisplayHref,
   layout = 'inline',
   onOrientationChange,
 }: SmartScreenScaledPreviewProps) {
@@ -170,52 +171,18 @@ export function SmartScreenScaledPreview({
     displayData,
   };
 
-  const orientationToolbar =
-    onOrientationChange && !isDashboard ? (
-      <div
-        className="flex items-center rounded-lg border bg-muted/30 p-0.5"
-        role="group"
-        aria-label="Preview orientation"
-      >
-        {ORIENTATION_OPTIONS.map((option) => {
-          const Icon = option.icon;
-          const active = previewOrientation === option.id;
-          return (
-            <Button
-              key={option.id}
-              type="button"
-              size="sm"
-              variant={active ? 'default' : 'ghost'}
-              className={cn(
-                'h-7 gap-1 rounded-md px-2 text-[10px] font-bold uppercase tracking-wide',
-                !active && 'text-muted-foreground',
-              )}
-              onClick={() => onOrientationChange(option.id)}
-              aria-pressed={active}
-              title={option.label}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {option.shortLabel}
-            </Button>
-          );
-        })}
-      </div>
-    ) : null;
+  const previewToolbar = (
+    <DisplayPreviewToolbar
+      layout={previewOrientation}
+      options={ORIENTATION_OPTIONS}
+      onLayoutChange={onOrientationChange && !isDashboard ? onOrientationChange : undefined}
+      openDisplayHref={openDisplayHref}
+    />
+  );
 
   return (
     <div className={cn(isDocked ? 'flex h-full min-h-0 flex-col gap-1.5' : 'space-y-2', className)}>
-      <div className={cn('flex shrink-0 flex-wrap items-center justify-between gap-1.5', isDocked && 'px-0.5')}>
-        <div className="min-w-0">
-          <p className="text-xs font-bold">Live preview</p>
-          <p className="text-[10px] text-muted-foreground">
-            {isDashboard ? 'Dashboard layout — change in settings' : 'Click to enlarge'}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {orientationToolbar}
-          {headerAction}
-        </div>
-      </div>
+      {previewToolbar}
 
       <button
         type="button"
@@ -258,13 +225,7 @@ export function SmartScreenScaledPreview({
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="flex shrink-0 items-center justify-between gap-3 border-b px-4 py-2.5">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div>
-                      <p className="text-sm font-bold">Smart Screen preview</p>
-                      <p className="text-[10px] text-muted-foreground">Esc or click outside to close</p>
-                    </div>
-                    {orientationToolbar}
-                  </div>
+                  <div className="flex flex-wrap items-center gap-3">{previewToolbar}</div>
                   <Button
                     type="button"
                     variant="outline"
