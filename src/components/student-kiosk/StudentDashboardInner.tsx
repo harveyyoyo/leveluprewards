@@ -1491,8 +1491,10 @@ export function StudentDashboardInner({
     />
   );
 
+  const hasLibraryActivity = myLibraryBooks.length > 0 || libraryBooksRead.length > 0;
+
   const libraryBlock =
-    libraryKioskCheckoutOn && schoolId && student ? (
+    libraryKioskCheckoutOn && schoolId && student && hasLibraryActivity ? (
       <StudentLibraryCheckoutsCard
         schoolId={schoolId}
         items={myLibraryBooks}
@@ -1630,7 +1632,7 @@ export function StudentDashboardInner({
             themed={!!effectiveTheme}
             primaryForeground={primaryForeground}
             photoDisplayMode={settings.photoDisplayMode}
-            nameExtras={
+            headerExtras={
               studentHouse ? (
                 <StudentKioskHouseBadge studentHouse={studentHouse} themed={!!effectiveTheme} />
               ) : undefined
@@ -1704,12 +1706,12 @@ export function StudentDashboardInner({
           <div
             className={cn(
               'grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-hidden xl:gap-5',
-              'grid-cols-1 lg:grid-cols-[minmax(0,12.5rem)_minmax(0,1fr)_minmax(0,12.5rem)] lg:items-stretch',
+              'grid-cols-1 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,15rem)] lg:items-stretch',
               '[@media(max-height:760px)]:gap-2',
             )}
           >
           {/* Left prize rail (desktop) */}
-          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-1 lg:flex lg:max-w-[12.5rem]">
+          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-1 lg:flex lg:max-w-[15rem]">
             <p
               className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
@@ -1780,7 +1782,7 @@ export function StudentDashboardInner({
 
           </div>
 
-          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-3 lg:flex lg:max-w-[12.5rem]">
+          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-3 lg:flex lg:max-w-[15rem]">
             <p
               className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}

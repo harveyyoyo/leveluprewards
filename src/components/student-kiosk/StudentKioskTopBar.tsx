@@ -14,8 +14,8 @@ export type StudentKioskTopBarProps = {
   themed: boolean;
   primaryForeground: string;
   photoDisplayMode?: string;
-  /** Shown beside the name (house badge, emoji, etc.). */
-  nameExtras?: ReactNode;
+  /** Shown on the welcome row (e.g. house badge). */
+  headerExtras?: ReactNode;
   /** e.g. logout controls */
   trailingActions?: ReactNode;
 };
@@ -26,7 +26,7 @@ export function StudentKioskTopBar({
   themed,
   primaryForeground,
   photoDisplayMode,
-  nameExtras,
+  headerExtras,
   trailingActions,
 }: StudentKioskTopBarProps) {
   const displayName = `${student.firstName}${student.lastName ? ` ${student.lastName}` : ''}`.trim();
@@ -47,79 +47,77 @@ export function StudentKioskTopBar({
           : undefined
       }
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 [@media(max-height:760px)]:gap-1.5">
-        <div className="min-w-0 flex-1">
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
+      <div className="mb-1 flex items-center justify-between gap-2 sm:mb-1.5 [@media(max-height:760px)]:mb-0.5">
+        <p
+          className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs [@media(max-height:760px)]:text-[9px]"
+          style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+        >
+          Welcome
+        </p>
+        {headerExtras ? <div className="shrink-0">{headerExtras}</div> : null}
+      </div>
+      <div
+        className={cn(
+          'grid w-full items-center gap-2 sm:gap-3 [@media(max-height:760px)]:gap-1.5',
+          'grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3 [@media(max-height:760px)]:gap-1.5 justify-self-start">
+          <div
+            className={cn(
+              'flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-sm font-black uppercase sm:h-14 sm:w-14 md:h-16 md:w-16 [@media(max-height:760px)]:h-9 [@media(max-height:760px)]:w-9',
+              !themed && 'student-kiosk-gradient-brand text-white shadow-md',
+            )}
+            style={
+              themed
+                ? {
+                    backgroundColor: 'var(--theme-primary)',
+                    color: primaryForeground,
+                  }
+                : undefined
+            }
+          >
+            {student.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={student.photoUrl}
+                alt=""
+                className={cn(
+                  'h-full w-full',
+                  photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
+                )}
+              />
+            ) : (
+              <span aria-hidden>
+                {(student.firstName?.[0] || '')}
+                {(student.lastName?.[0] || '')}
+              </span>
+            )}
+          </div>
+          <h1
+            className="min-w-0 truncate text-3xl font-black uppercase leading-tight tracking-wide sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl [@media(max-height:760px)]:text-2xl"
             style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
           >
-            Welcome back
-          </p>
-            <div className="mt-1.5 flex min-w-0 items-center gap-2 sm:mt-2 sm:gap-2.5 [@media(max-height:760px)]:mt-0 [@media(max-height:760px)]:gap-1.5">
-            <div
-              className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-black uppercase sm:h-10 sm:w-10 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8',
-                !themed && 'student-kiosk-gradient-brand text-white shadow-md',
-              )}
-              style={
-                themed
-                  ? {
-                      backgroundColor: 'var(--theme-primary)',
-                      color: primaryForeground,
-                    }
-                  : undefined
-              }
-            >
-              {student.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={student.photoUrl}
-                  alt=""
-                  className={cn(
-                    'h-full w-full',
-                    photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
-                  )}
-                />
-              ) : (
-                <span aria-hidden>
-                  {(student.firstName?.[0] || '')}
-                  {(student.lastName?.[0] || '')}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h1
-                  className="truncate text-lg font-black uppercase leading-tight tracking-wide sm:text-xl md:text-2xl lg:text-3xl [@media(max-height:760px)]:text-base"
-                  style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
-                >
-                  {displayName}
-                </h1>
-              </div>
-            </div>
-            {nameExtras}
-          </div>
+            {displayName}
+          </h1>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1 sm:gap-1.5">
-          {trailingActions ? (
-            <div className="flex flex-wrap items-center justify-end gap-1.5">{trailingActions}</div>
-          ) : null}
-          <div className="text-right">
-            <p
-              className="text-[9px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:hidden"
-              style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
-            >
-              Balance
-            </p>
-            <p
-              className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
-              style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
-            >
-              {points.toLocaleString()}
-            </p>
-          </div>
+        <div className="shrink-0 justify-self-center px-1 text-center sm:px-2">
+          <p
+            className="text-4xl font-black tabular-nums leading-none sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl [@media(max-height:760px)]:text-3xl"
+            style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
+          >
+            {points.toLocaleString()}
+          </p>
         </div>
+
+        {trailingActions ? (
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 justify-self-end">
+            {trailingActions}
+          </div>
+        ) : (
+          <div aria-hidden className="justify-self-end" />
+        )}
       </div>
     </div>
   );

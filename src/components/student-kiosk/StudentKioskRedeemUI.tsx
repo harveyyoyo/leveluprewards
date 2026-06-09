@@ -619,20 +619,18 @@ export function StudentKioskRedeemHero({
         />
         <span
           className={cn(
-            'max-w-full text-xl font-black uppercase tracking-[0.12em] leading-snug sm:text-2xl md:text-3xl sm:tracking-[0.18em] [@media(max-height:760px)]:text-lg',
+            'max-w-full text-2xl font-black uppercase tracking-[0.14em] leading-none sm:text-3xl md:text-4xl lg:text-5xl sm:tracking-[0.2em] [@media(max-height:760px)]:text-xl',
             !t && 'text-amber-50',
           )}
           style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
         >
-          {libraryCheckoutNote ? 'Scan coupon or LIB book sticker' : 'Scan coupon'}
+          Scan coupon
         </span>
         <p
           className="w-full text-center text-xs font-semibold opacity-90 sm:text-sm [@media(max-height:760px)]:text-[10px]"
           style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
         >
-          {libraryCheckoutNote
-            ? 'Same scanner for coupons and library books (LIB sticker on the book)'
-            : 'Scan with your barcode scanner, or type the code above'}
+          Scan with your barcode scanner, or type the code above
         </p>
       </ScanCouponScanZone>
       <p
@@ -693,7 +691,7 @@ export function StudentKioskRedeemHero({
             >
               <Wallet className="h-5 w-5 sm:h-6 sm:w-6 [@media(max-height:760px)]:h-4 [@media(max-height:760px)]:w-4" style={t ? { color: 'var(--theme-primary)' } : undefined} />
             </div>
-            {libraryCheckoutNote || recessCheckoutNote ? 'Scan coupon, pass, or book' : 'Redeem Coupon'}
+            {recessCheckoutNote ? 'Scan coupon, pass, or book' : 'Redeem Coupon'}
           </CardTitle>
         </Helper>
         {recessCheckoutNote ? (
