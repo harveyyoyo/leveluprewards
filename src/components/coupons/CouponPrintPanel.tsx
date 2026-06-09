@@ -7,7 +7,10 @@ import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Helper } from '@/components/ui/helper';
+import {
+  StaffPortalTabInfoPopover,
+  staffPortalTabInfoSection,
+} from '@/components/staff/StaffPortalTabInfoPopover';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
@@ -508,7 +511,7 @@ export function CouponPrintPanel({
       )}
     >
       <CardHeader className="p-4 md:p-6">
-        <Helper content="Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.">
+        <div className="flex items-center gap-1.5">
           <CardTitle className="flex items-center gap-3">
             <div
               className={cn(
@@ -521,7 +524,15 @@ export function CouponPrintPanel({
             </div>
             Print coupons
           </CardTitle>
-        </Helper>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.',
+              ),
+            ]}
+            ariaLabel="About print coupons"
+          />
+        </div>
         <PrinterReminderCallout
           title="Coupon / slip printer"
           message={settings.printerReminderPrizeVouchers}

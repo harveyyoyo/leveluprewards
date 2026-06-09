@@ -8,7 +8,7 @@ const settings = {
   },
   hub: {
     interfaceTitle: 'ממשק ותצוגה',
-    interfaceDescription: 'צבעים, מצב כהה, תנועה, צליל ופריסת Auto / Web / App',
+    interfaceDescription: 'צבעים, מצב כהה, תנועה, פריסה לאורך ורחבה, ומצב תצוגה Auto / Web / App',
     schoolTitle: 'הגדרות בית ספר',
     schoolDescription: 'מפגשים, התנהגות קיוסק, הדפסה ותכונות אופציונליות',
     pillarsTitle: 'עמודי מוצר',
@@ -49,6 +49,7 @@ const settings = {
       appearance: 'מראה',
       motionSound: 'תנועה וצליל',
       themeLayout: 'ערכת נושא ופריסה',
+      portalScreenLayout: 'פריסת פורטל ומסך',
     },
     soundFx: 'אפקטי צליל',
     animatedBackground: 'רקע מונפש',
@@ -60,8 +61,13 @@ const settings = {
     coloredFeatureTabs: 'לשוניות צבעוניות',
     personalizedAudio: 'ערכת שמע מותאמת',
     portraitDisplay: 'פריסת תצוגה לאורך',
-    hideHeader: 'הסתר כותרת מחוץ לפורטל',
+    portraitDisplayDesc:
+      'פריסה צרה וגבוהה למסכי קיוסק במצב לאורך. דריסות לפי מכשיר נמצאות בניהול → מיתוג → פרופילי קיוסק.',
+    hideHeader: 'הסתר כותרת',
+    hideHeaderDesc:
+      'הסתרת הכותרת בגלילה בדפי צוות ופורטל פנימיים; היא חוזרת בראש הדף או בגלילה למעלה. מרכז הפורטל הראשי תמיד מציג את הכותרת. בדף קיוסק התלמידים הכותרת מוסתרת עד שהעכבר מגיע לקצה העליון.',
     wideLayout: 'פריסה רחבה',
+    wideLayoutDesc: 'שימוש בפריסה ברוחב מלא בפורטלי מורים וניהול במקום תוכן ממורכז.',
   },
   general: {
     nav: {
@@ -88,6 +94,11 @@ const settings = {
     toSchoolSettings: 'חזרה להגדרות בית ספר',
     toGeneral: 'חזרה להגדרות כלליות',
     toMenu: 'חזרה לתפריט הגדרות',
+  },
+  adminBranding: {
+    tabInfoTitle: 'למה משמש המיתוג?',
+    tabInfoBody:
+      'הגדירו לוגו בית ספר, מראה קיוסק, ערכות נושא לתלמידים ובאנרי חסות. השינויים כאן משפיעים על מה שתלמידים וצוות רואים בפורטל ובקיוסק.',
   },
 };
 

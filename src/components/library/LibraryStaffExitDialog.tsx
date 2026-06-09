@@ -106,7 +106,7 @@ export function LibraryStaffExitDialog({
       <DialogContent className="rounded-2xl sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-headline">
-            <Lock className="h-5 w-5 text-primary" />
+            <Lock className="h-5 w-5 text-ring" />
             Staff exit
           </DialogTitle>
           <DialogDescription>

@@ -16,6 +16,7 @@ export {
   staffPortalDefaultTab,
   staffPortalPinWelcomeFirst,
   staffPortalIsTeacherOperatedTab,
+  staffPortalTabByValue,
   staffPortalTabDescription,
   staffPortalTabsForRole,
   staffPortalTeacherOperatedAdminNote,

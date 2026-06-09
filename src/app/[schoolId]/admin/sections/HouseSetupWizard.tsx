@@ -230,7 +230,7 @@ export function HouseSetupWizard({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Home className="h-5 w-5 text-primary" aria-hidden />
+            <Home className="h-5 w-5 text-ring" aria-hidden />
             {stepTitle}
           </DialogTitle>
           <DialogDescription>
@@ -255,7 +255,7 @@ export function HouseSetupWizard({
                 { icon: Monitor, text: 'Configure the House Hall of Fame display' },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                  <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden />
                   <Icon className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                   {text}
                 </li>
@@ -314,7 +314,7 @@ export function HouseSetupWizard({
                       <span className="text-[10px] text-muted-foreground self-center">+{theme.houses.length - 6} more</span>
                     ) : null}
                   </div>
-                  {selected ? <Check className="h-4 w-4 text-primary mt-2" aria-hidden /> : null}
+                  {selected ? <Check className="h-4 w-4 text-ring mt-2" aria-hidden /> : null}
                 </button>
               );
             })}

@@ -158,6 +158,8 @@ export function StaffPointsTab({
 
     <PointsTabLayout
 
+      tabValue={variant === 'admin' ? 'categories' : 'coupons'}
+
       className={className}
 
       defaultSection={printOnly ? 'print' : 'categories'}

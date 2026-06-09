@@ -1,6 +1,7 @@
 import React from "react";
 import {
   AbsoluteFill,
+  Sequence,
   Series,
   interpolate,
   spring,
@@ -9,7 +10,7 @@ import {
 } from "remotion";
 import { LandscapeBrowser } from "./landscapeShared";
 import { PromoClipVideo } from "./PromoClipVideo";
-import { outfit } from "./shared";
+import { jakarta, outfit } from "./shared";
 import { BRAND } from "./theme";
 import {
   INTRO_LOGO_ONLY_FRAMES,
@@ -72,6 +73,10 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const panelScale = interpolate(slideProgress, [0.34, 0.88], [0.94, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 
   const previewIn = spring({
     fps,
@@ -84,6 +89,16 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
     extrapolateRight: "clamp",
   });
   const browserScale = interpolate(previewIn, [0, 1], [0.9, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const wordBurstProgress = spring({
+    fps,
+    frame: frame - 158,
+    durationInFrames: 34,
+    config: { damping: 15, stiffness: 92 },
+  });
+  const wordBurstOpacity = interpolate(frame, [154, 170, 218, 224], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
@@ -128,46 +143,67 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
         {logo ?? defaultLogo}
       </div>
 
-      <div
-        style={{
-          position: "absolute",
-          left: leftColumnX,
-          top: logoCenterY + 88,
-          width: width * 0.28,
-          transform: `translateX(-50%) translateY(${copyLift}px)`,
-          opacity: copyOpacity * titleIn,
-          zIndex: 11,
-          textAlign: "center",
-        }}
-      >
-        <p
+      {variant !== "cinematic" && (
+        <div
           style={{
-            fontFamily: outfit,
-            fontSize: variant === "cinematic" ? 18 : 20,
-            fontWeight: 700,
-            letterSpacing: variant === "cinematic" ? 5 : 6,
-            textTransform: "uppercase",
-            color: variant === "cinematic" ? "#f5c842" : BRAND.cyan,
-            margin: 0,
+            position: "absolute",
+            left: 72,
+            top: logoCenterY + 96,
+            width: width * 0.32,
+            padding: "26px 30px",
+            borderRadius: 22,
+            background:
+              "linear-gradient(135deg, rgba(12,10,26,0.78), rgba(20,20,46,0.42))",
+            border: "1px solid rgba(76,201,240,0.16)",
+            boxShadow: "0 24px 80px rgba(0,0,0,0.22)",
+            transform: `translateY(${copyLift}px) scale(${panelScale})`,
+            transformOrigin: "left top",
+            opacity: copyOpacity * titleIn,
+            zIndex: 11,
+            textAlign: "left",
           }}
         >
-          {eyebrow}
-        </p>
-        <p
-          style={{
-            fontFamily: outfit,
-            fontSize: 18,
-            fontWeight: 700,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-            color: beat.color,
-            marginTop: 18,
-            marginBottom: 0,
-          }}
-        >
-          {beat.emoji} {beat.tagline}
-        </p>
-      </div>
+          <p
+            style={{
+              fontFamily: outfit,
+              fontSize: 20,
+              fontWeight: 700,
+              letterSpacing: 6,
+              textTransform: "uppercase",
+              color: BRAND.cyan,
+              margin: 0,
+            }}
+          >
+            {eyebrow}
+          </p>
+          <h2
+            style={{
+              fontFamily: outfit,
+              fontSize: 42,
+              lineHeight: 1.05,
+              fontWeight: 800,
+              letterSpacing: 0,
+              color: "white",
+              margin: "14px 0 0",
+            }}
+          >
+            Rewards, recognition, and motivation in one flow.
+          </h2>
+          <p
+            style={{
+              fontFamily: jakarta,
+              fontSize: 20,
+              fontWeight: 700,
+              lineHeight: 1.35,
+              color: BRAND.textMuted,
+              marginTop: 16,
+              marginBottom: 0,
+            }}
+          >
+            {beat.tagline}
+          </p>
+        </div>
+      )}
 
       <div
         style={{
@@ -181,22 +217,99 @@ export const WidescreenIntroLayout: React.FC<Props> = ({
         }}
       >
         <LandscapeBrowser scale={1} rotateY={-3} kenBurn={1.02}>
-          <Series>
-            {beat.clips.map((c, i) => (
-              <Series.Sequence
-                key={i}
-                durationInFrames={
-                  i === beat.clips.length - 1
-                    ? previewDuration - clipDur * (beat.clips.length - 1)
-                    : clipDur
-                }
-              >
-                <PromoClipVideo clip={c} />
-              </Series.Sequence>
-            ))}
-          </Series>
+          <Sequence
+            from={INTRO_LOGO_ONLY_FRAMES}
+            durationInFrames={previewDuration}
+          >
+            <Series>
+              {beat.clips.map((c, i) => (
+                <Series.Sequence
+                  key={i}
+                  durationInFrames={
+                    i === beat.clips.length - 1
+                      ? previewDuration - clipDur * (beat.clips.length - 1)
+                      : clipDur
+                  }
+                >
+                  <PromoClipVideo clip={c} />
+                </Series.Sequence>
+              ))}
+            </Series>
+          </Sequence>
         </LandscapeBrowser>
       </div>
+
+      {variant === "cinematic" && (
+        <div
+          style={{
+            position: "absolute",
+            left: 72,
+            right: 72,
+            bottom: 78,
+            zIndex: 18,
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 28,
+            opacity: wordBurstOpacity,
+            transform: `translateY(${interpolate(wordBurstProgress, [0, 1], [40, 0])}px)`,
+          }}
+        >
+          {[
+            { label: "Scan in", detail: "students start fast", color: "#4cc9f0" },
+            { label: "Earn points", detail: "motivation shows up", color: "#f5c842" },
+            { label: "Pick prizes", detail: "rewards become real", color: "#52e875" },
+          ].map((item, i) => {
+            const pop = spring({
+              fps,
+              frame: frame - 158 - i * 8,
+              durationInFrames: 28,
+              config: { damping: 12, stiffness: 150 },
+            });
+            return (
+              <div
+                key={item.label}
+                style={{
+                  minHeight: 124,
+                  borderRadius: 24,
+                  border: `2px solid ${item.color}77`,
+                  background: `linear-gradient(135deg, rgba(10,22,40,0.86), ${item.color}24)`,
+                  boxShadow: `0 26px 80px rgba(0,0,0,0.34), 0 0 42px ${item.color}44`,
+                  padding: "24px 28px",
+                  transform: `scale(${interpolate(pop, [0, 1], [0.82, 1])})`,
+                  transformOrigin: "center center",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: outfit,
+                    fontSize: 44,
+                    lineHeight: 1,
+                    fontWeight: 900,
+                    letterSpacing: 0,
+                    color: "#f0f4ff",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {item.label}
+                </div>
+                <div
+                  style={{
+                    fontFamily: jakarta,
+                    fontSize: 18,
+                    fontWeight: 800,
+                    letterSpacing: 2,
+                    textTransform: "uppercase",
+                    color: item.color,
+                    marginTop: 12,
+                  }}
+                >
+                  {item.detail}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </AbsoluteFill>
   );
 };

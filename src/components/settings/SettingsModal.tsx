@@ -34,7 +34,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages, DoorOpen
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
@@ -241,13 +241,6 @@ export function SettingsModal() {
             }
             if (key === 'payAttendance' && value === false) {
                 next = { ...next, enableClassSignIn: false, enableAttendance: false, enableBathroomTimer: false };
-            }
-            if (key === 'recessStudentKioskEnabled' && typeof value === 'boolean') {
-                next = {
-                    ...next,
-                    recessStudentKioskEnabled: value,
-                    enableRecess: value ? true : next.enableRecess,
-                };
             }
             return next;
         });
@@ -1211,6 +1204,72 @@ export function SettingsModal() {
                                      </p>
                                  </div>
 
+                                 <div className="space-y-4 mt-4 pt-4 border-t border-border/40">
+                                     <p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                                         {t('settings.interface.sections.portalScreenLayout')}
+                                     </p>
+
+                                     {canManageSchoolSettings && interfaceRole === 'global' ? (
+                                         <>
+                                             <div className="flex items-center justify-between gap-3">
+                                                 <div className="flex flex-col min-w-0 pr-4">
+                                                     <span className="text-sm font-bold">{t('settings.interface.portraitDisplay')}</span>
+                                                     <p className="text-[11px] text-muted-foreground">
+                                                         {t('settings.interface.portraitDisplayDesc')}
+                                                     </p>
+                                                 </div>
+                                                 <Switch
+                                                     checked={
+                                                         local.kioskPortraitDisplay === true ||
+                                                         local.studentPortalPortraitDisplay === true
+                                                     }
+                                                     onCheckedChange={(checked) => {
+                                                         handleToggle('kioskPortraitDisplay', checked);
+                                                         if (local.studentPortalPortraitDisplay) {
+                                                             handleToggle('studentPortalPortraitDisplay', false);
+                                                         }
+                                                     }}
+                                                 />
+                                             </div>
+
+                                             <div className="flex items-center justify-between gap-3 border-t border-border/40 pt-4">
+                                                 <div className="flex flex-col min-w-0 pr-4">
+                                                     <span className="text-sm font-bold">{t('settings.interface.hideHeader')}</span>
+                                                     <p className="text-[11px] text-muted-foreground">
+                                                         {t('settings.interface.hideHeaderDesc')}
+                                                     </p>
+                                                 </div>
+                                                 <Switch
+                                                     checked={local.hideSiteHeaderOutsidePortal === true}
+                                                     onCheckedChange={(checked) =>
+                                                         handleToggle('hideSiteHeaderOutsidePortal', checked)
+                                                     }
+                                                     aria-label={t('settings.interface.hideHeader')}
+                                                 />
+                                             </div>
+                                         </>
+                                     ) : null}
+
+                                     <div
+                                         className={cn(
+                                             'flex items-center justify-between gap-3',
+                                             canManageSchoolSettings && interfaceRole === 'global' && 'border-t border-border/40 pt-4',
+                                         )}
+                                     >
+                                         <div className="flex flex-col min-w-0 pr-4">
+                                             <span className="text-sm font-bold">{t('settings.interface.wideLayout')}</span>
+                                             <p className="text-[11px] text-muted-foreground">
+                                                 {t('settings.interface.wideLayoutDesc')}
+                                             </p>
+                                         </div>
+                                         <Switch
+                                             checked={staffPortalWideLayout}
+                                             onCheckedChange={() => toggleStaffPortalLayout()}
+                                             aria-label={t('settings.interface.wideLayout')}
+                                         />
+                                     </div>
+                                 </div>
+
                                  {interfaceRole === 'student' && (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">
@@ -1353,59 +1412,6 @@ export function SettingsModal() {
 
                                 <div className="space-y-4 mt-1">
                                     <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-col min-w-0 pr-4">
-                                            <span className="text-sm font-bold">Portrait display layout</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin &rarr; Branding &rarr; Kiosk profiles.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={
-                                                local.kioskPortraitDisplay === true ||
-                                                local.studentPortalPortraitDisplay === true
-                                            }
-                                            onCheckedChange={(checked) => {
-                                                handleToggle('kioskPortraitDisplay', checked);
-                                                if (local.studentPortalPortraitDisplay) {
-                                                    handleToggle('studentPortalPortraitDisplay', false);
-                                                }
-                                            }}
-                                            disabled={!canManageSchoolSettings}
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="flex flex-col min-w-0 pr-4">
-                                            <span className="text-sm font-bold">Hide header</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Tuck the header while you scroll on portal pages; it returns at the top or when you scroll up. Student kiosk always hides the header the same way.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={local.hideSiteHeaderOutsidePortal === true}
-                                            onCheckedChange={(checked) =>
-                                                handleToggle('hideSiteHeaderOutsidePortal', checked)
-                                            }
-                                            disabled={!canManageSchoolSettings}
-                                            aria-label="Hide header on portal pages"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="flex flex-col min-w-0 pr-4">
-                                            <span className="text-sm font-bold">Wide layout</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Use full-width layout on teacher and admin portals instead of centered content.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={staffPortalWideLayout}
-                                            onCheckedChange={() => toggleStaffPortalLayout()}
-                                            aria-label="Wide staff portal layout"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-sm font-bold">Duplicate tap freeze</span>
                                             <p className="text-[11px] text-muted-foreground">
@@ -1510,31 +1516,6 @@ export function SettingsModal() {
                                         {!canManageSchoolSettings ? (
                                             <p className="text-[11px] text-muted-foreground">Admin only.</p>
                                         ) : null}
-
-                                    <div className="flex items-start justify-between gap-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="min-w-0 space-y-1">
-                                            <p className="flex items-center gap-2 text-sm font-bold">
-                                                <DoorOpen className="h-4 w-4 text-primary" aria-hidden />
-                                                Bathroom &amp; break checkout
-                                            </p>
-                                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                                Accept printed recess pass barcodes (RCBATH, RCBREAK, RCWATER) at the
-                                                coupon scanner after a student signs in. Print passes in Admin → Recess.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={
-                                                local.enableRecess !== false &&
-                                                local.recessStudentKioskEnabled !== false
-                                            }
-                                            onCheckedChange={(checked) => {
-                                                handleToggle('recessStudentKioskEnabled', checked);
-                                                if (checked) handleToggle('enableRecess', true);
-                                            }}
-                                            disabled={!canManageSchoolSettings}
-                                            aria-label="Bathroom and break checkout on student kiosk"
-                                        />
-                                    </div>
 
                                         {canManageSchoolSettings && local.kioskLoginTabFaceEnabled === true ? (
                                             <button
@@ -1777,15 +1758,37 @@ export function SettingsModal() {
                                         />
                                     </div>
 
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-3">
                                         <div className="flex items-center gap-2">
                                             <HelpCircle className="w-4 h-4 text-muted-foreground" />
-                                            <span className="text-sm font-bold">Show Welcome Tour</span>
+                                            <span className="text-sm font-bold">App Tours</span>
                                         </div>
-                                        <Switch
-                                            checked={local.showIntroWizard !== false}
-                                            onCheckedChange={(checked) => handleToggle('showIntroWizard', checked)}
-                                        />
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                className="w-full rounded-xl"
+                                                onClick={() => {
+                                                    window.localStorage.removeItem('arcade_tour_progress_welcome');
+                                                    handleToggle('activeTourId', null);
+                                                    setTimeout(() => handleToggle('activeTourId', 'welcome'), 50);
+                                                    handleOpenChange(false);
+                                                }}
+                                            >
+                                                Start Welcome Tour
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                className="w-full rounded-xl"
+                                                onClick={() => {
+                                                    window.localStorage.removeItem('arcade_tour_progress_features');
+                                                    handleToggle('activeTourId', null);
+                                                    setTimeout(() => handleToggle('activeTourId', 'features'), 50);
+                                                    handleOpenChange(false);
+                                                }}
+                                            >
+                                                Start Features Tour
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

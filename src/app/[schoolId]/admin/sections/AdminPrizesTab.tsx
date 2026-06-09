@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { Button } from '@/components/ui/button';
 import {
   StaffPortalSectionCard,
@@ -260,14 +260,10 @@ export function AdminPrizesTab({
   }, [firestore, schoolId, tablePrizes, toast]);
 
   return (
-    <StaffPortalSectionCard>
-      <StaffPortalSectionCardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
-        <Helper content="Items students redeem with points in the rewards shop. Set cost, stock, shop visibility, teacher or class access, vending motor, and print card options per item.">
-          <StaffPortalSectionCardTitle className="flex items-center gap-2">
-            <Gift className="text-primary w-5 h-5" /> Rewards Shop
-          </StaffPortalSectionCardTitle>
-        </Helper>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+    <StaffPortalTabPanel
+      tabValue="prizes"
+      trailing={
+          <div className="flex flex-wrap items-center justify-end gap-2">
           <TabWalkthroughHeaderAction />
           <Button
             variant="outline"
@@ -305,7 +301,9 @@ export function AdminPrizesTab({
             <Plus className="mr-2 h-4 w-4" /> New Item
           </Button>
         </div>
-      </StaffPortalSectionCardHeader>
+        }
+    >
+    <StaffPortalSectionCard>
       <StaffPortalSectionCardContent className="min-w-0 overflow-visible px-2 pb-4 pt-0 sm:px-3">
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Button
@@ -470,7 +468,7 @@ export function AdminPrizesTab({
                             </div>
                           )
                         )}
-                        <DynamicIcon name={p.icon || 'Gift'} className="w-4 h-4 text-primary relative z-10 drop-shadow-sm" />
+                        <DynamicIcon name={p.icon || 'Gift'} className="w-4 h-4 text-ring relative z-10 drop-shadow-sm" />
                       </div>
                       <div className="relative min-w-0 flex-1 flex items-center gap-1.5">
                         <Input
@@ -1001,5 +999,6 @@ export function AdminPrizesTab({
       ) : null}
 
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

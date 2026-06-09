@@ -10,7 +10,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -321,7 +321,7 @@ export function AdminCouponsTab({
                           <div className="flex-1 min-w-0 flex items-center gap-3">
                             <span className="font-code text-primary text-sm font-bold shrink-0">{coupon.code}</span>
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
-                              <span className="text-[11px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg shrink-0">
+                              <span className="text-[11px] font-bold bg-ring/10 text-ring px-2 py-0.5 rounded-lg shrink-0">
                                 {coupon.value} pts
                               </span>
                               <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
@@ -391,7 +391,7 @@ export function AdminCouponsTab({
                                   )}
                                 </div>
                                 <div className="text-sm font-medium text-muted-foreground truncate">{g.teacher}</div>
-                                <div className="text-[11px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-lg w-fit">
+                                <div className="text-[11px] font-bold bg-ring/10 text-ring px-2 py-0.5 rounded-lg w-fit">
                                   {g.value} pts
                                 </div>
                                 <div className="text-sm font-black">{g.count}</div>
@@ -678,11 +678,15 @@ export function AdminCouponsTab({
       <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <Helper content="View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.">
+            <div className="flex items-center gap-1.5">
               <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-                <Ticket className="w-6 h-6 text-primary animate-pulse" /> Coupon Management
+                <Ticket className="w-6 h-6 text-ring animate-pulse" /> Coupon Management
               </StaffPortalSectionCardTitle>
-            </Helper>
+              <StaffPortalTabInfoPopover
+                sections={[staffPortalTabInfoSection('View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.')]}
+                ariaLabel="About coupon management"
+              />
+            </div>
           </div>
           <div className="flex shrink-0">
             <TabWalkthroughHeaderAction />

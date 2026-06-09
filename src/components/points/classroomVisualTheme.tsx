@@ -706,7 +706,7 @@ export function ClassroomDesignSwitcher({
         className="h-auto w-auto gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium shadow-sm hover:bg-accent sm:text-sm [&>svg:last-child]:h-4 [&>svg:last-child]:w-4"
         aria-label="Seating chart style"
       >
-        <Palette className="h-4 w-4 shrink-0 text-primary" />
+        <Palette className="h-4 w-4 shrink-0 text-ring" />
         <span>Style</span>
       </SelectTrigger>
       <SelectContent className="z-[250] w-56" position="popper" align="end">

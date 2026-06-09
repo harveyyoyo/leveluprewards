@@ -43,7 +43,6 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
 /** Add-on tabs teachers may pin; changes affect the whole school (show coordination notice). */
 export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
   'insights',
-  'halloffame',
   'displays',
   'library',
   'bonuspoints',
@@ -80,7 +79,7 @@ function teacherAddonEnabled(
  * | raffle, goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
  * | generated-coupons | — | add-on | Rewards economy (coupon print) |
  * | attendance | add-on | add-on | `payAttendance` pillar |
- * | insights, halloffame, library, … | add-on | add-on (pin) | School-wide; see `STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES` |
+ * | insights, displays, library, … | add-on | add-on (pin) | School-wide; see `STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES` |
  * | notifications, branding, integrations, student-portal | add-on | add-on (pin) | School config — coordinate with admin |
  */
 
@@ -123,7 +122,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   },
   {
     value: 'prizes',
-    label: 'Prizes',
+    label: 'Rewards',
     icon: Gift,
     kind: 'core',
     roles: ['admin', 'teacher'],
@@ -186,7 +185,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   // —— Admin add-ons (feature tabs) ——
   {
     value: 'insights',
-    label: 'Insights',
+    label: 'Analytics',
     icon: Activity,
     kind: 'addon',
     roles: ['admin', 'teacher'],
@@ -209,18 +208,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
         return s.payAttendance ?? true;
       }
       return (s.payAttendance ?? true) && (!!s.enableAttendance || !!s.enableClassSignIn);
-    },
-  },
-  {
-    value: 'halloffame',
-    label: 'Hall of Fame',
-    icon: Trophy,
-    kind: 'addon',
-    roles: ['admin', 'teacher'],
-    isEnabled: (s, role) => {
-      const on = !!s.enableClassLeaderboard;
-      if (role === 'teacher') return teacherAddonEnabled(s, 'halloffame', () => on);
-      return on;
     },
   },
   {
@@ -414,7 +401,6 @@ export const STAFF_PORTAL_CANONICAL_TAB_ORDER: readonly string[] = [
   'redemptions',
   'insights',
   'attendance',
-  'halloffame',
   'displays',
   'library',
   'bonuspoints',
@@ -530,12 +516,11 @@ export function staffPortalTeacherPinSideEffects(
       return { enableTeacherGeneratedCouponsTab: true };
     case 'insights':
       return { enableAdminAnalytics: true };
-    case 'halloffame':
-      return { enableClassLeaderboard: true };
     case 'displays':
     case 'bulletinboard':
     case 'smart-screen':
-      return { bulletinEnabled: true, smartScreenEnabled: true };
+    case 'halloffame':
+      return { bulletinEnabled: true, smartScreenEnabled: true, enableClassLeaderboard: true };
     case 'library':
       return { payLibrary: true };
     case 'bonuspoints':
@@ -557,6 +542,10 @@ export function staffPortalAdminAddOnIsOn(settings: Settings, tabValue: string):
     (t) => t.value === tabValue && t.kind === 'addon' && t.roles.includes('admin'),
   );
   return def ? def.isEnabled(settings, 'admin') : false;
+}
+
+export function staffPortalTabByValue(tabValue: string): StaffPortalTabDef | undefined {
+  return STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
 }
 
 export function staffPortalTabsForRole(
@@ -592,33 +581,38 @@ export function staffPortalDefaultTab(
 }
 
 const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
-  students: 'Roster, kiosk access, ID cards, CSV import, and per-student options.',
-  classes: 'Class groups, primary teachers, and how students are organized.',
-  teachers: 'Staff accounts, roles, passcodes, and who can sign in to the portal.',
-  prizes: 'Prize shop inventory, costs, and redemption rules.',
-  categories: 'Point categories teachers use when awarding or printing coupons.',
-  classroom: `${CLASSROOM_TAB_LABEL} — ${CLASSROOM_SEATING_SECTION_LABEL} settings, behavior, alerts, and room display.`,
-  reports: 'Exports and summaries of points, redemptions, and activity.',
-  roster: 'Your students — search, filter, and open profiles for awards.',
-  coupons: 'Print coupon sheets and award or deduct points.',
-  redemptions: 'History of prize redemptions for your students.',
-  insights: 'School-wide analytics and usage trends.',
-  attendance: 'Sign-in, periods, and attendance reporting.',
-  halloffame: 'Leaderboards for the hallway or assembly display.',
-  displays: 'Smart Screen and bulletin board displays for monitors, hallways, and lobbies.',
-  library: 'Checkout, returns, and library point rules.',
-  bonuspoints: 'Achievement bonuses and milestone rewards.',
-  'category-badges': 'Badges students earn from point categories.',
-  goals: 'Class and student goals with progress tracking.',
-  houses: 'House points, sorting, and competitions.',
-  recess: 'Check students out for a break or bathroom and track how long they are gone.',
-  notifications: 'Email and SMS templates for families and staff.',
-  branding: 'Logos, colors, kiosk profiles, and school identity.',
-  integrations: 'External tools and API connections.',
-  'student-portal': 'What students see on the home portal and kiosk.',
-  homework: 'Homework tracking and classroom assignments.',
-  raffle: 'Weekly raffle tickets and drawings.',
-  'generated-coupons': 'Coupons you generated for your classes.',
+  students: 'Manage enrollments, ID cards, kiosk access, and per-student options.',
+  classes: 'Create class groups, assign teachers, and organize students.',
+  teachers: 'Manage teachers, leaders, desk staff, passcodes, and portal access.',
+  prizes: 'Manage reward shop items, costs, stock, and redemption settings.',
+  categories:
+    'Set up point categories, print coupons, review inventory, and adjust balances.',
+  classroom:
+    'Configure Class Awards Live, behavior notes, alerts, and room display.',
+  reports: 'Print and export summaries of points, redemptions, and activity.',
+  roster: 'Manage direct student links and search your roster. Class students stay visible automatically.',
+  coupons: 'Print coupon sheets and award or deduct points in your classes.',
+  redemptions: 'Review prize redemption history for your students.',
+  insights: 'View school-wide analytics and engagement trends.',
+  attendance: 'Configure sign-in rules, period slots, and attendance reporting.',
+  displays: 'Set up Smart Screen, bulletin board, and Hall of Fame displays for TVs and monitors.',
+  library: 'Catalog books, print labels, and manage checkouts and returns.',
+  bonuspoints: 'Create bonus point milestones and achievement rewards.',
+  'category-badges':
+    'Define badges students earn from category point totals over time.',
+  goals: 'Set personal, class, or school goals and track progress.',
+  houses: 'Manage house standings, rosters, and competitions.',
+  recess: 'Check students out for breaks or bathroom and see who is out now.',
+  notifications:
+    'Configure automated alerts, email templates, and delivery logs.',
+  branding: 'Set school logo, student themes, kiosk layout, and sponsor banners.',
+  integrations:
+    'Connect roster and sign-in providers such as Google Classroom and Clever.',
+  'student-portal':
+    'Enable the home portal URL, passcodes, and per-student sign-in options.',
+  homework: 'Track homework assignments and classroom completion.',
+  raffle: 'Configure weekly raffle rules, ticket pools, and run drawings.',
+  'generated-coupons': 'View and manage coupons generated for your classes.',
 };
 
 /** Keep Welcome as the first nav item when present. */

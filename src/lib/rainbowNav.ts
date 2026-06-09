@@ -248,6 +248,21 @@ export function rainbowForPortalId(id: string, scheme?: NavColorScheme) {
   return rainbowByIndexUniformLightness(idx === -1 ? 0 : idx, scheme);
 }
 
+/** Complement (second-tone) color for portal hub cards — amber on sapphire, etc. */
+export function complementByIndexUniformLightness(index: number, scheme?: NavColorScheme) {
+  const palette = getComplementPalette(scheme);
+  const len = palette.length;
+  const i = ((index % len) + len) % len;
+  const [h] = parseHslParts(palette[i]);
+  const [, s, l] = parseHslParts(palette[0]);
+  return `hsl(${h} ${s} ${l})`;
+}
+
+export function complementForPortalId(id: string, scheme?: NavColorScheme) {
+  const idx = PORTAL_COLOR_ORDER.indexOf(id as (typeof PORTAL_COLOR_ORDER)[number]);
+  return complementByIndexUniformLightness(idx === -1 ? 0 : idx, scheme);
+}
+
 export function rainbowByIndex(index: number, scheme?: NavColorScheme) {
   const palette = getPalette(scheme);
   return `hsl(${palette[((index % palette.length) + palette.length) % palette.length]})`;

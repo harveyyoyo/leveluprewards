@@ -1,8 +1,9 @@
-import { timingSafeEqual } from 'crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { FieldValue } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
+import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
+import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 const APP_CONFIG_GLOBAL = 'global';
 
@@ -46,13 +47,6 @@ function trimmedString(value: unknown): string {
 
 function schoolAccessPasscodeFrom(data: Record<string, unknown>): string {
   return trimmedString(data.schoolAccessPasscode) || trimmedString(data.passcode) || '';
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, 'utf8');
-  const bufB = Buffer.from(b, 'utf8');
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
 }
 
 function isGoogleAuthenticated(firebase: Record<string, unknown> | undefined): boolean {
@@ -149,14 +143,27 @@ export async function verifySchoolAccessServer(
     throw new VerifySchoolAccessError('invalid-argument', 'A valid passcode is required.');
   }
 
-  const expected = schoolAccessPasscodeFrom((schoolDoc.data() ?? {}) as Record<string, unknown>);
-  if (!expected) {
-    throw new VerifySchoolAccessError(
-      'failed-precondition',
-      'This school has no access passcode configured. An administrator must set one before sign-in is possible.',
-    );
-  }
-  if (!safeEqual(expected, passcode)) {
+  const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
+  const legacyExpected = schoolAccessPasscodeFrom(schoolData);
+  if (
+    !(await verifyPasscodeCredential(
+      db,
+      schoolId,
+      PASSCODE_SECRET_IDS.schoolAccess,
+      passcode,
+      legacyExpected,
+      {
+        kind: 'school',
+        fields: ['schoolAccessPasscode', 'passcode'],
+      },
+    ))
+  ) {
+    if (!legacyExpected) {
+      throw new VerifySchoolAccessError(
+        'failed-precondition',
+        'This school has no access passcode configured. An administrator must set one before sign-in is possible.',
+      );
+    }
     throw new VerifySchoolAccessError('permission-denied', 'Invalid passcode.');
   }
 

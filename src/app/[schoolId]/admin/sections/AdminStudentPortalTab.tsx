@@ -8,7 +8,8 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -189,18 +190,12 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
   };
 
   return (
-    <div className="space-y-6">
+      <StaffPortalTabPanel
+        tabValue="student-portal"
+        trailing={<TabWalkthroughHeaderAction />}
+      >
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <Helper content="Students sign in at home with their ID and a personal passcode (recommended). They only see their own rewards — not other students or staff tools.">
-            <CardTitle className="flex items-center gap-2">
-              <GraduationCap className="h-5 w-5" aria-hidden />
-              Student home portal
-            </CardTitle>
-          </Helper>
-          <TabWalkthroughHeaderAction />
-        </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 pt-6">
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-4">
             <div>
               <Label htmlFor="enable-student-portal-tab" className="font-semibold">
@@ -330,9 +325,13 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
       {portalOn ? (
         <Card>
           <CardHeader>
-            <Helper content="Set an optional second passcode per student. Locked accounts can only be unlocked here.">
+            <div className="flex items-center gap-1.5">
               <CardTitle>Student passcodes &amp; lockouts</CardTitle>
-            </Helper>
+              <StaffPortalTabInfoPopover
+                sections={[staffPortalTabInfoSection('Set an optional second passcode per student. Locked accounts can only be unlocked here.')]}
+                ariaLabel="About student passcodes"
+              />
+            </div>
           </CardHeader>
           <CardContent>
             <ul className="space-y-3">
@@ -422,6 +421,6 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
           </CardContent>
         </Card>
       ) : null}
-    </div>
+    </StaffPortalTabPanel>
   );
 }

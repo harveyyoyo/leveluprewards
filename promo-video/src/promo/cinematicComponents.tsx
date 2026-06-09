@@ -85,7 +85,13 @@ export const LevelUpLogoAnimated: React.FC<{
   startFrame?: number;
   size?: number;
   cream?: string;
-}> = ({ startFrame = 0, size = 280, cream = "#f0e8c8" }) => {
+  showSubline?: boolean;
+}> = ({
+  startFrame = 0,
+  size = 280,
+  cream = "#f0e8c8",
+  showSubline = true,
+}) => {
   const frame = useCurrentFrame();
   const f = frame - startFrame; // local time
 
@@ -196,9 +202,11 @@ export const LevelUpLogoAnimated: React.FC<{
           LEVEL UP
         </div>
         <div style={{ height: 1, width: size, background: cream, opacity: 0.35 * lineScale, transform: `scaleX(${lineScale})`, transformOrigin: "center" }} />
-        <div style={{ fontFamily: outfit, fontSize: size * 0.048, letterSpacing: "0.5em", paddingLeft: "0.5em", color: cream, opacity: subOpacity * 0.6 }}>
-          School rewards system
-        </div>
+        {showSubline && (
+          <div style={{ fontFamily: outfit, fontSize: size * 0.048, letterSpacing: "0.5em", paddingLeft: "0.5em", color: cream, opacity: subOpacity * 0.6 }}>
+            School rewards system
+          </div>
+        )}
       </div>
     </div>
   );
@@ -319,9 +327,9 @@ export const AchievementBadge: React.FC<{
     <div
       style={{
         position: "absolute",
-        bottom: 72,
-        right: 72,
-        transform: `translateY(${interpolate(enter, [0, 1], [100, 0])}px) scale(${enter * shimmer})`,
+        bottom: 86,
+        right: 86,
+        transform: `translateY(${interpolate(enter, [0, 1], [120, 0])}px) scale(${enter * shimmer})`,
         opacity: enter * exitOpacity,
         zIndex: 60,
       }}
@@ -330,23 +338,23 @@ export const AchievementBadge: React.FC<{
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 18,
+          gap: 30,
           background: `linear-gradient(135deg, ${CINEMATIC.navyMid}, ${CINEMATIC.navyLight})`,
           border: `2px solid ${color}`,
-          borderRadius: 22,
-          padding: "20px 32px",
-          boxShadow: `0 0 48px ${color}55, 0 24px 48px rgba(0,0,0,0.55)`,
-          minWidth: 360,
+          borderRadius: 34,
+          padding: "34px 50px",
+          boxShadow: `0 0 86px ${color}70, 0 38px 84px rgba(0,0,0,0.6)`,
+          minWidth: 620,
         }}
       >
-        <span style={{ fontSize: 50, lineHeight: 1 }}>{emoji}</span>
+        <span style={{ fontSize: 96, lineHeight: 1 }}>{emoji}</span>
         <div>
           <div
             style={{
               fontFamily: outfit,
-              fontSize: 11,
+              fontSize: 17,
               fontWeight: 700,
-              letterSpacing: 3.5,
+              letterSpacing: 4.5,
               textTransform: "uppercase",
               color,
               marginBottom: 5,
@@ -357,7 +365,7 @@ export const AchievementBadge: React.FC<{
           <div
             style={{
               fontFamily: outfit,
-              fontSize: 22,
+              fontSize: 42,
               fontWeight: 800,
               color: CINEMATIC.offWhite,
               lineHeight: 1.1,
@@ -368,7 +376,7 @@ export const AchievementBadge: React.FC<{
           <div
             style={{
               fontFamily: jakarta,
-              fontSize: 14,
+              fontSize: 24,
               color: CINEMATIC.textMuted,
               marginTop: 4,
             }}
@@ -472,7 +480,7 @@ export const BrowserMockup: React.FC<{
     style={{
       borderRadius: 20,
       border: `1px solid ${CINEMATIC.gold}33`,
-      background: CINEMATIC.navyMid,
+      background: "#f8fafc",
       overflow: "hidden",
       boxShadow: `0 48px 120px -20px rgba(0,0,0,0.85), 0 0 80px rgba(245,200,66,0.12)`,
       display: "flex",
@@ -515,7 +523,9 @@ export const BrowserMockup: React.FC<{
         portal.leveluprewards.app
       </div>
     </div>
-    <div style={{ flex: 1, overflow: "hidden" }}>{children}</div>
+    <div style={{ flex: 1, overflow: "hidden", background: "#f8fafc" }}>
+      {children}
+    </div>
   </div>
 );
 

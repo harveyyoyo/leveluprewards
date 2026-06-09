@@ -30,7 +30,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -279,14 +280,9 @@ export function AdminNotificationsTab() {
   };
 
   return (
-    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
-      <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Helper content="Configure automated school notifications, manage active delivery rules, and view diagnostic logs.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-              <Bell className="w-6 h-6 text-primary animate-pulse" /> Notifications &amp; Alerts
-            </StaffPortalSectionCardTitle>
-          </Helper>
+    <StaffPortalTabPanel
+      tabValue="notifications"
+      trailing={
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 shrink-0">
             <div className="flex items-center gap-2 bg-background/60 p-2 rounded-xl border border-border/50">
               {statusBadge(headlineStatus)}
@@ -307,9 +303,9 @@ export function AdminNotificationsTab() {
               Create Alert
             </Button>
           </div>
-        </div>
-      </StaffPortalSectionCardHeader>
-
+        }
+    >
+    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
       <StaffPortalSectionCardContent className="p-6 space-y-6">
         <ContentSectionTreeNav
           items={[
@@ -324,11 +320,15 @@ export function AdminNotificationsTab() {
         {section === 'alerts' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <Helper content="These alerts are active for your school. Turn one off or configure another anytime.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Bell className="w-5 h-5 text-primary" /> Your Active Notifications
+                  <Bell className="w-5 h-5 text-ring" /> Your Active Notifications
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('These alerts are active for your school. Turn one off or configure another anytime.')]}
+                  ariaLabel="About active notifications"
+                />
+              </div>
             </div>
 
             {activeRules.length ? (
@@ -389,7 +389,7 @@ export function AdminNotificationsTab() {
               <div className="space-y-4">
                 <div className="border-b pb-2">
                   <h4 className="font-black text-base flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-primary" /> Event Triggers
+                    <CheckCircle2 className="w-5 h-5 text-ring" /> Event Triggers
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">Select which student activities trigger an alert.</p>
                 </div>
@@ -476,7 +476,7 @@ export function AdminNotificationsTab() {
               <div className="space-y-4">
                 <div className="border-b pb-2">
                   <h4 className="font-black text-base flex items-center gap-2">
-                    <Users className="w-5 h-5 text-primary" /> Recipient Groups
+                    <Users className="w-5 h-5 text-ring" /> Recipient Groups
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">Control who receives alerts for these events.</p>
                 </div>
@@ -497,7 +497,7 @@ export function AdminNotificationsTab() {
                   <div className="flex items-center justify-between p-3.5 rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors">
                     <div className="space-y-0.5">
                       <Label className="text-sm font-bold flex items-center gap-2">
-                        Students <User className="w-3.5 h-3.5 text-primary" />
+                        Students <User className="w-3.5 h-3.5 text-ring" />
                       </Label>
                       <p className="text-[11px] text-muted-foreground">Notify students directly when their student email or phone is saved.</p>
                     </div>
@@ -584,7 +584,7 @@ export function AdminNotificationsTab() {
 
             <div className="rounded-2xl border bg-muted/10 p-5 space-y-4 shadow-sm">
               <div className="border-b pb-3 flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
+                <Users className="w-5 h-5 text-ring" />
                 <div>
                   <h4 className="text-base font-black tracking-tight">Families &amp; Shared Display Privacy</h4>
                   <p className="text-xs text-muted-foreground">Weekly parent summaries and name privacy on public boards.</p>
@@ -684,18 +684,22 @@ export function AdminNotificationsTab() {
         {section === 'advanced' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <Helper content="Use these tools to diagnose notification delivery gates, view enqueued mail documents, and send test payloads.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <ListTree className="w-5 h-5 text-primary" /> Delivery Diagnostics &amp; Logs
+                  <ListTree className="w-5 h-5 text-ring" /> Delivery Diagnostics &amp; Logs
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Use these tools to diagnose notification delivery gates, view enqueued mail documents, and send test payloads.')]}
+                  ariaLabel="About delivery diagnostics"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
                 <div>
                   <h4 className="text-base font-black tracking-tight flex items-center gap-2">
-                    <ListTree className="w-4 h-4 text-primary" /> Active Delivery Diagnostic Checks
+                    <ListTree className="w-4 h-4 text-ring" /> Active Delivery Diagnostic Checks
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Checks that mirror Firebase Cloud Function gates in real-time.
@@ -717,7 +721,7 @@ export function AdminNotificationsTab() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h4 className="text-base font-black tracking-tight flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-primary" /> Test Tool &amp; Live Mail Queue
+                      <Mail className="w-4 h-4 text-ring" /> Test Tool &amp; Live Mail Queue
                     </h4>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Enqueue test emails or monitor enqueued transactions.
@@ -833,7 +837,7 @@ export function AdminNotificationsTab() {
                 </Alert>
               ) : mailLoading && mailRows === null ? (
                 <p className="text-sm text-muted-foreground font-medium flex items-center gap-2">
-                  <RefreshCw className="w-4 h-4 animate-spin text-primary" /> Loading mail queue…
+                  <RefreshCw className="w-4 h-4 animate-spin text-ring" /> Loading mail queue…
                 </p>
               ) : mailRows !== null && !sortedMail.length ? (
                 <p className="text-sm text-muted-foreground font-medium text-center py-6">
@@ -892,7 +896,7 @@ export function AdminNotificationsTab() {
             <div className="rounded-2xl border bg-muted/10 p-5 space-y-4">
               <div>
                 <h4 className="text-base font-black tracking-tight flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary" /> Supported Event Triggers Reference
+                  <CheckCircle2 className="w-4 h-4 text-ring" /> Supported Event Triggers Reference
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5 font-medium">
                   Review the exact database states and recipient queues for automated event gates.
@@ -946,5 +950,6 @@ export function AdminNotificationsTab() {
         updateSettings={updateSettings}
       />
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

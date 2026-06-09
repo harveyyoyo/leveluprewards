@@ -8,7 +8,7 @@ const settings = {
   },
   hub: {
     interfaceTitle: 'Interface & display',
-    interfaceDescription: 'Accent colors, dark mode, motion, sound, and Auto / Web / App layout',
+    interfaceDescription: 'Colors, dark mode, motion, portrait and wide layout, and Auto / Web / App display mode',
     schoolTitle: 'School settings',
     schoolDescription: 'Sessions, kiosk behavior, printing, and optional features',
     pillarsTitle: 'Product Pillars',
@@ -49,6 +49,7 @@ const settings = {
       appearance: 'Appearance',
       motionSound: 'Motion & Sound',
       themeLayout: 'Theme & Layout',
+      portalScreenLayout: 'Portal & screen layout',
     },
     soundFx: 'Sound FX',
     animatedBackground: 'Animated background',
@@ -60,8 +61,14 @@ const settings = {
     coloredFeatureTabs: 'Colored feature tabs',
     personalizedAudio: 'Personalized Audio Theme',
     portraitDisplay: 'Portrait display layout',
-    hideHeader: 'Hide site header outside portal',
+    portraitDisplayDesc:
+      'Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin → Branding → Kiosk profiles.',
+    hideHeader: 'Hide header',
+    hideHeaderDesc:
+      'Tuck the header while you scroll on staff and inner portal pages; it returns at the top or when you scroll up. The main portal hub always keeps the header visible. On the student kiosk page the header stays hidden until you move the mouse to the top edge.',
     wideLayout: 'Wide layout',
+    wideLayoutDesc:
+      'Use full-width layout on teacher and admin portals instead of centered content.',
   },
   general: {
     nav: {
@@ -88,6 +95,11 @@ const settings = {
     toSchoolSettings: 'Back to school settings',
     toGeneral: 'Back to general settings',
     toMenu: 'Back to settings menu',
+  },
+  adminBranding: {
+    tabInfoTitle: 'What is branding for?',
+    tabInfoBody:
+      'Set your school logo, kiosk look, student themes, and sponsor banners. Changes here shape what students and staff see on portal and kiosk screens.',
   },
 };
 

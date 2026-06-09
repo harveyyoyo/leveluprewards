@@ -18,6 +18,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 
 function studentLabel(s: Student) {
   return `${s.firstName} ${s.lastName}`.trim() || s.id;
@@ -191,7 +192,11 @@ export function GoalsManager(props: {
   const progressFor = (g: Goal) => progressRows.find((r) => r.goal.id === g.id)?.progress ?? 0;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+      <StaffPortalTabPanel
+        tabValue="goals"
+        trailing={<TabWalkthroughHeaderAction />}
+      >
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
       <Card
         className={cn(
           'border-t-8 transition-all duration-500',
@@ -208,7 +213,6 @@ export function GoalsManager(props: {
               Personal targets, savings toward shop rewards, or class-wide milestones. Enable from Admin → Add more.
             </CardDescription>
           </div>
-          <TabWalkthroughHeaderAction />
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -394,5 +398,6 @@ export function GoalsManager(props: {
         </CardContent>
       </Card>
     </div>
+    </StaffPortalTabPanel>
   );
 }

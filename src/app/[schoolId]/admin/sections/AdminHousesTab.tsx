@@ -30,7 +30,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Switch } from '@/components/ui/switch';
@@ -62,7 +63,6 @@ import {
 } from '@/components/houses/HouseStandingsChartBlock';
 import { HouseIdeasPanel } from '@/components/houses/HouseIdeasPanel';
 import { AdminHousesStatsStrip } from '@/components/houses/admin/AdminHousesStatsStrip';
-import { AdminHousesOverviewGrid } from '@/components/houses/admin/AdminHousesOverviewGrid';
 import { AdminHouseRosterCard } from '@/components/houses/admin/AdminHouseRosterCard';
 import { buildHouseStandingsRows } from '@/lib/houses/houseStandings';
 import type { House, Student, Teacher } from '@/lib/types';
@@ -387,23 +387,11 @@ export function AdminHousesTab({
   };
 
   return (
+    <StaffPortalTabPanel
+      tabValue="houses"
+      trailing={<TabWalkthroughHeaderAction />}
+    >
     <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardHeader className="flex flex-col gap-4 py-6 bg-secondary sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1 min-w-0">
-          <Helper content="School houses: standings overview, rosters, settings, and Hall of Fame monitor display.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <Home className="w-5 h-5 text-primary" /> Houses
-            </StaffPortalSectionCardTitle>
-          </Helper>
-          <p className="text-sm text-muted-foreground max-w-xl">
-            Track team standings, manage rosters, and configure how house points sync with student rewards.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <TabWalkthroughHeaderAction />
-        </div>
-      </StaffPortalSectionCardHeader>
-
       <StaffPortalSectionCardContent className="space-y-6">
         <ContentSectionTreeNav
           branchLabel="Houses"
@@ -439,12 +427,6 @@ export function AdminHousesTab({
                 onFormatChange={(format) => updateSettings({ houseStandingsChartFormat: format })}
               />
             ) : null}
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Ranked standings
-              </p>
-              <AdminHousesOverviewGrid rows={standingsRows} />
-            </div>
           </div>
         ) : null}
 
@@ -878,5 +860,6 @@ export function AdminHousesTab({
         </DialogContent>
       </Dialog>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

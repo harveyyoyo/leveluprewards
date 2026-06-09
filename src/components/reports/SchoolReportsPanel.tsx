@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, FileText, Printer, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { getStudentNickname } from '@/lib/utils';
 import type { Category, Class, Coupon, Prize, Student, Teacher } from '@/lib/types';
@@ -1213,23 +1214,8 @@ export function SchoolReportsPanel({
 
   return (
     <>
-      <Card className="border-t-4 border-primary shadow-md">
-        <CardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-          <Helper
-            content={
-              <>
-                Printable and exportable summaries for documentation and meetings ({scopeLabel}). Print opens your
-                browser dialog. CSV downloads the currently selected report with the filters shown here.
-              </>
-            }
-          >
-            <CardTitle className="text-2xl flex items-center gap-2">
-              <FileText className="text-primary w-6 h-6" aria-hidden />
-              Reports
-            </CardTitle>
-          </Helper>
-          <TabWalkthroughHeaderAction />
-        </CardHeader>
+      <StaffPortalTabPanel tabValue="reports" trailing={<TabWalkthroughHeaderAction />}>
+      <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
         <CardContent className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)_auto] lg:items-end">
             <div className="space-y-2">
@@ -1477,7 +1463,7 @@ export function SchoolReportsPanel({
               )}
               {reportKind === 'homework' && (
                 <div className="space-y-2 text-sm text-muted-foreground">
-                  <Helper content="Uses each student’s running total for category keys named like “Homework:” plus the reward title (same as the Homework Rewards tab). This is cumulative balance per title, not a dated activity log.">
+                  <div className="flex items-start gap-1.5">
                     <p>
                       {homeworkColumnTitles.length === 0 ? (
                         <>No homework reward buckets yet in this scope.</>
@@ -1490,13 +1476,18 @@ export function SchoolReportsPanel({
                         </>
                       )}
                     </p>
-                  </Helper>
+                    <StaffPortalTabInfoPopover
+                      sections={[staffPortalTabInfoSection('Uses each student’s running total for category keys named like “Homework:” plus the reward title (same as the Homework Rewards tab). This is cumulative balance per title, not a dated activity log.')]}
+                      ariaLabel="About homework report"
+                    />
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
+      </StaffPortalTabPanel>
       {printNode}
     </>
   );

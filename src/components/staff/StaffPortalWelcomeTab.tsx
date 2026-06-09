@@ -112,12 +112,12 @@ function TabLinkRow({
       onClick={onOpen}
       className={cn(
         'group flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
-        'border-border/70 bg-card hover:border-primary/20 hover:bg-muted/30',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35',
+        'border-border/70 bg-card hover:border-ring/30 hover:bg-muted/30',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
       )}
     >
       <div
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ring/10 text-ring transition-colors group-hover:bg-ring/20"
         aria-hidden
       >
         <Icon className="h-4 w-4" />
@@ -188,7 +188,7 @@ function ImportRosterCard({ onOpen }: { onOpen: () => void }) {
     <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-card px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
       <div className="flex min-w-0 items-start gap-3">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-primary"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-ring"
           aria-hidden
         >
           <TableProperties className="h-5 w-5" />

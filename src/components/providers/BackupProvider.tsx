@@ -496,8 +496,33 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
     const updateSchool = useCallback(async (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => {
         if (!firestore) return;
         try {
-            await updateDoc(doc(firestore, 'schools', schoolId), updates);
-            const patch = schoolPublicPatchFromSchoolUpdates(updates as Record<string, unknown>);
+            const hasPasscodePatch =
+                updates.passcode !== undefined ||
+                updates.schoolAccessPasscode !== undefined ||
+                updates.adminPasscode !== undefined;
+
+            if (hasPasscodePatch) {
+                const response = await fetch(`/api/school/${encodeURIComponent(schoolId)}/passcodes`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        passcode: updates.passcode,
+                        schoolAccessPasscode: updates.schoolAccessPasscode,
+                        adminPasscode: updates.adminPasscode,
+                    }),
+                });
+                if (!response.ok) {
+                    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+                    throw new Error(payload?.error || 'Passcode update failed.');
+                }
+            }
+
+            const { passcode: _p, schoolAccessPasscode: _s, adminPasscode: _a, ...safeUpdates } = updates;
+            if (Object.keys(safeUpdates).length > 0) {
+                await updateDoc(doc(firestore, 'schools', schoolId), safeUpdates);
+            }
+            const patch = schoolPublicPatchFromSchoolUpdates(safeUpdates as Record<string, unknown>);
             if (patch) {
                 await setDoc(schoolPublicDocRef(firestore, schoolId), patch, { merge: true });
             }

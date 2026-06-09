@@ -1,11 +1,9 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 
-const EDITOR_DIR = path.dirname(fileURLToPath(import.meta.url));
-const PROMO_ROOT = path.resolve(EDITOR_DIR, "..");
+const PROMO_ROOT = process.cwd();
 const STUDIO_ROOT = path.resolve(PROMO_ROOT, "..");
 const PROPS_FILE = path.join(PROMO_ROOT, "widescreen-promo-props.json");
 const CAPTURE_ROOT = path.join(PROMO_ROOT, "public", "capture-library");

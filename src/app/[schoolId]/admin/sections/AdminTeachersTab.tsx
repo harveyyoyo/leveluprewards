@@ -10,7 +10,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
@@ -266,33 +267,33 @@ export function AdminTeachersTab({
   };
 
   return (
+    <StaffPortalTabPanel
+      tabValue="teachers"
+      trailing={
+          <div className="flex flex-wrap gap-2">
+            <TabWalkthroughHeaderAction />
+            <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
+              <Plus className="mr-2 h-4 w-4" /> Add desk staff
+            </Button>
+            <Button onClick={onAddLeadership} variant="outline" className="rounded-xl">
+              <Plus className="mr-2 h-4 w-4" /> Add principal / division head
+            </Button>
+            <Button onClick={onAddTeacher} className="rounded-xl">
+              <Plus className="mr-2 h-4 w-4" /> Add teacher
+            </Button>
+          </div>
+        }
+    >
     <StaffPortalSectionCard className="w-full min-w-0">
-      <StaffPortalSectionCardHeader className="flex flex-row flex-wrap justify-between items-center gap-3 py-4 px-4 sm:px-5">
-        <div>
-          <Helper content="Classroom teachers award points and manage classes. Principals and division heads get school-wide portal access. Desk staff get limited coupon, prize, library, houses, office, or reports access.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" /> Teachers & staff
-            </StaffPortalSectionCardTitle>
-          </Helper>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <TabWalkthroughHeaderAction />
-          <Button onClick={openNewDeskStaff} variant="outline" className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add desk staff
-          </Button>
-          <Button onClick={onAddLeadership} variant="outline" className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add principal / division head
-          </Button>
-          <Button onClick={onAddTeacher} className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add teacher
-          </Button>
-        </div>
-      </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent className="min-w-0 space-y-6 px-3 pb-4 sm:px-4">
         <section className="space-y-3">
-          <Helper content="Homeroom and classroom teachers. Expand Classes or Students on a row to manage scope.">
+          <div className="flex items-center gap-1.5">
             <h3 className="font-bold">Classroom teachers</h3>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[staffPortalTabInfoSection('Homeroom and classroom teachers. Expand Classes or Students on a row to manage scope.')]}
+              ariaLabel="About classroom teachers"
+            />
+          </div>
           <AdminRecordListScroll>
           <ul className="space-y-2">
             {classroomTeachers.length > 0 ? (
@@ -612,9 +613,13 @@ export function AdminTeachersTab({
         </section>
 
         <section className="space-y-3">
-          <Helper content="Principals and division heads sign in through the staff portal with school-wide student and category access.">
+          <div className="flex items-center gap-1.5">
             <h3 className="font-bold">Principals & division heads</h3>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[staffPortalTabInfoSection('Principals and division heads sign in through the staff portal with school-wide student and category access.')]}
+              ariaLabel="About principals and division heads"
+            />
+          </div>
           <AdminRecordListScroll>
           <ul className="space-y-2">
             {leadershipStaff.length > 0 ? (
@@ -697,9 +702,13 @@ export function AdminTeachersTab({
         </section>
 
         <section className="space-y-3">
-          <Helper content="Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.">
+          <div className="flex items-center gap-1.5">
             <h3 className="font-bold">Desk staff</h3>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[staffPortalTabInfoSection('Limited accounts for coupon sheets, prize redemption, houses, office, library, or reports.')]}
+              ariaLabel="About desk staff"
+            />
+          </div>
           <AdminRecordListScroll>
           <ul className="space-y-2">
             {staffAccounts && staffAccounts.length > 0 ? (
@@ -877,5 +886,6 @@ export function AdminTeachersTab({
         </Dialog>
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

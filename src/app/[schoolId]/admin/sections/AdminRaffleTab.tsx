@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -436,27 +436,28 @@ export function AdminRaffleTab({
 
   return (
     <>
+      <StaffPortalTabPanel
+        tabValue="raffle"
+        infoSections={[
+            canEditSettings
+              ? {
+                  title: 'What is this for?',
+                  body: (
+                    <div className="space-y-2 text-sm">
+                      <p>Configure the pool below, then open the jackpot reels or spinning wheel — same odds, different animation.</p>
+                      <p>Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).</p>
+                      <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
+                    </div>
+                  ),
+                }
+              : {
+                  title: 'What is this for?',
+                  body: 'Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session.',
+                },
+          ]}
+          trailing={<TabWalkthroughHeaderAction />}
+      >
       <StaffPortalSectionCard className="w-full overflow-hidden">
-        <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
-          <div>
-            <Helper content={
-              canEditSettings ? (
-                <div className="space-y-2 text-sm">
-                  <p>Configure the pool below, then open the jackpot reels or spinning wheel — same odds, different animation.</p>
-                  <p>Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).</p>
-                  <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
-                </div>
-              ) : "Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session."
-            }>
-              <StaffPortalSectionCardTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5 text-primary" aria-hidden />
-                Raffle
-              </StaffPortalSectionCardTitle>
-            </Helper>
-          </div>
-          <TabWalkthroughHeaderAction />
-        </StaffPortalSectionCardHeader>
-
         <StaffPortalSectionCardContent className="space-y-8">
             {!rewardsPillarOn ? (
               <p className="rounded-xl border border-violet-300/40 bg-violet-50 px-3 py-2.5 text-xs font-medium text-violet-950 dark:bg-violet-950/30 dark:text-violet-100">
@@ -635,7 +636,7 @@ export function AdminRaffleTab({
                     )}
                   >
                     <p className="flex items-center gap-2 text-sm font-semibold">
-                      <Clock className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <Clock className="h-4 w-4 shrink-0 text-ring" aria-hidden />
                       On-time today only
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -736,7 +737,7 @@ export function AdminRaffleTab({
                   </div>
                   <div className="flex flex-col gap-1.5 py-3 pr-4">
                     <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                      <Dices className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <Dices className="h-4 w-4 shrink-0 text-ring" aria-hidden />
                       Jackpot (reels)
                     </span>
                     <span className="text-xs font-normal leading-snug text-muted-foreground">
@@ -760,7 +761,7 @@ export function AdminRaffleTab({
                   </div>
                   <div className="flex flex-col gap-1.5 py-3 pr-4">
                     <span className="flex items-center gap-2 text-sm font-bold text-foreground">
-                      <Disc3 className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+                      <Disc3 className="h-4 w-4 shrink-0 text-ring" aria-hidden />
                       Spinning wheel
                     </span>
                     <span className="text-xs font-normal leading-snug text-muted-foreground">
@@ -800,7 +801,7 @@ export function AdminRaffleTab({
 
                 {winner ? (
                   <div className="flex flex-1 items-center gap-3 rounded-xl border-2 border-primary/35 bg-primary/8 px-4 py-3 shadow-sm sm:min-w-[12rem] sm:max-w-sm">
-                    <Trophy className="h-8 w-8 shrink-0 text-primary" aria-hidden />
+                    <Trophy className="h-8 w-8 shrink-0 text-ring" aria-hidden />
                     <div className="min-w-0">
                       <p className="text-[0.65rem] font-bold uppercase tracking-wider text-primary">Last winner</p>
                       <p className="truncate text-lg font-black tracking-tight text-foreground">{winner.name}</p>
@@ -917,6 +918,7 @@ export function AdminRaffleTab({
             </section>
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
+      </StaffPortalTabPanel>
 
       <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
         <DialogContent size="xl" className="gap-0 p-0 sm:p-0 max-h-[95vh] overflow-y-auto overflow-x-hidden">

@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES } from '@/lib/bulletinBoard';
 import { cn } from '@/lib/utils';
 import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
@@ -43,9 +43,11 @@ export function BulletinSettingsPanel({
       <div className="rounded-2xl border bg-muted/10 p-4">
         <div className="mb-4 flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-muted-foreground" aria-hidden />
-          <Helper content="Configure the bulletin board display. Incentives are managed in the Incentives section. Open the full-screen Bulletin link to see changes live.">
-            <p className="text-sm font-bold">Bulletin board settings</p>
-          </Helper>
+          <p className="text-sm font-bold">Bulletin board settings</p>
+          <StaffPortalTabInfoPopover
+            sections={[staffPortalTabInfoSection('Configure the bulletin board display. Incentives are managed in the Incentives section. Open the full-screen Bulletin link to see changes live.')]}
+            ariaLabel="About bulletin board settings"
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

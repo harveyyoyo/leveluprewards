@@ -312,15 +312,15 @@ export function NotificationSetupWizard({
             </p>
             <ul className="text-sm space-y-2 mt-3">
               <li className="flex items-center gap-2">
-                <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden="true" />
                 Pick who receives the message
               </li>
               <li className="flex items-center gap-2">
-                <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden="true" />
                 Pick what school event starts the alert
               </li>
               <li className="flex items-center gap-2">
-                <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden="true" />
+                <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden="true" />
                 Confirm email or add WhatsApp
               </li>
             </ul>
@@ -366,7 +366,7 @@ export function NotificationSetupWizard({
                       </span>
                     ) : null}
                   </div>
-                  {selected ? <Check className="h-5 w-5 text-primary shrink-0 mt-1" aria-hidden="true" /> : null}
+                  {selected ? <Check className="h-5 w-5 text-ring shrink-0 mt-1" aria-hidden="true" /> : null}
                 </button>
               );
             })}
@@ -405,7 +405,7 @@ export function NotificationSetupWizard({
                     <p className="font-semibold text-sm">{opt.label}</p>
                     <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{opt.description}</p>
                   </div>
-                  {selected ? <Check className="h-5 w-5 text-primary shrink-0 mt-1" aria-hidden="true" /> : null}
+                  {selected ? <Check className="h-5 w-5 text-ring shrink-0 mt-1" aria-hidden="true" /> : null}
                 </button>
               );
             })}

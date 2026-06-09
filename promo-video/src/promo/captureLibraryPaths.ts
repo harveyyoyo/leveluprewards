@@ -29,6 +29,6 @@ export const CAPTURE_PATHS = {
   kioskNewPoints: clip("student-kiosk/kiosk-new-points-on-entry.mp4"),
   /** Canonical: student-kiosk/kiosk-signin-welcome-points.mp4 */
   kioskSignInPoints: clip("student-kiosk/kiosk-signin-rewards.mp4"),
-  studentKiosk: clip("student-kiosk/student-kiosk.mp4"),
+  studentKiosk: clip("student-kiosk/kiosk-prizes-hover.mp4"),
   portalHub: clip("portal/portal-hub-overview.mp4"),
 } as const;

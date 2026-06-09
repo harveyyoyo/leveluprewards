@@ -63,13 +63,16 @@ type Props = {
 
 export function IntroTourSpotlight({ targetId, active }: Props) {
   const [rect, setRect] = useState<SpotlightRect | null>(null);
+  const [helpRect, setHelpRect] = useState<SpotlightRect | null>(null);
 
   const measure = useCallback(() => {
     if (!active || !targetId) {
       setRect(null);
+      setHelpRect(null);
       return;
     }
     setRect(measureIntroTourTarget(targetId));
+    setHelpRect(measureIntroTourTarget('staff-ai-help'));
   }, [active, targetId]);
 
   useEffect(() => {
@@ -113,6 +116,16 @@ export function IntroTourSpotlight({ targetId, active }: Props) {
               rx={cutoutRx}
               fill="black"
             />
+            {helpRect && (
+              <rect
+                x={helpRect.left + 4}
+                y={helpRect.top + 4}
+                width={helpRect.width - 8}
+                height={helpRect.height - 8}
+                rx={100}
+                fill="black"
+              />
+            )}
           </mask>
         </defs>
         <rect

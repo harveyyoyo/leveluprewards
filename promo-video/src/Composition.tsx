@@ -1,4 +1,3 @@
-import React from "react";
 import { Video } from "@remotion/media";
 import { AbsoluteFill, Sequence, Audio, staticFile, useVideoConfig, spring, useCurrentFrame, interpolate } from "remotion";
 import {

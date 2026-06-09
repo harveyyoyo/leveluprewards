@@ -21,6 +21,11 @@ export const CinematicTransition: React.FC<{
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
+    const bandOpacity = interpolate(progress, [0, 0.2, 0.8, 1], [0, 1, 1, 0], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
     return (
       <AbsoluteFill style={{ zIndex: 9999, pointerEvents: "none" }}>
         <div
@@ -30,8 +35,10 @@ export const CinematicTransition: React.FC<{
             bottom: 0,
             left: `${slidePos}%`,
             width: "100%",
-            background: `linear-gradient(90deg, transparent, ${CINEMATIC.gold}66 15%, ${CINEMATIC.navy} 35%, ${CINEMATIC.navy} 65%, ${CINEMATIC.cyan}66 85%, transparent)`,
-            boxShadow: "0 0 120px rgba(0,0,0,0.9)",
+            opacity: bandOpacity,
+            background: `linear-gradient(90deg, transparent 0%, ${CINEMATIC.cyan}22 18%, ${CINEMATIC.gold}cc 42%, ${CINEMATIC.offWhite}ee 50%, ${CINEMATIC.cyan}bb 58%, ${CINEMATIC.gold}22 82%, transparent 100%)`,
+            boxShadow: `0 0 120px ${CINEMATIC.cyan}66`,
+            mixBlendMode: "screen",
           }}
         />
       </AbsoluteFill>
@@ -39,7 +46,12 @@ export const CinematicTransition: React.FC<{
   }
 
   if (type === "wipe") {
-    const radius = interpolate(progress, [0, 0.5, 1], [120, 0, 120], {
+    const radius = interpolate(progress, [0, 0.55, 1], [0, 78, 145], {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+      easing: Easing.inOut(Easing.cubic),
+    });
+    const glowOpacity = interpolate(progress, [0, 0.2, 0.75, 1], [0, 0.9, 0.75, 0], {
       extrapolateLeft: "clamp",
       extrapolateRight: "clamp",
     });
@@ -49,15 +61,16 @@ export const CinematicTransition: React.FC<{
           style={{
             position: "absolute",
             inset: 0,
-            backgroundColor: CINEMATIC.navy,
-            clipPath: `circle(${radius}% at 50% 50%)`,
+            opacity: glowOpacity,
+            background: `radial-gradient(circle at 50% 50%, ${CINEMATIC.offWhite}f2 0%, ${CINEMATIC.gold}cc ${Math.max(radius - 10, 0)}%, ${CINEMATIC.cyan}88 ${radius}%, transparent ${radius + 16}%)`,
+            mixBlendMode: "screen",
           }}
         />
       </AbsoluteFill>
     );
   }
 
-  const opacity = interpolate(progress, [0, 0.5, 1], [0, 0.55, 0], {
+  const opacity = interpolate(progress, [0, 0.45, 1], [0, 0.52, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.inOut(Easing.cubic),
@@ -66,7 +79,7 @@ export const CinematicTransition: React.FC<{
     <AbsoluteFill
       style={{
         zIndex: 9999,
-        backgroundColor: CINEMATIC.navy,
+        background: `linear-gradient(135deg, ${CINEMATIC.offWhite}, ${CINEMATIC.gold} 45%, ${CINEMATIC.cyan})`,
         opacity,
         pointerEvents: "none",
       }}

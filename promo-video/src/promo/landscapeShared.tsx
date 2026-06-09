@@ -471,7 +471,7 @@ export const LandscapeBrowser: React.FC<{
       height: 765,
       borderRadius: 20,
       border: `1px solid ${theme.browserBorder}`,
-      background: theme.browserBg,
+      background: "#f8fafc",
       overflow: "hidden",
       display: "flex",
       flexDirection: "column",
@@ -523,6 +523,7 @@ export const LandscapeBrowser: React.FC<{
       style={{
         flex: 1,
         overflow: "hidden",
+        background: "#f8fafc",
         transform: `scale(${kenBurn})`,
         transformOrigin: "center center",
       }}

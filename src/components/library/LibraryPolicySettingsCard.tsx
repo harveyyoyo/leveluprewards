@@ -6,7 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Helper } from '@/components/ui/helper';
+import {
+  StaffPortalTabInfoPopover,
+  staffPortalTabInfoSection,
+} from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import {
   LIBRARY_REWARD_MODE_LABELS,
@@ -36,12 +39,20 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
     <div className="space-y-4">
       <Card className="border-dashed">
         <CardHeader className="pb-3">
-          <Helper content="Control where students can check out and return books without staff at the desk.">
+          <div className="flex items-center gap-1.5">
             <CardTitle className="text-base flex items-center gap-2">
-              <ScanBarcode className="h-4 w-4 text-primary" />
+              <ScanBarcode className="h-4 w-4 text-ring" />
               Student checkout
             </CardTitle>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[
+                staffPortalTabInfoSection(
+                  'Control where students can check out and return books without staff at the desk.',
+                ),
+              ]}
+              ariaLabel="About student checkout"
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2">
@@ -75,12 +86,20 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
       <Card className="border-dashed">
         <CardHeader className="pb-3">
-          <Helper content="Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.">
+          <div className="flex items-center gap-1.5">
             <CardTitle className="text-base flex items-center gap-2">
-              <BookMarked className="h-4 w-4 text-primary" />
+              <BookMarked className="h-4 w-4 text-ring" />
               Loans &amp; returns
             </CardTitle>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[
+                staffPortalTabInfoSection(
+                  'Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.',
+                ),
+              ]}
+              ariaLabel="About loans and returns"
+            />
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
@@ -115,9 +134,17 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
           {rewardMode === 'app_points' ? (
             <div className="space-y-2 sm:col-span-2">
-              <Helper content="Points in this category go up or down when books are returned on time or late. Create a Library category under Categories if needed.">
+              <div className="flex items-center gap-1.5">
                 <Label>Points category</Label>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[
+                    staffPortalTabInfoSection(
+                      'Points in this category go up or down when books are returned on time or late. Create a Library category under Categories if needed.',
+                    ),
+                  ]}
+                  ariaLabel="About points category"
+                />
+              </div>
               <Select
                 value={settings.libraryPointsCategoryId || '_none'}
                 onValueChange={(v) => updateSettings({ libraryPointsCategoryId: v === '_none' ? undefined : v })}

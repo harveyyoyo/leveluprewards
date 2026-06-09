@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Link2, Shield } from 'lucide-react';
@@ -52,19 +53,11 @@ export function AdminIntegrationsTab() {
   );
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="rounded-2xl bg-primary/10 p-3 text-primary shrink-0">
-            <Link2 className="h-6 w-6" aria-hidden />
-          </div>
-          <Helper content="Connect roster and sign-in providers. OAuth and sync jobs run on the server; configure environment variables for your deployment.">
-            <h2 className="text-2xl font-black tracking-tight">Integrations</h2>
-          </Helper>
-        </div>
-        <TabWalkthroughHeaderAction />
-      </div>
-
+    <StaffPortalTabPanel
+      className="mx-auto max-w-3xl"
+      tabValue="integrations"
+      trailing={<TabWalkthroughHeaderAction />}
+    >
       {err ? (
         <Alert variant="destructive">
           <AlertTitle>Status unavailable</AlertTitle>
@@ -84,12 +77,16 @@ export function AdminIntegrationsTab() {
 
       <Card>
         <CardHeader>
-          <Helper content="Server-side configuration only (no student data leaves your school without setup).">
+          <div className="flex items-center gap-1.5">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BookOpen className="h-5 w-5" aria-hidden />
               Roster and SSO
             </CardTitle>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[staffPortalTabInfoSection('Server-side configuration only (no student data leaves your school without setup).')]}
+              ariaLabel="About roster and SSO"
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {!status ? (
@@ -106,6 +103,6 @@ export function AdminIntegrationsTab() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </StaffPortalTabPanel>
   );
 }

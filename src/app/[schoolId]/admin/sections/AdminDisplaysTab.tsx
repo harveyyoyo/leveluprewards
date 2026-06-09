@@ -19,7 +19,7 @@ import {
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import { Button } from '@/components/ui/button';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { cn } from '@/lib/utils';
@@ -33,7 +33,7 @@ import {
 import { SmartScreenSettingsPanel } from './displays/SmartScreenSettingsPanel';
 import { BulletinSettingsPanel } from './displays/BulletinSettingsPanel';
 import { BulletinIncentivesPanel } from './displays/BulletinIncentivesPanel';
-import { AdminHallOfFameTab } from './AdminHallOfFameTab';
+import { HallOfFameSettingsPanel } from './displays/HallOfFameSettingsPanel';
 import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
 type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'hall-of-fame' | 'incentives';
@@ -75,45 +75,36 @@ export function AdminDisplaysTab({
   const hallOfFameHref = useMemo(() => buildHallOfFameDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
 
   return (
+    <StaffPortalTabPanel
+      tabValue="displays"
+      trailing={
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <TabWalkthroughHeaderAction />
+            <Button asChild variant="outline" className="gap-2 rounded-xl">
+              <Link href={smartHref} target="_blank" rel="noopener noreferrer">
+                <Monitor className="h-4 w-4" aria-hidden />
+                Smart Screen
+                <ArrowUpRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="gap-2 rounded-xl">
+              <Link href={bulletinHref} target="_blank" rel="noopener noreferrer">
+                <Megaphone className="h-4 w-4" aria-hidden />
+                Bulletin
+                <ArrowUpRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="gap-2 rounded-xl">
+              <Link href={hallOfFameHref} target="_blank" rel="noopener noreferrer">
+                <Trophy className="h-4 w-4" aria-hidden />
+                Hall of Fame
+                <ArrowUpRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </Button>
+          </div>
+        }
+    >
     <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardHeader className="flex flex-row items-start justify-between gap-4 py-6">
-        <div className="min-w-0 space-y-1">
-          <Helper content="Hallway monitors, lobby screens, and bulletin boards — configure both display types from one place. Open the full-screen links on any TV or projector; they update live from these settings.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5 text-primary" />
-              Displays
-            </StaffPortalSectionCardTitle>
-          </Helper>
-          <p className="text-xs text-muted-foreground">
-            Smart Screen for live dashboards · Bulletin board for incentives · Hall of Fame leaderboards
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <TabWalkthroughHeaderAction />
-          <Button asChild variant="outline" className="gap-2 rounded-xl">
-            <Link href={smartHref} target="_blank" rel="noopener noreferrer">
-              <Monitor className="h-4 w-4" aria-hidden />
-              Smart Screen
-              <ArrowUpRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="gap-2 rounded-xl">
-            <Link href={bulletinHref} target="_blank" rel="noopener noreferrer">
-              <Megaphone className="h-4 w-4" aria-hidden />
-              Bulletin
-              <ArrowUpRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="gap-2 rounded-xl">
-            <Link href={hallOfFameHref} target="_blank" rel="noopener noreferrer">
-              <Trophy className="h-4 w-4" aria-hidden />
-              Hall of Fame
-              <ArrowUpRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </Button>
-        </div>
-      </StaffPortalSectionCardHeader>
-
       <StaffPortalSectionCardContent className="space-y-6">
         <ContentSectionTreeNav
           branchLabel="Displays"
@@ -143,7 +134,7 @@ export function AdminDisplaysTab({
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-black">
-                    <Monitor className="h-5 w-5 text-primary" />
+                    <Monitor className="h-5 w-5 text-ring" />
                     Smart Screen
                   </span>
                   <span
@@ -175,7 +166,7 @@ export function AdminDisplaysTab({
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-black">
-                    <Megaphone className="h-5 w-5 text-primary" />
+                    <Megaphone className="h-5 w-5 text-ring" />
                     Bulletin board
                   </span>
                   <span
@@ -207,7 +198,7 @@ export function AdminDisplaysTab({
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <span className="flex items-center gap-2 text-sm font-black">
-                    <Trophy className="h-5 w-5 text-primary" />
+                    <Trophy className="h-5 w-5 text-ring" />
                     Hall of Fame
                   </span>
                   <span
@@ -233,7 +224,7 @@ export function AdminDisplaysTab({
             <div className="rounded-2xl border bg-muted/10 p-4 space-y-3">
               <p className="text-sm font-bold">Live fullscreen displays</p>
               <p className="text-sm text-muted-foreground">
-                Open Smart Screen or Bulletin in a separate tab on your hallway monitor. Changes you save here appear on those displays automatically — no embedded preview needed.
+                Open any display in a separate tab on your hallway monitor. Smart Screen and Hall of Fame include live previews in their settings panels.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline" size="sm" className="rounded-xl gap-2">
@@ -266,7 +257,7 @@ export function AdminDisplaysTab({
               className="flex w-full items-center justify-between gap-3 rounded-2xl border bg-background px-4 py-3 text-left transition-colors hover:border-primary/25 hover:bg-muted/20"
             >
               <span className="flex items-center gap-2 text-sm font-bold">
-                <Tag className="h-4 w-4 text-primary" />
+                <Tag className="h-4 w-4 text-ring" />
                 Manage incentives
               </span>
               <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-black">
@@ -294,10 +285,17 @@ export function AdminDisplaysTab({
           />
         ) : null}
 
-        {section === 'hall-of-fame' ? <AdminHallOfFameTab schoolId={schoolId} /> : null}
+        {section === 'hall-of-fame' ? (
+          <HallOfFameSettingsPanel
+            schoolId={schoolId}
+            settings={settings}
+            updateSettings={updateSettings}
+          />
+        ) : null}
 
         {section === 'incentives' ? <BulletinIncentivesPanel schoolId={schoolId} /> : null}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

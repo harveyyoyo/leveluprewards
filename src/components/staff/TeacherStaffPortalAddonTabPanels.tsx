@@ -20,10 +20,9 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { StaffPortalSchoolwideFeatureNotice } from '@/components/staff/StaffPortalSchoolwideFeatureNotice';
-import { teacherPortalPanelClassName, teacherPortalTabContentClassName } from '@/components/staff/teacherPortalLayout';
+import { teacherPortalTabContentClassName } from '@/components/staff/teacherPortalLayout';
 import { AdminHousesTab } from '@/app/[schoolId]/admin/sections/AdminHousesTab';
 import { AdminStatsTab } from '@/app/[schoolId]/admin/sections/AdminStatsTab';
-import { AdminHallOfFameTab } from '@/app/[schoolId]/admin/sections/AdminHallOfFameTab';
 import { AdminDisplaysTab } from '@/app/[schoolId]/admin/sections/AdminDisplaysTab';
 import { AdminLibraryTab } from '@/app/[schoolId]/admin/sections/AdminLibraryTab';
 import { AdminBonusPointsTab } from '@/app/[schoolId]/admin/sections/AdminBonusPointsTab';
@@ -65,7 +64,6 @@ import {
 export type TeacherStaffPortalAddonTabPanelsProps = {
   activeTab: string;
   teacherTabEnabled: (tabId: string) => boolean;
-  isWide: boolean;
   schoolId: string;
   students: Student[] | null | undefined;
   classes: Class[] | null | undefined;
@@ -79,20 +77,16 @@ export type TeacherStaffPortalAddonTabPanelsProps = {
 function AddonPane({
   tabId,
   activeTab,
-  isWide,
   children,
 }: {
   tabId: string;
   activeTab: string;
-  isWide: boolean;
   children: ReactNode;
 }) {
   return (
     <TeacherPortalTabPane tabId={tabId} activeTab={activeTab} className={teacherPortalTabContentClassName}>
-      <div className={teacherPortalPanelClassName(isWide)}>
-        <StaffPortalSchoolwideFeatureNotice activeTab={tabId} />
-        {children}
-      </div>
+      <StaffPortalSchoolwideFeatureNotice activeTab={tabId} />
+      {children}
     </TeacherPortalTabPane>
   );
 }
@@ -100,7 +94,6 @@ function AddonPane({
 export function TeacherStaffPortalAddonTabPanels({
   activeTab,
   teacherTabEnabled,
-  isWide,
   schoolId,
   students,
   classes,
@@ -277,7 +270,7 @@ export function TeacherStaffPortalAddonTabPanels({
   return (
     <>
       {teacherTabEnabled('insights') && (
-        <AddonPane tabId="insights" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="insights" activeTab={activeTab}>
           {settings.enableAdminAnalytics ? (
             <AdminStatsTab
               students={students}
@@ -291,14 +284,8 @@ export function TeacherStaffPortalAddonTabPanels({
         </AddonPane>
       )}
 
-      {teacherTabEnabled('halloffame') && (
-        <AddonPane tabId="halloffame" activeTab={activeTab} isWide={isWide}>
-          <AdminHallOfFameTab schoolId={schoolId} />
-        </AddonPane>
-      )}
-
       {teacherTabEnabled('displays') && (
-        <AddonPane tabId="displays" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="displays" activeTab={activeTab}>
           <AdminDisplaysTab
             schoolId={schoolId}
             schoolLogoUrl={schoolLogoUrl ?? null}
@@ -309,7 +296,7 @@ export function TeacherStaffPortalAddonTabPanels({
       )}
 
       {teacherTabEnabled('library') && (
-        <AddonPane tabId="library" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="library" activeTab={activeTab}>
           <AdminLibraryTab
             libraryItems={library}
             students={students}
@@ -333,7 +320,7 @@ export function TeacherStaffPortalAddonTabPanels({
       )}
 
       {teacherTabEnabled('bonuspoints') && (
-        <AddonPane tabId="bonuspoints" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="bonuspoints" activeTab={activeTab}>
           <AdminBonusPointsTab
             achievementsLoading={achievementsLoading}
             achievements={achievements}
@@ -347,7 +334,7 @@ export function TeacherStaffPortalAddonTabPanels({
       )}
 
       {teacherTabEnabled('category-badges') && (
-        <AddonPane tabId="category-badges" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="category-badges" activeTab={activeTab}>
           <AdminBadgesTab
             categories={categories}
             badgesLoading={badgesLoading}
@@ -372,7 +359,7 @@ export function TeacherStaffPortalAddonTabPanels({
       )}
 
       {teacherTabEnabled('houses') && (
-        <AddonPane tabId="houses" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="houses" activeTab={activeTab}>
           <AdminHousesTab
             schoolId={schoolId}
             houses={houses}
@@ -401,25 +388,25 @@ export function TeacherStaffPortalAddonTabPanels({
       )}
 
       {teacherTabEnabled('notifications') && (
-        <AddonPane tabId="notifications" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="notifications" activeTab={activeTab}>
           <AdminNotificationsTab />
         </AddonPane>
       )}
 
       {teacherTabEnabled('integrations') && (
-        <AddonPane tabId="integrations" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="integrations" activeTab={activeTab}>
           <AdminIntegrationsTab />
         </AddonPane>
       )}
 
       {teacherTabEnabled('student-portal') && (
-        <AddonPane tabId="student-portal" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="student-portal" activeTab={activeTab}>
           <AdminStudentPortalTab schoolId={schoolId} students={students ?? []} />
         </AddonPane>
       )}
 
       {teacherTabEnabled('branding') && (
-        <AddonPane tabId="branding" activeTab={activeTab} isWide={isWide}>
+        <AddonPane tabId="branding" activeTab={activeTab}>
           <AdminBrandingTab
             schoolId={schoolId}
             firestore={firestore}

@@ -28,7 +28,7 @@ const STATUS_META: Record<
 > = {
   looking_up: {
     label: 'Looking up…',
-    className: 'border-primary/40 bg-primary/10 text-primary',
+    className: 'border-primary/40 bg-ring/10 text-ring',
     icon: 'spinner',
   },
   identified: {
@@ -102,7 +102,7 @@ export function LibraryBarcodeReaderField({
       )}
     >
       <Label htmlFor={inputId} className="flex items-center gap-2 text-sm font-bold">
-        <ScanBarcode className="h-4 w-4 text-primary" aria-hidden />
+        <ScanBarcode className="h-4 w-4 text-ring" aria-hidden />
         {scanFeedback ? 'Scan received' : 'Scan ready'}
       </Label>
       <p className="text-xs text-muted-foreground">

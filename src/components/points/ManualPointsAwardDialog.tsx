@@ -659,7 +659,7 @@ export function ManualPointsAwardDialog({
               <div
                 className={cn(
                   'p-2 rounded-xl',
-                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
+                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-ring/10 text-ring',
                 )}
               >
                 <Award className="w-5 h-5" />
@@ -697,7 +697,7 @@ export function ManualPointsAwardDialog({
               <div
                 className={cn(
                   'p-2 rounded-xl',
-                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-primary/10 text-primary',
+                  isGraphic ? 'bg-chart-2/20 text-chart-2' : 'bg-ring/10 text-ring',
                 )}
               >
                 <Award className="w-5 h-5" />

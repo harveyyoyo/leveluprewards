@@ -9,7 +9,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
@@ -37,31 +37,27 @@ export function AdminBadgesTab(props: any) {
   } = props;
 
   return (
+    <StaffPortalTabPanel
+      tabValue="category-badges"
+      trailing={
+          <div className="flex flex-wrap items-center gap-2">
+            <TabWalkthroughHeaderAction />
+            <Button onClick={() => { setEditingCategoryBadgeNull(); setIsCategoryBadgeModalOpen(true); }} className="rounded-xl">
+              <Plus className="mr-2 h-4 w-4" /> Add badge
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddSampleCategoryBadgesOpen(true)}
+              className="rounded-xl"
+              disabled={isAddingSampleCategoryBadges || !categories?.length}
+            >
+              {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Award className="mr-2 h-4 w-4" />}
+              Add sample badges
+            </Button>
+          </div>
+        }
+    >
     <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
-        <div>
-          <Helper content="Define badges students earn by reaching a points threshold in a category within a time period (e.g. Good Behavior badge for 50 points this month).">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-primary" /> Badges
-            </StaffPortalSectionCardTitle>
-          </Helper>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <TabWalkthroughHeaderAction />
-          <Button onClick={() => { setEditingCategoryBadgeNull(); setIsCategoryBadgeModalOpen(true); }} className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add badge
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setIsAddSampleCategoryBadgesOpen(true)}
-            className="rounded-xl"
-            disabled={isAddingSampleCategoryBadges || !categories?.length}
-          >
-            {isAddingSampleCategoryBadges ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Award className="mr-2 h-4 w-4" />}
-            Add sample badges
-          </Button>
-        </div>
-      </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent>
         {badgesLoading ? (
           <ul className="space-y-2 pr-1">
@@ -179,5 +175,6 @@ export function AdminBadgesTab(props: any) {
         )}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

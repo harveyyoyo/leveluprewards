@@ -4,7 +4,9 @@ export const LEGACY_DISPLAY_TAB_VALUES = ['bulletinboard', 'smart-screen'] as co
 
 /** Map legacy admin/teacher tab ids to the unified Displays tab. */
 export function normalizeStaffPortalTabValue(tabValue: string): string {
-  if (tabValue === 'bulletinboard' || tabValue === 'smart-screen') return 'displays';
+  if (tabValue === 'bulletinboard' || tabValue === 'smart-screen' || tabValue === 'halloffame') {
+    return 'displays';
+  }
   return tabValue;
 }
 

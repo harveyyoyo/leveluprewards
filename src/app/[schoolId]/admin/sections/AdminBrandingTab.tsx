@@ -30,7 +30,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings, type Settings, type KioskProfile } from '@/components/providers/SettingsProvider';
 import { ThemeGeneratorModal } from '@/components/themes/ThemeGeneratorModal';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
@@ -40,6 +41,7 @@ import { KioskSponsorBanner } from '@/components/kiosk/KioskSponsorBanner';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { OpenSchoolSettingsLink } from '@/components/settings/OpenSchoolSettingsLink';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export function AdminBrandingTab({
   schoolId,
@@ -115,8 +117,13 @@ export function AdminBrandingTab({
     toast({ title: 'Default theme cleared', description: 'Reverting to standard system style.' });
   };
 
+  const { t } = useTranslation();
+
   return (
-    <div className="space-y-6">
+    <StaffPortalTabPanel
+      tabValue="branding"
+      trailing={<TabWalkthroughHeaderAction />}
+    >
       <ContentSectionTreeNav
         branchLabel="Branding & Identity"
         items={[
@@ -136,12 +143,16 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <Helper content="Upload your school's official logo. It will appear next to the school name across all headers, kiosk stations, and printed receipts.">
+              <div className="flex items-center gap-1.5">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
-                  <UploadCloud className="w-5 h-5 text-primary" />
+                  <UploadCloud className="w-5 h-5 text-ring" />
                   School Logo
                 </CardTitle>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection("Upload your school's official logo. It will appear next to the school name across all headers, kiosk stations, and printed receipts.")]}
+                  ariaLabel="About school logo"
+                />
+              </div>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -268,7 +279,7 @@ export function AdminBrandingTab({
                     />
                     {isLogoUploading && (
                       <p className="text-sm font-semibold text-muted-foreground flex items-center gap-2 shrink-0">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" /> Uploading…
+                        <Loader2 className="h-4 w-4 animate-spin text-ring" /> Uploading…
                       </p>
                     )}
                   </div>
@@ -353,12 +364,16 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <Helper content="Adjust visual styles applied to student portrait photos on badges, leaderboards, and dashboard accounts.">
+              <div className="flex items-center gap-1.5">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <User className="w-5 h-5 text-indigo-500" />
                   Student Photo Styling
                 </CardTitle>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Adjust visual styles applied to student portrait photos on badges, leaderboards, and dashboard accounts.')]}
+                  ariaLabel="About student photo styling"
+                />
+              </div>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -473,12 +488,16 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <Helper content="Configure card background gradients, font themes, and textures as default presets for students, kiosk panels, and printouts.">
+              <div className="flex items-center gap-1.5">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
-                  <Palette className="w-5 h-5 text-primary" />
+                  <Palette className="w-5 h-5 text-ring" />
                   Default Student ID Card Theme
                 </CardTitle>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Configure card background gradients, font themes, and textures as default presets for students, kiosk panels, and printouts.')]}
+                  ariaLabel="About student ID card theme"
+                />
+              </div>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -570,12 +589,16 @@ export function AdminBrandingTab({
         <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
           <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <Helper content="Highlight local businesses, PTA announcements, or milestone notes on student-facing kiosk screens.">
+              <div className="flex items-center gap-1.5">
                 <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
                   <Megaphone className="w-5 h-5 text-indigo-500" />
                   Kiosk Sponsor & Announcement Banners
                 </CardTitle>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Highlight local businesses, PTA announcements, or milestone notes on student-facing kiosk screens.')]}
+                  ariaLabel="About kiosk banners"
+                />
+              </div>
               <TabWalkthroughHeaderAction />
             </div>
           </CardHeader>
@@ -1704,6 +1727,6 @@ export function AdminBrandingTab({
       </Dialog>
         </>
       )}
-    </div>
+    </StaffPortalTabPanel>
   );
 }

@@ -182,16 +182,354 @@ const CinematicVoiceBeat: React.FC<{
   );
 };
 
-const PortalVoiceScene: React.FC = () => (
-  <CinematicVoiceBeat
-    beatId="outro"
-    durationFrames={CT.outroEnd - CT.feature3End}
-    xpStart={0.72}
-    xpEnd={0.88}
-    segmentIndex={4}
-    segmentTotal={4}
-  />
+const NoInputGraphic: React.FC<{
+  label: string;
+  startFrame: number;
+  color: string;
+  children: React.ReactNode;
+}> = ({ label, startFrame, color, children }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const enter = spring({
+    fps,
+    frame: frame - startFrame,
+    durationInFrames: 24,
+    config: { damping: 12, stiffness: 140 },
+  });
+  const opacity = interpolate(frame, [startFrame - 6, startFrame + 12], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const slash = interpolate(frame, [startFrame + 10, startFrame + 24], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.out(Easing.cubic),
+  });
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        height: 270,
+        borderRadius: 34,
+        padding: "28px 30px",
+        background: `linear-gradient(145deg, rgba(15,32,64,0.94), ${color}1f)`,
+        border: `2px solid ${color}88`,
+        boxShadow: `0 28px 80px rgba(0,0,0,0.42), 0 0 50px ${color}44`,
+        opacity,
+        transform: `translateY(${interpolate(enter, [0, 1], [70, 0])}px) scale(${interpolate(enter, [0, 1], [0.82, 1])})`,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          height: 138,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {children}
+      </div>
+      <div
+        style={{
+          fontFamily: outfit,
+          fontSize: 34,
+          fontWeight: 900,
+          letterSpacing: 1,
+          textTransform: "uppercase",
+          textAlign: "center",
+          color: CINEMATIC.offWhite,
+        }}
+      >
+        No {label}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: "12%",
+          top: "49%",
+          width: `${slash * 76}%`,
+          height: 10,
+          borderRadius: 999,
+          background: `linear-gradient(90deg, ${CINEMATIC.coral}, ${CINEMATIC.gold})`,
+          boxShadow: `0 0 34px ${CINEMATIC.coral}99`,
+          transform: "rotate(-20deg)",
+          transformOrigin: "left center",
+        }}
+      />
+    </div>
+  );
+};
+
+const KeyboardGraphic: React.FC = () => (
+  <div
+    style={{
+      width: 210,
+      height: 94,
+      borderRadius: 18,
+      border: `3px solid ${CINEMATIC.textMuted}`,
+      padding: 12,
+      display: "grid",
+      gridTemplateColumns: "repeat(8, 1fr)",
+      gap: 6,
+      opacity: 0.9,
+    }}
+  >
+    {Array.from({ length: 24 }).map((_, i) => (
+      <div
+        key={i}
+        style={{
+          borderRadius: 5,
+          background: i > 16 ? CINEMATIC.gold : CINEMATIC.textMuted,
+          opacity: i > 16 ? 0.9 : 0.55,
+        }}
+      />
+    ))}
+  </div>
 );
+
+const MouseGraphic: React.FC = () => (
+  <div
+    style={{
+      width: 118,
+      height: 168,
+      borderRadius: 60,
+      border: `4px solid ${CINEMATIC.textMuted}`,
+      position: "relative",
+      opacity: 0.92,
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        top: 18,
+        left: "50%",
+        width: 8,
+        height: 36,
+        borderRadius: 999,
+        background: CINEMATIC.cyan,
+        transform: "translateX(-50%)",
+      }}
+    />
+    <div
+      style={{
+        position: "absolute",
+        top: 70,
+        left: 0,
+        right: 0,
+        height: 4,
+        background: CINEMATIC.textMuted,
+        opacity: 0.5,
+      }}
+    />
+  </div>
+);
+
+const TouchscreenGraphic: React.FC = () => (
+  <div
+    style={{
+      width: 160,
+      height: 190,
+      borderRadius: 24,
+      border: `4px solid ${CINEMATIC.textMuted}`,
+      position: "relative",
+      opacity: 0.92,
+    }}
+  >
+    <div
+      style={{
+        position: "absolute",
+        inset: 18,
+        borderRadius: 16,
+        background: `linear-gradient(135deg, ${CINEMATIC.cyan}33, ${CINEMATIC.gold}2e)`,
+      }}
+    />
+    <div
+      style={{
+        position: "absolute",
+        right: 10,
+        bottom: 8,
+        fontFamily: outfit,
+        fontSize: 58,
+        fontWeight: 900,
+        color: CINEMATIC.gold,
+        transform: "rotate(-12deg)",
+      }}
+    >
+      TAP
+    </div>
+  </div>
+);
+
+const ScanCardGraphic: React.FC<{ startFrame: number }> = ({ startFrame }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const enter = spring({
+    fps,
+    frame: frame - startFrame,
+    durationInFrames: 30,
+    config: { damping: 12, stiffness: 120 },
+  });
+  const scanY = interpolate(frame, [startFrame + 18, startFrame + 70], [42, 210], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: Easing.inOut(Easing.cubic),
+  });
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "50%",
+        bottom: 70,
+        width: 620,
+        height: 250,
+        borderRadius: 36,
+        border: `3px solid ${CINEMATIC.gold}`,
+        background: `linear-gradient(135deg, ${CINEMATIC.offWhite}, #fff8d7)`,
+        boxShadow: `0 40px 100px rgba(0,0,0,0.46), 0 0 70px ${CINEMATIC.gold}66`,
+        transform: `translateX(-50%) scale(${interpolate(enter, [0, 1], [0.78, 1])})`,
+        opacity: enter,
+        overflow: "hidden",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 34,
+          left: 42,
+          fontFamily: outfit,
+          fontSize: 34,
+          fontWeight: 900,
+          color: CINEMATIC.navy,
+        }}
+      >
+        Quick Scan
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          right: 44,
+          top: 34,
+          width: 86,
+          height: 86,
+          borderRadius: "50%",
+          background: CINEMATIC.cyan,
+          color: CINEMATIC.navy,
+          fontFamily: outfit,
+          fontSize: 48,
+          fontWeight: 900,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        ID
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          left: 46,
+          right: 46,
+          bottom: 46,
+          height: 72,
+          borderRadius: 12,
+          background:
+            "repeating-linear-gradient(90deg, #0a1628 0 7px, transparent 7px 13px, #0a1628 13px 21px, transparent 21px 30px)",
+        }}
+      />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          top: scanY,
+          height: 8,
+          background: CINEMATIC.cyan,
+          boxShadow: `0 0 32px ${CINEMATIC.cyan}`,
+        }}
+      />
+    </div>
+  );
+};
+
+const ScanOnlyScene: React.FC = () => {
+  const frame = useCurrentFrame();
+  const durationFrames = CT.outroEnd - CT.feature3End;
+  const progress = interpolate(frame, [0, durationFrames], [0.72, 0.88], {
+    extrapolateRight: "clamp",
+  });
+  const scanText = spring({
+    fps: 30,
+    frame: frame - 92,
+    durationInFrames: 30,
+    config: { damping: 12, stiffness: 120 },
+  });
+
+  return (
+    <AbsoluteFill>
+      <CinematicBg totalFrames={durationFrames} />
+      <GoldSparkles count={18} seed="scan-only-graphics" />
+      <ProgressRail progress={progress} color={CINEMATIC.green} />
+      <div
+        style={{
+          position: "absolute",
+          top: 78,
+          left: 72,
+          right: 72,
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 34,
+        }}
+      >
+        <NoInputGraphic label="keyboard" startFrame={0} color={CINEMATIC.cyan}>
+          <KeyboardGraphic />
+        </NoInputGraphic>
+        <NoInputGraphic label="mouse" startFrame={24} color={CINEMATIC.gold}>
+          <MouseGraphic />
+        </NoInputGraphic>
+        <NoInputGraphic label="touchscreen" startFrame={48} color={CINEMATIC.green}>
+          <TouchscreenGraphic />
+        </NoInputGraphic>
+      </div>
+      <ScanCardGraphic startFrame={86} />
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 356,
+          textAlign: "center",
+          opacity: scanText,
+          transform: `translateY(${interpolate(scanText, [0, 1], [34, 0])}px)`,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: outfit,
+            fontSize: 72,
+            lineHeight: 1,
+            fontWeight: 900,
+            letterSpacing: -1,
+            color: CINEMATIC.offWhite,
+            textShadow: `0 0 46px ${CINEMATIC.cyan}88`,
+          }}
+        >
+          Just a quick scan.
+        </div>
+      </div>
+      <AchievementBadge
+        emoji="ID"
+        title="Scan-first flow"
+        xp={120}
+        startFrame={104}
+        color={CINEMATIC.green}
+      />
+      <XPBar progress={progress} />
+    </AbsoluteFill>
+  );
+};
 
 const OutroScene: React.FC = () => {
   const frame = useCurrentFrame();
@@ -230,7 +568,7 @@ const OutroScene: React.FC = () => {
 
   return (
     <AbsoluteFill
-      style={{ justifyContent: "center", alignItems: "center", opacity: fadeIn }}
+      style={{ justifyContent: "center", alignItems: "center" }}
     >
       <CinematicBg totalFrames={outroDuration} />
       <GoldSparkles count={22} seed="outro" />
@@ -252,7 +590,14 @@ const OutroScene: React.FC = () => {
         />
       ))}
 
-      <div style={{ textAlign: "center", zIndex: 2, position: "relative" }}>
+      <div
+        style={{
+          textAlign: "center",
+          zIndex: 2,
+          position: "relative",
+          opacity: fadeIn,
+        }}
+      >
         <p
           style={{
             fontFamily: outfit,
@@ -415,7 +760,7 @@ export const CinematicPromo: React.FC = () => {
         />
       </Sequence>
       <Sequence from={CT.feature3End} durationInFrames={CT.outroEnd - CT.feature3End}>
-        <PortalVoiceScene />
+        <ScanOnlyScene />
       </Sequence>
       <Sequence from={CT.outroEnd} durationInFrames={CT.total - CT.outroEnd}>
         <OutroScene />

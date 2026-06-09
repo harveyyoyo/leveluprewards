@@ -48,7 +48,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Helper } from "@/components/ui/helper";
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { AdminRecordListHeader } from "@/components/admin/AdminRecordListHeader";
 import { AdminRecordListScroll } from "@/components/admin/AdminRecordListScroll";
 import {
@@ -373,82 +374,80 @@ export function AdminStudentsTab({
   const hasBulkSelection = selectedStudentIds.size > 0;
   return (
     <>
-      <StaffPortalSectionCard className="overflow-visible">
-        <StaffPortalSectionCardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 py-4 px-4 sm:px-5 bg-secondary">
-          <Helper content="Manage your enrollments, view student activity, and print ID cards. Points are awarded from the Teacher Portal.">
-            <StaffPortalSectionCardTitle className="text-2xl flex items-center gap-2 text-secondary-foreground">
-              <Users className="text-ring w-6 h-6" /> Students
-            </StaffPortalSectionCardTitle>
-          </Helper>
-          <div className="flex flex-wrap items-center gap-2 w-full pb-1 sm:pb-0 justify-between">
-            <div className="flex flex-wrap items-center gap-2 min-w-0">
-              <Button
-                onClick={() => handleOpenStudentModal?.(null)}
-                className="rounded-xl shrink-0"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add Student
-              </Button>
-              {hasBulkSelection ? (
-                <StudentBulkActionsMenu
-                  selectedStudents={selectedStudents}
-                  classes={classes || undefined}
-                  teachers={teachers}
-                  bulkBusy={bulkBusy}
-                  isBulkDeleting={isBulkDeleting}
-                  hasWelcomeBackToggle={hasWelcomeBackToggle}
-                  hasWelcomeStyleToggle={hasWelcomeStyleToggle}
-                  onOpenIdPrintSetup={onOpenIdPrintSetup}
-                  onPurgeOpen={() => setBulkPurgeOpen(true)}
-                  onBulkDelete={() => void handleBulkDelete()}
-                  bulkUpdateSelected={bulkUpdateSelected}
+      <StaffPortalTabPanel
+        tabValue="students"
+        trailing={
+            <div className="flex flex-wrap items-center gap-2 w-full pb-1 sm:pb-0 justify-between">
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <Button
+                  onClick={() => handleOpenStudentModal?.(null)}
+                  className="rounded-xl shrink-0"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add Student
+                </Button>
+                {hasBulkSelection ? (
+                  <StudentBulkActionsMenu
+                    selectedStudents={selectedStudents}
+                    classes={classes || undefined}
+                    teachers={teachers}
+                    bulkBusy={bulkBusy}
+                    isBulkDeleting={isBulkDeleting}
+                    hasWelcomeBackToggle={hasWelcomeBackToggle}
+                    hasWelcomeStyleToggle={hasWelcomeStyleToggle}
+                    onOpenIdPrintSetup={onOpenIdPrintSetup}
+                    onPurgeOpen={() => setBulkPurgeOpen(true)}
+                    onBulkDelete={() => void handleBulkDelete()}
+                    bulkUpdateSelected={bulkUpdateSelected}
+                  />
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2 justify-end shrink-0">
+                <TabWalkthroughHeaderAction />
+                <Button
+                  onClick={handleStudentCsvUpload}
+                  variant="outline"
+                  disabled={csvImportBusy}
+                  className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground"
+                  type="button"
+                >
+                  {csvImportBusy ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="mr-2 h-4 w-4" />
+                  )}
+                  Import CSV
+                </Button>
+                <Button
+                  onClick={() => {
+                    onOpenIdPrintSetup({
+                      students: studentsForIdPrint,
+                      classes: classes || [],
+                    });
+                  }}
+                  disabled={studentsForIdPrint.length === 0}
+                  variant="outline"
+                  className={cn(
+                    "rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground",
+                    (selectedStudentIds.size > 0 ||
+                      studentFilterClass !== "all") &&
+                      "border-primary/55 bg-primary/12 font-semibold text-foreground shadow-sm hover:bg-primary/18 hover:text-foreground",
+                  )}
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
+                <input
+                  type="file"
+                  ref={studentCsvInputRef}
+                  onChange={onStudentCsvFileChange}
+                  className="hidden"
+                  accept=".csv"
                 />
-              ) : null}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 justify-end shrink-0">
-              <TabWalkthroughHeaderAction />
-              <Button
-                onClick={handleStudentCsvUpload}
-                variant="outline"
-                disabled={csvImportBusy}
-                className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground"
-                type="button"
-              >
-                {csvImportBusy ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Wand2 className="mr-2 h-4 w-4" />
-                )}
-                Import CSV
-              </Button>
-              <Button
-                onClick={() => {
-                  onOpenIdPrintSetup({
-                    students: studentsForIdPrint,
-                    classes: classes || [],
-                  });
-                }}
-                disabled={studentsForIdPrint.length === 0}
-                variant="outline"
-                className={cn(
-                  "rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground",
-                  (selectedStudentIds.size > 0 ||
-                    studentFilterClass !== "all") &&
-                    "border-primary/55 bg-primary/12 font-semibold text-foreground shadow-sm hover:bg-primary/18 hover:text-foreground",
-                )}
-              >
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </Button>
-              <input
-                type="file"
-                ref={studentCsvInputRef}
-                onChange={onStudentCsvFileChange}
-                className="hidden"
-                accept=".csv"
-              />
-            </div>
-          </div>
-        </StaffPortalSectionCardHeader>
+          }
+      >
+      <StaffPortalSectionCard className="overflow-visible">
         <StaffPortalSectionCardContent className="min-w-0 overflow-visible px-3 pb-4 sm:px-4">
           <div className="mb-6 space-y-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
@@ -647,7 +646,7 @@ export function AdminStudentsTab({
                         onClick={() => handleOpenStudentModal?.(s)}
                         title="Edit student"
                       >
-                        <Edit className="h-3.5 w-3.5 text-primary" />
+                        <Edit className="h-3.5 w-3.5 text-ring" />
                       </Button>
                     </div>
                     <div
@@ -819,7 +818,7 @@ export function AdminStudentsTab({
                         onClick={() => previewIdCardStudent?.(s)}
                         title="Preview ID Card"
                       >
-                        <IdCard className="w-4 h-4 text-primary" />
+                        <IdCard className="w-4 h-4 text-ring" />
                       </Button>
                       <Button
                         variant="outline"
@@ -881,6 +880,7 @@ export function AdminStudentsTab({
           </AdminRecordListScroll>
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
+      </StaffPortalTabPanel>
       <AlertDialog
         open={bulkPurgeOpen}
         onOpenChange={(open) => !isBulkPurging && setBulkPurgeOpen(open)}

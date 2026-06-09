@@ -1,7 +1,8 @@
-import { timingSafeEqual } from 'crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
+import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
+import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 export class VerifyAdminPasscodeError extends Error {
   constructor(
@@ -19,13 +20,6 @@ function trimmedString(value: unknown): string {
 
 function adminPasscodeFrom(data: Record<string, unknown>): string {
   return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || '';
-}
-
-function safeEqual(a: string, b: string): boolean {
-  const bufA = Buffer.from(a, 'utf8');
-  const bufB = Buffer.from(b, 'utf8');
-  if (bufA.length !== bufB.length) return false;
-  return timingSafeEqual(bufA, bufB);
 }
 
 function isGoogleAuthenticated(firebase: Record<string, unknown> | undefined): boolean {
@@ -76,23 +70,35 @@ export async function verifyAdminPasscodeServer(
   const adminRoleRef = schoolRef.collection('roles_admin').doc(args.uid);
   // Primary: email allowlist from env var. Fallback: Firestore developer UID list
   // (survives env var misconfiguration / missing deploys).
-  const googleAdminBypass =
+  const developerCanBypass =
     isAllowedGoogleAdminBypass(args.email, googleAuth) ||
-    (googleAuth && await isDeveloperUid(db, args.uid));
+    (googleAuth && (await isDeveloperUid(db, args.uid)));
+  // Google/developer bypass applies only when no passcode was submitted (matches client gate).
+  const googleAdminBypass = developerCanBypass && passcode.length === 0;
 
   if (!googleAdminBypass) {
     if (passcode.length === 0) {
       throw new VerifyAdminPasscodeError('invalid-argument', 'A valid passcode is required.');
     }
 
-    const expected = adminPasscodeFrom((schoolDoc.data() ?? {}) as Record<string, unknown>);
-    if (!expected) {
-      throw new VerifyAdminPasscodeError(
-        'failed-precondition',
-        'This school has no admin passcode configured. An administrator must set one before login is possible.',
-      );
-    }
-    if (!safeEqual(expected, passcode)) {
+    const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
+    const legacyExpected = adminPasscodeFrom(schoolData);
+    if (
+      !(await verifyPasscodeCredential(
+        db,
+        schoolId,
+        PASSCODE_SECRET_IDS.admin,
+        passcode,
+        legacyExpected,
+        { kind: 'school', fields: ['adminPasscode', 'passcode'] },
+      ))
+    ) {
+      if (!legacyExpected) {
+        throw new VerifyAdminPasscodeError(
+          'failed-precondition',
+          'This school has no admin passcode configured. An administrator must set one before login is possible.',
+        );
+      }
       throw new VerifyAdminPasscodeError('permission-denied', 'Invalid passcode.');
     }
   }

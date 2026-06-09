@@ -1,6 +1,28 @@
 import { describe, expect, it, vi } from 'vitest';
 import { verifyStaffAccountPasscodeServer } from './verifyStaffPasscode';
 
+function secretsCollectionMock() {
+  return {
+    doc: vi.fn().mockReturnValue({
+      get: vi.fn().mockResolvedValue({ exists: false, data: () => undefined }),
+      set: vi.fn().mockResolvedValue(undefined),
+    }),
+  };
+}
+
+function schoolDocRefWithCollection(collectionMock: Record<string, unknown>) {
+  return {
+    collection: vi.fn((name: string) => {
+      if (name === 'secrets') return secretsCollectionMock();
+      if (name.startsWith('roles_')) {
+        return { doc: vi.fn().mockReturnValue({ set: vi.fn().mockResolvedValue(undefined) }) };
+      }
+      return collectionMock;
+    }),
+    update: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 describe('verifyStaffAccountPasscodeServer', () => {
   const createMockDb = (docs: any[]) => {
     const queryRes = {
@@ -14,6 +36,7 @@ describe('verifyStaffAccountPasscodeServer', () => {
 
     const docMock = {
       set: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
     };
 
     const collectionMock = {
@@ -23,9 +46,7 @@ describe('verifyStaffAccountPasscodeServer', () => {
       doc: vi.fn().mockReturnValue(docMock),
     };
 
-    const docRef = {
-      collection: vi.fn().mockReturnValue(collectionMock),
-    };
+    const docRef = schoolDocRefWithCollection(collectionMock);
 
     const schoolsCollection = {
       doc: vi.fn().mockReturnValue(docRef),
@@ -114,6 +135,7 @@ describe('verifyStaffAccountPasscodeServer', () => {
 
     const docMock = {
       set: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
     };
 
     // Chaining mock that shifts from returning empty results for .where() to full results for the fallback .get()
@@ -126,9 +148,7 @@ describe('verifyStaffAccountPasscodeServer', () => {
       doc: vi.fn().mockReturnValue(docMock),
     };
 
-    const docRef = {
-      collection: vi.fn().mockReturnValue(collectionMock),
-    };
+    const docRef = schoolDocRefWithCollection(collectionMock);
 
     const schoolsCollection = {
       doc: vi.fn().mockReturnValue(docRef),

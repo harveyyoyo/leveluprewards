@@ -46,6 +46,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+          AUTH_GATE_SIGNING_SECRET: ${{ secrets.AUTH_GATE_SIGNING_SECRET }}
         run: |
           {
             if [ -n "$OPENAI_API_KEY" ]; then
@@ -55,7 +56,11 @@ jobs:
               printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
             fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
-            printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
+            if [ -n "$AUTH_GATE_SIGNING_SECRET" ]; then
+              printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
+            else
+              echo '::warning::AUTH_GATE_SIGNING_SECRET not set — school gate cookies will not mint in production.'
+            fi
             printf 'OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'NEXT_PUBLIC_OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'

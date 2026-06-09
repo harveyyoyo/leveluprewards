@@ -25,7 +25,8 @@ import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePrint } from '@/components/providers/PrintProvider';
@@ -199,18 +200,8 @@ export function LibraryManagementPanel({
   const hasIntakeTab = !!(showIntakeScanner && onRegisterFromScan && upcTaken);
 
   return (
-    <Card className="w-full border-t-4 border-primary shadow-md overflow-hidden bg-background/95 backdrop-blur-md">
-      <CardHeader className="py-6 bg-secondary/35 border-b border-border/40">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Helper content="Catalog books with unique LIB barcodes. Manage cataloging, print sticker labels, and track loans. Students scan their card, then the book, to check out or return.">
-              <CardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-                <Book className="w-6 h-6 text-primary" /> Library Center
-              </CardTitle>
-            </Helper>
-          </div>
-        </div>
-      </CardHeader>
+    <StaffPortalTabPanel tabValue="library">
+    <Card className="w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
 
       <CardContent className="p-6 space-y-6">
         <Tabs defaultValue="catalog" className="w-full space-y-6">
@@ -254,7 +245,7 @@ export function LibraryManagementPanel({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="bg-background/40 hover:bg-background/60 transition-colors border border-primary/10 rounded-2xl">
                 <CardContent className="flex items-center gap-4 p-4">
-                  <div className="p-3 bg-primary/10 rounded-xl text-primary">
+                  <div className="p-3 bg-ring/10 rounded-xl text-ring">
                     <Book className="h-6 w-6" />
                   </div>
                   <div>
@@ -688,11 +679,15 @@ export function LibraryManagementPanel({
               <Card className="rounded-2xl border border-primary/20 overflow-hidden shadow-md bg-background/50">
                 <CardHeader className="py-4 bg-secondary/25 border-b border-border/20">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <Helper content="Fast cataloging using external hardware scanner or barcode camera.">
+                    <div className="flex items-center gap-1.5">
                       <CardTitle className="text-sm font-bold flex items-center gap-2">
-                        <SlidersHorizontal className="h-4 w-4 text-primary" /> Book Scanner Registration
+                        <SlidersHorizontal className="h-4 w-4 text-ring" /> Book Scanner Registration
                       </CardTitle>
-                    </Helper>
+                      <StaffPortalTabInfoPopover
+                        sections={[staffPortalTabInfoSection('Fast cataloging using external hardware scanner or barcode camera.')]}
+                        ariaLabel="About book scanner registration"
+                      />
+                    </div>
                     <Button
                       onClick={onAddLibraryItem}
                       className="rounded-xl h-10 font-bold shadow-sm gap-1 bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
@@ -723,6 +718,7 @@ export function LibraryManagementPanel({
         </Tabs>
       </CardContent>
     </Card>
+    </StaffPortalTabPanel>
   );
 }
 

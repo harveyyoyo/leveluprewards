@@ -10,8 +10,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-;
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
@@ -51,22 +51,18 @@ export function AdminClassesTab({
   };
 
   return (
-    <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6 bg-secondary">
-        <div>
-          <Helper content="Manage class groups for your school.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-ring" /> Classes
-            </StaffPortalSectionCardTitle>
-          </Helper>
-        </div>
+    <StaffPortalTabPanel
+      tabValue="classes"
+      trailing={
         <div className="flex flex-wrap items-center gap-2">
           <TabWalkthroughHeaderAction />
           <Button onClick={onAddClass} className="rounded-xl">
             <Plus className="mr-2 h-4 w-4" /> Add Class
           </Button>
         </div>
-      </StaffPortalSectionCardHeader>
+      }
+    >
+    <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardContent>
         <ul className="space-y-4 pr-1">
           {classes && classes.length > 0 ? (
@@ -220,5 +216,6 @@ export function AdminClassesTab({
         </ul>
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

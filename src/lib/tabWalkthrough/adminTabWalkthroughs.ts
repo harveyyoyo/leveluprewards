@@ -113,9 +113,9 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         ],
       },
       {
-        title: 'Review coupon inventory',
+        title: 'Review inventory',
         checklist: [
-          'Open Coupon inventory to see available and redeemed codes.',
+          'Open Inventory to see available and redeemed codes.',
           'Search by code or filter by category and teacher to audit a print run.',
           'Delete unused codes or purge redeemed history when cleaning up.',
         ],
@@ -172,7 +172,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   insights: {
-    title: 'Insights tab',
+    title: 'Analytics tab',
     subtitle: 'Analytics and school-wide trends',
     steps: [
       {
@@ -200,19 +200,6 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Prefer teacher reward rules over legacy class-period assignments.',
           'Use the in-tab Example walkthrough for a full sample setup.',
-        ],
-      },
-    ],
-  },
-  halloffame: {
-    title: 'Hall of Fame tab',
-    subtitle: 'Class and school leaderboards',
-    steps: [
-      {
-        title: 'Configure display',
-        checklist: [
-          'Choose whether leaders show by period or lifetime points.',
-          'Pick which classes appear on the public leaderboard display.',
         ],
       },
     ],

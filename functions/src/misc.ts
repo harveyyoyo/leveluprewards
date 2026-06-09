@@ -1867,8 +1867,20 @@ exports.verifyTeacherPasscode = functions.https.onCall(
     const teacherDoc = teachersSnap.docs[0];
     const teacherData = teacherDoc.data();
 
-    // Check if the passcode matches
-    if (teacherData.passcode !== passcode) {
+    const { verifyPasscodeCredential } = await import("./passcodeCredential");
+    const { teacherPasscodeSecretId } = await import("./passcodeSecrets");
+    const legacyPasscode =
+      teacherData.passcode !== undefined && teacherData.passcode !== null
+        ? String(teacherData.passcode).trim()
+        : "";
+    const verified = await verifyPasscodeCredential(
+      schoolId,
+      teacherPasscodeSecretId(teacherDoc.id),
+      passcode,
+      legacyPasscode,
+      { kind: "teacher", teacherId: teacherDoc.id },
+    );
+    if (!verified) {
       throw new functions.https.HttpsError("permission-denied", "Invalid teacher passcode.");
     }
 
@@ -2022,13 +2034,28 @@ exports.verifyStaffAccountPasscode = functions.https.onCall(
       }
     }
 
-    const match = accountsSnap.docs.find((d) => {
-      const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
+    const { verifyPasscodeCredential } = await import("./passcodeCredential");
+    const { staffPasscodeSecretId } = await import("./passcodeSecrets");
+
+    let match: (typeof accountsSnap.docs)[number] | undefined;
+    for (const docSnap of accountsSnap.docs) {
+      const row = docSnap.data() as { passcode?: string; role?: string; roles?: string[] };
       const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-      const dbPasscode = row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : "";
-      const inputPasscode = passcode !== undefined && passcode !== null ? String(passcode).trim() : "";
-      return roles.includes(role) && dbPasscode === inputPasscode;
-    });
+      if (!roles.includes(role)) continue;
+      const legacyPasscode =
+        row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : "";
+      const ok = await verifyPasscodeCredential(
+        schoolId,
+        staffPasscodeSecretId(docSnap.id),
+        passcode,
+        legacyPasscode,
+        { kind: "staff", staffAccountId: docSnap.id },
+      );
+      if (ok) {
+        match = docSnap;
+        break;
+      }
+    }
 
     if (!match) {
       throw new functions.https.HttpsError("permission-denied", "Invalid staff login.");

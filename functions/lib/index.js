@@ -20,4 +20,5 @@ __exportStar(require("./rewards"), exports);
 __exportStar(require("./backups"), exports);
 __exportStar(require("./developer"), exports);
 __exportStar(require("./misc"), exports);
+__exportStar(require("./passcodeTriggers"), exports);
 //# sourceMappingURL=index.js.map

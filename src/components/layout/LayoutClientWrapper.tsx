@@ -19,6 +19,7 @@ import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
+import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
@@ -144,6 +145,9 @@ function LayoutClientWrapperInner({
     /** In-school kiosk surfaces (/student, /prize) — locked viewport, internal scroll. */
     const isStudentKioskSurface =
       typeof pathname === 'string' && /\/(?:student|prize)(?:\/|$)/.test(pathname);
+    /** Student kiosk page — header tucks away until the pointer reaches the top edge. */
+    const isStudentKioskPage =
+      typeof pathname === 'string' && /\/student(?:\/|$)/.test(pathname);
     /** Any student-facing rewards surface (kiosk + home portal). */
     const isStudentRewardsPage = isStudentKioskSurface || isStudentHomePage;
     const isKioskPortraitRoute =
@@ -162,12 +166,13 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Student kiosk: always tuck/reveal on scroll (same pull-down as portals). */
-    const useKioskScrollRevealHeader = isStudentKioskSurface && canShowGlobalHeader;
-    /** Staff/student-home portals: tuck/reveal only when the display setting is on. */
+    /** Student kiosk: fully hidden until the pointer moves to the top edge. */
+    const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
+    const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader);
+    /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
     const usePortalScrollRevealHeader =
-      hideHeaderEnabled && canShowGlobalHeader && !isStudentKioskSurface;
-    const useScrollRevealHeader = useKioskScrollRevealHeader || usePortalScrollRevealHeader;
+      hideHeaderEnabled && canShowGlobalHeader && !isStudentKioskPage && !isPortalChoosePage;
+    const useScrollRevealHeader = usePortalScrollRevealHeader;
     const scrollRevealHeaderVisible = useScrollTopRevealChrome(useScrollRevealHeader);
     /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
     const isStaffPortalShellRoot =
@@ -469,7 +474,15 @@ function LayoutClientWrapperInner({
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
                     {shouldRenderGlobalHeader &&
                         !isFullscreenSpecialPage &&
-                        (useScrollRevealHeader ? (
+                        (useStudentKioskTopEdgeHeader ? (
+                            <HoverRevealHeaderShell
+                                visible={studentKioskTopEdgeHeaderVisible}
+                                peekWhenHidden={false}
+                                layout="overlay"
+                            >
+                                <Header />
+                            </HoverRevealHeaderShell>
+                        ) : useScrollRevealHeader ? (
                             <HoverRevealHeaderShell
                                 visible={scrollRevealHeaderVisible}
                                 peekWhenHidden
@@ -511,7 +524,7 @@ function LayoutClientWrapperInner({
                             />
                         </div>
                     )}
-                    {nonCriticalUiReady && settings.showIntroWizard !== false && <IntroWizard />}
+                    {nonCriticalUiReady && settings.activeTourId && <IntroWizard />}
                     {nonCriticalUiReady &&
                       !hideAppChrome &&
                       !isFullscreenSpecialPage &&

@@ -49,6 +49,11 @@ import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWi
 import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
 import { StaffPortalLayoutProvider, useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
+import {
+  StaffPortalSectionCard,
+  StaffPortalSectionCardContent,
+} from '@/components/staff/StaffPortalSection';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
 import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs, staffPortalAllAddOnTabValues, staffPortalMergePinnedAddOnValues } from '@/lib/staffPortal';
@@ -89,7 +94,6 @@ import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
 import {
-  teacherPortalPanelClassName,
   teacherPortalTabContentClassName,
 } from '@/components/staff/teacherPortalLayout';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
@@ -234,28 +238,22 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                    <h3 className="text-lg font-black flex items-center gap-2">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                        Homework Rewards
-                    </h3>
-                    <p className="text-sm text-muted-foreground font-medium">Give quick points for completed homework without adding anything to the student portal.</p>
-                </div>
-                <TabWalkthroughHeaderAction />
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <StaffPortalTabPanel
+            tabValue="homework"
+            trailing={
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <TabWalkthroughHeaderAction />
                     <div className="relative group">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                         <Input
                             placeholder="Search name or ID..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="h-11 w-full sm:w-64 rounded-xl pl-9 transition-all bg-slate-50"
+                            className="h-11 w-full sm:w-52 rounded-xl pl-9 bg-muted/40"
                         />
                     </div>
                     <Select value={filterClassId} onValueChange={(val) => { setFilterClassId(val); localStorage.setItem('defaultClassId', val); }}>
-                        <SelectTrigger className="h-11 w-full sm:w-52 rounded-xl font-bold">
+                        <SelectTrigger className="h-11 w-full sm:w-44 rounded-xl">
                             <SelectValue placeholder="All classes" />
                         </SelectTrigger>
                         <SelectContent>
@@ -263,13 +261,12 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                             {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" className="h-11 rounded-xl font-black uppercase tracking-widest text-xs" onClick={toggleAllVisibleStudents}>
+                    <Button variant="outline" className="h-11 rounded-xl text-xs" onClick={toggleAllVisibleStudents}>
                         {filteredStudents.length > 0 && filteredStudents.every((student) => selectedStudentIds.includes(student.id)) ? 'Deselect visible' : 'Select visible'}
                     </Button>
-                </div>
-                <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                    <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
                     <DialogTrigger asChild>
-                        <Button className="rounded-xl font-black uppercase tracking-widest gap-2">
+                        <Button className="rounded-xl gap-2">
                             <Plus className="w-4 h-4" />
                             New Reward
                         </Button>
@@ -314,14 +311,15 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
-            </div>
-
-            <Card className="border-dashed">
+                </div>
+            }
+        >
+            <StaffPortalSectionCard className="w-full overflow-hidden border-dashed">
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-black">Students to Reward</CardTitle>
+                    <CardTitle className="text-base font-semibold">Students to Reward</CardTitle>
                     <CardDescription>{selectedStudentIds.length} selected</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <StaffPortalSectionCardContent>
                     {filteredStudents.length > 0 ? (
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {filteredStudents.map((student) => {
@@ -348,16 +346,18 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                             })}
                         </div>
                     ) : (
-                        <p className="py-8 text-center text-sm font-bold text-muted-foreground">No students found for this class.</p>
+                        <p className="py-8 text-center text-sm text-muted-foreground">No students found for this class.</p>
                     )}
-                </CardContent>
-            </Card>
+                </StaffPortalSectionCardContent>
+            </StaffPortalSectionCard>
 
             {assignmentsLoading ? (
                 <div className="grid gap-4 md:grid-cols-2">
                     {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
                 </div>
             ) : myAssignments.length > 0 ? (
+                <StaffPortalSectionCard className="w-full overflow-hidden">
+                    <StaffPortalSectionCardContent className="p-4 md:p-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {myAssignments.map(assignment => (
                         <Card key={assignment.id} className="border-t-4 border-primary">
@@ -389,24 +389,26 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                         </Card>
                     ))}
                 </div>
+                    </StaffPortalSectionCardContent>
+                </StaffPortalSectionCard>
             ) : (
-                <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40 bg-muted/20 rounded-3xl border-2 border-dashed">
-                    <BookOpen className="w-16 h-16 text-slate-300" />
-                    <p className="text-sm font-bold uppercase tracking-widest">No homework rewards saved yet</p>
-                </div>
+                <StaffPortalSectionCard className="w-full overflow-hidden">
+                    <StaffPortalSectionCardContent className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-60">
+                    <BookOpen className="w-16 h-16 text-muted-foreground/40" />
+                    <p className="text-sm font-medium text-muted-foreground">No homework rewards saved yet</p>
+                    </StaffPortalSectionCardContent>
+                </StaffPortalSectionCard>
             )}
-        </div>
+        </StaffPortalTabPanel>
     );
 }
 
 function TeacherClassesTab({
     teacherId,
     classes,
-    isGraphic,
 }: {
     teacherId: string;
     classes: Class[];
-    isGraphic: boolean;
 }) {
     const { addClass, updateClass } = useAppContext();
     const { toast } = useToast();
@@ -470,54 +472,27 @@ function TeacherClassesTab({
     };
 
     return (
-        <div className="flex flex-col gap-6 items-center">
-            <Card
-                className={cn(
-                    'w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl',
-                    isGraphic
-                        ? 'bg-card/60 backdrop-blur-2xl border-chart-1 shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
-                        : 'bg-white border-chart-1 shadow-lg',
-                )}
-            >
-                <CardHeader className="p-4 md:p-6 pb-2">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center gap-3">
-                            <div
-                                className={cn(
-                                    'p-2 rounded-xl',
-                                    isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
-                                )}
-                            >
-                                <BookOpen className="w-6 h-6" />
-                            </div>
-                            Classes
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                            <TabWalkthroughHeaderAction />
-                        <div className="flex items-center gap-2">
-                            <TabWalkthroughHeaderAction />
-                            <Button variant="outline" className="rounded-xl gap-2 h-10 px-4" onClick={() => setIsCreateClassDialogOpen(true)}>
-                                <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">New Class</span>
-                            </Button>
-                        </div>
-                    </div>
-                    </div>
-                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                        Manage the classes you teach. Students in your classes are automatically added to your attendance and prize lists.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6 pt-0">
+        <StaffPortalTabPanel
+            tabValue="classes"
+            trailing={
+                <div className="flex flex-wrap items-center gap-2">
+                    <TabWalkthroughHeaderAction />
+                    <Button variant="outline" className="rounded-xl gap-2 h-10 px-4" onClick={() => setIsCreateClassDialogOpen(true)}>
+                        <Plus className="w-4 h-4" />
+                        <span className="hidden sm:inline">New Class</span>
+                    </Button>
+                </div>
+            }
+        >
+            <StaffPortalSectionCard className="w-full overflow-hidden">
+                <StaffPortalSectionCardContent className="p-4 md:p-6">
                     <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                         {myClasses.map((c) => (
                             <div
                                 key={c.id}
-                                className={cn(
-                                    'flex items-center justify-between p-3 rounded-2xl border group transition-all hover:border-chart-1/50',
-                                    isGraphic ? 'bg-background/40 border-white/10' : 'bg-muted/30',
-                                )}
+                                className="flex items-center justify-between p-3 rounded-2xl border group transition-all hover:border-primary/30 bg-muted/30"
                             >
-                                <span className="font-bold truncate px-1">{c.name}</span>
+                                <span className="font-semibold truncate px-1">{c.name}</span>
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -532,14 +507,11 @@ function TeacherClassesTab({
                         {unassignedClasses.length > 0 && (
                             <Button
                                 variant="ghost"
-                                className={cn(
-                                    'h-auto p-3 border-2 border-dashed rounded-2xl flex flex-row items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-chart-1/50 transition-all',
-                                    isGraphic ? 'border-white/10' : 'border-muted',
-                                )}
+                                className="h-auto p-3 border-2 border-dashed rounded-2xl flex flex-row items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all border-muted"
                                 onClick={() => setIsClaimDialogOpen(true)}
                             >
                                 <Users className="w-5 h-5" />
-                                <span className="text-xs font-bold uppercase tracking-wider">Claim Class</span>
+                                <span className="text-xs font-semibold uppercase tracking-wider">Claim Class</span>
                             </Button>
                         )}
                         {myClasses.length === 0 && unassignedClasses.length === 0 && (
@@ -548,8 +520,8 @@ function TeacherClassesTab({
                             </div>
                         )}
                     </div>
-                </CardContent>
-            </Card>
+                </StaffPortalSectionCardContent>
+            </StaffPortalSectionCard>
 
             <Dialog open={isCreateClassDialogOpen} onOpenChange={setIsCreateClassDialogOpen}>
                 <DialogContent className="sm:max-w-md">
@@ -615,7 +587,7 @@ function TeacherClassesTab({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+        </StaffPortalTabPanel>
     );
 }
 
@@ -624,13 +596,11 @@ function TeacherRosterTab({
     allStudents,
     rosterStudents,
     classes,
-    isGraphic,
 }: {
     teacherId: string;
     allStudents: Student[];
     rosterStudents: Student[];
     classes: Class[];
-    isGraphic: boolean;
 }) {
     const { updateStudent } = useAppContext();
     const { toast } = useToast();
@@ -750,38 +720,26 @@ function TeacherRosterTab({
     };
 
     return (
-        <div className="flex flex-col gap-6 items-center">
-            <Card className={cn(
-                "w-full max-w-7xl border-t-8 transition-all duration-500 hover:shadow-2xl",
-                isGraphic ? 'bg-card/60 backdrop-blur-2xl border-chart-4 shadow-[0_20px_50px_rgba(0,0,0,0.1)]' : 'bg-white border-chart-4 shadow-lg'
-            )}>
-                <CardHeader className="p-4 md:p-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <CardTitle className="flex items-center gap-3">
-                        <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-chart-4/20 text-chart-4' : 'bg-primary/10 text-primary')}>
-                            <Users className="w-6 h-6" />
-                        </div>
-                        Students
-                    </CardTitle>
-                    <TabWalkthroughHeaderAction />
-                    <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                        Add or remove the direct student links for your teacher account. Students in classes you teach stay visible through that class.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 md:p-6 space-y-6">
+        <StaffPortalTabPanel
+            tabValue="roster"
+            trailing={<TabWalkthroughHeaderAction />}
+        >
+            <StaffPortalSectionCard className="w-full overflow-hidden">
+                <StaffPortalSectionCardContent className="p-4 md:p-6 space-y-6">
                     <div className="relative max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search students..."
-                            className={cn("h-11 rounded-xl pl-9", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-slate-50')}
+                            className="h-11 rounded-xl pl-9 bg-muted/40"
                         />
                     </div>
 
                     <div className="flex flex-col gap-6">
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">On my roster ({roster.length})</Label>
-                            <div className={cn("overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <div className="overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3 bg-muted/20">
                                 <div className="space-y-2 pr-3">
                                     {roster.map((student) => {
                                         const directlyLinked = (student.teacherIds || []).includes(teacherId);
@@ -806,7 +764,7 @@ function TeacherRosterTab({
                                         );
                                     })}
                                     {roster.length === 0 ? (
-                                        <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students on your roster.</p>
+                                        <p className="py-10 text-center text-sm text-muted-foreground">No matching students on your roster.</p>
                                     ) : null}
                                 </div>
                             </div>
@@ -814,7 +772,7 @@ function TeacherRosterTab({
 
                         <div className="space-y-2">
                             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Add students ({addable.length})</Label>
-                            <div className={cn("overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3", isGraphic ? 'bg-foreground/5 border-white/10' : 'bg-muted/20')}>
+                            <div className="overflow-y-auto max-h-[300px] min-h-[150px] rounded-2xl border p-3 bg-muted/20">
                                 <div className="space-y-2 pr-3">
                                     {addable.map((student) => (
                                         <div key={student.id} className="flex items-center justify-between gap-3 rounded-xl border bg-background/70 p-3">
@@ -832,15 +790,15 @@ function TeacherRosterTab({
                                         </div>
                                     ))}
                                     {addable.length === 0 ? (
-                                        <p className="py-10 text-center text-sm font-bold text-muted-foreground">No matching students to add.</p>
+                                        <p className="py-10 text-center text-sm text-muted-foreground">No matching students to add.</p>
                                     ) : null}
                                 </div>
                             </div>
                         </div>
                     </div>
-                </CardContent>
-            </Card>
-        </div>
+                </StaffPortalSectionCardContent>
+            </StaffPortalSectionCard>
+        </StaffPortalTabPanel>
     );
 }
 
@@ -924,28 +882,22 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
     }, [redemptions, filterType, teacherId]);
 
     return (
-        <Card className="md:col-span-2 border-t-8 border-chart-3 shadow-lg" data-intro-tour="teacher-redemptions">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2 text-xl font-black">
-                        <Gift className="w-6 h-6 text-chart-3" />
-                      Reward Redemptions
-                    </CardTitle>
-                    <CardDescription className="font-medium">
-                        Student purchases that need to be delivered.
-                    </CardDescription>
+        <StaffPortalTabPanel
+            tabValue="redemptions"
+            trailing={
+                <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+                    <TabWalkthroughHeaderAction />
+                    <Tabs value={filterType} onValueChange={(v: string) => setFilterType(v as 'all' | 'me')} className="w-[200px]">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="all" className="text-xs font-semibold">All</TabsTrigger>
+                            <TabsTrigger value="me" className="text-xs font-semibold">Mine</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                <TabWalkthroughHeaderAction />
-                <Tabs value={filterType} onValueChange={(v: any) => setFilterType(v)} className="w-[200px]">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="all" className="text-xs font-bold">All</TabsTrigger>
-                        <TabsTrigger value="me" className="text-xs font-bold">Mine</TabsTrigger>
-                    </TabsList>
-                </Tabs>
-                </div>
-            </CardHeader>
-            <CardContent>
+            }
+        >
+            <StaffPortalSectionCard className="w-full overflow-hidden" data-intro-tour="teacher-redemptions">
+                <StaffPortalSectionCardContent>
                 <ScrollArea className="h-96">
                     {isLoading ? (
                         <div className="space-y-4 pr-4">
@@ -955,30 +907,30 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                         <ul className="space-y-3 pr-4">
                             {filteredRedemptions.map((item) => (
                                 <li key={item.id} className={cn(
-                                    "group flex justify-between items-center bg-white dark:bg-slate-900/50 p-4 rounded-2xl border transition-all hover:shadow-md",
-                                    item.fulfilled ? "border-slate-100 opacity-60" : "border-chart-3/20 shadow-sm"
+                                    "group flex justify-between items-center bg-card p-4 rounded-2xl border transition-all hover:shadow-md",
+                                    item.fulfilled ? "border-border/60 opacity-60" : "border-primary/20 shadow-sm"
                                 )}>
                                     <div className="flex items-center gap-4">
                                         <Checkbox
                                             id={`fulfilled-${item.id}`}
                                             checked={item.fulfilled}
                                             onCheckedChange={(checked) => handleFulfillmentToggle(item.studentId, item.id, !!checked)}
-                                            className="w-6 h-6 rounded-lg data-[state=checked]:bg-chart-3 data-[state=checked]:border-chart-3"
+                                            className="w-6 h-6 rounded-lg data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                         />
                                         <div>
-                                            <p className="font-black text-slate-800 dark:text-slate-200 leading-none mb-1">
+                                            <p className="font-semibold leading-none mb-1">
                                                 {item.desc.replace('Redeemed: ', '')}
                                             </p>
-                                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                                            <p className="text-xs text-muted-foreground flex items-center gap-2">
                                                 {item.studentName} <span className="opacity-40">|</span> {item.studentClass}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <Badge variant="outline" className="font-black text-primary bg-primary/10 border-primary/20 mb-1">
+                                        <Badge variant="outline" className="font-semibold text-primary bg-primary/10 border-primary/20 mb-1">
                                             {item.amount} pts
                                         </Badge>
-                                        <p className="text-[10px] font-black text-muted-foreground uppercase opacity-40">
+                                        <p className="text-[10px] text-muted-foreground uppercase opacity-60">
                                             {new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} @ {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
@@ -986,14 +938,15 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                             ))}
                         </ul>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
-                            <Gift className="w-16 h-16 text-slate-300" />
-                            <p className="text-sm font-bold uppercase tracking-widest">No redemptions found</p>
+                        <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-60">
+                            <Gift className="w-16 h-16 text-muted-foreground/40" />
+                            <p className="text-sm font-medium text-muted-foreground">No redemptions found</p>
                         </div>
                     )}
                 </ScrollArea>
-            </CardContent>
-        </Card>
+                </StaffPortalSectionCardContent>
+            </StaffPortalSectionCard>
+        </StaffPortalTabPanel>
     );
 }
 
@@ -1081,20 +1034,12 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
     const redeemed = myCoupons.filter(c => c.used);
   
     return (
-      <Card className="md:col-span-2 border-t-8 border-primary shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-xl font-black">
-              <Ticket className="w-6 h-6 text-primary" />
-              My Generated Coupons
-            </CardTitle>
-            <CardDescription className="font-medium">
-              Coupons you have created, separated by availability.
-            </CardDescription>
-          </div>
-          <TabWalkthroughHeaderAction />
-        </CardHeader>
-        <CardContent className="grid md:grid-cols-2 gap-6">
+      <StaffPortalTabPanel
+        tabValue="generated-coupons"
+        trailing={<TabWalkthroughHeaderAction />}
+      >
+        <StaffPortalSectionCard className="w-full overflow-hidden">
+        <StaffPortalSectionCardContent className="grid md:grid-cols-2 gap-6 p-4 md:p-6">
           <div className="space-y-4">
             <h3 className="text-base font-bold text-foreground/80 uppercase tracking-widest pl-1">Available ({available.length})</h3>
             <ScrollArea className="h-72 border border-border/60 rounded-xl bg-background/50 backdrop-blur-sm">
@@ -1154,10 +1099,49 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
               ) : <p className="p-8 text-center text-sm text-muted-foreground font-medium italic">No redeemed coupons yet.</p>}
             </ScrollArea>
           </div>
-        </CardContent>
-      </Card>
+        </StaffPortalSectionCardContent>
+        </StaffPortalSectionCard>
+      </StaffPortalTabPanel>
     );
   }
+
+function TeacherAttendanceTab({
+    teacherId,
+    classes,
+    periods,
+    categories,
+}: {
+    teacherId: string;
+    classes: Class[];
+    periods: AttendanceScheduleSlot[];
+    categories: Category[];
+}) {
+    return (
+        <StaffPortalTabPanel
+            tabValue="attendance"
+            trailing={
+                <div className="flex flex-wrap items-center gap-2">
+                    <TabWalkthroughHeaderAction />
+                    <AttendanceSetupWizard variant="teacher" />
+                </div>
+            }
+        >
+            <StaffPortalSectionCard className="w-full overflow-hidden">
+                <StaffPortalSectionCardContent className="p-4 md:p-6">
+                    <p className="mb-4 max-w-prose text-sm text-muted-foreground">
+                        New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
+                    </p>
+                    <TeacherAttendanceRewardsPanel
+                        teacherId={teacherId}
+                        classes={classes}
+                        periods={periods}
+                        categories={categories}
+                    />
+                </StaffPortalSectionCardContent>
+            </StaffPortalSectionCard>
+        </StaffPortalTabPanel>
+    );
+}
 
 function TeacherAttendancePanel({
     teacherId,
@@ -2319,7 +2303,6 @@ function TeacherPrinterInnerBody({
 
                             {teacherTabEnabled('coupons') && (
                             <TeacherPortalTabPane tabId="coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <CategoryModal
                                     isOpen={isCategoryModalOpen}
                                     setIsOpen={setIsCategoryModalOpen}
@@ -2339,7 +2322,6 @@ function TeacherPrinterInnerBody({
                                     issuerDisplayName={teacherName}
                                     isGraphic={isGraphic}
                                     printAccentColor={teacherAccent}
-                                    className={teacherPortalPanelClassName(isWide)}
                                     onAddCategory={!secretaryMode ? () => handleOpenCategoryModal(null) : undefined}
                                     onEditCategory={!secretaryMode ? (c) => handleOpenCategoryModal(c) : undefined}
                                     onDeleteCategory={
@@ -2408,13 +2390,11 @@ function TeacherPrinterInnerBody({
                                             : undefined
                                     }
                                 />
-                                </div>
                             </TeacherPortalTabPane>
                             )}
 
                             {teacherTabEnabled('classroom') && (
                             <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                 <StaffClassroomTab
                                     variant="teacher"
                                     schoolId={schoolId!}
@@ -2425,7 +2405,6 @@ function TeacherPrinterInnerBody({
                                     schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
                                     isGraphic={isGraphic}
                                     manualAccentColor={teacherAccent}
-                                    className={teacherPortalPanelClassName(isWide)}
                                     manualBudgetOptions={
                                         isAdmin
                                             ? undefined
@@ -2446,112 +2425,57 @@ function TeacherPrinterInnerBody({
                                               }
                                     }
                                 />
-                                </div>
                             </TeacherPortalTabPane>
                             )}
 
                             {teacherTabEnabled('generated-coupons') && (
                             <TeacherPortalTabPane tabId="generated-coupons" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <MyCoupons
                                         schoolId={schoolId!}
                                         teacherId={teacherId}
                                         teacherName={teacherName}
                                         students={studentsForTeacherActions}
                                     />
-                                </div>
                             </TeacherPortalTabPane>
                             )}
 
 
                             <TeacherPortalTabPane tabId="roster" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherRosterTab
                                         teacherId={teacherId}
                                         allStudents={students || []}
                                         rosterStudents={studentsForTeacherActions}
                                         classes={classes || []}
-                                        isGraphic={isGraphic}
                                     />
-                                </div>
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="classes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherClassesTab
                                         teacherId={teacherId}
                                         classes={classes || []}
-                                        isGraphic={isGraphic}
                                     />
-                                </div>
                             </TeacherPortalTabPane>
 
                             {teacherTabEnabled('attendance') && (
                             <TeacherPortalTabPane tabId="attendance" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
-                                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/30 px-4 py-3 mb-6">
-                                    <p className="text-sm text-muted-foreground max-w-prose">
-                                        New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
-                                    </p>
-                                    <TabWalkthroughHeaderAction />
-                                    <AttendanceSetupWizard variant="teacher" />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <Card className={cn(
-                                        "md:col-span-2 border-t-8 transition-all duration-500 hover:shadow-2xl",
-                                        isGraphic
-                                            ? 'bg-card/60 backdrop-blur-2xl border-primary shadow-[0_20px_50px_rgba(0,0,0,0.1)]'
-                                            : 'bg-white border-primary shadow-lg'
-                                    )}>
-                                        <CardHeader className="p-4 md:p-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                            <div>
-                                                <CardTitle className="flex items-center gap-3">
-                                                    <div className={cn("p-2 rounded-xl", isGraphic ? 'bg-primary/20 text-primary' : 'bg-primary/10 text-primary')}>
-                                                        <Clock className="w-6 h-6" />
-                                                    </div>
-                                                    Attendance Rewards
-                                                </CardTitle>
-                                                <CardDescription className={isGraphic ? 'text-muted-foreground/80' : ''}>
-                                                    Create the rules that award attendance points during active class periods.
-                                                </CardDescription>
-                                            </div>
-                                            <TabWalkthroughHeaderAction />
-                                        </CardHeader>
-                                        <CardContent className="p-4 md:p-6">
-                                            <TeacherAttendanceRewardsPanel
-                                                teacherId={teacherId}
-                                                classes={classes || []}
-                                                periods={periods || []}
-                                                categories={categories || []}
-                                            />
-                                        </CardContent>
-                                    </Card>
-                                </div>
-                                </div>
+                                <TeacherAttendanceTab
+                                    teacherId={teacherId}
+                                    classes={classes || []}
+                                    periods={periods || []}
+                                    categories={categories || []}
+                                />
                             </TeacherPortalTabPane>
                             )}
 
                             <TeacherPortalTabPane tabId="prizes" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
-                                <div className="grid grid-cols-1 gap-8">
-                                    <div className="w-full">
                                         <TeacherPrizeManager schoolId={schoolId!} teacherId={teacherId} teachers={teachers} />
-                                    </div>
-                                </div>
-                                </div>
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="redemptions" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <RecentRedemptions schoolId={schoolId!} students={studentsForTeacherActions} classes={classes || []} teacherId={teacherId} />
-                                </div>
-                                </div>
                             </TeacherPortalTabPane>
 
                             <TeacherPortalTabPane tabId="reports" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
-                                    <div className="w-full">
                                         <SchoolReportsPanel
                                             scope="teacher"
                                             schoolName={schoolDocData?.name?.trim() || 'School'}
@@ -2565,26 +2489,21 @@ function TeacherPrinterInnerBody({
                                             categories={categories || []}
                                             rafflePointsPerTicket={settings.rafflePointsPerTicket}
                                         />
-                                    </div>
-                                </div>
-                                </TeacherPortalTabPane>
+                            </TeacherPortalTabPane>
 
                             {teacherTabEnabled('raffle') && (
                                 <TeacherPortalTabPane tabId="raffle" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                    <div className={teacherPortalPanelClassName(isWide)}>
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
                                             canEditSettings={!secretaryMode}
                                             operatorName={teacherName || undefined}
                                         />
-                                    </div>
                                 </TeacherPortalTabPane>
                             )}
 
                                 {teacherTabEnabled('goals') && (
                                     <TeacherPortalTabPane tabId="goals" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                        <div className={teacherPortalPanelClassName(isWide)}>
                                             <GoalsManager
                                                 schoolId={schoolId!}
                                                 variant="teacher"
@@ -2596,22 +2515,18 @@ function TeacherPrinterInnerBody({
                                                 prizes={prizes ?? []}
                                                 isGraphic={isGraphic}
                                             />
-                                        </div>
                                     </TeacherPortalTabPane>
                                 )}
 
                             {teacherTabEnabled('homework') && (
                                 <TeacherPortalTabPane tabId="homework" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className={teacherPortalPanelClassName(isWide)}>
                                     <TeacherHomeworkTab schoolId={schoolId!} teacherId={teacherId} students={studentsForTeacherActions} classes={classesForTeacherUi} />
-                                </div>
                             </TeacherPortalTabPane>
                             )}
 
                             <TeacherStaffPortalAddonTabPanels
                                 activeTab={resolvedTeacherTab}
                                 teacherTabEnabled={teacherTabEnabled}
-                                isWide={isWide}
                                 schoolId={schoolId!}
                                 students={students}
                                 classes={classes}

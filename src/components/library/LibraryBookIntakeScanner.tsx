@@ -335,7 +335,7 @@ export function LibraryBookIntakeScanner({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
-            <ScanLine className="h-4 w-4 text-primary" />
+            <ScanLine className="h-4 w-4 text-ring" />
             Book intake
           </h3>
           <p className="text-xs text-muted-foreground">

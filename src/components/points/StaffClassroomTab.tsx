@@ -17,7 +17,8 @@ import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/Cla
 import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
 import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { Card, CardContent } from '@/components/ui/card';
 import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 import type { Category, Class, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -145,14 +146,9 @@ export function StaffClassroomTab({
 
   if (!classroomOn) {
     return (
-      <Card className={cn(CLASSROOM_SECTION_CARD, className)}>
-        <CardHeader className="border-b border-border/40 bg-secondary/35 p-4 sm:p-6">
-          <CardTitle className="flex items-center gap-2 text-xl font-black tracking-tight sm:text-2xl">
-            <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden />
-            {CLASSROOM_TAB_LABEL}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 p-4 sm:p-6">
+      <StaffPortalTabPanel tabValue="classroom" className={className}>
+        <Card className={cn(CLASSROOM_SECTION_CARD, 'rounded-2xl border border-border/60 border-t-0 shadow-sm')}>
+          <CardContent className="space-y-4 p-4 sm:p-6">
           <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
             {canEnableClassroomPillar
               ? `${CLASSROOM_TAB_LABEL} is not enabled. Run the setup wizard to turn on seating charts and quick awards for teachers.`
@@ -167,7 +163,8 @@ export function StaffClassroomTab({
             />
           ) : null}
         </CardContent>
-      </Card>
+        </Card>
+      </StaffPortalTabPanel>
     );
   }
 

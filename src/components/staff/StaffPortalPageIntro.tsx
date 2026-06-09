@@ -1,7 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Helper } from '@/components/ui/helper';
+import {
+  StaffPortalTabInfoPopover,
+  staffPortalTabInfoSection,
+} from '@/components/staff/StaffPortalTabInfoPopover';
 import { cn } from '@/lib/utils';
 import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
 import { staffPortalPageIntroClassName } from '@/components/staff/staffPortalNavStyles';
@@ -33,12 +36,16 @@ export function StaffPortalPageIntro({
         className,
       )}
     >
-      <Helper content={helperContent}>
-        <div>
+      <div>
+        <div className="flex items-center gap-1.5">
           <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
+          <StaffPortalTabInfoPopover
+            sections={[staffPortalTabInfoSection(helperContent)]}
+            ariaLabel={`About ${title}`}
+          />
         </div>
-      </Helper>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>
+      </div>
       {trailing ? (
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:self-start">
           {trailing}

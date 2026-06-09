@@ -11,7 +11,6 @@ import {
   Hexagon,
   LineChart,
   PieChart,
-  Rows3,
   Thermometer,
 } from 'lucide-react';
 import {
@@ -80,7 +79,6 @@ const FORMAT_OPTIONS: {
   label: string;
   icon: LucideIcon;
 }[] = [
-  { id: 'bars', label: 'Inline bars (in table)', icon: Rows3 },
   { id: 'columns', label: 'Column chart', icon: BarChart3 },
   { id: 'horizontal', label: 'Horizontal bars', icon: BarChartHorizontal },
   { id: 'line', label: 'Line chart', icon: LineChart },
@@ -110,8 +108,9 @@ export function isHouseStandingsChartFormat(value: string): value is HouseStandi
 export function normalizeHouseStandingsChartFormat(
   value: string | undefined | null,
 ): HouseStandingsChartFormat {
+  if (value === 'bars') return 'columns';
   if (value && isHouseStandingsChartFormat(value)) return value;
-  return 'bars';
+  return 'columns';
 }
 
 function HouseStandingsChartLegend({
@@ -235,7 +234,9 @@ function HouseStandingsChartBody({
   totalPts,
   maxPts,
 }: ChartBodyProps) {
-  if (format === 'columns') {
+  const resolvedFormat = format === 'bars' ? 'columns' : format;
+
+  if (resolvedFormat === 'columns') {
     return (
       <ChartContainer config={chartConfig} className="h-[min(280px,40vh)] w-full aspect-auto">
         <BarChart data={chartData} margin={CHART_MARGIN}>
@@ -260,7 +261,7 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'horizontal') {
+  if (resolvedFormat === 'horizontal') {
     return (
       <ChartContainer config={chartConfig} className="h-[min(320px,45vh)] w-full aspect-auto">
         <BarChart data={chartData} layout="vertical" margin={HORIZONTAL_MARGIN}>
@@ -283,7 +284,7 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'line') {
+  if (resolvedFormat === 'line') {
     return (
       <ChartContainer config={chartConfig} className="h-[min(260px,38vh)] w-full aspect-auto">
         <RechartsLineChart data={chartData} margin={CHART_MARGIN}>
@@ -331,7 +332,7 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'area') {
+  if (resolvedFormat === 'area') {
     return (
       <ChartContainer config={chartConfig} className="h-[min(260px,38vh)] w-full aspect-auto">
         <AreaChart data={chartData} margin={CHART_MARGIN}>
@@ -386,8 +387,8 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'pie' || format === 'donut') {
-    const innerRadius = format === 'donut' ? 44 : 0;
+  if (resolvedFormat === 'pie' || resolvedFormat === 'donut') {
+    const innerRadius = resolvedFormat === 'donut' ? 44 : 0;
     return (
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
         <ChartContainer config={chartConfig} className="h-[220px] w-full max-w-[260px] mx-auto aspect-square">
@@ -401,7 +402,7 @@ function HouseStandingsChartBody({
               cy="50%"
               innerRadius={innerRadius}
               outerRadius={80}
-              paddingAngle={format === 'donut' ? 2 : 1}
+              paddingAngle={resolvedFormat === 'donut' ? 2 : 1}
               isAnimationActive
               animationDuration={650}
             >
@@ -414,7 +415,7 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'radar') {
+  if (resolvedFormat === 'radar') {
     const radarMax = Math.max(maxPts, 1);
     return (
       <ChartContainer config={chartConfig} className="h-[min(280px,42vh)] w-full max-w-lg mx-auto aspect-square">
@@ -445,7 +446,7 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'radial') {
+  if (resolvedFormat === 'radial') {
     return (
       <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
         <ChartContainer config={chartConfig} className="h-[240px] w-full max-w-[280px] mx-auto aspect-square">
@@ -474,16 +475,8 @@ function HouseStandingsChartBody({
     );
   }
 
-  if (format === 'thermometer') {
+  if (resolvedFormat === 'thermometer') {
     return <HouseStandingsThermometerView rows={rows} maxPts={maxPts} />;
-  }
-
-  if (format === 'bars') {
-    return (
-      <p className="py-6 text-center text-xs text-muted-foreground">
-        Inline bars are shown in the ranked standings below. Pick another format above to see a chart here.
-      </p>
-    );
   }
 
   return null;

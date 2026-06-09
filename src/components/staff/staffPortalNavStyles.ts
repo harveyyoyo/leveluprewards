@@ -82,6 +82,7 @@ export function staffPortalSectionCardInWorkspaceClassName(className?: string) {
   return cn(
     className,
     'w-full min-w-0 overflow-hidden rounded-none border-0 bg-transparent shadow-none',
+    'hover:shadow-none motion-reduce:hover:shadow-none',
   );
 }
 
@@ -138,6 +139,7 @@ export function staffPortalSectionCardClassName(className?: string) {
   return cn(
     className,
     'w-full min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm',
+    'hover:shadow-sm motion-reduce:hover:shadow-sm',
   );
 }
 
@@ -151,6 +153,39 @@ export function staffPortalSectionCardHeaderClassName(className?: string) {
 
 export function staffPortalSectionCardTitleClassName(className?: string) {
   return cn(className, 'text-lg font-bold tracking-tight text-foreground flex items-center gap-2');
+}
+
+/** Tab-level page title (matches sidebar label). */
+export function staffPortalTabHeaderTitleClassName(className?: string) {
+  return cn(
+    className,
+    'text-xl font-bold tracking-tight text-foreground sm:text-2xl flex items-center gap-2.5',
+  );
+}
+
+/** Tab-level header icon beside the title. */
+export function staffPortalTabHeaderIconClassName(className?: string) {
+  return cn('h-5 w-5 shrink-0 text-primary sm:h-6 sm:w-6', className);
+}
+
+/** Shared shell — rounded cream panel above tab content (Hall of Fame reference). */
+export function staffPortalTabPageHeaderShellClassName(className?: string) {
+  return cn(
+    className,
+    'rounded-2xl border border-border/50 bg-secondary/80 shadow-sm',
+    'px-5 py-5 sm:px-6 sm:py-6',
+    'dark:bg-secondary/30 dark:border-border/60',
+  );
+}
+
+/** Standard gap between tab header panel and content card. */
+export function staffPortalTabPanelClassName(className?: string) {
+  return cn('flex min-w-0 w-full flex-col gap-4', className);
+}
+
+/** Section title / header icons — theme second accent (amber in sapphire). */
+export function staffPortalSectionIconClassName(className?: string) {
+  return cn('shrink-0 text-ring', className);
 }
 
 /** Sticky list column header — subtle strip. */

@@ -65,7 +65,6 @@ export const ADMIN_SETTINGS_TAB_VALUES = new Set([
     'notifications',
     'branding',
     'student-portal',
-    'halloffame',
     'displays',
     'library',
     'houses',

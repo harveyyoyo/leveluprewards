@@ -237,7 +237,7 @@ interface Settings {
     studentPortalLockBrowserToStudent?: boolean;
     /** @deprecated No longer used — student home never shows the global site header. */
     studentPortalShowHeader?: boolean;
-    /** When true, tuck the school header off-screen on portal pages (reveals at scroll top or top-edge hover on kiosks). */
+    /** When true, tuck the school header on staff/inner routes; main portal hub and student kiosk are excluded. */
     hideSiteHeaderOutsidePortal?: boolean;
     /**
      * When true, student kiosk screens (portal hub, sign-in, rewards shop) use a tall narrow
@@ -266,7 +266,7 @@ interface Settings {
     bathroomRequirePresent?: boolean;
     // Guidance
     enableHelperMode: boolean;
-    showIntroWizard?: boolean;
+    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | null;
     // Workflow
     enableTeacherBudgets: boolean;
     /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
@@ -704,7 +704,7 @@ const defaultSettings: Settings = {
     bathroomMaxMinutes: 5,
     bathroomRequirePresent: true,
     enableHelperMode: true,
-    showIntroWizard: true,
+    activeTourId: 'welcome',
     enableTeacherBudgets: false,
     enableTeacherGeneratedCouponsTab: false,
     enableHomework: false,

@@ -295,7 +295,7 @@ export function LibraryStudentSelfCheckoutPortal({
         <div
           className={cn(
             'flex h-16 w-16 items-center justify-center rounded-2xl border-2 shadow-sm',
-            step === 'student' && 'border-primary bg-primary/10 text-primary',
+            step === 'student' && 'border-primary bg-ring/10 text-ring',
             step === 'book' && 'border-amber-400 bg-amber-50 text-amber-800',
             step === 'success' && 'border-emerald-400 bg-emerald-50 text-emerald-800',
           )}

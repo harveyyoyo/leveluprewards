@@ -8,7 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { DisplayViewSwitcher } from '@/components/displays/DisplayViewSwitcher';
 import { parseDisplayView, type DisplayView } from '@/lib/displays/displayRoutes';
 
-const SmartScreenView = dynamic(() => import('../smart-screen/page'), {
+const SmartScreenView = dynamic(() => import('@/components/displays/SmartScreenRouteView'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6">
@@ -28,7 +28,7 @@ const BulletinBoardView = dynamic(() => import('../bulletin-board/BulletinBoardD
   ),
 });
 
-const HallOfFameView = dynamic(() => import('../hall-of-fame/page'), {
+const HallOfFameView = dynamic(() => import('@/components/displays/HallOfFameRouteView'), {
   ssr: false,
   loading: () => (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6">

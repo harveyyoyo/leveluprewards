@@ -219,7 +219,7 @@ export function LibraryCheckoutDesk({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-bold text-sm flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4 text-primary" />
+            <ArrowLeftRight className="h-4 w-4 text-ring" />
             Check out &amp; check in
           </h3>
           <p className="text-xs text-muted-foreground mt-1">
@@ -279,7 +279,7 @@ export function LibraryCheckoutDesk({
       )}
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-background/80 px-3 py-2.5">
-        <User className="h-5 w-5 text-primary shrink-0" aria-hidden />
+        <User className="h-5 w-5 text-ring shrink-0" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Current student</p>
           <p className="font-bold truncate">{studentLabel ?? 'None — find by name or scan ID'}</p>

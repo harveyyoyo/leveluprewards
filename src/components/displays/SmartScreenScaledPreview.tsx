@@ -29,10 +29,14 @@ function useFitScale(
   containerRef: React.RefObject<HTMLElement | null>,
   stageWidth: number,
   stageHeight: number,
+  /** Re-run when the container mounts (e.g. modal open). Ref identity alone does not change. */
+  active = true,
 ) {
   const [scale, setScale] = useState(0.4);
 
   useEffect(() => {
+    if (!active) return;
+
     const element = containerRef.current;
     if (!element) return;
 
@@ -47,7 +51,7 @@ function useFitScale(
     const observer = new ResizeObserver(update);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [containerRef, stageWidth, stageHeight]);
+  }, [containerRef, stageWidth, stageHeight, active]);
 
   return scale;
 }
@@ -132,7 +136,7 @@ export function SmartScreenScaledPreview({
 
   const stage = stageForLayout(activeLayout);
   const scale = useFitScale(containerRef, stage.width, stage.height);
-  const modalScale = useFitScale(modalRef, stage.width, stage.height);
+  const modalScale = useFitScale(modalRef, stage.width, stage.height, modalOpen);
 
   const configuredZip = (
     readSmartScreenSetting('smartScreenLocationZip', schoolSettings, undefined, draftSettings) || ''

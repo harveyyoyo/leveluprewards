@@ -20,8 +20,8 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { officeStaffEntryHref } from '@/lib/officePublicUrl';
 import { leadershipPersonnelLabel, normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import { staffLandingPath } from '@/lib/staffPortal/staffLandingPath';
 import type { TeacherPersonnelRole } from '@/lib/types';
 
 const TeacherPrinterInner = dynamic(
@@ -64,17 +64,6 @@ function roleLabel(option: StaffPortalLoginOption) {
     if (option.type === 'office') return 'School Office';
     if (option.type === 'houseCoordinator') return 'Houses';
     return 'Reports';
-}
-
-function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
-    if (type === 'teacher') return `/${schoolId}/teacher`;
-    if (type === 'secretary') return `/${schoolId}/secretary`;
-    if (type === 'prizeClerk') return `/${schoolId}/admin`;
-    if (type === 'reports') return `/${schoolId}/reports`;
-    if (type === 'librarian') return `/${schoolId}/librarian`;
-    if (type === 'office') return officeStaffEntryHref(schoolId);
-    if (type === 'houseCoordinator') return `/${schoolId}/admin`;
-    return `/${schoolId}/admin`;
 }
 
 function TeacherPrinterSkeleton() {

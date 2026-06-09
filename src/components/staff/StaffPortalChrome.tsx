@@ -1,7 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Helper } from '@/components/ui/helper';
+import {
+  StaffPortalTabInfoPopover,
+  staffPortalTabInfoSection,
+} from '@/components/staff/StaffPortalTabInfoPopover';
 import type { StaffPortalRole } from '@/lib/staffPortal';
 import { staffPortalPageIntroClassName } from '@/components/staff/staffPortalNavStyles';
 import { useStaffPortalLayout } from '@/components/staff/StaffPortalLayoutContext';
@@ -62,14 +65,18 @@ export function StaffPortalChrome({
         staffPortalPageIntroClassName(isWide),
       )}
     >
-      <Helper content={helperContent}>
-        <div>
+      <div>
+        <div className="flex items-center gap-1.5">
           <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             {heading}
           </h2>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{resolvedSubtitle}</p>
+          <StaffPortalTabInfoPopover
+            sections={[staffPortalTabInfoSection(helperContent)]}
+            ariaLabel={`About ${heading}`}
+          />
         </div>
-      </Helper>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{resolvedSubtitle}</p>
+      </div>
 
       {endActions ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap shrink-0">

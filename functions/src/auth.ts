@@ -3,6 +3,13 @@ import * as admin from "firebase-admin";
 import * as crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { isAllowedGoogleEmailOnAllowlist } from "./googleAllowlist";
+import { PASSCODE_SECRET_IDS } from "./passcodeSecrets";
+import {
+  schoolPasscodeConfigured,
+  verifyPasscodeCredential,
+  writePasscodeSecret,
+} from "./passcodeCredential";
+import { buildSampleTestCoupon, SAMPLE_TEST_COUPON_CODE } from "./shared/sampleSeedData";
 
 import "./init";
 
@@ -199,7 +206,8 @@ async function schoolAccessPasscodeIsRequired(
 ): Promise<boolean> {
   const schoolSnap = await db.collection("schools").doc(schoolId).get();
   if (!schoolSnap.exists) return false;
-  return schoolAccessPasscodeFrom(schoolSnap.data() || {}).length > 0;
+  const legacy = schoolAccessPasscodeFrom(schoolSnap.data() || {});
+  return await schoolPasscodeConfigured(schoolId, PASSCODE_SECRET_IDS.schoolAccess, legacy);
 }
 
 
@@ -407,23 +415,32 @@ exports.verifySchoolPasscode = functions.https.onCall(
     const adminRoleRef = db.collection("schools").doc(schoolId).collection("roles_admin").doc(uid);
     // Primary: email allowlist from env var. Fallback: Firestore developer UID list
     // (survives env var misconfiguration / missing deploys).
-    const googleAdminBypass =
+    const developerCanBypass =
       isAllowedGoogleAdminBypass(context) ||
-      (isGoogleAuthenticated(context) && await isDeveloper(context));
+      (isGoogleAuthenticated(context) && (await isDeveloper(context)));
+    // Google/developer bypass applies only when no passcode was submitted (matches client gate).
+    const googleAdminBypass = developerCanBypass && passcode.length === 0;
 
     if (!googleAdminBypass) {
       if (passcode.length === 0) {
         throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
       }
       const schoolData = schoolDoc.data()!;
-      const expected = adminPasscodeFrom(schoolData);
-      if (!expected) {
-        throw new functions.https.HttpsError(
-          "failed-precondition",
-          "This school has no admin passcode configured. An administrator must set one before login is possible."
-        );
-      }
-      if (!safeEqual(expected, passcode)) {
+      const legacyExpected = adminPasscodeFrom(schoolData);
+      const verified = await verifyPasscodeCredential(
+        schoolId,
+        PASSCODE_SECRET_IDS.admin,
+        passcode,
+        legacyExpected,
+        { kind: "school", fields: ["adminPasscode", "passcode"] },
+      );
+      if (!verified) {
+        if (!legacyExpected) {
+          throw new functions.https.HttpsError(
+            "failed-precondition",
+            "This school has no admin passcode configured. An administrator must set one before login is possible."
+          );
+        }
         throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
       }
     }
@@ -465,14 +482,21 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
     }
 
     const schoolData = schoolDoc.data()!;
-    const expected = schoolAccessPasscodeFrom(schoolData);
-    if (!expected) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "This school has no access passcode configured. An administrator must set one before sign-in is possible."
-      );
-    }
-    if (!safeEqual(expected, passcode)) {
+    const legacyExpected = schoolAccessPasscodeFrom(schoolData);
+    const verified = await verifyPasscodeCredential(
+      schoolId,
+      PASSCODE_SECRET_IDS.schoolAccess,
+      passcode,
+      legacyExpected,
+      { kind: "school", fields: ["schoolAccessPasscode", "passcode"] },
+    );
+    if (!verified) {
+      if (!legacyExpected) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "This school has no access passcode configured. An administrator must set one before sign-in is possible."
+        );
+      }
       throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
     }
 
@@ -643,6 +667,7 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       icon: "Gift",
       inStock: true,
     };
+    const seedTestCoupon = buildSampleTestCoupon(now);
     const seedStaffAccounts = [
       {
         id: "default_coupon_staff",
@@ -684,6 +709,7 @@ exports.createSchoolByDeveloper = functions.https.onCall(
     const studentsSnap = await schoolRef.collection("students").limit(1).get();
     const teachersSnap = await schoolRef.collection("teachers").limit(1).get();
     const prizesSnap = await schoolRef.collection("prizes").limit(1).get();
+    const testCouponSnap = await schoolRef.collection("coupons").doc(SAMPLE_TEST_COUPON_CODE).get();
     const staffAccountsSnap = await schoolRef.collection("staffAccounts").limit(1).get();
 
     if (schoolSnap.exists && (!studentsSnap.empty || !teachersSnap.empty)) {
@@ -732,6 +758,9 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       const { id, ...prizeData } = seedPrize;
       batch.set(schoolRef.collection("prizes").doc(id), prizeData);
     }
+    if (!testCouponSnap.exists) {
+      batch.set(schoolRef.collection("coupons").doc(SAMPLE_TEST_COUPON_CODE), seedTestCoupon);
+    }
     if (staffAccountsSnap.empty) {
       for (const account of seedStaffAccounts) {
         batch.set(schoolRef.collection("staffAccounts").doc(account.id), account);
@@ -771,12 +800,46 @@ exports.createSchoolByDeveloper = functions.https.onCall(
     );
     await batch.commit();
 
+    const schoolAccessPlain = String(finalSchoolDocData.schoolAccessPasscode || "").trim();
+    const adminPlain = String(finalSchoolDocData.adminPasscode || "").trim();
+    if (schoolAccessPlain) {
+      await writePasscodeSecret(cleanId, PASSCODE_SECRET_IDS.schoolAccess, schoolAccessPlain);
+    }
+    if (adminPlain) {
+      await writePasscodeSecret(cleanId, PASSCODE_SECRET_IDS.admin, adminPlain);
+    }
+    await schoolRef.update({
+      passcode: FieldValue.delete(),
+      schoolAccessPasscode: FieldValue.delete(),
+      adminPasscode: FieldValue.delete(),
+    });
+
+    if (teachersSnap.empty && seedTeacher.passcode) {
+      await writePasscodeSecret(
+        cleanId,
+        `teacher_${seedTeacher.id}`,
+        String(seedTeacher.passcode),
+      );
+      await schoolRef.collection("teachers").doc(seedTeacher.id).update({
+        passcode: FieldValue.delete(),
+      });
+    }
+    if (staffAccountsSnap.empty) {
+      for (const account of seedStaffAccounts) {
+        if (!account.passcode) continue;
+        await writePasscodeSecret(cleanId, `staff_${account.id}`, String(account.passcode));
+        await schoolRef.collection("staffAccounts").doc(account.id).update({
+          passcode: FieldValue.delete(),
+        });
+      }
+    }
+
     return {
       success: true,
       cleanId,
-      passcode: finalSchoolDocData.schoolAccessPasscode,
-      schoolAccessPasscode: finalSchoolDocData.schoolAccessPasscode,
-      adminPasscode: finalSchoolDocData.adminPasscode,
+      passcode: schoolAccessPlain,
+      schoolAccessPasscode: schoolAccessPlain,
+      adminPasscode: adminPlain,
       repaired: schoolSnap.exists,
     };
   }

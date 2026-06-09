@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -20,7 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { NumericKeypad } from '@/components/ui/NumericKeypad';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
+import { complementForPortalId, rainbowByIndex, rainbowForPortalId } from '@/lib/rainbowNav';
 import { LEVELUP_BRAND_PRIMARY_HEX, LEVELUP_BRAND_PRIMARY_ON_DARK_HEX } from '@/lib/appBranding';
 import {
     isKioskPortraitDisplay,
@@ -34,6 +34,7 @@ import type { TranslationParams } from '@/lib/i18n/translate';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
+import { staffLandingPath } from '@/lib/staffPortal/staffLandingPath';
 
 type PortalArea = {
     id: string;
@@ -76,17 +77,6 @@ function roleLabel(
     if (option.type === 'office') return t('portal.roles.schoolOffice');
     if (option.type === 'houseCoordinator') return t('portal.roles.houses');
     return t('portal.roles.reports');
-}
-
-function staffLandingPath(schoolId: string, type: StaffPortalLoginOption['type']) {
-    if (type === 'teacher') return `/${schoolId}/teacher`;
-    if (type === 'secretary') return `/${schoolId}/secretary`;
-    if (type === 'prizeClerk') return `/${schoolId}/admin`;
-    if (type === 'reports') return `/${schoolId}/reports`;
-    if (type === 'librarian') return `/${schoolId}/librarian`;
-    if (type === 'office') return `/${schoolId}/office`;
-    if (type === 'houseCoordinator') return `/${schoolId}/admin`;
-    return `/${schoolId}/admin`;
 }
 
 function WhereToDrawnTitle({
@@ -163,7 +153,7 @@ export default function PortalPage() {
         schoolId,
         autoLogin: false,
     });
-    const { settings } = useSettings();
+    const { settings, updateSettings } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
     const { toast } = useToast();
@@ -423,7 +413,8 @@ export default function PortalPage() {
                         >
                     {visiblePortals.map((area, index) => {
                         const Icon = area.icon;
-                        const rainbowColor = rainbowForPortalId(area.id, settings.colorScheme);
+                        const portalPrimaryColor = rainbowForPortalId(area.id, settings.colorScheme);
+                        const portalTrimColor = complementForPortalId(area.id, settings.colorScheme);
                         const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin && !canBypassAdminPasscode;
                         // School gate, admins, and developers can pick staff (or continue as admin); signed-in teachers go straight through.
@@ -437,15 +428,12 @@ export default function PortalPage() {
                                         'portal-choose-card relative overflow-hidden rounded-2xl border-2 bg-card',
                                         compactDisplay ? 'text-left' : 'text-center',
                                         portalCardHoverEffects &&
-                                            'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-hover:border-foreground/25 group-active:translate-y-0',
+                                            'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-active:translate-y-0',
                                         'flex h-full min-h-0 w-full flex-col justify-center',
                                         compactDisplay
                                             ? 'px-4 py-4 sm:px-5 sm:py-5'
                                             : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
                                     )}
-                                    style={{
-                                        borderColor: `${rainbowColor}55`,
-                                    }}
                                 >
                                     {compactDisplay ? (
                                     <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
@@ -455,19 +443,59 @@ export default function PortalPage() {
                                                 portalCardHoverEffects && 'portal-choose-icon--hoverable',
                                             )}
                                             style={{
-                                                backgroundColor: rainbowColor,
+                                                backgroundColor: portalPrimaryColor,
+                                                ['--portal-icon-accent' as string]: portalPrimaryColor,
                                             }}
                                             aria-hidden
                                         >
                                             <Icon className="h-7 w-7 text-white sm:h-8 sm:w-8" />
                                         </div>
                                         <div className="min-w-0 flex-1 space-y-1 pr-1">
-                                            <h3 className="text-lg font-black leading-snug tracking-tight text-foreground sm:text-xl">
+                                            <h3
+                                                className="text-lg font-black leading-snug tracking-tight sm:text-xl"
+                                                style={{ color: portalPrimaryColor }}
+                                            >
                                                 {area.title}
                                             </h3>
                                             <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
                                                 {area.description}
                                             </p>
+                                            {isAdmin && settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
+                                                <div className="pt-1 z-20 pointer-events-auto">
+                                                    <div
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        className="inline-flex cursor-pointer items-center rounded-md bg-secondary/40 px-2 py-0.5 text-[11px] font-bold text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                            const tourId = tourMap[area.id];
+                                                            if (tourId) {
+                                                                window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
+                                                                updateSettings({ activeTourId: null });
+                                                                setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
+                                                            }
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                const tourId = tourMap[area.id];
+                                                                if (tourId) {
+                                                                    window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
+                                                                    updateSettings({ activeTourId: null });
+                                                                    setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        <HelpCircle className="mr-1 h-3 w-3" />
+                                                        Welcome Tour
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <ArrowUpRight
                                             className={cn(
@@ -476,7 +504,7 @@ export default function PortalPage() {
                                                 portalCardHoverEffects &&
                                                     'transition-opacity duration-200 ease-out group-hover:opacity-100',
                                             )}
-                                            style={{ color: rainbowColor }}
+                                            style={{ color: portalPrimaryColor }}
                                             aria-hidden
                                         />
                                     </div>
@@ -489,18 +517,55 @@ export default function PortalPage() {
                                                     portalCardHoverEffects && 'portal-choose-icon--hoverable',
                                                 )}
                                                 style={{
-                                                    backgroundColor: rainbowColor,
+                                                    backgroundColor: portalPrimaryColor,
+                                                    ['--portal-icon-accent' as string]: portalPrimaryColor,
                                                 }}
                                             >
                                                 <Icon className="h-8 w-8 text-white md:h-9 md:w-9" />
                                             </motion.div>
-                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5">
-                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl">
-                                                    <span style={{ color: rainbowColor }}>{area.title}</span>
+                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5 z-20">
+                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl pointer-events-none">
+                                                    <span style={{ color: portalPrimaryColor }}>{area.title}</span>
                                                 </h3>
-                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base">
+                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base pointer-events-none">
                                                     {area.description}
                                                 </p>
+                                                {isAdmin && settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
+                                                    <div className="pt-2 pointer-events-auto">
+                                                        <div
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            className="inline-flex cursor-pointer items-center rounded-md bg-secondary/40 px-2.5 py-1 text-xs font-bold text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                const tourId = tourMap[area.id];
+                                                                if (tourId) {
+                                                                    window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
+                                                                    updateSettings({ activeTourId: null });
+                                                                    setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
+                                                                }
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                    const tourId = tourMap[area.id];
+                                                                    if (tourId) {
+                                                                        window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
+                                                                        updateSettings({ activeTourId: null });
+                                                                        setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
+                                                            Welcome Tour
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -562,13 +627,14 @@ export default function PortalPage() {
                                     'group relative block h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                     portalCardHoverEffects && 'z-0 hover:z-10 focus-visible:z-10',
                                 )}
-                                style={{ ['--portal-accent' as string]: rainbowColor }}
+                                style={{ ['--portal-accent' as string]: portalTrimColor }}
                             >
                                 {portalCard}
                             </Link>
                         );
                     })}
                 </motion.div>
+                
                 </div>
                 </div>
             </div>

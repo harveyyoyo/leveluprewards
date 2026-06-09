@@ -596,26 +596,28 @@ html[data-office-portal] .office-content-pane {
 
 /* Portal hub — layered neutral depth + per-card accent tint (set --portal-accent on .group) */
 .portal-choose-card {
+  border-color: color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 33%, transparent);
   box-shadow:
     0 1px 2px hsl(222 47% 11% / 0.06),
     0 4px 12px hsl(222 47% 11% / 0.07),
     0 12px 28px hsl(222 47% 11% / 0.09),
-    0 18px 42px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 18%, transparent);
+    0 18px 42px color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 18%, transparent);
 }
 
 .group:hover .portal-choose-card,
 .group:focus-visible .portal-choose-card {
+  border-color: color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 58%, transparent);
   box-shadow:
     0 2px 4px hsl(222 47% 11% / 0.07),
     0 10px 24px hsl(222 47% 11% / 0.11),
     0 22px 48px hsl(222 47% 11% / 0.13),
-    0 28px 60px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 26%, transparent);
+    0 28px 60px color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 26%, transparent);
 }
 
 .portal-choose-icon {
   box-shadow:
     0 2px 6px hsl(222 47% 11% / 0.22),
-    0 8px 22px color-mix(in srgb, var(--portal-accent, hsl(var(--primary))) 38%, transparent);
+    0 8px 22px color-mix(in srgb, var(--portal-icon-accent, var(--portal-accent, hsl(var(--primary)))) 38%, transparent);
 }
 
 .portal-choose-icon > svg {

@@ -17,7 +17,6 @@ const ADMIN_TAB_ORDER = [
   'redemptions',
   'insights',
   'attendance',
-  'halloffame',
   'displays',
   'library',
   'bonuspoints',

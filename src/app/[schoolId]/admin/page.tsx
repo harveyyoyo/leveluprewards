@@ -87,7 +87,6 @@ import { useSettings, type Settings as AppSettings } from '@/components/provider
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { ImageCropper } from '@/components/admin/ImageCropper';
-import { Helper } from '@/components/ui/helper';
 import { TabWalkthroughProvider } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import dynamic from 'next/dynamic';
 import { CategoryModal } from '@/components/admin/CategoryModal';
@@ -145,111 +144,27 @@ import {
 import { ADMIN_SETTINGS_TAB_VALUES } from '@/components/settings/settingsModalConfig';
 import { useIntroTourStaffTabListener } from '@/lib/introTourStaffTab';
 
-const tabLoader = () => (
-  <div className="animate-pulse h-64 w-full rounded-xl bg-muted/40" aria-hidden="true" />
-);
-
-/** After dev HMR or cache mismatch, lazy tab chunks often 404; reload once so import succeeds. */
-function importAdminTabSection<M extends Record<string, unknown>, K extends keyof M>(
-  importFn: () => Promise<M>,
-  exportKey: K,
-): () => Promise<M[K]> {
-  return () =>
-    importFn()
-      .then((m) => m[exportKey])
-      .catch((err: unknown) => {
-        const e = err as { name?: string; message?: string };
-        if (
-          typeof window !== 'undefined' &&
-          (e?.name === 'ChunkLoadError' ||
-            /loading chunk|chunk load|failed to fetch dynamically imported module/i.test(String(e?.message || '')))
-        ) {
-          window.location.reload();
-        }
-        throw err;
-      });
-}
-
-const AdminStatsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminStatsTab'), 'AdminStatsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminNotificationsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminNotificationsTab'), 'AdminNotificationsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminBrandingTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminBrandingTab'), 'AdminBrandingTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminClassesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminClassesTab'), 'AdminClassesTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminTeachersTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminTeachersTab'), 'AdminTeachersTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminCategoriesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminCategoriesTab'), 'AdminCategoriesTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminClassroomTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminClassroomTab'), 'AdminClassroomTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminPrizesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminPrizesTab'), 'AdminPrizesTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminAttendanceTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminAttendanceTab'), 'AdminAttendanceTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminReportsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminReportsTab'), 'AdminReportsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminBonusPointsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminBonusPointsTab'), 'AdminBonusPointsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminGoalsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminGoalsTab'), 'AdminGoalsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminRaffleTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminRaffleTab'), 'AdminRaffleTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminBadgesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminBadgesTab'), 'AdminBadgesTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminDisplaysTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminDisplaysTab'), 'AdminDisplaysTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminHallOfFameTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminHallOfFameTab'), 'AdminHallOfFameTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminIntegrationsTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminIntegrationsTab'), 'AdminIntegrationsTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminStudentPortalTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminStudentPortalTab'), 'AdminStudentPortalTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminHousesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminHousesTab'), 'AdminHousesTab'),
-  { loading: tabLoader, ssr: false },
-);
-const AdminRecessTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminRecessTab'), 'AdminRecessTab'),
-  { loading: tabLoader, ssr: false },
-);
+import {
+  AdminAttendanceTab,
+  AdminBadgesTab,
+  AdminBonusPointsTab,
+  AdminBrandingTab,
+  AdminCategoriesTab,
+  AdminClassesTab,
+  AdminClassroomTab,
+  AdminDisplaysTab,
+  AdminGoalsTab,
+  AdminHousesTab,
+  AdminIntegrationsTab,
+  AdminNotificationsTab,
+  AdminPrizesTab,
+  AdminRaffleTab,
+  AdminRecessTab,
+  AdminReportsTab,
+  AdminStatsTab,
+  AdminStudentPortalTab,
+  AdminTeachersTab,
+} from './adminTabDynamics';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { BulkRosterSetupDialog } from '@/components/admin/BulkRosterSetupDialog';
 import { StudentCsvColumnMapDialog } from '@/components/student/StudentCsvColumnMapDialog';
@@ -576,7 +491,7 @@ function AdminDashboardInner() {
     return [
       {
         value: 'insights',
-        label: 'Insights',
+        label: 'Analytics',
         icon: Activity,
         isOn: (s) => staffPortalAdminAddOnIsOn(s, 'insights'),
         enable: () => updateSettings({ enableAdminAnalytics: true, adminHiddenAddOnTabs: removeHidden('insights') }),
@@ -609,14 +524,6 @@ function AdminDashboardInner() {
           }),
       },
       {
-        value: 'halloffame',
-        label: 'Hall of Fame',
-        icon: Trophy,
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'halloffame'),
-        enable: () => updateSettings({ enableClassLeaderboard: true, adminHiddenAddOnTabs: removeHidden('halloffame') }),
-        disable: () => updateSettings({ enableClassLeaderboard: false, adminHiddenAddOnTabs: removeHidden('halloffame'), adminPinnedAddOnTabs: removePinned('halloffame') }),
-      },
-      {
         value: 'displays',
         label: 'Displays',
         icon: Monitor,
@@ -625,12 +532,14 @@ function AdminDashboardInner() {
           updateSettings({
             bulletinEnabled: true,
             smartScreenEnabled: true,
+            enableClassLeaderboard: true,
             adminHiddenAddOnTabs: removeHidden('displays'),
           }),
         disable: () =>
           updateSettings({
             bulletinEnabled: false,
             smartScreenEnabled: false,
+            enableClassLeaderboard: false,
             adminHiddenAddOnTabs: removeHidden('displays'),
             adminPinnedAddOnTabs: removePinned('displays'),
           }),
@@ -919,12 +828,10 @@ function AdminDashboardInner() {
         patch.enableAttendance = true;
         patch.enableClassSignIn = true;
         break;
-      case 'halloffame':
-        patch.enableClassLeaderboard = true;
-        break;
       case 'displays':
         patch.bulletinEnabled = true;
         patch.smartScreenEnabled = true;
+        patch.enableClassLeaderboard = true;
         break;
       case 'library':
         patch.payLibrary = true;
@@ -988,13 +895,10 @@ function AdminDashboardInner() {
           patch.enableClassSignIn = false;
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
-        case 'halloffame':
-          patch.enableClassLeaderboard = false;
-          nextHidden = nextHidden.filter((x) => x !== 'halloffame');
-          break;
         case 'displays':
           patch.bulletinEnabled = false;
           patch.smartScreenEnabled = false;
+          patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'library':
@@ -1078,12 +982,10 @@ function AdminDashboardInner() {
           patch.enableAttendance = true;
           patch.enableClassSignIn = true;
           break;
-        case 'halloffame':
-          patch.enableClassLeaderboard = true;
-          break;
         case 'displays':
           patch.bulletinEnabled = true;
           patch.smartScreenEnabled = true;
+          patch.enableClassLeaderboard = true;
           break;
         case 'library':
           patch.payLibrary = true;
@@ -1143,13 +1045,10 @@ function AdminDashboardInner() {
           patch.enableClassSignIn = false;
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
-        case 'halloffame':
-          patch.enableClassLeaderboard = false;
-          nextHidden = nextHidden.filter((x) => x !== 'halloffame');
-          break;
         case 'displays':
           patch.bulletinEnabled = false;
           patch.smartScreenEnabled = false;
+          patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'library':
@@ -2191,10 +2090,6 @@ function AdminDashboardInner() {
               classSignInEnabled={!!settings.enableClassSignIn}
               onBathroomSettingsChange={(patch: Parameters<typeof updateSettings>[0]) => updateSettings(patch)}
             />
-          </TabsContent>
-
-          <TabsContent value="halloffame" className={scrollingAdminTabClassName}>
-            <AdminHallOfFameTab schoolId={schoolId!} />
           </TabsContent>
 
           <TabsContent value="displays" className={scrollingAdminTabClassName}>

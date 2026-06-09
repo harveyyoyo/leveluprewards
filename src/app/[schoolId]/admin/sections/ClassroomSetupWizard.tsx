@@ -174,7 +174,7 @@ export function ClassroomSetupWizard({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <LayoutGrid className="h-5 w-5 text-primary" aria-hidden />
+            <LayoutGrid className="h-5 w-5 text-ring" aria-hidden />
             {stepTitle}
           </DialogTitle>
           <DialogDescription>
@@ -199,7 +199,7 @@ export function ClassroomSetupWizard({
                 { icon: LayoutGrid, text: 'Open the classroom view from the Classroom tab' },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2">
-                  <ChevronRight className="h-4 w-4 text-primary shrink-0" aria-hidden />
+                  <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden />
                   <Icon className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
                   {text}
                 </li>

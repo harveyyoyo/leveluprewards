@@ -11,7 +11,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,21 +135,16 @@ export function AdminAttendanceTab(props: any) {
   };
 
   return (
-    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
-      <StaffPortalSectionCardHeader className="py-6 bg-secondary/35 border-b border-border/40">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <Helper content="Configure school-wide attendance rules, manage universal period slots, and oversee teacher configurations.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2 text-2xl font-black tracking-tight text-foreground">
-              <Clock className="w-6 h-6 text-primary animate-pulse" /> Attendance &amp; Periods
-            </StaffPortalSectionCardTitle>
-          </Helper>
+    <StaffPortalTabPanel
+      tabValue="attendance"
+      trailing={
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <TabWalkthroughHeaderAction />
             <AttendanceSetupWizard variant="admin" />
           </div>
-        </div>
-      </StaffPortalSectionCardHeader>
-
+        }
+    >
+    <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
       <StaffPortalSectionCardContent className="p-6 space-y-6">
         <ContentSectionTreeNav
           items={[
@@ -165,11 +161,15 @@ export function AdminAttendanceTab(props: any) {
         {section === 'defaults' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <Helper content="These values are used as a fallback if no specific teacher reward rules or class assignments exist.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" /> Default School-wide Points
+                  <Zap className="w-5 h-5 text-ring" /> Default School-wide Points
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('These values are used as a fallback if no specific teacher reward rules or class assignments exist.')]}
+                  ariaLabel="About default school-wide points"
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -225,11 +225,15 @@ export function AdminAttendanceTab(props: any) {
             </div>
 
             <div className="pt-6 border-t space-y-4">
-              <Helper content="Teachers start and stop bathroom passes from the Classroom seating chart. Students can be required to sign in for attendance first.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Timer className="w-5 h-5 text-primary" /> Bathroom pass timer
+                  <Timer className="w-5 h-5 text-ring" /> Bathroom pass timer
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Teachers start and stop bathroom passes from the Classroom seating chart. Students can be required to sign in for attendance first.')]}
+                  ariaLabel="About bathroom pass timer"
+                />
+              </div>
               {!classSignInEnabled ? (
                 <p className="text-sm text-amber-800 dark:text-amber-100 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2">
                   Turn on <span className="font-semibold">class sign-in</span> in school settings so students can sign in before bathroom passes.
@@ -292,11 +296,15 @@ export function AdminAttendanceTab(props: any) {
         {section === 'periods' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <Helper content="Create and manage period time slots used by all teachers for on-time attendance.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" /> Universal Periods
+                  <Clock className="w-5 h-5 text-ring" /> Universal Periods
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Create and manage period time slots used by all teachers for on-time attendance.')]}
+                  ariaLabel="About universal periods"
+                />
+              </div>
             </div>
             <UniversalPeriodsAdmin schoolId={schoolId!} />
           </div>
@@ -305,11 +313,15 @@ export function AdminAttendanceTab(props: any) {
         {section === 'teachers' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
-              <Helper content="View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Teacher Attendance (per-teacher)
+                  <Users className="w-5 h-5 text-ring" /> Teacher Attendance (per-teacher)
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('View what each teacher created and edit attendance settings on their behalf. Teachers assign periods to their classes in Teacher Portal.')]}
+                  ariaLabel="About teacher attendance"
+                />
+              </div>
             </div>
 
             <div className="flex flex-wrap items-end gap-3 bg-muted/20 p-4 rounded-2xl border">
@@ -841,11 +853,15 @@ export function AdminAttendanceTab(props: any) {
         {section === 'activity' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <Helper content="Recent student actions across the school, including attendance sign-ins and point activity.">
+              <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <History className="w-5 h-5 text-primary" /> Student Activity Log
+                  <History className="w-5 h-5 text-ring" /> Student Activity Log
                 </h3>
-              </Helper>
+                <StaffPortalTabInfoPopover
+                  sections={[staffPortalTabInfoSection('Recent student actions across the school, including attendance sign-ins and point activity.')]}
+                  ariaLabel="About student activity log"
+                />
+              </div>
               <Button variant="outline" size="sm" className="rounded-xl h-10 px-4 shrink-0" onClick={loadStudentActivityLog} disabled={studentActivityLogLoading}>
                 {studentActivityLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
                 Refresh Activity Log
@@ -893,5 +909,6 @@ export function AdminAttendanceTab(props: any) {
         )}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

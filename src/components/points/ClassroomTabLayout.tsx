@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { LayoutGrid, BookOpenCheck, Monitor } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Helper } from '@/components/ui/helper';
+import { Card, CardContent } from '@/components/ui/card';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
 import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
@@ -80,81 +80,79 @@ export function ClassroomTabLayout({
     icon: SECTION_ICONS[id],
   }));
 
-  const header = (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <Helper
-        content={`Launch Class Awards Live from this section, configure options under Settings, then use Chart style / Toolbar on the monitor.`}
-      >
-        <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight tracking-tight text-foreground sm:text-2xl">
-          <LayoutGrid className="h-5 w-5 shrink-0 text-violet-500 sm:h-6 sm:w-6" aria-hidden /> {CLASSROOM_TAB_LABEL}
-        </CardTitle>
-      </Helper>
-      {headerAction ? <div className="flex shrink-0 flex-wrap items-center gap-3">{headerAction}</div> : null}
-    </div>
+  const contentCardClassName = cn(
+    'w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm [contain:layout_paint]',
   );
 
   if (!hasMultiple) {
     return (
-      <Card
-        className={cn(
-          'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background [contain:layout_paint]',
-          className,
-        )}
+      <StaffPortalTabPanel
+        tabValue="classroom"
+        className={className}
+        trailing={
+          headerAction ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-3">{headerAction}</div>
+          ) : undefined
+        }
       >
-        <CardHeader className="bg-secondary/35 border-b border-border/40 p-4 sm:p-6">{header}</CardHeader>
-        <CardContent className="p-4 sm:p-6">{contentBySection[resolvedSection]}</CardContent>
-      </Card>
+        <Card className={contentCardClassName}>
+          <CardContent className="p-4 sm:p-6">{contentBySection[resolvedSection]}</CardContent>
+        </Card>
+      </StaffPortalTabPanel>
     );
   }
 
   return (
-    <Card
-      className={cn(
-        'w-full border-t-4 border-violet-500 shadow-md overflow-hidden bg-background [contain:layout_paint]',
-        className,
-      )}
+    <StaffPortalTabPanel
+      tabValue="classroom"
+      className={className}
+      trailing={
+        headerAction ? (
+          <div className="flex shrink-0 flex-wrap items-center gap-3">{headerAction}</div>
+        ) : undefined
+      }
     >
-      <CardHeader className="bg-secondary/35 border-b border-border/40 p-4 sm:p-6">{header}</CardHeader>
+      <Card className={contentCardClassName}>
+        <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+          <ContentSectionTreeNav
+            items={sectionItems}
+            value={resolvedSection}
+            onValueChange={(val) => setSection(val as ClassroomTabSection)}
+            fullWidth
+            className="w-full"
+            aria-label={`${CLASSROOM_TAB_LABEL} sections`}
+          />
 
-      <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-        <ContentSectionTreeNav
-          items={sectionItems}
-          value={resolvedSection}
-          onValueChange={(val) => setSection(val as ClassroomTabSection)}
-          fullWidth
-          className="w-full"
-          aria-label={`${CLASSROOM_TAB_LABEL} sections`}
-        />
-
-        <div className="space-y-0">
-          {sections.map((id) => {
-            if (!mountedSections.has(id)) return null;
-            const active = id === resolvedSection;
-            return (
-              <div
-                key={id}
-                id={`classroom-section-${id}`}
-                role="tabpanel"
-                aria-labelledby={`classroom-section-tab-${id}`}
-                hidden={!active}
-                className={cn(!active && 'hidden')}
-              >
-                <motion.div
-                  initial={false}
-                  animate={
-                    active && !reduceMotion
-                      ? { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } }
-                      : { opacity: 1, transition: { duration: 0 } }
-                  }
-                  className="focus-visible:outline-none"
+          <div className="space-y-0">
+            {sections.map((id) => {
+              if (!mountedSections.has(id)) return null;
+              const active = id === resolvedSection;
+              return (
+                <div
+                  key={id}
+                  id={`classroom-section-${id}`}
+                  role="tabpanel"
+                  aria-labelledby={`classroom-section-tab-${id}`}
+                  hidden={!active}
+                  className={cn(!active && 'hidden')}
                 >
-                  {contentBySection[id]}
-                </motion.div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+                  <motion.div
+                    initial={false}
+                    animate={
+                      active && !reduceMotion
+                        ? { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } }
+                        : { opacity: 1, transition: { duration: 0 } }
+                    }
+                    className="focus-visible:outline-none"
+                  >
+                    {contentBySection[id]}
+                  </motion.div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </StaffPortalTabPanel>
   );
 }

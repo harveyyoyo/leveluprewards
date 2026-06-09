@@ -1,4 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
+import { staffPasscodeSecretId } from '@/lib/passcodeSecrets';
+import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 export const STAFF_LOGIN_ROLES = ['secretary', 'prizeClerk', 'reports', 'librarian', 'office', 'houseCoordinator'] as const;
 export type StaffLoginRole = (typeof STAFF_LOGIN_ROLES)[number];
@@ -69,16 +71,27 @@ export async function verifyStaffAccountPasscodeServer(
     }
   }
 
-  const match = accountsSnap.docs.find((d) => {
-    const row = d.data() as { passcode?: string; role?: string; roles?: string[] };
+  let match: (typeof accountsSnap.docs)[number] | undefined;
+  for (const docSnap of accountsSnap.docs) {
+    const row = docSnap.data() as { passcode?: string; role?: string; roles?: string[] };
     const roles = Array.isArray(row.roles) && row.roles.length > 0 ? row.roles : [row.role];
-    
-    // Coerce both database passcode and input passcode to strings and trim them
-    const dbPasscode = row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : '';
-    const inputPasscode = passcode !== undefined && passcode !== null ? String(passcode).trim() : '';
-    
-    return roles.includes(role) && dbPasscode === inputPasscode;
-  });
+    if (!roles.includes(role)) continue;
+
+    const legacyPasscode =
+      row.passcode !== undefined && row.passcode !== null ? String(row.passcode).trim() : '';
+    const ok = await verifyPasscodeCredential(
+      db,
+      schoolId,
+      staffPasscodeSecretId(docSnap.id),
+      passcode,
+      legacyPasscode,
+      { kind: 'staff', staffAccountId: docSnap.id },
+    );
+    if (ok) {
+      match = docSnap;
+      break;
+    }
+  }
 
   if (!match) {
     throw new Error('INVALID_STAFF_LOGIN');

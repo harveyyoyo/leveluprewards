@@ -10,7 +10,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabInfoPopover } from '@/components/staff/StaffPortalTabInfoPopover';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -91,21 +91,28 @@ export function AdminStaffAccountsTab({
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
         <div>
-          <Helper
-            content={
-              <>
-                Limited accounts: coupon printing only, or prize redemption at the admin prizes desk. Share desk
-                logins separately from full teacher accounts—desk staff still open Admin at this school&apos;s URL
-                after signing in. Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> ·
-                Prize desk: Admin → <span className="font-medium text-foreground">Prizes</span> (URL{' '}
-                <code className="text-xs bg-muted px-1 rounded">/admin</code>)
-              </>
-            }
-          >
+          <div className="flex items-center gap-1.5">
             <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <Printer className="w-5 h-5 text-primary" /> Desk staff
+              <Printer className="w-5 h-5 text-ring" /> Desk staff
             </StaffPortalSectionCardTitle>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[
+                {
+                  title: 'What is this for?',
+                  body: (
+                    <>
+                      Limited accounts: coupon printing only, or prize redemption at the admin prizes desk. Share desk
+                      logins separately from full teacher accounts—desk staff still open Admin at this school&apos;s URL
+                      after signing in. Secretary: path <code className="text-xs bg-muted px-1 rounded">/secretary</code> ·
+                      Prize desk: Admin → <span className="font-medium text-foreground">Prizes</span> (URL{' '}
+                      <code className="text-xs bg-muted px-1 rounded">/admin</code>)
+                    </>
+                  ),
+                },
+              ]}
+              ariaLabel="About desk staff"
+            />
+          </div>
         </div>
         <Button onClick={openNew} className="rounded-xl">
           <Plus className="mr-2 h-4 w-4" /> Add account

@@ -9,7 +9,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import DynamicIcon from '@/components/DynamicIcon';
@@ -36,26 +36,22 @@ export function AdminBonusPointsTab(props: any) {
   } = props;
 
   return (
+    <StaffPortalTabPanel
+      tabValue="bonuspoints"
+      trailing={
+          <div className="flex flex-wrap gap-2">
+            <TabWalkthroughHeaderAction />
+            <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
+              {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
+              Add sample milestones
+            </Button>
+            <Button onClick={() => { setEditingAchievement(null); setIsBadgeModalOpen(true); }} className="rounded-xl">
+              <Plus className="mr-2 h-4 w-4" /> Add milestone
+            </Button>
+          </div>
+        }
+    >
     <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardHeader className="flex flex-row justify-between items-center py-6">
-        <div>
-          <Helper content="Define bonus point milestones. When students hit these point thresholds they earn extra bonus points. Enable from Admin → Add more.">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-primary" /> Bonus Points
-            </StaffPortalSectionCardTitle>
-          </Helper>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <TabWalkthroughHeaderAction />
-          <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
-            {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
-            Add sample milestones
-          </Button>
-          <Button onClick={() => { setEditingAchievement(null); setIsBadgeModalOpen(true); }} className="rounded-xl">
-            <Plus className="mr-2 h-4 w-4" /> Add milestone
-          </Button>
-        </div>
-      </StaffPortalSectionCardHeader>
       <StaffPortalSectionCardContent>
         {achievementsLoading ? (
           <ul className="space-y-2 pr-1">
@@ -137,5 +133,6 @@ export function AdminBonusPointsTab(props: any) {
         )}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
+    </StaffPortalTabPanel>
   );
 }

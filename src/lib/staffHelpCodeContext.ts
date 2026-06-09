@@ -93,8 +93,8 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
-      'src/app/[schoolId]/admin/sections/AdminHallOfFameTab.tsx',
-      'src/app/[schoolId]/hall-of-fame/page.tsx',
+      'src/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel.tsx',
+      'src/app/[schoolId]/displays/page.tsx',
     ],
   },
   {

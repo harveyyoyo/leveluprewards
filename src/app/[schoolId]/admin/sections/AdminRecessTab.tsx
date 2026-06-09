@@ -5,8 +5,6 @@ import {
   DoorOpen,
   Timer,
   CheckCircle2,
-  Clock,
-  Info,
   History,
   Monitor,
   Printer,
@@ -33,6 +31,8 @@ import {
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Switch } from '@/components/ui/switch';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { RECESS_TAB_INFO_SECTIONS } from '@/lib/staffPortal/recessTabInfo';
 import {
   RECESS_REASONS,
   KIOSK_RECESS_REASONS,
@@ -137,74 +137,17 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
   const now = Date.now();
 
   return (
-    <div className="space-y-4">
-      {/* What this is + when to use it */}
-      <StaffPortalSectionCard>
-        <StaffPortalSectionCardHeader>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <DoorOpen className="h-5 w-5" aria-hidden />
-              </span>
-              <div>
-                <StaffPortalSectionCardTitle>Recess &amp; bathroom checkout</StaffPortalSectionCardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Know exactly who is out of the room — and for how long.
-                </p>
-              </div>
-            </div>
-            <TabWalkthroughHeaderAction />
-          </div>
-        </StaffPortalSectionCardHeader>
+    <StaffPortalTabPanel
+      tabValue="recess"
+      infoSections={RECESS_TAB_INFO_SECTIONS}
+      infoAriaLabel="About recess checkout"
+      trailing={<TabWalkthroughHeaderAction />}
+    >
+      <StaffPortalSectionCard className="w-full overflow-hidden">
         <StaffPortalSectionCardContent className="space-y-4">
-          <div className="rounded-xl border bg-muted/40 p-4 text-sm leading-relaxed">
-            <p className="flex items-center gap-2 font-semibold text-foreground">
-              <Info className="h-4 w-4 text-primary" aria-hidden />
-              What is this for?
-            </p>
-            <p className="mt-1 text-muted-foreground">
-              Recess is a simple sign-out sheet for short trips away from the room. When a student leaves for
-              the bathroom, a water break, a quick stretch, the nurse, or the office, you check them out here.
-              A live timer starts so any adult can see who is currently out and how long they have been gone —
-              then you check them back in when they return. Every trip is saved to a return log for safety,
-              accountability, and patterns over time.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                <CheckCircle2 className="h-4 w-4" aria-hidden />
-                Use it when…
-              </p>
-              <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-                <li>• A student asks to use the bathroom or get water.</li>
-                <li>• Someone needs a short movement or calm-down break.</li>
-                <li>• A student is sent to the nurse or front office.</li>
-                <li>• You want one shared answer to “who is out right now?”</li>
-              </ul>
-            </div>
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-300">
-                <Clock className="h-4 w-4" aria-hidden />
-                Keep in mind…
-              </p>
-              <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-                <li>• It tracks location, not points — nothing is added or deducted.</li>
-                <li>• Cards turn red past the time limit so long trips stand out.</li>
-                <li>• Remember to check students back in so the log stays accurate.</li>
-                <li>• For full-day attendance, use the Attendance tab instead.</li>
-              </ul>
-            </div>
-          </div>
-        </StaffPortalSectionCardContent>
-      </StaffPortalSectionCard>
-
-      <StaffPortalSectionCard>
-        <StaffPortalSectionCardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <Printer className="h-4 w-4 text-primary" aria-hidden />
+            <StaffPortalSectionCardTitle className="flex items-center gap-2 text-base">
+              <Printer className="h-4 w-4 text-ring" aria-hidden />
               Printable recess passes
             </StaffPortalSectionCardTitle>
             <Button
@@ -217,8 +160,6 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
               Print pass cards
             </Button>
           </div>
-        </StaffPortalSectionCardHeader>
-        <StaffPortalSectionCardContent className="space-y-4">
           <p className="text-sm text-muted-foreground leading-relaxed">
             Print one laminated card per category. Students sign in with their ID at the kiosk, then scan the
             matching pass at the coupon scanner. Scan the same pass again when they return.
@@ -267,7 +208,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
       <StaffPortalSectionCard>
         <StaffPortalSectionCardHeader>
           <StaffPortalSectionCardTitle className="flex items-center gap-2">
-            <Monitor className="h-4 w-4 text-primary" aria-hidden />
+            <Monitor className="h-4 w-4 text-ring" aria-hidden />
             Student kiosk scanning
           </StaffPortalSectionCardTitle>
         </StaffPortalSectionCardHeader>
@@ -328,7 +269,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                     className={cn(
                       'flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
                       active
-                        ? 'border-primary bg-primary/10 text-primary'
+                        ? 'border-primary bg-ring/10 text-ring'
                         : 'border-border bg-background text-muted-foreground hover:bg-muted',
                     )}
                   >
@@ -366,7 +307,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                     className={cn(
                       'flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
                       maxMinutes === m
-                        ? 'border-primary bg-primary/10 text-primary'
+                        ? 'border-primary bg-ring/10 text-ring'
                         : 'border-border bg-background text-muted-foreground hover:bg-muted',
                     )}
                   >
@@ -398,7 +339,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
       <StaffPortalSectionCard>
         <StaffPortalSectionCardHeader>
           <StaffPortalSectionCardTitle className="flex items-center gap-2">
-            <Timer className="h-4 w-4 text-primary" aria-hidden />
+            <Timer className="h-4 w-4 text-ring" aria-hidden />
             Out now
             {outNow.length > 0 ? (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
@@ -426,7 +367,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                   <li
                     key={pass.studentId}
                     className={cn(
-                      'flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors',
+                      'flex items-center justify-between gap-3 rounded-xl border p-3',
                       over ? 'border-red-500/50 bg-red-500/10' : 'border-border bg-muted/30',
                     )}
                   >
@@ -517,7 +458,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
           )}
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
-    </div>
+    </StaffPortalTabPanel>
   );
 }
 

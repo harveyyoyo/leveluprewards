@@ -21,12 +21,22 @@ describe('verifyAdminPasscodeServer', () => {
       doc: vi.fn().mockReturnValue(roleDocRef),
     };
 
+    const secretsCollection = {
+      doc: vi.fn().mockReturnValue({
+        get: vi.fn().mockResolvedValue({ exists: false, data: () => undefined }),
+        set: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
+
     const schoolDocRef = {
       get: vi.fn().mockResolvedValue({
         exists: Boolean(options.schoolData),
         data: () => options.schoolData,
       }),
-      collection: vi.fn().mockReturnValue(roleCollection),
+      collection: vi.fn((name: string) =>
+        name === 'secrets' ? secretsCollection : roleCollection,
+      ),
+      update: vi.fn().mockResolvedValue(undefined),
     };
 
     const schoolsCollection = {
@@ -111,5 +121,45 @@ describe('verifyAdminPasscodeServer', () => {
         passcode: '0000',
       }),
     ).rejects.toMatchObject({ code: 'permission-denied' } satisfies Partial<VerifyAdminPasscodeError>);
+  });
+
+  it('rejects wrong passcode for allowlisted Google developer when passcode is provided', async () => {
+    const prev = process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST;
+    process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST = 'dev@example.com';
+    try {
+      const { db } = createMockDb({ schoolData: { adminPasscode: '1234' } });
+
+      await expect(
+        verifyAdminPasscodeServer(db, {
+          uid: 'uid-dev',
+          email: 'dev@example.com',
+          firebase: { sign_in_provider: 'google.com' },
+          schoolId: 'schoolabc',
+          passcode: 'wrong',
+        }),
+      ).rejects.toMatchObject({ code: 'permission-denied' } satisfies Partial<VerifyAdminPasscodeError>);
+    } finally {
+      process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST = prev;
+    }
+  });
+
+  it('allows empty passcode for allowlisted Google developer', async () => {
+    const prev = process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST;
+    process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST = 'dev@example.com';
+    try {
+      const { db, adminSet } = createMockDb({ schoolData: { adminPasscode: '1234' } });
+
+      await verifyAdminPasscodeServer(db, {
+        uid: 'uid-dev',
+        email: 'dev@example.com',
+        firebase: { sign_in_provider: 'google.com' },
+        schoolId: 'schoolabc',
+        passcode: '',
+      });
+
+      expect(adminSet).toHaveBeenCalledWith({ role: 'admin' });
+    } finally {
+      process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST = prev;
+    }
   });
 });

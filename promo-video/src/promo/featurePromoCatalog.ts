@@ -116,7 +116,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#60a5fa",
 
-    clip: clip(CAPTURE_PATHS.kioskSigninRewards, 1.1),
+    clip: clip(CAPTURE_PATHS.kioskSigninRewards, 1.1, 1.45),
 
   },
 
@@ -134,7 +134,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#7dd3fc",
 
-    clip: clip(CAPTURE_PATHS.adminIdCard, 1.05),
+    clip: clip(CAPTURE_PATHS.adminIdCard, 1.05, 0.45),
 
   },
 
@@ -170,7 +170,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#fbbf24",
 
-    clip: clip(CAPTURE_PATHS.kioskPrizesHover, 1.08),
+    clip: clip(CAPTURE_PATHS.kioskPrizesHover, 1.08, 0.35),
 
   },
 

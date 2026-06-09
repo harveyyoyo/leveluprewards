@@ -8,7 +8,8 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
-import { Helper } from '@/components/ui/helper';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Class, Coupon, Student, Teacher } from '@/lib/types';
 
@@ -28,16 +29,11 @@ export function AdminStatsTab({
   totalPointsAwarded: number;
 }) {
   return (
-    <>
+    <StaffPortalTabPanel
+      tabValue="insights"
+      trailing={<TabWalkthroughHeaderAction />}
+    >
       <StaffPortalSectionCard className="">
-        <StaffPortalSectionCardHeader className="py-6 flex flex-row items-start justify-between gap-4">
-          <Helper content="Overview of points and engagement across the school.">
-            <StaffPortalSectionCardTitle className="text-2xl flex items-center gap-2">
-              <Activity className="text-primary w-6 h-6" /> School Analytics
-            </StaffPortalSectionCardTitle>
-          </Helper>
-          <TabWalkthroughHeaderAction />
-        </StaffPortalSectionCardHeader>
         <StaffPortalSectionCardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card className="bg-secondary/30 border-0 shadow-none">
@@ -72,11 +68,15 @@ export function AdminStatsTab({
 
       <StaffPortalSectionCard>
         <StaffPortalSectionCardHeader>
-          <Helper content="A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.">
+          <div className="flex items-center gap-1.5">
             <StaffPortalSectionCardTitle className="flex items-center gap-2">
-              <LayoutDashboard className="w-5 h-5 text-primary" /> System Stats
+              <LayoutDashboard className="w-5 h-5 text-ring" /> System Stats
             </StaffPortalSectionCardTitle>
-          </Helper>
+            <StaffPortalTabInfoPopover
+              sections={[staffPortalTabInfoSection("A high-level overview of your school's data, including counts for students, classes, teachers, and coupon activity.")]}
+              ariaLabel="About system stats"
+            />
+          </div>
         </StaffPortalSectionCardHeader>
         <StaffPortalSectionCardContent className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-center">
           {[
@@ -94,7 +94,7 @@ export function AdminStatsTab({
           ))}
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
-    </>
+    </StaffPortalTabPanel>
   );
 }
 

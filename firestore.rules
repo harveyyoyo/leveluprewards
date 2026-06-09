@@ -501,8 +501,7 @@ service cloud.firestore {
       // Passcode stored here; never readable by clients.
       // The Cloud Function verifySchoolPasscode reads this via the admin SDK.
       match /secrets/{docId} {
-        allow read: if false;
-        allow write: if isAdmin(schoolId);
+        allow read, write: if false;
       }
 
       match /backups/{backupId} {
