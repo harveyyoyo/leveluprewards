@@ -11,11 +11,39 @@ import type { House } from '@/lib/types';
 
 type Props = {
   birthdayToday?: boolean;
-  studentHouse?: House | null;
   welcomeStylesHref?: string | null;
   showWelcomeStyles?: boolean;
   themed?: boolean;
 };
+
+/** House badge for the top welcome bar. */
+export function StudentKioskHouseBadge({
+  studentHouse,
+  themed,
+}: {
+  studentHouse: House;
+  themed?: boolean;
+}) {
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <span className="inline-flex shrink-0 cursor-help flex-col items-start gap-0.5" tabIndex={0}>
+          <span
+            className="text-[8px] font-black uppercase tracking-[0.2em] opacity-60 sm:text-[9px]"
+            style={themed ? { color: 'var(--theme-page-text)' } : undefined}
+          >
+            House
+          </span>
+          <HouseBadge house={studentHouse} size="sm" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-xs">
+        Your house{studentHouse.value ? ` (${studentHouse.value})` : ''}. You earn points together in house
+        competitions and standings.
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 /** Avatar badge beside the student name — custom upload or a neutral student icon (not theme emoji). */
 export function StudentKioskEmojiBadge({
@@ -91,13 +119,12 @@ export function StudentKioskEmojiBadge({
 
 export function StudentKioskProfileExtras({
   birthdayToday,
-  studentHouse,
   welcomeStylesHref,
   showWelcomeStyles,
   themed,
 }: Props) {
   const welcomeVisible = !!(showWelcomeStyles && welcomeStylesHref);
-  const hasAny = birthdayToday || studentHouse || welcomeVisible;
+  const hasAny = birthdayToday || welcomeVisible;
 
   if (!hasAny) return null;
 
@@ -128,20 +155,6 @@ export function StudentKioskProfileExtras({
           </TooltipTrigger>
           <TooltipContent side="bottom" className="max-w-xs">
             It&apos;s your birthday today — your school is celebrating you on the kiosk.
-          </TooltipContent>
-        </Tooltip>
-      ) : null}
-
-      {studentHouse ? (
-        <Tooltip delayDuration={200}>
-          <TooltipTrigger asChild>
-            <span className="inline-flex cursor-help" tabIndex={0}>
-              <HouseBadge house={studentHouse} size="sm" />
-            </span>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" className="max-w-xs">
-            Your house team{studentHouse.value ? `: ${studentHouse.value}` : ''}. You earn points together in house
-            competitions and standings.
           </TooltipContent>
         </Tooltip>
       ) : null}

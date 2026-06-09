@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BookOpen, CheckCircle2, Loader2, Lock, ScanBarcode, User } from 'lucide-react';
+import { BookOpen, CheckCircle2, Loader2, Lock, ScanBarcode, User, X } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFunctions } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -10,16 +10,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { lookupStudentId } from '@/lib/db/lookup';
-import { performLibraryCheckoutOrReturn } from '@/lib/library/libraryOperations';
+import { performLibraryCheckoutOrReturn, findLibraryItemByUpc, getStudentLibraryCheckouts } from '@/lib/library/libraryOperations';
 import { getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
-import { isSchoolLibraryBarcode } from '@/lib/library/libraryScanCode';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
-import type { Category } from '@/lib/types';
+import type { Category, LibraryItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
 import { LibraryStaffExitDialog } from './LibraryStaffExitDialog';
+import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 
 type PortalStep = 'student' | 'book' | 'success';
 
@@ -64,6 +64,7 @@ export function LibraryStudentSelfCheckoutPortal({
 
   const [step, setStep] = useState<PortalStep>('student');
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [studentLoans, setStudentLoans] = useState<LibraryItem[]>([]);
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [busy, setBusy] = useState(false);
@@ -111,10 +112,43 @@ export function LibraryStudentSelfCheckoutPortal({
 
   const resetForNextStudent = useCallback(() => {
     setStudentId(null);
+    setStudentLoans([]);
     setLastBookTitle(null);
     setLastAction(null);
     setStep('student');
   }, []);
+
+  const handleBack = useCallback(() => {
+    if (step !== 'student') {
+      resetForNextStudent();
+      return;
+    }
+    if (staffCanDismissWithoutPasscode && onExit) {
+      onExit();
+      return;
+    }
+    setExitOpen(true);
+  }, [step, resetForNextStudent, staffCanDismissWithoutPasscode, onExit, setExitOpen]);
+
+  const handleExit = useCallback(() => {
+    if (staffCanDismissWithoutPasscode && onExit) {
+      onExit();
+      return;
+    }
+    setExitOpen(true);
+  }, [staffCanDismissWithoutPasscode, onExit, setExitOpen]);
+
+  const refreshStudentLoans = useCallback(
+    async (id: string) => {
+      if (!firestore || !schoolId) {
+        setStudentLoans([]);
+        return;
+      }
+      const items = await getStudentLibraryCheckouts(firestore, schoolId, id);
+      setStudentLoans(items);
+    },
+    [firestore, schoolId],
+  );
 
   const processBook = useCallback(
     async (code: string) => {
@@ -130,11 +164,20 @@ export function LibraryStudentSelfCheckoutPortal({
           setLastBookTitle(result.item.name);
           setLastAction('checkout');
           setStep('success');
+          await refreshStudentLoans(studentId);
         } else if (result.action === 'return') {
           playSound('success');
           setLastBookTitle(result.item.name);
           setLastAction('return');
           setStep('success');
+          await refreshStudentLoans(studentId);
+        } else if (result.action === 'limit_reached') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Checkout limit reached',
+            description: `You already have ${result.currentCount} of ${result.max} allowed books.`,
+          });
         } else if (result.action === 'wrong_borrower') {
           playSound('error');
           toast({
@@ -147,14 +190,14 @@ export function LibraryStudentSelfCheckoutPortal({
           toast({
             variant: 'destructive',
             title: 'Book not found',
-            description: 'Scan the LIB sticker on this school copy.',
+            description: 'Scan the barcode on this school copy (ISBN or LIB sticker).',
           });
         }
       } finally {
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, playSound, toast],
+    [firestore, schoolId, studentId, libraryPolicy, functions, playSound, toast, refreshStudentLoans],
   );
 
   const processStudent = useCallback(
@@ -174,58 +217,63 @@ export function LibraryStudentSelfCheckoutPortal({
         }
         setStudentId(id);
         setStep('book');
+        await refreshStudentLoans(id);
         playSound('success');
       } finally {
         setBusy(false);
       }
     },
-    [firestore, schoolId, playSound, toast],
+    [firestore, schoolId, playSound, toast, refreshStudentLoans],
   );
 
   const handleScan = useCallback(
     (code: string) => {
       if (!shouldAcceptScan(code)) return;
       const trimmed = code.trim();
-      if (!trimmed) return;
+      if (!trimmed || !firestore || !schoolId) return;
 
-      if (step === 'student') {
-        if (isSchoolLibraryBarcode(trimmed) || isRetailIsbnBarcode(trimmed)) {
-          toast({
-            variant: 'destructive',
-            title: 'Scan your ID card first',
-            description: 'Use your student ID card, then scan the book.',
-          });
-          return;
-        }
-        void processStudent(trimmed);
-        return;
-      }
+      void (async () => {
+        const found = await findLibraryItemByUpc(firestore, schoolId, trimmed);
 
-      if (step === 'book' || step === 'success') {
-        if (!isSchoolLibraryBarcode(trimmed)) {
-          if (isRetailIsbnBarcode(trimmed)) {
+        if (step === 'student') {
+          if (found) {
             toast({
               variant: 'destructive',
-              title: 'ISBN barcode',
-              description: 'Scan the school LIB sticker on the book.',
+              title: 'Scan your ID card first',
+              description: 'Use your student ID card, then scan the book.',
             });
-          } else if (step === 'book') {
-            toast({
-              variant: 'destructive',
-              title: 'Not a book barcode',
-              description: 'Scan the LIB sticker on the book cover.',
-            });
+            return;
           }
+          void processStudent(trimmed);
           return;
         }
-        if (step === 'success') {
-          setStep('book');
-          setLastAction(null);
+
+        if (step === 'book' || step === 'success') {
+          if (!found) {
+            if (isRetailIsbnBarcode(trimmed)) {
+              toast({
+                variant: 'destructive',
+                title: 'Book not in catalog',
+                description: 'This ISBN is not registered. Ask library staff for help.',
+              });
+            } else if (step === 'book') {
+              toast({
+                variant: 'destructive',
+                title: 'Book not found',
+                description: 'Scan the barcode on the book cover (ISBN or LIB sticker).',
+              });
+            }
+            return;
+          }
+          if (step === 'success') {
+            setStep('book');
+            setLastAction(null);
+          }
+          void processBook(trimmed);
         }
-        void processBook(trimmed);
-      }
+      })();
     },
-    [step, processBook, processStudent, shouldAcceptScan, toast],
+    [step, processBook, processStudent, shouldAcceptScan, toast, firestore, schoolId],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
@@ -245,7 +293,7 @@ export function LibraryStudentSelfCheckoutPortal({
     step === 'student'
       ? 'Scan your student ID card.'
       : step === 'book'
-        ? `Scan each book for ${studentLabel ?? 'this student'}.`
+        ? `Scan each book barcode for ${studentLabel ?? 'this student'}.`
         : 'Scan another book or tap Next student.';
 
   if (!sessionReady) {
@@ -264,34 +312,42 @@ export function LibraryStudentSelfCheckoutPortal({
   return (
     <div
       className={cn(
-        'flex flex-col bg-gradient-to-b from-primary/8 via-background to-background',
-        'min-h-[100dvh] h-full w-full flex-1 overflow-y-auto',
+        'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden',
+        'bg-gradient-to-b from-primary/8 via-background to-background',
       )}
     >
-      <header className="flex items-center justify-between gap-3 border-b bg-background/90 backdrop-blur px-4 py-3 shrink-0">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library</p>
-          <h1 className="text-lg font-black tracking-tight">Check out books</h1>
-        </div>
+      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 py-2.5 shadow-sm supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="rounded-xl shrink-0"
-          onClick={() => {
-            if (staffCanDismissWithoutPasscode && onExit) {
-              onExit();
-              return;
-            }
-            setExitOpen(true);
-          }}
+          className="h-11 shrink-0 gap-2 rounded-xl border-2 border-foreground/20 bg-background px-3 font-bold shadow-sm hover:bg-muted"
+          onClick={handleBack}
+          aria-label={step !== 'student' ? 'Back to scan student card' : 'Close self checkout'}
         >
-          <Lock className="mr-2 h-4 w-4" />
-          {staffCanDismissWithoutPasscode ? 'Close' : 'Staff'}
+          <X className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
+          <span className="text-sm">{step !== 'student' ? 'Back' : 'Close'}</span>
         </Button>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library</p>
+          <h1 className="truncate text-base font-black tracking-tight sm:text-lg">Check out books</h1>
+        </div>
+        {step !== 'student' ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-11 shrink-0 rounded-xl border-2 font-bold"
+            onClick={handleExit}
+          >
+            <Lock className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
+            Exit
+          </Button>
+        ) : (
+          <span className="w-[4.5rem] shrink-0 sm:w-[5.25rem]" aria-hidden />
+        )}
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-lg mx-auto w-full gap-6">
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto p-4 md:p-8 max-w-lg mx-auto w-full">
         <div
           className={cn(
             'flex h-16 w-16 items-center justify-center rounded-2xl border-2 shadow-sm',
@@ -309,11 +365,16 @@ export function LibraryStudentSelfCheckoutPortal({
           )}
         </div>
 
-        <div className="text-center space-y-1">
+        <div className="text-center space-y-2 w-full">
+          {studentLabel && step !== 'student' ? (
+            <p className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-foreground leading-none px-2">
+              {studentLabel}
+            </p>
+          ) : null}
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Step {step === 'student' ? '1' : step === 'book' ? '2' : 'Done'}
           </p>
-          <h2 className="text-2xl font-black">
+          <h2 className="text-xl sm:text-2xl font-black text-muted-foreground">
             {step === 'student'
               ? 'Scan your card'
               : step === 'book'
@@ -322,13 +383,19 @@ export function LibraryStudentSelfCheckoutPortal({
                   ? 'Book returned!'
                   : 'Book checked out!'}
           </h2>
-          {studentLabel && step !== 'student' ? (
-            <p className="text-sm text-muted-foreground font-medium">{studentLabel}</p>
-          ) : null}
           {lastBookTitle && step === 'success' ? (
-            <p className="text-sm font-semibold text-primary">{lastBookTitle}</p>
+            <p className="text-base sm:text-lg font-semibold text-primary">{lastBookTitle}</p>
           ) : null}
         </div>
+
+        {studentId && step !== 'student' ? (
+          <LibraryStudentLoansSummary
+            items={studentLoans}
+            maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
+            libraryPolicy={libraryPolicy}
+            compact
+          />
+        ) : null}
 
         <div className="w-full space-y-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">

@@ -197,6 +197,11 @@ export function LibraryManagementPanel({
     [libraryItems],
   );
 
+  const kioskMissingItems = useMemo(
+    () => (libraryItems ?? []).filter((i) => !i.upc?.trim()),
+    [libraryItems],
+  );
+
   const hasIntakeTab = !!(showIntakeScanner && onRegisterFromScan && upcTaken);
 
   return (
@@ -313,6 +318,38 @@ export function LibraryManagementPanel({
                 </CardContent>
               </Card>
             </div>
+
+            {kioskMissingItems.length > 0 ? (
+              <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-2">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Missing kiosk barcode ({kioskMissingItems.length})
+                </h5>
+                <p className="text-xs text-muted-foreground">
+                  These catalog items have no checkout barcode, so students cannot scan them at the kiosk. Edit each item
+                  or re-scan on Book Intake.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {kioskMissingItems.slice(0, 8).map((item) => (
+                    <Button
+                      key={item.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 rounded-lg text-xs font-semibold"
+                      onClick={() => onEditLibraryItem(item)}
+                    >
+                      {item.name}
+                    </Button>
+                  ))}
+                  {kioskMissingItems.length > 8 ? (
+                    <span className="text-xs text-muted-foreground self-center">
+                      +{kioskMissingItems.length - 8} more
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
 
             {/* Overdue Dashboard Quick Summary Log */}
             {overdueCount > 0 && statusFilter !== 'overdue' && (

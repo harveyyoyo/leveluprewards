@@ -7,6 +7,8 @@ export type LibraryRewardMode = 'none' | 'fines' | 'app_points' | 'isolated_poin
 export type LibraryPolicySettings = {
   rewardMode: LibraryRewardMode;
   loanPeriodDays: number;
+  /** Max books a student may have checked out at once. 0 = unlimited. */
+  maxCheckoutsPerStudent: number;
   lateFeesEnabled: boolean;
   latePointsPerDay: number;
   onTimeReturnPoints: number;
@@ -37,6 +39,7 @@ export function getLibraryPolicyFromSettings(
   settings: {
     libraryRewardMode?: LibraryRewardMode;
     libraryLoanPeriodDays?: number;
+    libraryMaxCheckoutsPerStudent?: number;
     libraryLateFeesEnabled?: boolean;
     libraryLatePointsPerDay?: number;
     libraryOnTimeReturnPoints?: number;
@@ -59,10 +62,15 @@ export function getLibraryPolicyFromSettings(
       : 0;
   const categoryId = settings.libraryPointsCategoryId?.trim() || undefined;
   const category = categoryId ? categories?.find((c) => c.id === categoryId) : undefined;
+  const maxCheckoutsPerStudent =
+    typeof settings.libraryMaxCheckoutsPerStudent === 'number' && settings.libraryMaxCheckoutsPerStudent >= 0
+      ? settings.libraryMaxCheckoutsPerStudent
+      : 3;
 
   return {
     rewardMode,
     loanPeriodDays,
+    maxCheckoutsPerStudent,
     lateFeesEnabled: settings.libraryLateFeesEnabled !== false,
     latePointsPerDay,
     onTimeReturnPoints,

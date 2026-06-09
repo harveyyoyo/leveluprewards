@@ -1,12 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { AlertTriangle, Calendar } from 'lucide-react';
+import { AlertTriangle, BookOpen, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { LibraryItem } from '@/lib/types';
-import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
+import {
+  computeDaysOverdue,
+  formatDueDate,
+  type LibraryPolicySettings,
+} from '@/lib/library/libraryPolicy';
 
 export function StudentLibraryCheckoutsCard({
   schoolId,
@@ -14,26 +18,53 @@ export function StudentLibraryCheckoutsCard({
   themed,
   topAlert = false,
   kioskCheckoutEnabled = false,
+  maxCheckouts,
+  libraryPolicy,
+  libraryPoints,
+  libraryFineBalance,
+  categoryPoints,
 }: {
   schoolId: string;
   items: LibraryItem[];
   themed?: boolean;
   /** Emphasize overdue returns at top of kiosk. */
   topAlert?: boolean;
-  /** Student can return via LIB scan on the coupon card. */
+  /** Student can return by scanning the book barcode on the coupon card. */
   kioskCheckoutEnabled?: boolean;
+  maxCheckouts?: number;
+  libraryPolicy?: LibraryPolicySettings;
+  libraryPoints?: number;
+  libraryFineBalance?: number;
+  categoryPoints?: number;
 }) {
-  if (items.length === 0) return null;
-
+  const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
+  const countLabel = max ? `${items.length} / ${max}` : String(items.length);
   const hasOverdue = items.some((i) => computeDaysOverdue(i.dueAt) > 0);
   const showOverdueHeader = topAlert && hasOverdue;
+  const atLimit = max != null && items.length >= max;
+
+  const tierLines: string[] = [];
+  if (libraryPolicy?.rewardMode === 'isolated_points' && typeof libraryPoints === 'number') {
+    tierLines.push(`Library points: ${libraryPoints}`);
+  }
+  if (libraryPolicy?.rewardMode === 'fines' && typeof libraryFineBalance === 'number' && libraryFineBalance > 0) {
+    tierLines.push(`Fines: ${libraryFineBalance}`);
+  }
+  if (
+    libraryPolicy?.rewardMode === 'app_points' &&
+    libraryPolicy.pointsCategoryName &&
+    typeof categoryPoints === 'number'
+  ) {
+    tierLines.push(`${libraryPolicy.pointsCategoryName}: ${categoryPoints} pts`);
+  }
 
   return (
     <Card
       className={cn(
         'shrink-0 border-2 shadow-md',
         showOverdueHeader && 'w-full border-amber-400/70 bg-amber-50/95 dark:border-amber-500/50 dark:bg-amber-950/40',
-        !topAlert && !themed && 'border-primary/30 bg-card/95',
+        atLimit && !showOverdueHeader && 'border-amber-400/50',
+        !topAlert && !themed && !showOverdueHeader && 'border-primary/30 bg-card/95',
       )}
       style={
         themed && !showOverdueHeader
@@ -56,25 +87,44 @@ export function StudentLibraryCheckoutsCard({
             showOverdueHeader && 'text-amber-950 dark:text-amber-100',
           )}
         >
-          <AlertTriangle
-            className={cn('h-4 w-4', showOverdueHeader ? 'text-amber-600' : 'text-primary')}
-            aria-hidden
-          />
+          {showOverdueHeader ? (
+            <AlertTriangle
+              className={cn('h-4 w-4', 'text-amber-600')}
+              aria-hidden
+            />
+          ) : (
+            <BookOpen className="h-4 w-4 text-primary" aria-hidden />
+          )}
           {showOverdueHeader ? 'Overdue library books — return now' : 'My library books'}
           <Badge
-            variant={showOverdueHeader ? 'destructive' : 'secondary'}
+            variant={showOverdueHeader || atLimit ? 'destructive' : 'secondary'}
             className="ml-auto text-[10px]"
           >
-            {items.length}
+            {countLabel}
           </Badge>
         </CardTitle>
+        {tierLines.length > 0 ? (
+          <p className="text-[10px] text-muted-foreground font-semibold pt-1">{tierLines.join(' · ')}</p>
+        ) : null}
+        {atLimit && !showOverdueHeader ? (
+          <p className="text-[10px] font-semibold text-amber-800 dark:text-amber-200 pt-1">
+            Checkout limit reached — return a book before borrowing another.
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent
         className={cn(
           'px-4 pb-4 pt-0 space-y-2',
-          showOverdueHeader ? 'max-h-36 overflow-y-auto' : 'max-h-48 overflow-y-auto',
+          items.length === 0 ? '' : showOverdueHeader ? 'max-h-36 overflow-y-auto' : 'max-h-48 overflow-y-auto',
         )}
       >
+        {items.length === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {kioskCheckoutEnabled
+              ? 'No books checked out. Scan a book barcode at the coupon scanner to borrow one.'
+              : 'No books checked out right now.'}
+          </p>
+        ) : null}
         {items.map((item) => {
           const overdueDays = computeDaysOverdue(item.dueAt);
           return (
@@ -109,8 +159,8 @@ export function StudentLibraryCheckoutsCard({
               {kioskCheckoutEnabled ? (
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {overdueDays > 0
-                    ? 'Scan the LIB sticker on this book at the coupon scanner to return'
-                    : 'Scan the LIB sticker on the coupon card to return · tap for details'}
+                    ? 'Scan this book at the coupon scanner to return'
+                    : 'Scan the book barcode at the coupon card to return · tap for details'}
                 </p>
               ) : topAlert ? (
                 <p className="text-[10px] font-semibold text-amber-900/80 dark:text-amber-200/90 mt-0.5">

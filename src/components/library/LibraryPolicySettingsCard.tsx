@@ -59,8 +59,8 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             <div>
               <p className="text-sm font-semibold">Student kiosk (signed in)</p>
               <p className="text-xs text-muted-foreground">
-                On the student rewards page, use the same barcode scan as coupons to check out or return books (LIB
-                sticker on each copy).
+                On the student rewards page, use the same barcode scan as coupons to check out or return books (scan the
+                book&apos;s ISBN barcode or LIB sticker).
               </p>
             </div>
             <Switch
@@ -130,6 +130,23 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 updateSettings({ libraryLoanPeriodDays: Math.max(1, parseInt(e.target.value, 10) || 14) })
               }
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lib-max-books">Max books per student</Label>
+            <Input
+              id="lib-max-books"
+              type="number"
+              min={0}
+              max={50}
+              value={settings.libraryMaxCheckoutsPerStudent ?? 3}
+              onChange={(e) =>
+                updateSettings({
+                  libraryMaxCheckoutsPerStudent: Math.max(0, parseInt(e.target.value, 10) || 0),
+                })
+              }
+            />
+            <p className="text-[10px] text-muted-foreground">0 = no limit</p>
           </div>
 
           {rewardMode === 'app_points' ? (

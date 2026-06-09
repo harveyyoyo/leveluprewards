@@ -30,6 +30,7 @@ import {
     type DisplayModePreference,
     type ResolvedDisplayMode,
 } from '@/lib/displayMode';
+import { resolveMainPortalCards, type MainPortalCardId } from '@/lib/portalHub';
 import {
     getBrowserLegacyModeSignals,
     resolveLegacyModePreference,
@@ -239,6 +240,8 @@ interface Settings {
     studentPortalShowHeader?: boolean;
     /** When true, tuck the school header on staff/inner routes; main portal hub and student kiosk are excluded. */
     hideSiteHeaderOutsidePortal?: boolean;
+    /** Which cards appear on the main portal hub (`/{schoolId}/portal`). Defaults to admin, teacher, student kiosk. */
+    mainPortalCards?: MainPortalCardId[];
     /**
      * When true, student kiosk screens (portal hub, sign-in, rewards shop) use a tall narrow
      * layout for portrait-mounted displays (e.g. a floor stand with a rotated monitor).
@@ -421,6 +424,8 @@ interface Settings {
     payOffice?: boolean;
     /** Default checkout loan length before a book is overdue. */
     libraryLoanPeriodDays?: number;
+    /** Max books a student may borrow at once. 0 = unlimited. */
+    libraryMaxCheckoutsPerStudent?: number;
     /**
      * How returns affect balances: none | fines | app_points | isolated_points.
      * Legacy schools without this field infer from category + late/bonus settings.
@@ -632,7 +637,7 @@ const defaultSettings: Settings = {
     enableNotifications: true,
     notificationRewardsEnabled: true,
     notificationAttendanceEnabled: true,
-    notificationLibraryEnabled: false,
+    notificationLibraryEnabled: true,
     notificationMilestonesEnabled: true,
     notificationStudentsEnabled: false,
     notificationArtworkEnabled: true,
@@ -802,6 +807,7 @@ const defaultSettings: Settings = {
     payLibrary: true,
     payOffice: false,
     libraryLoanPeriodDays: 14,
+    libraryMaxCheckoutsPerStudent: 3,
     libraryStudentKioskCheckoutEnabled: true,
     libraryAutoStudentPortalEnabled: true,
     libraryLateFeesEnabled: true,
@@ -1199,6 +1205,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     delete (parsed as Partial<Settings>).privacyStudentNameDisplayMode;
                 }
                 parsed.displayMode = normalizeDisplayModePreference(parsed.displayMode);
+                parsed.mainPortalCards = resolveMainPortalCards(parsed.mainPortalCards);
                 if (parsed.studentDisplayMode !== undefined) {
                     parsed.studentDisplayMode = normalizeDisplayModePreference(parsed.studentDisplayMode);
                 }

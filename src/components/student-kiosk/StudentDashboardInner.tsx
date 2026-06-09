@@ -65,7 +65,10 @@ import {
 } from '@/lib/recess/recessKioskSettings';
 import { RECESS_REASON_BY_VALUE } from '@/lib/recess/recessReasons';
 import { StudentKioskThemeButton } from '@/components/student-kiosk/StudentKioskThemeButton';
-import { StudentKioskProfileExtras } from '@/components/student-kiosk/StudentKioskProfileExtras';
+import {
+  StudentKioskHouseBadge,
+  StudentKioskProfileExtras,
+} from '@/components/student-kiosk/StudentKioskProfileExtras';
 import { StudentKioskActivityPreview } from '@/components/student-kiosk/StudentKioskActivityPreview';
 import { StudentActivityList } from '@/components/student-kiosk/StudentActivityList';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
@@ -335,15 +338,15 @@ export function StudentDashboardInner({
   );
   const hasLibraryCheckouts = myLibraryBooks.length > 0;
   const libraryScanHint =
-    libraryKioskCheckoutOn && hasLibraryCheckouts
-      ? ' Scan the LIB sticker on a library book here to check out or return (same place as coupons).'
+    libraryKioskCheckoutOn
+      ? ' Scan a book barcode (ISBN or LIB sticker) here to check out or return (same place as coupons).'
       : '';
   const recessScanHint = recessKioskCheckoutOn
     ? ' After signing in, scan a recess pass (RCBATH, RCBREAK, RCWATER) here to check out; scan the pass again when you return.'
     : '';
   const libraryCheckoutNote =
-    libraryKioskCheckoutOn && hasLibraryCheckouts
-      ? 'Library books: scan the LIB sticker on the book cover (same scanner as coupons) to check out or return.'
+    libraryKioskCheckoutOn
+      ? 'Library books: scan the book barcode (ISBN on cover or LIB sticker) at this scanner to check out or return.'
       : undefined;
   const recessCheckoutNote = recessKioskCheckoutOn
     ? 'Recess: scan your printed bathroom/break/water pass at this scanner (after your student ID). Scan the pass again to check back in.'
@@ -913,6 +916,16 @@ export function StudentDashboardInner({
           setCouponCode('');
           return;
         }
+        if (result.action === 'limit_reached') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Library — Limit reached',
+            description: `You already have ${result.currentCount} of ${result.max} allowed books. Return one first.`,
+          });
+          setCouponCode('');
+          return;
+        }
       } catch (e) {
         console.error('Library scan error:', e);
       }
@@ -1453,12 +1466,31 @@ export function StudentDashboardInner({
   const profileExtrasBlock = (
     <StudentKioskProfileExtras
       birthdayToday={birthdayToday}
-      studentHouse={studentHouse}
       welcomeStylesHref={schoolId ? `/${schoolId}/student/welcome` : null}
       showWelcomeStyles={studentSeesWelcomePage(settings, student)}
       themed={!!effectiveTheme}
     />
   );
+
+  const libraryBlock =
+    libraryKioskCheckoutOn && schoolId && student ? (
+      <StudentLibraryCheckoutsCard
+        schoolId={schoolId}
+        items={myLibraryBooks}
+        themed={!!effectiveTheme}
+        topAlert={overdueLibraryBooks.length > 0}
+        kioskCheckoutEnabled
+        maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
+        libraryPolicy={libraryPolicy}
+        libraryPoints={student.libraryPoints}
+        libraryFineBalance={student.libraryFineBalance}
+        categoryPoints={
+          libraryPolicy.pointsCategoryName && student.categoryPoints
+            ? student.categoryPoints[libraryPolicy.pointsCategoryName]
+            : undefined
+        }
+      />
+    ) : null;
 
   const wedgeDemoCameraActive =
     settings.kioskWedgeDemoCameraEnabled === true &&
@@ -1578,6 +1610,11 @@ export function StudentDashboardInner({
             themed={!!effectiveTheme}
             primaryForeground={primaryForeground}
             photoDisplayMode={settings.photoDisplayMode}
+            nameExtras={
+              studentHouse ? (
+                <StudentKioskHouseBadge studentHouse={studentHouse} themed={!!effectiveTheme} />
+              ) : undefined
+            }
             trailingActions={
               <div className="flex flex-col items-end gap-2">
                 {settings.enableBadges && headerBadges.length > 0 ? (
@@ -1641,16 +1678,6 @@ export function StudentDashboardInner({
               primaryForeground={primaryForeground}
               maxMinutes={recessMaxMinutes}
               onActivity={resetLogoutTimer}
-            />
-          ) : null}
-
-          {libraryKioskCheckoutOn && schoolId && myLibraryBooks.length > 0 ? (
-            <StudentLibraryCheckoutsCard
-              schoolId={schoolId}
-              items={myLibraryBooks}
-              themed={!!effectiveTheme}
-              topAlert={overdueLibraryBooks.length > 0}
-              kioskCheckoutEnabled
             />
           ) : null}
 
@@ -1741,6 +1768,7 @@ export function StudentDashboardInner({
               Other info
             </p>
             <StudentKioskFadeScrollPane themed={!!effectiveTheme}>
+              {libraryBlock}
               {profileExtrasBlock}
               <StudentKioskPointCategoriesPanel
                 themed={!!effectiveTheme}
@@ -1780,6 +1808,7 @@ export function StudentDashboardInner({
             >
               Other info
             </p>
+            {libraryBlock}
             {profileExtrasBlock}
             <StudentKioskPointCategoriesPanel
               themed={!!effectiveTheme}

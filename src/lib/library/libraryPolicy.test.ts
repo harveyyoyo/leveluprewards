@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getLibraryPolicyFromSettings,
   isLibraryPillarEnabled,
   isLibraryStandaloneSelfCheckoutEnabled,
   isLibraryStudentKioskCheckoutEnabled,
@@ -24,5 +25,17 @@ describe('library student checkout settings', () => {
     expect(isLibraryStandaloneSelfCheckoutEnabled({ libraryAutoStudentPortalEnabled: true })).toBe(true);
     expect(isLibraryStandaloneSelfCheckoutEnabled({})).toBe(true);
     expect(isLibraryStandaloneSelfCheckoutEnabled({ libraryAutoStudentPortalEnabled: false })).toBe(false);
+  });
+});
+
+describe('getLibraryPolicyFromSettings', () => {
+  it('defaults max checkouts to 3', () => {
+    const policy = getLibraryPolicyFromSettings({});
+    expect(policy.maxCheckoutsPerStudent).toBe(3);
+  });
+
+  it('respects explicit max checkouts including 0 for unlimited', () => {
+    expect(getLibraryPolicyFromSettings({ libraryMaxCheckoutsPerStudent: 5 }).maxCheckoutsPerStudent).toBe(5);
+    expect(getLibraryPolicyFromSettings({ libraryMaxCheckoutsPerStudent: 0 }).maxCheckoutsPerStudent).toBe(0);
   });
 });

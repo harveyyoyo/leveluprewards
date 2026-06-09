@@ -69,6 +69,26 @@ const settings = {
     wideLayout: 'Wide layout',
     wideLayoutDesc:
       'Use full-width layout on teacher and admin portals instead of centered content.',
+    mainPortalCards: 'Main portal cards',
+    mainPortalCardsDesc:
+      'Choose which destinations appear on the main portal hub. Defaults to admin, teacher, and student kiosk.',
+    mainPortalCardRequiresRewards: 'Requires the Rewards pillar to be enabled.',
+    mainPortalCardRequiresStudentPortal: 'Turn on Student home portal in school settings first.',
+    mainPortalCardRequiresParentPortal: 'Requires the Parent portal feature to be enabled.',
+    mainPortalCard: {
+      admin: 'Admin portal',
+      print: 'Teacher portal',
+      redeem: 'Student kiosk',
+      'student-home': 'Student home portal',
+      parent: 'Parent portal',
+    },
+    mainPortalCardDesc: {
+      admin: 'School admin dashboard for students, classes, prizes, and settings.',
+      print: 'Staff tools for teachers and desk roles.',
+      redeem: 'On-site student sign-in, points, and prize shop.',
+      'student-home': 'Students sign in from home to view progress.',
+      parent: 'Families view points, notes, and attendance.',
+    },
   },
   general: {
     nav: {

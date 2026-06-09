@@ -45,6 +45,13 @@ import {
 } from '@/lib/i18n/settingsNav';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { normalizeDisplayModePreference } from '@/lib/displayMode';
+import {
+    MAIN_PORTAL_CARD_ORDER,
+    resolveMainPortalCards,
+    toggleMainPortalCard,
+    type MainPortalCardId,
+} from '@/lib/portalHub';
+import { isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
 import type { StudentTheme } from '@/lib/types';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
@@ -1248,6 +1255,73 @@ export function SettingsModal() {
                                                  />
                                              </div>
                                          </>
+                                     ) : null}
+
+                                     {canManageSchoolSettings && interfaceRole === 'global' ? (
+                                         <div className="space-y-3 border-t border-border/40 pt-4">
+                                             <div className="min-w-0">
+                                                 <span className="text-sm font-bold">
+                                                     {t('settings.interface.mainPortalCards')}
+                                                 </span>
+                                                 <p className="text-[11px] text-muted-foreground">
+                                                     {t('settings.interface.mainPortalCardsDesc')}
+                                                 </p>
+                                             </div>
+                                             <div className="space-y-2">
+                                                 {MAIN_PORTAL_CARD_ORDER.map((cardId) => {
+                                                     const resolvedCards = resolveMainPortalCards(local.mainPortalCards);
+                                                     const enabled = resolvedCards.includes(cardId);
+                                                     const cardLabelKey = `settings.interface.mainPortalCard.${cardId}` as const;
+                                                     const cardDescKey = `settings.interface.mainPortalCardDesc.${cardId}` as const;
+                                                     const requiresRewards =
+                                                         (cardId === 'redeem' || cardId === 'student-home') &&
+                                                         !isRewardsPillarOn(local);
+                                                     const requiresStudentPortal =
+                                                         cardId === 'student-home' && local.enableStudentPortal !== true;
+                                                     const requiresParentPortal =
+                                                         cardId === 'parent' && !isParentPortalOn(local);
+                                                     const unavailableHint = requiresRewards
+                                                         ? t('settings.interface.mainPortalCardRequiresRewards')
+                                                         : requiresStudentPortal
+                                                           ? t('settings.interface.mainPortalCardRequiresStudentPortal')
+                                                           : requiresParentPortal
+                                                             ? t('settings.interface.mainPortalCardRequiresParentPortal')
+                                                             : null;
+                                                     return (
+                                                         <div
+                                                             key={cardId}
+                                                             className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-muted/20 px-3 py-2.5"
+                                                         >
+                                                             <div className="min-w-0 pr-2">
+                                                                 <span className="text-sm font-bold">{t(cardLabelKey)}</span>
+                                                                 <p className="text-[11px] text-muted-foreground leading-snug">
+                                                                     {t(cardDescKey)}
+                                                                     {unavailableHint ? (
+                                                                         <span className="mt-1 block text-[10px] text-amber-700 dark:text-amber-300">
+                                                                             {unavailableHint}
+                                                                         </span>
+                                                                     ) : null}
+                                                                 </p>
+                                                             </div>
+                                                             <Switch
+                                                                 checked={enabled}
+                                                                 onCheckedChange={(checked) =>
+                                                                     handleToggle(
+                                                                         'mainPortalCards',
+                                                                         toggleMainPortalCard(
+                                                                             local.mainPortalCards,
+                                                                             cardId,
+                                                                             checked,
+                                                                         ),
+                                                                     )
+                                                                 }
+                                                                 aria-label={t(cardLabelKey)}
+                                                             />
+                                                         </div>
+                                                     );
+                                                 })}
+                                             </div>
+                                         </div>
                                      ) : null}
 
                                      <div

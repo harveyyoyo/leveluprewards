@@ -34,6 +34,15 @@ import type { TranslationParams } from '@/lib/i18n/translate';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
+import {
+    isMainPortalCardEnabled,
+    portalHubCardPaddingClass,
+    portalHubGapClass,
+    portalHubGridClass,
+    portalHubGridMaxWidthClass,
+    portalHubOuterGapClass,
+    portalHubTitleClass,
+} from '@/lib/portalHub';
 import { staffLandingPath } from '@/lib/staffPortal/staffLandingPath';
 
 type PortalArea = {
@@ -323,9 +332,12 @@ export default function PortalPage() {
             ]
           : []),
     ];
-    const visiblePortals = portals.filter((area) =>
-        isPortalAreaOnDisplayMode(area.id, settings.displayMode),
+    const visiblePortals = portals.filter(
+        (area) =>
+            isMainPortalCardEnabled(settings.mainPortalCards, area.id) &&
+            isPortalAreaOnDisplayMode(area.id, settings.displayMode),
     );
+    const portalCount = visiblePortals.length;
 
     return (
         <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
@@ -334,19 +346,21 @@ export default function PortalPage() {
             <div
                 className={cn(
                     'relative z-[10] flex h-full min-h-0 w-full flex-col',
-                    compactDisplay ? 'overflow-x-hidden overflow-y-auto overscroll-contain' : 'overflow-hidden',
+                    compactDisplay || portalCount >= 4
+                        ? 'overflow-x-hidden overflow-y-auto overscroll-contain'
+                        : 'overflow-hidden',
                     compactDisplay
                         ? 'px-4 pb-3 pt-2 sm:pb-4 sm:pt-4 md:py-10'
-                        : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
+                        : portalCount >= 4
+                          ? 'px-4 pb-4 pt-6 sm:pt-8 md:pb-4 md:pt-10'
+                          : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
                     portalChoosePageShellClass(kioskPortrait, compactDisplay),
                 )}
             >
                 <div
                     className={cn(
                         'flex min-h-full w-full flex-1 flex-col items-center',
-                        compactDisplay
-                            ? 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8'
-                            : 'justify-start gap-10 sm:gap-12 md:gap-16',
+                        portalHubOuterGapClass(portalCount, compactDisplay),
                     )}
                 >
 
@@ -364,9 +378,7 @@ export default function PortalPage() {
                                         'font-headline portal-choose-title-depth inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         kioskPortrait
                                             ? portalChooseTitleClass(true, compactDisplay)
-                                            : compactDisplay
-                                              ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
-                                              : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
+                                            : portalHubTitleClass(portalCount, compactDisplay, false),
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -391,12 +403,11 @@ export default function PortalPage() {
                     {/* Grid: narrower cards on phone; full width from md up */}
                     <div
                         className={cn(
-                            'mx-auto w-full shrink-0 pb-safe md:mt-0',
+                            'mx-auto w-full pb-safe md:mt-0',
+                            portalCount >= 4 && !compactDisplay ? 'min-h-0 flex-1' : 'shrink-0',
                             kioskPortrait
                                 ? ''
-                                : compactDisplay
-                                  ? 'max-w-[min(24rem,calc(100%-0.5rem))] sm:max-w-xl'
-                                  : 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl',
+                                : portalHubGridMaxWidthClass(portalCount, compactDisplay, false),
                             portalChooseGridClass(kioskPortrait),
                         )}
                     >
@@ -407,8 +418,9 @@ export default function PortalPage() {
                             initial={prefersReducedMotion ? false : 'hidden'}
                             animate="show"
                             className={cn(
-                                'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
-                                kioskPortrait || compactDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
+                                'pointer-events-auto grid w-full overflow-visible',
+                                portalHubGapClass(portalCount, compactDisplay),
+                                portalHubGridClass(portalCount, compactDisplay, kioskPortrait),
                             )}
                         >
                     {visiblePortals.map((area, index) => {
@@ -432,7 +444,7 @@ export default function PortalPage() {
                                         'flex h-full min-h-0 w-full flex-col justify-center',
                                         compactDisplay
                                             ? 'px-4 py-4 sm:px-5 sm:py-5'
-                                            : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
+                                            : portalHubCardPaddingClass(portalCount, compactDisplay),
                                     )}
                                 >
                                     {compactDisplay ? (
@@ -492,7 +504,7 @@ export default function PortalPage() {
                                                         }}
                                                     >
                                                         <HelpCircle className="mr-1 h-3 w-3" />
-                                                        Welcome Tour
+                                                        {area.id === 'admin' ? 'Admin Tour' : area.id === 'print' ? 'Teacher Tour' : area.id === 'redeem' ? 'Student Tour' : 'Welcome Tour'}
                                                     </div>
                                                 </div>
                                             )}
@@ -562,7 +574,7 @@ export default function PortalPage() {
                                                             }}
                                                         >
                                                             <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
-                                                            Welcome Tour
+                                                            {area.id === 'admin' ? 'Admin Tour' : area.id === 'print' ? 'Teacher Tour' : area.id === 'redeem' ? 'Student Tour' : 'Welcome Tour'}
                                                         </div>
                                                     </div>
                                                 )}

@@ -103,6 +103,13 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
             title: 'Checked out to someone else',
             description: 'Only the student who borrowed this book can return it here.',
           });
+        } else if (result.action === 'limit_reached') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Checkout limit reached',
+            description: `You already have ${result.currentCount} of ${result.max} allowed books.`,
+          });
         } else {
           playSound('error');
           toast({ variant: 'destructive', title: 'Book not found' });

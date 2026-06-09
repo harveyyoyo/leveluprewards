@@ -55,6 +55,7 @@ export function LibrarySelfCheckoutOverlay({
       className="fixed inset-0 z-[200] flex h-[100dvh] w-full flex-col overflow-hidden bg-background"
       role="dialog"
       aria-modal="true"
+      aria-label="Library self checkout"
     >
       <LibraryStudentSelfCheckoutPortal
         schoolId={schoolId}

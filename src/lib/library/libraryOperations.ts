@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { LibraryItem } from '@/lib/types';
+import { getIsbnLookupVariants } from '@/lib/library/libraryCatalogLookup';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { computeDueAt, libraryReturnUsesServer, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 
@@ -18,6 +19,7 @@ export type LibraryCheckoutResult =
   | { action: 'checkout'; item: LibraryItem; itemId: string; dueAt?: number | null }
   | { action: 'return'; item: LibraryItem; itemId: string; pointsDelta?: number; pointsMessage?: string }
   | { action: 'wrong_borrower'; item: LibraryItem; borrowerName?: string }
+  | { action: 'limit_reached'; currentCount: number; max: number }
   | { action: 'not_found' };
 
 export type LibraryReturnServerResult = {
@@ -27,19 +29,56 @@ export type LibraryReturnServerResult = {
   daysOverdue?: number;
 };
 
+function catalogLookupCodes(rawCode: string): string[] {
+  const codes = new Set<string>();
+  const normalized = normalizeLibraryUpc(rawCode);
+  if (normalized) codes.add(normalized);
+  for (const variant of getIsbnLookupVariants(rawCode)) {
+    const code = normalizeLibraryUpc(variant);
+    if (code) codes.add(code);
+  }
+  return [...codes];
+}
+
 export async function findLibraryItemByUpc(
   firestore: Firestore,
   schoolId: string,
   rawCode: string,
 ): Promise<{ item: LibraryItem; itemId: string } | null> {
-  const upc = normalizeLibraryUpc(rawCode);
-  if (!upc) return null;
+  const codes = catalogLookupCodes(rawCode);
+  if (!codes.length) return null;
+  for (const upc of codes) {
+    const snap = await getDocs(
+      query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', upc), limit(1)),
+    );
+    if (!snap.empty) {
+      const itemDoc = snap.docs[0];
+      return { item: { id: itemDoc.id, ...itemDoc.data() } as LibraryItem, itemId: itemDoc.id };
+    }
+  }
+  return null;
+}
+
+export async function getStudentLibraryCheckouts(
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+): Promise<LibraryItem[]> {
   const snap = await getDocs(
-    query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', upc), limit(1)),
+    query(collection(firestore, 'schools', schoolId, 'library'), where('checkedOutTo', '==', studentId)),
   );
-  if (snap.empty) return null;
-  const itemDoc = snap.docs[0];
-  return { item: { id: itemDoc.id, ...itemDoc.data() } as LibraryItem, itemId: itemDoc.id };
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as LibraryItem)
+    .filter((item) => item.status === 'checked_out');
+}
+
+export async function countStudentLibraryCheckouts(
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+): Promise<number> {
+  const items = await getStudentLibraryCheckouts(firestore, schoolId, studentId);
+  return items.length;
 }
 
 function shouldUseServerReturn(policy?: LibraryPolicySettings): boolean {
@@ -114,6 +153,13 @@ export async function performLibraryCheckoutOrReturn(
   const policy = options?.policy;
 
   if (item.status === 'available') {
+    const max = policy?.maxCheckoutsPerStudent ?? 0;
+    if (max > 0) {
+      const currentCount = await countStudentLibraryCheckouts(firestore, schoolId, studentId);
+      if (currentCount >= max) {
+        return { action: 'limit_reached', currentCount, max };
+      }
+    }
     return clientCheckout(firestore, schoolId, studentId, item, itemId, policy);
   }
 

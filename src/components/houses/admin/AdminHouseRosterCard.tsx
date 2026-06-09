@@ -79,11 +79,12 @@ export function AdminHouseRosterCard({
 }: Props) {
   const parents = teachers.filter((t) => (t.houseParentHouseIds || []).includes(house.id));
   const searchTerm = memberSearch.trim().toLowerCase();
-  const filteredMembers = searchTerm
+  const filteredMembers = (searchTerm
     ? houseStudents.filter((s) =>
         `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm),
       )
-    : houseStudents;
+    : houseStudents
+  ).sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
 
   return (
     <article
@@ -235,7 +236,7 @@ export function AdminHouseRosterCard({
                 <SelectContent>
                   {availableStudents.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
-                      {s.lastName}, {s.firstName}
+                      {s.lastName}, {s.firstName} · {(s.points ?? 0).toLocaleString()} pts
                       {s.houseId
                         ? ` (from ${allHouses.find((h) => h.id === s.houseId)?.name ?? 'other'})`
                         : ''}
@@ -273,11 +274,24 @@ export function AdminHouseRosterCard({
               filteredMembers.map((s) => (
                 <li
                   key={s.id}
-                  className="flex items-center justify-between gap-2 rounded-lg bg-muted/30 px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg bg-muted/30 px-3 py-2 text-sm"
                 >
-                  <span>
-                    {s.lastName}, {s.firstName}
-                  </span>
+                  <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="truncate font-medium">
+                      {s.lastName}, {s.firstName}
+                    </span>
+                    <span className="flex shrink-0 items-center gap-1 tabular-nums text-xs">
+                      <span className="font-black text-foreground">{(s.points ?? 0).toLocaleString()}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        pts
+                      </span>
+                      {(s.lifetimePoints ?? 0) > (s.points ?? 0) ? (
+                        <span className="text-[10px] font-semibold text-muted-foreground">
+                          · {(s.lifetimePoints ?? 0).toLocaleString()} lifetime
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Button
                       variant="ghost"
