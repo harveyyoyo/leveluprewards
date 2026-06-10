@@ -15,6 +15,12 @@ function callableErrorTail(code: string): string {
   return parts[parts.length - 1] ?? '';
 }
 
+/** Wrong school id/passcode — do not try another backend with the same credentials. */
+export function isSchoolAccessCredentialError(error: unknown): boolean {
+  const tail = callableErrorTail(String((error as { code?: string }).code ?? ''));
+  return tail === 'permission-denied' || tail === 'not-found';
+}
+
 /** True when a callable failed for transport/server reasons (safe to try another backend). */
 export function isCallableInfrastructureError(error: unknown): boolean {
   const err = error as { code?: string; message?: string };
@@ -61,6 +67,12 @@ export function messageFromVerifySchoolAccessError(
   }
   if (tail === 'invalid-argument') {
     return raw || invalidCredentialsMessage;
+  }
+  if (tail === 'failed-precondition') {
+    return (
+      raw ||
+      'This school is not ready for sign-in yet. Ask an administrator to configure the access passcode.'
+    );
   }
   return getReadableErrorMessage(error, invalidCredentialsMessage);
 }

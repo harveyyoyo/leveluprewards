@@ -873,7 +873,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                     await refreshGoogleIdToken(auth.currentUser);
 
-                    // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/global.developerUids).
+                    // Listing `schools` in Firestore requires `isDeveloper()` (UID in appConfig/developerAllowlist.uids).
                     // addDeveloperMe merges the current Firebase user's UID into that allow-list.
                     let uid = auth.currentUser?.uid ?? null;
                     if (!uid) {

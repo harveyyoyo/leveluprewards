@@ -105,11 +105,13 @@ function TabLinkRow({
   label: string;
   description: string;
   onOpen: () => void;
+  tabValue?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onOpen}
+      data-intro-tour={tabValue ? `addon-link-${tabValue}` : undefined}
       className={cn(
         'group flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
         'border-border/70 bg-card hover:border-ring/30 hover:bg-muted/30',
@@ -271,6 +273,7 @@ export function StaffPortalWelcomeTab({
                   label={tab.label}
                   description={staffPortalTabDescription(tab)}
                   onOpen={() => onGoToTab(tab.value)}
+                  tabValue={tab.value}
                 />
               ))}
             </div>
@@ -293,6 +296,7 @@ export function StaffPortalWelcomeTab({
                   label={tab.label}
                   description={staffPortalTabDescription(tab)}
                   onOpen={() => onGoToTab(tab.value)}
+                  tabValue={tab.value}
                 />
               ))}
             </div>

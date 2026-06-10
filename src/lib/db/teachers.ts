@@ -1,4 +1,19 @@
-import { doc, setDoc, updateDoc, deleteDoc, deleteField, Firestore, writeBatch } from 'firebase/firestore';
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  deleteField,
+  getDocs,
+  collection,
+  query,
+  where,
+  arrayRemove,
+  Firestore,
+  writeBatch,
+  type DocumentReference,
+  type UpdateData,
+} from 'firebase/firestore';
 import type { Teacher } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
@@ -45,6 +60,38 @@ export const updateTeacher = async (
 export const deleteTeacher = async (firestore: Firestore, schoolId: string, teacherId: string) => {
   const teacherDocRef = doc(firestore, 'schools', schoolId, 'teachers', teacherId);
   try {
+    // Clear references before deleting the teacher so a partial failure never
+    // leaves classes/students pointing at a teacher that no longer exists.
+    const [classSnap, studentSnap] = await Promise.all([
+      getDocs(query(
+        collection(firestore, 'schools', schoolId, 'classes'),
+        where('primaryTeacherId', '==', teacherId),
+      )),
+      getDocs(query(
+        collection(firestore, 'schools', schoolId, 'students'),
+        where('teacherIds', 'array-contains', teacherId),
+      )),
+    ]);
+
+    const updates: Array<{ ref: DocumentReference; data: UpdateData<Record<string, unknown>> }> = [
+      ...classSnap.docs.map((d) => ({ ref: d.ref, data: { primaryTeacherId: deleteField() } })),
+      ...studentSnap.docs.map((d) => ({
+        ref: d.ref,
+        data: { teacherIds: arrayRemove(teacherId), updatedAt: Date.now() },
+      })),
+    ];
+
+    // Stay under the 500 writes-per-batch limit.
+    const BATCH_LIMIT = 450;
+    for (let i = 0; i < updates.length; i += BATCH_LIMIT) {
+      const chunk = updates.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      for (const u of chunk) {
+        batch.update(u.ref, u.data);
+      }
+      await batch.commit();
+    }
+
     await deleteDoc(teacherDocRef);
   } catch (error) {
     reportFirestorePermissionError(error, { path: teacherDocRef.path, operation: 'delete' });

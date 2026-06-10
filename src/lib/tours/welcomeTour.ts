@@ -44,7 +44,7 @@ export const welcomeTourSteps: IntroStep[] = [
   {
     id: 'finish',
     title: 'Choose Your Next Step!',
-    body: `That's the overview! To dive deeper, click the "Welcome Tour" button on any of these cards, or ask ${WIZARD_HELP_BUTTON_CLOSING} to launch the Features Tour.`,
+    body: `That's the overview! To dive deeper, click the Admin, Teacher, or Student Tour buttons on their respective cards, or ask ${WIZARD_HELP_BUTTON_CLOSING} to launch the Features Tour.`,
     onRoute: '/portal',
     target: STAFF_AI_HELP_TOUR_TARGET,
   },

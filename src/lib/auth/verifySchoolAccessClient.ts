@@ -1,11 +1,15 @@
 import type { Auth } from 'firebase/auth';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
-import { isCallableInfrastructureError, messageFromVerifySchoolAccessError } from '@/lib/loginResult';
+import {
+  isCallableInfrastructureError,
+  isSchoolAccessCredentialError,
+  messageFromVerifySchoolAccessError,
+} from '@/lib/loginResult';
 
 type VerifySchoolAccessResult =
   | { ok: true }
-  | { ok: false; message: string; infrastructureFailure?: boolean };
+  | { ok: false; message: string; infrastructureFailure?: boolean; credentialFailure?: boolean };
 
 async function grantDeveloperSchoolAccess(
   functions: Functions,
@@ -65,8 +69,19 @@ async function verifySchoolAccessViaCallable(
       ok: false,
       message: messageFromVerifySchoolAccessError(e, 'Invalid School ID or passcode.'),
       infrastructureFailure: isCallableInfrastructureError(e),
+      credentialFailure: isSchoolAccessCredentialError(e),
     };
   }
+}
+
+function shouldTrySchoolAccessApiAfterCallableFailure(result: {
+  ok: false;
+  infrastructureFailure?: boolean;
+  credentialFailure?: boolean;
+}): boolean {
+  if (result.infrastructureFailure) return true;
+  // Deployed callables can lag the SSR verifier (hashed passcode secrets). Retry via API.
+  return result.credentialFailure !== true;
 }
 
 async function verifySchoolAccessViaApiRoute(
@@ -146,7 +161,7 @@ export async function verifySchoolAccessViaApi(
         devOptions,
       );
       if (callableResult.ok) return callableResult;
-      if (!callableResult.infrastructureFailure) {
+      if (!shouldTrySchoolAccessApiAfterCallableFailure(callableResult)) {
         return { ok: false, message: callableResult.message };
       }
     }
@@ -163,7 +178,7 @@ export async function verifySchoolAccessViaApi(
       devOptions,
     );
     if (callableResult.ok) return callableResult;
-    if (!callableResult.infrastructureFailure) {
+    if (!shouldTrySchoolAccessApiAfterCallableFailure(callableResult)) {
       return { ok: false, message: callableResult.message };
     }
   }
@@ -180,7 +195,7 @@ export async function verifySchoolAccessViaApi(
       devOptions,
     );
     if (callableRetry.ok) return callableRetry;
-    if (!callableRetry.infrastructureFailure) {
+    if (!shouldTrySchoolAccessApiAfterCallableFailure(callableRetry)) {
       return { ok: false, message: callableRetry.message };
     }
   }

@@ -819,7 +819,8 @@ export default function DeveloperPage() {
                 <AlertDescription className="space-y-2 text-sm">
                   <p>
                     Firestore only allows listing all schools when your account UID is in{' '}
-                    <code className="rounded bg-background px-1 py-0.5 text-xs">appConfig/global.developerUids</code>.
+                    <code className="rounded bg-background px-1 py-0.5 text-xs">appConfig/developerAllowlist.uids</code>{' '}
+                    (or the legacy <code className="rounded bg-background px-1 py-0.5 text-xs">appConfig/global.developerUids</code>).
                     That entry is added automatically when developer login succeeds and the{' '}
                     <code className="rounded bg-background px-1 py-0.5 text-xs">addDeveloperMe</code> Cloud Function runs.
                   </p>

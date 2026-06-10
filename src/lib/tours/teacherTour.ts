@@ -42,7 +42,7 @@ export const teacherTourSteps: IntroStep[] = [
     body: 'This gives you a printable PDF of codes. Students will scan these at the kiosk to bank their points.',
     onRoute: '/teacher',
     target: 'coupon-generate-btn',
-    requireTarget: true,
+    requireTarget: false,
     selectTab: 'coupons',
   },
   {

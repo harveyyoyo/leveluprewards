@@ -593,6 +593,10 @@ export const importStudentsFromParsedRows = async (
   const studentUpdates: Array<{ id: string; patch: Partial<Student> }> = [];
 
   const byNameKey = new Map<string, Student[]>();
+  // Students created earlier in this same import; they are indexed in byNameKey so
+  // duplicate rows match them, but they have no Firestore doc yet, so patches must
+  // be merged in memory rather than queued as updates.
+  const pendingCreateIds = new Set<string>();
   if (options?.upsert) {
     for (const s of currentStudents) {
       const k = `${(s.firstName || '').trim().toLowerCase()}|${(s.lastName || '').trim().toLowerCase()}`;
@@ -648,7 +652,12 @@ export const importStudentsFromParsedRows = async (
         }
 
         if (Object.keys(patch).length > 0) {
-          studentUpdates.push({ id: existing.id, patch });
+          if (pendingCreateIds.has(existing.id)) {
+            // No Firestore doc yet — fold into the pending create.
+            Object.assign(existing, patch);
+          } else {
+            studentUpdates.push({ id: existing.id, patch });
+          }
           updatedCount++;
         }
         continue;
@@ -670,34 +679,42 @@ export const importStudentsFromParsedRows = async (
       (c) => studentClassName && c.name.toLowerCase() === studentClassName.toLowerCase(),
     );
 
-    studentsToCreate.push(
-      ensureStudentHasClassPrimaryTeacher(
-        {
-          id: newStudentId,
-          nfcId: newStudentId,
-          firstName,
-          lastName,
-          ...(middleName ? { middleName } : {}),
-          ...(nickname ? { nickname } : {}),
-          ...(birthday ? { birthday } : {}),
-          ...(parentEmail ? { parentEmail } : {}),
-          ...(parentPhone ? { parentPhone } : {}),
-          ...(studentEmail ? { studentEmail } : {}),
-          ...(studentPhone ? { studentPhone } : {}),
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          points: 0,
-          lifetimePoints: 0,
-          classId: classObj?.id || '',
-          categoryPoints: {},
-          pointsByPeriod: {},
-          categoryPointsByPeriod: {},
-          earnedAchievements: [],
-          earnedBadges: [],
-        },
-        allClasses,
-      ),
+    const created = ensureStudentHasClassPrimaryTeacher(
+      {
+        id: newStudentId,
+        nfcId: newStudentId,
+        firstName,
+        lastName,
+        ...(middleName ? { middleName } : {}),
+        ...(nickname ? { nickname } : {}),
+        ...(birthday ? { birthday } : {}),
+        ...(parentEmail ? { parentEmail } : {}),
+        ...(parentPhone ? { parentPhone } : {}),
+        ...(studentEmail ? { studentEmail } : {}),
+        ...(studentPhone ? { studentPhone } : {}),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        points: 0,
+        lifetimePoints: 0,
+        classId: classObj?.id || '',
+        categoryPoints: {},
+        pointsByPeriod: {},
+        categoryPointsByPeriod: {},
+        earnedAchievements: [],
+        earnedBadges: [],
+      },
+      allClasses,
     );
+    studentsToCreate.push(created);
+
+    if (options?.upsert) {
+      // Index the new student so duplicate rows later in this file update it
+      // (in memory) instead of creating a second document.
+      const arr = byNameKey.get(nameKey) || [];
+      arr.push(created);
+      byNameKey.set(nameKey, arr);
+      pendingCreateIds.add(created.id);
+    }
   }
 
   await persistStudentUpdates(firestore, schoolId, studentUpdates);

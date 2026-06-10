@@ -184,9 +184,18 @@ service cloud.firestore {
     }
 
     function isDeveloper() {
-      return isAuth() && exists(/databases/$(database)/documents/appConfig/developerAllowlist)
-        && 'uids' in get(/databases/$(database)/documents/appConfig/developerAllowlist).data
-        && request.auth.uid in get(/databases/$(database)/documents/appConfig/developerAllowlist).data.uids;
+      return isAuth() && (
+        (
+          exists(/databases/$(database)/documents/appConfig/developerAllowlist)
+          && 'uids' in get(/databases/$(database)/documents/appConfig/developerAllowlist).data
+          && request.auth.uid in get(/databases/$(database)/documents/appConfig/developerAllowlist).data.uids
+        )
+        || (
+          exists(/databases/$(database)/documents/appConfig/global)
+          && 'developerUids' in get(/databases/$(database)/documents/appConfig/global).data
+          && request.auth.uid in get(/databases/$(database)/documents/appConfig/global).data.developerUids
+        )
+      );
     }
 
     // Global app configuration (e.g. app logo, name, tagline)

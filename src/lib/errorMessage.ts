@@ -124,6 +124,7 @@ export function getReadableErrorMessage(error: unknown, fallback: string): strin
   }
 
   if (code === 'failed-precondition' || codeTail === 'failed-precondition') {
+    if (rawMessage) return rawMessage;
     return OFFLINE_HINT;
   }
 

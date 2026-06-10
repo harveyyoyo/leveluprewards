@@ -559,11 +559,15 @@ exports.addDeveloperMe = functions.https.onCall(
     }
 
     const db = admin.firestore();
+    const uid = context.auth!.uid;
+    const allowlistRef = db.collection("appConfig").doc("developerAllowlist");
     const globalRef = db.collection("appConfig").doc(APP_CONFIG_GLOBAL);
-    await globalRef.set(
-      { developerUids: FieldValue.arrayUnion(context.auth!.uid) },
-      { merge: true }
-    );
+    // Firestore rules + most server gates read `developerAllowlist.uids`.
+    // Legacy attendance/insights code still reads `global.developerUids` — keep both in sync.
+    await Promise.all([
+      allowlistRef.set({ uids: FieldValue.arrayUnion(uid) }, { merge: true }),
+      globalRef.set({ developerUids: FieldValue.arrayUnion(uid) }, { merge: true }),
+    ]);
     return { success: true };
   }
 );
