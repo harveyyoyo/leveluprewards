@@ -709,7 +709,7 @@ const defaultSettings: Settings = {
     bathroomMaxMinutes: 5,
     bathroomRequirePresent: true,
     enableHelperMode: true,
-    activeTourId: 'welcome',
+    activeTourId: null,
     enableTeacherBudgets: false,
     enableTeacherGeneratedCouponsTab: false,
     enableHomework: false,
