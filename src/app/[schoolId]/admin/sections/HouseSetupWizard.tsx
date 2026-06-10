@@ -177,7 +177,7 @@ export function HouseSetupWizard({
       if (draft.assignMode !== 'skip' && unassigned.length > 0) {
         const ids = unassigned.map((s) => s.id);
         if (draft.assignMode === 'balanced') {
-          await assignStudentsToHousesBalanced(firestore, schoolId, ids, currentHouses);
+          await assignStudentsToHousesBalanced(firestore, schoolId, ids, currentHouses, students);
         } else {
           await assignStudentsToHousesRandom(firestore, schoolId, ids, currentHouses);
         }

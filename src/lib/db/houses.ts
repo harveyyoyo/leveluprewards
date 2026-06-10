@@ -70,19 +70,24 @@ export const deleteHouse = async (
   houseId: string,
   students: Student[],
 ) => {
-  const batch = writeBatch(firestore);
-
+  // Stay under the 500 writes-per-batch limit; unassign students first so a
+  // partial failure never leaves the house deleted with members still attached.
+  const BATCH_LIMIT = 450;
   const studentsToUpdate = students.filter((s) => s.houseId === houseId);
-  studentsToUpdate.forEach((student) => {
-    const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-    batch.update(studentRef, { houseId: '' });
-  });
-
-  const houseRef = doc(firestore, 'schools', schoolId, 'houses', houseId);
-  batch.delete(houseRef);
 
   try {
-    await batch.commit();
+    for (let i = 0; i < studentsToUpdate.length; i += BATCH_LIMIT) {
+      const chunk = studentsToUpdate.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      chunk.forEach((student) => {
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+        batch.update(studentRef, { houseId: '' });
+      });
+      await batch.commit();
+    }
+
+    const houseRef = doc(firestore, 'schools', schoolId, 'houses', houseId);
+    await deleteDoc(houseRef);
   } catch (error) {
     reportFirestorePermissionError(error, {
       path: `schools/${schoolId}/houses`,
@@ -178,12 +183,19 @@ export const assignStudentsToHousesBalanced = async (
   schoolId: string,
   studentIds: string[],
   houses: House[],
+  currentStudents: Student[] = [],
 ): Promise<void> => {
   if (houses.length === 0 || studentIds.length === 0) return;
 
+  const assigning = new Set(studentIds);
   const counts = new Map(houses.map((h) => [h.id, 0]));
-  const batch = writeBatch(firestore);
+  for (const s of currentStudents) {
+    if (!s.houseId || assigning.has(s.id)) continue;
+    const c = counts.get(s.houseId);
+    if (c !== undefined) counts.set(s.houseId, c + 1);
+  }
 
+  const assignments: Array<{ studentId: string; houseId: string }> = [];
   for (const studentId of studentIds) {
     let pick = houses[0].id;
     let min = Number.POSITIVE_INFINITY;
@@ -195,12 +207,21 @@ export const assignStudentsToHousesBalanced = async (
       }
     }
     counts.set(pick, (counts.get(pick) ?? 0) + 1);
-    const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
-    batch.update(studentRef, { houseId: pick, updatedAt: Date.now() });
+    assignments.push({ studentId, houseId: pick });
   }
 
+  // Stay under the 500 writes-per-batch limit.
+  const BATCH_LIMIT = 450;
   try {
-    await batch.commit();
+    for (let i = 0; i < assignments.length; i += BATCH_LIMIT) {
+      const chunk = assignments.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      for (const a of chunk) {
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', a.studentId);
+        batch.update(studentRef, { houseId: a.houseId, updatedAt: Date.now() });
+      }
+      await batch.commit();
+    }
   } catch (error) {
     reportFirestorePermissionError(error, {
       path: `schools/${schoolId}/students`,
@@ -219,14 +240,19 @@ export const assignStudentsToHousesRandom = async (
 ): Promise<void> => {
   if (houses.length === 0 || studentIds.length === 0) return;
   const shuffled = [...studentIds].sort(() => Math.random() - 0.5);
-  const batch = writeBatch(firestore);
-  shuffled.forEach((studentId, index) => {
-    const house = houses[index % houses.length];
-    const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
-    batch.update(studentRef, { houseId: house.id, updatedAt: Date.now() });
-  });
+  // Stay under the 500 writes-per-batch limit.
+  const BATCH_LIMIT = 450;
   try {
-    await batch.commit();
+    for (let i = 0; i < shuffled.length; i += BATCH_LIMIT) {
+      const chunk = shuffled.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      chunk.forEach((studentId, offset) => {
+        const house = houses[(i + offset) % houses.length];
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+        batch.update(studentRef, { houseId: house.id, updatedAt: Date.now() });
+      });
+      await batch.commit();
+    }
   } catch (error) {
     reportFirestorePermissionError(error, {
       path: `schools/${schoolId}/students`,

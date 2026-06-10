@@ -206,6 +206,7 @@ export function AdminHousesTab({
           schoolId,
           unassigned.map((s) => s.id),
           latestHouses,
+          students || [],
         );
         assigned = unassigned.length;
       }
@@ -260,7 +261,7 @@ export function AdminHousesTab({
     try {
       const ids = unassignedStudents.map((s) => s.id);
       if (mode === 'balanced') {
-        await assignStudentsToHousesBalanced(firestore, schoolId, ids, sortedHouses);
+        await assignStudentsToHousesBalanced(firestore, schoolId, ids, sortedHouses, students || []);
       } else {
         await assignStudentsToHousesRandom(firestore, schoolId, ids, sortedHouses);
       }

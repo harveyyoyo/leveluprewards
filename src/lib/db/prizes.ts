@@ -197,6 +197,7 @@ export const redeemPrize = async (
 
       const studentData = studentDoc.data() as Student;
       const prizeData = prizeDoc.data() as Prize;
+      const currentPoints = Number(studentData.points ?? 0);
       const totalCost = typeof pointsOverride === 'number' ? pointsOverride : prizeData.points * quantity;
 
       if (!prizeData.inStock) {
@@ -219,7 +220,7 @@ export const redeemPrize = async (
         );
       }
 
-      if (typeof pointsOverride === 'number' && studentData.points < totalCost) {
+      if (typeof pointsOverride === 'number' && currentPoints < totalCost) {
         throw new Error('Not enough points.');
       }
 
@@ -236,7 +237,7 @@ export const redeemPrize = async (
         throw new Error('Not enough points in the required categories.');
       }
 
-      if (studentData.points < totalCost) {
+      if (currentPoints < totalCost) {
         throw new Error('Not enough points.');
       }
 
@@ -250,7 +251,7 @@ export const redeemPrize = async (
       };
 
       transaction.update(studentRef, {
-        points: studentData.points - totalCost,
+        points: currentPoints - totalCost,
         ...(categoryPointsUpdate ? { categoryPoints: categoryPointsUpdate } : {}),
         updatedAt: redeemedAt,
       });

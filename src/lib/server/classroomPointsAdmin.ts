@@ -131,7 +131,9 @@ export async function applyClassroomPointsAdmin(
 
   for (let i = 0; i < uniqueIds.length; i += chunkSize) {
     const chunkIds = uniqueIds.slice(i, i + chunkSize);
-    await db.runTransaction(async (tx) => {
+    // Count inside the transaction resets on retry; only commit the final value.
+    const chunkCount = await db.runTransaction(async (tx) => {
+      let committedCount = 0;
       const schoolRef = db.collection('schools').doc(schoolId);
       const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
 
@@ -146,9 +148,11 @@ export async function applyClassroomPointsAdmin(
       for (const { id, ref, data } of reads) {
         const current = Number(data.classroomPoints ?? 0);
         const next = Math.max(0, current + signedDelta);
+        // Use the clamped delta so period totals stay in sync with the balance.
+        const appliedDelta = next - current;
         const periodUpdate = applyPointsByPeriod(
           data.classroomPointsByPeriod as Record<string, number> | undefined,
-          signedDelta,
+          appliedDelta,
           now,
         );
 
@@ -168,9 +172,11 @@ export async function applyClassroomPointsAdmin(
 
         writeClassroomAwardLog(tx, schoolRef, meta, id, data, signedDelta, desc, now);
 
-        processedCount += 1;
+        committedCount += 1;
       }
+      return committedCount;
     });
+    processedCount += chunkCount;
   }
 
   return {
@@ -219,7 +225,9 @@ export async function applyRewardsPointsAdmin(
 
   for (let i = 0; i < uniqueIds.length; i += chunkSize) {
     const chunkIds = uniqueIds.slice(i, i + chunkSize);
-    await db.runTransaction(async (tx) => {
+    // Count inside the transaction resets on retry; only commit the final value.
+    const chunkCount = await db.runTransaction(async (tx) => {
+      let committedCount = 0;
       const schoolRef = db.collection('schools').doc(schoolId);
       const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
       const houseDeltas = new Map<string, number>();
@@ -299,11 +307,13 @@ export async function applyRewardsPointsAdmin(
         });
 
         writeClassroomAwardLog(tx, schoolRef, meta, id, data, signedDelta, logDesc, now);
-        processedCount += 1;
+        committedCount += 1;
       }
 
       writeHouseRollupsFromDeltasAdmin(tx, houseSnaps, houseDeltas);
+      return committedCount;
     });
+    processedCount += chunkCount;
   }
 
   return {

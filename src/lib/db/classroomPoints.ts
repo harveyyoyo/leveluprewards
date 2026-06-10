@@ -56,7 +56,9 @@ export async function applyClassroomPointsToStudents(
   try {
     for (let i = 0; i < uniqueIds.length; i += chunkSize) {
       const chunkIds = uniqueIds.slice(i, i + chunkSize);
-      await runTransaction(firestore, async (transaction) => {
+      // Count inside the transaction resets on retry; only commit the final value.
+      const chunkCount = await runTransaction(firestore, async (transaction) => {
+        let committedCount = 0;
         const studentRefs = chunkIds.map((id) =>
           doc(firestore, 'schools', schoolId, 'students', id),
         );
@@ -68,9 +70,11 @@ export async function applyClassroomPointsToStudents(
           const now = Date.now();
           const current = studentData.classroomPoints ?? 0;
           const next = Math.max(0, current + signedDelta);
+          // Use the clamped delta so period totals stay in sync with the balance.
+          const appliedDelta = next - current;
           const periodUpdate = applyPointsByPeriod(
             studentData.classroomPointsByPeriod,
-            signedDelta,
+            appliedDelta,
             now,
           );
 
@@ -105,9 +109,11 @@ export async function applyClassroomPointsToStudents(
             createdAt: now,
           });
 
-          processedCount += 1;
+          committedCount += 1;
         }
+        return committedCount;
       });
+      processedCount += chunkCount;
     }
 
     return {
@@ -163,7 +169,9 @@ export async function applyRewardsPointsToStudents(
   try {
     for (let i = 0; i < uniqueIds.length; i += chunkSize) {
       const chunkIds = uniqueIds.slice(i, i + chunkSize);
-      await runTransaction(firestore, async (transaction) => {
+      // Count inside the transaction resets on retry; only commit the final value.
+      const chunkCount = await runTransaction(firestore, async (transaction) => {
+        let committedCount = 0;
         const studentRefs = chunkIds.map((id) =>
           doc(firestore, 'schools', schoolId, 'students', id),
         );
@@ -248,11 +256,13 @@ export async function applyRewardsPointsToStudents(
             createdAt: now,
           });
 
-          processedCount += 1;
+          committedCount += 1;
         }
 
         writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
+        return committedCount;
       });
+      processedCount += chunkCount;
     }
 
     return {

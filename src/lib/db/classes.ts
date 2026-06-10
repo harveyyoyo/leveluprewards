@@ -33,19 +33,24 @@ export const updateClass = async (firestore: Firestore, schoolId: string, update
 };
 
 export const deleteClass = async (firestore: Firestore, schoolId: string, classId: string, students: Student[]) => {
-  const batch = writeBatch(firestore);
-
+  // Stay under the 500 writes-per-batch limit; unassign students first so a
+  // partial failure never leaves the class deleted with members still attached.
+  const BATCH_LIMIT = 450;
   const studentsToUpdate = students.filter(s => s.classId === classId);
-  studentsToUpdate.forEach(student => {
-    const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
-    batch.update(studentRef, { classId: '' });
-  });
-
-  const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
-  batch.delete(classRef);
 
   try {
-    await batch.commit();
+    for (let i = 0; i < studentsToUpdate.length; i += BATCH_LIMIT) {
+      const chunk = studentsToUpdate.slice(i, i + BATCH_LIMIT);
+      const batch = writeBatch(firestore);
+      chunk.forEach(student => {
+        const studentRef = doc(firestore, 'schools', schoolId, 'students', student.id);
+        batch.update(studentRef, { classId: '' });
+      });
+      await batch.commit();
+    }
+
+    const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
+    await deleteDoc(classRef);
   } catch (error) {
     reportFirestorePermissionError(error, { path: `schools/${schoolId}/classes`, operation: 'write' });
     throw error;

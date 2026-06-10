@@ -10,7 +10,7 @@ import type { Student, Coupon, Achievement, Category, Badge, Class } from '../ty
 import { studentMayRedeemCoupon } from '../coupons/couponRedemptionRules';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { removeUndefined, applyCategoryPointsByPeriod, applyAchievementsAndBadges } from './helpers';
+import { removeUndefined, applyPointsByPeriod, applyCategoryPointsByPeriod, applyAchievementsAndBadges } from './helpers';
 
 /** Firestore allows up to 500 writes per batch; stay under for safety. */
 const COUPON_ADD_BATCH_SIZE = 450;
@@ -112,13 +112,14 @@ export const redeemCoupon = async (
       if (!gate.ok) throw new Error(gate.message || 'Not eligible to redeem this coupon.');
 
       const addedValue = coupon.value;
-      const newPoints = currentStudent.points + addedValue;
+      const newPoints = Number(currentStudent.points ?? 0) + addedValue;
       const newLifetimePoints = (currentStudent.lifetimePoints || 0) + addedValue;
       const categoryPoints = { ...(currentStudent.categoryPoints || {}) };
       const categoryName = coupon.category || 'Coupon';
       categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + addedValue;
 
       const now = Date.now();
+      const pointsByPeriod = applyPointsByPeriod(currentStudent.pointsByPeriod, addedValue, now);
       const categoryPointsByPeriod = applyCategoryPointsByPeriod(
         currentStudent.categoryPointsByPeriod,
         categoryName,
@@ -138,6 +139,7 @@ export const redeemCoupon = async (
         points: newPoints + evalResult.bonusTotal,
         lifetimePoints: newLifetimePoints + evalResult.bonusTotal,
         categoryPoints: categoryPoints,
+        pointsByPeriod,
         categoryPointsByPeriod,
         earnedAchievements: evalResult.earnedAchievements,
         earnedBadges: evalResult.earnedBadges,

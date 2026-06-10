@@ -282,7 +282,9 @@ export const awardPointsToMultipleStudents = async (
     for (let i = 0; i < uniqueIds.length; i += chunkSize) {
       const chunkIds = uniqueIds.slice(i, i + chunkSize);
       
-      await runTransaction(firestore, async (transaction) => {
+      // Count inside the transaction resets on retry; only commit the final value.
+      const chunkCount = await runTransaction(firestore, async (transaction) => {
+        let committedCount = 0;
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
         const houseDeltas = new Map<string, number>();
@@ -340,12 +342,14 @@ export const awardPointsToMultipleStudents = async (
               (houseDeltas.get(studentData.houseId) ?? 0) + totalAward,
             );
           }
-          
-          processedCount++;
+
+          committedCount++;
         }
 
         writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
+        return committedCount;
       });
+      processedCount += chunkCount;
     }
 
     if (!options?.skipGoalSync && processedCount > 0) {
@@ -390,7 +394,9 @@ export const deductPointsFromMultipleStudents = async (
     for (let i = 0; i < uniqueIds.length; i += chunkSize) {
       const chunkIds = uniqueIds.slice(i, i + chunkSize);
       
-      await runTransaction(firestore, async (transaction) => {
+      // Count inside the transaction resets on retry; only commit the final value.
+      const chunkCount = await runTransaction(firestore, async (transaction) => {
+        let committedCount = 0;
         const studentRefs = chunkIds.map(id => doc(firestore, 'schools', schoolId, 'students', id));
         const studentDocs = await Promise.all(studentRefs.map(ref => transaction.get(ref)));
         const houseDeltas = new Map<string, number>();
@@ -410,7 +416,7 @@ export const deductPointsFromMultipleStudents = async (
           if (!studentDoc.exists()) continue;
 
           const studentData = studentDoc.data() as Student;
-          const newPoints = Math.max(0, studentData.points - points);
+          const newPoints = Math.max(0, Number(studentData.points ?? 0) - points);
 
           const now = Date.now();
           transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
@@ -425,11 +431,13 @@ export const deductPointsFromMultipleStudents = async (
             );
           }
 
-          processedCount++;
+          committedCount++;
         }
 
         writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
+        return committedCount;
       });
+      processedCount += chunkCount;
     }
 
     if (processedCount > 0) {
