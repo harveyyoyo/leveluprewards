@@ -180,7 +180,7 @@ export function IntroWizard() {
   const { settings, updateSettings } = useSettings();
   const pathname = usePathname();
   const [stepIndex, setStepIndex] = useState(0);
-  const [, setMeasureTick] = useState(0);
+  const [measureTick, setMeasureTick] = useState(0);
 
   const activeTourId = settings.activeTourId;
   const steps = useMemo(() => getTourSteps(activeTourId), [activeTourId]);
@@ -229,7 +229,7 @@ export function IntroWizard() {
   const spotlightRect = useMemo(
     () => (currentStep?.target ? measureIntroTourTarget(currentStep.target) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- measureTick drives re-measure
-    [currentStep?.target, pathname, stepIndex, ready],
+    [currentStep?.target, pathname, stepIndex, ready, measureTick],
   );
   
   const isFirstStep = stepIndex === 0;
@@ -239,11 +239,14 @@ export function IntroWizard() {
   }, [isFirstStep, spotlightRect]);
 
   const handleDismiss = useCallback(() => {
+    if (activeTourId) {
+      window.localStorage.removeItem(getStorageKey(activeTourId));
+    }
     updateSettings({ activeTourId: null });
-  }, [updateSettings]);
+  }, [activeTourId, updateSettings]);
 
-  const handleNext = () => {
-    if (!ready || !activeTourId) return;
+  const advanceStep = () => {
+    if (!activeTourId) return;
     if (stepIndex < steps.length - 1) {
       const next = stepIndex + 1;
       setStepIndex(next);
@@ -253,13 +256,16 @@ export function IntroWizard() {
     }
   };
 
+  const handleNext = () => {
+    if (!ready) return;
+    advanceStep();
+  };
+
   const handleBack = () => {
     if (!activeTourId) return;
-    setStepIndex((prev) => {
-      const next = prev > 0 ? prev - 1 : 0;
-      persistStep(next, activeTourId);
-      return next;
-    });
+    const next = stepIndex > 0 ? stepIndex - 1 : 0;
+    setStepIndex(next);
+    persistStep(next, activeTourId);
   };
 
   const showOnRoute = isStaffAppRoute(pathname);
@@ -328,8 +334,18 @@ export function IntroWizard() {
                     </Button>
                   )}
                   {!ready ? (
-                    <div className="flex items-center text-sm font-bold text-primary animate-pulse pr-2">
-                      Action required...
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 rounded-full px-3 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                        onClick={advanceStep}
+                      >
+                        Skip step
+                      </Button>
+                      <div className="flex items-center text-sm font-bold text-primary animate-pulse pr-2">
+                        Action required...
+                      </div>
                     </div>
                   ) : (
                     <Button
@@ -344,7 +360,9 @@ export function IntroWizard() {
               </div>
               {!ready ? (
                 <p className="text-sm font-medium text-foreground/85 mt-3 leading-snug">
-                  Click the highlighted control now. The tour will automatically continue!
+                  {!isFirstStep && spotlightRect
+                    ? 'Click the highlighted control now. The tour will automatically continue!'
+                    : 'Follow the instruction above to continue — the tour picks up automatically.'}
                 </p>
               ) : null}
             </CardContent>

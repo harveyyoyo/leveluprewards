@@ -1843,8 +1843,9 @@ export function SettingsModal() {
                                                 className="w-full rounded-xl"
                                                 onClick={() => {
                                                     window.localStorage.removeItem('arcade_tour_progress_welcome');
-                                                    handleToggle('activeTourId', null);
-                                                    setTimeout(() => handleToggle('activeTourId', 'welcome'), 50);
+                                                    // Commit directly — draft changes are discarded when the modal closes without OK.
+                                                    updateSettings({ activeTourId: null });
+                                                    setTimeout(() => updateSettings({ activeTourId: 'welcome' }), 50);
                                                     handleOpenChange(false);
                                                 }}
                                             >
@@ -1855,8 +1856,8 @@ export function SettingsModal() {
                                                 className="w-full rounded-xl"
                                                 onClick={() => {
                                                     window.localStorage.removeItem('arcade_tour_progress_features');
-                                                    handleToggle('activeTourId', null);
-                                                    setTimeout(() => handleToggle('activeTourId', 'features'), 50);
+                                                    updateSettings({ activeTourId: null });
+                                                    setTimeout(() => updateSettings({ activeTourId: 'features' }), 50);
                                                     handleOpenChange(false);
                                                 }}
                                             >
