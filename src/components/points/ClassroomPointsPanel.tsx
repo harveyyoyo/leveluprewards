@@ -1623,7 +1623,7 @@ function ClassroomPointsPanelInner({
                 'inline-flex items-center rounded-lg border-2 px-2.5 py-1.5 text-[11px] font-bold shadow-sm transition sm:px-3 sm:py-2 sm:text-xs',
                 design === 'brutalist'
                   ? 'border-foreground bg-card hover:bg-yellow-100'
-                  : 'border-primary/45 bg-primary/12 text-primary hover:bg-primary/18',
+                  : 'border-primary/45 bg-primary/10 text-primary hover:bg-primary/20',
               )}
               onClick={() => setBurstSelected([])}
             >
