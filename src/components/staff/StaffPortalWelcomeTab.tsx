@@ -100,6 +100,7 @@ function TabLinkRow({
   label,
   description,
   onOpen,
+  tabValue,
 }: {
   icon: LucideIcon;
   label: string;
