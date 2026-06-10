@@ -68,7 +68,8 @@ export function StudentActivityList({
         {history && history.length > 0 ? (
           visibleHistory.map((item, index) => {
             const isRedemption = item.desc.startsWith('Redeemed:');
-            const isPointGain = item.amount > 0;
+            const amount = Number(item.amount ?? 0);
+            const isPointGain = amount > 0;
 
             return (
               <li
@@ -151,7 +152,7 @@ export function StudentActivityList({
                         : undefined
                     }
                   >
-                    {isPointGain ? `+${item.amount}` : item.amount} PTS
+                    {isPointGain ? `+${amount}` : amount} PTS
                   </Badge>
                 </div>
                 {!preview && isRedemption ? (
