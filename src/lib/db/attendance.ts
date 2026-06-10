@@ -12,10 +12,10 @@ import {
   writeBatch,
   Firestore,
 } from 'firebase/firestore';
-import type { Student, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, HistoryItem, RecordClassSignInResult, Class, AttendanceRewardRule } from '../types';
+import type { Student, AttendanceSettings, AttendanceLogEntry, AttendanceScheduleSlot, HistoryItem, RecordClassSignInResult, Class, AttendanceRewardRule, Category } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getSchoolDayClock } from '@/lib/attendance/schoolDayClock';
-import { removeUndefined } from './helpers';
+import { removeUndefined, applyPointsByPeriod, applyCategoryPointsByPeriod } from './helpers';
 
 const ATTENDANCE_CONFIG_ID = 'config';
 const EARLY_SIGN_IN_WINDOW_MINUTES = 10;
@@ -227,12 +227,39 @@ export const recordClassSignIn = async (
     if (!studentSnap.exists()) throw new Error('Student not found');
     const data = studentSnap.data() as Student;
 
+    // Resolve the configured category before any writes — transaction reads
+    // must precede writes. A deleted or missing category degrades to an
+    // uncategorized award rather than failing the sign-in.
+    let categoryName: string | undefined;
+    if (computedPoints > 0 && config.categoryId) {
+      const categorySnap = await transaction.get(
+        doc(firestore, 'schools', schoolId, 'categories', config.categoryId)
+      );
+      const name = (categorySnap.data() as Category | undefined)?.name?.trim();
+      if (name) categoryName = name;
+    }
+
     const now = Date.now();
-    transaction.update(studentRef, {
+    const studentPatch: Record<string, unknown> = {
       points: (data.points || 0) + computedPoints,
       lifetimePoints: (data.lifetimePoints ?? 0) + computedPoints,
       updatedAt: now,
-    });
+    };
+    if (computedPoints > 0) {
+      studentPatch.pointsByPeriod = applyPointsByPeriod(data.pointsByPeriod, computedPoints, now);
+    }
+    if (categoryName) {
+      const categoryPointsUpdate = { ...data.categoryPoints };
+      categoryPointsUpdate[categoryName] = (categoryPointsUpdate[categoryName] || 0) + computedPoints;
+      studentPatch.categoryPoints = categoryPointsUpdate;
+      studentPatch.categoryPointsByPeriod = applyCategoryPointsByPeriod(
+        data.categoryPointsByPeriod,
+        categoryName,
+        computedPoints,
+        now
+      );
+    }
+    transaction.update(studentRef, studentPatch);
 
     const desc = onTime && periodLabel
       ? `Attendance (on time): ${periodLabel}`
