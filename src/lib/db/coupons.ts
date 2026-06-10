@@ -111,7 +111,12 @@ export const redeemCoupon = async (
       const gate = studentMayRedeemCoupon(coupon, currentStudent, classPrimaryTeacherId);
       if (!gate.ok) throw new Error(gate.message || 'Not eligible to redeem this coupon.');
 
-      const addedValue = coupon.value;
+      // A malformed coupon doc (missing or negative value) must not write NaN
+      // into the balance or turn a redemption into a deduction.
+      const addedValue = Number(coupon.value ?? 0);
+      if (!Number.isFinite(addedValue) || addedValue < 0) {
+        throw new Error('Invalid coupon value.');
+      }
       const newPoints = Number(currentStudent.points ?? 0) + addedValue;
       const newLifetimePoints = (currentStudent.lifetimePoints || 0) + addedValue;
       const categoryPoints = { ...(currentStudent.categoryPoints || {}) };
@@ -151,7 +156,7 @@ export const redeemCoupon = async (
       const mainActivityRef = doc(activityCollectionRef);
       transaction.set(mainActivityRef, {
         desc: `Redeemed coupon: ${coupon.code} (${coupon.category})`,
-        amount: coupon.value,
+        amount: addedValue,
         date: Date.now(),
       });
 
@@ -162,7 +167,7 @@ export const redeemCoupon = async (
         usedBy: studentId,
       });
 
-      return { baseValue: coupon.value, bonusTotal: evalResult.bonusTotal };
+      return { baseValue: addedValue, bonusTotal: evalResult.bonusTotal };
     });
     return { success: true, message: "Redeemed successfully", value: result.baseValue, bonusTotal: result.bonusTotal };
   } catch (error: unknown) {
