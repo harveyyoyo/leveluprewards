@@ -181,6 +181,12 @@ export const redeemPrize = async (
   const prizeRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
   const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
   const redeemedAt = Date.now();
+  // A negative or fractional quantity would flip the deduction into a credit
+  // and inflate stock; reject before touching the transaction.
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error('Invalid quantity.');
+  }
+  let committedTotalCost = 0;
   try {
     await runTransaction(firestore, async (transaction) => {
       const [studentDoc, prizeDoc] = await Promise.all([
@@ -198,7 +204,10 @@ export const redeemPrize = async (
       const studentData = studentDoc.data() as Student;
       const prizeData = prizeDoc.data() as Prize;
       const currentPoints = Number(studentData.points ?? 0);
-      const totalCost = typeof pointsOverride === 'number' ? pointsOverride : prizeData.points * quantity;
+      const totalCost = typeof pointsOverride === 'number' ? pointsOverride : Number(prizeData.points ?? 0) * quantity;
+      if (!Number.isFinite(totalCost) || totalCost < 0) {
+        throw new Error('Invalid redemption cost.');
+      }
 
       if (!prizeData.inStock) {
       throw new Error("This reward item is not available.");
@@ -265,11 +274,15 @@ export const redeemPrize = async (
         };
         transaction.update(prizeRef, updates);
       }
+
+      // Report the cost actually deducted (fresh doc price), not the caller's
+      // possibly stale prize snapshot.
+      committedTotalCost = totalCost;
     });
     void import('@/lib/goalsProgress').then((m) =>
       m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
     );
-    return { success: true, activityId: activityRef.id, redeemedAt, totalCost: typeof pointsOverride === 'number' ? pointsOverride : prize.points * quantity };
+    return { success: true, activityId: activityRef.id, redeemedAt, totalCost: committedTotalCost };
   } catch (e) {
     reportFirestorePermissionError(e, { path: studentRef.path, operation: 'update', requestResourceData: { prizeId: prize.id, quantity } });
     throw e;

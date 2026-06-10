@@ -215,6 +215,27 @@ export function AdminAttendanceTab(props: any) {
                 />
                 <p className="text-xs text-muted-foreground">Minutes after start to count as on-time.</p>
               </div>
+              <div className="space-y-2">
+                <Label>Default Category</Label>
+                <Select
+                  value={attendanceConfig?.categoryId || '__none__'}
+                  onValueChange={(v) => setAttendanceConfigState({
+                    ...(attendanceConfig || {}),
+                    categoryId: v === '__none__' ? undefined : v
+                  })}
+                >
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">None</SelectItem>
+                    {categories?.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Attendance points count toward this category and seed new default rules.</p>
+              </div>
             </div>
             <div className="pt-4 border-t">
               <AttendanceTimeZoneField

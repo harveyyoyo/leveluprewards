@@ -78,7 +78,14 @@ export async function redeemPrizeWithPickupVoucher(
   const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
   const redeemedAt = Date.now();
 
+  // A negative or fractional quantity would flip the deduction into a credit
+  // and inflate stock; reject before touching the transaction.
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    throw new Error('Invalid quantity.');
+  }
+
   let voucherScanCode = '';
+  let committedTotalCost = 0;
   try {
     await runTransaction(firestore, async (transaction) => {
       const [studentDoc, prizeDoc] = await Promise.all([
@@ -91,13 +98,17 @@ export async function redeemPrizeWithPickupVoucher(
 
       const studentData = studentDoc.data();
       const prizeData = prizeDoc.data() as Prize;
-      const totalCost = prizeData.points * quantity;
+      const currentPoints = Number(studentData.points ?? 0);
+      const totalCost = Number(prizeData.points ?? 0) * quantity;
+      if (!Number.isFinite(totalCost) || totalCost < 0) {
+        throw new Error('Invalid redemption cost.');
+      }
 
       if (!prizeData.inStock) throw new Error('This reward item is not available.');
       if (typeof prizeData.stockCount === 'number' && prizeData.stockCount < quantity) {
         throw new Error('Not enough items in stock for that quantity.');
       }
-      if ((studentData.points ?? 0) < totalCost) throw new Error('Not enough points.');
+      if (currentPoints < totalCost) throw new Error('Not enough points.');
 
       voucherScanCode = generatePrizeVoucherScanCode();
       const lookupRef = doc(firestore, 'schools', schoolId, 'prizeVoucherByCode', voucherScanCode);
@@ -118,7 +129,7 @@ export async function redeemPrizeWithPickupVoucher(
       };
 
       transaction.update(studentRef, {
-        points: (studentData.points ?? 0) - totalCost,
+        points: currentPoints - totalCost,
         updatedAt: redeemedAt,
       });
       transaction.set(activityRef, removeUndefined(activity as unknown as Record<string, unknown>));
@@ -140,6 +151,10 @@ export async function redeemPrizeWithPickupVoucher(
           inStock: nextStock > 0,
         });
       }
+
+      // Report the cost actually deducted (fresh doc price), not the caller's
+      // possibly stale prize snapshot.
+      committedTotalCost = totalCost;
     });
   } catch (e) {
     reportFirestorePermissionError(e, {
@@ -158,7 +173,7 @@ export async function redeemPrizeWithPickupVoucher(
     success: true,
     activityId: activityRef.id,
     redeemedAt,
-    totalCost: prize.points * quantity,
+    totalCost: committedTotalCost,
     voucherScanCode,
   };
 }
