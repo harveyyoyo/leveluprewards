@@ -81,13 +81,14 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Click Wizard for a guided new item, or New Item for the full editor.',
           'Set point cost, stock, and which teachers or classes can see it.',
+          'Optional: under Point categories, restrict redemption to combined balance from selected categories only.',
         ],
       },
       {
         title: 'Shelf cards and redemption',
         checklist: [
           'Print prize cards so the desk can scan barcodes at pickup.',
-          'Students redeem from the kiosk; fulfill orders in Teacher → Redemptions.',
+          'Students redeem from the kiosk (Eligible rewards or More prizes); fulfill orders in Teacher → Redemptions.',
         ],
       },
     ],
@@ -132,6 +133,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Launch Class Awards Live for the live seating chart and quick awards.',
           'Launch for class screen hides behavior comments on the projector view.',
           'Set chart defaults, school access, award labels, if/then alerts, and monitor options under Settings.',
+          'Monitor points display: hidden, balance only, session totals, or both — plus last name and emoji toggles.',
           'On the monitor: Style, Layout, Desk display, and tap mode / fly-up / celebration next to Arrange seats.',
         ],
       },
@@ -231,7 +233,8 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Configure each display',
         checklist: [
-          'Smart Screen: set title, daily message, layout, theme, and which modules to show.',
+          'Smart Screen: set title, daily message, layout, theme, and toggle modules (stats, leaderboard, houses, birthdays, etc.).',
+          'Jewish Orthodox schools: enable Hebrew date and Jewish holidays under Smart Screen settings.',
           'Bulletin: set board title, theme, and manage point-earning incentives.',
         ],
       },
@@ -301,10 +304,17 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     subtitle: 'Alerts for staff and families',
     steps: [
       {
-        title: 'Configure channels',
+        title: 'Turn notifications on',
         checklist: [
-          'Choose which events trigger in-app or email notifications.',
-          'Test with a small group before school-wide announcements.',
+          'Enable the master notifications switch at the top of this tab.',
+          'Use Set up a notification wizard for who receives alerts, which event triggers them, and email vs WhatsApp.',
+        ],
+      },
+      {
+        title: 'Fine-tune events',
+        checklist: [
+          'Toggle individual events: points, redemptions, attendance, library, milestones, low stock, weekly digest.',
+          'Confirm parent/student phone and email on student records before going school-wide.',
         ],
       },
     ],
@@ -321,10 +331,11 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         ],
       },
       {
-        title: 'Themes',
+        title: 'Themes & kiosk profiles',
         checklist: [
           'Open Theme Generator to build palettes and backgrounds.',
-          'Apply a theme school-wide from the generator or saved themes list.',
+          'Use Kiosk Profiles for per-device overrides (theme, login tabs, session timeout).',
+          'Open the Kiosk Live Simulator to preview login, welcome, and library screens.',
         ],
       },
     ],
@@ -358,6 +369,47 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Set per-student passcodes when required; use Unlock after too many failures.',
           'Reset browser clears a stuck device without changing the passcode.',
+        ],
+      },
+    ],
+  },
+  raffle: {
+    title: 'Raffle tab',
+    subtitle: 'Ticket drawings from student points',
+    steps: [
+      {
+        title: 'Configure tickets',
+        checklist: [
+          'Confirm points-per-ticket in school settings if ticket counts look wrong.',
+          'Add raffle prizes or use existing shop items when your school links them.',
+        ],
+      },
+      {
+        title: 'Run a drawing',
+        checklist: [
+          'Open the drawing view on a projector or classroom screen.',
+          'Spin or pick winners, then record results for your class or school.',
+        ],
+      },
+    ],
+  },
+  houses: {
+    title: 'Houses tab',
+    subtitle: 'Teams, sorting, and house standings',
+    steps: [
+      {
+        title: 'Run the setup wizard',
+        checklist: [
+          'Click Setup wizard to seed house teams, link points to student rewards, assign rosters, and configure House Hall of Fame.',
+          'Choose linked house totals (recommended) or manual house points on this tab.',
+        ],
+      },
+      {
+        title: 'Daily use',
+        checklist: [
+          'Assign or move students between houses; sync totals when using student rollup.',
+          'Open House Hall of Fame for monitor settings and the live leaderboard link.',
+          'Use Sorting ceremony for a ceremonial random or balanced assignment.',
         ],
       },
     ],

@@ -1204,6 +1204,25 @@ export function SettingsModal() {
                                      </p>
                                  </div>
 
+                                 {interfaceRole !== 'student' ? (
+                                     <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-border/40">
+                                         <div className="flex items-center gap-2 min-w-0 pr-2">
+                                             <Monitor className="w-4 h-4 text-muted-foreground shrink-0" />
+                                             <div className="min-w-0">
+                                                 <span className="text-sm font-bold">Wide layout</span>
+                                                 <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                     Use full-width layout on teacher and admin portals instead of centered content. Saved on this device.
+                                                 </p>
+                                             </div>
+                                         </div>
+                                         <Switch
+                                             checked={staffPortalWideLayout}
+                                             onCheckedChange={() => toggleStaffPortalLayout()}
+                                             aria-label="Wide staff portal layout"
+                                         />
+                                     </div>
+                                 ) : null}
+
                                  {interfaceRole === 'student' && (
                                      <div className="space-y-2 mt-4 pt-4 border-t border-border/40">
                                          <div className="flex items-center gap-2">
@@ -1381,20 +1400,6 @@ export function SettingsModal() {
                                             }
                                             disabled={!canManageSchoolSettings}
                                             aria-label="Hide header on portal pages"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center justify-between gap-3 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
-                                        <div className="flex flex-col min-w-0 pr-4">
-                                            <span className="text-sm font-bold">Wide layout</span>
-                                            <p className="text-[11px] text-muted-foreground">
-                                                Use full-width layout on teacher and admin portals instead of centered content.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={staffPortalWideLayout}
-                                            onCheckedChange={() => toggleStaffPortalLayout()}
-                                            aria-label="Wide staff portal layout"
                                         />
                                     </div>
 

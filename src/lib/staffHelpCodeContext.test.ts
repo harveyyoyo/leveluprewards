@@ -16,7 +16,7 @@ describe('staffHelpCodeContext', () => {
 
   it('allows staff-facing app sources', () => {
     expect(isAllowedStaffHelpSourcePath('src/app/[schoolId]/admin/page.tsx')).toBe(true);
-    expect(isAllowedStaffHelpSourcePath('src/components/StaffAiHelpButton.tsx')).toBe(true);
+    expect(isAllowedStaffHelpSourcePath('src/components/support/StaffAiHelpButton.tsx')).toBe(true);
   });
 
   it('extracts multi-word feature phrases', () => {

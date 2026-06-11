@@ -57,6 +57,7 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Launch Class Awards Live for quick awards during the lesson.',
           'Launch for class screen on your projector — mirrors the chart without behavior comments.',
           'Chart defaults, access, labels, alerts, and monitor options live under Settings in Class Awards Live.',
+          'Monitor points display controls whether desks show balances, session totals, both, or hidden.',
           'Chart style, Layout, Desk display, and Toolbar options on the monitor. Choose Class there when you have more than one.',
         ],
       },
@@ -83,6 +84,7 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         title: 'Manage your shop items',
         checklist: [
           'Add items you are allowed to offer; respect school-wide vs teacher-only scope.',
+          'Optional: restrict a prize to specific point categories so students spend category balances only.',
           'Keep stock updated so students do not redeem out-of-stock rewards.',
         ],
       },

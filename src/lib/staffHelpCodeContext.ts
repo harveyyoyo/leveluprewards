@@ -45,9 +45,11 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['prize', 'shop', 'reward', 'redeem', 'kiosk'],
+    keys: ['prize', 'shop', 'reward', 'redeem', 'kiosk', 'category balance', 'eligible'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminPrizesTab.tsx',
+      'src/components/prizes/PrizeModal.tsx',
+      'src/lib/prizes/prizeCategoryEligibility.ts',
       'src/app/[schoolId]/prize/page.tsx',
       'src/app/[schoolId]/student/page.tsx',
     ],
@@ -69,7 +71,10 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   },
   {
     keys: ['attendance', 'sign-in', 'sign in', 'check in', 'timezone'],
-    paths: ['src/app/[schoolId]/admin/sections/AdminAttendanceTab.tsx'],
+    paths: [
+      'src/app/[schoolId]/admin/sections/AdminAttendanceTab.tsx',
+      'src/components/attendance/AttendanceSetupWizard.tsx',
+    ],
   },
   {
     keys: ['library', 'book', 'checkout', 'barcode', 'upc'],
@@ -98,16 +103,28 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['house', 'houses', 'sorting', 'house parent'],
+    keys: ['house', 'houses', 'sorting', 'house parent', 'house hall of fame'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminHousesTab.tsx',
+      'src/app/[schoolId]/admin/sections/HouseSetupWizard.tsx',
       'src/app/[schoolId]/house-sorting/page.tsx',
     ],
   },
   {
-    keys: ['bulletin', 'bulletin board', 'announcement'],
+    keys: ['classroom', 'seating', 'class awards', 'behavior note', 'monitor points'],
+    paths: [
+      'src/components/points/StaffClassroomTab.tsx',
+      'src/components/classroom/ClassAwardsLiveSettingsSection.tsx',
+      'src/app/[schoolId]/admin/sections/ClassroomSetupWizard.tsx',
+      'src/lib/classroom/classroomMonitorDisplaySettings.ts',
+    ],
+  },
+  {
+    keys: ['smart screen', 'smartscreen', 'display', 'displays', 'bulletin', 'hebrew date', 'jewish holiday'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/app/[schoolId]/admin/sections/displays/SmartScreenSettingsPanel.tsx',
+      'src/app/[schoolId]/smart-screen/page.tsx',
       'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },
@@ -143,12 +160,16 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['setting', 'settings', 'gear', 'theme', 'tooltip', 'walkthrough', 'tour'],
-    paths: ['src/components/providers/SettingsProvider.tsx'],
+    keys: ['setting', 'settings', 'gear', 'theme', 'tooltip', 'walkthrough', 'tour', 'language', 'hebrew', 'locale', 'display mode', 'mobile'],
+    paths: [
+      'src/components/providers/SettingsProvider.tsx',
+      'src/components/settings/SettingsModal.tsx',
+      'src/components/i18n/SchoolLanguageSetting.tsx',
+    ],
   },
   {
     keys: ['help', 'ai help', 'support'],
-    paths: ['src/components/StaffAiHelpButton.tsx'],
+    paths: ['src/components/support/StaffAiHelpButton.tsx'],
   },
   {
     keys: ['insights', 'analytics', 'stats'],
@@ -167,6 +188,7 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/student(?:\/|$)/i, paths: ['src/app/[schoolId]/student/page.tsx'] },
   { pattern: /\/prize(?:\/|$)/i, paths: ['src/app/[schoolId]/prize/page.tsx'] },
   { pattern: /\/hall-of-fame/i, paths: ['src/app/[schoolId]/hall-of-fame/page.tsx'] },
+  { pattern: /\/smart-screen/i, paths: ['src/app/[schoolId]/smart-screen/page.tsx'] },
   { pattern: /\/bulletin-board/i, paths: ['src/app/[schoolId]/bulletin-board/page.tsx'] },
   { pattern: /\/house-sorting/i, paths: ['src/app/[schoolId]/house-sorting/page.tsx'] },
   { pattern: /\/office\/students/i, paths: ['src/app/[schoolId]/office/students/page.tsx'] },

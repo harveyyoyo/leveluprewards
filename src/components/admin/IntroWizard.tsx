@@ -66,15 +66,15 @@ const steps = [
     target: '/student',
   },
   {
-    title: 'Step 10: Go to the Rewards Shop',
-    description: 'The points were added! Let\'s go spend them. On the student kiosk, scroll to Eligible Rewards and tap "See all rewards" to open the rewards shop (stay signed in as the same student).',
+    title: 'Step 10: Open the rewards shop',
+    description: 'The points were added! On the student kiosk, find the Eligible rewards rail and tap **More prizes** to open the full shop (you stay signed in on the same page).',
     target: '/student',
     hideNext: true,
   },
   {
-    title: 'Step 11: Redeem a Reward',
-    description: "You're in the Rewards Shop! Select a reward you can afford and click 'Buy'. Once redeemed, you'll see a success message. Then, return to the 'Teacher Portal' (using the home icon then 'Teacher Portal') to finalize the delivery.",
-    target: '/prize',
+    title: 'Step 11: Redeem a reward',
+    description: "You're in the full rewards shop. Select a reward you can afford and confirm the purchase. When you see the success message, use **Back to kiosk** or the home icon, then open **Teacher Portal** to finalize delivery.",
+    target: '/student',
     hideNext: true,
   },
   {
