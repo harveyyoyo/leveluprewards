@@ -111,13 +111,13 @@ export function LibraryManagementPanel({
         case 'shelf':
           return (a.shelfLocation ?? '').localeCompare(b.shelfLocation ?? '');
         case 'status':
-          return a.status.localeCompare(b.status);
+          return (a.status ?? '').localeCompare(b.status ?? '');
         case 'barcode':
-          return a.upc.localeCompare(b.upc);
+          return (a.upc ?? '').localeCompare(b.upc ?? '');
         case 'checkedOut':
           return (a.checkedOutAt ?? 0) - (b.checkedOutAt ?? 0);
         default:
-          return a.name.localeCompare(b.name);
+          return (a.name ?? '').localeCompare(b.name ?? '');
       }
     });
     return list;

@@ -113,8 +113,19 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
         };
 
         if (enableWheelSpin) {
-            const parsedSegments = wheelSegments.map(s => parseInt(s));
-            if (parsedSegments.length === 6 && parsedSegments.every(s => !isNaN(s))) {
+            const trimmedSegments = wheelSegments.map(s => s.trim());
+            const allBlank = trimmedSegments.every(s => s === '');
+            if (!allBlank) {
+                const parsedSegments = trimmedSegments.map(s => parseInt(s, 10));
+                if (parsedSegments.length !== 6 || parsedSegments.some(s => !Number.isFinite(s))) {
+                    playSound('error');
+                    toast({
+                        variant: 'destructive',
+                        title: 'Invalid wheel slices',
+                        description: 'Enter all six point values, or leave every slice blank to use bonus points.',
+                    });
+                    return;
+                }
                 baseData.wheelSegments = parsedSegments;
             }
         }
@@ -320,6 +331,9 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                                             <SelectValue placeholder="Choose category..." />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            {categoryId && categories.length > 0 && !categories.some(c => c.id === categoryId) ? (
+                                                <SelectItem value={categoryId}>Unknown category (deleted)</SelectItem>
+                                            ) : null}
                                             {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>

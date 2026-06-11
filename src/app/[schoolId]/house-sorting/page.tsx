@@ -21,18 +21,21 @@ export default function HouseSortingPage() {
   const { settings } = useSettings();
 
   const housesQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
+    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
     [firestore, schoolId],
   );
   const studentsQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
+    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
     [firestore, schoolId],
   );
   const { data: houses, isLoading: housesLoading } = useCollection<House>(housesQuery);
   const { data: students, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
   const sortedHouses = useMemo(
-    () => [...(houses || [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.name.localeCompare(b.name)),
+    () =>
+      [...(houses || [])].sort(
+        (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || (a.name ?? '').localeCompare(b.name ?? ''),
+      ),
     [houses],
   );
 
@@ -40,7 +43,11 @@ export default function HouseSortingPage() {
     () =>
       (students || [])
         .filter((s) => !s.houseId)
-        .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)),
+        .sort(
+          (a, b) =>
+            (a.lastName ?? '').localeCompare(b.lastName ?? '') ||
+            (a.firstName ?? '').localeCompare(b.firstName ?? ''),
+        ),
     [students],
   );
 

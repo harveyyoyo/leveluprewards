@@ -81,10 +81,14 @@ export function AdminHouseRosterCard({
   const searchTerm = memberSearch.trim().toLowerCase();
   const filteredMembers = (searchTerm
     ? houseStudents.filter((s) =>
-        `${s.firstName} ${s.lastName}`.toLowerCase().includes(searchTerm),
+        `${s.firstName ?? ''} ${s.lastName ?? ''}`.toLowerCase().includes(searchTerm),
       )
     : houseStudents
-  ).sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName));
+  ).sort(
+    (a, b) =>
+      (a.lastName ?? '').localeCompare(b.lastName ?? '') ||
+      (a.firstName ?? '').localeCompare(b.firstName ?? ''),
+  );
 
   return (
     <article

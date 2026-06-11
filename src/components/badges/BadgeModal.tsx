@@ -56,7 +56,7 @@ export function BadgeModal({ isOpen, setIsOpen, badge, categories, onSave }: Bad
         setDescription(badge.description);
         setIcon(badge.icon);
         setCategoryId(badge.categoryId);
-        setPointsRequired(String(badge.pointsRequired));
+        setPointsRequired(String(badge.pointsRequired ?? ''));
         setPeriod(badge.period);
         setTier(badge.tier || '');
         setAccentColor(badge.accentColor || '');
@@ -150,6 +150,9 @@ export function BadgeModal({ isOpen, setIsOpen, badge, categories, onSave }: Bad
                 <Select value={categoryId} onValueChange={setCategoryId}>
                   <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
+                    {categoryId && categories.length > 0 && !categories.some((c) => c.id === categoryId) ? (
+                      <SelectItem value={categoryId}>Unknown category (deleted)</SelectItem>
+                    ) : null}
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}

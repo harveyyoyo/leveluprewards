@@ -171,11 +171,19 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">None (no point changes)</SelectItem>
-                  {categoryList.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} ({c.points > 0 ? `+${c.points}` : c.points} default)
-                    </SelectItem>
-                  ))}
+                  {settings.libraryPointsCategoryId &&
+                  categoryList.length > 0 &&
+                  !categoryList.some((c) => c.id === settings.libraryPointsCategoryId) ? (
+                    <SelectItem value={settings.libraryPointsCategoryId}>Unknown category (deleted)</SelectItem>
+                  ) : null}
+                  {categoryList.map((c) => {
+                    const points = Number(c.points ?? 0);
+                    return (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} ({points > 0 ? `+${points}` : points} default)
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

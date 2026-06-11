@@ -525,7 +525,10 @@ export function HouseStandingsChartBlock({ houses, students, format, onFormatCha
           <Label htmlFor="house-chart-format" className="sr-only">
             Chart format
           </Label>
-          <Select value={format} onValueChange={(v) => onFormatChange(v as HouseStandingsChartFormat)}>
+          <Select
+            value={format === 'bars' ? 'columns' : format}
+            onValueChange={(v) => onFormatChange(v as HouseStandingsChartFormat)}
+          >
             <SelectTrigger id="house-chart-format" className="h-8 w-[12.5rem] rounded-lg text-xs font-semibold">
               <SelectValue />
             </SelectTrigger>

@@ -39,7 +39,7 @@ export function HouseHallOfFameCard({
         (a, b) =>
           (b.points ?? 0) - (a.points ?? 0) ||
           (b.lifetimePoints ?? 0) - (a.lifetimePoints ?? 0) ||
-          a.name.localeCompare(b.name),
+          (a.name ?? '').localeCompare(b.name ?? ''),
       )
       .map((house, index) => {
         const members = memberCounts.get(house.id);
