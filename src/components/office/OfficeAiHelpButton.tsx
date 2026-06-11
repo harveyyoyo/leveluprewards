@@ -18,14 +18,31 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
+import { useOfficePortalData } from '@/components/office/OfficePortalGate';
+import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
+import { buildOfficeAiHelpContext } from '@/lib/office/officeHelpContext';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 export function OfficeAiHelpButton() {
   const { schoolId, loginState, userName } = useAppContext();
-  const { features, marksLabels } = useOfficePortalChrome();
+  const { features, marksLabels, settings } = useOfficePortalChrome();
+  const portal = useOfficePortalData();
+  const shared = useOfficeSharedData(schoolId, true);
   const authFetch = useAuthFetch();
   const { toast } = useToast();
+
+  const officeContext = useMemo(
+    () =>
+      buildOfficeAiHelpContext({
+        students: shared.students,
+        families: shared.families,
+        billingAccounts: portal.billingAccounts,
+        invoices: portal.invoices,
+        useMarksTerminology: settings?.useMarksTerminology,
+      }),
+    [shared.students, shared.families, portal.billingAccounts, portal.invoices, settings?.useMarksTerminology],
+  );
 
   const welcome = useMemo<ChatMessage>(
     () => ({
@@ -73,6 +90,7 @@ export function OfficeAiHelpButton() {
           pathname: typeof window !== 'undefined' ? window.location.pathname : '',
           loginState,
           product: 'office',
+          officeContext,
           model: getArcadeAiModelFromStorage(),
           messages: nextForApi.slice(1).slice(-10),
         }),
@@ -93,7 +111,7 @@ export function OfficeAiHelpButton() {
     } finally {
       setSending(false);
     }
-  }, [authFetch, input, loginState, messages, schoolId, sending, toast]);
+  }, [authFetch, input, loginState, messages, officeContext, schoolId, sending, toast]);
 
   if (!features.aiHelp) return null;
 

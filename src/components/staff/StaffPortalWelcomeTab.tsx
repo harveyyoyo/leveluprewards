@@ -16,6 +16,12 @@ import {
 } from '@/lib/staffPortal';
 import type { Settings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
+import {
+  adminWelcomeTitle,
+  buildAdminQuickActions,
+  trackStaffPortalQuickAction,
+  type AdminQuickActionId,
+} from '@/lib/staffPortalQuickActions';
 
 export type StaffPortalWelcomeStats = {
   studentCount: number;
@@ -31,6 +37,8 @@ type StaffPortalWelcomeTabProps = {
   role: StaffPortalRole;
   settings: Settings;
   onGoToTab: (tabValue: string) => void;
+  /** Used for admin quick-action usage tracking. */
+  schoolId?: string | null;
   /** Admin-only: open bulk CSV roster import. */
   onBulkRoster?: () => void;
   /** Shown under the hero heading when available. */
@@ -143,12 +151,14 @@ function StaffPortalWelcomeHero({
   stats,
   description,
   statLabels,
+  greeting,
 }: {
   schoolName: string | null;
   staffName: string | null;
   stats: StaffPortalWelcomeStats;
   description: string;
   statLabels: [string, string, string, string];
+  greeting?: string;
 }) {
   const statTiles = [
     { label: statLabels[0], value: stats.studentCount },
@@ -157,7 +167,7 @@ function StaffPortalWelcomeHero({
     { label: statLabels[3], value: stats.activePrizeCount },
   ];
 
-  const greeting = staffName ? `Welcome back, ${staffName} 👋` : 'Welcome back 👋';
+  const greetingText = greeting ?? (staffName ? `Welcome back, ${staffName} 👋` : 'Welcome back 👋');
 
   return (
     <div className="flex flex-col gap-5">
@@ -169,7 +179,7 @@ function StaffPortalWelcomeHero({
             </p>
           ) : null}
           <div>
-            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{greeting}</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{greetingText}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-[15px]">
               {description}
             </p>
@@ -225,6 +235,7 @@ export function StaffPortalWelcomeTab({
   role,
   settings,
   onGoToTab,
+  schoolId,
   onBulkRoster,
   schoolName,
   staffName,
@@ -246,6 +257,24 @@ export function StaffPortalWelcomeTab({
       ? ['Students', 'Classes', 'Point categories', 'Active prizes']
       : ['Students', 'Classes', 'Staff', 'Active prizes'];
 
+  const adminQuickActions =
+    role === 'admin' && schoolId
+      ? buildAdminQuickActions(schoolId)
+      : [];
+
+  const heroGreeting =
+    role === 'admin' ? `${adminWelcomeTitle(trimmedStaffName)} 👋` : undefined;
+
+  const handleAdminQuickAction = (id: AdminQuickActionId, tabValue: string) => {
+    if (!schoolId) return;
+    trackStaffPortalQuickAction(schoolId, id);
+    if (id === 'import' && onBulkRoster) {
+      onBulkRoster();
+      return;
+    }
+    onGoToTab(tabValue);
+  };
+
   return (
     <StaffPortalSectionCard className={className}>
       <StaffPortalSectionCardContent className="space-y-6 p-5 sm:p-6">
@@ -256,7 +285,25 @@ export function StaffPortalWelcomeTab({
             stats={stats}
             description={heroDescription}
             statLabels={heroStatLabels}
+            greeting={heroGreeting}
           />
+        ) : null}
+
+        {adminQuickActions.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {adminQuickActions.map((action) => (
+              <Button
+                key={action.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => handleAdminQuickAction(action.id, action.tabValue)}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
         ) : null}
 
         {role === 'admin' && onBulkRoster ? <ImportRosterCard onOpen={onBulkRoster} /> : null}

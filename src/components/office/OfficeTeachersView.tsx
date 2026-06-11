@@ -1,9 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +18,7 @@ import { countOfficeStudentsByTeacher } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { officePublicHref } from '@/lib/officePublicUrl';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import Link from 'next/link';
 
 type OfficeTeachersViewProps = {
@@ -30,8 +29,8 @@ type OfficeTeachersViewProps = {
 };
 
 export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: OfficeTeachersViewProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
   const [query, setQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OfficeTeacher | null>(null);
@@ -69,24 +68,17 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
   };
 
   const handleSave = async () => {
-    if (!firestore || !name.trim()) {
+    if (!write.ctx || !name.trim()) {
       toast({ variant: 'destructive', title: 'Teacher name is required.' });
       return;
     }
     setBusy(true);
     try {
-      const payload = {
+      await write.upsertOfficeTeacher(write.ctx, editing?.id ?? null, {
         name: name.trim(),
         email: email.trim() || null,
-        updatedAt: Date.now(),
-      };
-      if (editing) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', editing.id), payload);
-        toast({ title: 'Teacher updated' });
-      } else {
-        await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeTeachers')), payload);
-        toast({ title: 'Teacher added' });
-      }
+      });
+      toast({ title: editing ? 'Teacher updated' : 'Teacher added' });
       setDialogOpen(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
@@ -96,7 +88,7 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
   };
 
   const handleDelete = async (t: OfficeTeacher) => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     const assigned = studentCountByTeacher.get(t.id) ?? 0;
     if (assigned > 0) {
       toast({
@@ -109,7 +101,7 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
     if (!confirm(`Remove ${t.name} from the office teacher list?`)) return;
     setBusy(true);
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', t.id));
+      await write.deleteOfficeTeacher(write.ctx, t);
       toast({ title: 'Teacher removed' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });

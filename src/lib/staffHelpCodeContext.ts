@@ -143,6 +143,8 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
       'src/app/[schoolId]/office/grades/page.tsx',
       'src/app/[schoolId]/office/billing/page.tsx',
       'src/app/[schoolId]/office/reports/page.tsx',
+      'src/components/office/OfficeBillingView.tsx',
+      'src/lib/office/officeDb.ts',
     ],
   },
   {

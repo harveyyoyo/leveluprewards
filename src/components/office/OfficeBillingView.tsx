@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,6 @@ import { OfficeFamilyStatementButton } from '@/components/office/OfficeFamilySta
 import { useToast } from '@/hooks/use-toast';
 import { formatCents } from '@/lib/office/officeNav';
 import {
-  billingStatusForAccount,
   buildInvoiceReminderMailto,
   defaultDueDateIso,
   downloadCsv,
@@ -36,13 +35,14 @@ import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { CreditCard } from 'lucide-react';
-import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeFamily, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 type OfficeBillingViewProps = {
   schoolId: string;
   students: OfficeStudent[];
+  families: OfficeFamily[];
   studentLabelById: Map<string, string>;
   accounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
@@ -53,6 +53,7 @@ type OfficeBillingViewProps = {
 export function OfficeBillingView({
   schoolId,
   students,
+  families,
   studentLabelById,
   accounts,
   invoices,
@@ -66,6 +67,7 @@ export function OfficeBillingView({
   const [accountOpen, setAccountOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [familyName, setFamilyName] = useState('');
+  const [selectedFamilyId, setSelectedFamilyId] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [invoiceAccountId, setInvoiceAccountId] = useState('');
   const [invoiceLabel, setInvoiceLabel] = useState('');
@@ -164,6 +166,7 @@ export function OfficeBillingView({
 
   const resetAccountForm = () => {
     setFamilyName('');
+    setSelectedFamilyId('');
     setSelectedStudentIds([]);
     setContactEmail('');
     setContactPhone('');
@@ -228,6 +231,7 @@ export function OfficeBillingView({
   const openEditAccount = (account: OfficeBillingAccount) => {
     setEditAccountId(account.id);
     setFamilyName(account.familyName);
+    setSelectedFamilyId(account.familyId ?? '');
     setSelectedStudentIds(account.studentIds);
     setContactEmail(account.contactEmail ?? '');
     setContactPhone(account.contactPhone ?? '');
@@ -240,7 +244,7 @@ export function OfficeBillingView({
   };
 
   const handleBulkInvoicing = async () => {
-    if (!firestore || !bulkLabel.trim() || !bulkAmount) {
+    if (!write.ctx || !bulkLabel.trim() || !bulkAmount) {
       toast({ variant: 'destructive', title: 'Label and amount are required.' });
       return;
     }
@@ -277,38 +281,15 @@ export function OfficeBillingView({
       }
 
       const status: OfficeInvoiceStatus = bulkSaveAsDraft ? 'draft' : 'sent';
-      const createdCount = targetAccounts.length;
-      let totalAmountCents = createdCount * cents;
-
-      const promises = targetAccounts.map(async (account) => {
-        const invoiceRef = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
-        const invoiceDoc = {
-          accountId: account.id,
-          label: bulkLabel.trim(),
-          amountCents: cents,
-          dueDate: due,
-          status,
-          createdAt: Date.now(),
-        };
-        await setDoc(invoiceRef, invoiceDoc);
-
-        if (status === 'sent') {
-          const nextInvoices: OfficeInvoice[] = [
-            ...invoices,
-            {
-              id: invoiceRef.id,
-              ...invoiceDoc,
-            },
-          ];
-          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', account.id), {
-            balanceCents: (account.balanceCents || 0) + cents,
-            status: billingStatusForAccount(account.id, nextInvoices, account.status),
-            updatedAt: Date.now(),
-          });
-        }
+      const createdCount = await write.bulkCreateOfficeInvoices(write.ctx, {
+        accounts: targetAccounts,
+        invoices,
+        label: bulkLabel.trim(),
+        amountCents: cents,
+        dueDate: due,
+        status,
       });
-
-      await Promise.all(promises);
+      const totalAmountCents = createdCount * cents;
 
       toast({
         title: 'Bulk invoicing complete',
@@ -372,36 +353,25 @@ export function OfficeBillingView({
   };
 
   const handleSaveAccount = async () => {
-    if (!firestore || !familyName.trim()) {
+    if (!write.ctx || !familyName.trim()) {
       toast({ variant: 'destructive', title: 'Family name is required.' });
       return;
     }
     setBusy(true);
     try {
-      const payload = {
+      const existing = editAccountId ? accounts.find((a) => a.id === editAccountId) : null;
+      const familyId = selectedFamilyId.trim() || null;
+      await write.upsertOfficeBillingAccount(write.ctx, editAccountId, {
         familyName: familyName.trim(),
+        familyId,
         studentIds: selectedStudentIds,
         contactEmail: contactEmail.trim() || null,
         contactPhone: contactPhone.trim() || null,
         notes: accountNotes.trim() || null,
-        updatedAt: Date.now(),
-      };
-      if (editAccountId) {
-        const existing = accounts.find((a) => a.id === editAccountId);
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), {
-          ...payload,
-          balanceCents: existing?.balanceCents ?? 0,
-          status: existing?.status ?? 'active',
-        });
-        toast({ title: 'Account updated' });
-      } else {
-        await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts')), {
-          ...payload,
-          balanceCents: 0,
-          status: 'active',
-        });
-        toast({ title: 'Billing account created' });
-      }
+        balanceCents: existing?.balanceCents ?? 0,
+        status: existing?.status ?? 'active',
+      });
+      toast({ title: editAccountId ? 'Account updated' : 'Billing account created' });
       setAccountOpen(false);
       resetAccountForm();
     } catch (e) {
@@ -412,7 +382,7 @@ export function OfficeBillingView({
   };
 
   const handleSaveInvoice = async () => {
-    if (!firestore || !invoiceAccountId || !invoiceLabel.trim() || !invoiceAmount) {
+    if (!write.ctx || !invoiceAccountId || !invoiceLabel.trim() || !invoiceAmount) {
       toast({ variant: 'destructive', title: 'Account, label, and amount are required.' });
       return;
     }
@@ -422,71 +392,33 @@ export function OfficeBillingView({
       return;
     }
     const due = invoiceDue || new Date().toISOString().slice(0, 10);
+    const account = accounts.find((a) => a.id === invoiceAccountId);
+    if (!account) {
+      toast({ variant: 'destructive', title: 'Billing account not found.' });
+      return;
+    }
     setBusy(true);
     try {
-      if (editInvoiceId) {
-        const existing = invoices.find((i) => i.id === editInvoiceId);
-        if (!existing) throw new Error('Invoice not found');
-        const status = saveAsDraft ? 'draft' : existing.status === 'draft' && !saveAsDraft ? 'sent' : existing.status;
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
+      const existing = editInvoiceId ? invoices.find((i) => i.id === editInvoiceId) : null;
+      const status = saveAsDraft
+        ? 'draft'
+        : existing?.status === 'draft' && !saveAsDraft
+          ? 'sent'
+          : existing?.status ?? 'sent';
+      await write.saveOfficeInvoiceWithBalance(write.ctx, {
+        invoiceId: editInvoiceId,
+        account,
+        invoices,
+        data: {
           label: invoiceLabel.trim(),
           amountCents: cents,
           dueDate: due,
-          status,
-        });
-        const account = accounts.find((a) => a.id === existing.accountId);
-        if (account) {
-          const nextInvoices = invoices.map((i) =>
-            i.id === editInvoiceId
-              ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status }
-              : i,
-          );
-          let balanceCents = account.balanceCents || 0;
-          if (existing.status === 'sent') {
-            balanceCents = Math.max(0, balanceCents + (cents - (existing.amountCents || 0)));
-          } else if (status === 'sent' && existing.status === 'draft') {
-            balanceCents += cents;
-          }
-          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
-            balanceCents,
-            status: billingStatusForAccount(existing.accountId, nextInvoices, account.status),
-            updatedAt: Date.now(),
-          });
-        }
-        toast({ title: 'Invoice updated' });
-      } else {
-        const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
-        const status = saveAsDraft ? 'draft' : 'sent';
-        await setDoc(ref, {
-          accountId: invoiceAccountId,
-          label: invoiceLabel.trim(),
-          amountCents: cents,
-          dueDate: due,
-          status,
-          createdAt: Date.now(),
-        });
-        const account = accounts.find((a) => a.id === invoiceAccountId);
-        if (account && !saveAsDraft) {
-          const nextInvoices: OfficeInvoice[] = [
-            ...invoices,
-            {
-              id: ref.id,
-              accountId: invoiceAccountId,
-              label: invoiceLabel.trim(),
-              amountCents: cents,
-              dueDate: due,
-              status,
-              createdAt: Date.now(),
-            },
-          ];
-          await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', invoiceAccountId), {
-            balanceCents: (account.balanceCents || 0) + cents,
-            status: billingStatusForAccount(invoiceAccountId, nextInvoices, account.status),
-            updatedAt: Date.now(),
-          });
-        }
-        toast({ title: saveAsDraft ? 'Draft saved' : 'Invoice created' });
-      }
+          status: editInvoiceId ? status : saveAsDraft ? 'draft' : 'sent',
+        },
+      });
+      toast({
+        title: editInvoiceId ? 'Invoice updated' : saveAsDraft ? 'Draft saved' : 'Invoice created',
+      });
       setInvoiceOpen(false);
       resetInvoiceForm();
     } catch (e) {
@@ -501,22 +433,11 @@ export function OfficeBillingView({
   };
 
   const voidInvoice = async (inv: OfficeInvoice) => {
-    if (!firestore || !confirm('Void this invoice? Balance will be adjusted.')) return;
+    if (!write.ctx || !confirm('Void this invoice? Balance will be adjusted.')) return;
+    const account = accounts.find((a) => a.id === inv.accountId);
+    if (!account) return;
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
-        status: 'void',
-      });
-      const account = accounts.find((a) => a.id === inv.accountId);
-      if (account && (inv.status === 'sent' || inv.status === 'draft')) {
-        const nextInvoices = invoices.map((i) =>
-          i.id === inv.id ? { ...i, status: 'void' as const } : i,
-        );
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
-          status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
-          updatedAt: Date.now(),
-        });
-      }
+      await write.voidOfficeInvoiceWithBalance(write.ctx, inv, account, invoices);
       toast({ title: 'Invoice voided' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not void invoice', description: (e as Error).message });
@@ -524,22 +445,11 @@ export function OfficeBillingView({
   };
 
   const sendDraft = async (inv: OfficeInvoice) => {
-    if (!firestore || inv.status !== 'draft') return;
+    if (!write.ctx || inv.status !== 'draft') return;
+    const account = accounts.find((a) => a.id === inv.accountId);
+    if (!account) return;
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
-        status: 'sent',
-      });
-      const account = accounts.find((a) => a.id === inv.accountId);
-      if (account) {
-        const nextInvoices = invoices.map((i) =>
-          i.id === inv.id ? { ...i, status: 'sent' as const } : i,
-        );
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: (account.balanceCents || 0) + (inv.amountCents || 0),
-          status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
-          updatedAt: Date.now(),
-        });
-      }
+      await write.sendOfficeDraftInvoiceWithBalance(write.ctx, inv, account, invoices);
       toast({ title: 'Invoice sent', description: 'Balance updated.' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not send invoice', description: (e as Error).message });
@@ -609,9 +519,11 @@ export function OfficeBillingView({
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (!firestore || !confirm('Delete this billing account?')) return;
+    if (!write.ctx || !confirm('Delete this billing account?')) return;
+    const account = accounts.find((a) => a.id === id);
+    if (!account) return;
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', id));
+      await write.deleteOfficeBillingAccount(write.ctx, account);
       toast({ title: 'Account removed' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -925,6 +837,34 @@ export function OfficeBillingView({
               <Label>Family / payer name</Label>
               <Input value={familyName} onChange={(e) => setFamilyName(e.target.value)} className="rounded-xl" />
             </div>
+            {families.length > 0 ? (
+              <div className="space-y-2">
+                <Label>Link family profile (optional)</Label>
+                <Select
+                  value={selectedFamilyId || '__none__'}
+                  onValueChange={(v) => {
+                    const nextId = v === '__none__' ? '' : v;
+                    setSelectedFamilyId(nextId);
+                    const family = families.find((f) => f.id === nextId);
+                    if (family?.displayName && !familyName.trim()) {
+                      setFamilyName(family.displayName);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="No linked profile" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No linked profile</SelectItem>
+                    {families.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Email</Label>

@@ -18,6 +18,7 @@ export default function OfficeBillingPage() {
       <OfficeBillingView
         schoolId={schoolId}
         students={shared.students}
+        families={shared.families}
         studentLabelById={shared.studentLabelById}
         accounts={billingAccounts}
         invoices={invoices}

@@ -4,8 +4,6 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
-import { collection, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +34,8 @@ import {
 } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import Link from 'next/link';
 
@@ -67,9 +67,10 @@ export function OfficeGradesView({
   userName,
   isLoading,
 }: OfficeGradesViewProps) {
-  const firestore = useFirestore();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
+  const { marksLabels } = useOfficePortalChrome();
   const { term: activeTerm, setTerm: setActiveTerm, configuredTerms } = useOfficeTerm(schoolId);
   const { settings } = useOfficeSettings(schoolId);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -223,7 +224,7 @@ export function OfficeGradesView({
   };
 
   const handleSave = async () => {
-    if (!firestore || !form.studentId || !form.subject.trim() || !form.termLabel.trim()) {
+    if (!write.ctx || !form.studentId || !form.subject.trim() || !form.termLabel.trim()) {
       toast({ variant: 'destructive', title: 'Student, term, and subject are required.' });
       return;
     }
@@ -252,15 +253,13 @@ export function OfficeGradesView({
         letterGrade: form.letterGrade.trim() || null,
         numericGrade: form.numericGrade ? Number(form.numericGrade) : null,
         notes: form.notes.trim() || null,
-        updatedAt: Date.now(),
-        updatedBy: userName,
       };
       if (editingId) {
-        await setDoc(doc(firestore, 'schools', schoolId, 'officeGradeEntries', editingId), payload, { merge: true });
-        toast({ title: 'Grade updated' });
+        await write.updateOfficeGradeEntry(write.ctx, editingId, payload);
+        toast({ title: `${marksLabels.singular} updated` });
       } else {
-        await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeGradeEntries')), payload);
-        toast({ title: 'Grade saved' });
+        await write.createOfficeGradeEntry(write.ctx, payload);
+        toast({ title: `${marksLabels.singular} saved` });
       }
       setActiveTerm(form.termLabel.trim());
       setDialogOpen(false);
@@ -272,10 +271,12 @@ export function OfficeGradesView({
   };
 
   const handleDelete = async (id: string) => {
-    if (!firestore || !confirm('Delete this grade entry?')) return;
+    if (!write.ctx || !confirm(`Delete this ${marksLabels.singular.toLowerCase()} entry?`)) return;
+    const entry = entries.find((e) => e.id === id);
+    if (!entry) return;
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeGradeEntries', id));
-      toast({ title: 'Grade removed' });
+      await write.deleteOfficeGradeEntry(write.ctx, entry);
+      toast({ title: `${marksLabels.singular} removed` });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
     }
@@ -292,12 +293,12 @@ export function OfficeGradesView({
   };
 
   const handleBulkGrades = async () => {
-    if (!firestore || !bulkSubject.trim()) {
+    if (!write.ctx || !bulkSubject.trim()) {
       toast({ variant: 'destructive', title: 'Subject is required for bulk entry.' });
       return;
     }
     if (missingForTerm.length === 0) {
-      toast({ title: 'No students need grades for this term.' });
+      toast({ title: `No students need ${marksLabels.plural} for this term.` });
       return;
     }
     const numeric = bulkNumeric ? Number(bulkNumeric) : null;
@@ -308,29 +309,18 @@ export function OfficeGradesView({
     setBusy(true);
     try {
       const termLabel = activeTerm.trim();
-      const now = Date.now();
-      const chunkSize = 400;
-      for (let i = 0; i < missingForTerm.length; i += chunkSize) {
-        const chunk = missingForTerm.slice(i, i + chunkSize);
-        const batch = writeBatch(firestore);
-        for (const student of chunk) {
-          const ref = doc(collection(firestore, 'schools', schoolId, 'officeGradeEntries'));
-          batch.set(ref, {
-            studentId: student.id,
-            classId: student.classId ?? null,
-            termLabel,
-            subject: bulkSubject.trim(),
-            letterGrade: bulkLetter.trim() || null,
-            numericGrade: numeric,
-            notes: null,
-            updatedAt: now,
-            updatedBy: userName,
-          });
-        }
-        await batch.commit();
-      }
+      const bulkEntries = missingForTerm.map((student) => ({
+        studentId: student.id,
+        classId: student.classId ?? null,
+        termLabel,
+        subject: bulkSubject.trim(),
+        letterGrade: bulkLetter.trim() || null,
+        numericGrade: numeric,
+        notes: null,
+      }));
+      await write.bulkCreateOfficeGradeEntries(write.ctx, bulkEntries);
       toast({
-        title: 'Bulk grades saved',
+        title: `Bulk ${marksLabels.plural} saved`,
         description: `${missingForTerm.length} students · ${bulkSubject.trim()} · ${termLabel}`,
       });
       setBulkOpen(false);

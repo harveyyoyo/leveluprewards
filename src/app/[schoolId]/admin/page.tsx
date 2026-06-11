@@ -288,6 +288,7 @@ function AdminDashboardInner() {
   const {
     loginState,
     schoolId: ctxSchoolId, setCouponsToPrint, deleteStudent,
+    userName,
     addClass, updateClass, deleteClass,
     addHouse, updateHouse, deleteHouse,
     deleteCategory, addCategory, updateCategory,
@@ -1820,9 +1821,11 @@ function AdminDashboardInner() {
             <StaffPortalWelcomeTab
               role="admin"
               settings={settings}
+              schoolId={schoolId}
               onGoToTab={setActiveMainTab}
               onBulkRoster={() => setBulkRosterOpen(true)}
               schoolName={schoolData?.name?.trim() || null}
+              staffName={userName}
               welcomeStats={adminWelcomeStats}
             />
           </TabsContent>

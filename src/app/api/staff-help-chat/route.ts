@@ -9,6 +9,10 @@ import { APP_NAME } from '@/lib/appBranding';
 import { STAFF_HELP_AI_MODEL } from '@/lib/aiModelPreference';
 import { buildStaffHelpCodeContextBlock } from '@/lib/staffHelpCodeContext';
 import { canAccessStaffAiHelp } from '@/lib/staffAiHelpAccess';
+import {
+  formatOfficeAiHelpContextBlock,
+  type OfficeAiHelpContext,
+} from '@/lib/office/officeHelpContext';
 
 const MAX_MESSAGES = 10;
 const MAX_CONTENT_LEN = 2000;
@@ -34,6 +38,8 @@ function buildSystemPrompt(context: {
   schoolId: string;
   pathname?: string;
   loginState?: string;
+  product?: string;
+  officeContext?: OfficeAiHelpContext;
   userMessage: string;
 }): string {
   const pathLine = context.pathname?.trim()
@@ -42,6 +48,12 @@ function buildSystemPrompt(context: {
   const roleLine = context.loginState?.trim()
     ? `Their sign-in role in the app is: ${context.loginState.trim()}.`
     : 'Their sign-in role was not provided.';
+  const productLine =
+    context.product === 'office'
+      ? 'They are using the **School Office** pillar (roster, billing, grades/marks, family profiles — not the rewards Admin portal).'
+      : context.product?.trim()
+        ? `Product context: ${context.product.trim()}.`
+        : 'Product context was not provided (assume rewards Admin/Teacher unless the path includes /office/).';
 
   const base = loadProductKnowledgeMarkdown();
   const { block: codeBlock, files: codeFiles } = buildStaffHelpCodeContextBlock({
@@ -62,6 +74,7 @@ function buildSystemPrompt(context: {
     '**Context for this question**',
     `- ${pathLine}`,
     `- ${roleLine}`,
+    `- ${productLine}`,
     `- ${codeLine}`,
     '',
     '**Response style**',
@@ -70,6 +83,10 @@ function buildSystemPrompt(context: {
 
   if (codeBlock) {
     sections.push('', codeBlock);
+  }
+
+  if (context.product === 'office' && context.officeContext) {
+    sections.push('', formatOfficeAiHelpContextBlock(context.officeContext));
   }
 
   return sections.join('\n');
@@ -176,6 +193,11 @@ export async function POST(req: NextRequest) {
 
     const pathname = typeof body.pathname === 'string' ? body.pathname : undefined;
     const loginState = typeof body.loginState === 'string' ? body.loginState : undefined;
+    const product = typeof body.product === 'string' ? body.product.trim() : undefined;
+    const officeContext =
+      product === 'office' && body.officeContext && typeof body.officeContext === 'object'
+        ? (body.officeContext as OfficeAiHelpContext)
+        : undefined;
 
     if (loginState && !canAccessStaffAiHelp(loginState)) {
       return NextResponse.json(
@@ -197,6 +219,8 @@ export async function POST(req: NextRequest) {
       schoolId,
       pathname,
       loginState,
+      product,
+      officeContext,
       userMessage: lastUserMessage,
     });
 

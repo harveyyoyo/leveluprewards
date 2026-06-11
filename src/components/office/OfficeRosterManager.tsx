@@ -52,14 +52,13 @@ export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRoste
     }
     setBusy(true);
     try {
-      await write.createOfficeStudent(write.ctx, {
+      await write.createOfficeStudentWithFamily(write.ctx, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
         classId: classId || null,
         teacherId: teacherId || null,
         teacherName: null,
-        familyId: null,
         photoUrl: null,
         dateOfBirth: null,
         busRoute: null,
