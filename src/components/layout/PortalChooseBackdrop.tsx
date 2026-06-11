@@ -56,7 +56,7 @@ export function PortalChooseBackdrop() {
             transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
             className={cn(
               'absolute bottom-14 left-16 h-[420px] w-[420px] rounded-full blur-[135px]',
-              isSapphire ? 'bg-chart-2/28' : 'bg-chart-2/20',
+              isSapphire ? 'bg-chart-2/30' : 'bg-chart-2/20',
             )}
           />
           <motion.div
@@ -64,7 +64,7 @@ export function PortalChooseBackdrop() {
             transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
             className={cn(
               'absolute top-1/2 left-1/2 h-[620px] w-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[160px]',
-              isSapphire ? 'bg-chart-2/16' : 'bg-chart-3/18',
+              isSapphire ? 'bg-chart-2/15' : 'bg-chart-3/20',
             )}
           />
         </>

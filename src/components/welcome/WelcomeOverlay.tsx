@@ -162,7 +162,7 @@ export const WelcomeOverlay: React.FC<WelcomeOverlayProps> = ({
                 <img src={photoUrl} alt={studentName} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-4xl font-bold" style={{ color: primaryColor }}>
-                  {studentName.charAt(0)}
+                  {(studentName ?? '').charAt(0)}
                 </span>
               )}
             </div>

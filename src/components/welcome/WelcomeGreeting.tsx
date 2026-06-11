@@ -2332,6 +2332,15 @@ function KaleidoscopeGreeting({ name, hour, palette }: StyleProps) {
 
 /* ============== STYLE 21 — RECEIPT ============== */
 function ReceiptGreeting({ name, hour, palette }: StyleProps) {
+  /** Stable per mount — inline Math.random() re-rolled the barcode on every render. */
+  const barcodeBars = useMemo(
+    () =>
+      Array.from({ length: 40 }, () => ({
+        width: Math.random() > 0.5 ? 2 : 1,
+        height: `${60 + Math.random() * 40}%`,
+      })),
+    [],
+  );
   const now = new Date();
   const date = now.toLocaleDateString();
   const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -2390,8 +2399,8 @@ function ReceiptGreeting({ name, hour, palette }: StyleProps) {
         <p className="text-center text-xs uppercase tracking-widest" style={{ color: "var(--accent)" }}>** Thank you, {name}! **</p>
         <p className="mt-1 text-center text-xs" style={{ color: "var(--muted)" }}>Have a wonderful {timeOfDay(hour)}.</p>
         <div className="mt-4 flex h-10 items-end justify-center gap-px">
-          {Array.from({ length: 40 }).map((_, i) => (
-            <div key={i} style={{ width: Math.random() > 0.5 ? 2 : 1, height: `${60 + Math.random() * 40}%`, background: "var(--ink)" }} />
+          {barcodeBars.map((bar, i) => (
+            <div key={i} style={{ width: bar.width, height: bar.height, background: "var(--ink)" }} />
           ))}
         </div>
         <p className="mt-1 text-center text-[10px] tracking-widest" style={{ color: "var(--muted)" }}>WELCOME-{name.toUpperCase()}-001</p>
@@ -2448,7 +2457,7 @@ function TarotGreeting({ name, hour, palette }: StyleProps) {
 /* ============== STYLE 23 — VINYL RECORD ============== */
 function VinylGreeting({ name, hour, palette }: StyleProps) {
   return (
-    <div className="flex min-h-[80vh] items-center justify-center rounded-3xl p-6" style={cssVars({ ...palette.vars, background: "var(--bg)" })}>
+    <div className="flex min-h-[80vh] items-center justify-center overflow-hidden rounded-3xl p-6" style={cssVars({ ...palette.vars, background: "var(--bg)" })}>
       <div className="relative h-80 w-[36rem] max-w-full">
         {/* sleeve */}
         <div
@@ -2489,7 +2498,8 @@ function VinylGreeting({ name, hour, palette }: StyleProps) {
 
 /* ============== STYLE 24 — WEATHER ============== */
 function WeatherGreeting({ name, hour, palette }: StyleProps) {
-  const temp = 65 + Math.floor(Math.random() * 20);
+  /** Stable per mount — recomputing Math.random() each render made the temp flicker on parent re-renders. */
+  const [temp] = useState(() => 65 + Math.floor(Math.random() * 20));
   return (
     <div
       className="flex min-h-[80vh] items-center justify-center rounded-3xl p-6"
