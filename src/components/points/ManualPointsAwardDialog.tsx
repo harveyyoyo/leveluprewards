@@ -119,6 +119,13 @@ export function ManualPointsAwardDialog({
   }, [filterClassId, classes]);
 
   useEffect(() => {
+    if (!awardCategoryId) return;
+    if (!categoryList.some((c) => c.id === awardCategoryId)) {
+      setAwardCategoryId(categoryList[0]?.id ?? '');
+    }
+  }, [awardCategoryId, categoryList]);
+
+  useEffect(() => {
     const allowed = new Set(students.map((s) => s.id));
     setSelectedStudentIds((prev) => prev.filter((id) => allowed.has(id)));
   }, [students]);
@@ -386,7 +393,7 @@ export function ManualPointsAwardDialog({
   const formContent = (
     <div className={cn('space-y-6', variant === 'inline' ? 'p-0' : 'flex-1 min-h-0 overflow-y-auto px-6 pb-6')}>
             <div className="flex items-center justify-between gap-3">
-              <div className="grid w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
+              <div className="grid w-full max-w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
                 <Button
                   type="button"
                   variant={awardMode === 'award' ? 'default' : 'ghost'}
