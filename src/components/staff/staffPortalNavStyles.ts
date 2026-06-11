@@ -31,7 +31,7 @@ export function staffPortalGlobalHeaderWrapClassName() {
 export function staffPortalGlobalHeaderClassName() {
   return cn(
     'mb-3 w-full max-w-none rounded-b-2xl border border-border/50 border-t-0',
-    'bg-slate-200/90 dark:bg-slate-900/88',
+    'bg-slate-200/90 dark:bg-slate-900/90',
     'shadow-lg backdrop-blur-md sm:mb-4 sm:rounded-b-3xl',
   );
 }

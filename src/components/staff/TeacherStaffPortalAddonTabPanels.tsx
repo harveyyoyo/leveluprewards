@@ -186,7 +186,7 @@ export function TeacherStaffPortalAddonTabPanels({
 
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
   const totalPointsAwarded =
-    coupons?.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0) || 0;
+    coupons?.filter((c) => c.used).reduce((sum, c) => sum + (Number(c.value) || 0), 0) || 0;
 
   const libraryUpcTaken = async (upc: string, excludeId?: string) => {
     if (!firestore || !schoolId) return false;

@@ -79,17 +79,17 @@ export function StaffPortalAddFeatureTabsMenu({
           </DropdownMenuItem>
         ) : null}
         {hasBulkActions && tabs.length > 0 ? <DropdownMenuSeparator /> : null}
-        {tabs.map((t) => {
-          const Icon = t.icon;
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
           return (
             <DropdownMenuItem
-              key={t.value}
+              key={tab.value}
               className={cn('gap-2 font-semibold', getTabStyle && 'rounded-md')}
-              style={getTabStyle?.(t.value)}
-              onSelect={() => onAddTab(t.value)}
+              style={getTabStyle?.(tab.value)}
+              onSelect={() => onAddTab(tab.value)}
             >
               <Icon className="h-4 w-4 opacity-75" aria-hidden />
-              {t.label}
+              {tab.label}
             </DropdownMenuItem>
           );
         })}
