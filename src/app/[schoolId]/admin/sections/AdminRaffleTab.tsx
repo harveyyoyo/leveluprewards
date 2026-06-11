@@ -800,7 +800,7 @@ export function AdminRaffleTab({
                 </div>
 
                 {winner ? (
-                  <div className="flex flex-1 items-center gap-3 rounded-xl border-2 border-primary/35 bg-primary/8 px-4 py-3 shadow-sm sm:min-w-[12rem] sm:max-w-sm">
+                  <div className="flex flex-1 items-center gap-3 rounded-xl border-2 border-primary/35 bg-primary/10 px-4 py-3 shadow-sm sm:min-w-[12rem] sm:max-w-sm">
                     <Trophy className="h-8 w-8 shrink-0 text-ring" aria-hidden />
                     <div className="min-w-0">
                       <p className="text-[0.65rem] font-bold uppercase tracking-wider text-primary">Last winner</p>

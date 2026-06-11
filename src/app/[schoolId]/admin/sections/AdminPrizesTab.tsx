@@ -642,6 +642,13 @@ export function AdminPrizesTab({
                           {(classes || []).map((c) => (
                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                           ))}
+                          {classes &&
+                          p.classId &&
+                          !classes.some((c) => c.id === p.classId) ? (
+                            <SelectItem value={p.classId}>
+                              Unknown class (deleted)
+                            </SelectItem>
+                          ) : null}
                         </SelectContent>
                       </Select>
                     </div>
@@ -731,7 +738,7 @@ export function AdminPrizesTab({
                           title={p.aiFunReward ? 'Remove AI surprise prize' : mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
                           onClick={() => onDeletePrize(p.id)}
                         >
-                          {p.aiFunReward ? <X className="w-3.5 w-3.5" /> : <Trash2 className="w-3.5 w-3.5" />}
+                          {p.aiFunReward ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
                         </Button>
                       ) : null}
                     </div>
