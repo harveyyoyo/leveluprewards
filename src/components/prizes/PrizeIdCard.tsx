@@ -33,7 +33,8 @@ export function PrizeIdCard({
   const { settings } = useSettings();
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
   const scanCode = prizeScanCodeFor(prize);
-  const nameFitScale = prize.name.length >= 28 ? 0.78 : prize.name.length >= 22 ? 0.88 : 1;
+  const nameLength = (prize.name ?? '').length;
+  const nameFitScale = nameLength >= 28 ? 0.78 : nameLength >= 22 ? 0.88 : 1;
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
   const accent = prize.cardColor?.trim() || prizeCardColorForId(prize.id);
   const onColor = getContrastColor(accent) === 'white';

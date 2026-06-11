@@ -35,6 +35,11 @@ function normalizeDegrees(value: number) {
   return ((value % 360) + 360) % 360;
 }
 
+/** Clamp to >=1 and guard NaN/undefined weights from legacy data so totals never render "NaN". */
+function sliceWeight(slice: RaffleWheelSlice) {
+  return Math.max(1, Number(slice.weight) || 0);
+}
+
 type RaffleSpinWheelProps = {
   slices: readonly RaffleWheelSlice[];
   title?: string;
@@ -143,12 +148,12 @@ export function RaffleSpinWheel({
   }, [getCtx]);
 
   const segments = useMemo(() => {
-    const total = slices.reduce((sum, slice) => sum + Math.max(1, slice.weight), 0);
+    const total = slices.reduce((sum, slice) => sum + sliceWeight(slice), 0);
     if (!slices.length || total <= 0) return [];
 
     let acc = 0;
     return slices.map((slice, i) => {
-      const weight = Math.max(1, slice.weight);
+      const weight = sliceWeight(slice);
       const start = (acc / total) * 360;
       acc += weight;
       const end = (acc / total) * 360;
@@ -163,7 +168,7 @@ export function RaffleSpinWheel({
   }, [slices]);
 
   const totalTickets = useMemo(
-    () => slices.reduce((total, slice) => total + Math.max(1, slice.weight), 0),
+    () => slices.reduce((total, slice) => total + sliceWeight(slice), 0),
     [slices],
   );
 
@@ -457,7 +462,7 @@ export function RaffleSpinWheel({
                     />
                     <span className="truncate">{slice.name}</span>
                   </span>
-                  <span className="ml-2 shrink-0 text-xs font-bold text-slate-400">{Math.max(1, slice.weight)}</span>
+                  <span className="ml-2 shrink-0 text-xs font-bold text-slate-400">{sliceWeight(slice)}</span>
                 </li>
               ))}
               {!slices.length && (

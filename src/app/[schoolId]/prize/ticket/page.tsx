@@ -80,7 +80,7 @@ export default function PrizeRedeemTicketPage() {
     settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
 
   const prizeTickets = useMemo(() => {
-    if (!ticket.activityId || !ticket.studentId || !ticket.prizeName) return null;
+    if (!ticket.activityId || !ticket.studentId || !ticket.prizeName || !Number.isFinite(ticket.redeemedAt)) return null;
     const ticketNo = String(ticket.redeemedAt).replace(/\D/g, '').slice(-6) || String(ticket.redeemedAt).slice(-6);
     const qty = Number.isFinite(ticket.quantity) && ticket.quantity > 0 ? Math.floor(ticket.quantity) : 1;
     const per =
