@@ -197,8 +197,10 @@ export function OfficeClassesView({
   const grouped = useMemo(() => {
     const byClass = new Map<string, OfficeStudent[]>();
     const unassigned: OfficeStudent[] = [];
+    const knownClassIds = new Set(classes.map((c) => c.id));
     for (const s of students) {
-      if (!s.classId) {
+      // Orphaned classIds (class deleted) fall back to Unassigned so students never disappear.
+      if (!s.classId || !knownClassIds.has(s.classId)) {
         unassigned.push(s);
         continue;
       }
@@ -208,11 +210,11 @@ export function OfficeClassesView({
     }
     const sortedClasses = classes
       .slice()
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
       .map((c) => ({
         class: c,
         students: (byClass.get(c.id) ?? []).sort((a, b) => {
-          const ln = a.lastName.localeCompare(b.lastName);
+          const ln = (a.lastName ?? '').localeCompare(b.lastName ?? '');
           if (ln !== 0) return ln;
           return getOfficeStudentLabel(a).localeCompare(getOfficeStudentLabel(b));
         }),
@@ -220,7 +222,7 @@ export function OfficeClassesView({
     if (unassigned.length) {
       sortedClasses.push({
         class: { id: '__unassigned__', name: 'Unassigned', updatedAt: 0 },
-        students: unassigned.sort((a, b) => a.lastName.localeCompare(b.lastName)),
+        students: unassigned.sort((a, b) => (a.lastName ?? '').localeCompare(b.lastName ?? '')),
       });
     }
     return sortedClasses;
@@ -233,11 +235,11 @@ export function OfficeClassesView({
       .map(({ class: cls, students: list }) => ({
         class: cls,
         students: list.filter((s) => {
-          const label = `${getOfficeStudentLabel(s)} ${s.lastName}`.toLowerCase();
-          return label.includes(q) || cls.name.toLowerCase().includes(q);
+          const label = `${getOfficeStudentLabel(s)} ${s.lastName ?? ''}`.toLowerCase();
+          return label.includes(q) || (cls.name ?? '').toLowerCase().includes(q);
         }),
       }))
-      .filter(({ class: cls, students: list }) => cls.name.toLowerCase().includes(q) || list.length > 0);
+      .filter(({ class: cls, students: list }) => (cls.name ?? '').toLowerCase().includes(q) || list.length > 0);
   }, [grouped, query]);
 
   if (isLoading) {
@@ -362,7 +364,7 @@ export function OfficeClassesView({
                         </Link>
                       )}
                       <Select
-                        value={s.classId || '__none__'}
+                        value={s.classId && classes.some((c) => c.id === s.classId) ? s.classId : '__none__'}
                         onValueChange={(v) => void assignStudentToClass(s, v)}
                       >
                         <SelectTrigger className="h-8 w-36 rounded-lg text-xs" onClick={(e) => e.stopPropagation()}>

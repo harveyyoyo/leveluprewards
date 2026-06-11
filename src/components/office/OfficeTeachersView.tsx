@@ -47,10 +47,10 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = [...teachers].sort((a, b) => a.name.localeCompare(b.name));
+    const list = [...teachers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     if (!q) return list;
     return list.filter(
-      (t) => t.name.toLowerCase().includes(q) || (t.email?.toLowerCase().includes(q) ?? false),
+      (t) => (t.name ?? '').toLowerCase().includes(q) || (t.email?.toLowerCase().includes(q) ?? false),
     );
   }, [teachers, query]);
 

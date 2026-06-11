@@ -232,6 +232,9 @@ export function OfficeStudentSheet({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No class</SelectItem>
+                  {classId && classes.length > 0 && !classes.some((c) => c.id === classId) ? (
+                    <SelectItem value={classId}>Unknown class (deleted)</SelectItem>
+                  ) : null}
                   {classes.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}

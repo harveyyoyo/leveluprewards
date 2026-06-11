@@ -84,7 +84,7 @@ export function OfficeGradeReportView({
         const sa = studentLabelById.get(a.studentId) ?? '';
         const sb = studentLabelById.get(b.studentId) ?? '';
         if (sa !== sb) return sa.localeCompare(sb);
-        return a.subject.localeCompare(b.subject);
+        return (a.subject ?? '').localeCompare(b.subject ?? '');
       });
   }, [entries, term, classFilter, studentFilter, studentLabelById]);
 

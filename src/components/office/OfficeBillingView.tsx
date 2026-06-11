@@ -120,7 +120,7 @@ export function OfficeBillingView({
       map.set(inv.accountId, list);
     }
     for (const [id, list] of map) {
-      list.sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+      list.sort((a, b) => (b.dueDate ?? '').localeCompare(a.dueDate ?? ''));
       map.set(id, list);
     }
     return map;
@@ -154,8 +154,8 @@ export function OfficeBillingView({
     }
     if (!q) return list;
     return list.filter((a) => {
-      const linked = a.studentIds.map((id) => studentLabelById.get(id) ?? '').join(' ');
-      return a.familyName.toLowerCase().includes(q) || linked.toLowerCase().includes(q);
+      const linked = (a.studentIds ?? []).map((id) => studentLabelById.get(id) ?? '').join(' ');
+      return (a.familyName ?? '').toLowerCase().includes(q) || linked.toLowerCase().includes(q);
     });
   }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount]);
 
@@ -260,7 +260,7 @@ export function OfficeBillingView({
 
       const targetAccounts = accounts.filter((a) => {
         if (bulkTargetHomeroom === 'all') return true;
-        return a.studentIds.some((id) => studentIdsInTarget.has(id));
+        return (a.studentIds ?? []).some((id) => studentIdsInTarget.has(id));
       });
 
       if (targetAccounts.length === 0) {
@@ -341,7 +341,7 @@ export function OfficeBillingView({
 
     setBusy(true);
     try {
-      const message = `Hi ${account.familyName}, this is a reminder that invoice "${inv.label}" ($${(inv.amountCents / 100).toFixed(2)}) for your student(s) is currently unpaid. Due date: ${inv.dueDate}. Please login or contact the office to clear the balance. Thank you!`;
+      const message = `Hi ${account.familyName}, this is a reminder that invoice "${inv.label}" ($${((inv.amountCents || 0) / 100).toFixed(2)}) for your student(s) is currently unpaid. Due date: ${inv.dueDate}. Please login or contact the office to clear the balance. Thank you!`;
       
       const collName = channel === 'sms' ? 'sms' : 'whatsapp';
       const ref = doc(collection(firestore, collName));
@@ -440,7 +440,7 @@ export function OfficeBillingView({
           );
           let balanceCents = account.balanceCents || 0;
           if (existing.status === 'sent') {
-            balanceCents = Math.max(0, balanceCents + (cents - existing.amountCents));
+            balanceCents = Math.max(0, balanceCents + (cents - (existing.amountCents || 0)));
           } else if (status === 'sent' && existing.status === 'draft') {
             balanceCents += cents;
           }
@@ -509,7 +509,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'void' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - inv.amountCents),
+          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -532,7 +532,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'sent' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: (account.balanceCents || 0) + inv.amountCents,
+          balanceCents: (account.balanceCents || 0) + (inv.amountCents || 0),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -565,7 +565,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'paid' as const, paidAt: Date.now() } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - inv.amountCents),
+          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -669,7 +669,7 @@ export function OfficeBillingView({
         </div>
         <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
           <p className="text-xs font-bold uppercase text-muted-foreground">Overdue</p>
-          <p className="text-2xl font-bold text-amber-800 dark:text-amber-300">{overdueCount}</p>
+          <p className="text-xl font-bold text-amber-800 dark:text-amber-300">{overdueCount}</p>
         </div>
         <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
           <p className="text-xs font-bold uppercase text-muted-foreground">Paid invoices</p>
@@ -701,7 +701,7 @@ export function OfficeBillingView({
       ) : (
         <div className="space-y-4">
           {filteredAccounts.map((account) => {
-            const linked = account.studentIds
+            const linked = (account.studentIds ?? [])
               .map((id) => studentLabelById.get(id))
               .filter(Boolean)
               .join(', ');
@@ -728,7 +728,7 @@ export function OfficeBillingView({
                     <OfficeFamilyStatementButton
                       account={account}
                       invoices={invoices}
-                      studentLabels={account.studentIds
+                      studentLabels={(account.studentIds ?? [])
                         .map((id) => studentLabelById.get(id))
                         .filter((x): x is string => Boolean(x))}
                       statementSchoolName={officeSettings?.statementSchoolName}
@@ -1048,6 +1048,9 @@ export function OfficeBillingView({
                   <SelectValue placeholder="Choose account" />
                 </SelectTrigger>
                 <SelectContent>
+                  {!isLoading && invoiceAccountId && accounts.length > 0 && !accounts.some((a) => a.id === invoiceAccountId) ? (
+                    <SelectItem value={invoiceAccountId}>Unknown account (deleted)</SelectItem>
+                  ) : null}
                   {accounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.familyName}
