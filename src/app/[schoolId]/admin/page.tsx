@@ -1564,7 +1564,7 @@ function AdminDashboardInner() {
   };
 
   const usedCouponsCount = coupons?.filter((c) => c.used).length || 0;
-  const totalPointsAwarded = coupons?.filter((c) => c.used).reduce((sum, c) => sum + c.value, 0) || 0;
+  const totalPointsAwarded = coupons?.filter((c) => c.used).reduce((sum, c) => sum + Number(c.value ?? 0), 0) || 0;
 
   const handleStudentCsvUpload = () => {
     studentCsvInputRef.current?.click();
