@@ -419,7 +419,7 @@ export default function PortalPage() {
             >
                 <div
                     className={cn(
-                        'flex min-h-0 w-full flex-1 flex-col items-center',
+                        'flex min-h-full w-full flex-1 flex-col items-center',
                         portalHubOuterGapClass(hubCardCount, compactDisplay),
                     )}
                 >
@@ -467,7 +467,9 @@ export default function PortalPage() {
                             'mx-auto w-full shrink-0 pb-safe md:mt-0',
                             kioskPortrait
                                 ? ''
-                                : portalHubGridMaxWidthClass(hubCardCount, compactDisplay, false),
+                                : hubCardCount === 3 && !compactDisplay
+                                  ? 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl'
+                                  : portalHubGridMaxWidthClass(hubCardCount, compactDisplay, false),
                             portalChooseGridClass(kioskPortrait),
                         )}
                     >
@@ -503,7 +505,7 @@ export default function PortalPage() {
                                         compactDisplay ? 'text-left' : 'text-center',
                                         portalCardHoverEffects &&
                                             'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-active:translate-y-0',
-                                        'flex h-full min-h-0 w-full flex-col justify-center',
+                                        'flex w-full flex-col justify-center',
                                         portalHubCardPaddingClass(hubCardCount, compactDisplay),
                                     )}
                                 >
@@ -581,8 +583,8 @@ export default function PortalPage() {
                                         />
                                     </div>
                                     ) : (
-                                    <div className="relative z-10 flex h-full min-h-0 flex-1 flex-col">
-                                        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2.5 text-center md:gap-4">
+                                    <div className="relative z-10 flex flex-col">
+                                        <div className="flex flex-col items-center justify-center gap-2.5 text-center md:gap-4">
                                             <motion.div
                                                 className={cn(
                                                     'portal-choose-icon shrink-0 rounded-xl p-3 md:p-4',
@@ -696,7 +698,7 @@ export default function PortalPage() {
                                     if (area.id === 'redeem' && isSchoolChooser) return;
                                 }}
                                 className={cn(
-                                    'group relative block h-full flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                                    'group relative block flex flex-col rounded-2xl no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                                     portalCardHoverEffects && 'z-0 hover:z-10 focus-visible:z-10',
                                 )}
                                 style={{ ['--portal-accent' as string]: portalTrimColor }}
@@ -711,13 +713,13 @@ export default function PortalPage() {
                 {showWelcomeTourFooter ? (
                     <div
                         className={cn(
-                            'sticky bottom-0 z-20 flex w-full shrink-0 justify-center border-t border-border/30 bg-background/80 px-4 py-3 backdrop-blur-sm sm:py-4',
-                            hubDenseLayout ? 'mt-2' : 'mt-4 md:mt-6',
+                            'relative z-10 flex w-full shrink-0 justify-center pb-2 sm:pb-4',
+                            hubDenseLayout ? 'mt-2' : 'mt-6 md:mt-8',
                         )}
                     >
                         <Button
-                            variant="outline"
-                            className="rounded-full border-primary/20 bg-background/50 px-6 font-semibold text-foreground/80 shadow-sm backdrop-blur-sm transition-all hover:bg-secondary/80"
+                            variant="ghost"
+                            className="rounded-full px-6 font-semibold text-foreground/80 transition-all hover:bg-secondary/60"
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
