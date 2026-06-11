@@ -1261,7 +1261,7 @@ export function StudentDashboardInner({
       prizeName,
       prizeIcon,
       quantity,
-      totalCost: -item.amount,
+      totalCost: -Number(item.amount ?? 0),
     });
   }, [student, rewardPrizes, settings]);
 
@@ -1342,7 +1342,7 @@ export function StudentDashboardInner({
             studentSeesPrizeByTeachers(student, p) &&
             (!p.classId || student.classId === p.classId),
         )
-        .sort((a, b) => b.points - a.points);
+        .sort((a, b) => (b.points ?? 0) - (a.points ?? 0));
     },
     [rewardPrizes, student, kioskAiFunInShop, categories],
   );

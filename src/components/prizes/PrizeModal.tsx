@@ -77,7 +77,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
     if (isOpen) {
       if (prize) { // Edit mode
         setName(prize.name);
-        setPoints(prize.points.toString());
+        setPoints(String(prize.points ?? 0));
         setIcon(prize.icon);
         setInStock(prize.inStock);
         setStockCountStr(prize.stockCount === undefined ? '' : String(prize.stockCount));
@@ -322,6 +322,9 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">School-wide</SelectItem>
+                    {teacherId && !teachers.some(t => t.id === teacherId) ? (
+                      <SelectItem value={teacherId}>Deleted teacher</SelectItem>
+                    ) : null}
                     {teachers.map(t => (
                       <SelectItem key={t.id} value={t.id}>{t.name}&apos;s rewards</SelectItem>
                     ))}
@@ -336,6 +339,9 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">School-wide</SelectItem>
+                    {classId && !allClasses.some(c => c.id === classId) ? (
+                      <SelectItem value={classId}>Deleted class</SelectItem>
+                    ) : null}
                     {allClasses.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
@@ -363,7 +369,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                         {cat.teacherId ? (
                           <span className="ml-1 text-muted-foreground">(teacher)</span>
                         ) : null}
-                        <span className="block text-muted-foreground">Default award: {cat.points} pts</span>
+                        <span className="block text-muted-foreground">Default award: {Number(cat.points ?? 0)} pts</span>
                       </span>
                     </label>
                   ))}

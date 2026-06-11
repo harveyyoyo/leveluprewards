@@ -42,7 +42,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
         if (isOpen) {
             if (category) { // Edit mode
                 setName(category.name);
-                setPoints(category.points.toString());
+                setPoints(String(category.points ?? 0));
                 setColor(category.color || '#cccccc');
                 setRubricLevels(Array.isArray(category.rubricLevels) ? category.rubricLevels : []);
             } else { // Create mode
@@ -154,7 +154,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                                         <div className="flex-1 min-w-[120px] space-y-1">
                                             <Label className="text-[10px] uppercase text-muted-foreground">Label</Label>
                                             <Input
-                                                value={row.label}
+                                                value={row.label ?? ''}
                                                 onChange={(e) => {
                                                     const v = e.target.value;
                                                     setRubricLevels((prev) =>
@@ -167,7 +167,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                                             <Label className="text-[10px] uppercase text-muted-foreground">Pts</Label>
                                             <Input
                                                 type="number"
-                                                value={String(row.points)}
+                                                value={String(row.points ?? 0)}
                                                 onChange={(e) => {
                                                     const n = Math.max(0, Math.round(Number(e.target.value) || 0));
                                                     setRubricLevels((prev) =>

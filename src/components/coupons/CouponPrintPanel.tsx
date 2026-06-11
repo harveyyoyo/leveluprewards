@@ -135,7 +135,7 @@ export function CouponPrintPanel({
   useEffect(() => {
     const category = categoryList.find((c) => c.id === printCategoryId);
     if (category) {
-      setPrintValue(category.points.toString());
+      setPrintValue(String(category.points ?? 0));
     }
   }, [printCategoryId, categoryList]);
 

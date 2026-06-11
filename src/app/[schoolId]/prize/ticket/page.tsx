@@ -84,7 +84,7 @@ export default function PrizeRedeemTicketPage() {
     const ticketNo = String(ticket.redeemedAt).replace(/\D/g, '').slice(-6) || String(ticket.redeemedAt).slice(-6);
     const qty = Number.isFinite(ticket.quantity) && ticket.quantity > 0 ? Math.floor(ticket.quantity) : 1;
     const per =
-      typeof ticket.totalCost === 'number' && qty > 0 ? Math.round(ticket.totalCost / qty) : undefined;
+      Number.isFinite(ticket.totalCost) && qty > 0 ? Math.round(ticket.totalCost / qty) : undefined;
     return Array.from({ length: qty }, (_, i) => ({
       activityId: ticket.activityId,
       ticketNo: qty > 1 ? `${ticketNo}-${i + 1}` : ticketNo,

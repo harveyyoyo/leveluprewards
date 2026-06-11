@@ -67,8 +67,10 @@ export function StudentActivityList({
       <ul className="space-y-2">
         {history && history.length > 0 ? (
           visibleHistory.map((item, index) => {
-            const isRedemption = item.desc.startsWith('Redeemed:');
-            const isPointGain = item.amount > 0;
+            const desc = item.desc ?? '';
+            const isRedemption = desc.startsWith('Redeemed:');
+            const amount = Number(item.amount ?? 0);
+            const isPointGain = amount > 0;
 
             return (
               <li
@@ -96,16 +98,16 @@ export function StudentActivityList({
                         'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
                         isRedemption
                           ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                          : item.desc.toLowerCase().includes('attendance') ||
-                              item.desc.toLowerCase().includes('sign-in')
+                          : desc.toLowerCase().includes('attendance') ||
+                              desc.toLowerCase().includes('sign-in')
                             ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400'
                             : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
                       )}
                     >
                       {isRedemption ? (
                         <Gift className="h-3.5 w-3.5" aria-hidden />
-                      ) : item.desc.toLowerCase().includes('attendance') ||
-                        item.desc.toLowerCase().includes('sign-in') ? (
+                      ) : desc.toLowerCase().includes('attendance') ||
+                        desc.toLowerCase().includes('sign-in') ? (
                         <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
                       ) : (
                         <Ticket className="h-3.5 w-3.5" aria-hidden />
@@ -119,7 +121,7 @@ export function StudentActivityList({
                         )}
                         style={themedTextStyle}
                       >
-                        {item.desc}
+                        {desc}
                       </p>
                       <div
                         className={cn('mt-0.5 flex items-center gap-1', !themed && 'text-muted-foreground')}
@@ -151,7 +153,7 @@ export function StudentActivityList({
                         : undefined
                     }
                   >
-                    {isPointGain ? `+${item.amount}` : item.amount} PTS
+                    {isPointGain ? `+${amount}` : amount} PTS
                   </Badge>
                 </div>
                 {!preview && isRedemption ? (

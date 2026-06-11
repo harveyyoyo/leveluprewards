@@ -120,7 +120,7 @@ export function PrizeIdCard({
             Reward
           </p>
           <p className="text-[11pt] font-black leading-tight" style={{ color: mainTextColor }}>
-            {prize.points} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
+            {Number(prize.points ?? 0)} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
           </p>
         </div>
       </div>
