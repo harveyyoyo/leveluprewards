@@ -25,7 +25,7 @@ export function OfficeFamilyStatementButton({
     const acctInvoices = invoices
       .filter((i) => i.accountId === account.id)
       .slice()
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+      .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
     const openTotal = acctInvoices
       .filter(isInvoiceOpen)
       .reduce((sum, i) => sum + (i.amountCents || 0), 0);
@@ -81,8 +81,8 @@ export function OfficeFamilyStatementButton({
   );
 }
 
-function escapeHtml(value: string): string {
-  return value
+function escapeHtml(value: string | null | undefined): string {
+  return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

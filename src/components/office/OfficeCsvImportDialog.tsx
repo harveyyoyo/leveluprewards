@@ -67,7 +67,7 @@ export function OfficeCsvImportDialog({
           return;
         }
         const classIdByName = new Map(
-          classes.map((c) => [c.name.trim().toLowerCase(), c.id]),
+          classes.map((c) => [(c.name ?? '').trim().toLowerCase(), c.id]),
         );
         const batch = writeBatch(firestore);
         for (const row of rows) {

@@ -62,7 +62,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const { data: staffRaw, isLoading: staffLoading } = useCollection<StaffAccount>(staffQuery);
 
   const officeStaff = useMemo(
-    () => (staffRaw ?? []).filter(isOfficeStaffAccount).sort((a, b) => a.displayName.localeCompare(b.displayName)),
+    () => (staffRaw ?? []).filter(isOfficeStaffAccount).sort((a, b) => (a.displayName ?? '').localeCompare(b.displayName ?? '')),
     [staffRaw],
   );
 
@@ -161,7 +161,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
       return;
     }
     const taken = (staffRaw ?? []).some(
-      (a) => a.id !== editing?.id && a.username.trim().toLowerCase() === cleanUsername,
+      (a) => a.id !== editing?.id && (a.username ?? '').trim().toLowerCase() === cleanUsername,
     );
     if (taken) {
       toast({ variant: 'destructive', title: 'That username is already in use.' });

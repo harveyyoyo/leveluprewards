@@ -103,7 +103,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   onClick={() => setMobileOpen(false)}
                   className={cn(
                     'flex items-start gap-3 rounded-xl px-3 py-3 transition-colors',
-                    active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/8',
+                    active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/10',
                   )}
                 >
                   <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />

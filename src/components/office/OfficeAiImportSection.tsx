@@ -78,7 +78,7 @@ export function OfficeAiImportSection({
     if (!aiSnapshot) return null;
 
     // 1. Classes Diff
-    const existingClassNames = new Set(classes.map((c) => c.name.trim().toLowerCase()));
+    const existingClassNames = new Set(classes.map((c) => (c.name ?? '').trim().toLowerCase()));
     const classDiffs = (aiSnapshot.classes ?? []).map((c) => {
       const name = c.name.trim();
       const exists = existingClassNames.has(name.toLowerCase());
@@ -90,7 +90,7 @@ export function OfficeAiImportSection({
     });
 
     // 2. Teachers Diff
-    const existingTeacherNames = new Set(teachers.map((t) => t.name.trim().toLowerCase()));
+    const existingTeacherNames = new Set(teachers.map((t) => (t.name ?? '').trim().toLowerCase()));
     const teacherDiffs = (aiSnapshot.teachers ?? []).map((t) => {
       const name = t.name.trim();
       const exists = existingTeacherNames.has(name.toLowerCase());
@@ -145,7 +145,7 @@ export function OfficeAiImportSection({
 
     // 4. Grades Diff
     const existingGradeKeys = new Set(
-      gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${e.subject.toLowerCase()}`)
+      gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${(e.subject ?? '').toLowerCase()}`)
     );
     const studentIdByName = new Map(
       students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id])
@@ -190,7 +190,7 @@ export function OfficeAiImportSection({
     });
 
     // 5. Billing Accounts Diff
-    const existingFamilyNames = new Set(billingAccounts.map((a) => a.familyName.trim().toLowerCase()));
+    const existingFamilyNames = new Set(billingAccounts.map((a) => (a.familyName ?? '').trim().toLowerCase()));
     const billingDiffs = (aiSnapshot.billingAccounts ?? []).map((row) => {
       const name = `${row.familyName} Family`;
       const exists = existingFamilyNames.has(row.familyName.trim().toLowerCase());
@@ -204,7 +204,7 @@ export function OfficeAiImportSection({
     });
 
     // 6. Invoices Diff
-    const familyExistsMap = new Set(billingAccounts.map((a) => a.familyName.trim().toLowerCase()));
+    const familyExistsMap = new Set(billingAccounts.map((a) => (a.familyName ?? '').trim().toLowerCase()));
     (aiSnapshot.billingAccounts ?? []).forEach((b) => familyExistsMap.add(b.familyName.trim().toLowerCase()));
 
     const invoiceDiffs = (aiSnapshot.invoices ?? []).map((row) => {

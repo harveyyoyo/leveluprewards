@@ -29,7 +29,11 @@ export function OfficeTeacherSelect({
   label = 'Homeroom teacher',
   showManageLink = true,
 }: OfficeTeacherSelectProps) {
-  const sorted = [...teachers].sort((a, b) => a.name.localeCompare(b.name));
+  const sorted = [...teachers].sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  // Orphaned teacherId (teacher deleted). Only flag once the teacher list has loaded
+  // so the fallback doesn't flash while data is still streaming in.
+  const isOrphanedValue =
+    Boolean(value) && value !== '__none__' && teachers.length > 0 && !teachers.some((t) => t.id === value);
 
   return (
     <div className="space-y-2">
@@ -50,6 +54,7 @@ export function OfficeTeacherSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="__none__">No teacher assigned</SelectItem>
+          {isOrphanedValue ? <SelectItem value={value}>Unknown teacher (deleted)</SelectItem> : null}
           {sorted.map((t) => (
             <SelectItem key={t.id} value={t.id}>
               {t.name}

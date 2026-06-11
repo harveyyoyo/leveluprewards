@@ -128,7 +128,7 @@ export function OfficeGradesView({
       }
       if (q) {
         const label = (studentLabelById.get(e.studentId) ?? '').toLowerCase();
-        const subj = e.subject.toLowerCase();
+        const subj = (e.subject ?? '').toLowerCase();
         if (!label.includes(q) && !subj.includes(q)) return false;
       }
       return true;
@@ -143,7 +143,7 @@ export function OfficeGradesView({
       const sa = studentLabelById.get(a.studentId) ?? '';
       const sb = studentLabelById.get(b.studentId) ?? '';
       if (sa !== sb) return sa.localeCompare(sb);
-      return a.subject.localeCompare(b.subject);
+      return (a.subject ?? '').localeCompare(b.subject ?? '');
     });
   }, [filtered, studentLabelById]);
 
@@ -159,9 +159,9 @@ export function OfficeGradesView({
         const student = students.find((s) => s.id === studentId);
         const classId = grades[0]?.classId ?? student?.classId ?? null;
         const ordered = grades.slice().sort((a, b) => {
-          const termCmp = a.termLabel.localeCompare(b.termLabel);
+          const termCmp = (a.termLabel ?? '').localeCompare(b.termLabel ?? '');
           if (termCmp !== 0) return termCmp;
-          return a.subject.localeCompare(b.subject);
+          return (a.subject ?? '').localeCompare(b.subject ?? '');
         });
         return {
           studentId,
@@ -232,7 +232,7 @@ export function OfficeGradesView({
         e.id !== editingId &&
         e.studentId === form.studentId &&
         e.termLabel === form.termLabel.trim() &&
-        e.subject.toLowerCase() === form.subject.trim().toLowerCase(),
+        (e.subject ?? '').toLowerCase() === form.subject.trim().toLowerCase(),
     );
     if (duplicate) {
       toast({
@@ -729,6 +729,9 @@ export function OfficeGradesView({
                   <SelectValue placeholder="Choose student" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
+                  {!isLoading && form.studentId && !students.some((s) => s.id === form.studentId) ? (
+                    <SelectItem value={form.studentId}>Unknown student (deleted)</SelectItem>
+                  ) : null}
                   {students.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {studentLabelById.get(s.id)} · {(s.classId && classNameById.get(s.classId)) || 'No class'}

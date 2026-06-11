@@ -64,7 +64,7 @@ export function OfficeStudentsView({
   const openedFromQuery = useRef(false);
 
   const classOptions = useMemo(() => {
-    return classes.slice().sort((a, b) => a.name.localeCompare(b.name));
+    return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [classes]);
 
   const gradedForTerm = useMemo(
