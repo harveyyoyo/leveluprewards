@@ -5,27 +5,30 @@ import type {
   OfficeStudent,
   OfficeTeacher,
 } from '@/lib/office/types';
+import { joinDisplayParts, safeFiniteNumber, safeString } from '@/lib/safeDisplayValue';
 
 export function getOfficeStudentLabel(student: Pick<OfficeStudent, 'firstName' | 'lastName' | 'nickname'>): string {
-  const nick = student.nickname?.trim();
+  const nick = safeString(student.nickname);
   if (nick) return nick;
-  return student.firstName?.trim() || '';
+  return safeString(student.firstName);
 }
 
 export function getOfficeStudentFullName(student: Pick<OfficeStudent, 'firstName' | 'lastName' | 'nickname'>): string {
-  return `${getOfficeStudentLabel(student)} ${student.lastName}`.trim();
+  const nick = safeString(student.nickname);
+  if (nick) return nick;
+  return joinDisplayParts([student.firstName, student.lastName]);
 }
 
 export function getOfficeTeacherLabel(
   student: Pick<OfficeStudent, 'teacherId' | 'teacherName'>,
   teacherNameById: Map<string, string>,
 ): string {
-  const id = student.teacherId?.trim();
+  const id = safeString(student.teacherId);
   if (id) {
-    const fromRoster = teacherNameById.get(id);
+    const fromRoster = safeString(teacherNameById.get(id));
     if (fromRoster) return fromRoster;
   }
-  return student.teacherName?.trim() || '';
+  return safeString(student.teacherName);
 }
 
 export function officeStudentHasTeacher(
@@ -38,9 +41,9 @@ export function resolveOfficeTeacherIdByName(
   teachers: OfficeTeacher[],
   name: string | null | undefined,
 ): string | null {
-  const needle = name?.trim().toLowerCase();
+  const needle = safeString(name).toLowerCase();
   if (!needle) return null;
-  const hit = teachers.find((t) => t.name.trim().toLowerCase() === needle);
+  const hit = teachers.find((t) => safeString(t.name).toLowerCase() === needle);
   return hit?.id ?? null;
 }
 
@@ -119,10 +122,10 @@ export function collectOfficeTermOptions(params: {
 
 export function formatGradeDisplay(entry: Pick<OfficeGradeEntry, 'letterGrade' | 'numericGrade'>): string {
   const parts: string[] = [];
-  if (entry.letterGrade?.trim()) parts.push(entry.letterGrade.trim());
-  if (entry.numericGrade != null && Number.isFinite(entry.numericGrade)) {
-    parts.push(`${entry.numericGrade}%`);
-  }
+  const letter = safeString(entry.letterGrade);
+  if (letter) parts.push(letter);
+  const numeric = safeFiniteNumber(entry.numericGrade);
+  if (numeric != null) parts.push(`${numeric}%`);
   return parts.length ? parts.join(' · ') : '—';
 }
 
@@ -271,10 +274,10 @@ export function buildOverdueFamiliesDigest(
     const account = accounts.find((a) => a.id === accountId);
     rows.push({
       accountId,
-      familyName: account?.familyName ?? 'Account',
-      contactEmail: account?.contactEmail?.trim() || null,
+      familyName: safeString(account?.familyName, 'Account'),
+      contactEmail: safeString(account?.contactEmail) || null,
       invoiceCount: list.length,
-      totalCents: list.reduce((sum, i) => sum + (i.amountCents || 0), 0),
+      totalCents: list.reduce((sum, i) => sum + (safeFiniteNumber(i.amountCents) ?? 0), 0),
       oldestDueDate: list.map((i) => i.dueDate).sort()[0] ?? '',
     });
   }
@@ -378,9 +381,9 @@ export function defaultDueDateIso(daysAhead = 30): string {
 }
 
 export function parseUsdToCents(amount: string): number | null {
-  const cents = Math.round(parseFloat(amount) * 100);
-  if (!Number.isFinite(cents) || cents < 0) return null;
-  return cents;
+  const dollars = safeFiniteNumber(amount);
+  if (dollars == null || dollars < 0) return null;
+  return Math.round(dollars * 100);
 }
 
 export function uniqueGradeSubjects(entries: OfficeGradeEntry[], extra: string[] = []): string[] {
@@ -419,12 +422,12 @@ export function exportOfficeStudentsCsv(
   teacherNameById: Map<string, string>,
 ): void {
   const rows = students.map((s) => [
-    s.firstName,
-    s.lastName,
-    s.nickname ?? '',
-    (s.classId && classNameById.get(s.classId)) ?? '',
+    safeString(s.firstName),
+    safeString(s.lastName),
+    safeString(s.nickname),
+    safeString(s.classId ? classNameById.get(s.classId) : undefined),
     getOfficeTeacherLabel(s, teacherNameById),
-    s.notes ?? '',
+    safeString(s.notes),
   ]);
   downloadCsv(`office-roster-${schoolId}.csv`, ['First', 'Last', 'Nickname', 'Class', 'Teacher', 'Notes'], rows);
 }

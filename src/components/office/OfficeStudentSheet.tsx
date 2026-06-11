@@ -18,6 +18,7 @@ import {
   gradesForStudent,
   getOfficeStudentFullName,
 } from '@/lib/office/officeUtils';
+import { safeString } from '@/lib/safeDisplayValue';
 import type { OfficeBillingAccount, OfficeGradeEntry, OfficeStudent, OfficeClass, OfficeTeacher } from '@/lib/office/types';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 
@@ -49,7 +50,10 @@ export function OfficeStudentSheet({
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const teacherNameById = useMemo(() => new Map(teachers.map((t) => [t.id, t.name])), [teachers]);
+  const teacherNameById = useMemo(
+    () => new Map(teachers.map((t) => [t.id, safeString(t.name)])),
+    [teachers],
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -62,12 +66,12 @@ export function OfficeStudentSheet({
 
   useEffect(() => {
     if (student) {
-      setFirstName(student.firstName ?? '');
-      setLastName(student.lastName ?? '');
-      setNickname(student.nickname ?? '');
-      setClassId(student.classId ?? '');
-      setTeacherId(student.teacherId ?? '');
-      setNotes(student.notes ?? '');
+      setFirstName(safeString(student.firstName));
+      setLastName(safeString(student.lastName));
+      setNickname(safeString(student.nickname));
+      setClassId(safeString(student.classId));
+      setTeacherId(safeString(student.teacherId));
+      setNotes(safeString(student.notes));
     }
     setIsEditing(false);
   }, [student, open]);

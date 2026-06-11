@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultDueDateIso,
+  getOfficeStudentFullName,
+  getOfficeStudentLabel,
   isInvoiceDueSoon,
   parseUsdToCents,
   studentIdsWithGradesForTerm,
@@ -11,6 +13,35 @@ import type { OfficeInvoice } from './types';
 import type { OfficeGradeEntry, OfficeStudent } from './types';
 
 describe('officeUtils', () => {
+  it('getOfficeStudentFullName avoids literal undefined on legacy rows', () => {
+    expect(
+      getOfficeStudentFullName({
+        firstName: 'Ada',
+        lastName: undefined as unknown as string,
+        nickname: null,
+      }),
+    ).toBe('Ada');
+    expect(
+      getOfficeStudentFullName({
+        firstName: 'undefined',
+        lastName: 'Cohen',
+        nickname: null,
+      }),
+    ).toBe('Cohen');
+    expect(
+      getOfficeStudentFullName({
+        firstName: 'Miri',
+        lastName: 'Levi',
+        nickname: 'Mimi',
+      }),
+    ).toBe('Mimi');
+  });
+
+  it('getOfficeStudentLabel prefers nickname then first name', () => {
+    expect(getOfficeStudentLabel({ firstName: 'Ada', lastName: 'Lovelace', nickname: 'Ace' })).toBe('Ace');
+    expect(getOfficeStudentLabel({ firstName: 'Ada', lastName: 'Lovelace', nickname: null })).toBe('Ada');
+  });
+
   it('parseUsdToCents accepts valid amounts', () => {
     expect(parseUsdToCents('10')).toBe(1000);
     expect(parseUsdToCents('10.50')).toBe(1050);

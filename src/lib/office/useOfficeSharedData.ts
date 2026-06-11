@@ -7,6 +7,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { safeString } from '@/lib/safeDisplayValue';
 
 /** Office roster collections (`officeStudents`, `officeClasses`, `officeTeachers`). */
 export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
@@ -38,7 +39,7 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
 
   const classNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of classes) map.set(c.id, c.name);
+    for (const c of classes) map.set(c.id, safeString(c.name));
     return map;
   }, [classes]);
 
@@ -52,7 +53,7 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
 
   const teacherNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const t of teachers) map.set(t.id, t.name);
+    for (const t of teachers) map.set(t.id, safeString(t.name));
     return map;
   }, [teachers]);
 

@@ -15,7 +15,6 @@ import {
   billingAccountForStudent,
   exportOfficeStudentsCsv,
   getOfficeStudentFullName,
-  getOfficeStudentLabel,
   getOfficeTeacherLabel,
   officeStudentHasTeacher,
   studentIdsWithGradesForTerm,
@@ -268,7 +267,7 @@ export function OfficeStudentsView({
                 onClick={() => setSelected(s)}
               >
                 <td className="px-4 py-3 font-medium">
-                  {getOfficeStudentLabel(s)} {s.lastName}
+                  {getOfficeStudentFullName(s)}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
                   {(s.classId && classNameById.get(s.classId)) || '—'}

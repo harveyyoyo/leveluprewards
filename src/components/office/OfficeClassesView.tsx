@@ -235,7 +235,7 @@ export function OfficeClassesView({
       .map(({ class: cls, students: list }) => ({
         class: cls,
         students: list.filter((s) => {
-          const label = `${getOfficeStudentLabel(s)} ${s.lastName ?? ''}`.toLowerCase();
+          const label = getOfficeStudentFullName(s).toLowerCase();
           return label.includes(q) || (cls.name ?? '').toLowerCase().includes(q);
         }),
       }))
@@ -352,7 +352,7 @@ export function OfficeClassesView({
                             onSelectStudent(s);
                           }}
                         >
-                          {getOfficeStudentLabel(s)} {s.lastName}
+                          {getOfficeStudentFullName(s)}
                         </button>
                       ) : (
                         <Link
@@ -360,7 +360,7 @@ export function OfficeClassesView({
                           className="min-w-0 flex-1 text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
                           onClick={() => setHighlightStudentId(s.id)}
                         >
-                          {getOfficeStudentLabel(s)} {s.lastName}
+                          {getOfficeStudentFullName(s)}
                         </Link>
                       )}
                       <Select
