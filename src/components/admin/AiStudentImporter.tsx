@@ -55,7 +55,7 @@ export function AiStudentImporter({ classes, onSaveAll }: AiStudentImporterProps
                 let classId = '';
                 // Try to find a matching class by name
                 if (s.className) {
-                    const matchedClass = classes.find(c => c.name.toLowerCase() === s.className.toLowerCase());
+                    const matchedClass = classes.find(c => (c.name ?? '').toLowerCase() === String(s.className).toLowerCase());
                     if (matchedClass) {
                         classId = matchedClass.id;
                     }

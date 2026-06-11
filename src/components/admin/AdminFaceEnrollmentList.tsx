@@ -200,8 +200,9 @@ export function AdminFaceEnrollmentList({
           {rows.map((row) => {
             const student = studentById.get(row.studentId);
             const label = studentLabel(student, row.studentId);
-            const isOrphan = row.enabled && row.scanCount > 0 && !student;
-            const isActive = row.enabled && row.scanCount > 0;
+            const scanCount = Number(row.scanCount) || 0;
+            const isOrphan = row.enabled && scanCount > 0 && !student;
+            const isActive = row.enabled && scanCount > 0;
 
             return (
               <li
@@ -219,9 +220,9 @@ export function AdminFaceEnrollmentList({
                     ) : null}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {isActive ? 'Active' : row.scanCount > 0 ? 'Disabled' : 'Empty'}
+                    {isActive ? 'Active' : scanCount > 0 ? 'Disabled' : 'Empty'}
                     {' · '}
-                    {row.scanCount} scan{row.scanCount === 1 ? '' : 's'}
+                    {scanCount} scan{scanCount === 1 ? '' : 's'}
                     {isOrphan ? ' · Not on roster' : ''}
                   </p>
                 </div>
@@ -238,7 +239,7 @@ export function AdminFaceEnrollmentList({
                       Retrain
                     </Button>
                   ) : null}
-                  {row.scanCount > 0 ? (
+                  {scanCount > 0 ? (
                     <Button
                       type="button"
                       variant="outline"

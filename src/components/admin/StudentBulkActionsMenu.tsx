@@ -105,7 +105,7 @@ export function StudentBulkActionsMenu({
                         })
                       }
                     >
-                      {t.name}
+                      {t.name || 'Unnamed teacher'}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -125,7 +125,7 @@ export function StudentBulkActionsMenu({
                         })
                       }
                     >
-                      {t.name}
+                      {t.name || 'Unnamed teacher'}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -149,7 +149,7 @@ export function StudentBulkActionsMenu({
                         })
                       }
                     >
-                      {c.name}
+                      {c.name || 'Unnamed class'}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>

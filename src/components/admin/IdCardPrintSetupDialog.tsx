@@ -60,7 +60,7 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
     if (props.variant === 'prize') {
       const n = props.prizes.length;
       if (n === 0) return 'No prize cards in this print run.';
-      if (n === 1) return `1 prize card — ${props.prizes[0].name}`;
+      if (n === 1) return `1 prize card — ${props.prizes[0].name || 'Untitled prize'}`;
       return `${n} prize cards`;
     }
     if (props.variant === 'staff') {
