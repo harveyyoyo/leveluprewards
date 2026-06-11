@@ -145,7 +145,7 @@ export function StudentIdCard({
                 settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
               )} />
             ) : (
-              <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{(student.firstName[0] || '')}{(student.lastName[0] || '')}</span>
+              <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{(displayFirst[0] || '')}{(displayLast[0] || '')}</span>
             )}
           </div>
           

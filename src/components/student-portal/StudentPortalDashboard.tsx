@@ -191,7 +191,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
         </CardHeader>
         <CardContent>
           <p className="font-headline text-5xl font-black tabular-nums text-primary">{student.points ?? 0}</p>
-          {typeof student.lifetimePoints === 'number' ? (
+          {Number.isFinite(student.lifetimePoints) ? (
             <p className="text-sm text-muted-foreground mt-2">Lifetime: {student.lifetimePoints}</p>
           ) : null}
           <div className="mt-4">

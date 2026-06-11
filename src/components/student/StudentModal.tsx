@@ -97,11 +97,11 @@ export function StudentModal({
     if (isOpen) {
       setLocalPhotoPreviewUrl(null);
       if (student) { // Edit mode
-        setFirstName(student.firstName);
+        setFirstName(student.firstName ?? '');
         setMiddleName(student.middleName || '');
-        setLastName(student.lastName);
+        setLastName(student.lastName ?? '');
         setNickname(student.nickname || '');
-        setPoints(student.points.toString());
+        setPoints((student.points ?? 0).toString());
         setNfcId(student.nfcId || student.id);
         setClassId(student.classId || 'none');
         setHouseId(student.houseId || 'none');
@@ -466,7 +466,7 @@ export function StudentModal({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent size="lg" className="flex flex-col p-0 overflow-hidden max-h-[var(--dialog-max-h,min(90vh,calc(100dvh-2rem)))]">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName}` : 'New Student'}</DialogTitle>
+          <DialogTitle>{isEditing ? `Edit ${getStudentNickname(student!)} ${student!.lastName ?? ''}`.trim() : 'New Student'}</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="grid gap-4">
@@ -739,9 +739,13 @@ export function StudentModal({
               <SelectTrigger id="class"><SelectValue placeholder="Select a class..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
+                {/* Keep an orphaned classId selectable instead of silently showing the placeholder. */}
+                {classId !== 'none' && (allClasses?.length ?? 0) > 0 && !allClasses?.some(c => c.id === classId) ? (
+                  <SelectItem value={classId}>Unknown class (deleted)</SelectItem>
+                ) : null}
                 {allClasses
                   ?.slice()
-                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
                   .map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -753,9 +757,13 @@ export function StudentModal({
                 <SelectTrigger id="house"><SelectValue placeholder="Select a house..." /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
+                  {/* Keep an orphaned houseId selectable instead of silently showing the placeholder. */}
+                  {houseId !== 'none' && !allHouses?.some((h) => h.id === houseId) ? (
+                    <SelectItem value={houseId}>Unknown house (deleted)</SelectItem>
+                  ) : null}
                   {allHouses
                     ?.slice()
-                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
                     .map((h) => (
                       <SelectItem key={h.id} value={h.id}>
                         {h.emoji ? `${h.emoji} ` : ''}{h.name}
@@ -792,6 +800,9 @@ export function StudentModal({
             <Label>Assign to Teacher(s)</Label>
             <ScrollArea className="h-32 rounded-md border p-2">
               <div className="space-y-2">
+                {allTeachers.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No teachers yet.</p>
+                ) : null}
                 {allTeachers.map(teacher => (
                   <div key={teacher.id} className="flex items-center space-x-2">
                     <Checkbox

@@ -42,25 +42,29 @@ function ActivityList({ schoolId, studentId }: { schoolId: string; studentId: st
     <ScrollArea className="h-72 w-full pr-4">
       <ul className="space-y-4">
         {history && history.length > 0 ? (
-          history.map((item, index) => (
-            <li
-              key={index}
-              className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border"
-            >
-              <div>
-                <p className="font-medium">{item.desc}</p>
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(item.date), 'MMM d, yyyy, h:mm a')}
-                </p>
-              </div>
-              <Badge
-                variant={item.amount >= 0 ? 'default' : 'destructive'}
-                className={`font-bold ${item.amount >= 0 ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}
+          history.map((item, index) => {
+            const amount = Number(item.amount ?? 0) || 0;
+            const date = item.date != null ? new Date(item.date) : null;
+            return (
+              <li
+                key={index}
+                className="flex justify-between items-center text-sm p-3 bg-slate-50 dark:bg-slate-800/50 rounded-md border"
               >
-                {item.amount > 0 ? `+${item.amount}` : item.amount}
-              </Badge>
-            </li>
-          ))
+                <div>
+                  <p className="font-medium">{item.desc}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {date && !Number.isNaN(date.getTime()) ? format(date, 'MMM d, yyyy, h:mm a') : '—'}
+                  </p>
+                </div>
+                <Badge
+                  variant={amount >= 0 ? 'default' : 'destructive'}
+                  className={`font-bold ${amount >= 0 ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}
+                >
+                  {amount > 0 ? `+${amount}` : amount}
+                </Badge>
+              </li>
+            );
+          })
         ) : (
           <p className="text-center text-muted-foreground italic py-4">
             No transaction history yet.
@@ -83,7 +87,7 @@ export function StudentActivityModal({ isOpen, setIsOpen, student }: StudentActi
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            Activity for {getStudentNickname(student)} {student.lastName}
+            Activity for {getStudentNickname(student)} {student.lastName ?? ''}
           </DialogTitle>
           <DialogDescription>
             Current balance: <span className="font-bold text-primary">{(student.points || 0).toLocaleString()} points</span>
