@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useIntroTourSectionListener } from '@/lib/introTourSection';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Award, Ticket, Coins, ClipboardList } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -53,6 +54,16 @@ export function PointsTabLayout({
   const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
   const [section, setSection] = useState<PointsTabSection>(activeDefault);
+
+  const handleIntroTourSection = useCallback(
+    (sectionId: string) => {
+      if (sections.includes(sectionId as PointsTabSection)) {
+        setSection(sectionId as PointsTabSection);
+      }
+    },
+    [sections],
+  );
+  useIntroTourSectionListener(handleIntroTourSection);
 
   const contentBySection: Record<PointsTabSection, React.ReactNode> = {
     categories: categoriesContent,

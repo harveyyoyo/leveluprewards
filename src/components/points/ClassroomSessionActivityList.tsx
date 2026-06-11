@@ -9,6 +9,7 @@ export function ClassroomSessionActivityList({
   entries,
   compact = false,
   borderless = false,
+  hideTitle = false,
   className,
 }: {
   entries: ClassroomSessionActivityEntry[];
@@ -16,6 +17,8 @@ export function ClassroomSessionActivityList({
   compact?: boolean;
   /** Render without an inner bordered panel (sits outside toolbar chrome). */
   borderless?: boolean;
+  /** Parent supplies the section chrome (e.g. collapsible monitor sidebar). */
+  hideTitle?: boolean;
   className?: string;
 }) {
   return (
@@ -26,10 +29,12 @@ export function ClassroomSessionActivityList({
         className,
       )}
     >
-      <div className="mb-1.5 flex shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
-        <ListOrdered className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        Activity
-      </div>
+      {hideTitle ? null : (
+        <div className="mb-1.5 flex shrink-0 items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px]">
+          <ListOrdered className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Activity
+        </div>
+      )}
       <div
         className={cn(
           'min-h-0 flex-1 overflow-y-auto',

@@ -23,7 +23,11 @@ import {
   Users,
   MousePointerClick,
 } from 'lucide-react';
-import { openClassroomFullscreenTab, type ClassroomFullscreenAudience } from '@/lib/classroomPointsUrl';
+import {
+  buildClassroomFullscreenUrl,
+  openClassroomFullscreenTab,
+  type ClassroomFullscreenAudience,
+} from '@/lib/classroomPointsUrl';
 import { sanitizeSessionForStudentDisplay } from '@/lib/classroom/classroomStudentDisplay';
 import { isClassroomOnlyMode, isPillarOn, CLASSROOM_LOCAL_REWARDS, CLASSROOM_SESSION_ONLY, isRewardsPillarOn } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
@@ -61,6 +65,7 @@ import {
   applyClassroomSessionAward,
   buildInitialLayout,
   clearClassroomSession,
+  findNewSessionAwards,
   loadClassroomLayout,
   loadClassroomPrefs,
   loadClassroomSession,
@@ -95,6 +100,7 @@ import {
   teacherBudgetRemainingPhrase,
   teacherWithBudgetAfterSpend,
 } from '@/lib/teacherBudget';
+import { ClassroomMonitorHoverPanel } from '@/components/points/ClassroomMonitorHoverPanel';
 import { ClassroomMonitorQuickControls } from '@/components/points/ClassroomMonitorQuickControls';
 import { ClassroomSessionActivityList } from '@/components/points/ClassroomSessionActivityList';
 import {
@@ -235,6 +241,7 @@ function ClassroomPointsPanelInner({
   const [behaviorNoteSuppressHeldKey, setBehaviorNoteSuppressHeldKey] =
     useState<ClassroomNoteShortcutKey | null>(null);
   const heldNoteKeyRef = useRef<ClassroomNoteShortcutKey | null>(null);
+  const heldAltRef = useRef(false);
   const [classroomBalances, setClassroomBalances] = useState<Record<string, number>>({});
 
   const [filterClassId, setFilterClassId] = useState(() => {
@@ -404,6 +411,25 @@ function ClassroomPointsPanelInner({
     const id = effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : null;
     return id ? classes.find((c) => c.id === id)?.name : undefined;
   }, [classes, effectiveClassId]);
+
+  const classScreenUrl = useMemo(() => {
+    if (!isFullscreen || isStudentAudience) return null;
+    if (settings.classroomStudentDisplayEnabled === false) return null;
+    if (!effectiveClassId || effectiveClassId === 'all') return null;
+    return buildClassroomFullscreenUrl({
+      schoolId,
+      classId: effectiveClassId,
+      scope: storageScope,
+      audience: 'student',
+    });
+  }, [
+    effectiveClassId,
+    isFullscreen,
+    isStudentAudience,
+    schoolId,
+    settings.classroomStudentDisplayEnabled,
+    storageScope,
+  ]);
 
   const computedLayout = useMemo((): ClassroomSeatingLayout | null => {
     if (!effectiveClassId || effectiveClassId === 'all') return null;
@@ -671,6 +697,44 @@ function ClassroomPointsPanelInner({
     },
     [activeLayout, studentById, triggerDeskAwardFeedback],
   );
+
+  const prevSessionLastAwardRef = useRef<ClassroomSessionData['lastAward']>({});
+  const sessionEffectsSeededRef = useRef(false);
+
+  useEffect(() => {
+    prevSessionLastAwardRef.current = {};
+    sessionEffectsSeededRef.current = false;
+  }, [effectiveClassId]);
+
+  useEffect(() => {
+    if (!isStudentAudience || !activeLayout) return;
+
+    if (!sessionEffectsSeededRef.current) {
+      prevSessionLastAwardRef.current = sessionData.lastAward;
+      sessionEffectsSeededRef.current = true;
+      return;
+    }
+
+    const newAwards = findNewSessionAwards(prevSessionLastAwardRef.current, sessionData.lastAward);
+    prevSessionLastAwardRef.current = sessionData.lastAward;
+    if (newAwards.length === 0) return;
+
+    newAwards.forEach((award, i) => {
+      const cellIndex = activeLayout.cells.indexOf(award.studentId);
+      if (cellIndex < 0) return;
+      const student = studentById.get(award.studentId);
+      const name = student ? getStudentNickname(student) : '';
+      window.setTimeout(() => {
+        triggerDeskAwardFeedback(cellIndex, award.points, name);
+      }, i * 90);
+    });
+  }, [
+    activeLayout,
+    isStudentAudience,
+    sessionData,
+    studentById,
+    triggerDeskAwardFeedback,
+  ]);
 
   const recordSessionAwards = useCallback(
     (studentIds: string[], pointsDelta: number, description: string) => {
@@ -1204,6 +1268,37 @@ function ClassroomPointsPanelInner({
       target instanceof HTMLSelectElement ||
       (target instanceof HTMLElement && target.isContentEditable);
 
+    const onAltDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      if (e.key === 'Alt' || e.key === 'AltGraph') heldAltRef.current = true;
+    };
+
+    const onAltUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt' || e.key === 'AltGraph') heldAltRef.current = false;
+    };
+
+    const clearHeldAlt = () => {
+      heldAltRef.current = false;
+    };
+
+    window.addEventListener('keydown', onAltDown, true);
+    window.addEventListener('keyup', onAltUp, true);
+    window.addEventListener('blur', clearHeldAlt);
+    return () => {
+      window.removeEventListener('keydown', onAltDown, true);
+      window.removeEventListener('keyup', onAltUp, true);
+      window.removeEventListener('blur', clearHeldAlt);
+    };
+  }, [editMode]);
+
+  useEffect(() => {
+    if (editMode) return;
+    const isTypingTarget = (target: EventTarget | null) =>
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable);
+
     const onNoteKeyDown = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -1364,6 +1459,7 @@ function ClassroomPointsPanelInner({
       openBehaviorNote(s, { shortcutKey: 'c' });
     },
     getNoteKeyHeld: () => heldNoteKeyRef.current,
+    getBathroomAltHeld: () => heldAltRef.current,
     onBathroomToggle: bathroomEnabled ? handleBathroomToggle : undefined,
     onDragStart: handleDragStart,
     onDrop: handleDrop,
@@ -1705,7 +1801,7 @@ function ClassroomPointsPanelInner({
         </div>
       ) : null}
       {isFullscreen && !editMode && !isStudentAudience ? (
-        <div className="shrink-0 border-b border-border/40 bg-muted/15 px-3 py-2">
+        <ClassroomMonitorHoverPanel position="top" peekLabel="Tips">
           <ClassroomSeatingShortcutsHint
             prefs={prefs}
             editMode={editMode}
@@ -1714,7 +1810,7 @@ function ClassroomPointsPanelInner({
             classroomNoteDeduct={classroomNoteDeduct}
             monitorDisplay
           />
-        </div>
+        </ClassroomMonitorHoverPanel>
       ) : null}
       {!(isFullscreen && (editMode || isStudentAudience)) ? (
         <div
@@ -1742,6 +1838,7 @@ function ClassroomPointsPanelInner({
                 rewardsPillarOn={rewardsPillarOn}
                 onChange={patchPrefs}
                 onResetSessionDisplay={resetSessionDisplay}
+                classScreenUrl={classScreenUrl}
                 onClassChange={
                   isFullscreen && classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
                 }
@@ -1991,20 +2088,29 @@ function ClassroomPointsPanelInner({
         </div>
 
         {!editMode ? (
-          <aside
-            className={cn(
-              'flex min-h-0 flex-col self-stretch border-l border-border/50 bg-muted/10',
-              isFullscreen
-                ? 'w-44 shrink-0 pl-3 pr-2 lg:w-52'
-                : 'hidden w-40 shrink-0 pl-3 pr-1 sm:flex lg:w-48 xl:w-52',
-            )}
-          >
-            <ClassroomSessionActivityList
-              entries={sessionActivity}
-              borderless
-              className="min-h-0 flex-1"
-            />
-          </aside>
+          isFullscreen && !isStudentAudience ? (
+            <ClassroomMonitorHoverPanel position="right" peekLabel="Activity">
+              <ClassroomSessionActivityList
+                entries={sessionActivity}
+                borderless
+                hideTitle
+                className="min-h-0 flex-1"
+              />
+            </ClassroomMonitorHoverPanel>
+          ) : (
+            <aside
+              className={cn(
+                'flex min-h-0 flex-col self-stretch border-l border-border/50 bg-muted/10',
+                'hidden w-40 shrink-0 pl-3 pr-1 sm:flex lg:w-48 xl:w-52',
+              )}
+            >
+              <ClassroomSessionActivityList
+                entries={sessionActivity}
+                borderless
+                className="min-h-0 flex-1"
+              />
+            </aside>
+          )
         ) : null}
       </div>
 

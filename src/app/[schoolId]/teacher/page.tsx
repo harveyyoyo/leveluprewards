@@ -86,7 +86,10 @@ function TeacherPrinterSkeleton() {
 
 function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogout: () => void }) {
     const { loginState } = useAppContext();
-    const canOpenTeacherPortal = loginState === 'teacher';
+    const { settings } = useSettings();
+    const canOpenTeacherPortal =
+        loginState === 'teacher' ||
+        ((loginState === 'admin' || loginState === 'developer') && settings.activeTourId === 'teacher');
     if (!canOpenTeacherPortal) {
         return <TeacherPrinterSkeleton />;
     }
@@ -108,6 +111,7 @@ export default function TeacherPage() {
     const onTeacherRoute = pathname?.includes('/teacher') ?? false;
     const firestore = useFirestore();
     const { settings } = useSettings();
+    const teacherTourActive = settings.activeTourId === 'teacher';
     const isGraphic = settings.graphicMode === 'graphics';
     const playSound = useArcadeSound();
     const { toast } = useToast();
@@ -167,10 +171,10 @@ export default function TeacherPage() {
             router.replace(`/${schoolId}/office`);
         } else if (loginState === 'houseCoordinator') {
             router.replace(`/${schoolId}/admin`);
-        } else if ((loginState === 'admin' || loginState === 'developer') && isAdmin) {
+        } else if ((loginState === 'admin' || loginState === 'developer') && isAdmin && !teacherTourActive) {
             router.replace(`/${schoolId}/admin`);
         }
-    }, [directAccountKey, isAdmin, isInitialized, loginState, onTeacherRoute, schoolId, router]);
+    }, [directAccountKey, isAdmin, isInitialized, loginState, onTeacherRoute, schoolId, router, teacherTourActive]);
 
     useEffect(() => {
         if (
@@ -276,7 +280,7 @@ export default function TeacherPage() {
             }
             playSound('login');
             setAdminDialogOpen(false);
-            router.replace(`/${schoolId}/admin`);
+            router.replace(teacherTourActive ? `/${schoolId}/teacher` : `/${schoolId}/admin`);
             return true;
         } finally {
             setAdminSubmitting(false);
@@ -294,7 +298,9 @@ export default function TeacherPage() {
         );
     }
 
-    const canOpenTeacherTools = loginState === 'teacher';
+    const canOpenTeacherTools =
+        loginState === 'teacher' ||
+        ((loginState === 'admin' || loginState === 'developer') && teacherTourActive && isAdmin);
 
     if (!directAccountKey && canOpenTeacherTools) {
         return (
@@ -402,6 +408,7 @@ export default function TeacherPage() {
                                     type="button"
                                     variant="outline"
                                     className="w-full h-12 rounded-xl font-bold"
+                                    data-intro-tour="teacher-sign-in-admin"
                                     onClick={() => {
                                         playSound('click');
                                         if (canBypassAdminPasscode) {

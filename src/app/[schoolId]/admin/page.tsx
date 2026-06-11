@@ -8,6 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/fi
 import { useAdminDashboardData } from './hooks/useAdminDashboardData';
 import { useStudentRoster } from './hooks/useStudentRoster';
 import { useAdminAttendance } from './hooks/useAdminAttendance';
+import { useStudentActivityLog } from '@/hooks/useStudentActivityLog';
 import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
@@ -1173,13 +1174,11 @@ function AdminDashboardInner() {
     teacherAttendanceRewards, teacherAttendanceRewardsLoading,
     ruleDrafts, setRuleDrafts, savingRuleId,
     saveTeacherRewardRule, deleteTeacherRewardRule,
-    studentActivityLog, studentActivityLogLoading, loadStudentActivityLog,
   } = useAdminAttendance({
     enabled: (settings.payAttendance ?? true) && !!settings.enableClassSignIn,
     schoolId,
     firestore,
     teachers,
-    students,
     toast,
     playSound,
     getAttendanceConfig,
@@ -1188,6 +1187,18 @@ function AdminDashboardInner() {
     getTeacherAttendanceConfig,
     setTeacherAttendanceConfig,
     listTeacherAttendanceLog,
+  });
+
+  const {
+    studentActivityLog,
+    studentActivityLogLoading,
+    loadStudentActivityLog,
+  } = useStudentActivityLog({
+    enabled: !!schoolId && !!students?.length,
+    schoolId: schoolId ?? '',
+    students,
+    firestore,
+    toast,
   });
 
   /** Show shell as soon as the default Students tab can render; other collections load in background. */
@@ -2078,6 +2089,9 @@ function AdminDashboardInner() {
               prizes={prizes}
               categories={categories}
               rafflePointsPerTicket={settings.rafflePointsPerTicket}
+              studentActivityLog={studentActivityLog}
+              studentActivityLogLoading={studentActivityLogLoading}
+              loadStudentActivityLog={loadStudentActivityLog}
             />
           </TabsContent>
 
@@ -2104,9 +2118,6 @@ function AdminDashboardInner() {
               handleSaveTeacherAttendanceConfig={handleSaveTeacherAttendanceConfig}
               teacherAttendanceSaving={teacherAttendanceSaving}
               teacherAttendanceLog={teacherAttendanceLog}
-              studentActivityLog={studentActivityLog}
-              studentActivityLogLoading={studentActivityLogLoading}
-              loadStudentActivityLog={loadStudentActivityLog}
               setTeacherAttendanceConfigState={setTeacherAttendanceConfigState}
               attendanceConfig={attendanceConfig}
               setAttendanceConfigState={setAttendanceConfigState}
@@ -2115,11 +2126,6 @@ function AdminDashboardInner() {
               getAttendanceConfig={getAttendanceConfig}
               setAttendanceConfig={setAttendanceConfig}
               UniversalPeriodsAdmin={UniversalPeriodsAdmin}
-              enableBathroomTimer={settings.enableBathroomTimer ?? true}
-              bathroomMaxMinutes={settings.bathroomMaxMinutes ?? 5}
-              bathroomRequirePresent={settings.bathroomRequirePresent ?? true}
-              classSignInEnabled={!!settings.enableClassSignIn}
-              onBathroomSettingsChange={(patch: Parameters<typeof updateSettings>[0]) => updateSettings(patch)}
             />
           </TabsContent>
 
@@ -2195,7 +2201,7 @@ function AdminDashboardInner() {
 
           <TabsContent value="raffle" className={scrollingAdminTabClassName}>
             {activeMainTab === 'raffle' ? (
-              <AdminRaffleTab schoolId={schoolId!} students={students ?? []} />
+              <AdminRaffleTab schoolId={schoolId!} students={students ?? []} classes={classes ?? []} />
             ) : null}
           </TabsContent>
 

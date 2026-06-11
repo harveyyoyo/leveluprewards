@@ -15,6 +15,12 @@ export const PRODUCT_PILLAR_KEYS = [
 
 export type ProductPillarKey = (typeof PRODUCT_PILLAR_KEYS)[number];
 
+/**
+ * When false, homework pillar UI and runtime gates stay off until the product ships.
+ * Settings may still store payHomework for early-access schools once this is true.
+ */
+export const HOMEWORK_PILLAR_LIVE = false;
+
 export const PRODUCT_PILLAR_LABELS: Record<ProductPillarKey, string> = {
   payClassroom: 'Classroom Management',
   payAttendance: 'Attendance',
@@ -44,14 +50,17 @@ export function hasPillarAccess(
   return access?.[pillar] !== false;
 }
 
-/** Pillars default to on when unset (except School Office, which is opt-in). */
+/** Pillars default to on when unset (except School Office and Homework, which are opt-in). */
 export function isPillarOn(
   settings: PillarSettings | null | undefined,
   pillar: ProductPillarKey,
   access?: ProductPillarAccess | null,
 ): boolean {
   if (!hasPillarAccess(access, pillar)) return false;
-  if (pillar === 'payOffice') return settings?.payOffice === true;
+  if (pillar === 'payHomework' && !HOMEWORK_PILLAR_LIVE) return false;
+  if (pillar === 'payOffice' || pillar === 'payHomework') {
+    return settings?.[pillar] === true;
+  }
   return settings?.[pillar] !== false;
 }
 

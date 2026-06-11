@@ -3,6 +3,7 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
+  ArrowUpRight,
   ChevronDown,
   GraduationCap,
   Hash,
@@ -15,6 +16,7 @@ import {
   VolumeX,
   Zap,
 } from 'lucide-react';
+import { CLASS_AWARDS_STUDENT_LAUNCH_LABEL } from '@/lib/classroom/classroomTabSections';
 import {
   CLASSROOM_DESIGNS,
   type ClassroomDesign,
@@ -267,6 +269,7 @@ export function ClassroomMonitorQuickControls({
   onChange,
   onClassChange,
   onResetSessionDisplay,
+  classScreenUrl,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
@@ -278,6 +281,8 @@ export function ClassroomMonitorQuickControls({
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
   onClassChange?: (classId: string) => void;
   onResetSessionDisplay?: () => void;
+  /** Read-only projector mirror — omit when class screen launch is disabled. */
+  classScreenUrl?: string | null;
 }) {
   const activeDesign = normalizeClassroomDesign(prefs.design);
   const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
@@ -525,6 +530,24 @@ export function ClassroomMonitorQuickControls({
             <VolumeX className="h-4 w-4 shrink-0" aria-hidden />
           )}
         </button>
+      ) : null}
+
+      {classScreenUrl ? (
+        <a
+          href={classScreenUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            monitorSelectTriggerClass(design, isFullscreen),
+            'inline-flex items-center gap-1.5 no-underline',
+          )}
+          aria-label={CLASS_AWARDS_STUDENT_LAUNCH_LABEL}
+          title="Open read-only class screen on your projector — mirrors awards and effects, hides behavior notes."
+        >
+          <Monitor className="h-4 w-4 shrink-0" aria-hidden />
+          <span>Class screen</span>
+          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+        </a>
       ) : null}
 
       {onResetSessionDisplay ? (

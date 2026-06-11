@@ -551,7 +551,7 @@ export default function DeveloperPage() {
         payClassroom: defaults.payClassroom ?? app.payClassroom ?? true,
         payAttendance: defaults.payAttendance ?? app.payAttendance ?? true,
         payLibrary: defaults.payLibrary ?? app.payLibrary ?? true,
-        payHomework: defaults.payHomework ?? app.payHomework ?? true,
+        payHomework: defaults.payHomework ?? app.payHomework ?? false,
         payOffice: defaults.payOffice ?? app.payOffice ?? false,
       });
     };

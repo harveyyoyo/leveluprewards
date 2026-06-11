@@ -36,7 +36,7 @@ export const welcomeTourSteps: IntroStep[] = [
   {
     id: 'portal-student',
     title: 'Student Kiosk',
-    body: 'The kiosk is a shared screen where students can scan their ID cards or coupons to log in and bank their points.',
+    body: 'The kiosk is a shared screen where students scan their ID cards or coupons to log in and bank their points.',
     onRoute: '/portal',
     target: 'portal-redeem',
     requireTarget: true,

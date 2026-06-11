@@ -33,6 +33,7 @@ export const FEATURE_SECTION_NAV = [
 export const INTERFACE_SECTION_NAV = [
     { id: 'settings-interface-language', label: 'Language' },
     { id: 'settings-interface-appearance', label: 'Colors' },
+    { id: 'settings-interface-theme', label: 'Theme' },
     { id: 'settings-interface-motion', label: 'Motion' },
     { id: 'settings-interface-layout', label: 'Layout' },
 ] as const;

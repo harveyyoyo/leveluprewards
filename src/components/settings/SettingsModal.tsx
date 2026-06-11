@@ -907,11 +907,126 @@ export function SettingsModal() {
                                         })()}
                                     </div>
 
-                            {/* MOTION & SOUND */}
-                            <div
-                                id="settings-interface-motion"
-                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
-                            >
+                                    {/* THEME */}
+                                    <div
+                                        id="settings-interface-theme"
+                                        className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                                    >
+                                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                            <Moon className="w-3.5 h-3.5" /> {t('settings.interface.sections.theme')}
+                                        </p>
+
+                                        <div className="grid grid-cols-2 gap-4 mb-1 mt-1">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Moon className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                    <span className="text-sm font-bold">{t('settings.interface.darkMode')}</span>
+                                                </div>
+                                                <Switch
+                                                    checked={(() => {
+                                                        if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
+                                                        if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
+                                                        return local.darkMode;
+                                                    })()}
+                                                    onCheckedChange={(checked) => {
+                                                        const roleKey = interfaceRole === 'student' ? 'studentDarkMode' : interfaceRole === 'teacher' ? 'teacherDarkMode' : 'darkMode';
+                                                        handleToggle(roleKey, checked);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div
+                                                className={cn(
+                                                    'flex items-start justify-between gap-2',
+                                                    !(() => {
+                                                        if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
+                                                        if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
+                                                        return local.darkMode;
+                                                    })() && 'opacity-45 pointer-events-none',
+                                                )}
+                                            >
+                                                <div className="min-w-0 pr-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                        <span className="text-sm font-bold">{t('settings.interface.colorizeDark')}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
+                                                        Saturated buttons and a soft color wash behind the app (dark mode only).
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={(() => {
+                                                        if (interfaceRole === 'student') return local.studentDarkModeColorized ?? local.darkModeColorized ?? false;
+                                                        if (interfaceRole === 'teacher') return local.teacherDarkModeColorized ?? local.darkModeColorized ?? false;
+                                                        return local.darkModeColorized ?? false;
+                                                    })()}
+                                                    onCheckedChange={(checked) => {
+                                                        const roleKey =
+                                                            interfaceRole === 'student'
+                                                                ? 'studentDarkModeColorized'
+                                                                : interfaceRole === 'teacher'
+                                                                  ? 'teacherDarkModeColorized'
+                                                                  : 'darkModeColorized';
+                                                        handleToggle(roleKey, checked);
+                                                    }}
+                                                    className="shrink-0 mt-0.5"
+                                                />
+                                            </div>
+                                            <div className="flex items-start justify-between gap-2 col-span-2">
+                                                <div className="min-w-0 pr-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Cpu className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                        <span className="text-sm font-bold">{t('settings.interface.legacyMode')}</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
+                                                        Turn on for a simpler, faster UI (less animation, blur, and glow). Leave off for the full arcade look.
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={local.legacyMode}
+                                                    onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
+                                                    className="data-[state=checked]:bg-orange-600 shrink-0 mt-0.5"
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between col-span-2">
+                                                <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                    <Palette className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                    <div className="min-w-0">
+                                                        <span className="text-sm font-bold">{t('settings.interface.studentThemes')}</span>
+                                                        <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                            Off: kiosk, shop, and ID cards use standard styling. Saved themes stay on file.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={local.enableStudentThemes !== false}
+                                                    onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
+                                                />
+                                            </div>
+                                            {canManageSchoolSettings && interfaceRole === 'global' ? (
+                                                <div className="flex items-center justify-between col-span-2">
+                                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                        <Layers className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                        <div className="min-w-0">
+                                                            <span className="text-sm font-bold">{t('settings.interface.coloredFeatureTabs')}</span>
+                                                            <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
+                                                                Soft accent colors on extra-feature tabs you pin in the admin sidebar (Insights, Hall of Fame, and similar).
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <Switch
+                                                        checked={!!local.adminPerTabColorScheme}
+                                                        onCheckedChange={(checked) => handleToggle('adminPerTabColorScheme', checked)}
+                                                    />
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    </div>
+
+                                    {/* MOTION & SOUND */}
+                                    <div
+                                        id="settings-interface-motion"
+                                        className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
+                                    >
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
                                     <Zap className="w-3.5 h-3.5" /> Motion & Sound
                                 </p>
@@ -1046,127 +1161,18 @@ export function SettingsModal() {
 
 
 
-                            </div>
-
-                            {/* THEME & LAYOUT */}
-                            <div
-                                id="settings-interface-layout"
-                                className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
-                            >
-                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
-                                    <LayoutDashboard className="w-3.5 h-3.5" /> Theme & Layout
-                                </p>
-
-                                <div className="grid grid-cols-2 gap-4 mb-4 mt-1">
-                                    {/* Dark Mode */}
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Moon className="w-4 h-4 text-muted-foreground shrink-0" />
-                                             <span className="text-sm font-bold">Dark Mode</span>
-                                        </div>
-                                        <Switch
-                                            checked={(() => {
-                                                if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
-                                                if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
-                                                return local.darkMode;
-                                            })()}
-                                            onCheckedChange={(checked) => {
-                                                const roleKey = interfaceRole === 'student' ? 'studentDarkMode' : interfaceRole === 'teacher' ? 'teacherDarkMode' : 'darkMode';
-                                                handleToggle(roleKey, checked);
-                                            }}
-                                        />
                                     </div>
-                                    {/* Colorized dark — richer accents + ambient wash (see `html[data-dark-colorize]` in globals.css) */}
+
+                                    {/* LAYOUT */}
                                     <div
-                                        className={cn(
-                                            'flex items-start justify-between gap-2',
-                                            !(() => {
-                                                if (interfaceRole === 'student') return local.studentDarkMode ?? local.darkMode;
-                                                if (interfaceRole === 'teacher') return local.teacherDarkMode ?? local.darkMode;
-                                                return local.darkMode;
-                                            })() && 'opacity-45 pointer-events-none',
-                                        )}
+                                        id="settings-interface-layout"
+                                        className="scroll-mt-[4.5rem] bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 mb-4 border border-slate-100 dark:border-slate-800/50"
                                     >
-                                        <div className="min-w-0 pr-1">
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
-                                                <span className="text-sm font-bold">Colorize dark</span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
-                                                Saturated buttons and a soft color wash behind the app (dark mode only).
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={(() => {
-                                                if (interfaceRole === 'student') return local.studentDarkModeColorized ?? local.darkModeColorized ?? false;
-                                                if (interfaceRole === 'teacher') return local.teacherDarkModeColorized ?? local.darkModeColorized ?? false;
-                                                return local.darkModeColorized ?? false;
-                                            })()}
-                                            onCheckedChange={(checked) => {
-                                                const roleKey =
-                                                    interfaceRole === 'student'
-                                                        ? 'studentDarkModeColorized'
-                                                        : interfaceRole === 'teacher'
-                                                          ? 'teacherDarkModeColorized'
-                                                          : 'darkModeColorized';
-                                                handleToggle(roleKey, checked);
-                                            }}
-                                            className="shrink-0 mt-0.5"
-                                        />
-                                    </div>
-                                    {/* Legacy Mode — performance-oriented simple visuals (see `.legacy` in globals.css) */}
-                                    <div className="flex items-start justify-between gap-2 col-span-2">
-                                        <div className="min-w-0 pr-1">
-                                            <div className="flex items-center gap-2">
-                                                <Cpu className="w-4 h-4 text-muted-foreground shrink-0" />
-                                                <span className="text-sm font-bold">Legacy Mode</span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5 ml-6">
-                                                Turn on for a simpler, faster UI (less animation, blur, and glow). Leave off for the full arcade look.
-                                            </p>
-                                        </div>
-                                        <Switch
-                                            checked={local.legacyMode}
-                                            onCheckedChange={(checked) => handleToggle('legacyMode', checked)}
-                                            className="data-[state=checked]:bg-orange-600 shrink-0 mt-0.5"
-                                        />
-                                    </div>
-                                    {/* Student themes (display only; does not delete saved themes) */}
-                                    <div className="flex items-center justify-between col-span-2">
-                                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                                            <Palette className="w-4 h-4 text-muted-foreground shrink-0" />
-                                            <div className="min-w-0">
-                                                <span className="text-sm font-bold">Student themes</span>
-                                                <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                    Off: kiosk, shop, and ID cards use standard styling. Saved themes stay on file.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <Switch
-                                            checked={local.enableStudentThemes !== false}
-                                            onCheckedChange={(checked) => handleToggle('enableStudentThemes', checked)}
-                                        />
-                                    </div>
-                                    {canManageSchoolSettings && interfaceRole === 'global' ? (
-                                        <div className="flex items-center justify-between col-span-2">
-                                            <div className="flex items-center gap-2 min-w-0 pr-2">
-                                                <Layers className="w-4 h-4 text-muted-foreground shrink-0" />
-                                                <div className="min-w-0">
-                                                    <span className="text-sm font-bold">Colored feature tabs</span>
-                                                    <p className="text-[10px] text-muted-foreground font-medium leading-snug mt-0.5">
-                                                        Soft accent colors on extra-feature tabs you pin in the admin sidebar (Insights, Hall of Fame, and similar).
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Switch
-                                                checked={!!local.adminPerTabColorScheme}
-                                                onCheckedChange={(checked) => handleToggle('adminPerTabColorScheme', checked)}
-                                            />
-                                        </div>
-                                    ) : null}
-                                </div>
+                                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-3 flex items-center gap-2">
+                                            <LayoutDashboard className="w-3.5 h-3.5" /> {t('settings.interface.sections.themeLayout')}
+                                        </p>
 
-                                 {/* Display Mode */}
+                                        {/* Display Mode */}
                                  <div className="space-y-2">
                                      <div className="flex items-center justify-between bg-muted/40 p-1.5 rounded-2xl border border-border/50">
                                          {(['auto', 'web', 'app', 'mobile'] as const).map((mode) => {
@@ -1305,6 +1311,12 @@ export function SettingsModal() {
                                                              </div>
                                                              <Switch
                                                                  checked={enabled}
+                                                                 disabled={
+                                                                     !enabled &&
+                                                                     (requiresRewards ||
+                                                                         requiresStudentPortal ||
+                                                                         requiresParentPortal)
+                                                                 }
                                                                  onCheckedChange={(checked) =>
                                                                      handleToggle(
                                                                          'mainPortalCards',
@@ -1885,7 +1897,7 @@ export function SettingsModal() {
                                             local.payRewards ?? true,
                                             local.payClassroom ?? true,
                                             local.payAttendance ?? true,
-                                            local.payHomework ?? true,
+                                            local.payHomework === true,
                                             local.payLibrary ?? true,
                                         ].filter(Boolean).length;
                                         return (

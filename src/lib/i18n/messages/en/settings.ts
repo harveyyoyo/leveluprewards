@@ -32,6 +32,7 @@ const settings = {
     nav: {
       language: 'Language',
       colors: 'Colors',
+      theme: 'Theme',
       motion: 'Motion',
       layout: 'Layout',
     },
@@ -47,8 +48,9 @@ const settings = {
     },
     sections: {
       appearance: 'Appearance',
+      theme: 'Theme',
       motionSound: 'Motion & Sound',
-      themeLayout: 'Theme & Layout',
+      themeLayout: 'Layout',
       portalScreenLayout: 'Portal & screen layout',
     },
     soundFx: 'Sound FX',
@@ -65,13 +67,13 @@ const settings = {
       'Tall narrow layout for portrait-mounted kiosk screens. Per-device overrides live in Admin → Branding → Kiosk profiles.',
     hideHeader: 'Hide header',
     hideHeaderDesc:
-      'Tuck the header while you scroll on staff and inner portal pages; it returns at the top or when you scroll up. The main portal hub always keeps the header visible. On the student kiosk page the header stays hidden until you move the mouse to the top edge.',
+      'Tuck the header while you scroll on staff and inner portal pages; it returns at the top or when you scroll up. The main portal hub always keeps the header visible. On the student kiosk page the header stays hidden until you move the pointer to the top edge or touch the screen.',
     wideLayout: 'Wide layout',
     wideLayoutDesc:
       'Use full-width layout on teacher and admin portals instead of centered content.',
     mainPortalCards: 'Main portal cards',
     mainPortalCardsDesc:
-      'Choose which destinations appear on the main portal hub. Defaults to admin, teacher, and student kiosk.',
+      'Choose which destinations appear on the main portal hub. Student home and parent portals are off by default.',
     mainPortalCardRequiresRewards: 'Requires the Rewards pillar to be enabled.',
     mainPortalCardRequiresStudentPortal: 'Turn on Student home portal in school settings first.',
     mainPortalCardRequiresParentPortal: 'Requires the Parent portal feature to be enabled.',

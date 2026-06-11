@@ -69,7 +69,10 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   },
   {
     keys: ['attendance', 'sign-in', 'sign in', 'check in', 'timezone'],
-    paths: ['src/app/[schoolId]/admin/sections/AdminAttendanceTab.tsx'],
+    paths: [
+      'src/app/[schoolId]/admin/sections/AdminAttendanceTab.tsx',
+      'src/components/classroom/BathroomPassTimerSettings.tsx',
+    ],
   },
   {
     keys: ['library', 'book', 'checkout', 'barcode', 'upc'],

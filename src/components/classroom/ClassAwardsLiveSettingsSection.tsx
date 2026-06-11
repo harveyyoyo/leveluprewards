@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Timer,
   XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -22,7 +23,8 @@ import {
   normalizeClassroomMonitorPointsDisplay,
   type ClassroomMonitorPointsDisplay,
 } from '@/lib/classroom/classroomMonitorDisplaySettings';
-import { isRewardsPillarOn } from '@/lib/productPillars';
+import { isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { BathroomPassTimerSettings } from '@/components/classroom/BathroomPassTimerSettings';
 import {
   ClassroomBehaviorQuickPicksEditor,
   ClassroomSchoolQuickAwardsEditor,
@@ -115,6 +117,7 @@ export function ClassAwardsLiveSettingsSection({
   const includeLastName = settings.classroomMonitorIncludeLastName === true;
   const includeStudentEmoji = settings.classroomMonitorIncludeStudentEmoji === true;
   const balanceLabel = rewardsPillarOn ? 'LevelUp reward balance' : 'Classroom point balance';
+  const classSignInEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
 
   const firestore = useFirestore();
   const [principalPreviewOpen, setPrincipalPreviewOpen] = useState(false);
@@ -430,6 +433,17 @@ export function ClassAwardsLiveSettingsSection({
             </div>
           </div>
         </div>
+      </SettingsPanel>
+
+      <SettingsPanel icon={Timer} title="Bathroom pass timer" iconClassName="h-4 w-4 text-violet-500">
+        <BathroomPassTimerSettings
+          classSignInEnabled={classSignInEnabled}
+          enableBathroomTimer={settings.enableBathroomTimer ?? true}
+          bathroomMaxMinutes={settings.bathroomMaxMinutes ?? 5}
+          bathroomRequirePresent={settings.bathroomRequirePresent ?? true}
+          canEdit={canEdit}
+          onChange={updateSettings}
+        />
       </SettingsPanel>
 
       <Dialog

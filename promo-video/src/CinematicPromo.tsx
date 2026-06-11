@@ -615,8 +615,27 @@ const OutroScene: React.FC = () => {
           zIndex: 2,
           position: "relative",
           opacity: fadeIn,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
+        {isPortrait && (
+          <div
+            style={{
+              marginBottom: 34,
+              transform: `scale(${headlineE})`,
+              opacity: headlineE,
+            }}
+          >
+            <LevelUpLogoAnimated
+              startFrame={0}
+              size={230}
+              cream="#f0e8c8"
+              showSubline={false}
+            />
+          </div>
+        )}
         <p
           style={{
             fontFamily: outfit,
@@ -635,9 +654,9 @@ const OutroScene: React.FC = () => {
         <h2
           style={{
             fontFamily: outfit,
-            fontSize: isPortrait ? 118 : 110,
+            fontSize: isPortrait ? 92 : 110,
             fontWeight: 800,
-            lineHeight: 0.9,
+            lineHeight: isPortrait ? 0.96 : 0.9,
             letterSpacing: isPortrait ? -2 : -4,
             margin: "0 0 12px",
             transform: `scale(${headlineE})`,
@@ -647,9 +666,9 @@ const OutroScene: React.FC = () => {
             filter: "drop-shadow(0 0 80px rgba(245,200,66,0.5))",
           }}
         >
-          Start free
+          {isPortrait ? "Try it out" : "Start free"}
           <br />
-          today
+          free
         </h2>
         <p
           style={{
@@ -661,7 +680,9 @@ const OutroScene: React.FC = () => {
             opacity: headlineE,
           }}
         >
-          {copy?.outroSubline ?? "Just a quick scan and you're done"}
+          {isPortrait
+            ? "Scan-first rewards for your school"
+            : copy?.outroSubline ?? "Just a quick scan and you're done"}
         </p>
 
         <div

@@ -5,16 +5,11 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
-  limit as fsLimit,
-  orderBy,
-  query,
   updateDoc,
   type Firestore,
 } from 'firebase/firestore';
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { getStudentNickname } from '@/lib/utils';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import type { useToast } from '@/hooks/use-toast';
 import type {
@@ -22,7 +17,6 @@ import type {
   AttendanceRewardRule,
   AttendanceScheduleSlot,
   AttendanceSettings,
-  Student,
   Teacher,
 } from '@/lib/types';
 
@@ -32,15 +26,6 @@ const DEFAULT_CONFIG: AttendanceSettings = {
   onTimeWindowMinutes: 5,
   schedule: [],
 };
-
-export interface StudentActivityRow {
-  id: string;
-  studentId: string;
-  studentName: string;
-  date: number;
-  desc: string;
-  amount: number;
-}
 
 // Use the exact `toast` signature exposed by `useToast()` so callers don't
 // have to re-type inline shapes, and the `playSound` union stays in sync with
@@ -53,7 +38,6 @@ export interface AdminAttendanceDeps {
   schoolId: string | null;
   firestore: Firestore;
   teachers: Teacher[] | null | undefined;
-  students: Student[] | null | undefined;
   toast: ToastFn;
   playSound: PlaySoundFn;
   // AppContext-supplied methods
@@ -68,7 +52,7 @@ export interface AdminAttendanceDeps {
 /**
  * Owns every bit of admin-dashboard attendance state and the async
  * orchestration around it — school-level config/log, per-teacher
- * config/log, reward-rule drafts, and the student activity log snapshot.
+ * config/log, and reward-rule drafts.
  *
  * The admin page used to hold ~15 pieces of state, 4 useEffects, and 10
  * handlers for this area inline. Pulling it behind one hook keeps the page
@@ -76,7 +60,7 @@ export interface AdminAttendanceDeps {
  */
 export function useAdminAttendance(deps: AdminAttendanceDeps) {
   const {
-    enabled, schoolId, firestore, teachers, students,
+    enabled, schoolId, firestore, teachers,
     toast, playSound,
     getAttendanceConfig, setAttendanceConfig, listAttendanceLog,
     getTeacherAttendanceConfig, setTeacherAttendanceConfig, listTeacherAttendanceLog,
@@ -98,10 +82,6 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
   // ---- Reward rule drafts --------------------------------------------
   const [ruleDrafts, setRuleDrafts] = useState<Record<string, Partial<AttendanceRewardRule>>>({});
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
-
-  // ---- Student activity snapshot -------------------------------------
-  const [studentActivityLog, setStudentActivityLog] = useState<StudentActivityRow[]>([]);
-  const [studentActivityLogLoading, setStudentActivityLogLoading] = useState(false);
 
   // ---- Live teacher-rewards subscription -----------------------------
   const teacherAttendanceRewardsQuery = useMemoFirebase(
@@ -145,57 +125,6 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
       .then((cfg) => setTeacherAttendanceConfigState(cfg ?? fallback))
       .catch(() => setTeacherAttendanceConfigState(fallback));
   }, [enabled, schoolId, selectedAttendanceTeacherId, getTeacherAttendanceConfig]);
-
-  // ---- Student activity log ------------------------------------------
-  const loadStudentActivityLog = useCallback(async () => {
-    if (!schoolId || !students?.length) {
-      setStudentActivityLog([]);
-      return;
-    }
-    setStudentActivityLogLoading(true);
-    try {
-      const rows: StudentActivityRow[] = [];
-      await Promise.all(
-        students.map(async (s) => {
-          const activitiesRef = collection(firestore, 'schools', schoolId, 'students', s.id, 'activities');
-          const q = query(activitiesRef, orderBy('date', 'desc'), fsLimit(40));
-          const snap = await getDocs(q);
-          const studentName = `${getStudentNickname(s)} ${s.lastName || ''}`.trim() || s.id;
-          snap.forEach((docSnap) => {
-            const data = docSnap.data() as { date?: number; desc?: string; amount?: number };
-            rows.push({
-              id: `${s.id}_${docSnap.id}`,
-              studentId: s.id,
-              studentName,
-              date: data.date ?? 0,
-              desc: data.desc ?? 'Activity',
-              amount: Number(data.amount ?? 0),
-            });
-          });
-        }),
-      );
-      rows.sort((a, b) => b.date - a.date);
-      setStudentActivityLog(rows.slice(0, 300));
-    } catch (error: unknown) {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to load student activity',
-        description: getReadableErrorMessage(error, 'Could not load student activity log.'),
-      });
-      setStudentActivityLog([]);
-    } finally {
-      setStudentActivityLogLoading(false);
-    }
-  }, [schoolId, students, firestore, toast]);
-
-  // Auto-load the student activity log on first attendance view.
-  useEffect(() => {
-    if (!enabled || !schoolId || !students?.length) return;
-    void loadStudentActivityLog();
-    // `loadStudentActivityLog` itself changes when `students` changes — use
-    // `students` identity as the trigger so we don't re-fetch on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, schoolId, students]);
 
   // ---- Log loaders ---------------------------------------------------
   const loadAttendanceLog = useCallback(() => {
@@ -390,10 +319,5 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
     savingRuleId,
     saveTeacherRewardRule,
     deleteTeacherRewardRule,
-
-    // Student activity snapshot
-    studentActivityLog,
-    studentActivityLogLoading,
-    loadStudentActivityLog,
   } as const;
 }

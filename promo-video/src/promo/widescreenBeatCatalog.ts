@@ -22,11 +22,11 @@ const fromPath = (
 export const INTRO_LOGO_ONLY_FRAMES = 105;
 
 export const CAPTURE_CLIPS = {
-  scanEntry: fromPath(CAPTURE_PATHS.kioskScanEntry, 1.08, 1.35),
-  earnPoints: fromPath(CAPTURE_PATHS.kioskNewPoints, 1.08, 1.35),
-  prizeShop: fromPath(CAPTURE_PATHS.studentKiosk, 1.08, 1.35),
-  signInPoints: fromPath(CAPTURE_PATHS.kioskSignInPoints, 1.08, 1.45),
-  idCard: fromPath(CAPTURE_PATHS.adminIdCard, 1.05, 0.45),
+  scanEntry: fromPath(CAPTURE_PATHS.marketingKioskReady),
+  earnPoints: fromPath(CAPTURE_PATHS.marketingKioskWelcome),
+  prizeShop: fromPath(CAPTURE_PATHS.marketingKioskRewardsShop),
+  signInPoints: fromPath(CAPTURE_PATHS.marketingKioskWelcome),
+  idCard: fromPath(CAPTURE_PATHS.marketingAdminIdCard),
   portalHub: fromPath(CAPTURE_PATHS.portalHub, 1.05, 0.35),
 } as const;
 

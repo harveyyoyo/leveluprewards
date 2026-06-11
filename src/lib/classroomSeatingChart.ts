@@ -454,6 +454,28 @@ export type ClassroomSessionData = {
   activity?: ClassroomSessionActivityEntry[];
 };
 
+export type ClassroomSessionAwardDelta = {
+  studentId: string;
+  points: number;
+  at: number;
+};
+
+/** Positive awards that appeared since the previous session snapshot (for class-screen effect sync). */
+export function findNewSessionAwards(
+  previous: Record<string, ClassroomSessionLastAward>,
+  next: Record<string, ClassroomSessionLastAward>,
+): ClassroomSessionAwardDelta[] {
+  const deltas: ClassroomSessionAwardDelta[] = [];
+  for (const [studentId, entry] of Object.entries(next)) {
+    if (!entry || entry.points <= 0) continue;
+    const prev = previous[studentId];
+    if (!prev || entry.at > prev.at) {
+      deltas.push({ studentId, points: entry.points, at: entry.at });
+    }
+  }
+  return deltas.sort((a, b) => a.at - b.at);
+}
+
 const EMPTY_SESSION: ClassroomSessionData = { totals: {}, lastAward: {}, activity: [] };
 
 function normalizeSessionPayload(parsed: unknown): ClassroomSessionData {

@@ -78,7 +78,7 @@ import {
   StudentKioskTopBar,
   StudentKioskPointCategoriesPanel,
 } from '@/components/student-kiosk/StudentKioskTopBar';
-import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
+import { performKioskAttendanceSignIn } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
 import { useReducedMotion } from 'framer-motion';
@@ -87,6 +87,7 @@ import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
+import { useFirestoreSyncAlert } from '@/hooks/useFirestoreSyncAlert';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
@@ -138,7 +139,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
@@ -214,7 +214,8 @@ export function StudentDashboardInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges, syncStatus } = useAppContext();
+  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
+  const { show: firestoreSyncAlert } = useFirestoreSyncAlert();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
@@ -356,23 +357,10 @@ export function StudentDashboardInner({
   );
 
   const hasLibraryCheckouts = myLibraryBooks.length > 0;
-  const libraryScanHint =
-    libraryKioskCheckoutOn
-      ? ' Scan a book barcode (ISBN or LIB sticker) here to check out or return (same place as coupons).'
-      : '';
-  const recessScanHint = recessKioskCheckoutOn
-    ? ' After signing in, scan a recess pass (RCBATH, RCBREAK, RCWATER) here to check out; scan the pass again when you return.'
-    : '';
-  const libraryCheckoutNote =
-    libraryKioskCheckoutOn
-      ? 'Library books: scan the book barcode (ISBN on cover or LIB sticker) at this scanner to check out or return.'
-      : undefined;
-  const recessCheckoutNote = recessKioskCheckoutOn
-    ? 'Recess: scan your printed bathroom/break/water pass at this scanner (after your student ID). Scan the pass again to check back in.'
-    : undefined;
+  const extendedScanModes = recessKioskCheckoutOn || libraryKioskCheckoutOn;
   const couponHelperText = showCameraCoupon
-    ? `Scan a coupon with the device camera.${recessScanHint}${libraryScanHint} Use Logout on this card to exit.`
-    : `Scan or type a coupon code to add points.${recessScanHint}${libraryScanHint} Use Logout on this card to exit.`;
+    ? 'Scan a coupon with the device camera. Use Logout on this card to exit.'
+    : 'Scan or type a coupon code to add points. Use Logout on this card to exit.';
   const studentClassLabel = useMemo(() => {
     if (!student?.classId || !classes?.length) return 'Unassigned';
     return classes.find((c) => c.id === student.classId)?.name ?? 'Unassigned';
@@ -572,47 +560,15 @@ export function StudentDashboardInner({
         });
         if (result.pointsAwarded > 0) {
           playSound('success');
-          const periodSuffix = result.periodLabel ? ` · ${result.periodLabel}` : '';
-          toast({
-            title: `Attendance recorded${periodSuffix}`,
-            description: `+${result.pointsAwarded} pts${result.onTime ? ' (on time!)' : ''}.`,
-          });
           animationKey.current += 1;
           setFlyPointsValue(result.pointsAwarded);
           setTimeout(() => { setFlyPointsValue(null); }, 1500);
-          return;
-        }
-        if (result.reason === 'duplicate_same_session') {
-          return;
-        }
-        if (
-          result.reason === 'recorded' ||
-          result.reason === 'class_not_in_enabled_list' ||
-          result.reason === 'no_attendance_configuration' ||
-          result.reason === 'no_periods_for_school_legacy' ||
-          result.reason === 'student_not_found' ||
-          result.reason === 'callable_failed'
-        ) {
-          // `recorded` with 0 points is a soft-success, not an error: show a
-          // neutral "Attendance recorded" title rather than a warning-looking
-          // "Attendance" one, and only mark destructive for real failures.
-          const isRecordedZero = result.reason === 'recorded';
-          toast({
-            variant: result.reason === 'student_not_found' ? 'destructive' : 'default',
-            title: isRecordedZero ? 'Attendance recorded' : 'Attendance',
-            description: describeAttendanceKioskOutcome(result),
-          });
         }
       } catch (err) {
         console.error('Attendance sign-in failed', err);
-        toast({
-          variant: 'destructive',
-          title: 'Attendance not recorded',
-          description: getReadableErrorMessage(err, 'Could not record attendance.'),
-        });
       }
     })();
-  }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, toast, playSound]);
+  }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, playSound]);
  
   // --- Birthday bonus points (when enabled in school settings) ---
   useEffect(() => {
@@ -1537,9 +1493,13 @@ export function StudentDashboardInner({
           // (prevents Activity + CTA from falling below the fold).
           "student-dashboard-shell w-full h-dvh min-h-dvh relative overflow-x-hidden overflow-y-hidden flex flex-col",
           !effectiveTheme && 'student-kiosk-warm-shell',
-          birthdayToday
-            ? "pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12"
-            : "pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2",
+          firestoreSyncAlert
+            ? birthdayToday
+              ? 'pt-24 md:pt-28 [@media(max-height:760px)]:pt-20'
+              : 'pt-10 [@media(max-height:760px)]:pt-9'
+            : birthdayToday
+              ? 'pt-14 md:pt-16 [@media(max-height:760px)]:pt-12 [@media(max-height:760px)]:md:pt-12'
+              : 'pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2',
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           effectiveTheme && 'student-theme-surface',
           isCompactDisplayMode(settings.displayMode) && 'pb-6',
@@ -1572,7 +1532,6 @@ export function StudentDashboardInner({
       >
         {effectiveTheme?.fontFamily && <GoogleFontLoader fontFamily={effectiveTheme.fontFamily} />}
         {!effectiveTheme ? <StudentKioskWarmBackdrop /> : null}
-
         <div className="relative z-10 mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 md:px-8 [@media(max-height:760px)]:px-3">
         <div
           className={cn(
@@ -1592,14 +1551,6 @@ export function StudentDashboardInner({
                 })
               : '')}
         </div>
-
-        {syncStatus === 'offline' && (
-          <Alert variant="destructive" className="no-print shrink-0 border-red-600/70 py-2 px-3">
-            <AlertDescription className="text-xs font-semibold leading-snug">
-              {OFFLINE_USER_MESSAGE}
-            </AlertDescription>
-          </Alert>
-        )}
 
         {celebrationMessage && (
           <div className="pointer-events-none fixed inset-0 z-[60] flex items-center justify-center">
@@ -1758,8 +1709,7 @@ export function StudentDashboardInner({
             themed={{ active: !!effectiveTheme }}
             primaryForeground={primaryForeground}
             couponHelperText={couponHelperText}
-            libraryCheckoutNote={libraryCheckoutNote}
-            recessCheckoutNote={recessCheckoutNote}
+            extendedScanModes={extendedScanModes}
             couponCode={couponCode}
             setCouponCode={setCouponCode}
             showManualCoupon={showManualCoupon}

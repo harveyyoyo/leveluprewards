@@ -34,7 +34,17 @@ import type { TranslationParams } from '@/lib/i18n/translate';
 import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
+import {
+    isMainPortalCardEnabled,
+    portalHubCardPaddingClass,
+    portalHubGapClass,
+    portalHubGridClass,
+    portalHubGridMaxWidthClass,
+    portalHubOuterGapClass,
+    portalHubTitleClass,
+} from '@/lib/portalHub';
 import { staffLandingPath } from '@/lib/staffPortal/staffLandingPath';
+import { activatePortalTour, type PortalTourId } from '@/lib/tours/startPortalTour';
 
 type PortalArea = {
     id: string;
@@ -83,18 +93,18 @@ function WhereToDrawnTitle({
     title,
     accentColor,
     compactDisplay,
+    hubCardCount,
     glowColor,
 }: {
     title: string;
     accentColor: string;
     compactDisplay: boolean;
+    hubCardCount: number;
     glowColor?: string;
 }) {
     const titleClassName = cn(
         'font-headline portal-choose-title-depth relative inline-block overflow-visible pb-[0.2em] font-black tracking-tight',
-        compactDisplay
-            ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
-            : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
+        portalHubTitleClass(hubCardCount, compactDisplay, false),
     );
 
     return (
@@ -323,9 +333,71 @@ export default function PortalPage() {
             ]
           : []),
     ];
-    const visiblePortals = portals.filter((area) =>
-        isPortalAreaOnDisplayMode(area.id, settings.displayMode),
+    const visiblePortals = portals.filter(
+        (area) =>
+            isMainPortalCardEnabled(settings.mainPortalCards, area.id) &&
+            isPortalAreaOnDisplayMode(area.id, settings.displayMode),
     );
+    const hubCardCount = visiblePortals.length;
+    const hubDenseLayout = hubCardCount >= 4;
+    const showWelcomeTourFooter = settings.enableHelperMode === true;
+
+    const startPortalTour = (tourId: PortalTourId) => {
+        playSound('click');
+        activatePortalTour(tourId, updateSettings);
+        if (!schoolId) return;
+
+        if (tourId === 'admin') {
+            if (!isAdmin) {
+                if (canBypassAdminPasscode) {
+                    void (async () => {
+                        setAdminSubmitting(true);
+                        const ok = await loginAsAdminViaGoogle();
+                        setAdminSubmitting(false);
+                        if (!ok) {
+                            playSound('error');
+                            toast({
+                                variant: 'destructive',
+                                title: t('portal.adminPasscode.signInFailedTitle'),
+                                description: t('portal.adminPasscode.signInFailedDescription'),
+                            });
+                            setAdminDialogOpen(true);
+                            return;
+                        }
+                        playSound('login');
+                        router.push(`/${schoolId}/admin`);
+                    })();
+                    return;
+                }
+                if (!canBypassAdminPasscode) {
+                    router.prefetch(`/${schoolId}/admin`);
+                    setAdminDialogOpen(true);
+                    return;
+                }
+            }
+            router.push(`/${schoolId}/admin`);
+            return;
+        }
+
+        if (tourId === 'teacher') {
+            router.push(`/${schoolId}/teacher`);
+            if (loginState === 'school' || loginState === 'developer') {
+                setTeacherSubmitting(false);
+                setSelectedTeacherKey('');
+                setTeacherPasscode('');
+                setTeacherDialogOpen(true);
+            }
+            return;
+        }
+
+        if (tourId === 'student') {
+            if (loginState === 'admin') {
+                logout({ staffNavigateTo: 'student' });
+                return;
+            }
+            router.push(`/${schoolId}/student`);
+        }
+    };
 
     return (
         <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
@@ -334,19 +406,21 @@ export default function PortalPage() {
             <div
                 className={cn(
                     'relative z-[10] flex h-full min-h-0 w-full flex-col',
-                    compactDisplay ? 'overflow-x-hidden overflow-y-auto overscroll-contain' : 'overflow-hidden',
+                    compactDisplay || hubDenseLayout || showWelcomeTourFooter
+                        ? 'overflow-x-hidden overflow-y-auto overscroll-contain'
+                        : 'overflow-hidden',
                     compactDisplay
                         ? 'px-4 pb-3 pt-2 sm:pb-4 sm:pt-4 md:py-10'
-                        : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
+                        : hubDenseLayout
+                          ? 'px-4 pb-3 pt-6 sm:pt-8 md:pb-4 md:pt-10'
+                          : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
                     portalChoosePageShellClass(kioskPortrait, compactDisplay),
                 )}
             >
                 <div
                     className={cn(
-                        'flex min-h-full w-full flex-1 flex-col items-center',
-                        compactDisplay
-                            ? 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8'
-                            : 'justify-start gap-10 sm:gap-12 md:gap-16',
+                        'flex min-h-0 w-full flex-1 flex-col items-center',
+                        portalHubOuterGapClass(hubCardCount, compactDisplay),
                     )}
                 >
 
@@ -364,9 +438,7 @@ export default function PortalPage() {
                                         'font-headline portal-choose-title-depth inline-block overflow-visible pb-[0.15em] font-black tracking-tight',
                                         kioskPortrait
                                             ? portalChooseTitleClass(true, compactDisplay)
-                                            : compactDisplay
-                                              ? 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl'
-                                              : 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl',
+                                            : portalHubTitleClass(hubCardCount, compactDisplay, false),
                                     )}
                                     style={{
                                         color: whereToAccentColor,
@@ -382,21 +454,20 @@ export default function PortalPage() {
                                     title={t('portal.whereTo')}
                                     accentColor={whereToAccentColor}
                                     compactDisplay={compactDisplay}
+                                    hubCardCount={hubCardCount}
                                     glowColor={whereToGlowColor}
                                 />
                             )}
                         </div>
                     </div>
 
-                    {/* Grid: narrower cards on phone; full width from md up */}
+                    {/* Grid: narrower cards on phone; scales down when 4–5 hub cards are enabled */}
                     <div
                         className={cn(
                             'mx-auto w-full shrink-0 pb-safe md:mt-0',
                             kioskPortrait
                                 ? ''
-                                : compactDisplay
-                                  ? 'max-w-[min(24rem,calc(100%-0.5rem))] sm:max-w-xl'
-                                  : 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl',
+                                : portalHubGridMaxWidthClass(hubCardCount, compactDisplay, false),
                             portalChooseGridClass(kioskPortrait),
                         )}
                     >
@@ -407,8 +478,11 @@ export default function PortalPage() {
                             initial={prefersReducedMotion ? false : 'hidden'}
                             animate="show"
                             className={cn(
-                                'pointer-events-auto grid w-full gap-3 overflow-visible md:gap-5',
-                                kioskPortrait || compactDisplay ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-3',
+                                'pointer-events-auto grid w-full overflow-visible',
+                                portalHubGapClass(hubCardCount, compactDisplay),
+                                kioskPortrait
+                                    ? 'grid-cols-1'
+                                    : portalHubGridClass(hubCardCount, compactDisplay, false),
                             )}
                         >
                     {visiblePortals.map((area, index) => {
@@ -430,9 +504,7 @@ export default function PortalPage() {
                                         portalCardHoverEffects &&
                                             'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-active:translate-y-0',
                                         'flex h-full min-h-0 w-full flex-col justify-center',
-                                        compactDisplay
-                                            ? 'px-4 py-4 sm:px-5 sm:py-5'
-                                            : 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]',
+                                        portalHubCardPaddingClass(hubCardCount, compactDisplay),
                                     )}
                                 >
                                     {compactDisplay ? (
@@ -469,25 +541,25 @@ export default function PortalPage() {
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
-                                                            const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                            const tourMap: Record<string, PortalTourId> = {
+                                                                admin: 'admin',
+                                                                print: 'teacher',
+                                                                redeem: 'student',
+                                                            };
                                                             const tourId = tourMap[area.id];
-                                                            if (tourId) {
-                                                                window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
-                                                                updateSettings({ activeTourId: null });
-                                                                setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
-                                                            }
+                                                            if (tourId) startPortalTour(tourId);
                                                         }}
                                                         onKeyDown={(e) => {
                                                             if (e.key === 'Enter' || e.key === ' ') {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                const tourMap: Record<string, PortalTourId> = {
+                                                                    admin: 'admin',
+                                                                    print: 'teacher',
+                                                                    redeem: 'student',
+                                                                };
                                                                 const tourId = tourMap[area.id];
-                                                                if (tourId) {
-                                                                    window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
-                                                                    updateSettings({ activeTourId: null });
-                                                                    setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
-                                                                }
+                                                                if (tourId) startPortalTour(tourId);
                                                             }
                                                         }}
                                                     >
@@ -539,30 +611,30 @@ export default function PortalPage() {
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                const tourMap: Record<string, PortalTourId> = {
+                                                                    admin: 'admin',
+                                                                    print: 'teacher',
+                                                                    redeem: 'student',
+                                                                };
                                                                 const tourId = tourMap[area.id];
-                                                                if (tourId) {
-                                                                    window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
-                                                                    updateSettings({ activeTourId: null });
-                                                                    setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
-                                                                }
+                                                                if (tourId) startPortalTour(tourId);
                                                             }}
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter' || e.key === ' ') {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
-                                                                    const tourMap: Record<string, string> = { admin: 'admin', print: 'teacher', redeem: 'student' };
+                                                                    const tourMap: Record<string, PortalTourId> = {
+                                                                        admin: 'admin',
+                                                                        print: 'teacher',
+                                                                        redeem: 'student',
+                                                                    };
                                                                     const tourId = tourMap[area.id];
-                                                                    if (tourId) {
-                                                                        window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);
-                                                                        updateSettings({ activeTourId: null });
-                                                                        setTimeout(() => updateSettings({ activeTourId: tourId as any }), 50);
-                                                                    }
+                                                                    if (tourId) startPortalTour(tourId);
                                                                 }
                                                             }}
                                                         >
                                                             <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
-                                                            Welcome Tour
+                                                            Portal Tour
                                                         </div>
                                                     </div>
                                                 )}
@@ -634,12 +706,18 @@ export default function PortalPage() {
                         );
                     })}
                 </motion.div>
-                
-                {settings.enableHelperMode && (
-                    <div className="mt-8 md:mt-12 flex justify-center pb-8 z-10 relative">
+                </div>
+
+                {showWelcomeTourFooter ? (
+                    <div
+                        className={cn(
+                            'sticky bottom-0 z-20 flex w-full shrink-0 justify-center border-t border-border/30 bg-background/80 px-4 py-3 backdrop-blur-sm sm:py-4',
+                            hubDenseLayout ? 'mt-2' : 'mt-4 md:mt-6',
+                        )}
+                    >
                         <Button
                             variant="outline"
-                            className="rounded-full shadow-sm bg-background/50 backdrop-blur-sm border-primary/20 hover:bg-secondary/80 text-foreground/80 font-semibold px-6 transition-all"
+                            className="rounded-full border-primary/20 bg-background/50 px-6 font-semibold text-foreground/80 shadow-sm backdrop-blur-sm transition-all hover:bg-secondary/80"
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -652,9 +730,7 @@ export default function PortalPage() {
                             Start Welcome Tour
                         </Button>
                     </div>
-                )}
-                
-                </div>
+                ) : null}
                 </div>
             </div>
 
@@ -769,7 +845,11 @@ export default function PortalPage() {
                                         }
                                         playSound('login');
                                         setAdminDialogOpen(false);
-                                        router.replace(`/${schoolId}/admin`);
+                                        const adminDest =
+                                            settings.activeTourId === 'teacher'
+                                                ? `/${schoolId}/teacher`
+                                                : `/${schoolId}/admin`;
+                                        router.replace(adminDest);
                                     })();
                                 }}
                             >
@@ -807,6 +887,7 @@ export default function PortalPage() {
                                 type="button"
                                 variant="outline"
                                 className="w-full rounded-xl font-bold"
+                                data-intro-tour="teacher-sign-in-admin"
                                 disabled={adminSubmitting}
                                 onClick={() => {
                                     playSound('click');
@@ -827,17 +908,42 @@ export default function PortalPage() {
                                             }
                                             playSound('login');
                                             setTeacherDialogOpen(false);
-                                            router.replace(`/${schoolId}/admin`);
+                                            if (settings.activeTourId === 'teacher') {
+                                                router.replace(`/${schoolId}/teacher`);
+                                            } else {
+                                                router.replace(`/${schoolId}/admin`);
+                                            }
                                         })();
                                         return;
                                     }
                                     setTeacherDialogOpen(false);
-                                    router.prefetch(`/${schoolId}/admin`);
+                                    router.prefetch(
+                                        settings.activeTourId === 'teacher'
+                                            ? `/${schoolId}/teacher`
+                                            : `/${schoolId}/admin`,
+                                    );
                                     setAdminDialogOpen(true);
                                 }}
                             >
                                 <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
                                 {t('portal.staffSignIn.signInAsAdmin')}
+                            </Button>
+                        )}
+
+                        {isAdmin && settings.activeTourId === 'teacher' && schoolId && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full rounded-xl font-bold"
+                                data-intro-tour="teacher-sign-in-admin"
+                                onClick={() => {
+                                    playSound('click');
+                                    setTeacherDialogOpen(false);
+                                    router.push(`/${schoolId}/teacher`);
+                                }}
+                            >
+                                <ShieldCheck className="mr-2 h-4 w-4" aria-hidden />
+                                Continue as admin
                             </Button>
                         )}
 

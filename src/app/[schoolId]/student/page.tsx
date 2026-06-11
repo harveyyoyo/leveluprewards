@@ -73,7 +73,6 @@ import {
   StudentKioskTopBar,
   StudentKioskPointCategoriesPanel,
 } from '@/components/student-kiosk/StudentKioskTopBar';
-import { performKioskAttendanceSignIn, describeAttendanceKioskOutcome } from '@/lib/attendance/kioskSignIn';
 import DynamicIcon from '@/components/DynamicIcon';
 import { Progress } from '@/components/ui/progress';
 import { useReducedMotion } from 'framer-motion';
@@ -81,7 +80,7 @@ import { useStaggeredCardListEntrance } from '@/hooks/useStaggeredCardListEntran
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
+import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
@@ -133,7 +132,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
@@ -208,7 +206,7 @@ function StudentKioskPageFallback() {
 }
 
 function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, login, logout, syncStatus } = useAppContext();
+  const { loginState, isInitialized, schoolId, login, logout } = useAppContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -533,15 +531,6 @@ function StudentLoginPage() {
             onResolved={finishStudentSession}
           />
         )}
-        {syncStatus === 'offline' && (
-          <div className="no-print fixed left-0 right-0 top-0 z-[80] flex justify-center px-3 pt-2 sm:px-4 pointer-events-none">
-            <Alert variant="destructive" className="pointer-events-auto max-w-md border-red-600/80 bg-red-950/90 py-2 px-3 shadow-lg">
-              <AlertDescription className="text-[11px] font-semibold leading-snug sm:text-xs">
-                {OFFLINE_USER_MESSAGE}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
         <ErrorBoundary name="StudentDashboard">
           <SchoolGate>
             <StudentDashboardInner
@@ -581,13 +570,6 @@ function StudentLoginPage() {
               ...appearanceVarsForSurface(settings, 'redeem'),
             } as any}
           >
-            {syncStatus === 'offline' && (
-              <Alert variant="destructive" className="no-print mb-3 w-full max-w-lg border-red-600/70 py-2 px-3">
-                <AlertDescription className="text-xs font-semibold leading-snug">
-                  {OFFLINE_USER_MESSAGE}
-                </AlertDescription>
-              </Alert>
-            )}
             <StudentScanner
               onStudentFound={onScannerStudent}
               icon={<LevelUpKioskLogo className="" />}

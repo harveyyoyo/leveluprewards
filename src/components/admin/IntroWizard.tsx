@@ -19,6 +19,10 @@ import {
   dispatchIntroTourSelectStaffTab,
   parseStaffTabFromIntroTourTarget,
 } from '@/lib/introTourStaffTab';
+import {
+  dispatchIntroTourSelectSection,
+  parseSectionFromIntroTourTarget,
+} from '@/lib/introTourSection';
 
 import type { IntroStep } from '@/lib/tours/types';
 import { welcomeTourSteps } from '@/lib/tours/welcomeTour';
@@ -26,17 +30,52 @@ import { featuresTourSteps } from '@/lib/tours/featuresTour';
 import { adminTourSteps } from '@/lib/tours/adminTour';
 import { teacherTourSteps } from '@/lib/tours/teacherTour';
 import { studentTourSteps } from '@/lib/tours/studentTour';
+import { teacherFeaturesTourSteps } from '@/lib/tours/teacherFeaturesTour';
+import { studentFeaturesTourSteps } from '@/lib/tours/studentFeaturesTour';
+
+type TourId =
+  | 'welcome'
+  | 'features'
+  | 'admin'
+  | 'teacher'
+  | 'student'
+  | 'teacher-features'
+  | 'student-features';
+
+function normalizeTourId(tourId: string | null | undefined): TourId | null {
+  if (
+    tourId === 'features' ||
+    tourId === 'welcome' ||
+    tourId === 'admin' ||
+    tourId === 'teacher' ||
+    tourId === 'student' ||
+    tourId === 'teacher-features' ||
+    tourId === 'student-features'
+  ) {
+    return tourId;
+  }
+  return null;
+}
 
 function getTourSteps(tourId: string | null | undefined): IntroStep[] {
-  if (tourId === 'features') return featuresTourSteps;
-  if (tourId === 'welcome') return welcomeTourSteps;
-  if (tourId === 'admin') return adminTourSteps;
-  if (tourId === 'teacher') return teacherTourSteps;
-  if (tourId === 'student') return studentTourSteps;
+  const id = normalizeTourId(tourId);
+  if (id === 'features') return featuresTourSteps;
+  if (id === 'welcome') return welcomeTourSteps;
+  if (id === 'admin') return adminTourSteps;
+  if (id === 'teacher') return teacherTourSteps;
+  if (id === 'student') return studentTourSteps;
+  if (id === 'teacher-features') return teacherFeaturesTourSteps;
+  if (id === 'student-features') return studentFeaturesTourSteps;
   return [];
 }
 
 const getStorageKey = (tourId: string) => `arcade_tour_progress_${tourId}`;
+
+const OFFER_TOUR_LABELS: Record<NonNullable<IntroStep['offerNextTour']>, string> = {
+  features: 'Explore add-on features',
+  'teacher-features': 'Explore teacher add-ons',
+  'student-features': 'Learn about Student Home',
+};
 
 const STAFF_ROUTE_SUFFIXES = [
   '/portal',
@@ -189,18 +228,8 @@ export function IntroWizard() {
   useEffect(() => {
     if (!isWizardEnabled || !activeTourId) return;
 
-    const storageKey = getStorageKey(activeTourId);
-
-    const stored = window.localStorage.getItem(storageKey);
-    if (stored !== null) {
-      const parsed = parseInt(stored, 10);
-      if (!Number.isNaN(parsed) && parsed >= 0 && parsed < steps.length) {
-        setStepIndex(parsed);
-      }
-    } else {
-      setStepIndex(0);
-    }
-  }, [isWizardEnabled, activeTourId, pathname, steps.length]);
+    setStepIndex(0);
+  }, [isWizardEnabled, activeTourId, steps.length]);
 
   // Re-check target visibility after route changes and layout settles.
   useEffect(() => {
@@ -215,13 +244,17 @@ export function IntroWizard() {
 
   const currentStep = steps[stepIndex];
 
-  // Open the relevant staff sidebar tab when a step describes that section.
+  // Open the relevant staff sidebar / content section when a step describes it.
   useEffect(() => {
     if (!isWizardEnabled || !currentStep) return;
     const tab =
       currentStep.selectTab ?? parseStaffTabFromIntroTourTarget(currentStep.target);
-    if (!tab) return;
-    const id = window.setTimeout(() => dispatchIntroTourSelectStaffTab(tab), 80);
+    const section =
+      currentStep.selectSection ?? parseSectionFromIntroTourTarget(currentStep.target);
+    const id = window.setTimeout(() => {
+      if (tab) dispatchIntroTourSelectStaffTab(tab);
+      if (section) dispatchIntroTourSelectSection(section);
+    }, 80);
     return () => window.clearTimeout(id);
   }, [isWizardEnabled, currentStep, stepIndex, pathname]);
 
@@ -244,6 +277,19 @@ export function IntroWizard() {
     }
     updateSettings({ activeTourId: null });
   }, [activeTourId, updateSettings]);
+
+  const startOfferedTour = useCallback(
+    (nextTourId: NonNullable<IntroStep['offerNextTour']>) => {
+      if (activeTourId) {
+        window.localStorage.removeItem(getStorageKey(activeTourId));
+      }
+      updateSettings({ activeTourId: null });
+      window.setTimeout(() => {
+        updateSettings({ activeTourId: nextTourId });
+      }, 50);
+    },
+    [activeTourId, updateSettings],
+  );
 
   const advanceStep = () => {
     if (!activeTourId) return;
@@ -276,6 +322,7 @@ export function IntroWizard() {
 
   const description = stepDescription(currentStep, pathname, ready);
   const isLast = stepIndex >= steps.length - 1;
+  const offeredTour = isLast ? currentStep.offerNextTour : undefined;
   const progressPercent = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 100;
 
   return (
@@ -348,21 +395,32 @@ export function IntroWizard() {
                       </div>
                     </div>
                   ) : (
-                    <Button
-                      onClick={handleNext}
-                      className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
-                    >
-                      {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
-                      {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
-                    </Button>
+                    <>
+                      {offeredTour ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => startOfferedTour(offeredTour)}
+                          className="rounded-full h-10 px-4 text-sm font-bold"
+                        >
+                          {OFFER_TOUR_LABELS[offeredTour]}
+                        </Button>
+                      ) : null}
+                      <Button
+                        onClick={handleNext}
+                        className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
+                      >
+                        {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
+                        {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
               {!ready ? (
                 <p className="text-sm font-medium text-foreground/85 mt-3 leading-snug">
-                  {!isFirstStep && spotlightRect
-                    ? 'Click the highlighted control now. The tour will automatically continue!'
-                    : 'Follow the instruction above to continue — the tour picks up automatically.'}
+                  {spotlightRect
+                    ? 'Complete the highlighted action, then tap Next to continue.'
+                    : 'Follow the steps above, then tap Next when you are ready.'}
                 </p>
               ) : null}
             </CardContent>

@@ -34,6 +34,8 @@ export type ClassroomGridHandlers = {
   /** Shift+click — pick a note/comment type for this student. */
   onNotePicker?: (studentId: string) => void;
   getNoteKeyHeld?: () => ClassroomNoteShortcutKey | null;
+  /** Alt held via keydown (Windows menu bar can strip altKey from click). */
+  getBathroomAltHeld?: () => boolean;
   onBathroomToggle?: (studentId: string) => void;
   onDragStart: (cellIndex: number) => void;
   onDrop: (cellIndex: number) => void;
@@ -45,6 +47,29 @@ export type ActiveCelebrationState = {
   runId: number;
   points: number;
 } | null;
+
+function isBathroomAltModifier(
+  e: React.MouseEvent,
+  handlers: ClassroomGridHandlers | null | undefined,
+): boolean {
+  if (!handlers) return false;
+  if (e.altKey) return true;
+  const native = e.nativeEvent;
+  if (typeof native.getModifierState === 'function' && native.getModifierState('Alt')) return true;
+  return handlers.getBathroomAltHeld?.() === true;
+}
+
+function tryBathroomToggle(
+  e: React.MouseEvent,
+  handlers: ClassroomGridHandlers | null | undefined,
+  studentId: string,
+): boolean {
+  if (!isBathroomAltModifier(e, handlers) || !handlers?.onBathroomToggle) return false;
+  e.preventDefault();
+  e.stopPropagation();
+  handlers.onBathroomToggle(studentId);
+  return true;
+}
 
 type SeatingDeskCellProps = {
   cellIndex: number;
@@ -170,10 +195,26 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
 }: SeatingDeskCellProps) {
   const hasStudent = !!display;
   void bathroomTick;
+  const suppressClickForBathroomRef = useRef(false);
+
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (editMode || !studentId || e.button !== 0) return;
+      if (tryBathroomToggle(e, handlersRef.current, studentId)) {
+        suppressClickForBathroomRef.current = true;
+      }
+    },
+    [editMode, handlersRef, studentId],
+  );
 
   const onClick = useCallback(
     (e: React.MouseEvent) => {
       if (editMode || !studentId) return;
+      if (suppressClickForBathroomRef.current) {
+        suppressClickForBathroomRef.current = false;
+        e.preventDefault();
+        return;
+      }
       const h = handlersRef.current;
       if (!h) return;
       if ((e.ctrlKey || e.metaKey) && h.onDeduct) {
@@ -181,11 +222,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         h.onDeduct(studentId, cellIndex);
         return;
       }
-      if (e.altKey && h.onBathroomToggle) {
-        e.preventDefault();
-        h.onBathroomToggle(studentId);
-        return;
-      }
+      if (tryBathroomToggle(e, h, studentId)) return;
       if (e.shiftKey && h.onNotePicker) {
         e.preventDefault();
         h.onNotePicker(studentId);
@@ -228,6 +265,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
           e.preventDefault();
           handlersRef.current?.onDrop(cellIndex);
         }}
+        onMouseDown={onMouseDown}
         onClick={onClick}
         disabled={!hasStudent && !editMode}
         className={cn(

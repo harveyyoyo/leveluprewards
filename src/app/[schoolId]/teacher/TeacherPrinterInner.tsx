@@ -2661,6 +2661,7 @@ function TeacherPrinterInnerBody({
                                         <AdminRaffleTab
                                             schoolId={schoolId!}
                                             students={studentsForTeacherActions}
+                                            classes={classesForTeacherUi}
                                             canEditSettings={!secretaryMode}
                                             operatorName={teacherName || undefined}
                                         />

@@ -25,7 +25,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { Settings } from '@/components/providers/SettingsProvider';
-import { isClassroomPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { isClassroomPillarOn, isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import type { StaffPortalRole, StaffPortalTabDef } from './types';
 import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
@@ -365,7 +365,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     isEnabled: (s, role) => {
       if (role !== 'teacher') return false;
       if (teacherAddonHidden(s, 'homework')) return false;
-      return s.payHomework ?? true;
+      return isPillarOn(s, 'payHomework');
     },
   },
   {

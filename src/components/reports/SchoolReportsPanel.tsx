@@ -257,6 +257,8 @@ export function SchoolReportsPanel({
   categories,
   /** School raffle setting; defaults to 25 pts/ticket when omitted (matches app defaults). */
   rafflePointsPerTicket: rafflePointsPerTicketProp,
+  /** When true, omit the staff tab shell (parent owns section navigation). */
+  embedded = false,
 }: {
   scope: 'school' | 'teacher';
   schoolName: string;
@@ -269,6 +271,7 @@ export function SchoolReportsPanel({
   prizes: Prize[];
   categories: Category[];
   rafflePointsPerTicket?: number;
+  embedded?: boolean;
 }) {
   const { isGeneralRaffle, pointsPerTicket: rafflePtsPerTicket } = useMemo(
     () => parseRafflePointsPerTicket(rafflePointsPerTicketProp ?? 25),
@@ -1212,9 +1215,7 @@ export function SchoolReportsPanel({
         )
       : null;
 
-  return (
-    <>
-      <StaffPortalTabPanel tabValue="reports" trailing={<TabWalkthroughHeaderAction />}>
+  const reportCard = (
       <Card className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
         <CardContent className="space-y-6">
           <div className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)_auto] lg:items-end">
@@ -1487,6 +1488,21 @@ export function SchoolReportsPanel({
           </div>
         </CardContent>
       </Card>
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {reportCard}
+        {printNode}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StaffPortalTabPanel tabValue="reports" trailing={<TabWalkthroughHeaderAction />}>
+        {reportCard}
       </StaffPortalTabPanel>
       {printNode}
     </>

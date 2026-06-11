@@ -4,26 +4,35 @@ import {
   applyPillarAccessToSettings,
   formatActivePillars,
   hasPillarAccess,
+  HOMEWORK_PILLAR_LIVE,
   isPillarOn,
   isSettingsKeyAllowed,
 } from './productPillars';
 
 describe('product pillars', () => {
-  it('defaults pillars to on', () => {
+  it('defaults pillars to on except homework and office', () => {
     expect(isPillarOn({}, 'payLibrary')).toBe(true);
+    expect(isPillarOn({}, 'payHomework')).toBe(false);
+    expect(isPillarOn({ payHomework: true }, 'payHomework')).toBe(HOMEWORK_PILLAR_LIVE);
     expect(isPillarOn({ payHomework: false }, 'payHomework')).toBe(false);
   });
 
   it('gates homework and attendance features by pillar only', () => {
+    expect(isSettingsKeyAllowed({}, 'enableHomework')).toBe(false);
     expect(isSettingsKeyAllowed({ payHomework: false }, 'enableHomework')).toBe(false);
-    expect(isSettingsKeyAllowed({ payHomework: true }, 'enableHomework')).toBe(true);
+    expect(isSettingsKeyAllowed({ payHomework: true }, 'enableHomework')).toBe(HOMEWORK_PILLAR_LIVE);
     expect(isSettingsKeyAllowed({ payAttendance: false }, 'enableClassSignIn')).toBe(false);
     expect(isSettingsKeyAllowed({}, 'enableBadges')).toBe(true);
     expect(isSettingsKeyAllowed({}, 'enableNotifications')).toBe(true);
   });
 
   it('formats active pillar labels', () => {
-    expect(formatActivePillars({ payLibrary: false })).toMatch(/^Classroom Management.+Attendance.+Homework$/);
+    expect(formatActivePillars({ payLibrary: false })).toMatch(/^Classroom Management.+Attendance$/);
+    if (HOMEWORK_PILLAR_LIVE) {
+      expect(formatActivePillars({ payHomework: true })).toContain('Homework');
+    } else {
+      expect(formatActivePillars({ payHomework: true })).not.toContain('Homework');
+    }
   });
 
   it('separates pillar access from active settings', () => {

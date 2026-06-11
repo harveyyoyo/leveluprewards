@@ -17,4 +17,8 @@ export type IntroStep = {
   navigateHint?: string;
   /** Open this staff sidebar tab when the step is shown (admin/teacher). */
   selectTab?: string;
+  /** Open this content section tab when the step is shown (e.g. print coupons). */
+  selectSection?: string;
+  /** Optional follow-up tour offered on the final step. */
+  offerNextTour?: 'features' | 'teacher-features' | 'student-features';
 };

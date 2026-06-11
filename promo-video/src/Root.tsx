@@ -2,6 +2,7 @@ import "./index.css";
 import { Composition } from "remotion";
 import { CinematicPromo } from "./CinematicPromo";
 import { LongFeaturePromo, LONG_PROMO_DURATION } from "./LongFeaturePromo";
+import { RetroGamingVerticalPromo } from "./RetroGamingVerticalPromo";
 import {
   THEME_INTRO_DURATION,
   THEME_INTROS,
@@ -49,6 +50,14 @@ export const RemotionRoot: React.FC = () => {
               width={1080}
               height={1920}
             />
+            <Composition
+              id="RetroGamingLevelUpPromoVertical"
+              component={RetroGamingVerticalPromo}
+              durationInFrames={CT.total}
+              fps={30}
+              width={1080}
+              height={1920}
+            />
           </>
         ) : (
           <>
@@ -76,6 +85,14 @@ export const RemotionRoot: React.FC = () => {
               width={1080}
               height={1920}
             />
+            <Composition
+              id="RetroGamingLevelUpPromoVertical"
+              component={RetroGamingVerticalPromo}
+              durationInFrames={CT.total}
+              fps={30}
+              width={1080}
+              height={1920}
+            />
           </>
         )
       ) : (
@@ -91,6 +108,14 @@ export const RemotionRoot: React.FC = () => {
           <Composition
             id="CinematicLevelUpPromoVertical"
             component={CinematicPromo}
+            durationInFrames={CT.total}
+            fps={30}
+            width={1080}
+            height={1920}
+          />
+          <Composition
+            id="RetroGamingLevelUpPromoVertical"
+            component={RetroGamingVerticalPromo}
             durationInFrames={CT.total}
             fps={30}
             width={1080}

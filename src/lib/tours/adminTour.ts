@@ -1,4 +1,3 @@
-import { APP_NAME } from '@/lib/appBranding';
 import { STAFF_AI_HELP_TOUR_TARGET } from '@/lib/wizardHelpCopy';
 import type { IntroStep } from './types';
 
@@ -7,14 +6,6 @@ export const adminTourSteps: IntroStep[] = [
     id: 'admin-welcome',
     title: 'Admin Portal',
     body: 'Welcome to the Admin Portal! This is where you build your school — load students, define classes, add staff, and set up your reward point categories.',
-    onRoute: '/admin',
-    target: 'portal-admin',
-    navigateHint: 'Click the Admin Portal card to begin!',
-  },
-  {
-    id: 'admin-sidebar',
-    title: 'The Command Center',
-    body: 'All your core tools live here on the left. Use "Add more" to enable optional features like Hall of Fame or Library.',
     onRoute: '/admin',
     target: 'staff-nav-sidebar',
     requireTarget: true,
@@ -46,7 +37,7 @@ export const adminTourSteps: IntroStep[] = [
   {
     id: 'admin-points',
     title: 'Point Categories',
-    body: 'Define how students earn points (e.g., "Helping Others", "On Time"). Print Coupons, either school wide or teacher specific.',
+    body: 'Define how students earn points (e.g., "Helping Others", "On Time"). Print coupons school-wide or per teacher from the Points tab.',
     onRoute: '/admin',
     target: 'staff-tab-categories',
     requireTarget: true,
@@ -62,8 +53,9 @@ export const adminTourSteps: IntroStep[] = [
   {
     id: 'admin-finish',
     title: 'Explore More',
-    body: 'You are all set! From here, you can click the Home icon (top left) to go back and take the Teacher Tour, or you can ask the AI assistant here to show you the "Features Tour" to learn about all the additional tabs.',
+    body: 'You are all set with the core Admin tabs! Want to see optional add-ons like Houses, Library, and hallway Displays?',
     onRoute: '/admin',
     target: STAFF_AI_HELP_TOUR_TARGET,
+    offerNextTour: 'features',
   },
 ];

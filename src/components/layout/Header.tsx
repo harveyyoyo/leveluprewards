@@ -29,7 +29,7 @@ const SettingsModal = dynamic(
   { ssr: false },
 );
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { isRewardsPillarOn } from '@/lib/productPillars';
+import { isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
 import { cn } from '@/lib/utils';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
@@ -85,7 +85,7 @@ export default function Header() {
   const searchParams = useSearchParams();
   const params = useParams<{ schoolId?: string }>();
   const { loginState, schoolId: contextSchoolId, isInitialized, syncStatus, logout, isAdmin, userName, isKioskLocked } = useAppContext();
-  const { settings } = useSettings();
+  const { settings, pillarAccess } = useSettings();
   const { t } = useTranslation();
   const playSound = useArcadeSound();
   const { firestore } = useFirebase();
@@ -278,11 +278,11 @@ export default function Header() {
     loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
   const paidProducts: string[] = [];
-  if (settings.payRewards ?? true) paidProducts.push(t('header.products.rewards'));
-  if (settings.payClassroom ?? true) paidProducts.push(t('header.products.classroom'));
-  if (settings.payAttendance ?? true) paidProducts.push(t('header.products.attendance'));
-  if (settings.payHomework ?? true) paidProducts.push(t('header.products.homework'));
-  if (settings.payLibrary ?? true) paidProducts.push(t('header.products.library'));
+  if (isRewardsPillarOn(settings)) paidProducts.push(t('header.products.rewards'));
+  if (isPillarOn(settings, 'payClassroom', pillarAccess)) paidProducts.push(t('header.products.classroom'));
+  if (isPillarOn(settings, 'payAttendance', pillarAccess)) paidProducts.push(t('header.products.attendance'));
+  if (isPillarOn(settings, 'payHomework', pillarAccess)) paidProducts.push(t('header.products.homework'));
+  if (isPillarOn(settings, 'payLibrary', pillarAccess)) paidProducts.push(t('header.products.library'));
   const paidProductsLabel = paidProducts.join(' • ');
   const adminSideTabHeader =
     !!schoolId &&

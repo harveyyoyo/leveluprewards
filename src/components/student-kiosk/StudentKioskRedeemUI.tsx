@@ -8,8 +8,6 @@ import {
   Clock,
   Gift,
   HelpCircle,
-  BookOpen,
-  DoorOpen,
   ScanBarcode,
   Sparkles,
   Ticket,
@@ -527,10 +525,8 @@ export type StudentKioskRedeemHeroProps = {
   themed: StudentKioskThemed;
   primaryForeground: string;
   couponHelperText: string;
-  /** Visible callout when library checkout is enabled on this scan card. */
-  libraryCheckoutNote?: string;
-  /** Visible callout when recess pass scanning is enabled on this scan card. */
-  recessCheckoutNote?: string;
+  /** When true, title reflects coupon + pass + book scanning. */
+  extendedScanModes?: boolean;
   couponCode: string;
   setCouponCode: (code: string) => void;
   showManualCoupon: boolean;
@@ -549,8 +545,7 @@ export function StudentKioskRedeemHero({
   themed,
   primaryForeground,
   couponHelperText,
-  libraryCheckoutNote,
-  recessCheckoutNote,
+  extendedScanModes = false,
   couponCode,
   setCouponCode,
   showManualCoupon,
@@ -691,49 +686,9 @@ export function StudentKioskRedeemHero({
             >
               <Wallet className="h-5 w-5 sm:h-6 sm:w-6 [@media(max-height:760px)]:h-4 [@media(max-height:760px)]:w-4" style={t ? { color: 'var(--theme-primary)' } : undefined} />
             </div>
-            {recessCheckoutNote ? 'Scan coupon, pass, or book' : 'Redeem Coupon'}
+            {extendedScanModes ? 'Scan coupon, pass, or book' : 'Redeem Coupon'}
           </CardTitle>
         </Helper>
-        {recessCheckoutNote ? (
-          <div
-            className={cn(
-              'mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left text-[10px] font-semibold leading-snug sm:text-xs [@media(max-height:760px)]:hidden',
-              !t && 'border-violet-200/80 bg-violet-50/90 text-violet-950 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-100',
-            )}
-            style={
-              t
-                ? {
-                    borderColor: 'color-mix(in srgb, #8b5cf6 40%, transparent)',
-                    backgroundColor: 'color-mix(in srgb, #8b5cf6 10%, var(--theme-card))',
-                    color: 'var(--theme-text)',
-                  }
-                : undefined
-            }
-          >
-            <DoorOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-            <span>{recessCheckoutNote}</span>
-          </div>
-        ) : null}
-        {libraryCheckoutNote ? (
-          <div
-            className={cn(
-              'mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 text-left text-[10px] font-semibold leading-snug sm:text-xs [@media(max-height:760px)]:hidden',
-              !t && 'border-sky-200/80 bg-sky-50/90 text-sky-950 dark:border-sky-800/60 dark:bg-sky-950/40 dark:text-sky-100',
-            )}
-            style={
-              t
-                ? {
-                    borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
-                    backgroundColor: 'color-mix(in srgb, var(--theme-primary) 12%, var(--theme-card))',
-                    color: 'var(--theme-text)',
-                  }
-                : undefined
-            }
-          >
-            <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-            <span>{libraryCheckoutNote}</span>
-          </div>
-        ) : null}
       </CardHeader>
       <CardContent className="min-w-0 overflow-x-hidden p-4 pt-3 sm:p-6 sm:pt-4 [@media(max-height:760px)]:p-3 [@media(max-height:760px)]:pt-2">
         {showCameraCoupon ? (

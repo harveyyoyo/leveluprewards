@@ -1,6 +1,7 @@
 /** Shared capture-library paths. Fallbacks used when canonical clips are missing locally. */
 
 const clip = (path: string) => `capture-library/${path}`;
+const screenshot = (path: string) => `marketing/screenshots/${path}`;
 
 export const CAPTURE_PATHS = {
   adminBrandingTheme: clip("features/admin-branding-theme.mp4"),
@@ -31,4 +32,10 @@ export const CAPTURE_PATHS = {
   kioskSignInPoints: clip("student-kiosk/kiosk-signin-rewards.mp4"),
   studentKiosk: clip("student-kiosk/kiosk-prizes-hover.mp4"),
   portalHub: clip("portal/portal-hub-overview.mp4"),
+  marketingKioskReady: screenshot("kiosk-system-ready.png"),
+  marketingKioskWelcome: screenshot("kiosk-welcome.png"),
+  marketingKioskRewardsShop: screenshot("kiosk-rewards-shop.png"),
+  marketingStudentHomePortal: screenshot("student-home-portal.png"),
+  marketingAdminIdCard: screenshot("admin-id-card.png"),
+  marketingPortalHub: screenshot("portal-hub.png"),
 } as const;

@@ -6,6 +6,7 @@ type Translator = (key: string, params?: TranslationParams) => string;
 const INTERFACE_KEY: Record<string, string> = {
   'settings-interface-language': 'language',
   'settings-interface-appearance': 'colors',
+  'settings-interface-theme': 'theme',
   'settings-interface-motion': 'motion',
   'settings-interface-layout': 'layout',
 };

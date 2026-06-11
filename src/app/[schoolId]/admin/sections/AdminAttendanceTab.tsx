@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
-import { Clock, Globe, History, Loader2, Timer, Trash2, Users, Zap } from 'lucide-react';
+import { Clock, Globe, Loader2, Trash2, Users, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -46,9 +46,6 @@ export function AdminAttendanceTab(props: any) {
     handleSaveTeacherAttendanceConfig,
     teacherAttendanceSaving,
     teacherAttendanceLog,
-    studentActivityLog,
-    studentActivityLogLoading,
-    loadStudentActivityLog,
     setTeacherAttendanceConfigState,
     UniversalPeriodsAdmin,
     attendanceConfig,
@@ -57,11 +54,6 @@ export function AdminAttendanceTab(props: any) {
     handleSaveAttendanceConfig,
     getAttendanceConfig,
     setAttendanceConfig,
-    enableBathroomTimer,
-    bathroomMaxMinutes,
-    bathroomRequirePresent,
-    classSignInEnabled,
-    onBathroomSettingsChange,
   } = props;
 
   const dayOptions = [
@@ -79,7 +71,7 @@ export function AdminAttendanceTab(props: any) {
     const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     return map[new Date().getDay()] ?? 'mon';
   });
-  const [section, setSection] = React.useState<'defaults' | 'periods' | 'teachers' | 'activity'>('defaults');
+  const [section, setSection] = React.useState<'defaults' | 'periods' | 'teachers'>('defaults');
 
   const getAssignedSlotId = (classId: string): string => {
     const byDay = teacherAttendanceConfig?.classPeriodAssignmentsByDay;
@@ -151,10 +143,9 @@ export function AdminAttendanceTab(props: any) {
             { id: 'defaults', label: 'School Defaults' },
             { id: 'periods', label: 'Universal Periods' },
             { id: 'teachers', label: 'Per Teacher' },
-            { id: 'activity', label: 'Activity Log' },
           ]}
           value={section}
-          onValueChange={(id) => setSection(id as 'defaults' | 'periods' | 'teachers' | 'activity')}
+          onValueChange={(id) => setSection(id as 'defaults' | 'periods' | 'teachers')}
           className="mb-2"
         />
 
@@ -243,64 +234,6 @@ export function AdminAttendanceTab(props: any) {
                 getAttendanceConfig={getAttendanceConfig}
                 setAttendanceConfig={setAttendanceConfig}
               />
-            </div>
-
-            <div className="pt-6 border-t space-y-4">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Timer className="w-5 h-5 text-ring" /> Bathroom pass timer
-                </h3>
-                <StaffPortalTabInfoPopover
-                  sections={[staffPortalTabInfoSection('Teachers start and stop bathroom passes from the Classroom seating chart. Students can be required to sign in for attendance first.')]}
-                  ariaLabel="About bathroom pass timer"
-                />
-              </div>
-              {!classSignInEnabled ? (
-                <p className="text-sm text-amber-800 dark:text-amber-100 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2">
-                  Turn on <span className="font-semibold">class sign-in</span> in school settings so students can sign in before bathroom passes.
-                </p>
-              ) : null}
-              <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3">
-                <div>
-                  <p className="text-sm font-bold">Enable bathroom timer in Classroom</p>
-                  <p className="text-xs text-muted-foreground">Alt+click a student on the seating chart to send or return.</p>
-                </div>
-                <Switch
-                  checked={enableBathroomTimer ?? true}
-                  disabled={!classSignInEnabled}
-                  onCheckedChange={(v) => onBathroomSettingsChange?.({ enableBathroomTimer: v === true })}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="bathroom-max-min">Max minutes (warning)</Label>
-                  <Input
-                    id="bathroom-max-min"
-                    type="number"
-                    min={1}
-                    max={30}
-                    disabled={!enableBathroomTimer}
-                    value={bathroomMaxMinutes ?? 5}
-                    onChange={(e) =>
-                      onBathroomSettingsChange?.({
-                        bathroomMaxMinutes: Math.min(30, Math.max(1, parseInt(e.target.value, 10) || 5)),
-                      })
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">Timer turns red after this many minutes.</p>
-                </div>
-                <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3 md:mt-6">
-                  <div>
-                    <p className="text-sm font-bold">Require attendance sign-in</p>
-                    <p className="text-xs text-muted-foreground">Only present students can leave.</p>
-                  </div>
-                  <Switch
-                    checked={bathroomRequirePresent ?? true}
-                    disabled={!enableBathroomTimer}
-                    onCheckedChange={(v) => onBathroomSettingsChange?.({ bathroomRequirePresent: v === true })}
-                  />
-                </div>
-              </div>
             </div>
 
             <Button 
@@ -871,63 +804,6 @@ export function AdminAttendanceTab(props: any) {
           </div>
         )}
 
-        {section === 'activity' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
-            <div className="border-b pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <History className="w-5 h-5 text-ring" /> Student Activity Log
-                </h3>
-                <StaffPortalTabInfoPopover
-                  sections={[staffPortalTabInfoSection('Recent student actions across the school, including attendance sign-ins and point activity.')]}
-                  ariaLabel="About student activity log"
-                />
-              </div>
-              <Button variant="outline" size="sm" className="rounded-xl h-10 px-4 shrink-0" onClick={loadStudentActivityLog} disabled={studentActivityLogLoading}>
-                {studentActivityLogLoading ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : null}
-                Refresh Activity Log
-              </Button>
-            </div>
-
-            <div className="w-full overflow-x-auto rounded-2xl border bg-muted/10 p-4">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left text-muted-foreground font-black text-xs uppercase tracking-wider">
-                    <th className="py-2 pb-3">Student</th>
-                    <th className="py-2 pb-3">Time</th>
-                    <th className="py-2 pb-3">Action</th>
-                    <th className="py-2 pb-3">Points</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(studentActivityLog || []).map((entry: any) => (
-                    <tr key={entry.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                      <td className="py-3 font-semibold">{entry.studentName || entry.studentId}</td>
-                      <td className="py-3 text-muted-foreground">{new Date(entry.date).toLocaleString()}</td>
-                      <td className="py-3 font-medium">{entry.desc || 'Activity'}</td>
-                      <td className="py-3 font-bold text-foreground">
-                        {entry.amount > 0 ? (
-                          <span className="text-primary">+{entry.amount}</span>
-                        ) : entry.amount < 0 ? (
-                          <span className="text-destructive">{entry.amount}</span>
-                        ) : (
-                          entry.amount
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {(!studentActivityLog || studentActivityLog.length === 0) && !studentActivityLogLoading && (
-                    <tr>
-                      <td className="py-8 text-center text-muted-foreground font-medium" colSpan={4}>
-                        No activity found yet. Click &quot;Refresh Activity Log&quot; to load.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
     </StaffPortalTabPanel>

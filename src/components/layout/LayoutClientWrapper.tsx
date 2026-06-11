@@ -26,6 +26,7 @@ import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyle
 import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/hooks/use-toast';
+import { KioskFirestoreSyncBanner } from '@/components/kiosk/KioskFirestoreSyncBanner';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -166,7 +167,7 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Student kiosk: fully hidden until the pointer moves to the top edge. */
+    /** Student kiosk: fully hidden until the pointer moves to the top edge or the screen is touched. */
     const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
     const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader);
     /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
@@ -472,6 +473,7 @@ function LayoutClientWrapperInner({
                     )}
                 >
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}
+                    {isStudentKioskSurface ? <KioskFirestoreSyncBanner /> : null}
                     {shouldRenderGlobalHeader &&
                         !isFullscreenSpecialPage &&
                         (useStudentKioskTopEdgeHeader ? (

@@ -13,6 +13,7 @@ import { DEFAULT_PLAN, normalizePlan, PLANS, type PlanTier, type SchoolPlanConfi
 import {
     applyPillarAccessToSettings,
     hasPillarAccess,
+    HOMEWORK_PILLAR_LIVE,
     isProductPillarKey,
     isSettingsKeyAllowed,
     type ProductPillarAccess,
@@ -269,7 +270,7 @@ interface Settings {
     bathroomRequirePresent?: boolean;
     // Guidance
     enableHelperMode: boolean;
-    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | null;
+    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | null;
     // Workflow
     enableTeacherBudgets: boolean;
     /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
@@ -803,7 +804,7 @@ const defaultSettings: Settings = {
     payRewards: true,
     payClassroom: true,
     payAttendance: true,
-    payHomework: true,
+    payHomework: false,
     payLibrary: true,
     payOffice: false,
     libraryLoanPeriodDays: 14,
@@ -1050,7 +1051,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.enableAttendance = false;
             next.enableBathroomTimer = false;
         }
-        if (!(next.payHomework ?? true)) {
+        if (!HOMEWORK_PILLAR_LIVE || next.payHomework !== true) {
+            next.payHomework = false;
             next.enableHomework = false;
         }
         return next;
@@ -1191,6 +1193,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (!STUDENT_WELCOME_STYLES_LIVE) {
                     parsed.enableStudentWelcome = false;
                 }
+                if (!HOMEWORK_PILLAR_LIVE) {
+                    parsed.payHomework = false;
+                    parsed.enableHomework = false;
+                }
                 if (typeof parsed.studentWelcomeBackDurationSec !== 'number' || !Number.isFinite(parsed.studentWelcomeBackDurationSec)) {
                     parsed.studentWelcomeBackDurationSec = defaultSettings.studentWelcomeBackDurationSec;
                 } else {
@@ -1274,10 +1280,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     delete (parsed as Partial<Settings>).teacherNavLayout;
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
+                delete (parsed as Partial<Settings>).activeTourId;
                 const nextSettings = applyEntitlements({ 
                     ...defaultSettings, 
                     ...featureDefaultsFromRemote,
-                    ...parsed 
+                    ...parsed,
+                    activeTourId: null,
                 });
                 setSettings(nextSettings);
                 localStorage.setItem(settingsKey, JSON.stringify(nextSettings));
@@ -1405,8 +1413,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             }
             const next = applyEntitlements({ ...prev, ...allowedUpdates });
 
-            localStorage.setItem(settingsKey, JSON.stringify(next));
-            latestForFirestoreRef.current = next;
+            const persisted = { ...next };
+            delete persisted.activeTourId;
+            localStorage.setItem(settingsKey, JSON.stringify(persisted));
+            latestForFirestoreRef.current = persisted;
 
             if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer' || loginState === 'teacher')) {
                 const flushSid = schoolId.trim().toLowerCase();

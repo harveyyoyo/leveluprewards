@@ -37,7 +37,7 @@ export function StaffPortalTabHeader({
   subtitle,
   infoSections,
   infoAriaLabel,
-  hideSubtitle = true,
+  hideSubtitle = false,
   showIcon = true,
   iconClassName,
   titleClassName,
@@ -56,7 +56,7 @@ export function StaffPortalTabHeader({
   return (
     <div
       className={cn(
-        'flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-2',
+        'flex w-full flex-wrap items-center justify-between gap-x-3 gap-y-1',
         className,
       )}
     >
@@ -75,11 +75,13 @@ export function StaffPortalTabHeader({
           />
         ) : null}
       </div>
-      {!hideSubtitle && resolvedSubtitle ? (
-        <p className="w-full text-sm leading-snug text-muted-foreground">{resolvedSubtitle}</p>
-      ) : null}
       {trailing ? (
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{trailing}</div>
+      ) : null}
+      {!hideSubtitle && resolvedSubtitle ? (
+        <p className="w-full text-xs leading-snug text-muted-foreground line-clamp-1">
+          {resolvedSubtitle}
+        </p>
       ) : null}
     </div>
   );
