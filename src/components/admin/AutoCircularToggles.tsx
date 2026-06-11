@@ -73,7 +73,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
             size="icon"
             className={cn(
               isPill
-                ? "h-7 w-auto min-w-0 min-h-0 min-w-[44px] rounded-full px-2 text-[9px] font-black tracking-tight"
+                ? "h-7 w-auto min-h-0 min-w-[44px] rounded-full px-2 text-[9px] font-black tracking-tight"
                 : "h-8 w-8 sm:h-9 sm:w-9 rounded-full",
               "transition-all border shrink-0 text-center flex items-center justify-center select-none shadow-sm",
               toggleButtonClassName,
