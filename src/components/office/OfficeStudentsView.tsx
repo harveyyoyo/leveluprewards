@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeStudentSheet } from '@/components/office/OfficeStudentSheet';
+import { OfficeFamilySheet } from '@/components/office/OfficeFamilySheet';
 import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
-import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeClass, OfficeFamily, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   billingAccountForStudent,
   exportOfficeStudentsCsv,
@@ -33,6 +34,7 @@ type OfficeStudentsViewProps = {
   students: OfficeStudent[];
   classes: OfficeClass[];
   teachers: OfficeTeacher[];
+  families: OfficeFamily[];
   classNameById: Map<string, string>;
   teacherNameById: Map<string, string>;
   gradeEntries: OfficeGradeEntry[];
@@ -46,6 +48,7 @@ export function OfficeStudentsView({
   students,
   classes,
   teachers,
+  families,
   classNameById,
   teacherNameById,
   gradeEntries,
@@ -60,7 +63,15 @@ export function OfficeStudentsView({
   const [rosterFilter, setRosterFilter] = useState<RosterFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
   const [selected, setSelected] = useState<OfficeStudent | null>(null);
+  const [familyOpen, setFamilyOpen] = useState(false);
+  const [activeFamily, setActiveFamily] = useState<OfficeFamily | null>(null);
   const openedFromQuery = useRef(false);
+
+  const familyNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const f of families) map.set(f.id, f.displayName);
+    return map;
+  }, [families]);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
@@ -89,7 +100,16 @@ export function OfficeStudentsView({
       if (!q) return true;
       const label = getOfficeStudentFullName(s).toLowerCase();
       const cls = (s.classId && classNameById.get(s.classId))?.toLowerCase() ?? '';
-      return label.includes(q) || cls.includes(q);
+      const family = (s.familyId && familyNameById.get(s.familyId))?.toLowerCase() ?? '';
+      const teacher = getOfficeTeacherLabel(s, teacherNameById).toLowerCase();
+      return (
+        label.includes(q) ||
+        cls.includes(q) ||
+        family.includes(q) ||
+        teacher.includes(q) ||
+        (s.notes ?? '').toLowerCase().includes(q) ||
+        (s.busRoute ?? '').toLowerCase().includes(q)
+      );
     });
     return list.slice().sort((a, b) => {
       if (sortBy === 'name-desc') {
@@ -103,7 +123,14 @@ export function OfficeStudentsView({
       }
       return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
     });
-  }, [students, query, classFilter, rosterFilter, sortBy, classNameById, gradedForTerm, billingAccounts]);
+  }, [students, query, classFilter, rosterFilter, sortBy, classNameById, teacherNameById, familyNameById, gradedForTerm, billingAccounts]);
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'family') {
+      setActiveFamily(null);
+      setFamilyOpen(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const f = searchParams.get('filter')?.trim();
@@ -170,7 +197,20 @@ export function OfficeStudentsView({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />
-        <Button
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl"
+            onClick={() => {
+              setActiveFamily(null);
+              setFamilyOpen(true);
+            }}
+          >
+            Family profile
+          </Button>
+          <Button
           type="button"
           variant="outline"
           size="sm"
@@ -184,6 +224,7 @@ export function OfficeStudentsView({
           <Download className="h-4 w-4" />
           Export CSV
         </Button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-2">
         {rosterFilterOptions.map((opt) => (
@@ -205,7 +246,7 @@ export function OfficeStudentsView({
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search by name or class…" className="flex-1" />
+        <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search name, class, family, bus, notes…" className="flex-1" />
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase text-muted-foreground">Class</Label>
           <Select value={classFilter} onValueChange={setClassFilter}>
@@ -313,6 +354,27 @@ export function OfficeStudentsView({
         activeTerm={activeTerm}
         classes={classes}
         teachers={teachers}
+        families={families}
+        onOpenFamily={(id) => {
+          setActiveFamily(id ? families.find((f) => f.id === id) ?? null : null);
+          setFamilyOpen(true);
+        }}
+      />
+
+      <OfficeFamilySheet
+        schoolId={schoolId}
+        family={activeFamily}
+        students={students}
+        billingAccount={
+          activeFamily
+            ? billingAccounts.find((a) => a.familyId === activeFamily.id) ??
+              (selected?.familyId === activeFamily.id
+                ? billingAccountForStudent(billingAccounts, selected.id)
+                : null)
+            : null
+        }
+        open={familyOpen}
+        onOpenChange={setFamilyOpen}
       />
     </div>
   );

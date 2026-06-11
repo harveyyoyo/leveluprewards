@@ -8,17 +8,60 @@ export type OfficeTeacher = {
   updatedAt: number;
 };
 
+export type OfficeFamilyContactRole =
+  | 'parent'
+  | 'guardian'
+  | 'grandparent'
+  | 'emergency'
+  | 'other';
+
+/** Household contact on an `OfficeFamily` profile (parents, grandparents, emergency, etc.). */
+export type OfficeFamilyContact = {
+  id: string;
+  name: string;
+  role: OfficeFamilyContactRole;
+  relationship?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  isPrimary?: boolean;
+  notes?: string | null;
+};
+
+/**
+ * Full family profile — contacts, medical, legal, bus, and notes.
+ * Billing accounts and students link via `familyId`.
+ */
+export type OfficeFamily = {
+  id: string;
+  displayName: string;
+  contacts: OfficeFamilyContact[];
+  medicalNotes?: string | null;
+  legalNotes?: string | null;
+  busRoute?: string | null;
+  busNotes?: string | null;
+  generalNotes?: string | null;
+  updatedAt: number;
+  updatedBy?: string | null;
+};
+
 /** Office student roster. */
 export type OfficeStudent = {
   id: string;
   firstName: string;
   lastName: string;
   nickname?: string | null;
+  /** Link to `officeFamilies` household profile. */
+  familyId?: string | null;
+  photoUrl?: string | null;
+  /** ISO date `YYYY-MM-DD`. */
+  dateOfBirth?: string | null;
   classId?: string | null;
   /** Assigned homeroom teacher (`officeTeachers` doc id). */
   teacherId?: string | null;
   /** Legacy free-text; prefer `teacherId`. Kept for old rows and CSV until migrated. */
   teacherName?: string | null;
+  /** Student-level bus override; family `busRoute` is the default. */
+  busRoute?: string | null;
   notes?: string | null;
   updatedAt: number;
 };
@@ -26,6 +69,8 @@ export type OfficeStudent = {
 export type OfficeClass = {
   id: string;
   name: string;
+  /** Homeroom / primary teacher for this class (`officeTeachers` doc id). */
+  teacherId?: string | null;
   updatedAt: number;
 };
 
@@ -47,6 +92,8 @@ export type OfficeBillingAccountStatus = 'active' | 'past_due' | 'closed';
 export type OfficeBillingAccount = {
   id: string;
   familyName: string;
+  /** Link to `officeFamilies` when using Option A family profiles. */
+  familyId?: string | null;
   studentIds: string[];
   balanceCents: number;
   status: OfficeBillingAccountStatus;
@@ -56,7 +103,19 @@ export type OfficeBillingAccount = {
   updatedAt: number;
 };
 
-export type OfficeInvoiceStatus = 'draft' | 'sent' | 'paid' | 'void';
+export type OfficeInvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void';
+
+/** Ledger row for cash, check, card, transfer, and other payments. */
+export type OfficePayment = {
+  id: string;
+  accountId: string;
+  invoiceId?: string | null;
+  amountCents: number;
+  method: OfficePaymentMethod;
+  note?: string | null;
+  paidAt: number;
+  recordedBy?: string | null;
+};
 
 export type OfficePaymentMethod = 'cash' | 'check' | 'card' | 'transfer' | 'other';
 
@@ -68,6 +127,8 @@ export type OfficeInvoice = {
   dueDate: string;
   status: OfficeInvoiceStatus;
   createdAt: number;
+  /** Cumulative payments applied to this invoice (supports partial pay). */
+  paidAmountCents?: number | null;
   paidAt?: number | null;
   /** How payment was recorded when marked paid outside Stripe. */
   paymentMethod?: OfficePaymentMethod | null;
@@ -80,12 +141,49 @@ export type OfficeBillingAccountInput = Omit<OfficeBillingAccount, 'id' | 'updat
 
 export type OfficeInvoiceInput = Omit<OfficeInvoice, 'id' | 'createdAt' | 'paidAt'>;
 
+export type OfficeFeatureFlags = {
+  familyProfiles?: boolean;
+  studentPhotos?: boolean;
+  busInfo?: boolean;
+  medicalNotes?: boolean;
+  aiHelp?: boolean;
+  auditLog?: boolean;
+};
+
+export type OfficeAuditAction = 'create' | 'update' | 'delete';
+
+export type OfficeAuditEntityType =
+  | 'officeStudent'
+  | 'officeFamily'
+  | 'officeClass'
+  | 'officeTeacher'
+  | 'officeGradeEntry'
+  | 'officeBillingAccount'
+  | 'officeInvoice'
+  | 'officeSettings';
+
+/** Append-only change log (`schools/{id}/officeAuditLog`). */
+export type OfficeAuditLogEntry = {
+  id: string;
+  entityType: OfficeAuditEntityType;
+  entityId: string;
+  action: OfficeAuditAction;
+  summary: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  changedBy?: string | null;
+  changedAt: number;
+};
+
 /** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */
 export type OfficeSettings = {
   defaultActiveTerm?: string | null;
   statementSchoolName?: string | null;
   /** School-defined term labels (e.g. Fall 2026) — appear in working-term dropdowns before any grades exist. */
   configuredTerms?: string[] | null;
+  /** When true, UI says "Marks" instead of "Grades". */
+  useMarksTerminology?: boolean;
+  features?: OfficeFeatureFlags | null;
   updatedAt: number;
   updatedBy?: string | null;
 };

@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
-import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
+import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 import {
   Select,
   SelectContent,
@@ -36,6 +36,7 @@ type OfficeClassesViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classes: OfficeClass[];
+  teachers: OfficeTeacher[];
   teacherNameById: Map<string, string>;
   isLoading: boolean;
   onSelectStudent?: (student: OfficeStudent) => void;
@@ -45,12 +46,13 @@ export function OfficeClassesView({
   schoolId,
   students,
   classes,
+  teachers,
   teacherNameById,
   isLoading,
   onSelectStudent,
 }: OfficeClassesViewProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
 
   const exportClassRoster = () => {
     const rows: string[][] = [];
@@ -97,11 +99,13 @@ export function OfficeClassesView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
+  const [classTeacherId, setClassTeacherId] = useState('');
   const [busy, setBusy] = useState(false);
 
   const openNewClass = () => {
     setEditingClass(null);
     setClassName('');
+    setClassTeacherId('');
     setDialogOpen(true);
   };
 
@@ -109,33 +113,26 @@ export function OfficeClassesView({
     e.stopPropagation();
     setEditingClass(cls);
     setClassName(cls.name);
+    setClassTeacherId(cls.teacherId ?? '');
     setDialogOpen(true);
   };
 
   const handleSaveClass = async () => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     if (!className.trim()) {
       toast({ variant: 'destructive', title: 'Class name is required.' });
       return;
     }
     setBusy(true);
     try {
-      if (editingClass) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeClasses', editingClass.id), {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class renamed' });
-      } else {
-        const ref = doc(collection(firestore, 'schools', schoolId, 'officeClasses'));
-        await setDoc(ref, {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class created' });
-      }
+      await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
+        name: className.trim(),
+        teacherId: classTeacherId || null,
+      });
+      toast({ title: editingClass ? 'Class updated' : 'Class created' });
       setDialogOpen(false);
       setClassName('');
+      setClassTeacherId('');
       setEditingClass(null);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save class', description: (e as Error).message });
@@ -145,14 +142,11 @@ export function OfficeClassesView({
   };
 
   const assignStudentToClass = async (student: OfficeStudent, nextClassId: string) => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     const cid = nextClassId === '__none__' ? null : nextClassId;
     if (cid === (student.classId ?? null)) return;
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
-        classId: cid,
-        updatedAt: Date.now(),
-      });
+      await write.updateOfficeStudent(write.ctx, student.id, { classId: cid }, 'Moved student to class');
       toast({ title: 'Class updated' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not move student', description: (e as Error).message });
@@ -161,7 +155,7 @@ export function OfficeClassesView({
 
   const handleDeleteClass = async (cls: OfficeClass, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore) return;
+    if (!write.ctx) return;
 
     const classStudents = students.filter((s) => s.classId === cls.id);
     const hasStudents = classStudents.length > 0;
@@ -175,17 +169,11 @@ export function OfficeClassesView({
 
     setBusy(true);
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'schools', schoolId, 'officeClasses', cls.id));
-
-      for (const s of classStudents) {
-        batch.update(doc(firestore, 'schools', schoolId, 'officeStudents', s.id), {
-          classId: null,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await batch.commit();
+      await write.deleteOfficeClassBatch(
+        write.ctx,
+        cls,
+        classStudents.map((s) => s.id),
+      );
       toast({ title: 'Class deleted successfully' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -408,7 +396,7 @@ export function OfficeClassesView({
       >
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingClass ? 'Edit class name' : 'New class'}</DialogTitle>
+            <DialogTitle>{editingClass ? 'Edit class' : 'New class'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
@@ -424,6 +412,13 @@ export function OfficeClassesView({
                 }}
               />
             </div>
+            <OfficeTeacherSelect
+              schoolId={schoolId}
+              teachers={teachers}
+              value={classTeacherId}
+              onChange={setClassTeacherId}
+              label="Class teacher"
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>

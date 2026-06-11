@@ -23,6 +23,14 @@ import { formatCents } from '@/lib/office/officeNav';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import type { OfficeDashboardInsights } from '@/lib/office/officeUtils';
 import { cn } from '@/lib/utils';
+import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
+import { useAppContext } from '@/components/AppProvider';
+import {
+  buildOfficeQuickActions,
+  officeWelcomeTitle,
+  trackOfficeQuickAction,
+  type OfficeQuickActionId,
+} from '@/lib/office/useOfficeQuickActions';
 
 type OfficeDashboardProps = {
   schoolId: string;
@@ -65,6 +73,8 @@ export function OfficeDashboard({
   schoolDefaultTerm,
   configuredTerms,
 }: OfficeDashboardProps) {
+  const { marksLabels } = useOfficePortalChrome();
+  const { loginState, userName } = useAppContext();
   const gradePct =
     insights.termSubjects.length > 0
       ? insights.subjectGradeCompletionPct
@@ -79,7 +89,7 @@ export function OfficeDashboard({
   }
   if (insights.studentsMissingGrades > 0) {
     attentionItems.push({
-      label: `${insights.studentsMissingGrades} student${insights.studentsMissingGrades === 1 ? '' : 's'} need grades`,
+      label: `${insights.studentsMissingGrades} student${insights.studentsMissingGrades === 1 ? '' : 's'} need ${marksLabels.plural}`,
       href: `${officePublicHref(schoolId, 'students')}?filter=missing-grades`,
     });
   }
@@ -117,8 +127,8 @@ export function OfficeDashboard({
     },
     {
       href: `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`,
-      title: 'Grades',
-      subtitle: studentCount > 0 ? `${gradePct}% done for ${activeTerm}` : 'Record term grades',
+      title: marksLabels.section,
+      subtitle: studentCount > 0 ? `${gradePct}% done for ${activeTerm}` : marksLabels.enterAction,
       icon: GraduationCap,
       tint: 'bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300',
     },
@@ -132,7 +142,7 @@ export function OfficeDashboard({
     {
       href: officePublicHref(schoolId, 'reports'),
       title: 'Reports',
-      subtitle: 'Print grade summaries',
+      subtitle: 'Print summaries & exports',
       icon: FileText,
       tint: 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
     },
@@ -145,16 +155,29 @@ export function OfficeDashboard({
     },
   ];
 
+  const quickActions = buildOfficeQuickActions({
+    schoolId,
+    loginState,
+    activeTerm,
+    marksRecordLabel: `Record ${marksLabels.singular}`,
+    hrefFor: (segment, query) => {
+      const base = officePublicHref(schoolId, segment || undefined);
+      return query ? `${base}?${query}` : base;
+    },
+  });
+
+  const welcomeTitle = officeWelcomeTitle(loginState, userName);
+
   return (
     <div className="w-full space-y-6">
       <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">
         <p className="text-lg font-medium text-slate-900 dark:text-white">
-          {isEmpty ? 'Welcome — let’s set up your roster.' : 'School overview'}
+          {isEmpty ? 'Welcome — let’s set up your roster.' : welcomeTitle}
         </p>
         <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
           {isEmpty
             ? 'Add students, teachers, and classes to get started.'
-            : 'Grades and reports filter to the selected term.'}
+            : `${marksLabels.section} and reports filter to the selected term.`}
         </p>
         <div className="mt-4">
           <OfficeWorkingTermSelect
@@ -236,17 +259,16 @@ export function OfficeDashboard({
           </section>
 
           <section className="rounded-2xl bg-slate-50/80 px-4 py-3.5 dark:bg-slate-900/40">
-            <p className="mb-2.5 text-xs font-medium text-muted-foreground">Quick actions</p>
+            <p className="mb-2.5 text-xs font-medium text-muted-foreground">Quick actions for you</p>
             <div className="flex flex-wrap gap-2">
-              <QuickAction href={officePublicHref(schoolId, 'students')} label="Add student" />
-              <QuickAction
-                href={`${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`}
-                label="Record grade"
-              />
-              <QuickAction
-                href={`${officePublicHref(schoolId, 'billing')}?action=new-invoice`}
-                label="New invoice"
-              />
+              {quickActions.map((action) => (
+                <QuickAction
+                  key={action.id}
+                  href={action.href}
+                  label={action.label}
+                  onNavigate={() => trackOfficeQuickAction(schoolId, action.id as OfficeQuickActionId)}
+                />
+              ))}
             </div>
           </section>
         </>
@@ -291,10 +313,19 @@ function NavTileLink({ href, title, subtitle, icon: Icon, tint }: NavTile) {
   );
 }
 
-function QuickAction({ href, label }: { href: string; label: string }) {
+function QuickAction({
+  href,
+  label,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  onNavigate?: () => void;
+}) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-teal-50 hover:text-teal-900 hover:ring-teal-200/80 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-teal-950/40 dark:hover:text-teal-100"
     >
       <Plus className="h-3 w-3" aria-hidden />

@@ -30,6 +30,7 @@ import {
   isInvoiceOverdue,
   parseUsdToCents,
 } from '@/lib/office/officeUtils';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
@@ -60,6 +61,7 @@ export function OfficeBillingView({
 }: OfficeBillingViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
   const { settings: officeSettings } = useOfficeSettings(schoolId);
   const [accountOpen, setAccountOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
@@ -85,6 +87,7 @@ export function OfficeBillingView({
   const [payTarget, setPayTarget] = useState<OfficeInvoice | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<OfficePaymentMethod>('check');
   const [paymentNote, setPaymentNote] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkTargetHomeroom, setBulkTargetHomeroom] = useState('all');
@@ -129,8 +132,8 @@ export function OfficeBillingView({
   const openBalanceCents = useMemo(
     () =>
       invoices
-        .filter((i) => i.status === 'sent' || i.status === 'draft')
-        .reduce((sum, i) => sum + (i.amountCents || 0), 0),
+        .filter((i) => i.status === 'sent' || i.status === 'draft' || i.status === 'partial')
+        .reduce((sum, i) => sum + Math.max(0, (i.amountCents || 0) - (i.paidAmountCents || 0)), 0),
     [invoices],
   );
 
@@ -547,30 +550,32 @@ export function OfficeBillingView({
     setPayTarget(inv);
     setPaymentMethod('check');
     setPaymentNote('');
+    const remaining = Math.max(0, (inv.amountCents || 0) - (inv.paidAmountCents || 0));
+    setPaymentAmount((remaining / 100).toFixed(2));
     setPayOpen(true);
   };
 
-  const markPaid = async (inv: OfficeInvoice, method: OfficePaymentMethod, note: string) => {
-    if (!firestore) return;
+  const markPaid = async (inv: OfficeInvoice, method: OfficePaymentMethod, note: string, amountDollars: string) => {
+    if (!write.ctx) return;
+    const amountCents = parseUsdToCents(amountDollars);
+    if (amountCents == null || amountCents <= 0) {
+      toast({ variant: 'destructive', title: 'Enter a valid payment amount.' });
+      return;
+    }
+    const account = accounts.find((a) => a.id === inv.accountId);
+    if (!account) {
+      toast({ variant: 'destructive', title: 'Billing account not found.' });
+      return;
+    }
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
-        status: 'paid',
-        paidAt: Date.now(),
-        paymentMethod: method,
-        paymentNote: note.trim() || null,
+      await write.recordOfficePayment(write.ctx, {
+        account,
+        invoice: inv,
+        amountCents,
+        method,
+        note,
       });
-      const account = accounts.find((a) => a.id === inv.accountId);
-      if (account) {
-        const nextInvoices = invoices.map((i) =>
-          i.id === inv.id ? { ...i, status: 'paid' as const, paidAt: Date.now() } : i,
-        );
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
-          status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
-          updatedAt: Date.now(),
-        });
-      }
-      toast({ title: 'Payment recorded' });
+      toast({ title: amountCents >= (inv.amountCents || 0) - (inv.paidAmountCents || 0) ? 'Payment recorded' : 'Partial payment recorded' });
       setPayOpen(false);
       setPayTarget(null);
     } catch (e) {
@@ -986,10 +991,22 @@ export function OfficeBillingView({
           </DialogHeader>
           {payTarget ? (
             <p className="text-sm text-muted-foreground">
-              {payTarget.label} · {formatCents(payTarget.amountCents)}
+              {payTarget.label} · {formatCents(payTarget.amountCents)} total
+              {(payTarget.paidAmountCents ?? 0) > 0
+                ? ` · ${formatCents((payTarget.paidAmountCents ?? 0))} paid`
+                : ''}
             </p>
           ) : null}
           <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Payment amount (USD)</Label>
+              <Input
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+                className="rounded-xl"
+              />
+            </div>
             <div className="space-y-2">
               <Label>Payment method</Label>
               <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as OfficePaymentMethod)}>
@@ -1021,9 +1038,9 @@ export function OfficeBillingView({
             </Button>
             <Button
               disabled={busy || !payTarget}
-              onClick={() => payTarget && void markPaid(payTarget, paymentMethod, paymentNote)}
+              onClick={() => payTarget && void markPaid(payTarget, paymentMethod, paymentNote, paymentAmount)}
             >
-              Mark paid
+              Record payment
             </Button>
           </DialogFooter>
         </DialogContent>

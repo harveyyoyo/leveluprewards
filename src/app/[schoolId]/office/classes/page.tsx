@@ -24,6 +24,7 @@ export default function OfficeClassesPage() {
         schoolId={schoolId}
         students={shared.students}
         classes={shared.classes}
+        teachers={shared.teachers}
         teacherNameById={shared.teacherNameById}
         isLoading={shared.isLoading}
         onSelectStudent={setSelected}

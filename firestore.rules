@@ -490,6 +490,21 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      match /officeFamilies/{familyId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeAuditLog/{entryId} {
+        allow read: if canAccessOffice(schoolId);
+        allow create: if canAccessOffice(schoolId);
+        allow update, delete: if false;
+      }
+
+      match /officePayments/{paymentId} {
+        allow read, create: if canAccessOffice(schoolId);
+        allow update, delete: if false;
+      }
+
       match /anonymousPortalSessions/{uid} {
         allow read, write: if false;
       }

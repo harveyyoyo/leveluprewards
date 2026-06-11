@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
+import type { OfficeClass, OfficeFamily, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 import { safeString } from '@/lib/safeDisplayValue';
@@ -28,14 +28,20 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
     () => (canLoad ? collection(firestore!, 'schools', schoolId!, 'officeTeachers') : null),
     [firestore, schoolId, canLoad],
   );
+  const familiesQuery = useMemoFirebase(
+    () => (canLoad ? collection(firestore!, 'schools', schoolId!, 'officeFamilies') : null),
+    [firestore, schoolId, canLoad],
+  );
 
   const { data: studentsRaw, isLoading: studentsLoading } = useCollection<OfficeStudent>(studentsQuery);
   const { data: classesRaw, isLoading: classesLoading } = useCollection<OfficeClass>(classesQuery);
   const { data: teachersRaw, isLoading: teachersLoading } = useCollection<OfficeTeacher>(teachersQuery);
+  const { data: familiesRaw, isLoading: familiesLoading } = useCollection<OfficeFamily>(familiesQuery);
 
   const students = useMemo(() => studentsRaw ?? [], [studentsRaw]);
   const classes = useMemo(() => classesRaw ?? [], [classesRaw]);
   const teachers = useMemo(() => teachersRaw ?? [], [teachersRaw]);
+  const families = useMemo(() => familiesRaw ?? [], [familiesRaw]);
 
   const classNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -57,13 +63,21 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
     return map;
   }, [teachers]);
 
+  const familyById = useMemo(() => {
+    const map = new Map<string, OfficeFamily>();
+    for (const f of families) map.set(f.id, f);
+    return map;
+  }, [families]);
+
   return {
     students,
     classes,
     teachers,
+    families,
+    familyById,
     classNameById,
     studentLabelById,
     teacherNameById,
-    isLoading: studentsLoading || classesLoading || teachersLoading,
+    isLoading: studentsLoading || classesLoading || teachersLoading || familiesLoading,
   };
 }

@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { collection, doc, setDoc } from 'firebase/firestore';
 import { Plus } from 'lucide-react';
-import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 
 type OfficeRosterManagerProps = {
   schoolId: string;
@@ -27,8 +26,8 @@ type OfficeRosterManagerProps = {
 };
 
 export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRosterManagerProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -47,23 +46,26 @@ export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRoste
   };
 
   const handleSave = async () => {
-    if (!firestore || !firstName.trim() || !lastName.trim()) {
+    if (!write.ctx || !firstName.trim() || !lastName.trim()) {
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
     setBusy(true);
     try {
-      const payload: Omit<OfficeStudent, 'id'> = {
+      await write.createOfficeStudent(write.ctx, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
         classId: classId || null,
         teacherId: teacherId || null,
         teacherName: null,
+        familyId: null,
+        photoUrl: null,
+        dateOfBirth: null,
+        busRoute: null,
         notes: null,
         updatedAt: Date.now(),
-      };
-      await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeStudents')), payload);
+      });
       toast({ title: 'Student added' });
       if (addAnother) {
         reset();

@@ -1,7 +1,4 @@
 import { useState, useEffect, useMemo } from 'react';
-import { doc, updateDoc, writeBatch } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,8 +16,19 @@ import {
   getOfficeStudentFullName,
 } from '@/lib/office/officeUtils';
 import { safeString } from '@/lib/safeDisplayValue';
-import type { OfficeBillingAccount, OfficeGradeEntry, OfficeStudent, OfficeClass, OfficeTeacher } from '@/lib/office/types';
+import type {
+  OfficeBillingAccount,
+  OfficeFamily,
+  OfficeGradeEntry,
+  OfficeStudent,
+  OfficeClass,
+  OfficeTeacher,
+} from '@/lib/office/types';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
+import { OfficeStudentPhotoUpload } from '@/components/office/OfficeStudentPhotoUpload';
+import { useToast } from '@/hooks/use-toast';
 
 type OfficeStudentSheetProps = {
   schoolId: string;
@@ -33,6 +41,8 @@ type OfficeStudentSheetProps = {
   activeTerm: string;
   classes?: OfficeClass[];
   teachers?: OfficeTeacher[];
+  families?: OfficeFamily[];
+  onOpenFamily?: (familyId: string | null) => void;
 };
 
 export function OfficeStudentSheet({
@@ -46,9 +56,12 @@ export function OfficeStudentSheet({
   activeTerm,
   classes = [],
   teachers = [],
+  families = [],
+  onOpenFamily,
 }: OfficeStudentSheetProps) {
-  const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
+  const { marksLabels, features } = useOfficePortalChrome();
 
   const teacherNameById = useMemo(
     () => new Map(teachers.map((t) => [t.id, safeString(t.name)])),
@@ -61,7 +74,10 @@ export function OfficeStudentSheet({
   const [nickname, setNickname] = useState('');
   const [classId, setClassId] = useState('');
   const [teacherId, setTeacherId] = useState('');
+  const [familyId, setFamilyId] = useState('');
+  const [busRoute, setBusRoute] = useState('');
   const [notes, setNotes] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -71,7 +87,10 @@ export function OfficeStudentSheet({
       setNickname(safeString(student.nickname));
       setClassId(safeString(student.classId));
       setTeacherId(safeString(student.teacherId));
+      setFamilyId(safeString(student.familyId));
+      setBusRoute(safeString(student.busRoute));
       setNotes(safeString(student.notes));
+      setPhotoUrl(safeString(student.photoUrl));
     }
     setIsEditing(false);
   }, [student, open]);
@@ -87,22 +106,24 @@ export function OfficeStudentSheet({
   const billingHref = officePublicHref(schoolId, 'billing');
 
   const handleSave = async () => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     if (!firstName.trim() || !lastName.trim()) {
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
     setBusy(true);
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
+      await write.updateOfficeStudent(write.ctx, student.id, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
         classId: classId || null,
         teacherId: teacherId || null,
         teacherName: null,
+        familyId: familyId || null,
+        busRoute: features.busInfo ? busRoute.trim() || null : student.busRoute ?? null,
         notes: notes.trim() || null,
-        updatedAt: Date.now(),
+        photoUrl: photoUrl || null,
       });
       toast({ title: 'Student profile updated' });
       setIsEditing(false);
@@ -114,33 +135,22 @@ export function OfficeStudentSheet({
   };
 
   const handleDelete = async () => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     if (!confirm(`Are you sure you want to permanently delete ${name}? All grade entries and billing linkages will be cleaned up.`)) {
       return;
     }
     setBusy(true);
     try {
-      const batch = writeBatch(firestore);
-      // 1. Delete student
-      batch.delete(doc(firestore, 'schools', schoolId, 'officeStudents', student.id));
-
-      // 2. Delete grade entries
       const studentGrades = gradeEntries.filter((g) => g.studentId === student.id);
-      for (const g of studentGrades) {
-        batch.delete(doc(firestore, 'schools', schoolId, 'officeGradeEntries', g.id));
-      }
-
-      // 3. Clean up student ID from billing accounts
       const studentAccounts = billingAccounts.filter((a) => a.studentIds.includes(student.id));
-      for (const a of studentAccounts) {
-        const nextStudentIds = a.studentIds.filter((id) => id !== student.id);
-        batch.update(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', a.id), {
-          studentIds: nextStudentIds,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await batch.commit();
+      await write.deleteOfficeStudentBatch(write.ctx, {
+        student,
+        gradeEntryIds: studentGrades.map((g) => g.id),
+        billingUpdates: studentAccounts.map((a) => ({
+          accountId: a.id,
+          studentIds: a.studentIds.filter((id) => id !== student.id),
+        })),
+      });
       toast({ title: 'Student deleted successfully' });
       onOpenChange(false);
     } catch (e) {
@@ -212,6 +222,15 @@ export function OfficeStudentSheet({
 
         {isEditing ? (
           <div className="mt-6 space-y-4">
+            {features.studentPhotos ? (
+              <OfficeStudentPhotoUpload
+                schoolId={schoolId}
+                studentId={student.id}
+                photoUrl={photoUrl}
+                studentName={name}
+                onPhotoUrl={setPhotoUrl}
+              />
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>First name</Label>
@@ -255,6 +274,37 @@ export function OfficeStudentSheet({
               onChange={setTeacherId}
             />
 
+            {features.familyProfiles ? (
+              <div className="space-y-1.5">
+                <Label>Family profile</Label>
+                <Select value={familyId || '__none__'} onValueChange={(v) => setFamilyId(v === '__none__' ? '' : v)}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder="No family linked" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No family linked</SelectItem>
+                    {families.map((f) => (
+                      <SelectItem key={f.id} value={f.id}>
+                        {f.displayName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {onOpenFamily ? (
+                  <Button type="button" variant="link" className="h-auto p-0 text-xs" onClick={() => onOpenFamily(familyId || null)}>
+                    {familyId ? 'Edit family profile' : 'Create family profile'}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {features.busInfo ? (
+              <div className="space-y-1.5">
+                <Label>Bus route</Label>
+                <Input value={busRoute} onChange={(e) => setBusRoute(e.target.value)} className="rounded-xl" />
+              </div>
+            ) : null}
+
             <div className="space-y-1.5">
               <Label>Notes (optional)</Label>
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="rounded-xl" />
@@ -284,7 +334,7 @@ export function OfficeStudentSheet({
           <div className="mt-6 space-y-6">
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs">
-                <Link href={addGradeHref}>Add grade</Link>
+                <Link href={addGradeHref}>Add {marksLabels.singular}</Link>
               </Button>
               <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs gap-1">
                 <Link href={billingHref}>
@@ -335,10 +385,10 @@ export function OfficeStudentSheet({
             <section>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  Grades · {activeTerm}
+                  {marksLabels.section} · {activeTerm}
                 </h3>
                 <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs">
-                  <Link href={addGradeHref}>Add grade</Link>
+                  <Link href={addGradeHref}>Add {marksLabels.singular}</Link>
                 </Button>
               </div>
               {termGrades.length > 0 ? (
@@ -351,7 +401,7 @@ export function OfficeStudentSheet({
                   ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">No grades recorded for this term yet.</p>
+                <p className="mt-2 text-sm text-muted-foreground">No {marksLabels.plural} recorded for this term yet.</p>
               )}
               {grades.length > termGrades.length ? (
                 <p className="mt-2 text-xs text-muted-foreground">

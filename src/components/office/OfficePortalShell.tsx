@@ -6,10 +6,14 @@ import { Building2, LogOut, Maximize2, Menu, Minimize2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { OFFICE_NAV_ITEMS, officeNavIdFromPath } from '@/lib/office/officeNav';
+import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
+import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
+import { OfficeUniversalSearch } from '@/components/office/OfficeUniversalSearch';
+import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
+import { OfficeAiHelpButton } from '@/components/office/OfficeAiHelpButton';
 import {
   OFFICE_CONTENT_PANE_CLASS,
   OFFICE_LAYOUT_PANE_CLASS,
@@ -39,7 +43,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const displaySchool = schoolName?.trim() || schoolId;
-  const activeNav = OFFICE_NAV_ITEMS.find((i) => i.id === activeId);
+  const { settings, marksLabels } = useOfficePortalChrome();
+  const navItems = getOfficeNavItems(settings);
+  const activeNav = navItems.find((i) => i.id === activeId);
   const { term: workingTerm } = useOfficeTerm(schoolId);
   const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
 
@@ -93,7 +99,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           </div>
 
           <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            {OFFICE_NAV_ITEMS.map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeId;
               return (
@@ -182,21 +188,26 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   {activeNav?.label ?? 'School Office'}
                 </h1>
                 <p className="truncate text-xs text-muted-foreground">
-                  {activeNav?.description ?? 'Grades & billing'}
+                  {activeNav?.description ?? `${marksLabels.section} & billing`}
                   {workingTerm ? ` · Term ${workingTerm}` : ''}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 shrink-0 rounded-lg"
-                onClick={toggleLayoutMode}
-                aria-label={isWide ? 'Use standard centered layout' : 'Use wide full-screen layout'}
-                title={isWide ? 'Standard layout' : 'Wide layout'}
-              >
-                {isWide ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-              </Button>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <OfficeUniversalSearch />
+                <OfficeInterfaceSettingsSheet schoolId={schoolId} />
+                <OfficeAiHelpButton />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="hidden h-8 w-8 rounded-lg sm:inline-flex"
+                  onClick={toggleLayoutMode}
+                  aria-label={isWide ? 'Use standard centered layout' : 'Use wide full-screen layout'}
+                  title={isWide ? 'Standard layout' : 'Wide layout'}
+                >
+                  {isWide ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
             </div>
           </header>
           <main className="flex-1 py-4 sm:py-6">

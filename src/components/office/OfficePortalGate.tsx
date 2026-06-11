@@ -14,8 +14,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { isOfficePillarOn, type PillarSettings } from '@/lib/productPillars';
-import type { OfficeBillingAccount, OfficeGradeEntry, OfficeInvoice } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeGradeEntry, OfficeInvoice, OfficePayment, OfficeAuditLogEntry } from '@/lib/office/types';
 import { OfficePortalShell } from '@/components/office/OfficePortalShell';
+import { OfficePortalChromeProvider } from '@/components/office/OfficePortalChrome';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import {
   hasOfficePortalLoginIntent,
@@ -30,6 +31,8 @@ type OfficePortalData = {
   gradeEntries: OfficeGradeEntry[];
   billingAccounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
+  payments: OfficePayment[];
+  auditEntries: OfficeAuditLogEntry[];
   isOfficeDataLoading: boolean;
 };
 
@@ -37,6 +40,8 @@ const OfficePortalDataContext = createContext<OfficePortalData>({
   gradeEntries: [],
   billingAccounts: [],
   invoices: [],
+  payments: [],
+  auditEntries: [],
   isOfficeDataLoading: true,
 });
 
@@ -128,26 +133,45 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
       canLoadOfficeData ? collection(firestore, 'schools', routeSchoolId, 'officeInvoices') : null,
     [firestore, routeSchoolId, canLoadOfficeData],
   );
+  const paymentsQuery = useMemoFirebase(
+    () =>
+      canLoadOfficeData ? collection(firestore, 'schools', routeSchoolId, 'officePayments') : null,
+    [firestore, routeSchoolId, canLoadOfficeData],
+  );
+  const auditQuery = useMemoFirebase(
+    () =>
+      canLoadOfficeData ? collection(firestore, 'schools', routeSchoolId, 'officeAuditLog') : null,
+    [firestore, routeSchoolId, canLoadOfficeData],
+  );
 
   const { data: gradeEntriesRaw, isLoading: gradesLoading } = useCollection<OfficeGradeEntry>(gradesQuery);
   const { data: billingAccountsRaw, isLoading: accountsLoading } =
     useCollection<OfficeBillingAccount>(accountsQuery);
   const { data: invoicesRaw, isLoading: invoicesLoading } = useCollection<OfficeInvoice>(invoicesQuery);
+  const { data: paymentsRaw, isLoading: paymentsLoading } = useCollection<OfficePayment>(paymentsQuery);
+  const { data: auditRaw, isLoading: auditLoading } = useCollection<OfficeAuditLogEntry>(auditQuery);
 
   const portalData = useMemo<OfficePortalData>(
     () => ({
       gradeEntries: gradeEntriesRaw ?? [],
       billingAccounts: billingAccountsRaw ?? [],
       invoices: invoicesRaw ?? [],
-      isOfficeDataLoading: gradesLoading || accountsLoading || invoicesLoading,
+      payments: paymentsRaw ?? [],
+      auditEntries: auditRaw ?? [],
+      isOfficeDataLoading:
+        gradesLoading || accountsLoading || invoicesLoading || paymentsLoading || auditLoading,
     }),
     [
       gradeEntriesRaw,
       billingAccountsRaw,
       invoicesRaw,
+      paymentsRaw,
+      auditRaw,
       gradesLoading,
       accountsLoading,
       invoicesLoading,
+      paymentsLoading,
+      auditLoading,
     ],
   );
 
@@ -349,14 +373,16 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
 
   return (
     <OfficePortalDataContext.Provider value={portalData}>
-      <OfficePortalShell
-        schoolId={routeSchoolId}
-        schoolName={displaySchool}
-        userName={userName}
-        onLogout={() => logout({ staffNavigateTo: 'office' })}
-      >
-        {children}
-      </OfficePortalShell>
+      <OfficePortalChromeProvider schoolId={routeSchoolId}>
+        <OfficePortalShell
+          schoolId={routeSchoolId}
+          schoolName={displaySchool}
+          userName={userName}
+          onLogout={() => logout({ staffNavigateTo: 'office' })}
+        >
+          {children}
+        </OfficePortalShell>
+      </OfficePortalChromeProvider>
     </OfficePortalDataContext.Provider>
   );
 }

@@ -130,7 +130,7 @@ export function formatGradeDisplay(entry: Pick<OfficeGradeEntry, 'letterGrade' |
 }
 
 export function isInvoiceOpen(inv: OfficeInvoice): boolean {
-  return inv.status === 'sent' || inv.status === 'draft';
+  return inv.status === 'sent' || inv.status === 'draft' || inv.status === 'partial';
 }
 
 export function billingStatusForAccount(

@@ -21,6 +21,9 @@ import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { compareOfficeTermLabels, getSuggestedTermLabel } from '@/lib/office/officeUtils';
+import { defaultOfficeFeatureFlags } from '@/lib/office/officeTerminology';
+import type { OfficeFeatureFlags } from '@/lib/office/types';
+import { Switch } from '@/components/ui/switch';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
@@ -71,6 +74,8 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const [schoolTerms, setSchoolTerms] = useState<string[]>([]);
   const [newTermName, setNewTermName] = useState('');
   const [prefsBusy, setPrefsBusy] = useState(false);
+  const [useMarksTerminology, setUseMarksTerminology] = useState(false);
+  const [features, setFeatures] = useState<Required<OfficeFeatureFlags>>(defaultOfficeFeatureFlags());
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffAccount | null>(null);
@@ -86,6 +91,8 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     setSchoolTerms(
       (settings?.configuredTerms ?? []).map((t) => t.trim()).filter(Boolean).sort(compareOfficeTermLabels),
     );
+    setUseMarksTerminology(settings?.useMarksTerminology === true);
+    setFeatures({ ...defaultOfficeFeatureFlags(), ...(settings?.features ?? {}) });
   }, [settings, schoolName]);
 
   const addSchoolTerm = () => {
@@ -124,6 +131,8 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           defaultActiveTerm: defaultTerm.trim() || null,
           statementSchoolName: statementName.trim() || null,
           configuredTerms: schoolTerms.length ? schoolTerms : null,
+          useMarksTerminology,
+          features,
         },
         userName,
       );
@@ -299,6 +308,50 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
             <Button type="button" variant="outline" className="rounded-xl" onClick={addSchoolTerm}>
               Add term
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4 max-w-2xl border-t border-slate-100 pt-4 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label htmlFor="office-use-marks" className="text-sm font-semibold">
+                Use &quot;Marks&quot; instead of &quot;Grades&quot;
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Updates nav labels, reports, and copy across School Office.
+              </p>
+            </div>
+            <Switch
+              id="office-use-marks"
+              checked={useMarksTerminology}
+              onCheckedChange={setUseMarksTerminology}
+            />
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-semibold">Feature sections</p>
+            {(
+              [
+                ['familyProfiles', 'Family profiles', 'Household contacts, grandparents, and family notes'],
+                ['studentPhotos', 'Student photos', 'Upload student pictures on roster profiles'],
+                ['busInfo', 'Bus & transport', 'Bus route fields on families and students'],
+                ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
+                ['aiHelp', 'AI help button', 'Floating assistant in the Office header'],
+                ['auditLog', 'Change history', 'Append-only audit log for Office record changes'],
+              ] as const
+            ).map(([key, title, description]) => (
+              <div key={key} className="flex items-center justify-between gap-4 rounded-xl border p-3">
+                <div>
+                  <p className="text-sm font-medium">{title}</p>
+                  <p className="text-xs text-muted-foreground">{description}</p>
+                </div>
+                <Switch
+                  checked={features[key]}
+                  onCheckedChange={(checked) => setFeatures((prev) => ({ ...prev, [key]: checked }))}
+                  aria-label={title}
+                />
+              </div>
+            ))}
           </div>
         </div>
 
