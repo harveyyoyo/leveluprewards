@@ -264,7 +264,7 @@ export function ShowcaseLanding() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fcfaf6] text-[#1a2e42] selection:bg-[#c9a227]/30 selection:text-[#102a45] font-sans antialiased overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#fcfaf6] text-[#1a2e42] selection:bg-[#c9a227]/30 selection:text-[#102a45] font-sans antialiased overflow-x-hidden">
       {/* Editorial paper background texture */}
       <div
         aria-hidden
@@ -440,7 +440,7 @@ export function ShowcaseLanding() {
             className="relative mx-auto w-full max-w-md lg:max-w-none flex justify-center py-10"
           >
             {/* Soft decorative background glow behind images */}
-            <div className="absolute top-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-[#c9a227]/12 filter blur-[40px] animate-pulse pointer-events-none" />
+            <div className="absolute top-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-[#c9a227]/10 filter blur-[40px] animate-pulse pointer-events-none" />
 
             <div className="relative w-full">
               {/* Primary mockup */}
@@ -565,7 +565,7 @@ export function ShowcaseLanding() {
                 Try the LevelUp magic live
               </h2>
               <p className="mt-4 text-base text-[#1a2e42]/80 font-medium">
-                Act as a **Teacher** to reward credits or as a **Student** at the digital kiosk to redeem items. Watch levels, streaks, and real-time logs update in real time with authentic feedback!
+                Act as a <strong>Teacher</strong> to reward credits or as a <strong>Student</strong> at the digital kiosk to redeem items. Watch levels, streaks, and real-time logs update in real time with authentic feedback!
               </p>
             </div>
 
@@ -856,7 +856,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 font-bold text-white shadow-xl shadow-emerald-500/20 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Try Kiosk Simulator
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </a>
                 </div>
               </motion.div>
@@ -973,7 +973,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#102a45] to-[#1d426d] px-6 py-4 font-bold text-white shadow-xl shadow-slate-900/10 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Try Classroom Tools
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </a>
                 </div>
               </motion.div>
@@ -1031,7 +1031,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-500 px-6 py-4 font-bold text-white shadow-xl shadow-emerald-500/20 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Setup House System
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </Link>
                 </div>
               </motion.div>
@@ -1139,7 +1139,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-500 px-6 py-4 font-bold text-white shadow-xl shadow-amber-500/20 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Schedule a Raffle Demo
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </Link>
                 </div>
               </motion.div>
@@ -1197,7 +1197,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-500 px-6 py-4 font-bold text-white shadow-xl shadow-purple-500/20 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Custom Identity Tools
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </Link>
                 </div>
               </motion.div>
@@ -1295,7 +1295,7 @@ export function ShowcaseLanding() {
                   </li>
                   <li className="flex items-center gap-3 text-sm font-semibold text-[#1a2e42]/95">
                     <CheckCircle2 className="h-5 w-5 text-sky-600 shrink-0" />
-                    Billing billing logs, prize store invoices, and transparent student ledgers
+                    Billing logs, prize store invoices, and transparent student ledgers
                   </li>
                 </ul>
 
@@ -1305,7 +1305,7 @@ export function ShowcaseLanding() {
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-500 px-6 py-4 font-bold text-white shadow-xl shadow-sky-500/20 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
                     Request Administrative Demo
-                    <ArrowUpRight className="h-4.5 w-4.5" />
+                    <ArrowUpRight className="h-5 w-5" />
                   </Link>
                 </div>
               </motion.div>

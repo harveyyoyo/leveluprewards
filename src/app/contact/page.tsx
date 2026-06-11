@@ -6,7 +6,7 @@ import { HomeLandingLogo } from '@/components/logos/HomeLandingLogo';
 import { SiteContactForm } from '@/components/layout/SiteContactForm';
 
 export const metadata: Metadata = {
-  title: 'Contact � LevelUp',
+  title: 'Contact — LevelUp',
   description: 'Request a demo or contact LevelUp Rewards.',
 };
 
@@ -27,7 +27,7 @@ export default function ContactPage() {
         href="/"
         className="text-sm font-semibold text-slate-400 transition-colors hover:text-slate-100"
       >
-        ? Back to home
+        &larr; Back to home
       </Link>
     </div>
   );

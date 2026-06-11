@@ -71,7 +71,9 @@ function PreviewFrame({
       </div>
       <div
         className={cn(
-          'relative overflow-hidden rounded-xl border bg-black shadow-inner max-h-[420px] mx-auto',
+          // Iframe below renders at a fixed 375x812 scaled by 0.46 (~173x374); keep the
+          // frame at least that tall so narrow grid cells never clip the preview bottom.
+          'relative overflow-hidden rounded-xl border bg-black shadow-inner min-h-[374px] max-h-[420px] mx-auto',
           aspectClass,
         )}
       >
