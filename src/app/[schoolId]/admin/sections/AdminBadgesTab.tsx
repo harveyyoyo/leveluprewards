@@ -118,7 +118,7 @@ export function AdminBadgesTab(props: any) {
                     <span className="truncate text-sm font-bold">{b.name}</span>
                   </div>
                   <div className="truncate text-sm font-medium text-muted-foreground">{cat?.name ?? 'Unknown'}</div>
-                  <div className="text-center text-sm font-bold text-primary">{b.pointsRequired} pts</div>
+                  <div className="text-center text-sm font-bold text-primary">{b.pointsRequired ?? 0} pts</div>
                   <div className="truncate text-sm font-medium text-muted-foreground">{b.tier ? `${periodLabel} / ${b.tier}` : periodLabel}</div>
                   <Button
                     variant="ghost"

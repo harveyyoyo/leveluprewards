@@ -447,7 +447,7 @@ export function AdminAttendanceTab(props: any) {
                                       </p>
                                     </div>
                                     <div className="text-right shrink-0 text-sm">
-                                      <span className="text-muted-foreground font-bold text-primary">+{e.pointsAwarded} pts</span>
+                                      <span className="font-bold text-primary">+{e.pointsAwarded ?? 0} pts</span>
                                     </div>
                                   </li>
                                 ))}
@@ -818,7 +818,7 @@ export function AdminAttendanceTab(props: any) {
                   </Button>
                 </div>
 
-                {teacherAttendanceLog.length > 0 && (
+                {(teacherAttendanceLog || []).length > 0 && (
                   <div className="space-y-3 bg-muted/10 p-5 rounded-2xl border">
                     <Label className="text-sm font-bold">Recent sign-ins (teacher)</Label>
                     <div className="w-full overflow-x-auto pr-4">
@@ -836,7 +836,7 @@ export function AdminAttendanceTab(props: any) {
                             <tr key={entry.id ?? entry.signedInAt} className="border-b border-border/50">
                               <td className="py-2.5 font-semibold">{entry.studentName || entry.studentId}</td>
                               <td className="py-2.5 text-muted-foreground">{new Date(entry.signedInAt).toLocaleString()}</td>
-                              <td className="py-2.5 text-primary font-bold">+{entry.pointsAwarded}</td>
+                              <td className="py-2.5 text-primary font-bold">+{entry.pointsAwarded ?? 0}</td>
                               <td className="py-2.5 text-muted-foreground font-semibold">{entry.periodLabel ?? '–'}</td>
                             </tr>
                           ))}
