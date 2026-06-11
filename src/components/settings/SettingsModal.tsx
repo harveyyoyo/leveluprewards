@@ -741,8 +741,6 @@ export function SettingsModal() {
                                 ) : null}
                             </div>
 
-                            {canManageSchoolSettings ? null : null}
-
                             {/* APPEARANCE */}
                             <div className="grid gap-4 md:grid-cols-[220px_1fr]">
                                 {/* Desktop left nav */}
@@ -789,7 +787,12 @@ export function SettingsModal() {
                                                     : interfaceRole === 'teacher'
                                                       ? 'teacherColorScheme'
                                                       : 'colorScheme';
-                                            const selectedScheme = (local[roleKey] || 'default') as ColorScheme;
+                                            // Guard against stale/removed scheme ids on legacy docs (lookup below would crash).
+                                            const storedScheme = local[roleKey];
+                                            const selectedScheme: ColorScheme =
+                                                storedScheme && Object.prototype.hasOwnProperty.call(colorSchemes, storedScheme)
+                                                    ? (storedScheme as ColorScheme)
+                                                    : 'default';
 
                                             const renderSchemeSwatch = (key: ColorScheme) => {
                                                 const swatchColors = colorSchemes[key].swatchColors;
@@ -850,7 +853,12 @@ export function SettingsModal() {
 
                                         {(() => {
                                             const roleKey = interfaceRole === 'student' ? 'studentColorScheme' : interfaceRole === 'teacher' ? 'teacherColorScheme' : 'colorScheme';
-                                            const selectedScheme = (local[roleKey] || 'default') as ColorScheme;
+                                            // Guard against stale/removed scheme ids on legacy docs (lookup below would crash).
+                                            const storedScheme = local[roleKey];
+                                            const selectedScheme: ColorScheme =
+                                                storedScheme && Object.prototype.hasOwnProperty.call(colorSchemes, storedScheme)
+                                                    ? (storedScheme as ColorScheme)
+                                                    : 'default';
                                             const presetColors = colorSchemes[selectedScheme].swatchColors;
                                             const customColors = local.customAppearanceColors?.[selectedScheme] || {};
                                             const primaryColor = customColors.primary || presetColors[0];
@@ -2318,6 +2326,12 @@ export function SettingsModal() {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="__none__">Confetti (built-in default)</SelectItem>
+                                                    {local.defaultWelcomeGreetingStyleId &&
+                                                    !WELCOME_GREETING_STYLES.some((s) => s.id === local.defaultWelcomeGreetingStyleId) ? (
+                                                        <SelectItem value={local.defaultWelcomeGreetingStyleId}>
+                                                            Unknown style (removed)
+                                                        </SelectItem>
+                                                    ) : null}
                                                     {WELCOME_GREETING_STYLES.map((s) => (
                                                         <SelectItem key={s.id} value={s.id}>
                                                             {s.emoji} {s.label}
@@ -2403,6 +2417,9 @@ export function SettingsModal() {
                                                 </SelectTrigger>
                                                 <SelectContent className="z-[310]">
                                                     <SelectItem value="__none__">Default (School General Settings)</SelectItem>
+                                                    {selectedProfileId && !profiles.some((p) => p.id === selectedProfileId) ? (
+                                                        <SelectItem value={selectedProfileId}>Unknown profile (deleted)</SelectItem>
+                                                    ) : null}
                                                     {profiles.map((p) => (
                                                         <SelectItem key={p.id} value={p.id}>
                                                             {p.name}
