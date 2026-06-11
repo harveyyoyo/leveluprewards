@@ -50,6 +50,7 @@ function studentDisplayName(s: Student): string {
 }
 
 function formatClock(ts: number): string {
+  if (!Number.isFinite(ts)) return '';
   try {
     return new Date(ts).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   } catch {
@@ -447,7 +448,7 @@ export function AdminRecessTab({ schoolId, students }: { schoolId: string; stude
                           row.overLimit ? 'text-red-600 dark:text-red-300' : 'text-muted-foreground',
                         )}
                       >
-                        {formatBathroomElapsed(row.durationMs)}
+                        {formatBathroomElapsed(Number(row.durationMs) || 0)}
                       </span>
                       <span className="text-xs text-muted-foreground">{formatClock(row.returnedAt)}</span>
                     </div>
