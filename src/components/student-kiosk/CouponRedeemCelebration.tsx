@@ -33,7 +33,7 @@ export function CouponRedeemCelebration({
       <div
         className={cn(
           'relative flex w-full max-w-xl flex-col items-center gap-5 rounded-3xl border-2 border-white/20',
-          'bg-gradient-to-b from-slate-900/96 via-slate-900/94 to-slate-950/96',
+          'bg-gradient-to-b from-slate-900/95 via-slate-900/95 to-slate-950/95',
           'px-6 py-8 shadow-2xl shadow-emerald-950/50 sm:gap-6 sm:px-10 sm:py-10',
           'animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500 motion-reduce:animate-none',
         )}
