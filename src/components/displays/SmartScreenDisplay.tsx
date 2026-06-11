@@ -177,7 +177,7 @@ export function SmartScreenDisplay({
   const activePrizes = useMemo(() => {
     return [...(prizes || [])]
       .filter((prize) => prize.inStock !== false && (prize.stockCount ?? 1) > 0)
-      .sort((a, b) => a.points - b.points)
+      .sort((a, b) => Number(a.points ?? 0) - Number(b.points ?? 0))
       .slice(0, 4);
   }, [prizes]);
 
@@ -330,7 +330,7 @@ export function SmartScreenDisplay({
       <ModuleCard key="holidays" title="Jewish holidays" icon={<Star className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
           {upcomingHolidays.map((holiday) => (
-            <div key={holiday.id} className="rounded-xl border border-current/10 px-2 py-1.5">
+            <div key={holiday.id} className="rounded-xl border border-[color:color-mix(in_srgb,currentColor_10%,transparent)] px-2 py-1.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{holiday.nameEn}</p>
@@ -442,7 +442,8 @@ export function SmartScreenDisplay({
                     <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{house.name}</p>
                     <p className={cn('font-black', modulesCompact ? 'text-[11px]' : 'text-sm')}>{points.toLocaleString()}</p>
                   </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-current/12">
+                  {/* Tailwind 3 cannot alpha-modify `current` (bg-current/12 compiles to nothing), so use color-mix. */}
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,currentColor_12%,transparent)]">
                     <div
                       className={cn('h-full rounded-full', theme.rail)}
                       style={{ width: `${Math.max(10, Math.min(100, (points / maxHousePoints) * 100))}%` }}
@@ -501,7 +502,7 @@ export function SmartScreenDisplay({
       <ModuleCard key="bulletin" title="Bulletin" icon={<Megaphone className="h-5 w-5" />} theme={theme} compact={modulesCompact}>
         <div className="space-y-1.5">
           {activeBulletin.slice(0, modulesCompact ? 2 : 4).map((item) => (
-            <div key={item.id} className="rounded-xl border border-current/10 px-2 py-1.5">
+            <div key={item.id} className="rounded-xl border border-[color:color-mix(in_srgb,currentColor_10%,transparent)] px-2 py-1.5">
               <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{item.title}</p>
               {item.description && !modulesCompact ? (
                 <p className={cn('mt-0.5 line-clamp-1 text-xs font-semibold', theme.quiet)}>{item.description}</p>
@@ -523,11 +524,11 @@ export function SmartScreenDisplay({
           {activePrizes.slice(0, modulesCompact ? 3 : 4).map((prize) => (
             <div
               key={prize.id}
-              className="flex items-center justify-between gap-2 rounded-xl border border-current/10 px-2 py-1.5"
+              className="flex items-center justify-between gap-2 rounded-xl border border-[color:color-mix(in_srgb,currentColor_10%,transparent)] px-2 py-1.5"
             >
               <p className={cn('truncate font-black', modulesCompact ? 'text-xs' : 'text-sm')}>{prize.name}</p>
               <p className={cn('shrink-0 font-black uppercase', modulesCompact ? 'text-[10px]' : 'text-xs', theme.accent)}>
-                {prize.points.toLocaleString()} pts
+                {Number(prize.points ?? 0).toLocaleString()} pts
               </p>
             </div>
           ))}
