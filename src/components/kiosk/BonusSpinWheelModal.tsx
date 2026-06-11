@@ -29,10 +29,15 @@ export function BonusSpinWheelModal({
     const spinTo = useRef(0);
 
     const segments = useMemo(() => {
-        if (achievement?.wheelSegments && Array.isArray(achievement.wheelSegments) && achievement.wheelSegments.length === 6) {
-            return achievement.wheelSegments;
+        const raw = achievement?.wheelSegments;
+        if (
+            Array.isArray(raw) &&
+            raw.length === 6 &&
+            raw.every((s: unknown) => typeof s === 'number' && Number.isFinite(s))
+        ) {
+            return raw as number[];
         }
-        const base = achievement?.bonusPoints || 10;
+        const base = Number(achievement?.bonusPoints) || 10;
         return [
             Math.floor(base * 0.5),
             base,

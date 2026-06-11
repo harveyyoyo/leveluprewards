@@ -33,7 +33,8 @@ export function PrizeIdCard({
   const { settings } = useSettings();
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
   const scanCode = prizeScanCodeFor(prize);
-  const nameFitScale = prize.name.length >= 28 ? 0.78 : prize.name.length >= 22 ? 0.88 : 1;
+  const nameLength = (prize.name ?? '').length;
+  const nameFitScale = nameLength >= 28 ? 0.78 : nameLength >= 22 ? 0.88 : 1;
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
   const accent = prize.cardColor?.trim() || prizeCardColorForId(prize.id);
   const onColor = getContrastColor(accent) === 'white';
@@ -120,7 +121,7 @@ export function PrizeIdCard({
             Reward
           </p>
           <p className="text-[11pt] font-black leading-tight" style={{ color: mainTextColor }}>
-            {prize.points} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
+            {Number(prize.points ?? 0).toLocaleString()} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
           </p>
         </div>
       </div>

@@ -81,9 +81,13 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
         </div>
       )}
       <CouponTitle text={title} compact={hasLimitLine} />
-      <div className={cn("coupon-main w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', isColored ? 'border-[currentColor]/30' : 'border-slate-200')}>
+      <div
+        className={cn("coupon-main w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', !isColored && 'border-slate-200')}
+        /* Tailwind has no alpha modifier for currentColor (`border-[currentColor]/30` compiles to nothing). */
+        style={isColored ? { borderColor: 'color-mix(in srgb, currentColor 30%, transparent)' } : undefined}
+      >
         <div className="flex flex-col items-center leading-none">
-          <span className="text-[1.125em] font-black text-black leading-none">{coupon.value}</span>
+          <span className="text-[1.125em] font-black text-black leading-none">{Number(coupon.value ?? 0)}</span>
           <span className="text-[0.4375em] font-bold uppercase tracking-[0.2em] mt-[0.125em]">
             Points
           </span>

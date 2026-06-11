@@ -322,6 +322,11 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">School-wide</SelectItem>
+                    {teacherId && !teachers.some(t => t.id === teacherId) ? (
+                      <SelectItem value={teacherId}>
+                        {teacherId === creatorTeacherId ? 'My rewards' : 'Unknown teacher (deleted)'}
+                      </SelectItem>
+                    ) : null}
                     {teachers.map(t => (
                       <SelectItem key={t.id} value={t.id}>{t.name}&apos;s rewards</SelectItem>
                     ))}
@@ -336,6 +341,9 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">School-wide</SelectItem>
+                    {classId && !allClasses.some(c => c.id === classId) ? (
+                      <SelectItem value={classId}>Unknown class (deleted)</SelectItem>
+                    ) : null}
                     {allClasses.map(c => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
@@ -363,7 +371,7 @@ export function PrizeModal({ isOpen, setIsOpen, prize, teachers, allClasses, cat
                         {cat.teacherId ? (
                           <span className="ml-1 text-muted-foreground">(teacher)</span>
                         ) : null}
-                        <span className="block text-muted-foreground">Default award: {cat.points} pts</span>
+                        <span className="block text-muted-foreground">Default award: {Number(cat.points ?? 0)} pts</span>
                       </span>
                     </label>
                   ))}

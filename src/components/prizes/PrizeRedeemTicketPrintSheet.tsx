@@ -224,7 +224,7 @@ export function PrizeRedeemTicketPrintSheet({
               </div>
               
               <div className="prize-ticket__stats">
-                {typeof t.totalCost === 'number' ? (
+                {typeof t.totalCost === 'number' && Number.isFinite(t.totalCost) ? (
                   <p className="prize-ticket__stat-line">
                     <span className="prize-ticket__stat-label">Cost:</span>
                     {t.totalCost.toLocaleString()} pts
