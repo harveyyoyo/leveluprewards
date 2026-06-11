@@ -240,7 +240,7 @@ export function AdminBrandingTab({
                                     toast({ variant: 'destructive', title: 'Failed to restore logo', description: String(e) });
                                   }
                                 }}
-                                className="h-20 w-full rounded-2xl overflow-hidden border-2 border-border hover:border-primary bg-muted/30 p-2 transition-all hover:scale-102 flex items-center justify-center group"
+                                className="h-20 w-full rounded-2xl overflow-hidden border-2 border-border hover:border-primary bg-muted/30 p-2 transition-all hover:scale-[1.02] flex items-center justify-center group"
                               >
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -752,7 +752,7 @@ export function AdminBrandingTab({
             </div>
 
             {/* Scheduled announcements section */}
-            <div className="col-span-2 pt-8 border-t space-y-6">
+            <div className="pt-8 border-t space-y-6">
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-foreground">Scheduled Date Announcements</h4>
                 <p className="text-xs text-muted-foreground">Automatically swap out the standard banner for highly targeted schedules on specific calendar dates.</p>
@@ -780,7 +780,7 @@ export function AdminBrandingTab({
                       maxLength={10}
                     />
                   </div>
-                  <div className="space-y-2 col-span-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label className="text-xs font-bold text-muted-foreground uppercase">Sponsor / Announcement Message</Label>
                     <Input
                       placeholder="e.g. Teacher Appreciation Week sponsored by LevelUp PTG!"

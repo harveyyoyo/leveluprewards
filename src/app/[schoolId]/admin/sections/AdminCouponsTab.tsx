@@ -82,7 +82,7 @@ export function AdminCouponsTab({
 
   const filteredAvailable = useMemo(() => {
     return availableCoupons.filter((c) => {
-      const matchesSearch = normalizedSearch.length === 0 || c.code.toLowerCase().includes(normalizedSearch);
+      const matchesSearch = normalizedSearch.length === 0 || (c.code || '').toLowerCase().includes(normalizedSearch);
       const matchesCategory = category === 'all' || c.category === category;
       const matchesTeacher = teacher === 'all' || c.teacher === teacher;
       return matchesSearch && matchesCategory && matchesTeacher;
@@ -91,7 +91,7 @@ export function AdminCouponsTab({
 
   const filteredRedeemed = useMemo(() => {
     return redeemedCoupons.filter((c) => {
-      const matchesSearch = normalizedSearch.length === 0 || c.code.toLowerCase().includes(normalizedSearch);
+      const matchesSearch = normalizedSearch.length === 0 || (c.code || '').toLowerCase().includes(normalizedSearch);
       const matchesCategory = category === 'all' || c.category === category;
       const matchesTeacher = teacher === 'all' || c.teacher === teacher;
       return matchesSearch && matchesCategory && matchesTeacher;
@@ -114,7 +114,7 @@ export function AdminCouponsTab({
           key,
           category: gCategory,
           teacher: gTeacher,
-          value: c.value,
+          value: Number(c.value ?? 0),
           scopeLine,
           count: 1,
           latestAt: Number.isFinite(createdAt) ? createdAt : 0,
@@ -153,7 +153,7 @@ export function AdminCouponsTab({
           key,
           category: gCategory,
           teacher: gTeacher,
-          value: c.value,
+          value: Number(c.value ?? 0),
           scopeLine,
           count: 1,
           latestAt: Number.isFinite(usedAt) ? usedAt : 0,
@@ -322,7 +322,7 @@ export function AdminCouponsTab({
                             <span className="font-code text-primary text-sm font-bold shrink-0">{coupon.code}</span>
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <span className="text-[11px] font-bold bg-ring/10 text-ring px-2 py-0.5 rounded-lg shrink-0">
-                                {coupon.value} pts
+                                {coupon.value ?? 0} pts
                               </span>
                               <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
                                 {coupon.category} <span className="text-muted-foreground/60">by</span> {coupon.teacher}
@@ -526,7 +526,7 @@ export function AdminCouponsTab({
                           </span>
                           <div className="flex flex-wrap items-center gap-2 min-w-0">
                             <span className="text-[11px] font-bold bg-muted text-muted-foreground px-2 py-0.5 rounded-lg shrink-0">
-                              {coupon.value} pts
+                              {coupon.value ?? 0} pts
                             </span>
                             <span className="text-[11px] font-bold text-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
                               Used by {getStudentName(String(coupon.usedBy || '')) || 'Unknown'}

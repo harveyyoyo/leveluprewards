@@ -17,10 +17,12 @@ import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader'
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function achievementCriteriaLabel(ach: any) {
-  if (ach.criteria.type === 'points') return `>= ${ach.criteria.threshold} current`;
-  if (ach.criteria.type === 'lifetimePoints') return `>= ${ach.criteria.threshold} lifetime`;
-  if (ach.criteria.type === 'coupons') return `Cat: ${ach.criteria.threshold}`;
-  if (ach.criteria.type === 'manual') return 'Manual';
+  const criteria = ach?.criteria;
+  if (!criteria) return '-';
+  if (criteria.type === 'points') return `>= ${criteria.threshold ?? 0} current`;
+  if (criteria.type === 'lifetimePoints') return `>= ${criteria.threshold ?? 0} lifetime`;
+  if (criteria.type === 'coupons') return `Cat: ${criteria.threshold ?? 0}`;
+  if (criteria.type === 'manual') return 'Manual';
   return '-';
 }
 
