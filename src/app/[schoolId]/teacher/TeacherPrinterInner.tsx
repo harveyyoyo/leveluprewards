@@ -165,7 +165,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
             if (!classMatch) return false;
             if (!normalizedSearch) return true;
 
-            const fullName = `${getStudentNickname(student)} ${student.lastName}`.toLowerCase();
+            const fullName = `${getStudentNickname(student)} ${student.lastName ?? ''}`.toLowerCase();
             return fullName.includes(normalizedSearch) ||
                 student.id.toLowerCase().includes(normalizedSearch) ||
                 (student.nfcId && student.nfcId.toLowerCase().includes(normalizedSearch));
@@ -266,6 +266,9 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                         <SelectContent>
                             <SelectItem value="all">All Classes</SelectItem>
                             {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                            {filterClassId !== 'all' && classes.length > 0 && !classes.some((c) => c.id === filterClassId) && (
+                                <SelectItem value={filterClassId}>Unknown class (deleted)</SelectItem>
+                            )}
                         </SelectContent>
                     </Select>
                     <Button variant="outline" className="h-11 rounded-xl text-xs" onClick={toggleAllVisibleStudents}>
@@ -379,7 +382,7 @@ function TeacherHomeworkTab({ schoolId, teacherId, students, classes }: { school
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex flex-wrap gap-2">
-                                    <Badge variant="outline" className="font-black bg-primary/5 border-primary/20">{assignment.points} pts</Badge>
+                                    <Badge variant="outline" className="font-black bg-primary/5 border-primary/20">{(Number(assignment.points) || 0)} pts</Badge>
                                     <Badge variant="outline" className="font-bold">
                                         {assignment.classId === 'all' ? 'All Classes' : (classes.find(c => c.id === assignment.classId)?.name || 'Class Unknown')}
                                     </Badge>
@@ -637,7 +640,7 @@ function TeacherRosterTab({
 
     const matchesSearch = (student: Student) => {
         if (!normalizedSearch) return true;
-        return `${getStudentNickname(student)} ${student.lastName} ${student.nfcId || student.id}`.toLowerCase().includes(normalizedSearch);
+        return `${getStudentNickname(student)} ${student.lastName ?? ''} ${student.nfcId || student.id}`.toLowerCase().includes(normalizedSearch);
     };
 
     const sortedStudents = (list: Student[]) =>
@@ -645,7 +648,7 @@ function TeacherRosterTab({
             .filter(matchesSearch)
             .slice()
             .sort((a, b) => {
-                const ln = a.lastName.localeCompare(b.lastName);
+                const ln = (a.lastName ?? '').localeCompare(b.lastName ?? '');
                 if (ln !== 0) return ln;
                 return getStudentNickname(a).localeCompare(getStudentNickname(b));
             });
@@ -672,7 +675,7 @@ function TeacherRosterTab({
     const renderClassLabel = (student: Student) => {
         const cls = student.classId ? classMap.get(student.classId) : undefined;
         const classOwned = !!student.classId && classIdsForTeacher.has(student.classId);
-        return `${cls?.name || 'Unassigned'}${classOwned ? ' · class roster' : ''}`;
+        return `${cls?.name || 'Unassigned'}${classOwned ? ' Â· class roster' : ''}`;
     };
 
     const schoolName = schoolData?.name?.trim() || 'School';
@@ -1016,10 +1019,10 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                         const querySnapshot = await getDocs(q);
                         querySnapshot.forEach(doc => {
                             const activity = doc.data() as HistoryItem;
-                            if (activity.desc.startsWith('Redeemed:')) {
+                            if ((activity.desc ?? '').startsWith('Redeemed:')) {
                                 allRedemptions.push({
                                     studentId: student.id,
-                                    studentName: `${student.firstName} ${student.lastName}`,
+                                    studentName: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
                                     studentClass: classMap.get(student.classId || '') || 'Unassigned',
                                     ...activity,
                                     id: doc.id,
@@ -1032,7 +1035,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                 }));
             }
 
-            setRedemptions(allRedemptions.sort((a, b) => b.date - a.date));
+            setRedemptions(allRedemptions.sort((a, b) => (Number(b.date) || 0) - (Number(a.date) || 0)));
             setIsLoading(false);
         };
 
@@ -1091,7 +1094,7 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                                     </div>
                                     <div className="text-right">
                                         <Badge variant="outline" className="font-semibold text-primary bg-primary/10 border-primary/20 mb-1">
-                                            {item.amount} pts
+                                            {(Number(item.amount) || 0)} pts
                                         </Badge>
                                         <p className="text-[10px] text-muted-foreground uppercase opacity-60">
                                             {new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric' })} @ {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1183,14 +1186,14 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
     const getStudentName = (studentId?: string) => {
       if (!studentId) return 'N/A';
       const student = students?.find(s => s.id === studentId);
-      return student ? `${getStudentNickname(student)} ${student.lastName}` : `ID: ${studentId}`;
+      return student ? `${getStudentNickname(student)} ${student.lastName ?? ''}`.trim() : `ID: ${studentId}`;
     };
   
     const myCoupons = useMemo(() => {
       if (!coupons) return [];
       return coupons
         .filter((c) => (c.createdByTeacherId ? c.createdByTeacherId === teacherId : c.teacher === teacherName))
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
     }, [coupons, teacherId, teacherName]);
   
     const available = myCoupons.filter(c => !c.used);
@@ -1214,16 +1217,16 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
                     <li key={coupon.id} className="p-4 bg-card rounded-xl border border-border/40 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
                       <div className="flex justify-between items-center">
                         <span className="font-mono text-xs font-black bg-primary/10 text-primary px-2.5 py-1 rounded-md tracking-wider group-hover:bg-primary/20 transition-colors uppercase">{coupon.code}</span>
-                        <span className="font-bold text-foreground">{coupon.value} pts</span>
+                        <span className="font-bold text-foreground">{(Number(coupon.value) || 0)} pts</span>
                       </div>
                       <div className="text-[11px] font-medium text-muted-foreground mt-3 flex items-center justify-between">
                         <p className="bg-muted px-2 py-0.5 rounded-sm">{coupon.category}</p>
-                        <p className="opacity-70">{new Date(coupon.createdAt).toLocaleDateString()}</p>
+                        <p className="opacity-70">{coupon.createdAt ? new Date(coupon.createdAt).toLocaleDateString() : 'N/A'}</p>
                       </div>
                       {(coupon.startsAt || coupon.expiresAt) && (
                         <p className="text-[10px] text-muted-foreground mt-1">
                           {coupon.startsAt && <>Starts {new Date(coupon.startsAt).toLocaleDateString()}</>}
-                          {coupon.startsAt && coupon.expiresAt && ' · '}
+                          {coupon.startsAt && coupon.expiresAt && ' Â· '}
                           {coupon.expiresAt && <>Ends {new Date(coupon.expiresAt).toLocaleDateString()}</>}
                         </p>
                       )}
@@ -1247,7 +1250,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
                     <li key={coupon.id} className="p-4 bg-card/60 rounded-xl border border-dashed border-border/60 grayscale-[0.5] opacity-70">
                       <div className="flex justify-between items-center grayscale">
                         <span className="font-mono text-xs font-black bg-muted text-muted-foreground px-2.5 py-1 rounded-md tracking-wider line-through uppercase">{coupon.code}</span>
-                        <span className="font-bold text-muted-foreground">{coupon.value} pts</span>
+                        <span className="font-bold text-muted-foreground">{(Number(coupon.value) || 0)} pts</span>
                       </div>
                       <div className="text-[11px] font-medium text-muted-foreground mt-3">
                         <div className="flex justify-between items-center mb-1">
@@ -2001,6 +2004,9 @@ function TeacherAttendanceRewardsPanel({
               {availableClasses.map((c) => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
+              {selectedClassId && availableClasses.length > 0 && !availableClasses.some((c) => c.id === selectedClassId) && (
+                <SelectItem value={selectedClassId}>Unknown class (deleted)</SelectItem>
+              )}
               {availableClasses.length === 0 && <SelectItem value="__none__" disabled>No classes yet</SelectItem>}
             </SelectContent>
           </Select>
@@ -2022,6 +2028,9 @@ function TeacherAttendanceRewardsPanel({
                   {(periods || []).map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.label} ({p.startTime}-{p.endTime})</SelectItem>
                   ))}
+                  {selectedPeriodId && (periods || []).length > 0 && !(periods || []).some((p) => p.id === selectedPeriodId) && (
+                    <SelectItem value={selectedPeriodId}>Unknown period (deleted)</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </TabsContent>
@@ -2064,6 +2073,9 @@ function TeacherAttendanceRewardsPanel({
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
+                {categoryId !== '__none__' && categories.length > 0 && !categories.some((c) => c.id === categoryId) && (
+                  <SelectItem value={categoryId}>Unknown category (deleted)</SelectItem>
+                )}
               </SelectContent>
             </Select>
             <Dialog open={isAddCategoryOpen} onOpenChange={setIsAddCategoryOpen}>
@@ -2114,13 +2126,13 @@ function TeacherAttendanceRewardsPanel({
         ) : (rules || []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No attendance rules yet. Create one above, then test a student sign-in during that period.</p>
         ) : (
-        <ScrollArea className="h-[calc(100vh-32rem)]">
+        <ScrollArea className="h-[calc(100vh-32rem)] min-h-[10rem]">
           <div className="space-y-2">
             {(rules || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map((r) => (
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border bg-background/30">
                 <div className="min-w-[240px]">
                   <p className="font-bold">{r.className || availableClasses.find(c => c.id === r.classId)?.name || r.classId}</p>
-                  <p className="text-xs text-muted-foreground">{describePeriod(r)} | +{r.pointsForSignIn} (+{r.pointsForOnTime} on time)</p>
+                  <p className="text-xs text-muted-foreground">{describePeriod(r)} | +{(Number(r.pointsForSignIn) || 0)} (+{(Number(r.pointsForOnTime) || 0)} on time)</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
@@ -2333,12 +2345,12 @@ function TeacherPrinterInnerBody({
         return studentsInTeacherScope(teacherId, students ?? [], classes ?? []);
     }, [schoolWideTeacherScope, teacherId, students, classes]);
 
-    /** Class filters and coupon class lists: students’ classes plus classes this teacher owns as primary. */
+    /** Class filters and coupon class lists: studentsâ€™ classes plus classes this teacher owns as primary. */
     const classesForTeacherUi = useMemo(() => {
         if (secretaryMode) return classes ?? [];
         if (schoolWideTeacherScope) {
             const cls = classes ?? [];
-            return cls.slice().sort((a, b) => a.name.localeCompare(b.name));
+            return cls.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
         }
         const cls = classes ?? [];
         const fromStudents = new Set(
@@ -2347,7 +2359,7 @@ function TeacherPrinterInnerBody({
         return cls
             .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId)
             .slice()
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     }, [secretaryMode, schoolWideTeacherScope, classes, studentsForTeacherActions, teacherId]);
 
     const schoolDocRef = useMemoFirebase(
