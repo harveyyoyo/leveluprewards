@@ -134,7 +134,7 @@ export function BehaviorTimelinePanel({
       if (!note?.id || !note.note?.trim()) return;
       setRows((prev) => {
         const rest = prev.filter((r) => r.id !== note.id);
-        return [note, ...rest].sort((a, b) => b.createdAt - a.createdAt);
+        return [note, ...rest].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       });
       setError(null);
       window.setTimeout(() => void load({ silent: true }), 400);

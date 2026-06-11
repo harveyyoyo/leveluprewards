@@ -92,14 +92,14 @@ export default function ClassroomFullscreenPage() {
   }, [allStudents, allClasses, schoolWide, activeTeacherId]);
 
   const classes = useMemo(() => {
-    const list = (allClasses ?? []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    const list = (allClasses ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     if (schoolWide) return list;
     const fromStudents = new Set(
       students.map((s) => s.classId).filter((id): id is string => Boolean(id)),
     );
     return list
       .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === activeTeacherId)
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [allClasses, schoolWide, students, activeTeacherId]);
 
   const deferredStudents = useDeferredValue(students);
