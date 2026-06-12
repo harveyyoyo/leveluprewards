@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from 'react';
 import type { Student, Class, House, Coupon, Teacher, Prize, Category, CategoryRubricLevel, HistoryItem, Achievement, Badge, AttendanceSettings, AttendanceLogEntry, RecordClassSignInResult, HomeworkAssignment, HomeworkSubmission } from '@/lib/types';
-import type { CouponPrintPageSize } from '@/lib/coupons/couponPrint';
+import type { CouponCornerStyle, CouponPrintPageSize } from '@/lib/coupons/couponPrint';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { collection, doc, runTransaction } from 'firebase/firestore';
@@ -64,7 +64,10 @@ interface AppContextType {
   isKioskLocked: boolean;
   setIsKioskLocked: (locked: boolean) => void;
   // Print
-  setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => void;
+  setCouponsToPrint: (
+    coupons: Coupon[],
+    options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string; cornerStyle?: CouponCornerStyle },
+  ) => void;
   setStudentsToPrint: (data: { students: Student[], classes: Class[], schoolId: string; printerType?: 'dtc4500e' }) => void;
   setStaffIdCardsToPrint: (data: { subjects: import('@/lib/staff/staffIdCardSubject').StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
   printPrizeTickets: (tickets: any[]) => void;

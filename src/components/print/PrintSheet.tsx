@@ -4,7 +4,13 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Coupon } from '@/lib/types';
 import { Coupon as CouponComponent } from '@/components/coupons/Coupon';
-import { chunkCouponsForPrint, normalizeCouponPrintPageSize, type CouponPrintPageSize } from '@/lib/coupons/couponPrint';
+import {
+  chunkCouponsForPrint,
+  DEFAULT_COUPON_CORNER_STYLE,
+  normalizeCouponPrintPageSize,
+  type CouponCornerStyle,
+  type CouponPrintPageSize,
+} from '@/lib/coupons/couponPrint';
 import { cn } from '@/lib/utils';
 
 export { COUPONS_PER_PRINT_PAGE, COUPON_PRINT_PAGE_SIZE_OPTIONS } from '@/lib/coupons/couponPrint';
@@ -13,10 +19,17 @@ interface PrintSheetProps {
   coupons: Coupon[];
   schoolId: string | null;
   couponsPerPage?: CouponPrintPageSize;
+  cornerStyle?: CouponCornerStyle;
   onReady?: () => void;
 }
 
-export function PrintSheet({ coupons, schoolId, couponsPerPage = 10, onReady }: PrintSheetProps) {
+export function PrintSheet({
+  coupons,
+  schoolId,
+  couponsPerPage = 10,
+  cornerStyle = DEFAULT_COUPON_CORNER_STYLE,
+  onReady,
+}: PrintSheetProps) {
   useEffect(() => {
     document.body.classList.add('coupon-printing');
     onReady?.();
@@ -37,8 +50,14 @@ export function PrintSheet({ coupons, schoolId, couponsPerPage = 10, onReady }: 
       {pages.map((pageCoupons, pageIndex) => (
         <div key={pageIndex} className={cn('coupon-print-page', `coupon-print-page--${pageSize}`)}>
           {pageCoupons.map((c, index) => (
-            <div key={`${c.code}-${pageIndex}-${index}`} className="print-coupon-wrapper">
-              <CouponComponent coupon={c} schoolId={schoolId} />
+            <div
+              key={`${c.code}-${pageIndex}-${index}`}
+              className={cn(
+                'print-coupon-wrapper',
+                cornerStyle === 'rounded' && 'print-coupon-wrapper--rounded',
+              )}
+            >
+              <CouponComponent coupon={c} schoolId={schoolId} cornerStyle={cornerStyle} />
             </div>
           ))}
         </div>

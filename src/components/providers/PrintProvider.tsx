@@ -17,7 +17,11 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import type { CouponPrintPageSize } from '@/lib/coupons/couponPrint';
+import {
+    DEFAULT_COUPON_CORNER_STYLE,
+    type CouponCornerStyle,
+    type CouponPrintPageSize,
+} from '@/lib/coupons/couponPrint';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
@@ -70,7 +74,10 @@ const LibraryBarcodePrintSheet = dynamic(
 );
 
 interface PrintContextType {
-    setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => void;
+    setCouponsToPrint: (
+        coupons: Coupon[],
+        options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string; cornerStyle?: CouponCornerStyle },
+    ) => void;
     setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
     setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
@@ -96,7 +103,12 @@ async function ensurePrizeTicketFontsLoaded(): Promise<void> {
 
 export function PrintProvider({ children }: { children: React.ReactNode }) {
     const { toast } = useToast();
-    const [couponPrintJob, setCouponPrintJob] = useState<{ coupons: Coupon[]; couponsPerPage: CouponPrintPageSize; schoolId: string } | null>(null);
+    const [couponPrintJob, setCouponPrintJob] = useState<{
+        coupons: Coupon[];
+        couponsPerPage: CouponPrintPageSize;
+        schoolId: string;
+        cornerStyle: CouponCornerStyle;
+    } | null>(null);
     const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
@@ -241,13 +253,21 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
 
     const value = useMemo(
         () => ({
-            setCouponsToPrint: (coupons: Coupon[], options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string }) => {
+            setCouponsToPrint: (
+                coupons: Coupon[],
+                options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string; cornerStyle?: CouponCornerStyle },
+            ) => {
                 const sid = (options?.schoolId ?? '').trim();
                 if (!sid) {
                     toast({ variant: 'destructive', title: 'Cannot print coupons', description: 'Missing schoolId.' });
                     return;
                 }
-                setCouponPrintJob({ coupons, couponsPerPage: options?.couponsPerPage ?? 10, schoolId: sid });
+                setCouponPrintJob({
+                    coupons,
+                    couponsPerPage: options?.couponsPerPage ?? 10,
+                    schoolId: sid,
+                    cornerStyle: options?.cornerStyle ?? DEFAULT_COUPON_CORNER_STYLE,
+                });
             },
             setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
                 const sid = (data?.schoolId ?? '').trim();
@@ -294,6 +314,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     coupons={couponPrintJob.coupons}
                     couponsPerPage={couponPrintJob.couponsPerPage}
                     schoolId={couponPrintJob.schoolId}
+                    cornerStyle={couponPrintJob.cornerStyle}
                     onReady={triggerCouponPrint}
                 />
             )}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect, useRef, useState } from 'react';
+import type { CouponCornerStyle } from '@/lib/coupons/couponPrint';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -53,7 +54,17 @@ function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
   );
 }
 
-export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, schoolId?: string | null, isNew?: boolean }) {
+export function Coupon({
+  coupon,
+  schoolId,
+  isNew = false,
+  cornerStyle,
+}: {
+  coupon: Coupon;
+  schoolId?: string | null;
+  isNew?: boolean;
+  cornerStyle?: CouponCornerStyle;
+}) {
   const { settings } = useSettings();
   const schoolDisplayName = useSchoolDisplayName(schoolId);
   const title = schoolDisplayName ? `${APP_NAME} - ${schoolDisplayName}` : APP_NAME;
@@ -71,8 +82,13 @@ export function Coupon({ coupon, schoolId, isNew = false }: { coupon: Coupon, sc
     <div
       style={style}
       className={cn(
-        'coupon-scalable py-[0.22em] px-[0.45em] border border-dotted rounded-[0.75em] bg-white shadow-sm inline-flex flex-col items-center justify-between text-center h-[5em] w-[9.5em] relative overflow-hidden',
-        !isColored && "border-slate-400 text-slate-800"
+        'coupon-scalable py-[0.22em] px-[0.45em] border border-dotted bg-white shadow-sm inline-flex flex-col items-center justify-between text-center h-[5em] w-[9.5em] relative overflow-hidden',
+        cornerStyle === 'rectangular'
+          ? 'rounded-none print-coupon--rectangular'
+          : cornerStyle === 'rounded'
+            ? 'rounded-[0.75em] print-coupon--rounded'
+            : 'rounded-[0.75em]',
+        !isColored && 'border-slate-400 text-slate-800',
       )}
     >
       {isNew && (

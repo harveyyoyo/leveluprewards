@@ -38,8 +38,10 @@ import { useToast } from '@/hooks/use-toast';
 import {
   COUPONS_PER_PRINT_PAGE,
   COUPON_PRINT_PAGE_SIZE_OPTIONS,
+  DEFAULT_COUPON_CORNER_STYLE,
   generateUniqueCouponCodes,
   normalizeCouponPrintPageSize,
+  type CouponCornerStyle,
   type CouponPrintPageSize,
 } from '@/lib/coupons/couponPrint';
 import { buildRedemptionPrintNote } from '@/lib/coupons/couponRedemptionRules';
@@ -117,6 +119,7 @@ export function CouponPrintPanel({
   const [printExpiresOn, setPrintExpiresOn] = useState('');
   const [printSheetCount, setPrintSheetCount] = useState('1');
   const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
+  const [printCornerStyle, setPrintCornerStyle] = useState<CouponCornerStyle>(DEFAULT_COUPON_CORNER_STYLE);
   const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>(() =>
     isTeacherRedemption ? 'creator' : 'school',
   );
@@ -151,7 +154,7 @@ export function CouponPrintPanel({
 
   useEffect(() => {
     if (!isTeacherRedemption) return;
-    if (printRedemptionScope === 'school' || printRedemptionScope === 'teachers') {
+    if (printRedemptionScope === 'teachers') {
       setPrintRedemptionScope('creator');
     }
   }, [isTeacherRedemption, printRedemptionScope]);
@@ -345,7 +348,9 @@ export function CouponPrintPanel({
       isTeacherRedemption
         ? printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
-          : { redemptionScope: 'creator' }
+          : printRedemptionScope === 'school'
+            ? { redemptionScope: 'school' }
+            : { redemptionScope: 'creator' }
         : printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
           : printRedemptionScope === 'teachers'
@@ -353,7 +358,9 @@ export function CouponPrintPanel({
             : { redemptionScope: 'school' };
 
     const redemptionScopeForNote: CouponRedemptionScope = isTeacherRedemption
-      ? printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+      ? printRedemptionScope === 'classes' ||
+          printRedemptionScope === 'creator' ||
+          printRedemptionScope === 'school'
         ? printRedemptionScope
         : 'creator'
       : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
@@ -398,7 +405,11 @@ export function CouponPrintPanel({
     ) {
       await teacherBudget.onBudgetSpend(totalCost);
     }
-    setCouponsToPrint(couponsToCreate, { couponsPerPage: printCouponsPerPage, schoolId });
+    setCouponsToPrint(couponsToCreate, {
+      couponsPerPage: printCouponsPerPage,
+      schoolId,
+      cornerStyle: printCornerStyle,
+    });
     playSound('success');
     toast({
       title: 'Coupons ready to print',
@@ -408,7 +419,9 @@ export function CouponPrintPanel({
 
   const selectedCategoryForPreview = categoryList.find((c) => c.id === printCategoryId);
   const redemptionPreviewScope: CouponRedemptionScope = isTeacherRedemption
-    ? printRedemptionScope === 'classes' || printRedemptionScope === 'creator'
+    ? printRedemptionScope === 'classes' ||
+        printRedemptionScope === 'creator' ||
+        printRedemptionScope === 'school'
       ? printRedemptionScope
       : 'creator'
     : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
@@ -433,7 +446,9 @@ export function CouponPrintPanel({
       isTeacherRedemption
         ? printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-          : { redemptionScope: 'creator' as const }
+          : printRedemptionScope === 'school'
+            ? { redemptionScope: 'school' as const }
+            : { redemptionScope: 'creator' as const }
         : printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
           : printRedemptionScope === 'teachers'
@@ -551,13 +566,14 @@ export function CouponPrintPanel({
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1 w-full space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 md:col-span-2 xl:col-span-2">
                   <Label className={labelClass}>Incentive Category</Label>
                   <div className="flex items-center gap-2">
-                    <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
-                      <SelectTrigger className={fieldClass}>
-                        <SelectValue placeholder="Select..." />
-                      </SelectTrigger>
+                    <div className="min-w-0 flex-1">
+                      <Select value={printCategoryId} onValueChange={setPrintCategoryId}>
+                        <SelectTrigger className={cn(fieldClass, '[&>span]:line-clamp-none')}>
+                          <SelectValue placeholder="Select..." />
+                        </SelectTrigger>
                       <SelectContent>
                         {categoryList.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
@@ -566,6 +582,7 @@ export function CouponPrintPanel({
                         ))}
                       </SelectContent>
                     </Select>
+                    </div>
                     {!hideQuickAddCategory && (
                     <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
                       <DialogTrigger asChild>
@@ -647,6 +664,25 @@ export function CouponPrintPanel({
                           {size} per page
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <Label htmlFor="coupon-print-corners" className={labelClass}>
+                    Coupon corners
+                  </Label>
+                  <Select
+                    value={printCornerStyle}
+                    onValueChange={(value) =>
+                      setPrintCornerStyle(value === 'rounded' ? 'rounded' : 'rectangular')
+                    }
+                  >
+                    <SelectTrigger id="coupon-print-corners" className={cn('text-lg font-black', fieldClass)}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rectangular">Rectangular (default)</SelectItem>
+                      <SelectItem value="rounded">Rounded (ID card look)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -816,7 +852,7 @@ export function CouponPrintPanel({
                 <RadioGroup
                   value={printRedemptionScope}
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                  className="grid gap-3 sm:grid-cols-2"
+                  className="grid gap-3 sm:grid-cols-3"
                 >
                   <div
                     className={cn(
@@ -843,6 +879,20 @@ export function CouponPrintPanel({
                       <span className="font-bold">Selected classes</span>
                       <span className="block text-xs mt-0.5 text-muted-foreground">
                         Only students in the classes you pick below (your classes and roster).
+                      </span>
+                    </label>
+                  </div>
+                  <div
+                    className={cn(
+                      'flex items-start gap-2 rounded-xl border p-3',
+                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
+                    )}
+                  >
+                    <RadioGroupItem value="school" id="crs-school" className="mt-1" />
+                    <label htmlFor="crs-school" className="text-sm leading-snug cursor-pointer">
+                      <span className="font-bold">Schoolwide</span>
+                      <span className="block text-xs mt-0.5 text-muted-foreground">
+                        Any enrolled student at the school may redeem.
                       </span>
                     </label>
                   </div>
@@ -911,7 +961,7 @@ export function CouponPrintPanel({
                     isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80',
                   )}
                 >
-                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} />
+                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
                   Each cell on the printed sheet matches this layout.

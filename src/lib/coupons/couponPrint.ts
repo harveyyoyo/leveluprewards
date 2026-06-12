@@ -3,6 +3,10 @@ export const COUPON_PRINT_PAGE_SIZE_OPTIONS = [10, 30] as const;
 export type CouponPrintPageSize = (typeof COUPON_PRINT_PAGE_SIZE_OPTIONS)[number];
 export const COUPONS_PER_PRINT_PAGE: CouponPrintPageSize = 10;
 
+/** Printed coupon corners — rectangular matches legacy print layout; rounded mirrors ID cards. */
+export type CouponCornerStyle = 'rounded' | 'rectangular';
+export const DEFAULT_COUPON_CORNER_STYLE: CouponCornerStyle = 'rectangular';
+
 export function normalizeCouponPrintPageSize(value: number): CouponPrintPageSize {
   return COUPON_PRINT_PAGE_SIZE_OPTIONS.includes(value as CouponPrintPageSize)
     ? (value as CouponPrintPageSize)
