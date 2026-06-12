@@ -2,15 +2,17 @@
 
 import { useMemo, useState } from 'react';
 import { Megaphone, Palette } from 'lucide-react';
+import { collection, query } from 'firebase/firestore';
 import { BulletinBoardScaledPreview, type BulletinBoardPreviewLayout } from '@/components/displays/BulletinBoardScaledPreview';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { buildBulletinDisplayHref } from '@/lib/displays/displayRoutes';
-import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES } from '@/lib/bulletinBoard';
-import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
+import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES, type BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
+import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 
 type BulletinSettingsPanelProps = {
   schoolId: string;
@@ -21,18 +23,26 @@ type BulletinSettingsPanelProps = {
     bulletinLogoSize?: string;
     bulletinShowWowBadge?: boolean;
     bulletinColumns?: string;
+    incentivesShowOnBulletinBoard?: boolean;
   };
   updateSettings: (updates: Record<string, unknown>) => void;
-  sortedIncentives: BulletinBoardIncentiveRecord[];
 };
 
 export function BulletinSettingsPanel({
   schoolId,
   settings,
   updateSettings,
-  sortedIncentives,
 }: BulletinSettingsPanelProps) {
+  const firestore = useFirestore();
   const [layout, setLayout] = useState<BulletinBoardPreviewLayout>('landscape');
+
+  const incentivesQuery = useMemoFirebase(
+    () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null),
+    [firestore, schoolId],
+  );
+  const { data: incentives } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
+  const activeIncentives = useMemo(() => activeIncentivesList(incentives), [incentives]);
+  const showIncentivesOnBoard = incentivesVisibleOnSurface(settings, 'bulletinBoard');
 
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinTheme = settings.bulletinTheme || 'default';
@@ -41,7 +51,6 @@ export function BulletinSettingsPanel({
   const bulletinColumns = settings.bulletinColumns || '2';
 
   const fullHref = useMemo(() => buildBulletinDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
-  const activeIncentiveCount = (sortedIncentives || []).filter((i) => i.active !== false).length;
 
   return (
     <div className="overflow-hidden rounded-xl border bg-muted/10">
@@ -161,16 +170,29 @@ export function BulletinSettingsPanel({
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-2 font-semibold text-foreground/80">
-                <Megaphone className="h-4 w-4 text-ring" aria-hidden />
-                Active incentives
-              </span>
-              <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
-                {activeIncentiveCount}
-              </span>
-              <span className="text-xs">Total: {(sortedIncentives || []).length}</span>
-          </div>
+            <div className="rounded-xl border bg-background px-4 py-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="flex items-center gap-2 font-semibold text-foreground/80">
+                  <Megaphone className="h-4 w-4 text-ring" aria-hidden />
+                  Incentives on this board
+                </span>
+                <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
+                  {activeIncentives.length} active
+                </span>
+                <span
+                  className={
+                    showIncentivesOnBoard
+                      ? 'rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300'
+                      : 'rounded-full bg-muted px-2.5 py-1 text-[10px] font-black uppercase tracking-wide'
+                  }
+                >
+                  {showIncentivesOnBoard ? 'Visible' : 'Hidden'}
+                </span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Create and choose surfaces in Admin → Incentives. This panel only controls bulletin layout and theme.
+              </p>
+            </div>
         </div>
       </div>
     </div>

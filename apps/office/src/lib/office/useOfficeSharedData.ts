@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
-import { useAppContext } from '@/components/AppProvider';
+import { useAppContext } from '@/components/providers/OfficeAuthProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';

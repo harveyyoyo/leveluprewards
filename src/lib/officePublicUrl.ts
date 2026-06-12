@@ -11,12 +11,25 @@ export type OfficePublicSegment =
   | 'reports'
   | 'settings';
 
+function officeDevOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
+  if (!raw) return null;
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `http://${raw}`);
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 function officeCanonicalOrigin(): string | null {
   const host = canonicalOfficeHost();
-  if (!host) return null;
+  if (!host) {
+    return officeDevOrigin();
+  }
   if (typeof window !== 'undefined') {
     if (isLocalDevHost(window.location.host) && !isOfficeHostname(window.location.host)) {
-      return null;
+      return officeDevOrigin();
     }
   }
   const scheme = host.includes('localhost') ? 'http' : 'https';
@@ -38,6 +51,13 @@ export function officePublicHref(schoolId: string, segment: OfficePublicSegment 
   const school = schoolId.trim().toLowerCase();
   const origin = officeCanonicalOrigin();
   if (origin) {
+    const devOrigin = officeDevOrigin();
+    const usesOfficeAppRoutes = !!devOrigin && origin === devOrigin;
+    if (usesOfficeAppRoutes) {
+      return segment
+        ? `${origin}/${school}/office/${segment}`
+        : `${origin}/${school}/office`;
+    }
     return segment ? `${origin}/${school}/${segment}` : `${origin}/${school}`;
   }
   if (typeof window !== 'undefined' && isOfficeHostname(window.location.host)) {

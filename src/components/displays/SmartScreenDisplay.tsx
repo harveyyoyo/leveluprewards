@@ -44,6 +44,7 @@ import {
   validSmartScreenLayout,
 } from '@/lib/smartScreen/smartScreenSettings';
 import type { BulletinIncentive, SmartScreenLocationInfo } from '@/hooks/useSmartScreenDisplayData';
+import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 import type { Class, House, Prize, Student } from '@/lib/types';
 import { formatTodayHebrewDate, getUpcomingJewishHolidays } from '@/lib/hebrewCalendar';
 
@@ -181,12 +182,7 @@ export function SmartScreenDisplay({
       .slice(0, 4);
   }, [prizes]);
 
-  const activeBulletin = useMemo(() => {
-    return [...(bulletinItems || [])]
-      .filter((item) => item.active !== false)
-      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-      .slice(0, 4);
-  }, [bulletinItems]);
+  const activeBulletin = useMemo(() => activeIncentivesList(bulletinItems).slice(0, 4), [bulletinItems]);
 
   const birthdayStudents = useMemo(() => {
     return (students || []).filter((student) => birthdayMatchesToday(student.birthday, now)).slice(0, 3);
@@ -234,7 +230,10 @@ export function SmartScreenDisplay({
   const showHouses = readScreenSetting('smartScreenShowHouses', schoolSettings, screenSettings) !== false;
   const showClasses = readScreenSetting('smartScreenShowClasses', schoolSettings, screenSettings) !== false;
   const showBirthdays = readScreenSetting('smartScreenShowBirthdays', schoolSettings, screenSettings) !== false;
-  const showBulletin = readScreenSetting('smartScreenShowBulletin', schoolSettings, screenSettings) !== false;
+  const showBulletinModule =
+    readScreenSetting('smartScreenShowBulletin', schoolSettings, screenSettings) !== false;
+  const showBulletin =
+    showBulletinModule && incentivesVisibleOnSurface(schoolSettings, 'smartScreen');
   const showRewards = readScreenSetting('smartScreenShowRewards', schoolSettings, screenSettings) !== false;
   const showSchedule = readScreenSetting('smartScreenShowSchedule', schoolSettings, screenSettings) !== false;
   const showHebrewDate = isJewishOrthodox && readScreenSetting('smartScreenShowHebrewDate', schoolSettings, screenSettings) === true;
@@ -510,7 +509,11 @@ export function SmartScreenDisplay({
             </div>
           ))}
           {activeBulletin.length === 0 ? (
-            <p className={cn('text-xs font-semibold', theme.quiet)}>Add bulletin items in Admin.</p>
+            <p className={cn('text-xs font-semibold', theme.quiet)}>
+              {showBulletinModule
+                ? 'Add incentives in Admin → Incentives, or turn on Where to show → Smart Screen.'
+                : 'Turn on the Bulletin module in Displays → Smart Screen.'}
+            </p>
           ) : null}
         </div>
       </ModuleCard>,

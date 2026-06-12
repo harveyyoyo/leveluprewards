@@ -1,0 +1,4076 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.font-barcode {
+  font-family: 'Libre Barcode 39', cursive;
+}
+
+/* SVG barcodes (JsBarcode Code 128) — sharper bars + quiet zone for camera scan */
+.print-barcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: #ffffff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-barcode-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  overflow: visible;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-barcode-caption {
+  margin-top: 2px;
+}
+
+.print-id-barcode-container .print-barcode {
+  width: 94%;
+  max-width: 2.85in;
+}
+
+.print-id-barcode-container .print-barcode-svg {
+  min-height: 0.28in;
+  max-height: 0.44in;
+}
+
+.coupon-barcode.print-barcode .print-barcode-svg {
+  max-height: 1.1em;
+}
+
+.library-barcode-sticker-code.print-barcode .print-barcode-svg {
+  max-height: 0.22in;
+}
+
+/* System emoji fonts — theme/display fonts rarely include emoji glyphs. */
+:root {
+  --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
+}
+
+/* i18n: Hebrew (RTL) typography — LocaleProvider sets html[dir]. */
+html[dir='rtl'] body {
+  font-family: 'Noto Sans Hebrew', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * School Office typography: Tailwind uses rem from <html>, not the parent pane.
+ * Sidebar baseline = 18px on html; main pane uses zoom so all rem utilities shrink (~14px effective body).
+ */
+html[data-office-portal] {
+  font-size: var(--office-sidebar-font-size, 18px);
+}
+
+html[data-office-portal] #levelup-global-app-header {
+  display: none !important;
+}
+
+html[data-hide-global-header] #levelup-global-app-header {
+  display: none !important;
+}
+
+html[data-office-portal] .office-main-pane {
+  zoom: var(--office-main-zoom, 0.7777777778);
+}
+
+/* Tailwind text-* uses rem from <html>; cap large type in the workspace pane. */
+html[data-office-portal] .office-main-pane .text-2xl {
+  font-size: 1.25rem !important;
+  line-height: 1.625rem !important;
+}
+
+html[data-office-portal] .office-main-pane .text-xl {
+  font-size: 1.125rem !important;
+  line-height: 1.5rem !important;
+}
+
+html[data-office-portal] .office-main-pane .text-lg {
+  font-size: 1rem !important;
+  line-height: 1.375rem !important;
+}
+
+/* Centered site frame — not full widescreen viewport. */
+html[data-office-portal] .office-layout-pane {
+  box-sizing: border-box;
+}
+
+html[data-office-portal] .office-content-pane {
+  box-sizing: border-box;
+}
+
+@supports not (zoom: 1) {
+  html[data-office-portal] .office-main-pane {
+    transform: scale(var(--office-main-zoom, 0.7777777778));
+    transform-origin: top left;
+    width: calc(100% / var(--office-main-zoom, 0.7777777778));
+  }
+}
+
+@media print {
+  html[data-office-portal] {
+    font-size: 16px;
+  }
+
+  html[data-office-portal] .office-main-pane {
+    zoom: 1;
+    transform: none;
+    width: auto;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+@keyframes lovable-tab-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0) scale(0.975);
+    filter: blur(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes lovable-tab-pop {
+  0% {
+    transform: translate3d(0, 4px, 0) scale(0.96);
+  }
+  64% {
+    transform: translate3d(0, -1px, 0) scale(1.035);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.lovable-tab-content[data-state='active'] {
+  animation: lovable-tab-in 460ms cubic-bezier(0.22, 1, 0.36, 1) both !important;
+  will-change: opacity, transform, filter;
+}
+
+.lovable-tab-trigger[data-state='active'] {
+  animation: lovable-tab-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.student-kiosk-transition-flash {
+  contain: layout paint style;
+  isolation: isolate;
+  transform: translateZ(0);
+  will-change: opacity;
+}
+
+.student-kiosk-transition-card {
+  animation: student-kiosk-flash-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform: translateZ(0);
+  will-change: opacity, transform;
+}
+
+.student-kiosk-transition-mark {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.student-kiosk-transition-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: hsl(var(--primary) / 0.18);
+  animation: student-kiosk-ring 1550ms cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  transform: translateZ(0) scale(0.86);
+  will-change: opacity, transform;
+}
+
+.student-kiosk-transition-ring-delay {
+  animation-delay: 520ms;
+}
+
+@keyframes student-kiosk-flash-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes student-kiosk-ring {
+  0% {
+    opacity: 0.62;
+    transform: translateZ(0) scale(0.88);
+  }
+  100% {
+    opacity: 0;
+    transform: translateZ(0) scale(1.34);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lovable-tab-content[data-state='active'],
+  .lovable-tab-trigger[data-state='active'],
+  .student-kiosk-transition-card,
+  .student-kiosk-transition-ring,
+  .student-kiosk-warm-aurora,
+  .student-kiosk-scan-beam,
+  .student-kiosk-scan-beam-horizontal,
+  .student-kiosk-scan-beam-core,
+  .student-kiosk-scan-flash,
+  .rk-dot,
+  .rk-rise,
+  .rk-title {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* Student kiosk redeem — warm OKLCH kiosk aesthetic (default / unthemed) */
+@keyframes rk-aurora {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -15px) scale(1.08);
+  }
+}
+
+@keyframes rk-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes rk-scan {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(1100%);
+  }
+}
+
+@keyframes rk-scan-horizontal {
+  0% {
+    left: -36%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes rk-scan-horizontal-core {
+  0% {
+    left: -3px;
+  }
+  100% {
+    left: calc(100% + 3px);
+  }
+}
+
+@keyframes rk-scan-flash {
+  0%,
+  44%,
+  56%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.28;
+  }
+}
+
+@keyframes rk-pulse {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes rk-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.student-kiosk-warm-shell {
+  color: oklch(0.28 0.08 0);
+  background:
+    radial-gradient(1200px 700px at 10% -10%, oklch(0.94 0.06 10), transparent 60%),
+    radial-gradient(900px 600px at 110% 10%, oklch(0.94 0.06 350), transparent 60%),
+    radial-gradient(900px 600px at 50% 110%, oklch(0.96 0.04 20), transparent 60%),
+    linear-gradient(180deg, oklch(0.985 0.01 10), oklch(0.97 0.03 10));
+}
+
+.student-kiosk-warm-grid {
+  background-image:
+    linear-gradient(oklch(0.5 0.1 10 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.5 0.1 10 / 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse at center, black 25%, transparent 80%);
+}
+
+.student-kiosk-warm-aurora {
+  animation: rk-aurora 12s ease-in-out infinite;
+}
+
+.student-kiosk-warm-aurora-reverse {
+  animation: rk-aurora 14s ease-in-out infinite reverse;
+}
+
+.student-kiosk-scan-beam {
+  animation: rk-scan 2.4s linear infinite;
+}
+
+.student-kiosk-scan-beam-horizontal {
+  animation: rk-scan-horizontal 1.05s linear infinite;
+  will-change: left;
+}
+
+.student-kiosk-scan-beam-core {
+  animation: rk-scan-horizontal-core 1.05s linear infinite;
+  will-change: left;
+}
+
+.student-kiosk-scan-flash {
+  animation: rk-scan-flash 1.05s linear infinite;
+}
+
+.rk-title {
+  background: linear-gradient(
+    110deg,
+    oklch(0.5 0.22 10) 0%,
+    oklch(0.55 0.22 350) 55%,
+    oklch(0.5 0.22 20) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: rk-shimmer 8s ease-in-out infinite;
+}
+
+.rk-rise {
+  animation: rk-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.rk-dot {
+  animation: rk-pulse 1.6s ease-in-out infinite;
+}
+
+.student-kiosk-gradient-brand {
+  background: linear-gradient(135deg, oklch(0.6 0.22 10), oklch(0.6 0.22 350));
+}
+
+.student-kiosk-gradient-text {
+  background: linear-gradient(90deg, oklch(0.5 0.22 10), oklch(0.55 0.22 350));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@layer base {
+  :root {
+    --background: 42 48% 96%;
+    --foreground: 222 47% 11%;
+    --card: 40 35% 99%;
+    --card-foreground: 222 47% 11%;
+    --popover: 40 35% 99%;
+    --popover-foreground: 222 47% 11%;
+    /* Sapphire + amber default appearance */
+    --primary: 217 64% 40%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 40 62% 78%;
+    --secondary-foreground: 40 44% 20%;
+    --muted: 42 44% 91%;
+    --muted-foreground: 217 26% 36%;
+    --accent: 40 64% 88%;
+    --accent-foreground: 40 48% 24%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 40 40% 78%;
+    --input: 40 40% 78%;
+    --ring: 40 70% 46%;
+    --chart-1: 217 64% 40%;
+    --chart-2: 40 70% 48%;
+    --chart-3: 40 62% 56%;
+    --chart-4: 40 65% 54%;
+    --chart-5: 217 58% 48%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 22%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 42%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 210 40% 98%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-200 min-h-screen motion-reduce:transition-none;
+  }
+
+  /* Backdrop performance hardening:
+   * - When hidden/off/reduced-motion, pause all animations underneath the backdrop host.
+   * - Also neutralize transition churn on descendants (helps battery on kiosk tablets).
+   */
+  #arcade-backdrop-host.arcade-backdrop-paused *,
+  #arcade-backdrop-host.arcade-backdrop-off * {
+    animation-play-state: paused !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  #arcade-backdrop-host.arcade-backdrop-off {
+    opacity: 0 !important;
+  }
+  
+  /* Make all bold text use the primary scheme color by default */
+  strong,
+  b,
+  .font-bold,
+  .font-black,
+  .font-extrabold {
+    color: hsl(var(--primary));
+  }
+
+  /*
+   * Smart Screen hallway display uses its own theme tokens.
+   * App dark mode must not recolor bold headings or the page shell.
+   */
+  html[data-smart-screen-theme] body {
+    background-image: none !important;
+  }
+
+  html[data-smart-screen-theme='daylight'] body {
+    background-color: #f5f7fb !important;
+    color: #0f172a !important;
+  }
+
+  html[data-smart-screen-theme='daylight'] {
+    color-scheme: light;
+  }
+
+  html[data-smart-screen-theme='midnight'] body {
+    background-color: #020817 !important;
+    color: #ffffff !important;
+  }
+
+  html[data-smart-screen-theme='studio'] body {
+    background-color: #090806 !important;
+    color: #ffffff !important;
+  }
+
+  html[data-smart-screen-theme='midnight'],
+  html[data-smart-screen-theme='studio'] {
+    color-scheme: dark;
+  }
+
+  html[data-smart-screen-theme] [data-smart-screen-root] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
+  
+  .coupon-preview-container {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .coupon-preview-container .coupon-scalable {
+    font-size: 10.526cqi;
+  }
+
+  .print-coupon-wrapper .coupon-scalable {
+    font-size: 24px;
+  }
+
+  /* Teacher "Print preview" (same em-based coupon as the sheet) — was inheriting ~16px; scale to match print. */
+  .coupon-print-preview-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.25rem;
+  }
+
+  .coupon-print-match-wrapper .coupon-scalable {
+    /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
+    font-size: 24px;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-scalable {
+    font-size: 19px;
+    justify-content: flex-start;
+    gap: 0.04em;
+    padding-top: 0.16em;
+    padding-bottom: 0.14em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-title {
+    margin-bottom: 0;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-main {
+    padding-top: 0.04em;
+    padding-bottom: 0.04em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-barcode {
+    display: block;
+    font-size: 1.34em;
+    line-height: 1;
+    font-weight: 400;
+    font-style: normal;
+    transform: none;
+    letter-spacing: 0.03em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-redemption-label {
+    font-size: 0.2em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-barcode-zone {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-height: 1.58em;
+    margin-top: 0.02em;
+    gap: 0;
+  }
+}
+
+@media (max-height: 760px) {
+  .student-dashboard-shell {
+    --student-dashboard-density: 0.93;
+  }
+}
+
+/* Portal hub — layered neutral depth + per-card accent tint (set --portal-accent on .group) */
+.portal-choose-card {
+  border-color: color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 33%, transparent);
+  box-shadow:
+    0 1px 2px hsl(222 47% 11% / 0.06),
+    0 4px 12px hsl(222 47% 11% / 0.07),
+    0 12px 28px hsl(222 47% 11% / 0.09),
+    0 18px 42px color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 18%, transparent);
+}
+
+.group:hover .portal-choose-card,
+.group:focus-visible .portal-choose-card {
+  border-color: color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 58%, transparent);
+  box-shadow:
+    0 2px 4px hsl(222 47% 11% / 0.07),
+    0 10px 24px hsl(222 47% 11% / 0.11),
+    0 22px 48px hsl(222 47% 11% / 0.13),
+    0 28px 60px color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 26%, transparent);
+}
+
+.portal-choose-icon {
+  box-shadow:
+    0 2px 6px hsl(222 47% 11% / 0.22),
+    0 8px 22px color-mix(in srgb, var(--portal-icon-accent, var(--portal-accent, hsl(var(--primary)))) 38%, transparent);
+}
+
+.portal-choose-icon > svg {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .portal-choose-icon--hoverable,
+.group:focus-visible .portal-choose-icon--hoverable {
+  transform: scale(1.1) translateY(-3px);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .portal-choose-icon--hoverable > svg,
+.group:focus-visible .portal-choose-icon--hoverable > svg {
+  transform: scale(1.12) rotate(-8deg);
+}
+
+.group:active .portal-choose-icon--hoverable {
+  transform: scale(1.04) translateY(-1px);
+}
+
+.group:active .portal-choose-icon--hoverable > svg {
+  transform: scale(1.05) rotate(-3deg);
+}
+
+.portal-choose-title-depth {
+  text-shadow:
+    0 2px 18px hsl(var(--primary) / 0.2),
+    0 1px 3px hsl(222 47% 11% / 0.14);
+}
+
+/* Portal hub: fit header + cards + footer inside viewport (no scrollbars) */
+@media (max-height: 820px) {
+  .portal-choose-title-depth {
+    font-size: clamp(2rem, 7vh, 3.25rem) !important;
+    line-height: 1.05;
+  }
+
+  .portal-choose-card:not([class*='min-h-']) {
+    min-height: 0 !important;
+  }
+}
+
+@media (max-height: 680px) {
+  .portal-choose-title-depth {
+    font-size: clamp(1.75rem, 6vh, 2.5rem) !important;
+  }
+}
+
+/* Color Schemes for both Light & Dark Mode */
+[data-color-scheme="default"] {
+  --primary: 211 62% 17%;
+  --primary-foreground: 0 0% 100%;
+  --background: 218 55% 93%;
+  --foreground: 222 47% 11%;
+  --card: 214 40% 98%;
+  --card-foreground: 222 47% 11%;
+  --popover: 214 40% 98%;
+  --popover-foreground: 222 47% 11%;
+  --accent: 41 45% 92%;
+  --accent-foreground: 41 42% 28%;
+  --secondary: 41 40% 88%;
+  --secondary-foreground: 41 38% 24%;
+  --border: 214 36% 80%;
+  --muted: 214 38% 90%;
+  --muted-foreground: 215 24% 34%;
+  --input: 214 36% 80%;
+  --ring: 41 60% 55%;
+  --chart-1: 211 62% 28%;
+  --chart-2: 41 60% 65%;
+  --chart-3: 217 64% 40%;
+  --chart-4: 160 65% 42%;
+  --chart-5: 280 62% 55%;
+}
+
+html[data-color-scheme="default"] body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.16) 0%, transparent 52%),
+    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.14) 0%, transparent 48%),
+    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-3) / 0.12) 0%, transparent 54%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-color-scheme="default"] body {
+    background-attachment: scroll;
+  }
+}
+
+[data-color-scheme="sky"] {
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 11%;
+  --background: 199 80% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 199 90% 95%;
+  --accent-foreground: 199 40% 30%;
+  --border: 199 60% 85%;
+  --muted: 199 40% 96%;
+  --muted-foreground: 199 30% 35%;
+  --chart-1: 199 89% 48%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="rose"] {
+  --primary: 347 77% 48%;
+  --primary-foreground: 210 40% 98%;
+  --background: 347 70% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 347 85% 95%;
+  --accent-foreground: 347 45% 35%;
+  --border: 347 60% 85%;
+  --muted: 347 45% 96%;
+  --muted-foreground: 347 32% 45%;
+  --chart-1: 347 77% 50%;
+  --chart-2: 25 95% 53%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="mint"] {
+  --primary: 160 84% 39%;
+  --primary-foreground: 222 47% 11%;
+  --background: 160 60% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 160 70% 94%;
+  --accent-foreground: 160 40% 30%;
+  --border: 160 50% 84%;
+  --muted: 160 40% 96%;
+  --muted-foreground: 160 28% 35%;
+  --chart-1: 160 84% 39%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="lavender"] {
+  --primary: 263 70% 58%;
+  --primary-foreground: 210 40% 98%;
+  --background: 263 60% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 263 75% 95%;
+  --accent-foreground: 263 45% 35%;
+  --border: 263 55% 85%;
+  --muted: 263 40% 96%;
+  --muted-foreground: 263 30% 45%;
+  --chart-1: 263 70% 58%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 40 90% 60%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="peach"] {
+  --primary: 25 95% 53%;
+  --primary-foreground: 222 47% 11%;
+  --background: 25 80% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 25 90% 95%;
+  --accent-foreground: 25 55% 35%;
+  --border: 25 70% 85%;
+  --muted: 25 40% 96%;
+  --muted-foreground: 25 30% 35%;
+  --chart-1: 25 95% 53%;
+  --chart-2: 347 77% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+/* Dual-tone appearance presets (see Settings → Colors; complements in `rainbowNav.ts`) */
+[data-color-scheme="ocean"] {
+  --primary: 192 70% 30%;
+  --primary-foreground: 210 40% 98%;
+  --background: 200 78% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 40 58% 94%;
+  --accent-foreground: 40 42% 28%;
+  --secondary: 40 56% 86%;
+  --secondary-foreground: 40 42% 24%;
+  --border: 192 42% 82%;
+  --muted: 192 34% 96%;
+  --muted-foreground: 192 24% 34%;
+  --ring: 40 63% 56%;
+  --chart-1: 192 70% 38%;
+  --chart-2: 40 63% 56%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 199 89% 48%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="sunset"] {
+  --primary: 12 66% 55%;
+  --primary-foreground: 222 47% 11%;
+  --background: 24 85% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 229 40% 95%;
+  --accent-foreground: 229 28% 34%;
+  --secondary: 229 34% 88%;
+  --secondary-foreground: 229 28% 30%;
+  --border: 24 72% 86%;
+  --muted: 24 45% 96%;
+  --muted-foreground: 24 32% 36%;
+  --ring: 229 30% 50%;
+  --chart-1: 12 66% 55%;
+  --chart-2: 229 30% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+[data-color-scheme="sapphire"] {
+  --primary: 217 64% 40%;
+  --primary-foreground: 210 40% 98%;
+  --background: 42 48% 96%;
+  --card: 40 35% 99%;
+  --card-foreground: 222 47% 11%;
+  --accent: 40 64% 88%;
+  --accent-foreground: 40 48% 24%;
+  --secondary: 40 62% 78%;
+  --secondary-foreground: 40 44% 20%;
+  --border: 40 40% 78%;
+  --muted: 42 44% 91%;
+  --muted-foreground: 217 26% 36%;
+  --ring: 40 70% 46%;
+  --chart-1: 217 64% 40%;
+  --chart-2: 40 70% 48%;
+  --chart-3: 40 62% 56%;
+  --chart-4: 40 65% 54%;
+  --chart-5: 217 58% 48%;
+}
+
+html[data-color-scheme="sapphire"] body {
+  background-color: hsl(var(--background));
+  background-image:
+    radial-gradient(ellipse 125% 90% at 8% -12%, hsl(var(--primary) / 0.12) 0%, transparent 52%),
+    radial-gradient(ellipse 110% 85% at 96% 6%, hsl(var(--chart-2) / 0.26) 0%, transparent 48%),
+    radial-gradient(ellipse 95% 80% at 4% 88%, hsl(var(--chart-2) / 0.16) 0%, transparent 50%),
+    radial-gradient(ellipse 100% 75% at 50% 108%, hsl(var(--chart-2) / 0.18) 0%, transparent 54%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-color-scheme="sapphire"] body {
+    background-attachment: scroll;
+  }
+}
+
+[data-color-scheme="coral"] {
+  --primary: 4 63% 59%;
+  --primary-foreground: 222 47% 11%;
+  --background: 20 85% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --accent: 177 48% 94%;
+  --accent-foreground: 177 34% 28%;
+  --secondary: 177 42% 86%;
+  --secondary-foreground: 177 34% 24%;
+  --border: 4 54% 86%;
+  --muted: 4 38% 96%;
+  --muted-foreground: 4 28% 34%;
+  --ring: 177 53% 37%;
+  --chart-1: 4 63% 59%;
+  --chart-2: 177 53% 37%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+/* Dark mode variations for themes */
+.dark[data-color-scheme="default"] {
+  --background: 220 45% 7%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 38% 22%;
+  --muted: 217 34% 14%;
+  --muted-foreground: 215 24% 72%;
+  --primary: 211 58% 42%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 41 28% 18%;
+  --accent-foreground: 41 55% 82%;
+  --secondary: 41 24% 18%;
+  --secondary-foreground: 41 50% 88%;
+  --ring: 41 55% 58%;
+  --chart-1: 211 58% 52%;
+  --chart-2: 41 50% 62%;
+  --chart-3: 217 64% 48%;
+  --chart-4: 160 65% 46%;
+  --chart-5: 280 62% 58%;
+}
+
+.dark[data-color-scheme="sky"] {
+  --background: 199 80% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 199 50% 25%;
+  --muted: 199 40% 15%;
+  --muted-foreground: 199 30% 70%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 199 40% 20%;
+  --accent-foreground: 199 90% 90%;
+  --ring: 199 89% 48%;
+  --chart-1: 199 89% 48%;
+  --chart-2: 160 84% 39%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="rose"] {
+  --background: 347 70% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 347 50% 25%;
+  --muted: 347 40% 15%;
+  --muted-foreground: 347 30% 72%;
+  --primary: 347 77% 48%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 347 40% 20%;
+  --accent-foreground: 347 90% 90%;
+  --ring: 347 77% 48%;
+  --chart-1: 347 77% 50%;
+  --chart-2: 25 95% 53%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="mint"] {
+  --background: 160 60% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 160 45% 22%;
+  --muted: 160 40% 15%;
+  --muted-foreground: 160 30% 70%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 160 40% 20%;
+  --accent-foreground: 160 90% 90%;
+  --ring: 160 84% 39%;
+  --chart-1: 160 84% 39%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 40 90% 60%;
+  --chart-4: 110 60% 50%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="lavender"] {
+  --background: 263 60% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 263 45% 25%;
+  --muted: 263 40% 15%;
+  --muted-foreground: 263 30% 72%;
+  --primary: 263 70% 58%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 263 40% 20%;
+  --accent-foreground: 263 90% 90%;
+  --ring: 263 70% 58%;
+  --chart-1: 263 70% 58%;
+  --chart-2: 199 89% 48%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 40 90% 60%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="peach"] {
+  --background: 25 80% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --border: 25 60% 25%;
+  --muted: 25 40% 15%;
+  --muted-foreground: 25 30% 72%;
+  --primary: 25 95% 53%;
+  --primary-foreground: 222 47% 11%;
+  --accent: 25 40% 20%;
+  --accent-foreground: 25 90% 90%;
+  --ring: 25 95% 53%;
+  --chart-1: 25 95% 53%;
+  --chart-2: 347 77% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="ocean"] {
+  --background: 200 75% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --accent: 38 58% 18%;
+  --accent-foreground: 38 92% 82%;
+  --secondary: 38 58% 18%;
+  --secondary-foreground: 38 92% 86%;
+  --border: 197 45% 22%;
+  --muted: 197 38% 14%;
+  --muted-foreground: 197 28% 72%;
+  --primary: 192 70% 30%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 63% 56%;
+  --chart-1: 192 70% 38%;
+  --chart-2: 40 63% 56%;
+  --chart-3: 160 84% 39%;
+  --chart-4: 199 89% 48%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="sunset"] {
+  --background: 24 70% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --accent: 235 38% 20%;
+  --accent-foreground: 235 88% 86%;
+  --secondary: 235 38% 20%;
+  --secondary-foreground: 235 88% 88%;
+  --border: 24 55% 24%;
+  --muted: 24 40% 14%;
+  --muted-foreground: 24 30% 72%;
+  --primary: 12 66% 55%;
+  --primary-foreground: 222 47% 11%;
+  --ring: 229 30% 50%;
+  --chart-1: 12 66% 55%;
+  --chart-2: 229 30% 50%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+.dark[data-color-scheme="sapphire"] {
+  --background: 220 72% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --accent: 40 62% 24%;
+  --accent-foreground: 40 92% 84%;
+  --secondary: 40 60% 22%;
+  --secondary-foreground: 40 92% 88%;
+  --border: 40 28% 26%;
+  --muted: 40 32% 15%;
+  --muted-foreground: 40 24% 74%;
+  --primary: 217 64% 40%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 70% 46%;
+  --chart-1: 217 64% 40%;
+  --chart-2: 40 70% 48%;
+  --chart-3: 40 62% 56%;
+  --chart-4: 40 65% 54%;
+  --chart-5: 217 58% 48%;
+}
+
+.dark[data-color-scheme="coral"] {
+  --background: 20 75% 5%;
+  --card: 222 47% 11%;
+  --card-foreground: 210 40% 98%;
+  --accent: 196 46% 18%;
+  --accent-foreground: 196 82% 84%;
+  --secondary: 196 46% 18%;
+  --secondary-foreground: 196 82% 88%;
+  --border: 16 55% 24%;
+  --muted: 16 40% 14%;
+  --muted-foreground: 16 30% 72%;
+  --primary: 4 63% 59%;
+  --primary-foreground: 222 47% 11%;
+  --ring: 177 53% 37%;
+  --chart-1: 4 63% 59%;
+  --chart-2: 177 53% 37%;
+  --chart-3: 199 89% 48%;
+  --chart-4: 160 84% 39%;
+  --chart-5: 280 70% 60%;
+}
+
+/*
+ * Colorized dark mode (optional): `data-dark-colorize="on"` on `html` from Settings.
+ * Default scheme uses near-grayscale dark tokens; this restores saturated primaries + chart reads.
+ */
+html.dark[data-dark-colorize="on"] {
+  --gradient-bg:
+    radial-gradient(ellipse 125% 90% at 12% -8%, hsl(var(--primary) / 0.2) 0%, transparent 46%),
+    radial-gradient(ellipse 110% 80% at 92% 4%, hsl(var(--chart-2) / 0.14) 0%, transparent 44%),
+    radial-gradient(ellipse 100% 70% at 50% 108%, hsl(var(--chart-5) / 0.12) 0%, transparent 52%);
+}
+
+html.dark[data-dark-colorize="on"] body {
+  background-color: hsl(var(--background));
+  background-image: var(--gradient-bg);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.dark[data-dark-colorize="on"] body {
+    background-attachment: scroll;
+  }
+}
+
+html.dark[data-dark-colorize="on"][data-color-scheme="sapphire"] {
+  --primary: 217 64% 44%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 40 70% 46%;
+  --secondary: 40 62% 26%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 40 64% 28%;
+  --accent-foreground: 210 40% 98%;
+  --chart-1: 217 64% 48%;
+  --chart-2: 40 70% 52%;
+  --chart-3: 40 62% 58%;
+  --chart-4: 40 65% 56%;
+  --chart-5: 217 58% 52%;
+}
+
+html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
+  --primary: 211 58% 38%;
+  --primary-foreground: 210 40% 98%;
+  --ring: 211 58% 38%;
+  --secondary: 41 28% 20%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 41 32% 24%;
+  --accent-foreground: 210 40% 98%;
+  --chart-1: 211 58% 52%;
+  --chart-2: 41 55% 62%;
+  --chart-3: 38 85% 52%;
+  --chart-4: 160 65% 46%;
+  --chart-5: 280 62% 58%;
+}
+
+/* Student ID Card (screen preview)
+   Single physical size: ISO/IEC 7810 ID-1 (85.6mm × 53.98mm) — matches DTC/card printer output and Avery print below. */
+.print-id-card {
+  /* Set inline from StudentIdCard when a theme uses fontScale (default 1). */
+  --print-id-font-scale: 1.1;
+  --print-id-name-fit-scale: 1;
+  border: 1px solid hsl(var(--border));
+  padding: 12px 14px;
+  text-align: center;
+  width: 85.6mm;
+  height: 53.98mm;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-family: 'Ubuntu', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.print-id-card--rectangular {
+  border-radius: 0;
+}
+
+/* On-screen ID preview (admin, theme wizard): 1:1 ISO ID-1 — same mm box as print/DTC. */
+.student-id-card-screen-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.student-id-card-screen-preview .print-id-card {
+  flex-shrink: 0;
+}
+
+.print-id-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.print-id-app {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.print-id-app-logo {
+  width: auto;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 86px;
+}
+.print-id-app-logo img {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.print-id-app-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+.print-id-app-name {
+  font-size: calc(10px * var(--print-id-font-scale));
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+.print-id-app-tagline {
+  font-size: calc(8px * var(--print-id-font-scale));
+  font-weight: 600;
+  opacity: 0.85;
+  line-height: 1.2;
+}
+
+.print-id-school {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: right;
+}
+.print-id-school-logo {
+  width: auto;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 86px;
+}
+.print-id-school-logo img {
+  width: auto;
+  max-width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+.print-id-header {
+  font-size: calc(10px * var(--print-id-font-scale));
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.print-id-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  justify-content: space-between;
+}
+
+.print-id-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.print-id-theme-emoji-center {
+  font-family: var(--emoji-font-family);
+  font-size: calc(44px * var(--print-id-font-scale));
+  line-height: 1;
+  flex-shrink: 0;
+  margin-left: auto;
+  opacity: 0.85;
+}
+
+.print-id-theme-emoji-center .print-id-custom-emoji-img {
+  width: 1em;
+  height: 1em;
+  object-fit: contain;
+  display: block;
+}
+
+.print-id-avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  color: #4b5563;
+  flex-shrink: 0;
+}
+.print-id-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.print-id-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.print-id-name {
+  font-weight: 800;
+  font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+  letter-spacing: 0.03em;
+  line-height: 1.12;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.print-id-nickname {
+  font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+  line-height: 1.12;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.print-id-card:not(.is-colored) .print-id-class {
+  color: #4b5563;
+}
+
+.print-id-class {
+  font-size: calc(12px * var(--print-id-font-scale));
+  font-weight: 600;
+}
+
+.print-id-barcode-container {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #ffffff;
+  color: #000000;
+  padding-top: 10px;
+  padding-bottom: 6px;
+  border-radius: 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+.print-id-card .print-id-barcode-container .print-barcode-svg {
+  width: 100%;
+  max-height: calc(0.44in * var(--print-id-font-scale, 1));
+  transform: none;
+}
+
+.print-id-card .print-id-barcode-container .font-barcode,
+.print-id-card .font-barcode {
+  /* Legacy Code 39 font fallback */
+  font-weight: 400;
+  font-style: normal;
+  font-size: calc(30px * var(--print-id-font-scale));
+  line-height: 0.7;
+  color: #000000;
+  transform: scaleY(1.5);
+  transform-origin: top;
+}
+
+.theme-idcard-animated .print-id-theme-emoji-center {
+  animation: idcard-emoji-orbit 2.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
+  transform-origin: 55% 80%;
+}
+
+.theme-idcard-animated .print-id-avatar {
+  animation: idcard-avatar-pop 2.6s ease-in-out infinite;
+}
+
+/* More ID card animations: shimmer + scanline + border glow */
+.theme-idcard-animated .print-id-card {
+  position: relative;
+}
+
+.theme-idcard-animated .print-id-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 14px;
+  pointer-events: none;
+  background: radial-gradient(circle at 20% 0%, rgba(255,255,255,0.22), transparent 40%),
+              radial-gradient(circle at 80% 100%, rgba(255,255,255,0.14), transparent 45%);
+  mix-blend-mode: overlay;
+  opacity: 0.75;
+  animation: idcard-border-glow 3.2s ease-in-out infinite;
+}
+
+.theme-idcard-animated .print-id-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.18) 45%, transparent 60%);
+  transform: translateX(-120%) skewX(-12deg);
+  animation: idcard-sheen 4.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  opacity: 0.7;
+}
+
+.theme-idcard-animated .print-id-barcode-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-idcard-animated .print-id-barcode-container::after {
+  content: "";
+  position: absolute;
+  left: -30%;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: linear-gradient(to right, transparent, rgba(0,0,0,0.08), transparent);
+  transform: translateX(0);
+  animation: idcard-scanline 2.8s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes idcard-emoji-orbit {
+  0%, 100% { transform: translateY(0) rotate(-4deg) scale(1); opacity: 0.88; }
+  30% { transform: translateY(-5px) rotate(4deg) scale(1.08); opacity: 1; }
+  60% { transform: translateY(2px) rotate(-1deg) scale(1.03); opacity: 0.95; }
+}
+
+@keyframes idcard-avatar-pop {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  40% { transform: scale(1.04); filter: brightness(1.08); }
+  70% { transform: scale(0.98); filter: brightness(0.96); }
+}
+
+@keyframes idcard-border-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.95; }
+}
+
+@keyframes idcard-sheen {
+  0% { transform: translateX(-140%) skewX(-12deg); opacity: 0; }
+  20% { opacity: 0.85; }
+  55% { opacity: 0.85; }
+  100% { transform: translateX(140%) skewX(-12deg); opacity: 0; }
+}
+
+@keyframes idcard-scanline {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(260%); }
+}
+
+/* Theme element animations (student portal + prize/rewards shop): animate emoji + primary accents, not the background. */
+.theme-theme-elements-animated .theme-animated-emoji {
+  animation: theme-emoji-float 2.2s ease-in-out infinite, theme-emoji-wobble 5.2s ease-in-out infinite !important;
+  will-change: transform;
+}
+
+.theme-theme-elements-animated h2 span,
+.theme-theme-elements-animated .text-6xl,
+.theme-theme-elements-animated .text-4xl.md\\:text-5xl.font-black.leading-none + span,
+.theme-theme-elements-animated .text-3xl.md\\:text-4xl.leading-none {
+  animation: theme-emoji-float 2.2s ease-in-out infinite, theme-title-shimmer 4.8s ease-in-out infinite;
+}
+
+/* Legacy mode forces animation-duration/iteration-count with !important.
+   When a kiosk explicitly enables Theme animations, restore real timing. */
+.legacy .theme-theme-elements-animated.theme-motion-override h2 span,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-6xl,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-4xl.md\\:text-5xl.font-black.leading-none + span,
+.legacy .theme-theme-elements-animated.theme-motion-override .text-3xl.md\\:text-4xl.leading-none {
+  animation-duration: 2.2s !important;
+  animation-iteration-count: infinite !important;
+}
+
+.legacy .theme-idcard-animated.theme-motion-override .print-id-theme-emoji-center {
+  animation-duration: 2.8s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-avatar {
+  animation-duration: 2.6s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-card::before {
+  animation-duration: 3.2s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-card::after {
+  animation-duration: 4.4s !important;
+  animation-iteration-count: infinite !important;
+}
+.legacy .theme-idcard-animated.theme-motion-override .print-id-barcode-container::after {
+  animation-duration: 2.8s !important;
+  animation-iteration-count: infinite !important;
+}
+
+.theme-theme-elements-animated [style*="var(--theme-primary)"] {
+  transition: filter 300ms ease;
+}
+.theme-theme-elements-animated [style*="var(--theme-primary)"]:hover {
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.16));
+}
+
+@keyframes theme-emoji-float {
+  0%, 100% { transform: translateY(0) rotate(-1deg) scale(1); }
+  45% { transform: translateY(-8px) rotate(2deg) scale(1.06); }
+  70% { transform: translateY(-2px) rotate(-1deg) scale(1.02); }
+}
+
+@keyframes theme-emoji-wobble {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.45)); }
+}
+
+@keyframes theme-title-shimmer {
+  0%, 100% { text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  50% { text-shadow: 0 0 16px rgba(255, 255, 255, 0.36); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-theme-emoji-center,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-avatar,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-card::before,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-card::after,
+  .theme-idcard-animated:not(.theme-motion-override) .print-id-barcode-container::after,
+  .theme-theme-elements-animated:not(.theme-motion-override) h2 span,
+  .theme-theme-elements-animated:not(.theme-motion-override) .text-6xl,
+  .theme-theme-elements-animated:not(.theme-motion-override) .text-3xl.md\\:text-4xl.leading-none {
+    animation: none !important;
+  }
+}
+
+/* Print Styles */
+#coupon-print-root,
+#student-id-print-container,
+#prize-ticket-print-wrapper,
+#library-barcode-print-wrapper {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0;
+  }
+
+  /* Multi-page school reports (portal on body): allow overflow and sane margins */
+  html:has(body.school-reports-printing),
+  body.school-reports-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  body.school-reports-printing > *:not(#school-reports-print-wrapper) {
+    display: none !important;
+  }
+
+  body.school-reports-printing #school-reports-print-wrapper {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 10mm 12mm !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 1. AGGRESSIVE RESET: Force white background at the most root levels */
+  /* 1. PRODUCTION RESET: Strict visibility-based isolation */
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    overflow: hidden !important;
+  }
+
+  html:has(body.school-reports-printing),
+  body.school-reports-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  html:has(body.coupon-printing),
+  body.coupon-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* ID cards: multiple Avery pages — same as coupons; pinned 100% viewport + overflow:hidden clips page 2+. */
+  html:has(body.id-card-printing),
+  body.id-card-printing,
+  html:has(body.library-barcode-printing),
+  body.library-barcode-printing {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* 80 mm thermal voucher: don't keep Letter-sized html/body — kills huge blank under bordered slip */
+  html:has(body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing),
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Kill min-h-screen on the app shell so a long driver page (e.g. 80×3276mm) doesn't stretch the slip. */
+  html:has(body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing) [data-app-view-root],
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing [data-app-view-root] {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  /* Scorched Earth: Hide EVERYTHING on body */
+  body.coupon-printing *,
+  body.prize-ticket-printing *,
+  body.id-card-printing *,
+  body.library-barcode-printing * {
+    visibility: hidden !important;
+  }
+
+  /* Whitelist the print wrappers and their children */
+  body.coupon-printing #coupon-print-root,
+  body.coupon-printing #coupon-print-root *,
+  body.prize-ticket-printing #prize-ticket-print-wrapper,
+  body.prize-ticket-printing #prize-ticket-print-wrapper *,
+  body.prize-ticket-printing #prize-ticket-standalone,
+  body.prize-ticket-printing #prize-ticket-standalone *,
+  body.id-card-printing #student-id-print-wrapper,
+  body.id-card-printing #student-id-print-wrapper *,
+  body.library-barcode-printing #library-barcode-print-wrapper,
+  body.library-barcode-printing #library-barcode-print-wrapper * {
+    visibility: visible !important;
+  }
+
+  @page {
+    size: auto;
+    /* Avoid !important here — it prevents named @page rules (e.g. coupons) from applying margins in some engines. */
+    margin: 0;
+  }
+
+  /* 2. DISABLE FILTERS: Universal reset to kill backdrop-filters and filters */
+  *,
+  ::after,
+  ::before {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* 3. PATH-TO-VISIBLE ISOLATION:
+     The definitive way to hide everything without phantom page space.
+     We hide all children of the body, then white-list the app root and the active print wrapper. */
+  body.prize-ticket-printing > *:not([data-app-view-root]):not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone) {
+    display: none !important;
+  }
+
+  /* ID card sheet is portaled to body (StudentIdPrintSheet). Hide the app shell so visibility:hidden min-h-screen UI does not paginate as blank sheets. */
+  body.id-card-printing > *:not(#student-id-print-wrapper),
+  body.library-barcode-printing > *:not(#library-barcode-print-wrapper) {
+    display: none !important;
+  }
+
+  /* 80 mm thermal: portaled slip is a direct body child — drop the min-h-screen app shell from print layout entirely. */
+  body[data-prize-voucher-print='thermal_80mm'].prize-ticket-printing [data-app-view-root] {
+    display: none !important;
+  }
+
+  /* Coupons: print root is portaled to body (see PrintSheet). Drop phantom blank pages from the tall in-app layout. */
+  body.coupon-printing > *:not(#coupon-print-root) {
+    display: none !important;
+  }
+  
+  /* Prize tickets: keep only the wrapper to avoid layout gaps. */
+  body.prize-ticket-printing [data-app-view-root] > *:not(#prize-ticket-print-wrapper):not(#prize-ticket-standalone) {
+    display: none !important;
+  }
+
+  /* Whitelist the print wrappers - PRODUCTION VERBATIM */
+  body.coupon-printing #coupon-print-root,
+  body.prize-ticket-printing #prize-ticket-print-wrapper,
+  body.prize-ticket-printing #prize-ticket-standalone,
+  body.id-card-printing #student-id-print-wrapper,
+  body.library-barcode-printing #library-barcode-print-wrapper {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    z-index: 9999 !important;
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    transform: none !important;
+    flex-direction: unset !important;
+  }
+
+  /* Coupons: keep root flush; tiny safe area comes only from @page couponletter (avoid stacking padding + @page). */
+  body.coupon-printing #coupon-print-root {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    flex-direction: unset !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Label stock (50×70 mm): overlay slip centered — thermal uses separate rules below */
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'],
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] {
+    --prize-print-scale: 1 !important;
+    transform: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    align-items: center !important;
+  }
+
+  /* 80 mm thermal: shrink-wrap like coupons — absolute + height:100% parent makes the slip stretch */
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'],
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] {
+    page: prizethermal80;
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+    flex-direction: unset !important;
+  }
+
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket,
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket {
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-self: flex-start !important;
+    flex-grow: 0 !important;
+    grid-template-rows: unset !important;
+  }
+
+  /* Label stock only — never apply Letter-width grid (8.5in / 1fr) to thermal */
+  body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket,
+  body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Label-sized @page (50×70 mm / M110S): typography & fixed slip height — scoped to label format only */
+  @media (max-width: 100mm) {
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] {
+      transform: none !important;
+      height: 100% !important;
+      overflow: visible !important;
+      align-items: stretch !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] {
+      transform: none !important;
+      height: 100% !important;
+      overflow: visible !important;
+      align-items: stretch !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'],
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] {
+      display: block !important;
+      position: static !important;
+      height: auto !important;
+      min-height: 0 !important;
+      max-width: 80mm !important;
+      margin: 0 auto !important;
+      overflow: visible !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket {
+      width: 100% !important;
+      max-width: 100% !important;
+      /* Account for @page margin to avoid clipping. */
+      height: 68mm !important;
+      max-height: 68mm !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      border-width: 1.8px !important;
+      overflow: hidden !important;
+    }
+
+    /* AI joke / riddle / fortune can extend the slip instead of clipping. */
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket[data-has-ai-surprise='true'],
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket[data-has-ai-surprise='true'] {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 68mm !important;
+      overflow: visible !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__head,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__head {
+      padding: 1.6mm 2.1mm !important;
+      border-bottom-width: 1.8px !important;
+      gap: 1.8mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-box,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-box {
+      width: 10mm !important;
+      height: 10mm !important;
+      min-width: 10mm !important;
+      min-height: 10mm !important;
+      border-width: 2px !important;
+      padding: 0.6mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brandline,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brandline {
+      letter-spacing: 0.08em !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-lu,
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-redeem,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-lu,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__brand-redeem {
+      font-size: 2.5mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__school,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__school {
+      font-size: 3.3mm !important;
+      margin-top: 0.4mm !important;
+      line-height: 1.05 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero {
+      gap: 0.8mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__icon-ring,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__icon-ring {
+      width: 13mm !important;
+      height: 13mm !important;
+      margin: 0 auto !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name {
+      font-size: 7.2mm !important;
+      line-height: 0.88 !important;
+      padding: 0 2mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name--surprise-body,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__prize-name--surprise-body {
+      font-size: 4.5mm !important;
+      line-height: 1.1 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-name {
+      font-size: 4.1mm !important;
+      margin: 0.35mm 0 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-emoji,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__student-emoji {
+      font-size: 4.6mm !important;
+      line-height: 1 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__lucide,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__lucide {
+      width: 8.5mm !important;
+      height: 8.5mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero-emoji,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__hero-emoji {
+      font-size: 8.5mm !important;
+      line-height: 1 !important;
+    }
+
+    /* Keep school logo/fallback visible on small labels. */
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo,
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-fallback,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__logo-fallback {
+      display: block !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__banner,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__banner {
+      padding: 0.9mm 0 !important;
+      border-top-width: 1.8px !important;
+      border-bottom-width: 1.8px !important;
+      font-size: 2.35mm !important;
+      letter-spacing: 0.11em !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__details,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__details {
+      gap: 0.35mm !important;
+      margin-top: 0 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__stats,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__stats {
+      padding: 0.45mm 2.1mm 0.3mm !important;
+      gap: 0.4mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__stat-line,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__stat-line {
+      font-size: 1.95mm !important;
+      grid-template-columns: 9.5mm 1fr !important;
+      gap: 0.7mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise {
+      padding: 0.5mm 2.1mm 1.2mm !important;
+      margin-top: 0.2mm !important;
+      border-top: 1px solid #000 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-kind,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-kind {
+      font-size: 2.15mm !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.06em !important;
+      text-transform: none !important;
+      margin: 0 0 0.4mm !important;
+      color: #000 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-label,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-label {
+      font-size: 1.55mm !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      line-height: 1.15 !important;
+      margin: 0 !important;
+      color: #000 !important;
+      word-break: break-word !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer {
+      font-size: 1.75mm !important;
+      font-weight: 600 !important;
+      line-height: 1.2 !important;
+      margin: 0.4mm 0 0 !important;
+      color: #000 !important;
+      word-break: break-word !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer-label,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='label_50x70'] .prize-ticket__surprise-answer-label {
+      font-weight: 800 !important;
+    }
+
+    /* 80 mm thermal receipt roll (e.g. VCP-8370): wider page — drop fixed label height */
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+      justify-content: flex-start !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name {
+      font-size: 8.5mm !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name--surprise-body,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__prize-name--surprise-body {
+      font-size: 5.2mm !important;
+      line-height: 1.12 !important;
+    }
+
+    body.prize-ticket-printing #prize-ticket-print-wrapper[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__student-name,
+    body.prize-ticket-printing #prize-ticket-standalone[data-prize-voucher-paper='thermal_80mm'] .prize-ticket__student-name {
+      font-size: 4.6mm !important;
+    }
+  }
+  
+  body.prize-ticket-printing #prize-ticket-print-wrapper *,
+  body.prize-ticket-printing #prize-ticket-standalone * {
+    visibility: visible !important;
+  }
+
+  @page {
+    size: letter portrait;
+    margin: 0;
+  }
+
+  /* Re-state after default Letter @page so thermal slip layout keeps content-height page box in Chrome. */
+  @page prizethermal80 {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  /* Letter coupons: minimal non-printable inset (~4mm) so edges are not clipped on most printers. */
+  @page couponletter {
+    size: letter portrait;
+    margin: 4mm;
+  }
+
+  @page prizeticket {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  #coupon-print-root {
+    display: block !important;
+    position: static;
+    top: auto;
+    left: auto;
+  }
+
+  .coupon-print-page {
+    page: couponletter;
+    display: grid !important;
+    grid-template-columns: repeat(2, calc((8.5in - 8mm) / 2));
+    grid-template-rows: repeat(5, calc((11in - 8mm) / 5));
+    gap: 0 !important;
+    width: calc(8.5in - 8mm);
+    height: calc(11in - 8mm);
+    margin: 0 auto;
+    padding: 0;
+    box-sizing: border-box;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .coupon-print-page--30 {
+    grid-template-columns: repeat(3, calc((8.5in - 8mm) / 3));
+    grid-template-rows: repeat(10, calc((11in - 8mm) / 10));
+  }
+
+  .coupon-print-page:last-child {
+    page-break-after: auto;
+  }
+
+  .print-coupon-wrapper {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    page-break-inside: avoid;
+    box-sizing: border-box;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper {
+    width: 100%;
+    height: 100%;
+  }
+
+  .print-coupon-wrapper .coupon-scalable {
+    font-size: 42px !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable {
+    font-size: 19px !important;
+    justify-content: flex-start !important;
+    gap: 0.04em !important;
+    padding-top: 0.16em !important;
+    padding-bottom: 0.14em !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-title {
+    margin-bottom: 0 !important;
+  }
+
+  .print-coupon-wrapper .coupon-title,
+  .coupon-preview-container .coupon-title,
+  .coupon-print-match-wrapper .coupon-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-main {
+    padding-top: 0.04em !important;
+    padding-bottom: 0.04em !important;
+  }
+
+  /* Scanner-friendly Code 128 SVG on all coupon print layouts */
+  .print-coupon-wrapper .coupon-barcode.print-barcode,
+  .print-coupon-wrapper .coupon-barcode .print-barcode-svg {
+    overflow: visible !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-coupon-wrapper .coupon-barcode-zone {
+    flex-shrink: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* 30-up: larger bars + taller module height (matches ID card print technique) */
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode .print-barcode-svg {
+    display: block !important;
+    max-height: 1.35em !important;
+    transform: none !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-redemption-label {
+    font-size: 0.2em !important;
+    margin-bottom: 0 !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-barcode-zone {
+    flex: 1 1 auto !important;
+    justify-content: flex-end !important;
+    min-height: 1.58em !important;
+    margin-top: 0.02em !important;
+    padding-bottom: 0.02em !important;
+    gap: 0 !important;
+  }
+
+  #student-id-print-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .student-id-print-page {
+    display: grid !important;
+    grid-template-columns: repeat(2, 3.33in) !important;
+    /* Slightly tighter rows than 2.33in Avery default — small step only. */
+    grid-template-rows: repeat(4, 2.28in) !important;
+    column-gap: 0.16in !important;
+    row-gap: 0 !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    /* Avery 25395: match manufacturer sheet margins; asymmetric top/bottom nudges vertical fit. */
+    padding: 0.54in 0.6in 0.56in !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    justify-content: center !important;
+    align-content: center !important;
+    place-items: center !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+
+  .student-id-print-page:last-child {
+    page-break-after: auto;
+  }
+
+  #library-barcode-print-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+  }
+
+  .library-barcode-print-page {
+    display: grid !important;
+    grid-template-columns: repeat(3, 2.625in) !important;
+    grid-template-rows: repeat(10, 1in) !important;
+    column-gap: 0.125in !important;
+    row-gap: 0 !important;
+    width: 8.5in !important;
+    height: 11in !important;
+    padding: 0.5in 0.1875in !important;
+    box-sizing: border-box !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    justify-content: center !important;
+    align-content: start !important;
+  }
+
+  .library-barcode-print-page:last-child {
+    page-break-after: auto;
+  }
+
+  .library-barcode-sticker {
+    box-sizing: border-box !important;
+    width: 2.625in !important;
+    height: 1in !important;
+    padding: 0.06in 0.1in 0.04in !important;
+    border: 1px dashed #d1d5db !important;
+    border-radius: 2px !important;
+    background: #fff !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    overflow: hidden !important;
+    page-break-inside: avoid;
+    text-align: center;
+  }
+
+  .library-barcode-sticker-school {
+    width: 100%;
+    font-size: 5.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #6b7280;
+    line-height: 1.1;
+  }
+
+  .library-barcode-sticker-title {
+    width: 100%;
+    line-height: 1.1;
+    max-height: 2.2em;
+    overflow: hidden;
+  }
+
+  .library-barcode-sticker-meta {
+    width: 100%;
+    margin: 0;
+    line-height: 1.1;
+  }
+
+  .library-barcode-sticker-code.print-barcode {
+    max-width: 100%;
+    overflow: visible;
+  }
+
+  .library-barcode-sticker-code.print-barcode .print-barcode-svg {
+    max-height: 0.24in !important;
+  }
+
+  .library-barcode-sticker-upc {
+    margin: 0;
+    line-height: 1;
+  }
+
+  .library-barcode-sticker--spine {
+    width: 0.55in !important;
+    height: 1.25in !important;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    padding: 2mm !important;
+  }
+
+  .library-barcode-sticker--spine .library-barcode-sticker-code {
+    font-size: 11pt !important;
+  }
+
+  .library-barcode-sticker--pocket {
+    width: 2.75in !important;
+    height: 1.75in !important;
+    padding: 3mm !important;
+  }
+
+  .library-barcode-sticker--pocket .library-barcode-sticker-title {
+    font-size: 11pt !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .print-prize-id-card.print-id-card {
+    background: var(--prize-card-accent, #fff) !important;
+    border: 2px solid var(--prize-card-accent, hsl(var(--border))) !important;
+    color: var(--prize-card-text, #0f172a) !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .print-prize-id-card .print-id-header-container {
+    border-bottom-color: var(--prize-card-divider, rgba(0, 0, 0, 0.15)) !important;
+  }
+
+  .print-id-card {
+    border: 1px solid hsl(var(--border)) !important;
+    padding: 12px 14px !important;
+    text-align: center !important;
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    max-width: 85.6mm !important;
+    max-height: 53.98mm !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid;
+    font-family: 'Ubuntu', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Liberation Sans", sans-serif;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    position: relative;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+  }
+
+  .print-id-card:not(.is-colored) {
+    background: #fff !important;
+  }
+
+  /* Avery 25395: uniform scale of the full ID-1 card to fit the label cell (WYSIWYG with screen preview). */
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page > .student-id-print-slot {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    transform: scale(0.9886) !important;
+    transform-origin: center center !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page .student-id-print-slot > .print-id-card:not(.print-prize-id-card) {
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    max-width: 85.6mm !important;
+    max-height: 53.98mm !important;
+    padding: 12px 14px !important;
+    flex-shrink: 0 !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper .student-id-print-page .print-prize-id-card.print-id-card {
+    width: 90% !important;
+    max-width: 90% !important;
+    max-height: 90% !important;
+    height: auto !important;
+    aspect-ratio: 85.6 / 53.98 !important;
+  }
+
+  /* Theme fonts/weights flow from the card root (match DTC print path). */
+  body.id-card-printing #student-id-print-wrapper .student-id-print-slot .print-id-card.is-colored *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center) {
+    font-family: inherit !important;
+    font-style: inherit !important;
+  }
+
+  body.id-card-printing #student-id-print-wrapper,
+  body.id-card-printing #student-id-print-wrapper * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-id-card--rectangular {
+    border-radius: 0 !important;
+  }
+
+  .print-id-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+
+  .print-id-app {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+  .print-id-app-logo {
+    width: auto;
+    height: 24px;
+    border-radius: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f3f4f6;
+    max-width: 86px;
+  }
+  .print-id-app-logo img {
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+  .print-id-app-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    text-align: left;
+  }
+  .print-id-app-name {
+    font-size: calc(10px * var(--print-id-font-scale));
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .print-id-app-tagline {
+    font-size: calc(8px * var(--print-id-font-scale));
+    font-weight: 600;
+    opacity: 0.85;
+    line-height: 1.2;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+  .print-id-school {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: right;
+    flex: 1;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+  .print-id-school-logo {
+    width: auto;
+    height: 24px;
+    border-radius: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #f3f4f6;
+    border: 1px solid rgba(0,0,0,0.08);
+    max-width: 86px;
+  }
+  .print-id-school-logo img {
+    width: auto;
+    max-width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+  .print-id-header {
+    font-size: calc(10px * var(--print-id-font-scale));
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    overflow-wrap: break-word;
+    word-break: normal;
+    white-space: normal;
+    line-height: 1.1;
+  }
+  
+  .print-id-main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+    justify-content: space-between;
+  }
+
+  .print-id-left {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .print-id-theme-emoji-center {
+    font-family: var(--emoji-font-family) !important;
+    font-size: calc(44px * var(--print-id-font-scale));
+    line-height: 1;
+    flex-shrink: 0;
+    margin-left: auto;
+    opacity: 0.85;
+  }
+
+  .print-id-theme-emoji-center .print-id-custom-emoji-img {
+    width: 1em;
+    height: 1em;
+    object-fit: contain;
+    display: block;
+  }
+
+  .print-id-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #f3f4f6;
+    border: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: calc(20pt * var(--print-id-font-scale));
+    color: #4b5563;
+    flex-shrink: 0;
+  }
+
+  .print-id-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .print-id-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .print-id-name {
+    font-weight: 800;
+    font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+    letter-spacing: 0.03em;
+    line-height: 1.15;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    text-transform: none;
+  }
+
+  .print-id-nickname {
+    font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.15;
+  }
+
+  .print-id-card:not(.is-colored) .print-id-class {
+    color: #4b5563;
+  }
+
+  .print-id-class {
+    font-size: calc(12px * var(--print-id-font-scale));
+    font-weight: 600;
+    white-space: normal;
+    word-break: normal;
+    overflow-wrap: break-word;
+    line-height: 1.15;
+  }
+
+  .print-id-barcode-container {
+    width: 100%;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    border-top: none;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding-top: 10px;
+    padding-bottom: 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .print-id-barcode-container .print-barcode-svg {
+    width: 100% !important;
+    max-height: 0.44in !important;
+    color: #000000 !important;
+  }
+
+  .print-id-card .print-id-barcode-container .font-barcode,
+  .print-id-card .font-barcode {
+    font-weight: 400;
+    font-style: normal;
+    font-size: calc(30px * var(--print-id-font-scale));
+    line-height: 0.7;
+    color: #000000 !important;
+    transform: scaleY(1.5);
+    transform-origin: top;
+  }
+
+  /*
+   * DTC / ID-1 (credit card) print: use the same layout as the on-screen ID card
+   * (see "Student ID Card (screen preview)" at the top of this file). The generic
+   * @media .print-id-* rules above are tuned for Avery sheets; this block overrides
+   * them for body.dtc-card-printing + #student-id-dtc-print-wrapper only.
+   */
+  body.dtc-card-printing #student-id-dtc-print-wrapper .dtc-page {
+    width: 85.6mm !important;
+    height: 53.98mm !important;
+    min-width: 85.6mm !important;
+    min-height: 53.98mm !important;
+    max-width: 85.6mm !important;
+    max-height: 53.98mm !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    /* Do not set background here — it would cover the card; page chrome stays neutral via @page. */
+    background: transparent !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .dtc-page .print-id-card,
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border: 1px solid hsl(var(--border)) !important;
+    padding: 12px 14px !important;
+    text-align: center !important;
+    /* font-family: theme comes from inline on .print-id-card (see StudentIdCard); do not force Ubuntu here. */
+    /* Theme background comes from inline styles on .print-id-card; never force white (!important would override inline). */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    position: relative !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--rectangular {
+    border-radius: 0 !important;
+  }
+  /* Inherit theme font (and italic) from the card root; Avery/print rules above set Ubuntu on .print-id-header, etc. */
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center) {
+    font-family: inherit !important;
+    font-style: inherit !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-header-container {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15) !important;
+    padding-bottom: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+    min-width: 0 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-logo {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-text {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    text-align: left !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-name {
+    font-size: calc(10px * var(--print-id-font-scale)) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1.2 !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-app-tagline {
+    font-size: calc(8px * var(--print-id-font-scale)) !important;
+    font-weight: 600 !important;
+    opacity: 0.85 !important;
+    line-height: 1.2 !important;
+    overflow-wrap: break-word !important;
+    word-break: normal !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-school {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-align: right !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    justify-content: flex-end !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-school-logo {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 4px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-header {
+    font-size: calc(10px * var(--print-id-font-scale)) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.02em !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.1 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-main {
+    flex: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    padding: 4px 0 !important;
+    justify-content: space-between !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-theme-emoji-center {
+    font-family: var(--emoji-font-family) !important;
+    font-size: calc(44px * var(--print-id-font-scale)) !important;
+    line-height: 1 !important;
+    margin-left: auto !important;
+    opacity: 0.85 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-avatar {
+    width: 54px !important;
+    height: 54px !important;
+    min-width: 54px !important;
+    min-height: 54px !important;
+    border-radius: 999px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-name {
+    font-weight: 800 !important;
+    font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important;
+    letter-spacing: 0.03em !important;
+    line-height: 1.15 !important;
+    text-transform: none !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-nickname {
+    font-size: calc(12px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.15 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-class {
+    font-size: calc(12px * var(--print-id-font-scale)) !important;
+    font-weight: 600 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    line-height: 1.15 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-barcode-container {
+    width: 100% !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding-top: 10px !important;
+    padding-bottom: 6px !important;
+    border-radius: 10px !important;
+    margin-top: 4px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .print-id-barcode-container .print-barcode-svg {
+    width: 100% !important;
+    max-height: 0.44in !important;
+    color: #000000 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .print-id-barcode-container .font-barcode,
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card .font-barcode {
+    font-weight: 400 !important;
+    font-style: normal !important;
+    font-size: calc(30px * var(--print-id-font-scale)) !important;
+    line-height: 0.7 !important;
+    color: #000000 !important;
+    transform: scaleY(1.5) !important;
+    transform-origin: top !important;
+  }
+
+  /* Preserve theme backgrounds and ink in PDF/print (pair with StudentIdCard inline printColorAdjust). */
+  body.dtc-card-printing #student-id-dtc-print-wrapper,
+  body.dtc-card-printing #student-id-dtc-print-wrapper * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* --- Prize redeem ticket (58mm / M110-style narrow receipt) --- */
+  @page prizeticket {
+    size: 58mm auto;
+    margin: 0;
+  }
+
+  /* Conserving the prize ticket content styling, but removing the conflicting wrapper override */
+  .prize-ticket {
+    width: 100% !important;
+    height: auto !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important; /* Ensure absolute no padding */
+    box-sizing: border-box;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.2;
+    border: 4px solid #000 !important; /* Thick production border */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4mm;
+    align-items: stretch;
+  }
+  
+  /* Label stock minimum slip height — not for 80 mm thermal (different min-height rules) */
+  @media (max-width: 100mm) {
+    body:not([data-prize-voucher-print='thermal_80mm']) .prize-ticket {
+      min-height: 66mm !important;
+    }
+  }
+
+  .prize-ticket__head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4mm;
+    margin: 0;
+    padding: 4mm 5mm; 
+    border-bottom: 4px solid #000; /* Edge-to-edge thick line */
+  }
+
+  .prize-ticket__logo-box {
+    width: auto; 
+    height: 20mm;
+    min-width: 20mm;
+    min-height: 20mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+    padding: 1mm;
+  }
+
+  .prize-ticket__logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .prize-ticket__logo-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 5.5mm; /* Ensure legible in preview/print */
+    font-family: 'Fraunces', Georgia, serif;
+    color: #000 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.02em;
+    border: 0.5mm solid #000;
+  }
+
+  .prize-ticket__head-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .prize-ticket__brandline {
+    margin: 0;
+    padding: 0;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #000 !important;
+    white-space: nowrap;
+  }
+
+  .prize-ticket__brand-lu {
+    font-size: 3.5mm !important;
+    font-weight: 800;
+    color: #000 !important;
+  }
+
+  .prize-ticket__brand-redeem {
+    font-size: 3.5mm !important; 
+    font-weight: 500;
+    color: #000 !important;
+    text-transform: uppercase;
+  }
+
+  .prize-ticket__school {
+    margin: 0.5mm 0 0 0;
+    font-size: 6mm !important; /* Larger than brandline */
+    font-weight: 800;
+    color: #000 !important;
+    line-height: 1.1;
+  }
+
+  .prize-ticket__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+
+  .prize-ticket__hero {
+    text-align: center;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6mm; /* Production gap balance */
+    justify-content: center;
+    align-self: center;
+  }
+
+  .prize-ticket__icon-ring {
+    width: 40mm;
+    height: 40mm;
+    margin: -4mm auto 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+  }
+
+  .prize-ticket__lucide {
+    width: 32mm !important; 
+    height: 32mm !important;
+    color: #000 !important;
+    stroke-width: 2.5px !important; /* Bold Icon */
+  }
+
+  .prize-ticket__hero-emoji {
+    font-size: 32mm;
+    line-height: 1;
+    display: block;
+  }
+
+  .prize-ticket__prize-name {
+    margin: 0;
+    font-size: 24.5mm !important; /* Slightly more precise */
+    line-height: 0.82;
+    font-weight: 800;
+    font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+    color: #000 !important;
+    word-break: break-word;
+    letter-spacing: -0.01em;
+    text-transform: none !important;
+    padding: 0 4mm;
+  }
+
+  /* Full joke/riddle/fortune/acrostic line(s) in the hero — smaller than one-word prize titles for readability */
+  .prize-ticket__prize-name--surprise-body {
+    font-size: 11mm !important;
+    line-height: 1.08;
+    letter-spacing: 0;
+    white-space: pre-line;
+  }
+
+  .prize-ticket__banner {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2mm;
+    margin: 0;
+    padding: 2.5mm 0;
+    border-top: 4px solid #000; /* Thick edge-to-edge */
+    border-bottom: 4px solid #000; /* Thick edge-to-edge */
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 800;
+    font-size: 3.5mm; 
+    color: #000 !important;
+  }
+
+  .prize-ticket__banner-id {
+    font-weight: 800;
+  }
+
+  .prize-ticket__pickup-scan {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1mm;
+    margin: 2mm 0 1mm;
+    padding: 0 2mm;
+  }
+
+  .prize-ticket__pickup-label {
+    margin: 0;
+    font-size: 3mm;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #000 !important;
+  }
+
+  .prize-ticket__pickup-scan .print-barcode-svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .prize-ticket__details {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    gap: 1mm;
+    margin-top: 0.5mm;
+  }
+
+  .prize-ticket__student-name {
+    margin: 3mm 0;
+    font-size: 15mm !important; 
+    font-weight: 800;
+    line-height: 1.1;
+    color: #000 !important;
+    text-transform: none !important;
+  }
+
+  .prize-ticket__student-name-inner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2mm;
+    flex-wrap: wrap;
+  }
+
+  .prize-ticket__student-emoji {
+    font-size: 1.12em;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .prize-ticket__student-nick {
+    font-size: 3.5mm;
+    font-weight: 500;
+    color: #000 !important;
+    opacity: 0.8;
+  }
+
+  .prize-ticket__stats {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; 
+    gap: 1mm;
+    margin: 0;
+    padding: 2mm 5mm 5mm; /* Indent slightly, massive bottom margin */
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .prize-ticket__stat-line {
+    display: grid;
+    grid-template-columns: 14mm 1fr; /* Tight alignment */
+    gap: 1.5mm;
+    align-items: baseline;
+    margin: 0;
+    width: fit-content;
+    font-size: 4mm !important; 
+    font-weight: 700;
+    color: #000 !important;
+    line-height: 1.2;
+  }
+
+  .prize-ticket__stat-label {
+    font-weight: 800;
+    text-align: left; /* Production Left Bias */
+    color: #000 !important;
+  }
+
+  .prize-ticket__surprise {
+    margin: 0;
+    padding: 2mm 5mm 4mm;
+    width: 100%;
+    box-sizing: border-box;
+    border-top: 2px solid #000;
+  }
+
+  .prize-ticket__surprise-kind {
+    margin: 0 0 1.5mm;
+    font-size: 4.15mm;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    color: #000 !important;
+    line-height: 1.1;
+  }
+
+  .prize-ticket__surprise-label {
+    margin: 0;
+    font-size: 2.7mm;
+    font-weight: 900;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    color: #000 !important;
+    word-break: break-word;
+  }
+
+  .prize-ticket__surprise-answer {
+    margin: 2mm 0 0;
+    font-size: 3.4mm;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #000 !important;
+    word-break: break-word;
+  }
+
+  .prize-ticket__surprise-answer-label {
+    font-weight: 800;
+  }
+}
+
+@keyframes fly-up {
+  from {
+    transform: scale(0.5) translateY(0);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(2.5) translateY(-150px);
+    opacity: 0;
+  }
+}
+
+.animate-fly-up {
+  animation: fly-up 1.5s ease-out forwards;
+}
+
+.graphic-text-glow {
+  text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
+}
+
+/* --- Theme animations (for student theme previews + redeem/prize UI) --- */
+@keyframes theme-gradient-pan {
+  0% {
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+  }
+  50% {
+    background-position: 100% 50%, 0% 50%, 50% 100%;
+  }
+  100% {
+    background-position: 0% 50%, 100% 50%, 50% 0%;
+  }
+}
+
+/**
+ * Adds an animated color wash over the existing themed background.
+ * Intended for on-screen experiences only (prize + redeem), never print.
+ */
+.theme-animated-backdrop {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-animated-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle at 20% 20%, var(--theme-primary, rgba(99, 102, 241, 0.55)) 0%, transparent 55%),
+    radial-gradient(circle at 80% 30%, var(--theme-accent, rgba(236, 72, 153, 0.45)) 0%, transparent 58%),
+    radial-gradient(circle at 50% 80%, var(--theme-bg, rgba(15, 23, 42, 0.22)) 0%, transparent 60%);
+  background-size: 180% 180%;
+  filter: blur(22px) saturate(1.15);
+  transform: translateZ(0);
+  animation: theme-gradient-pan 16s ease-in-out infinite;
+}
+
+.theme-animated-backdrop > * {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Student/prize theme readability guard.
+ * The app-wide base rule colors bold text with the site primary. Inside a
+ * custom student theme, that can put dark primary text onto a dark themed
+ * surface. Any explicit inline color still wins; otherwise themed bold text
+ * falls back to the normalized readable theme text.
+ */
+.student-theme-surface :where(strong, b, .font-bold, .font-black, .font-extrabold):not([style*="color"]) {
+  color: var(--theme-text) !important;
+}
+
+/* Legacy Mode Overrides - Strips performance-heavy effects */
+.legacy *:not([data-legacy-motion-root]):not([data-legacy-motion-root] *) {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+}
+
+/* Force-kill all animations and fixed backgrounds outside modal layers. */
+.legacy [class*="animate-"]:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-pulse:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-bounce:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-spin:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-float:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-pulse-glow:not([data-legacy-motion-root]):not([data-legacy-motion-root] *),
+.legacy .animate-fly-up:not([data-legacy-motion-root]):not([data-legacy-motion-root] *) {
+  animation: none !important;
+  transition: none !important;
+}
+
+/*
+ * Radix Dialog / AlertDialog use Tailwind `animate-in` + transitions. Modal layers tagged from
+ * `dialog.tsx` / `alert-dialog.tsx` are excluded above so Radix Presence and focus cleanup keep
+ * working when Legacy mode is toggled from inside Settings.
+ */
+
+/* Disable heavy background decorations */
+.legacy [style*="background-image"] {
+  background-image: none !important;
+}
+
+.legacy .pointer-events-none.fixed.inset-0.opacity-\[0\.03\] {
+  background-image: none !important;
+  display: none !important;
+}
+
+/* Simplify gradients to solid backgrounds */
+.legacy .bg-gradient-to-br,
+.legacy .bg-gradient-to-tr,
+.legacy .bg-gradient-to-r,
+.legacy .bg-gradient-to-l {
+  background-image: none !important;
+  background-color: hsl(var(--secondary) / 0.1) !important;
+}
+
+.legacy .kiosk-sponsor-banner {
+  background-image: none !important;
+  background-color: hsl(var(--primary)) !important;
+  border-color: hsl(var(--primary-foreground) / 0.35) !important;
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.legacy .kiosk-sponsor-banner *,
+.legacy .kiosk-sponsor-banner .font-black,
+.legacy .kiosk-sponsor-banner .font-extrabold {
+  color: hsl(var(--primary-foreground)) !important;
+}
+
+.legacy .kiosk-sponsor-banner img {
+  background-color: hsl(var(--primary-foreground) / 0.92);
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.375rem;
+}
+
+.legacy .backdrop-blur-md,
+.legacy .backdrop-blur-sm,
+.legacy .backdrop-blur-lg,
+.legacy .backdrop-blur-xl,
+.legacy .backdrop-blur-2xl {
+  background-color: hsl(var(--background)) !important;
+  backdrop-filter: none !important;
+}
+
+/* Specific overrides for common translucent backgrounds to prevent "not good" look */
+.legacy .bg-background\/80,
+.legacy .bg-background\/95,
+.legacy .bg-card\/40,
+.legacy .bg-card\/50 {
+  background-color: hsl(var(--background)) !important;
+}
+
+.legacy .bg-card\/40.backdrop-blur-sm {
+  background-color: hsl(var(--card)) !important;
+}
+
+.dark.legacy .backdrop-blur-md,
+.dark.legacy .backdrop-blur-sm,
+.dark.legacy .backdrop-blur-lg,
+.dark.legacy .backdrop-blur-xl,
+.dark.legacy .backdrop-blur-2xl {
+  background-color: hsl(var(--background)) !important;
+}
+
+/* WelcomeGreeting (leveluphello): wave emoji pivot matches source styles.css */
+.animate-wiggle {
+  transform-origin: 70% 70%;
+}
+
+/* LevelUpLogoBrutalist (Lovable-style wordmark) — keyframes match inline animation names */
+@keyframes lu-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lu-line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes lu-text-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(0.12em);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ed-dot-pop {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Override global base rule that colors .font-black as primary — brutalist mark stays ink black */
+.level-up-logo-brutalist,
+.level-up-logo-brutalist .font-black {
+  color: #000 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-logo-brutalist .lu-brutalist-anim {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .level-up-logo-brutalist .lu-brutalist-line {
+    transform: scaleX(1) !important;
+  }
+}
+
+/* LevelUpLogo (cinematic SVG) — luc-* keyframes avoid clash with brutalist lu-* */
+.level-up-logo-cinematic {
+  --brand-cream: oklch(0.93 0.04 88);
+}
+
+.level-up-logo-cinematic .font-black {
+  color: var(--brand-cream) !important;
+}
+
+@keyframes luc-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes luc-glow {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes luc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes luc-bar-rise {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes luc-bar-pulse {
+  0%,
+  100% {
+    opacity: 0.82;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes luc-arrow-draw {
+  to {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes luc-text-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes luc-line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-logo-cinematic,
+  .level-up-logo-cinematic * {
+    animation: none !important;
+  }
+
+  .level-up-logo-cinematic svg > path:first-of-type {
+    opacity: 1 !important;
+  }
+
+  .level-up-logo-cinematic svg rect {
+    opacity: 1 !important;
+    transform: scaleY(1) !important;
+  }
+
+  .level-up-logo-cinematic svg > path:last-of-type {
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+
+  .level-up-logo-cinematic h1,
+  .level-up-logo-cinematic p {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .level-up-logo-cinematic .h-px {
+    transform: scaleX(1) !important;
+  }
+}
+
+/* LevelUpLogoDrift (student kiosk soft drift) */
+.level-up-logo-drift {
+  --brand-cream: oklch(0.93 0.04 88);
+}
+
+/* Kiosk scanner sits on light cards — bump cream + halo presence vs default drift */
+.kiosk-brand-drift .level-up-logo-drift {
+  --brand-cream: oklch(0.35 0.09 252);
+}
+
+.dark .kiosk-brand-drift .level-up-logo-drift {
+  --brand-cream: oklch(0.96 0.06 95);
+}
+
+.level-up-logo-drift .font-extralight {
+  color: var(--brand-cream) !important;
+}
+
+@keyframes lud-glow {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes lud-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes lud-arrow-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lud-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-logo-drift,
+  .level-up-logo-drift * {
+    animation: none !important;
+  }
+
+  .level-up-logo-drift svg {
+    transform: none !important;
+  }
+
+  .level-up-logo-drift path {
+    opacity: 1 !important;
+    stroke-dashoffset: 0 !important;
+  }
+
+  .level-up-logo-drift path[fill='none'] {
+    opacity: 0.12 !important;
+  }
+
+  .level-up-logo-drift h1 {
+    opacity: 1 !important;
+  }
+}
+
+/* Classroom celebration effects */
+@keyframes classroom-fx-fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-rise {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes classroom-fx-burst {
+  from {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(1);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-fall {
+  animation: classroom-fx-fall linear forwards;
+}
+
+.animate-classroom-fx-rise {
+  animation: classroom-fx-rise ease-out forwards;
+}
+
+.animate-classroom-fx-twinkle {
+  animation: classroom-fx-twinkle ease-in-out forwards;
+}
+
+.animate-classroom-fx-burst {
+  animation: classroom-fx-burst ease-out forwards;
+}
+
+/* Desk-scoped celebration effects (contained to student cell) */
+@keyframes classroom-fx-fall-scoped {
+  to {
+    transform: translateY(calc(120% + 16px)) rotate(620deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-rise-scoped {
+  from {
+    transform: translateY(0) scale(0.85);
+    opacity: 1;
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-45%) scale(1.05);
+  }
+  to {
+    transform: translateY(-115%) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-twinkle-scoped {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35) rotate(0deg);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.15) rotate(12deg);
+  }
+  65% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(-8deg);
+  }
+}
+
+@keyframes classroom-fx-burst-scoped {
+  from {
+    transform: translate(-50%, -50%) scale(0.1);
+    opacity: 1;
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(-50% + var(--fx-x, 0)), calc(-50% + var(--fx-y, 0))) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-confetti-scoped {
+  0% {
+    transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  20% {
+    transform: translateY(28%) translateX(calc(var(--fx-drift, 0px) * 0.35)) rotate(calc(var(--fx-spin, 540deg) * 0.2))
+      scale(1.05);
+    opacity: 1;
+  }
+  55% {
+    transform: translateY(72%) translateX(calc(var(--fx-drift, 0px) * 0.75)) rotate(calc(var(--fx-spin, 540deg) * 0.55))
+      scale(0.98);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(calc(130% + 20px)) translateX(var(--fx-drift, 0px)) rotate(var(--fx-spin, 540deg))
+      scale(0.85);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-fall-scoped {
+  animation: classroom-fx-fall-scoped linear forwards;
+}
+
+.animate-classroom-fx-rise-scoped {
+  animation: classroom-fx-rise-scoped ease-out forwards;
+}
+
+.animate-classroom-fx-twinkle-scoped {
+  animation: classroom-fx-twinkle-scoped ease-in-out forwards;
+}
+
+.animate-classroom-fx-burst-scoped {
+  animation: classroom-fx-burst-scoped ease-out forwards;
+}
+
+.animate-classroom-fx-confetti-scoped {
+  animation: classroom-fx-confetti-scoped cubic-bezier(0.22, 0.85, 0.35, 1) forwards;
+}
+
+@keyframes classroom-fx-firework-flash-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 0;
+  }
+  12% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-firework-burst-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(0.15);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(calc(-50% + var(--fx-x, 0) * 0.22), calc(-50% + var(--fx-y, 0) * 0.22)) scale(1.35);
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(
+        calc(-50% + var(--fx-x, 0)),
+        calc(-50% + var(--fx-y, 0) + var(--fx-gravity, 10%))
+      )
+      scale(0.25);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-fx-firework-trail-scoped {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.95;
+  }
+  25% {
+    transform: translate(calc(-50% + var(--fx-x, 0) * 0.55), calc(-50% + var(--fx-y, 0) * 0.55)) scale(0.85);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(
+        calc(-50% + var(--fx-x, 0)),
+        calc(-50% + var(--fx-y, 0) + var(--fx-gravity, 14%))
+      )
+      scale(0.15);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fx-firework-flash-scoped {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 230, 150, 0.75) 35%,
+    rgba(255, 180, 80, 0.25) 60%,
+    transparent 72%
+  );
+  animation: classroom-fx-firework-flash-scoped 0.75s ease-out forwards;
+}
+
+.animate-classroom-fx-firework-burst-scoped {
+  animation: classroom-fx-firework-burst-scoped cubic-bezier(0.15, 0.85, 0.25, 1) forwards;
+}
+
+.animate-classroom-fx-firework-trail-scoped {
+  animation: classroom-fx-firework-trail-scoped ease-out forwards;
+}
+
+@keyframes classroom-fly-up-scoped {
+  from {
+    transform: scale(0.55) translateY(15%);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.35) translateY(-85%);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-fly-up-scoped {
+  animation: classroom-fly-up-scoped 1.2s ease-out forwards;
+}
+
+/* Classroom desk — kiosk +PTS (separate setting; larger than legacy scoped fly-up). */
+@keyframes classroom-kiosk-fly-up {
+  0% {
+    transform: translateY(10px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-76px) scale(1.08);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-kiosk-fly-up {
+  animation: classroom-kiosk-fly-up 1s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-classroom-kiosk-fly-up--small {
+  font-size: clamp(0.75rem, 3.2vmin, 1.2rem);
+  animation-name: classroom-kiosk-fly-up-small;
+}
+
+.animate-classroom-kiosk-fly-up--medium {
+  font-size: clamp(0.85rem, 4vmin, 1.55rem);
+}
+
+.animate-classroom-kiosk-fly-up--large {
+  font-size: clamp(0.95rem, 5vmin, 1.85rem);
+  animation-name: classroom-kiosk-fly-up-large;
+}
+
+@keyframes classroom-kiosk-fly-up-small {
+  0% {
+    transform: translateY(8px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-64px) scale(1.05);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-kiosk-fly-up-large {
+  0% {
+    transform: translateY(12px) scale(0.9);
+    opacity: 1;
+  }
+  22% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-88px) scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* Classroom desk — simple award flash (arcade burst + wave + shine). */
+@keyframes classroom-desk-flash-burst {
+  0% {
+    transform: scale(0.45);
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-desk-flash-wave {
+  0% {
+    transform: scale(0.82);
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.85);
+  }
+  55% {
+    opacity: 0.85;
+    box-shadow: 0 0 18px 6px rgba(52, 211, 153, 0.45);
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0);
+  }
+}
+
+@keyframes classroom-desk-flash-shine {
+  0% {
+    transform: translateX(-130%) skewX(-14deg);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(130%) skewX(-14deg);
+    opacity: 0;
+  }
+}
+
+@keyframes classroom-desk-flash-spark {
+  0%,
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(1.6);
+    opacity: 1;
+  }
+}
+
+@keyframes classroom-desk-flash-badge {
+  0% {
+    transform: scale(0.4) translateY(6px);
+    opacity: 0;
+  }
+  22% {
+    transform: scale(1.2) translateY(-3px);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95) translateY(-2px);
+    opacity: 0;
+  }
+}
+
+.animate-classroom-desk-flash-burst {
+  animation: classroom-desk-flash-burst 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-wave {
+  animation: classroom-desk-flash-wave 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-shine {
+  animation: classroom-desk-flash-shine 0.75s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-spark {
+  animation: classroom-desk-flash-spark 0.65s ease-out forwards;
+  will-change: transform, opacity;
+}
+
+.animate-classroom-desk-flash-badge {
+  animation: classroom-desk-flash-badge 1.05s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Auto-award countdown on desk (GPU-friendly; no JS tick loop). */
+@keyframes classroom-pending-top {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+.animate-classroom-pending-top {
+  animation-name: classroom-pending-top;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-classroom-fx-fall,
+  .animate-classroom-fx-rise,
+  .animate-classroom-fx-twinkle,
+  .animate-classroom-fx-burst,
+  .animate-classroom-fx-fall-scoped,
+  .animate-classroom-fx-rise-scoped,
+  .animate-classroom-fx-twinkle-scoped,
+  .animate-classroom-fx-burst-scoped,
+  .animate-classroom-fx-confetti-scoped,
+  .animate-classroom-fx-firework-flash-scoped,
+  .animate-classroom-fx-firework-burst-scoped,
+  .animate-classroom-fx-firework-trail-scoped,
+  .animate-classroom-fly-up-scoped,
+  .animate-classroom-kiosk-fly-up,
+  .animate-classroom-pending-top {
+    animation: none !important;
+    opacity: 0 !important;
+  }
+
+  .animate-classroom-desk-flash-burst,
+  .animate-classroom-desk-flash-wave,
+  .animate-classroom-desk-flash-shine,
+  .animate-classroom-desk-flash-spark,
+  .animate-classroom-desk-flash-badge {
+    animation: none !important;
+    will-change: auto;
+  }
+
+  .animate-classroom-desk-flash-burst {
+    opacity: 0.5 !important;
+    transform: none !important;
+  }
+
+  .animate-classroom-desk-flash-wave {
+    opacity: 0.9 !important;
+    transform: none !important;
+  }
+}

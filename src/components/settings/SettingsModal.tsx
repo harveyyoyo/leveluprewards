@@ -67,7 +67,8 @@ import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJum
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
 import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
-import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
+import { OfficePortalEntryLink } from '@/components/integrations/OfficePortalEntryLink';
+import { sssPublicHref } from '@/lib/sss/sssPublicUrl';
 import {
     FEATURE_SECTION_NAV,
     GENERAL_SECTION_NAV,
@@ -1889,7 +1890,7 @@ export function SettingsModal() {
                                     <ShieldCheck className="w-3.5 h-3.5" /> Product Pillars
                                 </p>
                                 <p className="text-xs text-muted-foreground leading-normal mb-3">
-                                    Select which products are part of your active plan. School Office is optional and uses its own roster (not shared with rewards).
+                                    Select which products are part of your active plan. School Office and Student Special Services are optional and use their own data (not shared with rewards).
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {(() => {
@@ -1978,6 +1979,34 @@ export function SettingsModal() {
                                                                     schoolId={schoolId}
                                                                     className="text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
                                                                 />
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={cn("sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2", unavailablePillarHint('paySss') && 'opacity-60')}>
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div>
+                                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
+                                                                {PRODUCT_PILLAR_LABELS.paySss}
+                                                            </h4>
+                                                            <p className="text-[10px] text-muted-foreground">
+                                                                {unavailablePillarHint('paySss') ?? 'Spreadsheet student roster — providers, contacts, and family info (separate from office & rewards)'}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex shrink-0 flex-col items-end gap-2">
+                                                            <Switch
+                                                                checked={local.paySss === true && !unavailablePillarHint('paySss')}
+                                                                onCheckedChange={(val) => handleToggle('paySss', val)}
+                                                                disabled={!!unavailablePillarHint('paySss')}
+                                                                aria-label={PRODUCT_PILLAR_LABELS.paySss}
+                                                            />
+                                                            {local.paySss === true && !unavailablePillarHint('paySss') && schoolId ? (
+                                                                <a
+                                                                    href={sssPublicHref(schoolId)}
+                                                                    className="text-[11px] font-bold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:text-violet-300 dark:hover:text-violet-100"
+                                                                >
+                                                                    Open Student Special Services
+                                                                </a>
                                                             ) : null}
                                                         </div>
                                                     </div>

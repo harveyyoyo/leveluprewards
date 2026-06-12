@@ -28,11 +28,8 @@
 
       html,
       body {
-        height: 100%;
-      }
-
-      body {
         margin: 0;
+        padding: 0;
         font-family:
           ui-sans-serif,
           system-ui,
@@ -44,26 +41,229 @@
           "Apple Color Emoji",
           "Segoe UI Emoji";
         color: var(--text);
-        background: #fff;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
 
+      /* SCREEN STYLES (Default / Desktop Immersive View) */
+      @media screen {
+        body {
+          background-color: #03060f;
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: stretch !important;
+          justify-content: flex-start !important;
+          min-height: 100vh;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        .control-sidebar {
+          width: 330px;
+          min-width: 330px;
+          background: #090e1a;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 24px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          height: 100vh;
+          overflow-y: auto;
+          color: #eaf0ff;
+          box-sizing: border-box;
+          font-size: 13px;
+        }
+
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding-bottom: 16px;
+        }
+
+        .sidebar-logo {
+          font-size: 24px;
+        }
+
+        .sidebar-title-text h2 {
+          font-size: 16px !important;
+          font-weight: 800;
+          color: #fff !important;
+          margin: 0 !important;
+          letter-spacing: -0.01em;
+          text-transform: none !important;
+        }
+
+        .sidebar-subtitle-text {
+          font-size: 11px;
+          color: rgba(234, 240, 255, 0.5);
+          margin-top: 2px;
+        }
+
+        .sidebar-section {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding-bottom: 16px;
+        }
+
+        .sidebar-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: rgba(234, 240, 255, 0.5);
+          font-weight: 700;
+        }
+
+        .sidebar-input, .sidebar-select {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 8px 12px;
+          color: #fff;
+          font-family: inherit;
+          font-size: 12.5px;
+          width: 100%;
+          outline: none;
+          box-sizing: border-box;
+        }
+
+        .sidebar-input:focus, .sidebar-select:focus {
+          border-color: var(--accent2);
+          box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
+
+        .sidebar-checkbox-group {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        .sidebar-checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 12px;
+          color: rgba(234, 240, 255, 0.85);
+          cursor: pointer;
+        }
+
+        .sidebar-checkbox-label input {
+          cursor: pointer;
+        }
+
+        .sidebar-btn {
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          color: #fff;
+          border: none;
+          padding: 12px;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.15);
+        }
+
+        .sidebar-btn:hover {
+          filter: brightness(1.1);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(6, 182, 212, 0.25);
+        }
+
+        .sidebar-btn:active {
+          transform: translateY(0);
+        }
+
+        .proposal-main {
+          flex: 1;
+          height: 100vh;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 40px 20px;
+          gap: 32px;
+          box-sizing: border-box;
+          background-image: 
+            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+        }
+
+        .page {
+          width: 7.5in;
+          height: 10in;
+          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .page:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.8), 0 0 60px rgba(99, 102, 241, 0.15);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        @media (max-width: 1023px) {
+          body {
+            flex-direction: column !important;
+            overflow-y: auto !important;
+          }
+          .control-sidebar {
+            width: 100%;
+            min-width: 0;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          }
+          .proposal-main {
+            height: auto;
+            overflow-y: visible;
+          }
+        }
+      }
+
+      /* PRINT STYLES (Overrides for PDF/Printer) */
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        body {
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          display: block !important;
+        }
+        .page {
+          width: 7.5in !important;
+          height: 10in !important;
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          page-break-after: always;
+        }
+      }
+
+      /* FLYER CONTAINER CORE STYLES */
       .page {
-        height: calc(11in - 1in);
-        width: calc(8.5in - 1in);
         position: relative;
         overflow: hidden;
-        border-radius: 18px;
         background:
           radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%),
           radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%),
           linear-gradient(180deg, #081022, #070b16 70%, #05060c);
         padding: 24px;
-      }
-
-      .page + .page {
-        page-break-before: always;
       }
 
       .topbar {
@@ -143,6 +343,14 @@
         border-radius: 16px;
         padding: 16px;
         backdrop-filter: blur(10px);
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+      }
+
+      @media screen {
+        .card:hover {
+          border-color: rgba(255, 255, 255, 0.18);
+          background-color: rgba(255, 255, 255, 0.07);
+        }
       }
 
       h2 {
@@ -210,6 +418,15 @@
         border-radius: 12px;
         border: 1px solid rgba(255, 255, 255, 0.08);
         background: rgba(255, 255, 255, 0.04);
+        transition: transform 0.2s ease;
+      }
+
+      @media screen {
+        .kpi:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.15);
+        }
       }
 
       .kpi .label {
@@ -270,198 +487,556 @@
     </style>
   </head>
   <body>
-    <!-- PAGE 1: FRONT -->
-    <section class="page" aria-label="Front of flyer">
-      <header class="topbar">
-        <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> PBIS rewards system</div>
-          <h1>LevelUp Rewards</h1>
-          <p class="subtitle">
-            A principal-ready PBIS rewards system that standardizes recognition, automates tracking, and keeps incentives
-            fair—so teachers spend less time managing points and more time teaching.
-          </p>
+    <!-- CONTROL SIDEBAR (Screen Only) -->
+    <div class="control-sidebar no-print" role="complementary">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">⚡</span>
+        <div class="sidebar-title-text">
+          <h2>LevelUp Flyer Editor</h2>
+          <p class="sidebar-subtitle-text">Customize General PBIS Flyer</p>
         </div>
-        <div class="right-meta">
-          <div><strong>LevelUp EdTech Enterprises LLC</strong></div>
-          <div>Brooklyn, NY</div>
-          <div class="muted">1849 East 38th Street</div>
-          <div class="muted">
-            <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
-              >contact@leveluprewards.app</a
-            >
-          </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="theme-select">Visual Theme</label>
+        <select id="theme-select" class="sidebar-select" onchange="updateTheme()">
+          <option value="navy" selected>Bold Navy (Default)</option>
+          <option value="green">Emerald Forest</option>
+          <option value="sunset">Purple Sunset</option>
+          <option value="cyber">Classic Neon</option>
+          <option value="crimson">Crimson Culture</option>
+          <option value="light">Light Theme (Ink-Saver)</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="prepared-mode">Prepared For</label>
+        <select id="prepared-mode" class="sidebar-select" onchange="updatePreparedMode()">
+          <option value="generic">Generic (Default)</option>
+          <option value="school">This School</option>
+        </select>
+        <div id="school-name-section" style="display: none; margin-top: 8px;">
+          <label class="sidebar-label" for="school-name-input">School Name</label>
+          <input type="text" id="school-name-input" value="St. Jude Academy" class="sidebar-input" oninput="updateSchoolName()" />
         </div>
-      </header>
+      </div>
 
-      <div class="grid">
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <h2>What it does (PBIS rewards & school climate)</h2>
-            <ul>
-              <li><strong>Runs a school-wide points and rewards program</strong> aligned to PBIS expectations.</li>
-              <li><strong>Makes recognition consistent</strong> across classrooms with shared categories and clear rules.</li>
-              <li><strong>Keeps incentives transparent and equitable</strong> so students see the same system everywhere.</li>
-              <li><strong>Automates the “paperwork” of rewards</strong> (balances, redemptions, and histories) in one place.</li>
-            </ul>
-          </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label">Contact Details</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="company-input" value="LevelUp EdTech Enterprises LLC" class="sidebar-input" placeholder="Company Name" oninput="syncContactInfo()" />
+          <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Contact Email" oninput="syncContactInfo()" />
+          <input type="text" id="street-input" value="1849 East 38th Street" class="sidebar-input" placeholder="Street Address" oninput="syncContactInfo()" />
+          <input type="text" id="city-input" value="Brooklyn, NY" class="sidebar-input" placeholder="City, State" oninput="syncContactInfo()" />
+          <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website URL" oninput="syncContactInfo()" />
+          <button type="button" class="sidebar-btn" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); margin-top: 4px;" onclick="loadDefaultContactInfo()">
+            Load Default Contact Info
+          </button>
+        </div>
+      </div>
 
-          <div style="margin-top: 10px; margin-bottom: 10px;">
-            <div class="callout">
-              <p>
-                <strong>Designed for busy schools:</strong> fewer manual tallies, fewer spreadsheets—and a rewards program students actually trust.
+      <div class="sidebar-section">
+        <label class="sidebar-label">Pages to Print</label>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="show-page-2" checked onchange="togglePage2()" />
+            Include Page 2 (Back)
+          </label>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label">Toggle Sections</label>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-what-it-does" checked onchange="toggleCard('card-what-it-does', this.checked)" />
+            What It Does
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-funding" checked onchange="toggleCard('section-funding', this.checked)" />
+            Funding & Procurement
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-setup" checked onchange="toggleCard('section-setup', this.checked)" />
+            Simple Setup
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-telemetry" checked onchange="toggleCard('card-telemetry', this.checked)" />
+            Building Telemetry
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-teachers" checked onchange="toggleCard('section-teachers', this.checked)" />
+            For Teachers Section
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-deans" checked onchange="toggleCard('section-deans', this.checked)" />
+            For Deans Section
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-support" checked onchange="toggleCard('section-support', this.checked)" />
+            Support & Dispensers
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-img-kiosk" checked onchange="toggleCard('card-img-kiosk', this.checked)" />
+            kiosk Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-img-achievements" checked onchange="toggleCard('card-img-achievements', this.checked)" />
+            Achievements Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-img-portal" checked onchange="toggleCard('card-img-portal', this.checked)" />
+            Student Portal Mockup
+          </label>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 10px;">
+        <button class="sidebar-btn w-full" onclick="window.print()">
+          🖨️ Print / Save PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN PREVIEW PANEL -->
+    <div class="proposal-main">
+      <div id="flyer-pages" style="display: flex; flex-direction: column; gap: 32px; align-items: center;">
+        
+        <!-- PAGE 1: FRONT -->
+        <section class="page" id="page-1-section" aria-label="Front of flyer">
+          <header class="topbar">
+            <div class="brand">
+              <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> PBIS rewards system</div>
+              <h1 contenteditable="true">LevelUp Rewards</h1>
+              <p class="subtitle" contenteditable="true">
+                A principal-ready PBIS rewards system that standardizes recognition, automates tracking, and keeps incentives
+                fair—so teachers spend less time managing points and more time teaching.
               </p>
             </div>
+            <div class="right-meta">
+              <div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>
+              <div><span contenteditable="true" class="sync-address-city">Brooklyn, NY</span></div>
+              <div class="muted"><span contenteditable="true" class="sync-address-street">1849 East 38th Street</span></div>
+              <div class="muted">
+                <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--accent2); text-decoration: none;"
+                  ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
+                >
+              </div>
+            </div>
+          </header>
+
+          <div class="grid">
+            <div class="card" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <h2 contenteditable="true">What it does (PBIS rewards & school climate)</h2>
+                <ul>
+                  <li contenteditable="true"><strong>Runs a school-wide points and rewards program</strong> aligned to PBIS expectations.</li>
+                  <li contenteditable="true"><strong>Makes recognition consistent</strong> across classrooms with shared categories and clear rules.</li>
+                  <li contenteditable="true"><strong>Keeps incentives transparent and equitable</strong> so students see the same system everywhere.</li>
+                  <li contenteditable="true"><strong>Automates the “paperwork” of rewards</strong> (balances, redemptions, and histories) in one place.</li>
+                </ul>
+              </div>
+
+              <div style="margin-top: 10px; margin-bottom: 10px;">
+                <div class="callout">
+                  <p contenteditable="true">
+                    <strong>Designed for busy schools:</strong> fewer manual tallies, fewer spreadsheets—and a rewards program students actually trust.
+                  </p>
+                </div>
+              </div>
+
+              <div class="kpis" aria-label="Leadership outcomes">
+                <div class="kpi">
+                  <div class="label" contenteditable="true">Teacher time</div>
+                  <div class="value" contenteditable="true">Less counting, more teaching</div>
+                </div>
+                <div class="kpi">
+                  <div class="label" contenteditable="true">Consistency</div>
+                  <div class="value" contenteditable="true">Same system in every room</div>
+                </div>
+                <div class="kpi">
+                  <div class="label" contenteditable="true">Motivation</div>
+                  <div class="value" contenteditable="true">Rewards students care about</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- Real Kiosk Screenshot Panel -->
+              <div class="card" id="card-img-kiosk" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
+                <img src="../public/marketing/screenshots/kiosk-rewards-shop.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Kiosk Rewards Shop Screenshot" />
+                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+                  Arcade & PBIS Hub
+                </div>
+              </div>
+              
+              <div class="card" id="card-funding-setup" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div id="section-funding">
+                  <h2 contenteditable="true">Funding & procurement</h2>
+                  <ul style="margin-bottom: 10px;">
+                    <li contenteditable="true"><strong>Title I / IV-A funding:</strong> Fully eligible under school improvement, parent engagement, and school climate grant goals.</li>
+                    <li contenteditable="true"><strong>Sole Source vendor:</strong> Direct, simple procurement route for school districts up to $25k.</li>
+                  </ul>
+                </div>
+                <div id="section-setup">
+                  <h2 contenteditable="true">Simple setup</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Zero complex hardware:</strong> Standard touchscreens plug directly into standard outlets and work via Wi-Fi.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="kpis" aria-label="Leadership outcomes">
-            <div class="kpi">
-              <div class="label">Teacher time</div>
-              <div class="value">Less counting, more teaching</div>
+          <footer class="footer">
+            <div>
+              <strong contenteditable="true">LevelUp rewards positive habits.</strong> <span contenteditable="true">A reliable, high-fidelity system designed for NYC schools that value student engagement.</span>
             </div>
-            <div class="kpi">
-              <div class="label">Consistency</div>
-              <div class="value">Same system in every room</div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-1">
+              <span class="pill" contenteditable="true">Title IV-A eligible</span>
+              <span class="pill" contenteditable="true">Sole Source vendor</span>
+              <span class="pill" contenteditable="true">NYS 2-d compliant</span>
+              <span class="pill" contenteditable="true">Telemetry logs</span>
             </div>
-            <div class="kpi">
-              <div class="label">Motivation</div>
-              <div class="value">Rewards students care about</div>
-            </div>
-          </div>
-        </div>
+          </footer>
+        </section>
 
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- 3D Graphic Panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
-            <img src="../public/levelup_rewards_hero.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Gamification UI Hero" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-              Arcade & PBIS Hub
+        <!-- PAGE 2: BACK -->
+        <section class="page" id="page-2-section" aria-label="Back of flyer">
+          <header class="topbar">
+            <div class="brand">
+              <div class="badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Operational flow</div>
+              <h1 contenteditable="true">System integration &amp; tracking</h1>
+              <p class="subtitle" contenteditable="true">
+                Roll out LevelUp across your entire school building in minutes, with real-time consistency tracking and no administrative oversight needed.
+              </p>
+            </div>
+            <div class="right-meta">
+              <div><strong contenteditable="true">LevelUp Rewards</strong></div>
+              <div class="muted" contenteditable="true">PBIS overview playbook</div>
+            </div>
+          </header>
+
+          <div class="grid">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="card" id="card-telemetry">
+                <h2 contenteditable="true">Building-wide telemetry</h2>
+                <ul>
+                  <li contenteditable="true"><strong>1 · Live dashboard:</strong> View real-time activity metrics across grades, homerooms, and custom student cohorts.</li>
+                  <li contenteditable="true"><strong>2 · Teacher adoption stats:</strong> Check participation rates by staff member to ensure unified building-wide compliance.</li>
+                  <li contenteditable="true"><strong>3 · Automated reporting:</strong> Instantly generate behavioral trends and incentive logs for school board reviews.</li>
+                  <li contenteditable="true"><strong>4 · Smart inventory:</strong> Track store prize redemptions and automatically alert coordinators when levels run low.</li>
+                </ul>
+
+                <div style="height: 12px;" id="deans-spacing"></div>
+                <div id="section-teachers">
+                  <h2 contenteditable="true">For teachers</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Faster recognition</strong> that fits directly into instruction.</li>
+                    <li contenteditable="true"><strong>No more point bookkeeping</strong>—balances and records stay organized automatically.</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <!-- Real App Screenshot Panel -->
+              <div class="card" id="card-img-achievements" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
+                <img src="../public/marketing/screenshots/hall-of-fame.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Hall of Fame Leaderboard Screenshot" />
+                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+                  Student Level-Up Progression
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <!-- App Mockup Panel -->
+              <div class="card" id="card-img-portal" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
+                <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                  <span style="margin-left: 4px; font-family: monospace;" id="sync-portal-url-display">leveluprewards.app/student</span>
+                </div>
+                <img src="../public/marketing/screenshots/student-home-portal.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Student Portal Dashboard Screenshot" />
+              </div>
+              
+              <div class="card" id="card-deans-support" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                <div id="section-deans">
+                  <h2 contenteditable="true">For deans & PBIS teams</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Real-time visibility</strong> into recognition patterns and incentive usage.</li>
+                    <li contenteditable="true"><strong>Clean, exportable reporting</strong> to support PBIS/MTSS planning.</li>
+                    <li contenteditable="true"><strong>Controlled access</strong> to support consistent implementation building-wide.</li>
+                  </ul>
+                </div>
+                
+                <div id="section-support">
+                  <h2 contenteditable="true">Support & Verification</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Optional automated dispensers</strong> for reliable rewards backed by hardware handshakes.</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-          
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+
+          <footer class="footer">
             <div>
-              <h2>Funding & procurement</h2>
-              <ul style="margin-bottom: 10px;">
-                <li><strong>Eligible funding:</strong> Title IV-A (SSAE) and Title I.</li>
-                <li><strong>Procurement:</strong> Available as a <strong>Sole Source</strong> resource, enabling direct purchase up to <strong>$25,000</strong>.</li>
-              </ul>
+              <strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong><br />
+              <span contenteditable="true" class="sync-address-full">1849 East 38th Street, Brooklyn, NY</span><br />
+              <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--accent2); text-decoration: none;"
+                ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
+              >
             </div>
-            <div>
-              <h2>Security & Compliance</h2>
-              <ul>
-                <li><strong>NY Education Law 2-d compliant</strong>.</li>
-                <li><strong>DPA-ready</strong> for district agreements.</li>
-              </ul>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-2">
+              <span class="pill" contenteditable="true">PBIS / MTSS aligned</span>
+              <span class="pill" contenteditable="true">Real-time dashboards</span>
+              <span class="pill" contenteditable="true">DPA-ready</span>
+              <span class="pill" contenteditable="true">NY Law 2-d</span>
             </div>
-          </div>
-        </div>
+          </footer>
+        </section>
+
       </div>
+    </div>
 
-      <footer class="footer">
-        <div>
-          <strong>PBIS rewards, done right.</strong> Built for NYC schools that want a consistent incentives program.
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
-          <span class="pill">Title IV-A eligible</span>
-          <span class="pill">Title I eligible</span>
-          <span class="pill sole">Sole Source ≤ $25k</span>
-          <span class="pill">NY Law 2-d</span>
-        </div>
-      </footer>
-    </section>
+    <script>
+      const THEMES = {
+        navy: {
+          '--bg': '#0b1220',
+          '--accent': '#7c3aed',
+          '--accent2': '#06b6d4',
+          '--panel': 'rgba(255, 255, 255, 0.05)',
+          '--text': '#eaf0ff',
+          '--muted': 'rgba(234, 240, 255, 0.78)',
+          '--hair': 'rgba(234, 240, 255, 0.15)',
+          '--success': '#22c55e',
+          '--black': '#0a0a0a',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c)'
+        },
+        green: {
+          '--bg': '#041d1a',
+          '--accent': '#059669',
+          '--accent2': '#10b981',
+          '--panel': 'rgba(255, 255, 255, 0.05)',
+          '--text': '#ecfdf5',
+          '--muted': 'rgba(236, 253, 245, 0.78)',
+          '--hair': 'rgba(236, 253, 245, 0.15)',
+          '--success': '#34d399',
+          '--black': '#020d0c',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(5, 150, 105, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16, 185, 129, 0.25), transparent 55%), linear-gradient(180deg, #041a17, #02110e 70%, #010706)'
+        },
+        sunset: {
+          '--bg': '#1a0b18',
+          '--accent': '#db2777',
+          '--accent2': '#f97316',
+          '--panel': 'rgba(255, 255, 255, 0.05)',
+          '--text': '#fdf2f8',
+          '--muted': 'rgba(253, 242, 248, 0.78)',
+          '--hair': 'rgba(253, 242, 248, 0.15)',
+          '--success': '#22c55e',
+          '--black': '#090208',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(219, 39, 119, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(249, 115, 22, 0.25), transparent 55%), linear-gradient(180deg, #180916, #0e040d 70%, #060105)'
+        },
+        cyber: {
+          '--bg': '#08070d',
+          '--accent': '#d946ef',
+          '--accent2': '#f43f5e',
+          '--panel': 'rgba(255, 255, 255, 0.05)',
+          '--text': '#fae8ff',
+          '--muted': 'rgba(250, 232, 255, 0.78)',
+          '--hair': 'rgba(250, 232, 255, 0.15)',
+          '--success': '#10b981',
+          '--black': '#030205',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(217, 70, 239, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(244, 63, 94, 0.25), transparent 55%), linear-gradient(180deg, #07060b, #040307 70%, #010103)'
+        },
+        crimson: {
+          '--bg': '#1e050b',
+          '--accent': '#e11d48',
+          '--accent2': '#fb7185',
+          '--panel': 'rgba(255, 255, 255, 0.05)',
+          '--text': '#fff1f2',
+          '--muted': 'rgba(255, 241, 242, 0.78)',
+          '--hair': 'rgba(255, 241, 242, 0.15)',
+          '--success': '#10b981',
+          '--black': '#0a0103',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(225, 29, 72, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251, 113, 133, 0.25), transparent 55%), linear-gradient(180deg, #180308, #0e0104 70%, #050001)'
+        },
+        light: {
+          '--bg': '#f8fafc',
+          '--accent': '#4f46e5',
+          '--accent2': '#0ea5e9',
+          '--panel': 'rgba(15, 23, 42, 0.04)',
+          '--text': '#0f172a',
+          '--muted': '#475569',
+          '--hair': 'rgba(15, 23, 42, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(79, 70, 229, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f1f5f9 70%, #e2e8f0)'
+        }
+      };
 
-    <!-- PAGE 2: BACK -->
-    <section class="page" aria-label="Back of flyer">
-      <header class="topbar">
-        <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> Rewards system outcomes</div>
-          <h1>School-wide outcomes you can expect</h1>
-          <p class="subtitle">
-            A consistent PBIS rewards system—built to reduce overhead, strengthen trust, and keep incentives fair and
-            measurable building-wide.
-          </p>
-        </div>
-        <div class="right-meta">
-          <div><strong>LevelUp Rewards</strong></div>
-          <div class="muted">Professional one-pager</div>
-        </div>
-      </header>
+      function updateTheme() {
+        const themeKey = document.getElementById('theme-select').value;
+        const theme = THEMES[themeKey] || THEMES.navy;
+        const root = document.documentElement;
+        
+        // Apply variables
+        for (const [key, value] of Object.entries(theme)) {
+          if (key === 'page-gradient') continue;
+          root.style.setProperty(key, value);
+        }
+        
+        // Update page backgrounds
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(p => {
+          p.style.background = theme['page-gradient'];
+          if (themeKey === 'light') {
+            p.style.color = '#0f172a';
+            // Update strong, h1, h2, h3, badge
+            p.querySelectorAll('strong, h1, h3, .badge').forEach(el => {
+              el.style.color = '#0f172a';
+            });
+            p.querySelectorAll('h2').forEach(el => {
+              el.style.color = '#4f46e5';
+            });
+            p.querySelectorAll('.subtitle').forEach(el => {
+              el.style.color = '#475569';
+            });
+            p.querySelectorAll('.muted').forEach(el => {
+              el.style.color = '#64748b';
+            });
+            p.querySelectorAll('.callout').forEach(el => {
+              el.style.background = 'rgba(79, 70, 229, 0.06)';
+              el.style.borderLeftColor = '#4f46e5';
+            });
+            p.querySelectorAll('.kpi').forEach(el => {
+              el.style.background = 'rgba(0,0,0,0.02)';
+              el.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+            });
+            p.querySelectorAll('.card').forEach(el => {
+              el.style.borderColor = 'rgba(15, 23, 42, 0.1)';
+              el.style.background = 'rgba(15, 23, 42, 0.02)';
+            });
+            p.querySelectorAll('.topbar, .footer').forEach(el => {
+              el.style.borderColor = 'rgba(15, 23, 42, 0.12)';
+            });
+            p.querySelectorAll('li::before').forEach(el => {
+              el.style.color = '#4f46e5';
+              el.style.textShadow = 'none';
+            });
+          } else {
+            // Restore dark colors
+            p.style.color = 'var(--text)';
+            p.style.color = '';
+            p.querySelectorAll('strong, h1, h3, .badge, h2, .subtitle, .muted, .callout, .kpi, .card, .topbar, .footer, li::before').forEach(el => {
+              el.style.color = '';
+              el.style.background = '';
+              el.style.borderColor = '';
+              el.style.borderLeftColor = '';
+              el.style.textShadow = '';
+            });
+          }
+        });
+      }
 
-      <div class="grid">
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <div class="card">
-            <h2>School-wide impact</h2>
-            <ul>
-              <li><strong>Higher participation</strong> because students understand the system and see rewards quickly.</li>
-              <li><strong>More consistent implementation</strong> across staff with shared categories and expectations.</li>
-              <li><strong>Fewer disputes</strong> with transparent balances and complete redemption histories.</li>
-              <li><strong>Reduced admin overhead</strong> with fewer manual corrections and reward reconciliation.</li>
-            </ul>
+      function updatePreparedMode() {
+        const mode = document.getElementById('prepared-mode').value;
+        const nameSection = document.getElementById('school-name-section');
+        const badge = document.getElementById('flyer-prepared-badge');
+        
+        if (mode === 'school') {
+          nameSection.style.display = 'block';
+          updateSchoolName();
+        } else {
+          nameSection.style.display = 'none';
+          badge.innerHTML = '<span class="dot" aria-hidden="true"></span> PBIS rewards system';
+        }
+      }
 
-            <div style="height: 12px"></div>
-            <h2>For teachers</h2>
-            <ul>
-              <li><strong>Faster recognition</strong> that fits directly into instruction.</li>
-              <li><strong>No more point bookkeeping</strong>—balances and records stay organized automatically.</li>
-            </ul>
-          </div>
-          
-          <!-- 3D Achievements graphic panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
-            <img src="../public/levelup_rewards_achievements.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp 3D Badges & Achievements" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-              Student Level-Up Progression
-            </div>
-          </div>
-        </div>
+      function updateSchoolName() {
+        const schoolName = document.getElementById('school-name-input').value;
+        const badge = document.getElementById('flyer-prepared-badge');
+        badge.innerHTML = '<span class="dot" aria-hidden="true"></span> Prepared for ' + escapeHtml(schoolName);
+      }
 
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- App Mockup Panel -->
-          <div class="card" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
-            <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-              <span style="margin-left: 4px; font-family: monospace;">portal.leveluprewards.app/student</span>
-            </div>
-            <img src="../public/student-dashboard-layout-desktop.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Student Portal Dashboard Screenshot" />
-          </div>
-          
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <h2>For deans & PBIS teams</h2>
-              <ul>
-                <li><strong>Real-time visibility</strong> into recognition patterns and incentive usage.</li>
-                <li><strong>Clean, exportable reporting</strong> to support PBIS/MTSS planning.</li>
-                <li><strong>Controlled access</strong> to support consistent implementation building-wide.</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h2>Support & Verification</h2>
-              <ul>
-                <li><strong>Optional automated dispensers</strong> for reliable rewards backed by hardware handshakes.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+      function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
 
-      <footer class="footer">
-        <div>
-          <strong>LevelUp EdTech Enterprises LLC</strong><br />
-          1849 East 38th Street, Brooklyn, NY<br />
-          <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Procurement%20Inquiry" style="color: var(--accent2); text-decoration: none;"
-            >contact@leveluprewards.app</a
-          >
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
-          <span class="pill">PBIS / MTSS aligned</span>
-          <span class="pill">Real-time dashboards</span>
-          <span class="pill">DPA-ready</span>
-          <span class="pill">NY Law 2-d</span>
-        </div>
-      </footer>
-    </section>
+      function syncContactInfo() {
+        const company = document.getElementById('company-input').value;
+        const email = document.getElementById('email-input').value;
+        const street = document.getElementById('street-input').value;
+        const city = document.getElementById('city-input').value;
+        const web = document.getElementById('web-input').value;
+        
+        // Sync company name
+        document.querySelectorAll('.sync-company').forEach(el => {
+          el.textContent = company;
+        });
+        
+        // Sync address city
+        document.querySelectorAll('.sync-address-city').forEach(el => {
+          el.textContent = city;
+        });
+
+        // Sync address street
+        document.querySelectorAll('.sync-address-street').forEach(el => {
+          el.textContent = street;
+        });
+
+        // Sync full address on Page 2
+        document.querySelectorAll('.sync-address-full').forEach(el => {
+          el.textContent = street + ', ' + city;
+        });
+
+        // Sync emails
+        document.querySelectorAll('.sync-email').forEach(el => {
+          el.textContent = email;
+        });
+
+        // Sync email links
+        document.querySelectorAll('.sync-email-link').forEach(el => {
+          el.href = 'mailto:' + email + '?subject=PBIS%20Inquiry';
+        });
+
+        // Sync portal URL
+        const portalUrlDisplay = document.getElementById('sync-portal-url-display');
+        if (portalUrlDisplay) {
+          portalUrlDisplay.textContent = web.replace(/^https?:\/\//i, '') + '/student';
+        }
+      }
+
+      function loadDefaultContactInfo() {
+        document.getElementById('company-input').value = 'LevelUp EdTech Enterprises LLC';
+        document.getElementById('email-input').value = 'contact@leveluprewards.app';
+        document.getElementById('street-input').value = '1849 East 38th Street';
+        document.getElementById('city-input').value = 'Brooklyn, NY';
+        document.getElementById('web-input').value = 'leveluprewards.app';
+        syncContactInfo();
+      }
+
+      function togglePage2() {
+        const checked = document.getElementById('show-page-2').checked;
+        const p2 = document.getElementById('page-2-section');
+        p2.style.display = checked ? 'block' : 'none';
+      }
+
+      function toggleCard(id, show) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.style.display = show ? '' : 'none';
+        }
+      }
+
+      // Check if URL has ?embed=1 and hide sidebar accordingly
+      if (new URLSearchParams(window.location.search).has('embed')) {
+        document.querySelector('.control-sidebar').style.display = 'none';
+        document.querySelector('.proposal-main').style.padding = '0';
+      }
+
+      // Initialize
+      loadDefaultContactInfo();
+    </script>
   </body>
 </html>

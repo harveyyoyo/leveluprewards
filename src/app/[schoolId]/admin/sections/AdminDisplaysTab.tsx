@@ -2,28 +2,22 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { collection, query } from 'firebase/firestore';
 import {
   ArrowUpRight,
   LayoutGrid,
   Megaphone,
   Monitor,
-  Tag,
   Trophy,
 } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
-  StaffPortalSectionCardHeader,
-  StaffPortalSectionCardTitle,
 } from '@/components/staff/StaffPortalSection';
 import { Button } from '@/components/ui/button';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import type { Settings } from '@/components/providers/SettingsProvider';
-import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 import {
   buildBulletinDisplayHref,
   buildHallOfFameDisplayHref,
@@ -31,11 +25,10 @@ import {
 } from '@/lib/displays/displayRoutes';
 import { SmartScreenSettingsPanel } from './displays/SmartScreenSettingsPanel';
 import { BulletinSettingsPanel } from './displays/BulletinSettingsPanel';
-import { BulletinIncentivesPanel } from './displays/BulletinIncentivesPanel';
 import { HallOfFameSettingsPanel } from './displays/HallOfFameSettingsPanel';
 import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
-type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'hall-of-fame' | 'incentives';
+type DisplaysSection = 'overview' | 'smart-screen' | 'bulletin' | 'hall-of-fame';
 
 type AdminDisplaysTabProps = {
   schoolId: string;
@@ -49,22 +42,8 @@ export function AdminDisplaysTab({
   settings,
   updateSettings,
 }: AdminDisplaysTabProps) {
-  const firestore = useFirestore();
   const { isJewishOrthodox } = useSchoolProfile();
   const [section, setSection] = useState<DisplaysSection>('overview');
-
-  const incentivesQuery = useMemoFirebase(
-    () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null),
-    [firestore, schoolId],
-  );
-  const { data: incentives } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
-
-  const sortedIncentives = useMemo(() => {
-    if (!incentives?.length) return [];
-    return [...incentives].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
-  }, [incentives]);
-
-  const activeIncentiveCount = sortedIncentives.filter((item) => item.active !== false).length;
 
   const smartHref = useMemo(() => buildSmartScreenDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
   const bulletinHref = useMemo(() => buildBulletinDisplayHref(schoolId, { fullscreen: true }), [schoolId]);
@@ -110,7 +89,6 @@ export function AdminDisplaysTab({
             { id: 'smart-screen', label: 'Smart Screen', icon: Monitor },
             { id: 'bulletin', label: 'Bulletin board', icon: Megaphone },
             { id: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy },
-            { id: 'incentives', label: 'Incentives', icon: Tag, badge: activeIncentiveCount },
           ]}
           value={section}
           onValueChange={(id) => setSection(id as DisplaysSection)}
@@ -147,7 +125,7 @@ export function AdminDisplaysTab({
                   Bulletin board
                 </div>
                 <p className="text-sm leading-relaxed text-muted-foreground">
-                  Focused board for point-earning incentives and celebration posts — great for office TVs and staff areas.
+                  Focused hallway board for celebrations and point-earning opportunities when enabled in Incentives.
                 </p>
                 <p className="mt-3 text-xs font-bold text-primary opacity-0 transition-opacity group-hover:opacity-100">
                   Configure bulletin →
@@ -201,20 +179,6 @@ export function AdminDisplaysTab({
                 </Button>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setSection('incentives')}
-              className="flex w-full items-center justify-between gap-3 rounded-2xl border bg-background px-4 py-3 text-left transition-colors hover:border-primary/25 hover:bg-muted/20"
-            >
-              <span className="flex items-center gap-2 text-sm font-bold">
-                <Tag className="h-4 w-4 text-ring" />
-                Manage incentives
-              </span>
-              <span className="rounded-full border bg-muted/30 px-2.5 py-1 text-xs font-black">
-                {activeIncentiveCount} active
-              </span>
-            </button>
           </div>
         ) : null}
 
@@ -232,7 +196,6 @@ export function AdminDisplaysTab({
             schoolId={schoolId}
             settings={settings}
             updateSettings={updateSettings}
-            sortedIncentives={sortedIncentives}
           />
         ) : null}
 
@@ -243,8 +206,6 @@ export function AdminDisplaysTab({
             updateSettings={updateSettings}
           />
         ) : null}
-
-        {section === 'incentives' ? <BulletinIncentivesPanel schoolId={schoolId} /> : null}
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
     </StaffPortalTabPanel>

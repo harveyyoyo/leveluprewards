@@ -385,6 +385,12 @@ interface Settings {
     bulletinShowWowBadge?: boolean;
     /** '1' = single column; '2' = responsive two-column grid on wide screens. */
     bulletinColumns?: '1' | '2';
+    /** Point-earning opportunity cards (Admin → Incentives tab). */
+    enableIncentives?: boolean;
+    incentivesShowOnBulletinBoard?: boolean;
+    incentivesShowOnSmartScreen?: boolean;
+    incentivesShowOnStudentKiosk?: boolean;
+    incentivesShowOnStudentPortal?: boolean;
     // Smart Screen (admin-managed shared display)
     smartScreenEnabled?: boolean;
     smartScreenTitle?: string;
@@ -423,6 +429,7 @@ interface Settings {
     payHomework?: boolean;
     payLibrary?: boolean;
     payOffice?: boolean;
+    paySss?: boolean;
     /** Default checkout loan length before a book is overdue. */
     libraryLoanPeriodDays?: number;
     /** Max books a student may borrow at once. 0 = unlimited. */
@@ -776,6 +783,12 @@ const defaultSettings: Settings = {
     bulletinShowWowBadge: true,
     bulletinColumns: '2',
 
+    enableIncentives: true,
+    incentivesShowOnBulletinBoard: true,
+    incentivesShowOnSmartScreen: true,
+    incentivesShowOnStudentKiosk: false,
+    incentivesShowOnStudentPortal: false,
+
     smartScreenEnabled: true,
     smartScreenTitle: 'Smart Screen',
     smartScreenMessage: 'Make today count.',
@@ -807,6 +820,7 @@ const defaultSettings: Settings = {
     payHomework: false,
     payLibrary: true,
     payOffice: false,
+    paySss: false,
     libraryLoanPeriodDays: 14,
     libraryMaxCheckoutsPerStudent: 3,
     libraryStudentKioskCheckoutEnabled: true,

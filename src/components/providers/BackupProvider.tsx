@@ -34,7 +34,7 @@ import { DEMO_STUDENT_THEMES } from '@/lib/demoStudentThemes';
 import {
     seedOfficeDemoDataForSchool,
     type OfficeDemoVariant,
-} from '@/lib/office/seedOfficeDemoData';
+} from '@/lib/seedOfficeDemoData';
 import type { SchoolProfileType } from '@/lib/schoolProfile';
 
 interface BackupContextType {

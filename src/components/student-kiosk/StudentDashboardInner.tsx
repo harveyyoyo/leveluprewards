@@ -144,6 +144,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
+import { StudentIncentivesCard } from '@/components/incentives/StudentIncentivesCard';
 import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
@@ -1584,14 +1585,12 @@ export function StudentDashboardInner({
             primaryForeground={primaryForeground}
             photoDisplayMode={settings.photoDisplayMode}
             headerExtras={
-              studentHouse ? (
-                <StudentKioskHouseBadge studentHouse={studentHouse} themed={!!effectiveTheme} />
-              ) : undefined
-            }
-            trailingActions={
-              <div className="flex flex-col items-end gap-2">
+              <>
+                {studentHouse ? (
+                  <StudentKioskHouseBadge studentHouse={studentHouse} themed={!!effectiveTheme} />
+                ) : null}
                 {settings.enableBadges && headerBadges.length > 0 ? (
-                  <div className="flex flex-wrap items-center justify-end gap-1">
+                  <div className="flex flex-wrap items-center gap-1">
                     {headerBadges.map((b) => (
                       <div
                         key={b.id}
@@ -1612,16 +1611,18 @@ export function StudentDashboardInner({
                     ) : null}
                   </div>
                 ) : null}
-                <StudentKioskLogoutControls
-                  themed={{ active: !!effectiveTheme }}
-                  primaryForeground={primaryForeground}
-                  isKioskLocked={isKioskLocked}
-                  autoLogoutEnabled={kioskAutoLogoutOn}
-                  logoutTimer={logoutTimer}
-                  sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
-                  onLogout={handleManualLogout}
-                />
-              </div>
+              </>
+            }
+            trailingActions={
+              <StudentKioskLogoutControls
+                themed={{ active: !!effectiveTheme }}
+                primaryForeground={primaryForeground}
+                isKioskLocked={isKioskLocked}
+                autoLogoutEnabled={kioskAutoLogoutOn}
+                logoutTimer={logoutTimer}
+                sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                onLogout={handleManualLogout}
+              />
             }
         />
         {student.nickname?.trim() ? (
@@ -1873,6 +1874,15 @@ export function StudentDashboardInner({
               schoolId={schoolId!}
               student={student}
               enabled
+              themed={!!effectiveTheme}
+              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
+            />
+          ) : null}
+
+          {schoolId ? (
+            <StudentIncentivesCard
+              schoolId={schoolId}
+              surface="studentKiosk"
               themed={!!effectiveTheme}
               themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
             />

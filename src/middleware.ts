@@ -8,15 +8,20 @@ import {
 import {
   canonicalOfficeRedirectUrl,
   isOfficeChromeRequest,
-  isOfficeHostname,
   OFFICE_CHROME_REQUEST_HEADER,
-  officeHostInternalRewritePath,
-  officeHostRedirectPath,
 } from '@/lib/officeRouting';
+import {
+  canonicalSssRedirectUrl,
+  isSssChromeRequest,
+  isSssHostname,
+  SSS_CHROME_REQUEST_HEADER,
+  sssHostInternalRewritePath,
+  sssHostRedirectPath,
+} from '@/lib/sss/sssRouting';
 import { applySecurityHeaders } from '@/lib/middleware/securityHeaders';
 import { checkAuthGuard } from '@/lib/middleware/authGuard';
 
-function officeChromeRequestHeaders(request: NextRequest): Headers {
+function portalChromeRequestHeaders(request: NextRequest): Headers {
   const forwardedHost =
     request.headers.get('x-fh-requested-host') ??
     request.headers.get('x-forwarded-host') ??
@@ -24,6 +29,9 @@ function officeChromeRequestHeaders(request: NextRequest): Headers {
   const headers = new Headers(request.headers);
   if (isOfficeChromeRequest(request.nextUrl.pathname, forwardedHost)) {
     headers.set(OFFICE_CHROME_REQUEST_HEADER, 'hidden');
+  }
+  if (isSssChromeRequest(request.nextUrl.pathname, forwardedHost)) {
+    headers.set(SSS_CHROME_REQUEST_HEADER, 'hidden');
   }
   return headers;
 }
@@ -59,11 +67,18 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
 
-  if (isOfficeHostname(forwardedHost)) {
-    const officePath = officeHostRedirectPath(pathname);
-    if (officePath && officePath !== pathname) {
+  const canonicalSssUrl = canonicalSssRedirectUrl(pathname, search, forwardedHost, request.nextUrl.protocol);
+  if (canonicalSssUrl) {
+    const redirect = NextResponse.redirect(canonicalSssUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
+  if (isSssHostname(forwardedHost)) {
+    const sssPath = sssHostRedirectPath(pathname);
+    if (sssPath && sssPath !== pathname) {
       const url = request.nextUrl.clone();
-      url.pathname = officePath;
+      url.pathname = sssPath;
       const redirect = NextResponse.redirect(url);
       applySecurityHeaders(redirect);
       return redirect;
@@ -81,9 +96,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  const internalRewrite = isOfficeHostname(forwardedHost)
-    ? officeHostInternalRewritePath(pathname)
-    : null;
+  const internalRewrite = isSssHostname(forwardedHost) ? sssHostInternalRewritePath(pathname) : null;
   const sessionPathname = internalRewrite ?? pathname;
 
   const authRedirect = await checkAuthGuard(request, sessionPathname, forwardedHost);
@@ -95,14 +108,14 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = internalRewrite;
     const response = NextResponse.rewrite(url, {
-      request: { headers: officeChromeRequestHeaders(request) },
+      request: { headers: portalChromeRequestHeaders(request) },
     });
     applySecurityHeaders(response);
     return response;
   }
 
   const response = NextResponse.next({
-    request: { headers: officeChromeRequestHeaders(request) },
+    request: { headers: portalChromeRequestHeaders(request) },
   });
   applySecurityHeaders(response);
   return response;

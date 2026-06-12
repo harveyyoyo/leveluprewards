@@ -1,4 +1,4 @@
-import type { LoginState } from '@/components/providers/AuthProvider';
+import type { OfficeLoginState as LoginState } from '@/components/providers/OfficeAuthProvider';
 
 /** Client intent to use the office portal (localStorage / loginState). */
 export function hasOfficePortalLoginIntent(loginState: LoginState | string | null | undefined): boolean {

@@ -38,7 +38,7 @@ import {
   PRODUCT_PILLAR_LABELS,
   type ProductPillarKey,
 } from '@/lib/productPillars';
-import { OfficePortalEntryLink } from '@/components/office/OfficePortalEntryLink';
+import { OfficePortalEntryLink } from '@/components/integrations/OfficePortalEntryLink';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
@@ -93,6 +93,7 @@ interface SchoolInfo {
     payLibrary?: boolean;
     payHomework?: boolean;
     payOffice?: boolean;
+    paySss?: boolean;
   };
   pillarAccess?: Partial<Record<ProductPillarKey, boolean>>;
   featureSettingsDefaults?: Partial<Record<ProductPillarKey, boolean>>;
@@ -134,6 +135,7 @@ export default function DeveloperPage() {
     payLibrary: true,
     payHomework: true,
     payOffice: false,
+    paySss: false,
   });
   const [editingPillarAccess, setEditingPillarAccess] = useState<Record<ProductPillarKey, boolean>>({
     payClassroom: true,
@@ -141,6 +143,7 @@ export default function DeveloperPage() {
     payLibrary: true,
     payHomework: true,
     payOffice: true,
+    paySss: true,
   });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
@@ -546,6 +549,7 @@ export default function DeveloperPage() {
         payLibrary: access.payLibrary !== false,
         payHomework: access.payHomework !== false,
         payOffice: access.payOffice !== false,
+        paySss: access.paySss !== false,
       });
       setEditingPillars({
         payClassroom: defaults.payClassroom ?? app.payClassroom ?? true,
@@ -553,6 +557,7 @@ export default function DeveloperPage() {
         payLibrary: defaults.payLibrary ?? app.payLibrary ?? true,
         payHomework: defaults.payHomework ?? app.payHomework ?? false,
         payOffice: defaults.payOffice ?? app.payOffice ?? false,
+        paySss: defaults.paySss ?? app.paySss ?? false,
       });
     };
     try {
@@ -571,6 +576,7 @@ export default function DeveloperPage() {
       payLibrary: true,
       payHomework: true,
       payOffice: false,
+      paySss: false,
     });
     setEditingPillarAccess({
       payClassroom: true,
@@ -578,6 +584,7 @@ export default function DeveloperPage() {
       payLibrary: true,
       payHomework: true,
       payOffice: true,
+      paySss: true,
     });
   };
 
@@ -595,7 +602,7 @@ export default function DeveloperPage() {
         nextDefaults[key] = editingPillarAccess[key] && editingPillars[key];
         if (!editingPillarAccess[key]) {
           nextAppSettings[key] = false;
-        } else if (typeof nextAppSettings[key] !== 'boolean') {
+        } else {
           nextAppSettings[key] = editingPillars[key];
         }
       }
@@ -1575,6 +1582,7 @@ export default function DeveloperPage() {
                             {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
                             {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}
                             {key === 'payOffice' && 'Grades, billing, and office-only student roster (not shared with rewards).'}
+                            {key === 'paySss' && 'Spreadsheet student database for special services — providers, contacts, and family info.'}
                           </p>
                         </div>
                         {key === 'payOffice' && hasAccess && editingPillars[key] ? (

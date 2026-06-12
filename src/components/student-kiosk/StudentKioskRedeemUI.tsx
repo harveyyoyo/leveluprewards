@@ -172,16 +172,15 @@ export function StudentKioskLogoutControls({
       <Button
         type="button"
         size="sm"
+        variant="ghost"
         className={cn(
-          'h-9 whitespace-nowrap rounded-full border-2 px-4 text-[11px] font-bold uppercase tracking-widest shadow-sm',
-          !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
+          'h-7 whitespace-nowrap rounded-md px-2 text-xs font-medium normal-case tracking-normal opacity-80 hover:opacity-100',
+          !t && 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
         )}
         style={
           t
             ? {
-                borderColor: 'var(--theme-primary)',
-                backgroundColor: 'var(--theme-primary)',
-                color: primaryForeground,
+                color: 'var(--theme-page-text)',
               }
             : undefined
         }

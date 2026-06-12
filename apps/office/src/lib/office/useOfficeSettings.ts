@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useAppContext } from '@/components/AppProvider';
+import { useAppContext } from '@/components/providers/OfficeAuthProvider';
 import { useFirestore, useDoc } from '@/firebase';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import type { OfficeSettings } from '@/lib/office/types';

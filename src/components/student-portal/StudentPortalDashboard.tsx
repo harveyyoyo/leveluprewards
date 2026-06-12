@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
+import { StudentIncentivesCard } from '@/components/incentives/StudentIncentivesCard';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { HouseHallOfFameCard } from '@/components/houses/HouseHallOfFameCard';
 import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
@@ -255,6 +256,8 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
           </CardContent>
         </Card>
       ) : null}
+
+      <StudentIncentivesCard schoolId={schoolId} surface="studentPortal" />
 
       {settings.enableBadges ? (
         <EarnedBadgesShowcase student={student} badges={badges} enableBadges={settings.enableBadges} />

@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
+import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
@@ -97,12 +98,7 @@ export default function BulletinBoardDisplay({
   );
   const { data: bulletinPosts } = useCollection<BulletinPost>(postsQuery);
 
-  const sortedBulletin = useMemo(() => {
-    if (!bulletinIncentives?.length) return [];
-    return [...bulletinIncentives].sort(
-      (a, b) => ((b as { createdAt?: number }).createdAt ?? 0) - ((a as { createdAt?: number }).createdAt ?? 0),
-    );
-  }, [bulletinIncentives]);
+  const sortedBulletin = useMemo(() => activeIncentivesList(bulletinIncentives), [bulletinIncentives]);
 
   useEffect(() => {
     if (isPreview) return;
@@ -117,6 +113,7 @@ export default function BulletinBoardDisplay({
   }, [isPreview, isInitialized, loginState, router, toast]);
 
   const bulletinEnabled = settings.bulletinEnabled !== false;
+  const showIncentiveCards = isPreview || incentivesVisibleOnSurface(settings, 'bulletinBoard');
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim() || DEFAULT_BULLETIN_SUBTITLE;
   const schoolLogoUrl = schoolMeta?.logoUrl;
@@ -217,22 +214,20 @@ export default function BulletinBoardDisplay({
             </div>
           </div>
         ) : null}
-        {isLoading ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : sortedBulletin.filter((i) => i.active !== false).length > 0 ? (
-          <div
-            className={cn(
-              'grid gap-3',
-              settings.bulletinColumns === '1' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
-              isPreview && settings.bulletinColumns !== '1' && 'sm:grid-cols-2',
-            )}
-          >
-            {sortedBulletin
-              .filter((i) => i.active !== false)
-              .slice(0, isPreview ? 4 : undefined)
-              .map((inc) => (
+        {showIncentiveCards ? (
+          isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : sortedBulletin.length > 0 ? (
+            <div
+              className={cn(
+                'grid gap-3',
+                settings.bulletinColumns === '1' ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2',
+                isPreview && settings.bulletinColumns !== '1' && 'sm:grid-cols-2',
+              )}
+            >
+              {sortedBulletin.slice(0, isPreview ? 4 : undefined).map((inc) => (
                 <div
                   key={inc.id}
                   className="flex items-center justify-between gap-3 rounded-2xl border border-white/20 bg-white/40 p-3 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-black/20"
@@ -253,13 +248,14 @@ export default function BulletinBoardDisplay({
                   </span>
                 </div>
               ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center opacity-70">
-            <Sparkles className="h-8 w-8 animate-pulse text-indigo-400" />
-            <span className="text-xs font-bold">No active incentives on the board yet</span>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center opacity-70">
+              <Sparkles className="h-8 w-8 animate-pulse text-indigo-400" />
+              <span className="text-xs font-bold">No active incentives on the board yet</span>
+            </div>
+          )
+        ) : null}
       </CardContent>
     </Card>
   ) : (

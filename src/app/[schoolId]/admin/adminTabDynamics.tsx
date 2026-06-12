@@ -87,6 +87,10 @@ export const AdminDisplaysTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminDisplaysTab'), 'AdminDisplaysTab'),
   { loading: tabLoader, ssr: false },
 );
+export const AdminIncentivesTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminIncentivesTab'), 'AdminIncentivesTab'),
+  { loading: tabLoader, ssr: false },
+);
 export const AdminIntegrationsTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminIntegrationsTab'), 'AdminIntegrationsTab'),
   { loading: tabLoader, ssr: false },

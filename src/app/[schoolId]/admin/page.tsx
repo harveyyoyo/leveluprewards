@@ -157,6 +157,7 @@ import {
   AdminClassroomTab,
   AdminDisplaysTab,
   AdminGoalsTab,
+  AdminIncentivesTab,
   AdminHousesTab,
   AdminIntegrationsTab,
   AdminNotificationsTab,
@@ -548,6 +549,19 @@ function AdminDashboardInner() {
           }),
       },
       {
+        value: 'incentives',
+        label: 'Incentives',
+        icon: Tag,
+        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'incentives'),
+        enable: () => updateSettings({ enableIncentives: true, adminHiddenAddOnTabs: removeHidden('incentives') }),
+        disable: () =>
+          updateSettings({
+            enableIncentives: false,
+            adminHiddenAddOnTabs: removeHidden('incentives'),
+            adminPinnedAddOnTabs: removePinned('incentives'),
+          }),
+      },
+      {
         value: 'library',
         label: 'Library',
         icon: BookOpen,
@@ -836,6 +850,9 @@ function AdminDashboardInner() {
         patch.smartScreenEnabled = true;
         patch.enableClassLeaderboard = true;
         break;
+      case 'incentives':
+        patch.enableIncentives = true;
+        break;
       case 'library':
         patch.payLibrary = true;
         break;
@@ -903,6 +920,10 @@ function AdminDashboardInner() {
           patch.smartScreenEnabled = false;
           patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
+          break;
+        case 'incentives':
+          patch.enableIncentives = false;
+          nextHidden = nextHidden.filter((x) => x !== 'incentives');
           break;
         case 'library':
           patch.payLibrary = false;
@@ -990,6 +1011,9 @@ function AdminDashboardInner() {
           patch.smartScreenEnabled = true;
           patch.enableClassLeaderboard = true;
           break;
+        case 'incentives':
+          patch.enableIncentives = true;
+          break;
         case 'library':
           patch.payLibrary = true;
           break;
@@ -1053,6 +1077,10 @@ function AdminDashboardInner() {
           patch.smartScreenEnabled = false;
           patch.enableClassLeaderboard = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
+          break;
+        case 'incentives':
+          patch.enableIncentives = false;
+          nextHidden = nextHidden.filter((x) => x !== 'incentives');
           break;
         case 'library':
           patch.payLibrary = false;
@@ -2133,6 +2161,14 @@ function AdminDashboardInner() {
             <AdminDisplaysTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
+              settings={settings}
+              updateSettings={updateSettings}
+            />
+          </TabsContent>
+
+          <TabsContent value="incentives" className={scrollingAdminTabClassName}>
+            <AdminIncentivesTab
+              schoolId={schoolId!}
               settings={settings}
               updateSettings={updateSettings}
             />

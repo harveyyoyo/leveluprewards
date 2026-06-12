@@ -143,14 +143,29 @@ export function officeHostInternalRewritePath(pathname: string): string | null {
 /**
  * Redirect `/{school}/office/…` on the main or portal host to the office subdomain.
  */
+function officeRedirectTargetOrigin(protocol: string): string | null {
+  const targetHost = canonicalOfficeHost();
+  if (targetHost) {
+    const scheme = targetHost.includes('localhost') ? 'http:' : protocol || 'https:';
+    return `${scheme}//${targetHost}`;
+  }
+  const devOrigin = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
+  if (!devOrigin) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(devOrigin) ? devOrigin : `http://${devOrigin}`).origin;
+  } catch {
+    return null;
+  }
+}
+
 export function canonicalOfficeRedirectUrl(
   pathname: string,
   search: string,
   rawCurrentHost: string | null | undefined,
   protocol: string,
 ): URL | null {
-  const targetHost = canonicalOfficeHost();
-  if (!targetHost) return null;
+  const targetOrigin = officeRedirectTargetOrigin(protocol);
+  if (!targetOrigin) return null;
   if (isOfficeHostname(rawCurrentHost)) return null;
 
   const parts = pathname.split('/').filter(Boolean);
@@ -160,10 +175,11 @@ export function canonicalOfficeRedirectUrl(
   if (!isSchoolIdSegment(school)) return null;
   if (parts[1].toLowerCase() !== 'office') return null;
 
-  const scheme = targetHost.includes('localhost') ? 'http:' : protocol || 'https:';
   const publicTail = parts.slice(2).join('/');
-  const publicPath = publicTail ? `/${school.toLowerCase()}/${publicTail}` : `/${school.toLowerCase()}`;
-  const target = new URL(`${scheme}//${targetHost}${publicPath}`);
+  const publicPath = publicTail
+    ? `/${school.toLowerCase()}/office/${publicTail}`
+    : `/${school.toLowerCase()}/office`;
+  const target = new URL(`${targetOrigin}${publicPath}`);
   target.search = search || '';
   return target;
 }

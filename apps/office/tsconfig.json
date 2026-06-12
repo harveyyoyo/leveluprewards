@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "typeRoots": ["./node_modules/@types"]
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/lib/server/classroomAlertRulesEvaluator.ts",
+    "src/lib/server/classroomPointsAdmin.ts",
+    "src/lib/server/libraryAiIsbnLookup.ts",
+    "src/lib/server/mediaAssetLibrary.ts",
+    "src/lib/server/mediaAssetRecapture.ts",
+    "src/components/ui/NumericKeypad.tsx",
+    "src/components/ui/command.tsx",
+    "src/lib/google/googleSchoolAccess.ts"
+  ]
+}

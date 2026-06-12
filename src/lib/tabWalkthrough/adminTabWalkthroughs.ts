@@ -211,7 +211,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Pick your display type',
         checklist: [
-          'Use Overview to compare Smart Screen (live dashboard), Bulletin board (incentives focus), and Hall of Fame (leaderboards).',
+          'Use Overview to compare Smart Screen (live dashboard), Bulletin board, and Hall of Fame (leaderboards).',
           'Open the full-screen links on hallway monitors, lobby TVs, or gym projectors.',
         ],
       },
@@ -219,8 +219,28 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         title: 'Configure each display',
         checklist: [
           'Smart Screen: set title, daily message, layout, theme, and which modules to show.',
-          'Bulletin: set board title, theme, and manage point-earning incentives.',
+          'Bulletin: set board title, theme, and layout.',
           'Hall of Fame: choose rank type (students, classes, houses, goals), podium, grid, and layout.',
+        ],
+      },
+    ],
+  },
+  incentives: {
+    title: 'Incentives tab',
+    subtitle: 'Point-earning opportunities and where students see them',
+    steps: [
+      {
+        title: 'Create opportunities',
+        checklist: [
+          'Use Manage to add presets or custom cards (title, description, points, icon).',
+          'Active cards are the ones students can see on enabled surfaces.',
+        ],
+      },
+      {
+        title: 'Choose surfaces',
+        checklist: [
+          'Where to show: bulletin board, Smart Screen, student kiosk, and student home portal — each toggles independently.',
+          'Hallway displays default on; turn on kiosk or portal when you want students to see opportunities after sign-in.',
         ],
       },
     ],
