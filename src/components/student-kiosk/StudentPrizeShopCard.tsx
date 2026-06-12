@@ -30,7 +30,7 @@ export function StudentPrizeShopCard({
   wholeCardClick = false,
   className,
 }: StudentPrizeShopCardProps) {
-  const canAfford = studentPoints >= prize.points;
+  const canAfford = studentPoints >= (prize.points || 0);
   const displayName = stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
   const pctTowardCost = Math.min(100, Math.floor((studentPoints / (prize.points || 1)) * 100));
 

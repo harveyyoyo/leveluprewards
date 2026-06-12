@@ -459,7 +459,7 @@ function ScanCouponScanZone({
       className={cn(
         'relative flex flex-wrap items-center justify-center gap-3 overflow-hidden rounded-2xl border-2 border-dashed px-4 py-5 min-h-[5.5rem] text-center sm:min-h-[6.5rem] sm:gap-4 sm:px-5 sm:py-6 [@media(max-height:760px)]:min-h-[4.5rem] [@media(max-height:760px)]:gap-2 [@media(max-height:760px)]:px-3 [@media(max-height:760px)]:py-3',
         !t &&
-          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/92 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/92 dark:to-amber-900/95',
+          'border-amber-400/80 bg-gradient-to-r from-amber-900/95 via-amber-950/90 to-amber-900/95 text-amber-50 dark:border-amber-500/55 dark:from-amber-900/95 dark:via-amber-950/90 dark:to-amber-900/95',
       )}
       style={
         t

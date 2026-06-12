@@ -485,7 +485,7 @@ export function StudentDashboardInner({
   }, [isKioskLocked, settings.kioskSessionTimeoutSec, markKioskRewardsActivity]);
 
   useEffect(() => {
-    if (isKioskLocked) return;
+    if (isKioskLocked || !kioskAutoLogoutOn) return;
     if (logoutTimer <= 0) {
       onDone();
       toast({ title: 'Session ended', description: 'Returning to kiosk home.' });
@@ -1502,8 +1502,8 @@ export function StudentDashboardInner({
               : 'pt-1 md:pt-3 [@media(max-height:760px)]:pt-1 [@media(max-height:760px)]:md:pt-2',
           settings.enableThemeAnimations && !!effectiveTheme && "theme-theme-elements-animated theme-motion-override",
           effectiveTheme && 'student-theme-surface',
-          isCompactDisplayMode(settings.displayMode) && 'pb-6',
-          'pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+          'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+          isCompactDisplayMode(settings.displayMode) && 'pb-[max(1.5rem,env(safe-area-inset-bottom))]'
         )}
         style={effectiveTheme ? ({
           '--theme-bg': themeBg,
