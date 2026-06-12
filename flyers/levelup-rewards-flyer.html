@@ -549,8 +549,8 @@
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <input type="text" id="company-input" value="LevelUp EdTech Enterprises LLC" class="sidebar-input" placeholder="Company Name" oninput="syncContactInfo()" />
           <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Contact Email" oninput="syncContactInfo()" />
-          <input type="text" id="street-input" value="1849 East 38th Street" class="sidebar-input" placeholder="Street Address" oninput="syncContactInfo()" />
-          <input type="text" id="city-input" value="Brooklyn, NY" class="sidebar-input" placeholder="City, State" oninput="syncContactInfo()" />
+          <input type="text" id="street-input" value="" class="sidebar-input" placeholder="Street Address" oninput="syncContactInfo()" />
+          <input type="text" id="city-input" value="" class="sidebar-input" placeholder="City, State" oninput="syncContactInfo()" />
           <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website URL" oninput="syncContactInfo()" />
           <button type="button" class="sidebar-btn" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); margin-top: 4px;" onclick="loadDefaultContactInfo()">
             Load Default Contact Info
@@ -645,8 +645,8 @@
             </div>
             <div class="right-meta">
               <div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>
-              <div><span contenteditable="true" class="sync-address-city">Brooklyn, NY</span></div>
-              <div class="muted"><span contenteditable="true" class="sync-address-street">1849 East 38th Street</span></div>
+              <div><span contenteditable="true" class="sync-address-city"></span></div>
+              <div class="muted"><span contenteditable="true" class="sync-address-street"></span></div>
               <div class="muted">
                 <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
                   ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
@@ -828,7 +828,7 @@
           <footer class="footer">
             <div>
               <strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong><br />
-              <span contenteditable="true" class="sync-address-full">1849 East 38th Street, Brooklyn, NY</span><br />
+              <span class="sync-address-full-container"><span contenteditable="true" class="sync-address-full"></span><br /></span>
               <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
                 ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
               >
@@ -1186,16 +1186,34 @@
         // Sync address city
         document.querySelectorAll('.sync-address-city').forEach(el => {
           el.textContent = city;
+          if (!city) {
+            el.parentElement.style.display = 'none';
+          } else {
+            el.parentElement.style.display = '';
+          }
         });
 
         // Sync address street
         document.querySelectorAll('.sync-address-street').forEach(el => {
           el.textContent = street;
+          if (!street) {
+            el.parentElement.style.display = 'none';
+          } else {
+            el.parentElement.style.display = '';
+          }
         });
 
         // Sync full address on Page 2
+        const fullAddr = (street && city) ? (street + ', ' + city) : (street || city);
         document.querySelectorAll('.sync-address-full').forEach(el => {
-          el.textContent = street + ', ' + city;
+          el.textContent = fullAddr;
+        });
+        document.querySelectorAll('.sync-address-full-container').forEach(el => {
+          if (!fullAddr) {
+            el.style.display = 'none';
+          } else {
+            el.style.display = '';
+          }
         });
 
         // Sync emails
@@ -1218,8 +1236,8 @@
       function loadDefaultContactInfo() {
         document.getElementById('company-input').value = 'LevelUp EdTech Enterprises LLC';
         document.getElementById('email-input').value = 'contact@leveluprewards.app';
-        document.getElementById('street-input').value = '1849 East 38th Street';
-        document.getElementById('city-input').value = 'Brooklyn, NY';
+        document.getElementById('street-input').value = '';
+        document.getElementById('city-input').value = '';
         document.getElementById('web-input').value = 'leveluprewards.app';
         syncContactInfo();
       }
