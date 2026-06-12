@@ -612,7 +612,7 @@ export function AdminNotificationsTab() {
                     Hide legal surnames on shared screens to preserve student privacy.
                   </p>
                   <Select
-                    value={settings.privacyStudentNameDisplayMode}
+                    value={settings.privacyStudentNameDisplayMode === 'preferred_only' ? 'preferred_only' : 'full'}
                     onValueChange={(v) =>
                       updateSettings({ privacyStudentNameDisplayMode: v === 'preferred_only' ? 'preferred_only' : 'full' })
                     }

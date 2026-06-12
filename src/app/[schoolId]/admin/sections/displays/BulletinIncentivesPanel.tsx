@@ -66,7 +66,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
       setEditingIncentive(incentive);
       setTitle(incentive.title);
       setDescription(incentive.description);
-      setPoints(incentive.points);
+      setPoints(Number(incentive.points) || 0);
       setIcon(incentive.icon || '🎉');
       setCategory(incentive.category || 'Attendance');
       setActive(incentive.active !== false);
@@ -248,7 +248,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
                             {inc.category}
                           </span>
                           <span className="rounded-lg bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-                            +{inc.points} PTS
+                            +{Number(inc.points) || 0} PTS
                           </span>
                           <span
                             className={cn(

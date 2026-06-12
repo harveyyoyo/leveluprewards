@@ -190,6 +190,12 @@ export function HallOfFameSettingsPanel({
                           {c.name} Points
                         </SelectItem>
                       ))}
+                      {categories &&
+                      sortBy &&
+                      !['lifetimePoints', 'points', 'period_day', 'period_week', 'period_month'].includes(sortBy) &&
+                      !categories.some((c) => c.name === sortBy) ? (
+                        <SelectItem value={sortBy}>Unknown category (deleted)</SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>
@@ -213,6 +219,12 @@ export function HallOfFameSettingsPanel({
                           {c.name}
                         </SelectItem>
                       ))}
+                      {classes &&
+                      scope &&
+                      scope !== 'all' &&
+                      !classes.some((c) => c.id === scope) ? (
+                        <SelectItem value={scope}>Unknown class (deleted)</SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>

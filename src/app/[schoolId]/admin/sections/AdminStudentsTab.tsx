@@ -430,7 +430,7 @@ export function AdminStudentsTab({
                     "rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground",
                     (selectedStudentIds.size > 0 ||
                       studentFilterClass !== "all") &&
-                      "border-primary/55 bg-primary/12 font-semibold text-foreground shadow-sm hover:bg-primary/18 hover:text-foreground",
+                      "border-primary/55 bg-primary/10 font-semibold text-foreground shadow-sm hover:bg-primary/20 hover:text-foreground",
                   )}
                 >
                   <Printer className="mr-2 h-4 w-4" />
@@ -475,6 +475,14 @@ export function AdminStudentsTab({
                         {c.name}
                       </SelectItem>
                     ))}
+                    {classes &&
+                    studentFilterClass &&
+                    studentFilterClass !== "all" &&
+                    !classes.some((c) => c.id === studentFilterClass) ? (
+                      <SelectItem value={studentFilterClass}>
+                        Unknown class (deleted)
+                      </SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
                 <Select
@@ -669,8 +677,8 @@ export function AdminStudentsTab({
                           />
                         ) : (
                           <span>
-                            {s.firstName[0] || ""}
-                            {s.lastName[0] || ""}
+                            {s.firstName?.[0] || ""}
+                            {s.lastName?.[0] || ""}
                           </span>
                         )}
                       </div>

@@ -40,7 +40,7 @@ export function AdminStatsTab({
               <CardContent className="p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Total Points Issued</h3>
                 <p className="text-4xl font-black text-foreground">
-                  {students?.reduce((sum, s) => sum + (s.lifetimePoints || s.points || 0), 0).toLocaleString() || 0}
+                  {(students?.reduce((sum, s) => sum + (Number(s.lifetimePoints || s.points) || 0), 0) ?? 0).toLocaleString()}
                 </p>
               </CardContent>
             </Card>
@@ -59,7 +59,7 @@ export function AdminStatsTab({
             <Card className="bg-secondary/30 border-0 shadow-none">
               <CardContent className="p-6">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-2">Value Redeemed</h3>
-                <p className="text-4xl font-black text-foreground">{totalPointsAwarded.toLocaleString()} pts</p>
+                <p className="text-4xl font-black text-foreground">{(Number(totalPointsAwarded) || 0).toLocaleString()} pts</p>
               </CardContent>
             </Card>
           </div>
@@ -85,7 +85,7 @@ export function AdminStatsTab({
             { label: 'Teachers', val: teachers?.length || 0 },
             { label: 'Coupons', val: coupons?.length || 0 },
             { label: 'Used', val: usedCouponsCount },
-            { label: 'Points Issued', val: totalPointsAwarded.toLocaleString() },
+            { label: 'Points Issued', val: (Number(totalPointsAwarded) || 0).toLocaleString() },
           ].map((stat, i) => (
             <div key={i} className="bg-secondary/30 border p-6 rounded-2xl">
               <p className="text-3xl font-bold font-code">{stat.val}</p>
