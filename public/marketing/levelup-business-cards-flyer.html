@@ -358,12 +358,30 @@
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        position: relative;
       }
 
       .bc-avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        display: block;
+      }
+
+      /* Initials fallback styled like student ID app portal */
+      .bc-avatar-fallback {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Outfit', sans-serif;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--strong);
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+        opacity: 0.95;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.25);
       }
 
       .bc-details {
@@ -475,7 +493,7 @@
           <input type="text" id="name-input" value="Jane Doe" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
           <input type="text" id="title-input" value="PBIS Coordinator" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
           <input type="text" id="badge-input" value="Staff" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
-          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane" class="sidebar-input" placeholder="Photo / Avatar URL" oninput="syncFields()" />
+          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
         </div>
       </div>
 
@@ -621,7 +639,8 @@
               
               <div class="bc-main">
                 <div class="bc-avatar">
-                  <img src="" alt="Avatar" class="sync-avatar" />
+                  <img src="" alt="Avatar" class="sync-avatar" onerror="handleImageError(this)" />
+                  <div class="bc-avatar-fallback"></div>
                 </div>
                 
                 <div class="bc-details">
@@ -654,6 +673,14 @@
 
         for (let i = 0; i < 10; i++) {
           sheet.innerHTML += cardTemplate;
+        }
+      }
+
+      function handleImageError(img) {
+        img.style.display = 'none';
+        const fallback = img.nextElementSibling;
+        if (fallback) {
+          fallback.style.display = 'flex';
         }
       }
 
@@ -698,9 +725,33 @@
         updateElements('.sync-company', company);
         updateElements('.sync-tagline', tagline);
 
-        // Sync avatar source
+        // Calculate initials from name
+        const nameParts = name.trim().split(/\s+/);
+        let initials = '';
+        if (nameParts.length > 0 && nameParts[0]) {
+          initials += nameParts[0][0].toUpperCase();
+          if (nameParts.length > 1 && nameParts[nameParts.length - 1]) {
+            initials += nameParts[nameParts.length - 1][0].toUpperCase();
+          }
+        }
+        if (!initials) initials = 'BC';
+
+        document.querySelectorAll('.bc-avatar-fallback').forEach(el => {
+          el.textContent = initials;
+        });
+
+        // Sync avatar source or show initials
         document.querySelectorAll('.sync-avatar').forEach(img => {
-          img.src = photo;
+          const fallback = img.nextElementSibling;
+          if (photo && photo.trim()) {
+            img.src = photo;
+            img.style.display = 'block';
+            fallback.style.display = 'none';
+          } else {
+            img.src = '';
+            img.style.display = 'none';
+            fallback.style.display = 'flex';
+          }
         });
 
         // Sync QR code source linking directly to the site URL
