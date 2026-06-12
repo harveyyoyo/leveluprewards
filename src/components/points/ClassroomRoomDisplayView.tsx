@@ -254,8 +254,16 @@ export function ClassroomRoomDisplayView({
                             </span>
                           )}
                         </span>
-                        <span className="shrink-0 rounded-lg bg-emerald-500/20 px-2.5 py-1 font-mono text-base font-black text-emerald-300 sm:text-lg">
-                          +{row.session}
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-lg px-2.5 py-1 font-mono text-base font-black sm:text-lg',
+                            row.session > 0
+                              ? 'bg-emerald-500/20 text-emerald-300'
+                              : 'bg-rose-500/20 text-rose-300',
+                          )}
+                        >
+                          {row.session > 0 ? '+' : ''}
+                          {row.session}
                         </span>
                       </li>
                     ))}

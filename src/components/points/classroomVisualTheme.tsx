@@ -563,7 +563,7 @@ function monitorActionButtonClass(
           ? 'border-indigo-400/50 bg-indigo-500/20 text-white hover:border-indigo-300/70 hover:bg-indigo-500/30'
           : design === 'brutalist'
             ? 'border-foreground bg-yellow-200 text-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-yellow-300'
-            : 'border-primary/45 bg-primary/12 text-primary hover:border-primary/60 hover:bg-primary/18'),
+            : 'border-primary/45 bg-primary/10 text-primary hover:border-primary/60 hover:bg-primary/20'),
   );
 }
 
