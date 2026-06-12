@@ -37,7 +37,7 @@ export function BonusSpinWheelModal({
         ) {
             return achievement.wheelSegments;
         }
-        const base = achievement?.bonusPoints || 10;
+        const base = Number(achievement?.bonusPoints) || 10;
         return [
             Math.floor(base * 0.5),
             base,
