@@ -549,7 +549,7 @@
         <label class="sidebar-label">Pages to Print</label>
         <div class="sidebar-checkbox-group">
           <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="show-page-2" checked onchange="togglePage2()" />
+            <input type="checkbox" id="show-page-2" onchange="togglePage2()" />
             Include Page 2 (Back)
           </label>
         </div>
@@ -589,6 +589,10 @@
           <label class="sidebar-checkbox-label">
             <input type="checkbox" id="toggle-img-kiosk" checked onchange="toggleCard('card-img-kiosk', this.checked)" />
             kiosk Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-img-id" checked onchange="toggleCard('card-img-id', this.checked)" />
+            ID Card Screenshot
           </label>
           <label class="sidebar-checkbox-label">
             <input type="checkbox" id="toggle-img-achievements" checked onchange="toggleCard('card-img-achievements', this.checked)" />
@@ -680,6 +684,14 @@
                 </div>
               </div>
               
+              <!-- Real ID Card Screenshot Panel -->
+              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 140px; position: relative;">
+                <img src="screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student ID Card Screenshot" />
+                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+                  Custom Student ID Cards
+                </div>
+              </div>
+              
               <div class="card" id="card-funding-setup" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
                 <div id="section-funding">
                   <h2 contenteditable="true">Funding & procurement</h2>
@@ -712,7 +724,7 @@
         </section>
 
         <!-- PAGE 2: BACK -->
-        <section class="page" id="page-2-section" aria-label="Back of flyer">
+        <section class="page" id="page-2-section" aria-label="Back of flyer" style="display: none;">
           <header class="topbar">
             <div class="brand">
               <div class="badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Operational flow</div>
