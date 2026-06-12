@@ -232,7 +232,7 @@
         overflow: hidden;
       }
 
-      /* THE BUSINESS CARD ITSELF (Styled as a Student ID Card) */
+      /* THE BUSINESS CARD ITSELF (Styled as a Student ID Card by default) */
       .bcard {
         width: 100%;
         height: 100%;
@@ -460,6 +460,76 @@
         height: 100% !important;
         display: block !important;
       }
+
+      /* ==========================================================================
+         COUPON STYLE OVERRIDES
+         ========================================================================== */
+      .bcard.style-coupon {
+        border: 2px dashed var(--accent2) !important;
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 0.12in 0.15in;
+      }
+
+      .bcard.style-coupon .bc-decor,
+      .bcard.style-coupon .bc-decor2 {
+        display: none !important;
+      }
+
+      .bcard.style-coupon .bc-header {
+        justify-content: center !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 4px !important;
+      }
+
+      .bcard.style-coupon .bc-role-badge {
+        display: none !important;
+      }
+
+      .bcard.style-coupon .bc-main {
+        flex-direction: column !important;
+        gap: 4px !important;
+        align-items: stretch !important;
+      }
+
+      .bcard.style-coupon .bc-avatar {
+        display: none !important;
+      }
+
+      .bcard.style-coupon .bc-details {
+        border-top: 1px dashed var(--hair);
+        border-bottom: 1px dashed var(--hair);
+        padding: 4px 0 !important;
+        text-align: center !important;
+        align-items: center !important;
+        flex: none !important;
+      }
+
+      .bcard.style-coupon .bc-name {
+        font-size: 13px !important;
+        text-align: center !important;
+      }
+
+      .bcard.style-coupon .bc-title {
+        font-size: 8px !important;
+        text-align: center !important;
+        margin-bottom: 2px !important;
+      }
+
+      .bcard.style-coupon .bc-contact-info {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+      }
+
+      .bcard.style-coupon .bc-qrcode-container {
+        align-self: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        margin-top: 4px !important;
+      }
     </style>
   </head>
   <body>
@@ -468,9 +538,17 @@
       <div class="sidebar-header">
         <span class="sidebar-logo">🪪</span>
         <div class="sidebar-title-text">
-          <h2>ID-Style Cards</h2>
+          <h2>Card Builder</h2>
           <p class="sidebar-subtitle-text">10-up Letter Print Sheet</p>
         </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="style-select">Card Design Template</label>
+        <select id="style-select" class="sidebar-select" onchange="updateCardStyle()">
+          <option value="id-card" selected>ID Card Style</option>
+          <option value="coupon">Coupon Style</option>
+        </select>
       </div>
 
       <div class="sidebar-section">
@@ -620,13 +698,16 @@
         }
       };
 
+      let currentStyle = 'id-card';
+
       function generateCards() {
         const sheet = document.getElementById('sheet-1');
         sheet.innerHTML = '';
         
+        const cardClass = currentStyle === 'coupon' ? 'bcard style-coupon' : 'bcard';
         const cardTemplate = `
           <div class="bcard-container">
-            <div class="bcard">
+            <div class="${cardClass}">
               <div class="bc-decor"></div>
               <div class="bc-decor2"></div>
               
@@ -658,7 +739,7 @@
                     </div>
                     <div class="bc-contact-row sync-phone-row">
                       <span class="bc-icon">☎</span>
-                      <span class="bc-contact-text sync-phone">(555) 123-4567</span>
+                      <span class="bc-contact-text sync-phone"></span>
                     </div>
                     <div class="bc-contact-row sync-web-row">
                       <span class="bc-icon">🌐</span>
@@ -686,6 +767,21 @@
         if (fallback) {
           fallback.style.display = 'flex';
         }
+      }
+
+      function updateCardStyle() {
+        currentStyle = document.getElementById('style-select').value;
+        const cards = document.querySelectorAll('.bcard');
+        cards.forEach(card => {
+          if (currentStyle === 'coupon') {
+            card.classList.add('style-coupon');
+          } else {
+            card.classList.remove('style-coupon');
+          }
+        });
+        
+        // Trigger field synchronization to update dynamic layouts
+        syncFields();
       }
 
       function updateTheme() {
@@ -744,10 +840,10 @@
           el.textContent = initials;
         });
 
-        // Sync avatar source or show initials
+        // Sync avatar source or show initials (only relevant in ID style)
         document.querySelectorAll('.sync-avatar').forEach(img => {
           const fallback = img.nextElementSibling;
-          if (photo && photo.trim()) {
+          if (photo && photo.trim() && currentStyle !== 'coupon') {
             img.src = photo;
             img.style.display = 'block';
             fallback.style.display = 'none';
@@ -766,8 +862,8 @@
             if (typeof QRCode !== 'undefined') {
               new QRCode(container, {
                 text: url,
-                width: 46,
-                height: 46,
+                width: currentStyle === 'coupon' ? 44 : 46,
+                height: currentStyle === 'coupon' ? 44 : 46,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -782,11 +878,15 @@
           }
         });
 
-        // Hide empty rows/badges/containers if empty
+        // Hide empty rows/badges/containers if empty (in coupon style, phone and email layout differs slightly)
         document.querySelectorAll('.sync-email-row').forEach(el => el.style.display = email ? 'flex' : 'none');
         document.querySelectorAll('.sync-phone-row').forEach(el => el.style.display = phone ? 'flex' : 'none');
         document.querySelectorAll('.sync-web-row').forEach(el => el.style.display = web ? 'flex' : 'none');
-        document.querySelectorAll('.sync-badge').forEach(el => el.style.display = badge ? 'block' : 'none');
+        
+        // Badge is hidden in coupon style
+        document.querySelectorAll('.sync-badge').forEach(el => {
+          el.style.display = (badge && currentStyle !== 'coupon') ? 'block' : 'none';
+        });
       }
 
       function updateElements(selector, value) {
