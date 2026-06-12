@@ -20,6 +20,10 @@
         --accent2: #06b6d4;
         --success: #22c55e;
         --black: #0a0a0a;
+        --strong: #ffffff;
+        --heading-color: var(--accent2);
+        --featured-border: var(--accent2);
+        --featured-bg: rgba(255, 255, 255, 0.08);
       }
 
       * {
@@ -292,12 +296,12 @@
         gap: 8px;
         padding: 6px 10px;
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: var(--panel);
+        border: 1px solid var(--hair);
         font-size: 11px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.9);
+        color: var(--text);
         width: max-content;
       }
 
@@ -306,7 +310,7 @@
         height: 10px;
         border-radius: 3px;
         background: linear-gradient(135deg, var(--accent), var(--accent2));
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 0 2px var(--black);
       }
 
       h1 {
@@ -314,7 +318,7 @@
         font-size: 34px;
         line-height: 1.05;
         letter-spacing: -0.02em;
-        background: linear-gradient(135deg, #ffffff 60%, rgba(234, 240, 255, 0.7));
+        background: linear-gradient(135deg, var(--strong) 60%, var(--text));
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
@@ -331,7 +335,7 @@
         text-align: right;
         font-size: 11.5px;
         line-height: 1.5;
-        color: rgba(234, 240, 255, 0.8);
+        color: var(--text);
         white-space: nowrap;
       }
 
@@ -344,7 +348,7 @@
 
       .card {
         background: var(--panel);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--hair);
         border-radius: 16px;
         padding: 16px;
         backdrop-filter: blur(10px);
@@ -359,8 +363,8 @@
       }
 
       .card.featured {
-        border: 2px solid var(--accent2) !important;
-        background: rgba(255, 255, 255, 0.08) !important;
+        border: 2px solid var(--featured-border) !important;
+        background: var(--featured-bg) !important;
         box-shadow: 0 0 24px rgba(6, 182, 212, 0.15);
       }
 
@@ -369,7 +373,7 @@
         font-size: 13.5px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
-        color: var(--accent2);
+        color: var(--heading-color);
         font-weight: 700;
       }
 
@@ -381,7 +385,7 @@
 
       li {
         margin: 8px 0;
-        color: rgba(234, 240, 255, 0.88);
+        color: var(--text);
         line-height: 1.35;
         font-size: 13px;
         position: relative;
@@ -393,26 +397,26 @@
         position: absolute;
         left: 0;
         top: 0;
-        color: var(--accent2);
+        color: var(--heading-color);
         font-size: 11px;
         line-height: 18px;
         text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
       }
 
       li strong {
-        color: #ffffff;
+        color: var(--strong);
       }
 
       .callout {
         border-left: 3px solid var(--accent);
         padding: 10px 12px 10px 14px;
-        background: rgba(124, 58, 237, 0.1);
+        background: var(--panel);
         border-radius: 12px;
       }
 
       .callout p {
         margin: 0;
-        color: rgba(234, 240, 255, 0.92);
+        color: var(--text);
         font-size: 13px;
         line-height: 1.4;
       }
@@ -427,8 +431,8 @@
       .kpi {
         padding: 10px;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--hair);
+        background: var(--panel);
         transition: transform 0.2s ease;
       }
 
@@ -444,14 +448,14 @@
         font-size: 9.5px;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.6);
+        color: var(--muted);
       }
 
       .kpi .value {
         margin-top: 4px;
         font-size: 12px;
         line-height: 1.25;
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--strong);
         font-weight: 600;
       }
 
@@ -466,13 +470,13 @@
         gap: 16px;
         padding-top: 12px;
         border-top: 1px solid var(--hair);
-        color: rgba(234, 240, 255, 0.75);
+        color: var(--muted);
         font-size: 11px;
         line-height: 1.4;
       }
 
       .footer strong {
-        color: rgba(255, 255, 255, 0.95);
+        color: var(--strong);
       }
 
       .pill {
@@ -480,10 +484,10 @@
         align-items: center;
         padding: 5px 10px;
         border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--hair);
+        background: var(--panel);
         font-size: 10px;
-        color: rgba(234, 240, 255, 0.85);
+        color: var(--text);
         white-space: nowrap;
       }
 
@@ -493,7 +497,7 @@
       }
 
       .muted {
-        color: rgba(234, 240, 255, 0.65);
+        color: var(--muted);
       }
     </style>
   </head>
@@ -644,7 +648,7 @@
               <div><span contenteditable="true" class="sync-address-city">Brooklyn, NY</span></div>
               <div class="muted"><span contenteditable="true" class="sync-address-street">1849 East 38th Street</span></div>
               <div class="muted">
-                <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--accent2); text-decoration: none;"
+                <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
                   ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
                 >
               </div>
@@ -697,7 +701,7 @@
               </div>
               
               <!-- Real ID Card Screenshot Panel -->
-              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 140px; position: relative; display: none;">
+              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; height: 140px; position: relative; display: none;">
                 <img src="screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student ID Card Screenshot" />
                 <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
                   Custom Student ID Cards
@@ -791,8 +795,8 @@
 
             <div style="display: flex; flex-direction: column; gap: 16px;">
               <!-- App Mockup Panel -->
-              <div class="card" id="card-img-portal" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
-                <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+              <div class="card" id="card-img-portal" style="padding: 6px; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--panel);">
+                <div style="font-size: 9px; color: var(--muted); padding: 2px 6px 6px 6px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
                   <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
                   <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
                   <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
@@ -825,7 +829,7 @@
             <div>
               <strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong><br />
               <span contenteditable="true" class="sync-address-full">1849 East 38th Street, Brooklyn, NY</span><br />
-              <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--accent2); text-decoration: none;"
+              <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
                 ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
               >
             </div>
@@ -853,6 +857,10 @@
           '--hair': 'rgba(234, 240, 255, 0.15)',
           '--success': '#22c55e',
           '--black': '#0a0a0a',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c)'
         },
         green: {
@@ -865,6 +873,10 @@
           '--hair': 'rgba(236, 253, 245, 0.15)',
           '--success': '#34d399',
           '--black': '#020d0c',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(5, 150, 105, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16, 185, 129, 0.25), transparent 55%), linear-gradient(180deg, #041a17, #02110e 70%, #010706)'
         },
         sunset: {
@@ -877,6 +889,10 @@
           '--hair': 'rgba(253, 242, 248, 0.15)',
           '--success': '#22c55e',
           '--black': '#090208',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(219, 39, 119, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(249, 115, 22, 0.25), transparent 55%), linear-gradient(180deg, #180916, #0e040d 70%, #060105)'
         },
         cyber: {
@@ -889,6 +905,10 @@
           '--hair': 'rgba(250, 232, 255, 0.15)',
           '--success': '#10b981',
           '--black': '#030205',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(217, 70, 239, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(244, 63, 94, 0.25), transparent 55%), linear-gradient(180deg, #07060b, #040307 70%, #010103)'
         },
         crimson: {
@@ -901,6 +921,10 @@
           '--hair': 'rgba(255, 241, 242, 0.15)',
           '--success': '#10b981',
           '--black': '#0a0103',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(225, 29, 72, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251, 113, 133, 0.25), transparent 55%), linear-gradient(180deg, #180308, #0e0104 70%, #050001)'
         },
         gold: {
@@ -913,6 +937,10 @@
           '--hair': 'rgba(254, 243, 199, 0.15)',
           '--success': '#10b981',
           '--black': '#0a0702',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(217, 119, 6, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251, 191, 36, 0.25), transparent 55%), linear-gradient(180deg, #150e05, #0a0702 70%, #030201)'
         },
         aurora: {
@@ -925,6 +953,10 @@
           '--hair': 'rgba(236, 254, 255, 0.15)',
           '--success': '#34d399',
           '--black': '#020709',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(6, 182, 212, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16, 185, 129, 0.25), transparent 55%), linear-gradient(180deg, #051014, #02070a 70%, #010304)'
         },
         sapphire: {
@@ -937,6 +969,10 @@
           '--hair': 'rgba(239, 246, 255, 0.15)',
           '--success': '#10b981',
           '--black': '#04060c',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(59, 130, 246, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(99, 102, 241, 0.25), transparent 55%), linear-gradient(180deg, #080b16, #04050a 70%, #010204)'
         },
         obsidian: {
@@ -949,6 +985,10 @@
           '--hair': 'rgba(249, 250, 251, 0.15)',
           '--success': '#10b981',
           '--black': '#050506',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(243, 244, 246, 0.15), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(156, 163, 175, 0.12), transparent 55%), linear-gradient(180deg, #0b0b0c, #060607 70%, #020202)'
         },
         sand: {
@@ -961,6 +1001,10 @@
           '--hair': 'rgba(255, 247, 237, 0.15)',
           '--success': '#10b981',
           '--black': '#0a0604',
+          '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(255, 255, 255, 0.08)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(234, 88, 12, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(245, 158, 11, 0.25), transparent 55%), linear-gradient(180deg, #150c08, #0a0604 70%, #030201)'
         },
         light: {
@@ -973,6 +1017,10 @@
           '--hair': 'rgba(15, 23, 42, 0.12)',
           '--success': '#16a34a',
           '--black': '#ffffff',
+          '--strong': '#090d16',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(79, 70, 229, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f1f5f9 70%, #e2e8f0)'
         },
         'light-sky': {
@@ -985,6 +1033,10 @@
           '--hair': 'rgba(2, 132, 199, 0.12)',
           '--success': '#16a34a',
           '--black': '#ffffff',
+          '--strong': '#031b2b',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(2, 132, 199, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0f9ff 70%, #e0f2fe)'
         },
         'light-mint': {
@@ -997,6 +1049,10 @@
           '--hair': 'rgba(22, 163, 74, 0.12)',
           '--success': '#16a34a',
           '--black': '#ffffff',
+          '--strong': '#022310',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(22, 163, 74, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16, 185, 129, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0fdf4 70%, #dcfce7)'
         },
         'light-amber': {
@@ -1009,6 +1065,10 @@
           '--hair': 'rgba(180, 83, 9, 0.12)',
           '--success': '#16a34a',
           '--black': '#ffffff',
+          '--strong': '#270f02',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(180, 83, 9, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(217, 119, 6, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fffbeb 70%, #fef3c7)'
         }
       };
@@ -1026,64 +1086,8 @@
         
         // Update page backgrounds
         const pages = document.querySelectorAll('.page');
-        const isLight = themeKey.startsWith('light');
         pages.forEach(p => {
           p.style.background = theme['page-gradient'];
-          if (isLight) {
-            p.style.color = theme['--text'];
-            // Update strong, h1, h2, h3, badge
-            p.querySelectorAll('strong, h1, h3, .badge').forEach(el => {
-              el.style.color = theme['--text'];
-            });
-            p.querySelectorAll('h2').forEach(el => {
-              el.style.color = theme['--accent'];
-            });
-            p.querySelectorAll('.subtitle').forEach(el => {
-              el.style.color = theme['--muted'];
-            });
-            p.querySelectorAll('.muted').forEach(el => {
-              el.style.color = theme['--muted'];
-            });
-            p.querySelectorAll('.callout').forEach(el => {
-              el.style.background = theme['--panel'];
-              el.style.borderLeftColor = theme['--accent'];
-            });
-            p.querySelectorAll('.kpi').forEach(el => {
-              el.style.background = 'rgba(0,0,0,0.02)';
-              el.style.borderColor = theme['--hair'];
-            });
-            p.querySelectorAll('.card').forEach(el => {
-              el.style.borderColor = theme['--hair'];
-              el.style.background = theme['--panel'];
-            });
-            p.querySelectorAll('.card.featured').forEach(el => {
-              el.style.borderColor = theme['--accent'];
-              el.style.background = 'rgba(0, 0, 0, 0.03)';
-              el.style.borderWidth = '2px';
-            });
-            p.querySelectorAll('.topbar, .footer').forEach(el => {
-              el.style.borderColor = theme['--hair'];
-            });
-            p.querySelectorAll('li::before').forEach(el => {
-              el.style.color = theme['--accent'];
-              el.style.textShadow = 'none';
-            });
-            p.querySelectorAll('.sync-email-link').forEach(el => {
-              el.style.color = theme['--accent'];
-            });
-          } else {
-            // Restore dark colors
-            p.style.color = 'var(--text)';
-            p.style.color = '';
-            p.querySelectorAll('strong, h1, h3, .badge, h2, .subtitle, .muted, .callout, .kpi, .card, .topbar, .footer, li::before, .sync-email-link').forEach(el => {
-              el.style.color = '';
-              el.style.background = '';
-              el.style.borderColor = '';
-              el.style.borderLeftColor = '';
-              el.style.borderWidth = '';
-              el.style.textShadow = '';
-            });
-          }
         });
       }
 
