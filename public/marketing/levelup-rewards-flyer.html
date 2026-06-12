@@ -358,6 +358,12 @@
         }
       }
 
+      .card.featured {
+        border: 2px solid var(--accent2) !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 0 24px rgba(6, 182, 212, 0.15);
+      }
+
       h2 {
         margin: 0 0 10px 0;
         font-size: 13.5px;
@@ -582,6 +588,10 @@
             For Teachers Section
           </label>
           <label class="sidebar-checkbox-label">
+            <input type="checkbox" id="toggle-students" checked onchange="toggleCard('section-students', this.checked)" />
+            For Students Section
+          </label>
+          <label class="sidebar-checkbox-label">
             <input type="checkbox" id="toggle-deans" checked onchange="toggleCard('section-deans', this.checked)" />
             For Deans Section
           </label>
@@ -594,7 +604,7 @@
             kiosk Screenshot
           </label>
           <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-img-id" checked onchange="toggleCard('card-img-id', this.checked)" />
+            <input type="checkbox" id="toggle-img-id" onchange="toggleCard('card-img-id', this.checked)" />
             ID Card Screenshot
           </label>
           <label class="sidebar-checkbox-label">
@@ -626,8 +636,7 @@
               <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> PBIS rewards system</div>
               <h1 contenteditable="true">LevelUp Rewards</h1>
               <p class="subtitle" contenteditable="true">
-                A principal-ready PBIS rewards system that standardizes recognition, automates tracking, and keeps incentives
-                fair—so teachers spend less time managing points and more time teaching.
+                A principal-ready PBIS rewards system that turns positive behavior into a fun, gamified adventure for students—while standardizing recognition and saving time for teachers.
               </p>
             </div>
             <div class="right-meta">
@@ -643,21 +652,21 @@
           </header>
 
           <div class="grid">
-            <div class="card" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between;">
+            <div class="card featured" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between;">
               <div>
                 <h2 contenteditable="true">What it does (PBIS rewards & school climate)</h2>
                 <ul>
-                  <li contenteditable="true"><strong>Runs a school-wide points and rewards program</strong> aligned to PBIS expectations.</li>
-                  <li contenteditable="true"><strong>Makes recognition consistent</strong> across classrooms with shared categories and clear rules.</li>
-                  <li contenteditable="true"><strong>Keeps incentives transparent and equitable</strong> so students see the same system everywhere.</li>
-                  <li contenteditable="true"><strong>Automates the “paperwork” of rewards</strong> (balances, redemptions, and histories) in one place.</li>
+                  <li contenteditable="true"><strong>Turns positive behavior into an adventure</strong> with custom avatars, achievements, and level-up milestones.</li>
+                  <li contenteditable="true"><strong>Interactive Arcade Rewards Store</strong> where students check balances, customize profiles, and redeem rewards.</li>
+                  <li contenteditable="true"><strong>School-wide Hype & Leaderboards</strong> with friendly team challenges and digital Hall of Fame recognition.</li>
+                  <li contenteditable="true"><strong>Automates tracking & bookkeeping</strong> so staff spend zero time on paper logs or manually counting points.</li>
                 </ul>
               </div>
 
               <div style="margin-top: 10px; margin-bottom: 10px;">
                 <div class="callout">
                   <p contenteditable="true">
-                    <strong>Designed for busy schools:</strong> fewer manual tallies, fewer spreadsheets—and a rewards program students actually trust.
+                    <strong>Built for student excitement:</strong> Gamified progress, arcade rewards, and friendly competition make positive habits self-sustaining and genuinely fun.
                   </p>
                 </div>
               </div>
@@ -672,8 +681,8 @@
                   <div class="value" contenteditable="true">Same system in every room</div>
                 </div>
                 <div class="kpi">
-                  <div class="label" contenteditable="true">Motivation</div>
-                  <div class="value" contenteditable="true">Rewards students care about</div>
+                  <div class="label" contenteditable="true">Student fun</div>
+                  <div class="value" contenteditable="true">Gamified progress they love</div>
                 </div>
               </div>
             </div>
@@ -688,7 +697,7 @@
               </div>
               
               <!-- Real ID Card Screenshot Panel -->
-              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 140px; position: relative;">
+              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 140px; position: relative; display: none;">
                 <img src="screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student ID Card Screenshot" />
                 <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
                   Custom Student ID Cards
@@ -720,8 +729,8 @@
             <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-1">
               <span class="pill" contenteditable="true">Title IV-A eligible</span>
               <span class="pill" contenteditable="true">Sole Source vendor</span>
-              <span class="pill" contenteditable="true">NYS 2-d compliant</span>
-              <span class="pill" contenteditable="true">Telemetry logs</span>
+              <span class="pill" contenteditable="true">Arcade Rewards Shop</span>
+              <span class="pill" contenteditable="true">Gamified PBIS Hub</span>
             </div>
           </footer>
         </section>
@@ -759,6 +768,14 @@
                   <ul>
                     <li contenteditable="true"><strong>Faster recognition</strong> that fits directly into instruction.</li>
                     <li contenteditable="true"><strong>No more point bookkeeping</strong>—balances and records stay organized automatically.</li>
+                  </ul>
+                </div>
+
+                <div id="section-students">
+                  <h2 contenteditable="true">For students (The fun stuff!)</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Gamified progression:</strong> Custom avatars, XP achievements, and rank milestones that keep kids motivated.</li>
+                    <li contenteditable="true"><strong>Interactive Arcade Kiosk:</strong> Self-service reward shops and live leaderboards that build school-wide hype.</li>
                   </ul>
                 </div>
               </div>
@@ -1039,6 +1056,11 @@
               el.style.borderColor = theme['--hair'];
               el.style.background = theme['--panel'];
             });
+            p.querySelectorAll('.card.featured').forEach(el => {
+              el.style.borderColor = theme['--accent'];
+              el.style.background = 'rgba(0, 0, 0, 0.03)';
+              el.style.borderWidth = '2px';
+            });
             p.querySelectorAll('.topbar, .footer').forEach(el => {
               el.style.borderColor = theme['--hair'];
             });
@@ -1058,6 +1080,7 @@
               el.style.background = '';
               el.style.borderColor = '';
               el.style.borderLeftColor = '';
+              el.style.borderWidth = '';
               el.style.textShadow = '';
             });
           }
