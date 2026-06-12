@@ -794,9 +794,11 @@ export default function HallOfFamePage({
                             <div className={cn(
                               'items-end gap-3 sm:gap-4 md:gap-6 mx-auto w-full overflow-visible pt-2',
                               isFullscreen ? 'mb-2' : 'mb-12 md:mb-20',
-                              clampedPodiumSize === 5 && !isPortrait
+                              // A lone winner falls back to flex so it centers (a single card in
+                              // grid-cols-5/3 would be pinned to the leftmost column).
+                              clampedPodiumSize === 5 && podiumSlotCount > 1 && !isPortrait
                                 ? 'grid grid-cols-5 max-w-6xl'
-                                : clampedPodiumSize === 3 && !isPortrait
+                                : clampedPodiumSize === 3 && podiumSlotCount > 1 && !isPortrait
                                   ? 'grid grid-cols-3 max-w-5xl'
                                   : 'flex flex-wrap justify-center',
                             )}>
@@ -854,7 +856,7 @@ export default function HallOfFamePage({
                                             <div className="mt-auto space-y-2">
                                                 <div className="flex justify-between text-xs font-black text-muted-foreground">
                                                     <span>
-                                                        {item.points.toLocaleString()} / {item.targetPoints.toLocaleString()} pts
+                                                        {Number(item.points ?? 0).toLocaleString()} / {Number(item.targetPoints ?? 0).toLocaleString()} pts
                                                     </span>
                                                     <span className="text-primary font-bold">
                                                         {pct}%

@@ -152,7 +152,9 @@ export default function BulletinBoardDisplay({
       className={cn(
         'w-full shadow-2xl border-t-8 border-indigo-500 backdrop-blur-md',
         getBulletinBoardCardClassName(settings.bulletinTheme),
-        animBackdrop ? 'bg-card/92' : 'bg-card/80',
+        // 92 is not on the Tailwind opacity scale, so bg-card/92 compiled to nothing
+        // (and tailwind-merge dropped the Card's own bg-card, leaving it transparent).
+        animBackdrop ? 'bg-card/90' : 'bg-card/80',
         isPreview && 'shadow-lg',
       )}
     >
@@ -247,7 +249,7 @@ export default function BulletinBoardDisplay({
                     </div>
                   </div>
                   <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-800 dark:text-emerald-200">
-                    +{inc.points} PTS
+                    +{Number(inc.points ?? 0)} PTS
                   </span>
                 </div>
               ))}
