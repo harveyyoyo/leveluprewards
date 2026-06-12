@@ -515,7 +515,10 @@
           <option value="sapphire">Royal Sapphire</option>
           <option value="obsidian">Grayscale Midnight</option>
           <option value="sand">Sahara Sand</option>
-          <option value="light">Light Theme (Ink-Saver)</option>
+          <option value="light">Classic Light (Ink-Saver)</option>
+          <option value="light-sky">Light Sky Breeze</option>
+          <option value="light-mint">Light Mint Garden</option>
+          <option value="light-amber">Light Amber Sun</option>
         </select>
       </div>
 
@@ -954,6 +957,42 @@
           '--success': '#16a34a',
           '--black': '#ffffff',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(79, 70, 229, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f1f5f9 70%, #e2e8f0)'
+        },
+        'light-sky': {
+          '--bg': '#f0f9ff',
+          '--accent': '#0284c7',
+          '--accent2': '#0ea5e9',
+          '--panel': 'rgba(2, 132, 199, 0.04)',
+          '--text': '#0f172a',
+          '--muted': '#334155',
+          '--hair': 'rgba(2, 132, 199, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(2, 132, 199, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14, 165, 233, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0f9ff 70%, #e0f2fe)'
+        },
+        'light-mint': {
+          '--bg': '#f0fdf4',
+          '--accent': '#16a34a',
+          '--accent2': '#10b981',
+          '--panel': 'rgba(22, 163, 74, 0.04)',
+          '--text': '#052e16',
+          '--muted': '#14532d',
+          '--hair': 'rgba(22, 163, 74, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(22, 163, 74, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16, 185, 129, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0fdf4 70%, #dcfce7)'
+        },
+        'light-amber': {
+          '--bg': '#fffbeb',
+          '--accent': '#b45309',
+          '--accent2': '#d97706',
+          '--panel': 'rgba(180, 83, 9, 0.04)',
+          '--text': '#451a03',
+          '--muted': '#78350f',
+          '--hair': 'rgba(180, 83, 9, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(180, 83, 9, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(217, 119, 6, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fffbeb 70%, #fef3c7)'
         }
       };
 
@@ -970,44 +1009,45 @@
         
         // Update page backgrounds
         const pages = document.querySelectorAll('.page');
+        const isLight = themeKey.startsWith('light');
         pages.forEach(p => {
           p.style.background = theme['page-gradient'];
-          if (themeKey === 'light') {
-            p.style.color = '#0f172a';
+          if (isLight) {
+            p.style.color = theme['--text'];
             // Update strong, h1, h2, h3, badge
             p.querySelectorAll('strong, h1, h3, .badge').forEach(el => {
-              el.style.color = '#0f172a';
+              el.style.color = theme['--text'];
             });
             p.querySelectorAll('h2').forEach(el => {
-              el.style.color = '#4f46e5';
+              el.style.color = theme['--accent'];
             });
             p.querySelectorAll('.subtitle').forEach(el => {
-              el.style.color = '#475569';
+              el.style.color = theme['--muted'];
             });
             p.querySelectorAll('.muted').forEach(el => {
-              el.style.color = '#64748b';
+              el.style.color = theme['--muted'];
             });
             p.querySelectorAll('.callout').forEach(el => {
-              el.style.background = 'rgba(79, 70, 229, 0.06)';
-              el.style.borderLeftColor = '#4f46e5';
+              el.style.background = theme['--panel'];
+              el.style.borderLeftColor = theme['--accent'];
             });
             p.querySelectorAll('.kpi').forEach(el => {
               el.style.background = 'rgba(0,0,0,0.02)';
-              el.style.borderColor = 'rgba(15, 23, 42, 0.08)';
+              el.style.borderColor = theme['--hair'];
             });
             p.querySelectorAll('.card').forEach(el => {
-              el.style.borderColor = 'rgba(15, 23, 42, 0.1)';
-              el.style.background = 'rgba(15, 23, 42, 0.02)';
+              el.style.borderColor = theme['--hair'];
+              el.style.background = theme['--panel'];
             });
             p.querySelectorAll('.topbar, .footer').forEach(el => {
-              el.style.borderColor = 'rgba(15, 23, 42, 0.12)';
+              el.style.borderColor = theme['--hair'];
             });
             p.querySelectorAll('li::before').forEach(el => {
-              el.style.color = '#4f46e5';
+              el.style.color = theme['--accent'];
               el.style.textShadow = 'none';
             });
             p.querySelectorAll('.sync-email-link').forEach(el => {
-              el.style.color = '#4f46e5';
+              el.style.color = theme['--accent'];
             });
           } else {
             // Restore dark colors
