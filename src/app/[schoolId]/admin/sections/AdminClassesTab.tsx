@@ -107,6 +107,9 @@ export function AdminClassesTab({
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__none__">Unassigned</SelectItem>
+                        {c.primaryTeacherId && teachers && !teachers.some((t) => t.id === c.primaryTeacherId) ? (
+                          <SelectItem value={c.primaryTeacherId}>Unknown teacher (deleted)</SelectItem>
+                        ) : null}
                         {teachers?.map((t) => (
                           <SelectItem key={t.id} value={t.id}>
                             {t.name}
@@ -189,7 +192,7 @@ export function AdminClassesTab({
                               {s.firstName} <span className="font-semibold">{s.lastName}</span>
                             </span>
                             <span className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground font-mono bg-muted/30 px-1.5 py-0.5 rounded">
-                              {s.points} pts
+                              {s.points ?? 0} pts
                             </span>
                           </div>
                         ))}
