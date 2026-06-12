@@ -280,7 +280,7 @@ function AdminMainTabsListHorizontal({
             className="h-full rounded-full bg-primary/80 transition-[width,margin-left] duration-150"
             style={{
               width: `${Math.max(14, thumbWidthPercent)}%`,
-              marginLeft: `${(scrollPercent * (100 - thumbWidthPercent)) / 100}%`,
+              marginLeft: `${(scrollPercent * (100 - Math.max(14, thumbWidthPercent))) / 100}%`,
             }}
           />
         </div>
