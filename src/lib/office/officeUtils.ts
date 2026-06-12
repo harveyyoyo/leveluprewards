@@ -6,14 +6,22 @@ import type {
   OfficeTeacher,
 } from '@/lib/office/types';
 
+/** Trimmed string from legacy Firestore rows that may omit or mistype name fields. */
+function officeStudentNamePart(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
 export function getOfficeStudentLabel(student: Pick<OfficeStudent, 'firstName' | 'lastName' | 'nickname'>): string {
-  const nick = student.nickname?.trim();
+  const nick = officeStudentNamePart(student?.nickname);
   if (nick) return nick;
-  return student.firstName?.trim() || '';
+  return officeStudentNamePart(student?.firstName);
 }
 
 export function getOfficeStudentFullName(student: Pick<OfficeStudent, 'firstName' | 'lastName' | 'nickname'>): string {
-  return `${getOfficeStudentLabel(student)} ${student.lastName}`.trim();
+  const label = getOfficeStudentLabel(student);
+  const last = officeStudentNamePart(student?.lastName);
+  if (label && last) return `${label} ${last}`;
+  return label || last;
 }
 
 export function getOfficeTeacherLabel(

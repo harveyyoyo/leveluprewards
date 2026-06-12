@@ -158,7 +158,12 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                         <div className="flex items-center gap-3">
                             <div
                                 className="w-10 h-10 rounded-xl flex items-center justify-center border-2 shrink-0"
-                                style={{ borderColor: accentColor || undefined, backgroundColor: accentColor ? `${accentColor}20` : undefined }}
+                                style={{
+                                  borderColor: accentColor || undefined,
+                                  backgroundColor: accentColor
+                                    ? `color-mix(in srgb, ${accentColor} 20%, transparent)`
+                                    : undefined,
+                                }}
                             >
                                 <DynamicIcon name={icon || 'Trophy'} className="w-5 h-5" style={accentColor ? { color: accentColor } : undefined} />
                             </div>

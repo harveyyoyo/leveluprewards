@@ -9,7 +9,7 @@ import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -729,9 +729,11 @@ export function OfficeGradesView({
                   <SelectValue placeholder="Choose student" />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
-                  {!isLoading && form.studentId && !students.some((s) => s.id === form.studentId) ? (
-                    <SelectItem value={form.studentId}>Unknown student (deleted)</SelectItem>
-                  ) : null}
+                  <OrphanSelectItem
+                    value={form.studentId}
+                    entityName="student"
+                    show={!isLoading && isOrphanSelectValue(form.studentId, students)}
+                  />
                   {students.map((s) => (
                     <SelectItem key={s.id} value={s.id}>
                       {studentLabelById.get(s.id)} · {(s.classId && classNameById.get(s.classId)) || 'No class'}

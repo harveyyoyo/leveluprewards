@@ -147,6 +147,48 @@ const SelectSeparator = React.forwardRef<
 ))
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
+type OrphanSelectItemProps = {
+  /** Stored id for the deleted/orphaned entity — must match the Select value. */
+  value: string;
+  /** Human-readable entity type, e.g. "teacher", "student", "class". */
+  entityName: string;
+  /** When false, nothing is rendered (caller gates on loaded lists / orphan detection). */
+  show?: boolean;
+  /** Override the default `Unknown {entityName} (deleted)` label. */
+  label?: string;
+  className?: string;
+};
+
+/** Fallback SelectItem when a stored id no longer exists in the option list. */
+function OrphanSelectItem({
+  value,
+  entityName,
+  show = true,
+  label,
+  className,
+}: OrphanSelectItemProps) {
+  if (!show || !value) return null;
+  return (
+    <SelectItem value={value} className={className}>
+      {label ?? `Unknown ${entityName} (deleted)`}
+    </SelectItem>
+  );
+}
+
+/** True when `value` is set but absent from `options` (deleted/orphaned reference). */
+function isOrphanSelectValue(
+  value: string | undefined | null,
+  options: readonly { id: string }[],
+  {
+    excludeValues = [],
+    requireNonEmptyOptions = false,
+  }: { excludeValues?: string[]; requireNonEmptyOptions?: boolean } = {},
+): boolean {
+  if (!value || excludeValues.includes(value)) return false;
+  if (requireNonEmptyOptions && options.length === 0) return false;
+  return !options.some((option) => option.id === value);
+}
+
 export {
   Select,
   SelectGroup,
@@ -155,6 +197,8 @@ export {
   SelectContent,
   SelectLabel,
   SelectItem,
+  OrphanSelectItem,
+  isOrphanSelectValue,
   SelectSeparator,
   SelectScrollUpButton,
   SelectScrollDownButton,

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentType, type CSSProperties } from 'react';
+import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentType, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
@@ -44,7 +44,12 @@ import {
     portalHubTitleClass,
 } from '@/lib/portalHub';
 import { staffLandingPath } from '@/lib/staffPortal/staffLandingPath';
-import { activatePortalTour, type PortalTourId } from '@/lib/tours/startPortalTour';
+import {
+    activatePortalTour,
+    activateWelcomeTour,
+    type PortalTourId,
+} from '@/lib/tours/startPortalTour';
+import { PortalAreaTourButton } from '@/lib/tours/PortalAreaTourButton';
 
 type PortalArea = {
     id: string;
@@ -399,6 +404,12 @@ export default function PortalPage() {
         }
     };
 
+    const startWelcomeTour = (e: MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        activateWelcomeTour(updateSettings);
+    };
+
     return (
         <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
@@ -532,42 +543,13 @@ export default function PortalPage() {
                                             <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
                                                 {area.description}
                                             </p>
-                                            {settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
-                                                <div className="pt-1 z-20 pointer-events-auto">
-                                                    <div
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        className="inline-flex cursor-pointer items-center rounded-md bg-secondary/40 px-2 py-0.5 text-[11px] font-bold text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            const tourMap: Record<string, PortalTourId> = {
-                                                                admin: 'admin',
-                                                                print: 'teacher',
-                                                                redeem: 'student',
-                                                            };
-                                                            const tourId = tourMap[area.id];
-                                                            if (tourId) startPortalTour(tourId);
-                                                        }}
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                const tourMap: Record<string, PortalTourId> = {
-                                                                    admin: 'admin',
-                                                                    print: 'teacher',
-                                                                    redeem: 'student',
-                                                                };
-                                                                const tourId = tourMap[area.id];
-                                                                if (tourId) startPortalTour(tourId);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <HelpCircle className="mr-1 h-3 w-3" />
-                                                        Welcome Tour
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {settings.enableHelperMode ? (
+                                                <PortalAreaTourButton
+                                                    areaId={area.id}
+                                                    layout="compact"
+                                                    onLaunchTour={startPortalTour}
+                                                />
+                                            ) : null}
                                         </div>
                                         <ArrowUpRight
                                             className={cn(
@@ -602,42 +584,12 @@ export default function PortalPage() {
                                                 <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base pointer-events-none">
                                                     {area.description}
                                                 </p>
-                                                {settings.enableHelperMode && (area.id === 'admin' || area.id === 'print' || area.id === 'redeem') && (
-                                                    <div className="pt-2 pointer-events-auto">
-                                                        <div
-                                                            role="button"
-                                                            tabIndex={0}
-                                                            className="inline-flex cursor-pointer items-center rounded-md bg-secondary/40 px-2.5 py-1 text-xs font-bold text-secondary-foreground shadow-sm transition-all hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                                const tourMap: Record<string, PortalTourId> = {
-                                                                    admin: 'admin',
-                                                                    print: 'teacher',
-                                                                    redeem: 'student',
-                                                                };
-                                                                const tourId = tourMap[area.id];
-                                                                if (tourId) startPortalTour(tourId);
-                                                            }}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter' || e.key === ' ') {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    const tourMap: Record<string, PortalTourId> = {
-                                                                        admin: 'admin',
-                                                                        print: 'teacher',
-                                                                        redeem: 'student',
-                                                                    };
-                                                                    const tourId = tourMap[area.id];
-                                                                    if (tourId) startPortalTour(tourId);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <HelpCircle className="mr-1.5 h-3.5 w-3.5" />
-                                                            Portal Tour
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                {settings.enableHelperMode ? (
+                                                    <PortalAreaTourButton
+                                                        areaId={area.id}
+                                                        onLaunchTour={startPortalTour}
+                                                    />
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>
@@ -718,13 +670,7 @@ export default function PortalPage() {
                         <Button
                             variant="outline"
                             className="rounded-full border-primary/20 bg-background/50 px-6 font-semibold text-foreground/80 shadow-sm backdrop-blur-sm transition-all hover:bg-secondary/80"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.localStorage.removeItem('arcade_tour_progress_welcome');
-                                updateSettings({ activeTourId: null });
-                                setTimeout(() => updateSettings({ activeTourId: 'welcome' }), 50);
-                            }}
+                            onClick={startWelcomeTour}
                         >
                             <HelpCircle className="mr-2 h-4 w-4 text-primary/70" />
                             Start Welcome Tour

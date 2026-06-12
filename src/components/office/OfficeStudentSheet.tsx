@@ -4,7 +4,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Copy, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -232,9 +232,11 @@ export function OfficeStudentSheet({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">No class</SelectItem>
-                  {classId && classes.length > 0 && !classes.some((c) => c.id === classId) ? (
-                    <SelectItem value={classId}>Unknown class (deleted)</SelectItem>
-                  ) : null}
+                  <OrphanSelectItem
+                    value={classId}
+                    entityName="class"
+                    show={isOrphanSelectValue(classId, classes, { requireNonEmptyOptions: true })}
+                  />
                   {classes.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}

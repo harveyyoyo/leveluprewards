@@ -21,8 +21,8 @@ export function HouseBadge({
         className,
       )}
       style={{
-        borderColor: `${house.color}55`,
-        backgroundColor: `${house.color}18`,
+        borderColor: `color-mix(in srgb, ${house.color} 33%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${house.color} 10%, transparent)`,
         color: house.color,
       }}
       title={house.value ? `${house.name} — ${house.value}` : house.name}

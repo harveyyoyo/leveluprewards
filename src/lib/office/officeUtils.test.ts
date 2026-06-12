@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   defaultDueDateIso,
+  getOfficeStudentFullName,
+  getOfficeStudentLabel,
   isInvoiceDueSoon,
   parseUsdToCents,
   studentIdsWithGradesForTerm,
@@ -11,6 +13,37 @@ import type { OfficeInvoice } from './types';
 import type { OfficeGradeEntry, OfficeStudent } from './types';
 
 describe('officeUtils', () => {
+  it('getOfficeStudentLabel prefers nickname and guards missing fields', () => {
+    expect(getOfficeStudentLabel({ firstName: 'Jane', lastName: 'Doe', nickname: 'JD' })).toBe('JD');
+    expect(getOfficeStudentLabel({ firstName: 'Jane', lastName: 'Doe' })).toBe('Jane');
+    expect(
+      getOfficeStudentLabel({ firstName: undefined as unknown as string, lastName: undefined as unknown as string }),
+    ).toBe('');
+  });
+
+  it('getOfficeStudentFullName never renders literal undefined', () => {
+    expect(getOfficeStudentFullName({ firstName: 'Jane', lastName: 'Doe' })).toBe('Jane Doe');
+    expect(getOfficeStudentFullName({ firstName: 'Jane', lastName: 'Doe', nickname: 'JD' })).toBe('JD Doe');
+    expect(
+      getOfficeStudentFullName({
+        firstName: undefined as unknown as string,
+        lastName: undefined as unknown as string,
+      }),
+    ).toBe('');
+    expect(
+      getOfficeStudentFullName({
+        firstName: 'Jane',
+        lastName: undefined as unknown as string,
+      }),
+    ).toBe('Jane');
+    expect(
+      getOfficeStudentFullName({
+        firstName: undefined as unknown as string,
+        lastName: 'Doe',
+      }),
+    ).toBe('Doe');
+  });
+
   it('parseUsdToCents accepts valid amounts', () => {
     expect(parseUsdToCents('10')).toBe(1000);
     expect(parseUsdToCents('10.50')).toBe(1050);

@@ -70,7 +70,7 @@ export function BonusSpinWheelModal({
     }, [isOpen, hasSpun, achievement]);
 
     const handleSpin = async () => {
-        if (isSpinning || result) return;
+        if (isSpinning || result !== null) return;
 
         setIsSpinning(true);
         playSound('click');

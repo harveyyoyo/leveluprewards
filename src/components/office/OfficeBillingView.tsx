@@ -6,7 +6,7 @@ import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -1048,9 +1048,11 @@ export function OfficeBillingView({
                   <SelectValue placeholder="Choose account" />
                 </SelectTrigger>
                 <SelectContent>
-                  {!isLoading && invoiceAccountId && accounts.length > 0 && !accounts.some((a) => a.id === invoiceAccountId) ? (
-                    <SelectItem value={invoiceAccountId}>Unknown account (deleted)</SelectItem>
-                  ) : null}
+                  <OrphanSelectItem
+                    value={invoiceAccountId}
+                    entityName="account"
+                    show={!isLoading && isOrphanSelectValue(invoiceAccountId, accounts, { requireNonEmptyOptions: true })}
+                  />
                   {accounts.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.familyName}
