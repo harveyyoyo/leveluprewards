@@ -232,31 +232,25 @@
         overflow: hidden;
       }
 
-      /* THE BUSINESS CARD ITSELF (Styled as a Student ID Card by default) */
-      .bcard {
+      /* ==========================================================================
+         CANONICAL STUDENT ID CARD STYLE
+         ========================================================================== */
+      .print-id-card {
         width: 100%;
         height: 100%;
-        padding: 0.15in 0.2in;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        padding: 10px 14px;
         background: var(--bg);
         color: var(--text);
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: space-between;
         position: relative;
+        border-radius: 12px;
         overflow: hidden;
-        font-family: 'DM Sans', system-ui, sans-serif;
+        border: 1px solid var(--hair);
       }
 
-      /* Subtle gradient overlays */
-      .bcard::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 60%),
-                    radial-gradient(circle at bottom right, rgba(0,0,0,0.15), transparent 60%);
-        pointer-events: none;
-      }
-      
       .bc-decor {
         position: absolute;
         bottom: -20px;
@@ -281,75 +275,91 @@
         pointer-events: none;
       }
 
-      .bc-header {
+      .print-id-header-container {
         display: flex;
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid var(--hair);
-        padding-bottom: 6px;
-        margin-bottom: 6px;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
         z-index: 1;
       }
-      
-      .bc-brand {
+
+      .print-id-app {
         display: flex;
         align-items: center;
         gap: 6px;
       }
 
-      .bc-brand-logo {
-        width: 20px;
-        height: 20px;
-        object-fit: contain;
+      .print-id-app-logo {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
-      .bc-brand-text {
+      .print-id-app-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .print-id-app-text {
         display: flex;
         flex-direction: column;
+        text-align: left;
       }
 
-      .bc-logo {
+      .print-id-app-name {
         font-family: 'Outfit', sans-serif;
-        font-size: 11px;
+        font-size: 9px;
         font-weight: 800;
         line-height: 1.1;
-        letter-spacing: -0.01em;
-        margin: 0;
         color: var(--strong);
       }
-      
-      .bc-tagline {
+
+      .print-id-app-tagline {
         font-size: 7px;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        font-weight: 600;
+        opacity: 0.85;
+        line-height: 1.1;
         color: var(--heading-color);
-        margin: 0;
-        font-weight: 700;
-        line-height: 1;
-        margin-top: 1px;
       }
 
-      .bc-role-badge {
-        font-size: 7.5px;
+      .print-id-school .print-id-header {
+        font-family: 'Outfit', sans-serif;
+        font-size: 8px;
+        font-weight: 800;
+        color: var(--strong);
         background: var(--panel);
         border: 1px solid var(--hair);
-        padding: 2.5px 6px;
+        padding: 2px 6px;
         border-radius: 999px;
-        color: var(--text);
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        font-weight: 700;
       }
 
-      .bc-main {
+      .print-id-main {
+        flex: 1;
         display: flex;
         align-items: center;
         gap: 10px;
-        flex: 1;
+        padding: 2px 0;
         z-index: 1;
       }
 
-      .bc-avatar {
+      .print-id-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .print-id-avatar {
         width: 48px;
         height: 48px;
         border-radius: 8px;
@@ -363,7 +373,7 @@
         position: relative;
       }
 
-      .bc-avatar img {
+      .print-id-avatar img {
         width: 100%;
         height: 100%;
         object-fit: cover;
@@ -386,70 +396,146 @@
         text-shadow: 0 1px 2px rgba(0,0,0,0.25);
       }
 
-      .bc-details {
-        flex: 1;
+      .print-id-text {
         display: flex;
         flex-direction: column;
+        text-align: left;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .print-id-name {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 800;
+        font-size: 13px;
+        line-height: 1.1;
+        color: var(--strong);
+      }
+
+      .print-id-class {
+        font-size: 8px;
+        font-weight: 700;
+        color: var(--heading-color);
+        text-transform: uppercase;
+        margin-top: 1px;
+      }
+
+      .print-id-barcode-container {
+        width: 100%;
+        display: flex;
         justify-content: center;
+        align-items: center;
+        border-top: 1px solid var(--hair);
+        padding-top: 4px;
+        margin-top: 4px;
+        z-index: 1;
+      }
+
+      /* ==========================================================================
+         CANONICAL COUPON STYLE
+         ========================================================================== */
+      .coupon-scalable {
+        width: 100%;
+        height: 100%;
+        padding: 10px 14px;
+        background: #ffffff !important; /* Authentic coupon white background */
+        color: #1e293b !important; /* Dark text for high contrast print */
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: space-between;
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px dashed var(--accent2) !important;
+        font-family: 'DM Sans', sans-serif;
+      }
+
+      .coupon-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: var(--accent) !important;
+        letter-spacing: 0.04em;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.15) !important;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        text-align: center;
+        line-height: 1.2;
+      }
+
+      .coupon-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px dashed rgba(0, 0, 0, 0.15) !important;
+        padding-bottom: 4px;
+        margin-bottom: 4px;
+        flex: 1;
+      }
+
+      .coupon-left-badge {
+        background: rgba(6, 182, 212, 0.08) !important;
+        border: 1px solid var(--accent2) !important;
+        color: var(--accent2) !important;
+        padding: 3px 6px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 8.5px;
+        text-transform: uppercase;
+        min-width: 44px;
+        text-align: center;
+        letter-spacing: 0.02em;
+        line-height: 1.2;
+      }
+
+      .coupon-details-text {
+        text-align: left;
+        flex: 1;
         min-width: 0;
       }
-      
-      .bc-name {
+
+      .coupon-name {
         font-family: 'Outfit', sans-serif;
         font-size: 13px;
         font-weight: 800;
-        color: var(--strong);
-        margin: 0;
+        color: #0f172a !important;
         line-height: 1.1;
       }
-      
-      .bc-title {
+
+      .coupon-category {
         font-size: 8px;
-        color: var(--heading-color);
-        margin: 1px 0 3px 0;
         font-weight: 700;
+        color: var(--accent) !important;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        margin-top: 1px;
       }
 
-      .bc-contact-info {
+      .coupon-barcode-zone {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        font-size: 7.5px;
-        color: var(--muted);
-      }
-      
-      .bc-contact-row {
-        display: flex;
         align-items: center;
-        gap: 4px;
-        min-width: 0;
-      }
-      
-      .bc-icon {
-        color: var(--accent2);
-        width: 10px;
-        font-size: 8px;
-        text-align: center;
-      }
-      
-      .bc-contact-text {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        gap: 3px;
       }
 
+      .coupon-redemption-label {
+        font-size: 7.5px;
+        font-weight: 700;
+        color: #64748b !important;
+        text-align: center;
+        line-height: 1.2;
+      }
+
+      /* QR code container inside cards */
       .bc-qrcode-container {
-        width: 46px;
-        height: 46px;
-        border-radius: 4px;
-        background: #ffffff;
-        padding: 2px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: #ffffff !important;
+        border: 1px solid rgba(0, 0, 0, 0.12) !important;
+        border-radius: 4px;
+        padding: 2px;
         flex-shrink: 0;
         overflow: hidden;
       }
@@ -459,76 +545,6 @@
         width: 100% !important;
         height: 100% !important;
         display: block !important;
-      }
-
-      /* ==========================================================================
-         COUPON STYLE OVERRIDES
-         ========================================================================== */
-      .bcard.style-coupon {
-        border: 2px dashed var(--accent2) !important;
-        background: var(--bg);
-        border-radius: 8px;
-        padding: 0.12in 0.15in;
-      }
-
-      .bcard.style-coupon .bc-decor,
-      .bcard.style-coupon .bc-decor2 {
-        display: none !important;
-      }
-
-      .bcard.style-coupon .bc-header {
-        justify-content: center !important;
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
-        margin-bottom: 4px !important;
-      }
-
-      .bcard.style-coupon .bc-role-badge {
-        display: none !important;
-      }
-
-      .bcard.style-coupon .bc-main {
-        flex-direction: column !important;
-        gap: 4px !important;
-        align-items: stretch !important;
-      }
-
-      .bcard.style-coupon .bc-avatar {
-        display: none !important;
-      }
-
-      .bcard.style-coupon .bc-details {
-        border-top: 1px dashed var(--hair);
-        border-bottom: 1px dashed var(--hair);
-        padding: 4px 0 !important;
-        text-align: center !important;
-        align-items: center !important;
-        flex: none !important;
-      }
-
-      .bcard.style-coupon .bc-name {
-        font-size: 13px !important;
-        text-align: center !important;
-      }
-
-      .bcard.style-coupon .bc-title {
-        font-size: 8px !important;
-        text-align: center !important;
-        margin-bottom: 2px !important;
-      }
-
-      .bcard.style-coupon .bc-contact-info {
-        flex-direction: row !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
-        gap: 8px !important;
-      }
-
-      .bcard.style-coupon .bc-qrcode-container {
-        align-self: center !important;
-        width: 44px !important;
-        height: 44px !important;
-        margin-top: 4px !important;
       }
     </style>
   </head>
@@ -572,10 +588,10 @@
       <div class="sidebar-section">
         <label class="sidebar-label">Personal Details</label>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="name-input" value="Harvey" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
+          <input type="text" id="name-input" value="Dovid Teitelbaum" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
           <input type="text" id="title-input" value="Lead Developer" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
           <input type="text" id="badge-input" value="Developer" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
-          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Harvey" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
+          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Dovid" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
         </div>
       </div>
 
@@ -687,14 +703,14 @@
           '--panel': 'rgba(15, 23, 42, 0.04)', '--text': '#0f172a',
           '--muted': '#475569', '--hair': 'rgba(15, 23, 42, 0.12)',
           '--success': '#16a34a', '--black': '#ffffff', '--strong': '#090d16',
-          '--heading-color': 'var(--accent)'
+          '--heading-color': var(--accent)
         },
         'light-sky': {
           '--bg': '#f0f9ff', '--accent': '#0284c7', '--accent2': '#0ea5e9',
           '--panel': 'rgba(2, 132, 199, 0.04)', '--text': '#0f172a',
           '--muted': '#334155', '--hair': 'rgba(2, 132, 199, 0.12)',
           '--success': '#16a34a', '--black': '#ffffff', '--strong': '#031b2b',
-          '--heading-color': 'var(--accent)'
+          '--heading-color': var(--accent)
         }
       };
 
@@ -704,57 +720,88 @@
         const sheet = document.getElementById('sheet-1');
         sheet.innerHTML = '';
         
-        const cardClass = currentStyle === 'coupon' ? 'bcard style-coupon' : 'bcard';
-        const cardTemplate = `
-          <div class="bcard-container">
-            <div class="${cardClass}">
-              <div class="bc-decor"></div>
-              <div class="bc-decor2"></div>
-              
-              <div class="bc-header">
-                <div class="bc-brand">
-                  <img src="/logo.png" alt="Logo" class="bc-brand-logo" />
-                  <div class="bc-brand-text">
-                    <h1 class="bc-logo sync-company">LevelUp Rewards</h1>
-                    <div class="bc-tagline sync-tagline">PBIS & Climate</div>
-                  </div>
-                </div>
-                <div class="bc-role-badge sync-badge">Staff</div>
-              </div>
-              
-              <div class="bc-main">
-                <div class="bc-avatar">
-                  <img src="" alt="Avatar" class="sync-avatar" onerror="handleImageError(this)" />
-                  <div class="bc-avatar-fallback"></div>
+        let cardTemplate = '';
+        if (currentStyle === 'coupon') {
+          cardTemplate = `
+            <div class="bcard-container">
+              <div class="coupon-scalable">
+                <div class="coupon-title">
+                  <span class="sync-company-tagline">LevelUp Rewards - PBIS & Climate</span>
                 </div>
                 
-                <div class="bc-details">
-                  <h2 class="bc-name sync-name">Jane Doe</h2>
-                  <p class="bc-title sync-title">PBIS Coordinator</p>
-                  
-                  <div class="bc-contact-info">
-                    <div class="bc-contact-row sync-email-row">
-                      <span class="bc-icon">✉</span>
-                      <span class="bc-contact-text sync-email">contact@leveluprewards.app</span>
-                    </div>
-                    <div class="bc-contact-row sync-phone-row">
-                      <span class="bc-icon">☎</span>
-                      <span class="bc-contact-text sync-phone"></span>
-                    </div>
-                    <div class="bc-contact-row sync-web-row">
-                      <span class="bc-icon">🌐</span>
-                      <span class="bc-contact-text sync-web">leveluprewards.app</span>
-                    </div>
+                <div class="coupon-main">
+                  <div class="coupon-left-badge">
+                    <span class="sync-badge">Staff</span>
+                  </div>
+                  <div class="coupon-details-text">
+                    <div class="coupon-name sync-name">Jane Doe</div>
+                    <div class="coupon-category sync-title">PBIS Coordinator</div>
                   </div>
                 </div>
                 
-                <div class="bc-qrcode-container sync-qrcode-container">
-                  <!-- Generated dynamically via local qrcode.js library -->
+                <div class="coupon-barcode-zone">
+                  <div class="coupon-redemption-label">
+                    <span class="sync-email">contact@leveluprewards.app</span>
+                    <span class="sync-separator" style="margin: 0 4px;">·</span>
+                    <span class="sync-web">leveluprewards.app</span>
+                  </div>
+                  <div class="bc-qrcode-container sync-qrcode-container" style="width: 36px; height: 36px;"></div>
                 </div>
               </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          cardTemplate = `
+            <div class="bcard-container">
+              <div class="print-id-card">
+                <div class="bc-decor"></div>
+                <div class="bc-decor2"></div>
+                
+                <div class="print-id-header-container">
+                  <div class="print-id-app">
+                    <div class="print-id-app-logo">
+                      <img src="/logo.png" alt="Logo" />
+                    </div>
+                    <div class="print-id-app-text">
+                      <span class="print-id-app-name sync-company">LevelUp Rewards</span>
+                      <span class="print-id-app-tagline sync-tagline">PBIS & Climate</span>
+                    </div>
+                  </div>
+                  <div class="print-id-school">
+                    <span class="print-id-header sync-badge">Staff</span>
+                  </div>
+                </div>
+                
+                <div class="print-id-main">
+                  <div class="print-id-left">
+                    <div class="print-id-avatar">
+                      <img src="" alt="Avatar" class="sync-avatar" onerror="handleImageError(this)" />
+                      <div class="bc-avatar-fallback"></div>
+                    </div>
+                    <div class="print-id-text">
+                      <div class="print-id-name sync-name">Jane Doe</div>
+                      <div class="print-id-class sync-title">PBIS Coordinator</div>
+                      <div class="print-id-meta-info" style="font-size: 8px; opacity: 0.8; margin-top: 3px; display: flex; flex-direction: column; gap: 1px;">
+                        <div class="sync-email-row" style="display: flex; align-items: center; gap: 4px;">
+                          <span style="color: var(--accent2)">✉</span>
+                          <span class="sync-email">contact@leveluprewards.app</span>
+                        </div>
+                        <div class="sync-phone-row" style="display: flex; align-items: center; gap: 4px;">
+                          <span style="color: var(--accent2)">☎</span>
+                          <span class="sync-phone"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="print-id-barcode-container">
+                  <div class="bc-qrcode-container sync-qrcode-container" style="width: 38px; height: 38px;"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
 
         for (let i = 0; i < 10; i++) {
           sheet.innerHTML += cardTemplate;
@@ -771,16 +818,12 @@
 
       function updateCardStyle() {
         currentStyle = document.getElementById('style-select').value;
-        const cards = document.querySelectorAll('.bcard');
-        cards.forEach(card => {
-          if (currentStyle === 'coupon') {
-            card.classList.add('style-coupon');
-          } else {
-            card.classList.remove('style-coupon');
-          }
-        });
         
-        // Trigger field synchronization to update dynamic layouts
+        // Regenerate card DOM templates
+        generateCards();
+        // Re-apply theme visual variables
+        updateTheme();
+        // Sync control inputs to card targets
         syncFields();
       }
 
@@ -794,13 +837,16 @@
         }
 
         const isLight = themeKey.startsWith('light');
-        const cards = document.querySelectorAll('.bcard');
+        const cards = document.querySelectorAll('.bcard, .print-id-card, .coupon-scalable');
         
         cards.forEach(card => {
           if (isLight) {
             card.style.border = '1px solid var(--hair)';
           } else {
-            card.style.border = 'none';
+            // Keep dashed borders on coupon style intact
+            if (!card.classList.contains('coupon-scalable')) {
+              card.style.border = 'none';
+            }
           }
         });
       }
@@ -825,6 +871,10 @@
         updateElements('.sync-company', company);
         updateElements('.sync-tagline', tagline);
 
+        // Header sync for coupon style
+        const companyTaglineText = `${company} - ${tagline}`;
+        updateElements('.sync-company-tagline', companyTaglineText);
+
         // Calculate initials from name
         const nameParts = name.trim().split(/\s+/);
         let initials = '';
@@ -840,7 +890,7 @@
           el.textContent = initials;
         });
 
-        // Sync avatar source or show initials (only relevant in ID style)
+        // Sync avatar source or show initials
         document.querySelectorAll('.sync-avatar').forEach(img => {
           const fallback = img.nextElementSibling;
           if (photo && photo.trim() && currentStyle !== 'coupon') {
@@ -862,8 +912,8 @@
             if (typeof QRCode !== 'undefined') {
               new QRCode(container, {
                 text: url,
-                width: currentStyle === 'coupon' ? 44 : 46,
-                height: currentStyle === 'coupon' ? 44 : 46,
+                width: currentStyle === 'coupon' ? 36 : 38,
+                height: currentStyle === 'coupon' ? 36 : 38,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -878,14 +928,14 @@
           }
         });
 
-        // Hide empty rows/badges/containers if empty (in coupon style, phone and email layout differs slightly)
+        // Hide empty rows/badges/containers if empty
         document.querySelectorAll('.sync-email-row').forEach(el => el.style.display = email ? 'flex' : 'none');
         document.querySelectorAll('.sync-phone-row').forEach(el => el.style.display = phone ? 'flex' : 'none');
         document.querySelectorAll('.sync-web-row').forEach(el => el.style.display = web ? 'flex' : 'none');
         
-        // Badge is hidden in coupon style
-        document.querySelectorAll('.sync-badge').forEach(el => {
-          el.style.display = (badge && currentStyle !== 'coupon') ? 'block' : 'none';
+        // Hide separator dot in coupon style if email or web is empty
+        document.querySelectorAll('.sync-separator').forEach(el => {
+          el.style.display = (email && web) ? 'inline' : 'none';
         });
       }
 
