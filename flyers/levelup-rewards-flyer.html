@@ -131,6 +131,11 @@
           box-sizing: border-box;
         }
 
+        .sidebar-select option {
+          background-color: #090e1a;
+          color: #ffffff;
+        }
+
         .sidebar-input:focus, .sidebar-select:focus {
           border-color: var(--accent2);
           box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
@@ -989,11 +994,13 @@
               el.style.color = '#4f46e5';
               el.style.textShadow = 'none';
             });
+            p.querySelectorAll('.sync-email-link').forEach(el => {
+              el.style.color = '#4f46e5';
+            });
           } else {
             // Restore dark colors
             p.style.color = 'var(--text)';
-            p.style.color = '';
-            p.querySelectorAll('strong, h1, h3, .badge, h2, .subtitle, .muted, .callout, .kpi, .card, .topbar, .footer, li::before').forEach(el => {
+            p.querySelectorAll('strong, h1, h3, .badge, h2, .subtitle, .muted, .callout, .kpi, .card, .topbar, .footer, li::before, .sync-email-link').forEach(el => {
               el.style.color = '';
               el.style.background = '';
               el.style.borderColor = '';
