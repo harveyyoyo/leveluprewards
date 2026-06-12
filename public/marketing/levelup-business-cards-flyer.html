@@ -6,6 +6,8 @@
     <title>LevelUp Rewards — Business Cards</title>
     <!-- Modern typography matching other high-fidelity flyers -->
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+    <!-- Local QR Code generation library to bypass CSP domain block policies -->
+    <script src="qrcode.min.js"></script>
     <style>
       @page {
         size: letter;
@@ -449,12 +451,14 @@
         justify-content: center;
         border: 1px solid rgba(0, 0, 0, 0.1);
         flex-shrink: 0;
+        overflow: hidden;
       }
 
-      .bc-qrcode-img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
+      .bc-qrcode-container canvas,
+      .bc-qrcode-container img {
+        width: 100% !important;
+        height: 100% !important;
+        display: block !important;
       }
     </style>
   </head>
@@ -490,17 +494,17 @@
       <div class="sidebar-section">
         <label class="sidebar-label">Personal Details</label>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="name-input" value="Jane Doe" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
-          <input type="text" id="title-input" value="PBIS Coordinator" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
-          <input type="text" id="badge-input" value="Staff" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
-          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
+          <input type="text" id="name-input" value="Harvey" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
+          <input type="text" id="title-input" value="Lead Developer" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
+          <input type="text" id="badge-input" value="Developer" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
+          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Harvey" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
         </div>
       </div>
 
       <div class="sidebar-section">
         <label class="sidebar-label">Contact Details</label>
         <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Email Address" oninput="syncFields()" />
+          <input type="text" id="email-input" value="sdeichemed@gmail.com" class="sidebar-input" placeholder="Email Address" oninput="syncFields()" />
           <input type="text" id="phone-input" value="(555) 123-4567" class="sidebar-input" placeholder="Phone Number" oninput="syncFields()" />
           <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website" oninput="syncFields()" />
         </div>
@@ -663,8 +667,8 @@
                   </div>
                 </div>
                 
-                <div class="bc-qrcode-container">
-                  <img src="" alt="QR Code" class="bc-qrcode-img sync-qrcode" />
+                <div class="bc-qrcode-container sync-qrcode-container">
+                  <!-- Generated dynamically via local qrcode.js library -->
                 </div>
               </div>
             </div>
@@ -754,10 +758,28 @@
           }
         });
 
-        // Sync QR code source linking directly to the site URL
-        const qrUrl = web ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(web.startsWith('http') ? web : 'https://' + web)}` : '';
-        document.querySelectorAll('.sync-qrcode').forEach(img => {
-          img.src = qrUrl;
+        // Sync QR code source linking directly to the site URL using local QRCode.js
+        document.querySelectorAll('.sync-qrcode-container').forEach(container => {
+          container.innerHTML = '';
+          if (web && web.trim()) {
+            const url = web.startsWith('http') ? web : 'https://' + web;
+            if (typeof QRCode !== 'undefined') {
+              new QRCode(container, {
+                text: url,
+                width: 46,
+                height: 46,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+              });
+              container.style.display = 'flex';
+            } else {
+              container.innerHTML = '<span style="font-size: 8px; color: #000; text-align: center;">QR</span>';
+              container.style.display = 'flex';
+            }
+          } else {
+            container.style.display = 'none';
+          }
         });
 
         // Hide empty rows/badges/containers if empty
@@ -765,7 +787,6 @@
         document.querySelectorAll('.sync-phone-row').forEach(el => el.style.display = phone ? 'flex' : 'none');
         document.querySelectorAll('.sync-web-row').forEach(el => el.style.display = web ? 'flex' : 'none');
         document.querySelectorAll('.sync-badge').forEach(el => el.style.display = badge ? 'block' : 'none');
-        document.querySelectorAll('.bc-qrcode-container').forEach(el => el.style.display = web ? 'flex' : 'none');
       }
 
       function updateElements(selector, value) {
