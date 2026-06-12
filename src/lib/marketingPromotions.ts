@@ -571,6 +571,16 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     preview: { border: 'border-amber-600/40', tag: 'Vending' },
     tags: ['Vending', 'Hardware', 'Optional', 'Desktop'],
   },
+  {
+    id: 'levelup-business-cards',
+    name: 'Business Cards',
+    description:
+      'Interactive 10-up business card printing sheet for LevelUp Rewards coordinators and staff. Customize name, role, contact info, and themes.',
+    href: '/marketing/levelup-business-cards-flyer.html',
+    audience: 'features',
+    preview: { border: 'border-cyan-400/40', tag: 'Branding' },
+    tags: ['Business cards', 'Themes', 'Staff', 'Print'],
+  },
 ] as const;
 
 export function getPromotionFlyersByAudience(

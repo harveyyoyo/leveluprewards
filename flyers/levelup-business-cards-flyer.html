@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LevelUp Rewards — Business Cards</title>
+    <!-- Modern typography matching other high-fidelity flyers -->
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      @page {
+        size: letter;
+        margin: 0;
+      }
+
+      :root {
+        --bg: #0b1220;
+        --panel: rgba(255, 255, 255, 0.05);
+        --text: #eaf0ff;
+        --muted: rgba(234, 240, 255, 0.78);
+        --hair: rgba(234, 240, 255, 0.15);
+        --accent: #7c3aed;
+        --accent2: #06b6d4;
+        --success: #22c55e;
+        --black: #0a0a0a;
+        --strong: #ffffff;
+        --heading-color: var(--accent2);
+        --featured-border: var(--accent2);
+        --featured-bg: rgba(255, 255, 255, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        color: var(--text);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* SCREEN STYLES */
+      @media screen {
+        body {
+          background-color: #03060f;
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: stretch !important;
+          justify-content: flex-start !important;
+          min-height: 100vh;
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+
+        .control-sidebar {
+          width: 330px;
+          min-width: 330px;
+          background: #090e1a;
+          border-right: 1px solid rgba(255, 255, 255, 0.08);
+          padding: 24px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+          height: 100vh;
+          overflow-y: auto;
+          color: #eaf0ff;
+          box-sizing: border-box;
+          font-size: 13px;
+        }
+
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          padding-bottom: 16px;
+        }
+
+        .sidebar-logo {
+          font-size: 24px;
+        }
+
+        .sidebar-title-text h2 {
+          font-size: 16px !important;
+          font-weight: 800;
+          color: #fff !important;
+          margin: 0 !important;
+          letter-spacing: -0.01em;
+        }
+
+        .sidebar-subtitle-text {
+          font-size: 11px;
+          color: rgba(234, 240, 255, 0.5);
+          margin-top: 2px;
+        }
+
+        .sidebar-section {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding-bottom: 16px;
+        }
+
+        .sidebar-label {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: rgba(234, 240, 255, 0.5);
+          font-weight: 700;
+        }
+
+        .sidebar-input, .sidebar-select {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 8px;
+          padding: 8px 12px;
+          color: #fff;
+          font-family: inherit;
+          font-size: 12.5px;
+          width: 100%;
+          outline: none;
+          box-sizing: border-box;
+        }
+
+        .sidebar-select option {
+          background-color: #090e1a;
+          color: #ffffff;
+        }
+
+        .sidebar-input:focus, .sidebar-select:focus {
+          border-color: var(--accent2);
+          box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
+        }
+
+        .sidebar-btn {
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          color: #fff;
+          border: none;
+          padding: 12px;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 13px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          box-shadow: 0 4px 12px rgba(6, 182, 212, 0.15);
+          width: 100%;
+        }
+
+        .sidebar-btn:hover {
+          filter: brightness(1.1);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 16px rgba(6, 182, 212, 0.25);
+        }
+
+        .sidebar-btn:active {
+          transform: translateY(0);
+        }
+
+        .proposal-main {
+          flex: 1;
+          height: 100vh;
+          overflow-y: auto;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 40px 20px;
+          gap: 32px;
+          box-sizing: border-box;
+          background-image: 
+            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.1) 0px, transparent 50%),
+            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+        }
+
+        .page {
+          border-radius: 0;
+          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+      }
+
+      /* PRINT STYLES */
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        body {
+          background: transparent !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          display: block !important;
+        }
+        .page {
+          margin: 0 !important;
+          border: none !important;
+          box-shadow: none !important;
+          page-break-after: always;
+        }
+        .bcard-container {
+          outline: none !important;
+        }
+      }
+
+      /* BUSINESS CARD SHEET GRID */
+      .page {
+        width: 8.5in;
+        height: 11in;
+        background: #ffffff;
+        padding: 0.5in 0.75in;
+        display: grid;
+        grid-template-columns: 3.5in 3.5in;
+        grid-template-rows: repeat(5, 2in);
+        gap: 0;
+      }
+
+      .bcard-container {
+        width: 3.5in;
+        height: 2in;
+        outline: 1px dashed rgba(0,0,0,0.1); /* Cut lines for screen preview */
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* THE BUSINESS CARD ITSELF (Styled as a Student ID Card) */
+      .bcard {
+        width: 100%;
+        height: 100%;
+        padding: 0.15in 0.2in;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background: var(--bg);
+        color: var(--text);
+        position: relative;
+        overflow: hidden;
+        font-family: 'DM Sans', system-ui, sans-serif;
+      }
+
+      /* Subtle gradient overlays */
+      .bcard::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: radial-gradient(circle at top left, rgba(255,255,255,0.06), transparent 60%),
+                    radial-gradient(circle at bottom right, rgba(0,0,0,0.15), transparent 60%);
+        pointer-events: none;
+      }
+      
+      .bc-decor {
+        position: absolute;
+        bottom: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+        opacity: 0.15;
+        pointer-events: none;
+      }
+      
+      .bc-decor2 {
+        position: absolute;
+        top: -15px;
+        left: 40%;
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--accent2) 0%, transparent 70%);
+        opacity: 0.12;
+        pointer-events: none;
+      }
+
+      .bc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--hair);
+        padding-bottom: 6px;
+        margin-bottom: 6px;
+        z-index: 1;
+      }
+      
+      .bc-brand {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .bc-brand-logo {
+        width: 20px;
+        height: 20px;
+        object-fit: contain;
+      }
+
+      .bc-brand-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .bc-logo {
+        font-family: 'Outfit', sans-serif;
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        margin: 0;
+        color: var(--strong);
+      }
+      
+      .bc-tagline {
+        font-size: 7px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--heading-color);
+        margin: 0;
+        font-weight: 700;
+        line-height: 1;
+        margin-top: 1px;
+      }
+
+      .bc-role-badge {
+        font-size: 7.5px;
+        background: var(--panel);
+        border: 1px solid var(--hair);
+        padding: 2.5px 6px;
+        border-radius: 999px;
+        color: var(--text);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+
+      .bc-main {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        z-index: 1;
+      }
+
+      .bc-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        border: 1px solid var(--hair);
+        background: var(--panel);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+
+      .bc-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .bc-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+      }
+      
+      .bc-name {
+        font-family: 'Outfit', sans-serif;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--strong);
+        margin: 0;
+        line-height: 1.1;
+      }
+      
+      .bc-title {
+        font-size: 8px;
+        color: var(--heading-color);
+        margin: 1px 0 3px 0;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .bc-contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 7.5px;
+        color: var(--muted);
+      }
+      
+      .bc-contact-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+      }
+      
+      .bc-icon {
+        color: var(--accent2);
+        width: 10px;
+        font-size: 8px;
+        text-align: center;
+      }
+      
+      .bc-contact-text {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .bc-qrcode-container {
+        width: 46px;
+        height: 46px;
+        border-radius: 4px;
+        background: #ffffff;
+        padding: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        flex-shrink: 0;
+      }
+
+      .bc-qrcode-img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- CONTROL SIDEBAR -->
+    <div class="control-sidebar no-print" role="complementary">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">🪪</span>
+        <div class="sidebar-title-text">
+          <h2>ID-Style Cards</h2>
+          <p class="sidebar-subtitle-text">10-up Letter Print Sheet</p>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="theme-select">Visual Theme</label>
+        <select id="theme-select" class="sidebar-select" onchange="updateTheme()">
+          <option value="navy" selected>Bold Navy (Default)</option>
+          <option value="green">Emerald Forest</option>
+          <option value="sunset">Purple Sunset</option>
+          <option value="cyber">Classic Neon</option>
+          <option value="crimson">Crimson Culture</option>
+          <option value="gold">Quest Gold</option>
+          <option value="aurora">Winter Aurora</option>
+          <option value="sapphire">Royal Sapphire</option>
+          <option value="obsidian">Grayscale Midnight</option>
+          <option value="sand">Sahara Sand</option>
+          <option value="light">Classic Light</option>
+          <option value="light-sky">Light Sky</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label">Personal Details</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="name-input" value="Jane Doe" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
+          <input type="text" id="title-input" value="PBIS Coordinator" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
+          <input type="text" id="badge-input" value="Staff" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
+          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Jane" class="sidebar-input" placeholder="Photo / Avatar URL" oninput="syncFields()" />
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label">Contact Details</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Email Address" oninput="syncFields()" />
+          <input type="text" id="phone-input" value="(555) 123-4567" class="sidebar-input" placeholder="Phone Number" oninput="syncFields()" />
+          <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website" oninput="syncFields()" />
+        </div>
+      </div>
+      
+      <div class="sidebar-section">
+        <label class="sidebar-label">Branding</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="company-input" value="LevelUp Rewards" class="sidebar-input" placeholder="Company/App Name" oninput="syncFields()" />
+          <input type="text" id="tagline-input" value="PBIS & Climate" class="sidebar-input" placeholder="Tagline" oninput="syncFields()" />
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 10px;">
+        <button class="sidebar-btn" onclick="window.print()">
+          🖨️ Print / Save PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- MAIN PREVIEW PANEL -->
+    <div class="proposal-main">
+      <div class="page" id="sheet-1" aria-label="Business card print sheet">
+        <!-- 10 cards generated via JS -->
+      </div>
+    </div>
+
+    <script>
+      const THEMES = {
+        navy: {
+          '--bg': '#0b1220', '--accent': '#7c3aed', '--accent2': '#06b6d4',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#eaf0ff',
+          '--muted': 'rgba(234, 240, 255, 0.78)', '--hair': 'rgba(234, 240, 255, 0.15)',
+          '--success': '#22c55e', '--black': '#0a0a0a', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        green: {
+          '--bg': '#041d1a', '--accent': '#059669', '--accent2': '#10b981',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#ecfdf5',
+          '--muted': 'rgba(236, 253, 245, 0.78)', '--hair': 'rgba(236, 253, 245, 0.15)',
+          '--success': '#34d399', '--black': '#020d0c', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        sunset: {
+          '--bg': '#1a0b18', '--accent': '#db2777', '--accent2': '#f97316',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fdf2f8',
+          '--muted': 'rgba(253, 242, 248, 0.78)', '--hair': 'rgba(253, 242, 248, 0.15)',
+          '--success': '#22c55e', '--black': '#090208', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        cyber: {
+          '--bg': '#08070d', '--accent': '#d946ef', '--accent2': '#f43f5e',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fae8ff',
+          '--muted': 'rgba(250, 232, 255, 0.78)', '--hair': 'rgba(250, 232, 255, 0.15)',
+          '--success': '#10b981', '--black': '#030205', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        crimson: {
+          '--bg': '#1e050b', '--accent': '#e11d48', '--accent2': '#fb7185',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fff1f2',
+          '--muted': 'rgba(255, 241, 242, 0.78)', '--hair': 'rgba(255, 241, 242, 0.15)',
+          '--success': '#10b981', '--black': '#0a0103', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        gold: {
+          '--bg': '#1a1206', '--accent': '#d97706', '--accent2': '#fbbf24',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fef3c7',
+          '--muted': 'rgba(254, 243, 199, 0.78)', '--hair': 'rgba(254, 243, 199, 0.15)',
+          '--success': '#10b981', '--black': '#0a0702', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        aurora: {
+          '--bg': '#061318', '--accent': '#06b6d4', '--accent2': '#10b981',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#ecfeff',
+          '--muted': 'rgba(236, 254, 255, 0.78)', '--hair': 'rgba(236, 254, 255, 0.15)',
+          '--success': '#34d399', '--black': '#020709', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        sapphire: {
+          '--bg': '#0a0e1c', '--accent': '#3b82f6', '--accent2': '#6366f1',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#eff6ff',
+          '--muted': 'rgba(239, 246, 255, 0.78)', '--hair': 'rgba(239, 246, 255, 0.15)',
+          '--success': '#10b981', '--black': '#04060c', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        obsidian: {
+          '--bg': '#0d0d0e', '--accent': '#f3f4f6', '--accent2': '#9ca3af',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#f9fafb',
+          '--muted': 'rgba(249, 250, 251, 0.78)', '--hair': 'rgba(249, 250, 251, 0.15)',
+          '--success': '#10b981', '--black': '#050506', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        sand: {
+          '--bg': '#1a0f0a', '--accent': '#ea580c', '--accent2': '#f59e0b',
+          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fff7ed',
+          '--muted': 'rgba(255, 247, 237, 0.78)', '--hair': 'rgba(255, 247, 237, 0.15)',
+          '--success': '#10b981', '--black': '#0a0604', '--strong': '#ffffff',
+          '--heading-color': 'var(--accent2)'
+        },
+        light: {
+          '--bg': '#ffffff', '--accent': '#4f46e5', '--accent2': '#0ea5e9',
+          '--panel': 'rgba(15, 23, 42, 0.04)', '--text': '#0f172a',
+          '--muted': '#475569', '--hair': 'rgba(15, 23, 42, 0.12)',
+          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#090d16',
+          '--heading-color': 'var(--accent)'
+        },
+        'light-sky': {
+          '--bg': '#f0f9ff', '--accent': '#0284c7', '--accent2': '#0ea5e9',
+          '--panel': 'rgba(2, 132, 199, 0.04)', '--text': '#0f172a',
+          '--muted': '#334155', '--hair': 'rgba(2, 132, 199, 0.12)',
+          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#031b2b',
+          '--heading-color': 'var(--accent)'
+        }
+      };
+
+      function generateCards() {
+        const sheet = document.getElementById('sheet-1');
+        sheet.innerHTML = '';
+        
+        const cardTemplate = `
+          <div class="bcard-container">
+            <div class="bcard">
+              <div class="bc-decor"></div>
+              <div class="bc-decor2"></div>
+              
+              <div class="bc-header">
+                <div class="bc-brand">
+                  <img src="/logo.png" alt="Logo" class="bc-brand-logo" />
+                  <div class="bc-brand-text">
+                    <h1 class="bc-logo sync-company">LevelUp Rewards</h1>
+                    <div class="bc-tagline sync-tagline">PBIS & Climate</div>
+                  </div>
+                </div>
+                <div class="bc-role-badge sync-badge">Staff</div>
+              </div>
+              
+              <div class="bc-main">
+                <div class="bc-avatar">
+                  <img src="" alt="Avatar" class="sync-avatar" />
+                </div>
+                
+                <div class="bc-details">
+                  <h2 class="bc-name sync-name">Jane Doe</h2>
+                  <p class="bc-title sync-title">PBIS Coordinator</p>
+                  
+                  <div class="bc-contact-info">
+                    <div class="bc-contact-row sync-email-row">
+                      <span class="bc-icon">✉</span>
+                      <span class="bc-contact-text sync-email">contact@leveluprewards.app</span>
+                    </div>
+                    <div class="bc-contact-row sync-phone-row">
+                      <span class="bc-icon">☎</span>
+                      <span class="bc-contact-text sync-phone">(555) 123-4567</span>
+                    </div>
+                    <div class="bc-contact-row sync-web-row">
+                      <span class="bc-icon">🌐</span>
+                      <span class="bc-contact-text sync-web">leveluprewards.app</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="bc-qrcode-container">
+                  <img src="" alt="QR Code" class="bc-qrcode-img sync-qrcode" />
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        for (let i = 0; i < 10; i++) {
+          sheet.innerHTML += cardTemplate;
+        }
+      }
+
+      function updateTheme() {
+        const themeKey = document.getElementById('theme-select').value;
+        const theme = THEMES[themeKey] || THEMES.navy;
+        const root = document.documentElement;
+        
+        for (const [key, value] of Object.entries(theme)) {
+          root.style.setProperty(key, value);
+        }
+
+        const isLight = themeKey.startsWith('light');
+        const cards = document.querySelectorAll('.bcard');
+        
+        cards.forEach(card => {
+          if (isLight) {
+            card.style.border = '1px solid var(--hair)';
+          } else {
+            card.style.border = 'none';
+          }
+        });
+      }
+
+      function syncFields() {
+        const name = document.getElementById('name-input').value;
+        const title = document.getElementById('title-input').value;
+        const badge = document.getElementById('badge-input').value;
+        const email = document.getElementById('email-input').value;
+        const phone = document.getElementById('phone-input').value;
+        const web = document.getElementById('web-input').value;
+        const company = document.getElementById('company-input').value;
+        const tagline = document.getElementById('tagline-input').value;
+        const photo = document.getElementById('photo-input').value;
+
+        updateElements('.sync-name', name);
+        updateElements('.sync-title', title);
+        updateElements('.sync-badge', badge);
+        updateElements('.sync-email', email);
+        updateElements('.sync-phone', phone);
+        updateElements('.sync-web', web);
+        updateElements('.sync-company', company);
+        updateElements('.sync-tagline', tagline);
+
+        // Sync avatar source
+        document.querySelectorAll('.sync-avatar').forEach(img => {
+          img.src = photo;
+        });
+
+        // Sync QR code source linking directly to the site URL
+        const qrUrl = web ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(web.startsWith('http') ? web : 'https://' + web)}` : '';
+        document.querySelectorAll('.sync-qrcode').forEach(img => {
+          img.src = qrUrl;
+        });
+
+        // Hide empty rows/badges/containers if empty
+        document.querySelectorAll('.sync-email-row').forEach(el => el.style.display = email ? 'flex' : 'none');
+        document.querySelectorAll('.sync-phone-row').forEach(el => el.style.display = phone ? 'flex' : 'none');
+        document.querySelectorAll('.sync-web-row').forEach(el => el.style.display = web ? 'flex' : 'none');
+        document.querySelectorAll('.sync-badge').forEach(el => el.style.display = badge ? 'block' : 'none');
+        document.querySelectorAll('.bc-qrcode-container').forEach(el => el.style.display = web ? 'flex' : 'none');
+      }
+
+      function updateElements(selector, value) {
+        document.querySelectorAll(selector).forEach(el => {
+          el.textContent = value;
+        });
+      }
+
+      // Check if URL has ?embed=1 and hide sidebar accordingly
+      if (new URLSearchParams(window.location.search).has('embed')) {
+        document.querySelector('.control-sidebar').style.display = 'none';
+        document.querySelector('.proposal-main').style.padding = '0';
+      }
+
+      // Initialize
+      generateCards();
+      updateTheme();
+      syncFields();
+    </script>
+  </body>
+</html>
