@@ -3,7 +3,7 @@ import { spawnSync } from 'child_process';
 const PROJECT_ID = 'studio-1273073612-71183';
 const LIVE_URL = `https://${PROJECT_ID}.web.app`;
 const AUTH_SMOKE_URL = process.env.LIVE_AUTH_BASE_URL || 'https://leveluprewards.app';
-const EXPECTED_TEXT = 'School Login';
+const EXPECTED_TEXT = 'levelUp';
 
 function run(command, args, options = {}) {
   console.log(`\n$ ${command} ${args.join(' ')}`);

@@ -24,7 +24,7 @@ import {
   signInWithRedirect,
   signOut,
 } from 'firebase/auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Keyboard } from 'lucide-react';
 import {
   canUseGoogleRedirectSignIn,
   consumeGoogleRedirectFailedNotice,
@@ -45,6 +45,8 @@ import {
   isGoogleOAuthRedirectMismatchError,
 } from '@/lib/google/googleOAuthSetupHint';
 import { navigateAfterSchoolLogin } from '@/lib/auth/syncFirebaseSessionCookie';
+import { AlphanumericKeyboard } from '@/components/ui/AlphanumericKeyboard';
+import { NumericKeypad } from '@/components/ui/NumericKeypad';
 
 export type SchoolDeveloperLoginFormMode = 'full' | 'developer-only';
 
@@ -81,6 +83,8 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const { settings } = useSettings();
   const [mounted, setMounted] = useState(false);
   const { auth, user: firebaseUser } = useFirebase();
+
+  const [activeField, setActiveField] = useState<'schoolId' | 'passcode' | null>(null);
 
   const triggerShake = () => {
     setIsShaking(true);
@@ -660,15 +664,32 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
                   School ID
                 </Label>
-                <input
-                  id="schoolId"
-                  ref={schoolIdRef}
-                  className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
-                  placeholder="e.g. schoolabc"
-                  value={schoolId}
-                  onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
-                  autoComplete="username"
-                />
+                <div className="flex gap-2 items-center">
+                  <input
+                    id="schoolId"
+                    ref={schoolIdRef}
+                    className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
+                    placeholder="e.g. schoolabc"
+                    value={schoolId}
+                    onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
+                    autoComplete="username"
+                  />
+                  <button
+                    type="button"
+                    title="Toggle onscreen keyboard"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setActiveField(activeField === 'schoolId' ? null : 'schoolId');
+                      schoolIdRef.current?.focus();
+                    }}
+                    className={cn(
+                      "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
+                      activeField === 'schoolId' && "bg-primary/10 border-primary text-primary"
+                    )}
+                  >
+                    <Keyboard className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
             )}
             {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
@@ -708,20 +729,53 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                       could not find existing access for this school. Enter the school passcode to continue.
                     </p>
                   )}
-                  <input
-                    id="passcode"
-                    name="school-access-passcode"
-                    type="password"
-                    ref={passcodeRef}
-                    className="w-full h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
-                    value={schoolPasscode}
-                    onChange={(e) => setSchoolPasscode(e.target.value)}
-                    onInput={(e) => setSchoolPasscode(e.currentTarget.value)}
-                    autoComplete="off"
-                    inputMode="numeric"
-                  />
+                  <div className="flex gap-2 items-center">
+                    <input
+                      id="passcode"
+                      name="school-access-passcode"
+                      type="password"
+                      ref={passcodeRef}
+                      className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-mono tracking-[0.35em] text-center bg-background border border-border text-foreground"
+                      value={schoolPasscode}
+                      onChange={(e) => setSchoolPasscode(e.target.value)}
+                      onInput={(e) => setSchoolPasscode(e.currentTarget.value)}
+                      autoComplete="off"
+                      inputMode="numeric"
+                    />
+                    <button
+                      type="button"
+                      title="Toggle onscreen numeric keypad"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setActiveField(activeField === 'passcode' ? null : 'passcode');
+                        passcodeRef.current?.focus();
+                      }}
+                      className={cn(
+                        "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
+                        activeField === 'passcode' && "bg-primary/10 border-primary text-primary"
+                      )}
+                    >
+                      <Keyboard className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               )
+            )}
+            {activeField === 'schoolId' && (
+              <div className="pt-2 pb-2 border-t border-border/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <AlphanumericKeyboard
+                  value={schoolId}
+                  onChange={(val) => setSchoolId(val.toLowerCase())}
+                />
+              </div>
+            )}
+            {activeField === 'passcode' && (
+              <div className="pt-2 pb-2 border-t border-border/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <NumericKeypad
+                  value={schoolPasscode}
+                  onChange={(val) => setSchoolPasscode(val)}
+                />
+              </div>
             )}
             <div className="pt-4 flex flex-col gap-3">
               {(isSubmitting || isGoogleSigningIn) && (isDeveloperOnly || isDeveloper) ? (

@@ -42,6 +42,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
             key={key}
             type="button"
             variant="outline"
+            onMouseDown={(e) => e.preventDefault()}
             className="h-12 text-xl font-black rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm"
             onClick={() => handleKeyPress(key)}
           >
@@ -51,6 +52,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
         <Button
           type="button"
           variant="outline"
+          onMouseDown={(e) => e.preventDefault()}
           className="h-12 text-xs font-bold uppercase tracking-wider rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm"
           onClick={handleClear}
           title="Clear all"
@@ -60,6 +62,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
         <Button
           type="button"
           variant="outline"
+          onMouseDown={(e) => e.preventDefault()}
           className="h-12 text-xl font-black rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm"
           onClick={() => handleKeyPress('0')}
         >
@@ -68,6 +71,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
         <Button
           type="button"
           variant="outline"
+          onMouseDown={(e) => e.preventDefault()}
           className="h-12 rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm"
           onClick={handleBackspace}
           title="Backspace"
