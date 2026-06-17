@@ -16,11 +16,11 @@ Each agent session must use **its own branch** before changing code:
 
 | Agent | Prefix |
 |-------|--------|
-| Cursor | `cursor/<task-slug>` |
+| Cursor | `cursor/curser` (one shared branch for all Cursor work) |
 | Codex | `codex/<task-slug>` |
 | Antigravity | `antigravity/<task-slug>` |
 
-Workflow: `.agent/workflows/agent-branch-workflow.md`. Rules: `.cursor/rules/agent-branches.mdc`. **Enforced by default:** Cursor hooks (`.cursor/hooks.json`) + git pre-commit after `npm install`. Named branch: `npm run agent:branch -- <slug>`. Base `main` for most work; base `dev` for Lovable/UI integration. Open PRs to merge; do not push agent work directly to `main` unless the user explicitly asks.
+Workflow: `.agent/workflows/agent-branch-workflow.md`. Rules: `.cursor/rules/agent-branches.mdc`. **Enforced by default:** Cursor hooks (`.cursor/hooks.json`) + git pre-commit after `npm install`. Cursor sessions auto-checkout **`cursor/curser`** (unified branch). Base `main` for most work; base `dev` for Lovable/UI integration. Open PRs to merge; do not push agent work directly to `main` unless the user explicitly asks.
 
 ### Secrets (add in [Cloud Agents dashboard](https://cursor.com/dashboard/cloud-agents) → Secrets)
 

@@ -44,21 +44,11 @@ export function isAgentBranch(branch) {
   return AGENT_BRANCH_PREFIXES.some((prefix) => branch.startsWith(prefix));
 }
 
-export function defaultCursorBranchName(sessionId, slug) {
-  if (slug && typeof slug === "string") {
-    const cleaned = slug
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 48);
-    if (cleaned) return `cursor/${cleaned}`;
-  }
-  const id = String(sessionId || "session")
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .slice(0, 8)
-    .toLowerCase();
-  return `cursor/session-${id || "local"}`;
+/** Single shared branch for all Cursor agent work in this repo. */
+export const CURSOR_UNIFIED_BRANCH = "cursor/curser";
+
+export function defaultCursorBranchName(_sessionId, _slug) {
+  return CURSOR_UNIFIED_BRANCH;
 }
 
 export function isEditTool(toolName) {

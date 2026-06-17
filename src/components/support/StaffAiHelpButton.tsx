@@ -30,7 +30,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 const WELCOME: ChatMessage = {
   role: 'assistant',
-  content: `Hi! I can help you use ${APP_NAME}: the Admin, Teacher, and student tools; printing coupons; the rewards shop; settings; and Admin → Notifications (email, SMS, and WhatsApp alerts). What would you like to know?`,
+  content: `Hi! I can help you use ${APP_NAME}: Admin and Teacher portals, student kiosk, coupons and prizes (including category-linked rewards), Classroom Management, Displays/Smart Screen, Houses, settings (language, display mode, notifications), and more. What would you like to know?`,
 };
 
 function isPublicRoute(pathname: string) {
