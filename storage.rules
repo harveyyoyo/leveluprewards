@@ -16,6 +16,10 @@ service firebase.storage {
       allow read: if true;
       allow write: if false;
     }
+    match /office-student-photos/{schoolId}/{studentId} {
+      allow read: if true;
+      allow write: if false;
+    }
     // Student custom emoji/sticker images — public read; writes via Cloud Functions.
     match /student-custom-emojis/{schoolId}/{studentId} {
       allow read: if true;
