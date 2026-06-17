@@ -94,6 +94,7 @@ export function StaffPortalNav({
     onTabChange(value);
   };
 
+  const addMoreDropdown =
     hideAddMore
       ? null
       : addMoreMenu ??
