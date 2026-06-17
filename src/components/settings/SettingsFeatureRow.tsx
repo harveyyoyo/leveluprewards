@@ -65,7 +65,7 @@ export function SettingsFeatureRow({
                 }
             }}
         >
-            <div className={`flex items-start gap-4 ${!canUse && 'opacity-60'} mr-6 min-w-0`}>
+            <div className={`flex items-start gap-4 ${!canUse ? 'opacity-60' : ''} mr-6 min-w-0`}>
                 <div
                     className={`p-2.5 rounded-xl transition-colors shrink-0 mt-0.5 ${isEnabled && canUse ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}
                 >
