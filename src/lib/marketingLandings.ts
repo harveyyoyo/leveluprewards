@@ -3,11 +3,11 @@
  * Keep in sync: add each approved route here so LayoutClientWrapper hides Header.
  */
 export const MARKETING_LANDING_PAGES: ReadonlyArray<{ href: string; label: string }> = [
-  { href: '/flyers', label: 'Flyers' },
+  { href: '/marketing/interactive.html', label: 'Flyers' },
 ];
 
 /** Hub for printable flyers. */
-export const MARKETING_FLYERS_HREF = '/flyers';
+export const MARKETING_FLYERS_HREF = '/marketing/interactive.html';
 
 /** @deprecated Use {@link MARKETING_FLYERS_HREF}. */
 export const MARKETING_PROMOTIONS_HREF = MARKETING_FLYERS_HREF;

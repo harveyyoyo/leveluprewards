@@ -342,7 +342,7 @@ export function StudentScanner({
             });
             return null;
         }
-    }, [toast, waitForFaceVideoElement]);
+    }, [toast, waitForFaceVideoElement, t]);
 
     // Face tab: open camera and continuously try to match (no sign-in button).
     useEffect(() => {
@@ -475,6 +475,7 @@ export function StudentScanner({
         playSound,
         onStudentFound,
         stopFaceCamera,
+        t,
     ]);
 
     const router = useRouter();
@@ -668,6 +669,7 @@ export function StudentScanner({
         settings.payLibrary,
         router,
         studentKioskSessionError,
+        t,
     ]);
 
     const cameraScanSettingOn = qrEnabled && isActive && scanTabSelected;

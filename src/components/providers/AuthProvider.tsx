@@ -707,7 +707,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => {
             window.clearTimeout(bootTimeout);
         };
-    }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession]);
+    }, [isMounted, isUserLoading, firestore, auth, returnToSchoolSession, functions]);
 
     /**
      * Mint HttpOnly Firebase session cookie whenever the app has an active (non-logged-out) session.
