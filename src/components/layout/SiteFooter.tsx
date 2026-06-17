@@ -22,7 +22,8 @@ export function SiteFooter({
       <div className={cn(staffPortalFooterInnerClassName(staffPortalWide), compact ? 'py-1' : 'py-1.5')}>
         <div className={cn('flex flex-col items-center text-center', compact ? 'gap-0' : 'gap-0.5')}>
           <p className="text-[7px] font-medium uppercase tracking-[0.12em] text-muted-foreground/45">
-            beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'} · {process.env.NEXT_PUBLIC_BUILD_TIME}
+            beta · {process.env.NEXT_PUBLIC_VERSION || 'beta-1.1.0'}
+            {process.env.NEXT_PUBLIC_BUILD_TIME ? <> · {process.env.NEXT_PUBLIC_BUILD_TIME}</> : null}
           </p>
           {!compact && (
             <>
