@@ -59,7 +59,7 @@ export function FaceMismatchBanner({ studentId, confidence, onResolved, classNam
     <div
       role="status"
       className={cn(
-        'pointer-events-auto fixed right-3 top-3 z-[70] flex max-w-[min(100vw-1.5rem,17rem)] items-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-50/92 px-2 py-1 shadow-sm backdrop-blur-sm dark:bg-amber-950/88',
+        'pointer-events-auto fixed right-3 top-3 z-[70] flex max-w-[min(100vw-1.5rem,17rem)] items-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-50/90 px-2 py-1 shadow-sm backdrop-blur-sm dark:bg-amber-950/90',
         className,
       )}
     >
