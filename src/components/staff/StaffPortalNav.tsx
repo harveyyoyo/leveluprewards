@@ -12,12 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { StaffPortalTabView } from '@/lib/staffPortal';
+import { staffPortalTabByValue, type StaffPortalTabView } from '@/lib/staffPortal';
 import { staffPortalTabTriggerClassName } from './staffPortalNavStyles';
 import { StaffPortalAddFeatureTabsMenu } from './StaffPortalAddFeatureTabsMenu';
 import { AdminMainTabsList } from '@/components/admin/AdminMainTabsList';
 import { useTranslation } from '@/components/providers/LocaleProvider';
-import { localizeStaffPortalTabs } from '@/lib/i18n/staffLabels';
+import { localizeStaffPortalTabs, translateStaffTabLabel } from '@/lib/i18n/staffLabels';
 import { resolveLabel } from '@/lib/i18n/resolveLabel';
 import { StaffPortalSidebarTabRow } from './StaffPortalSidebarTabRow';
 
@@ -66,6 +66,9 @@ export function StaffPortalNav({
         : t('staff.nav.teacherPortal');
   const localizedMainTabs = localizeStaffPortalTabs(mainTabs, t);
   const localizedAddMoreTabs = localizeStaffPortalTabs(addMoreTabs, t);
+  const activeTabIsListed =
+    localizedMainTabs.some((tab) => tab.value === activeTab) ||
+    localizedAddMoreTabs.some((tab) => tab.value === activeTab);
 
   if (mainTabs.length === 0) return null;
 
@@ -120,6 +123,15 @@ export function StaffPortalNav({
                   {tab.label}
                 </SelectItem>
               ))}
+              {activeTab && !activeTabIsListed ? (
+                <SelectItem value={activeTab}>
+                  {translateStaffTabLabel(
+                    activeTab,
+                    staffPortalTabByValue(activeTab)?.label ?? activeTab,
+                    t,
+                  )}
+                </SelectItem>
+              ) : null}
             </SelectGroup>
             {localizedAddMoreTabs.length > 0 ? (
               <>

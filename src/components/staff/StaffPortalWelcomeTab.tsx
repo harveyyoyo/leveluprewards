@@ -161,10 +161,10 @@ function StaffPortalWelcomeHero({
   greeting?: string;
 }) {
   const statTiles = [
-    { label: statLabels[0], value: stats.studentCount },
-    { label: statLabels[1], value: stats.classCount },
-    { label: statLabels[2], value: stats.staffCount },
-    { label: statLabels[3], value: stats.activePrizeCount },
+    { label: statLabels[0], value: Number(stats.studentCount ?? 0) || 0 },
+    { label: statLabels[1], value: Number(stats.classCount ?? 0) || 0 },
+    { label: statLabels[2], value: Number(stats.staffCount ?? 0) || 0 },
+    { label: statLabels[3], value: Number(stats.activePrizeCount ?? 0) || 0 },
   ];
 
   const greetingText = greeting ?? (staffName ? `Welcome back, ${staffName} 👋` : 'Welcome back 👋');
