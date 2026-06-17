@@ -114,6 +114,19 @@ function isGoogleAuthenticated(context: functions.https.CallableContext): boolea
   return Boolean(identities && (identities["google.com"] || identities.google));
 }
 
+async function isDeveloper(context: functions.https.CallableContext): Promise<boolean> {
+  if (!context.auth?.uid) return false;
+  const db = admin.firestore();
+  try {
+    const doc = await db.collection("appConfig").doc("developerAllowlist").get();
+    if (!doc.exists) return false;
+    const data = doc.data();
+    return Array.isArray(data?.uids) && data!.uids.includes(context.auth.uid);
+  } catch {
+    return false;
+  }
+}
+
 async function hasExistingSchoolPortalAccess(
   schoolId: string,
   uid: string,
@@ -144,7 +157,7 @@ async function hasExistingSchoolPortalAccess(
   // Allowlisted Google dev/owner accounts may enter any school without the access passcode
   // (same bypass used for admin passcode login).
   if (isAllowedGoogleAdminBypass(context)) return true;
-  return isDeveloper(context);
+  return await isDeveloper(context);
 }
 
 async function ensureAnonymousPortalSession(schoolId: string, uid: string): Promise<void> {
@@ -192,7 +205,7 @@ async function hasKioskMembershipOrStaff(
   const memberSnap = await db.collection("schools").doc(schoolId).collection("kioskMembers").doc(uid).get();
   if (memberSnap.exists) return true;
   if (await hasSchoolRole(schoolId, uid, roles)) return true;
-  return isDeveloper(context);
+  return await isDeveloper(context);
 }
 
 async function schoolEntryCodeIsRequired(
@@ -212,4 +225,4 @@ async function schoolAccessPasscodeIsRequired(
   if (!schoolSnap.exists) return false;
   return schoolAccessPasscodeFrom(schoolSnap.data() || {}).length > 0;
 }
-
+
