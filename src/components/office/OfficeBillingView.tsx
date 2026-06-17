@@ -35,7 +35,7 @@ import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { CreditCard } from 'lucide-react';
-import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeFamily, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -47,13 +47,14 @@ import {
   isInvoicePayable,
   resolveInvoiceStatusAfterPayment,
   sumPaymentAllocations,
+  type OfficePaymentAllocation,
 } from '@/lib/office/officeBillingPayments';
-import type { OfficePaymentAllocation } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 type OfficeBillingViewProps = {
   schoolId: string;
   students: OfficeStudent[];
+  families?: OfficeFamily[];
   studentLabelById: Map<string, string>;
   accounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
@@ -64,6 +65,7 @@ type OfficeBillingViewProps = {
 export function OfficeBillingView({
   schoolId,
   students,
+  families: _families = [],
   studentLabelById,
   accounts,
   invoices,

@@ -16,8 +16,9 @@ export type OfficePaymentRecord = {
 };
 
 export function invoicePaidCents(inv: OfficeInvoice): number {
-  if (typeof inv.paidCents === 'number' && inv.paidCents >= 0) {
-    return Math.min(inv.paidCents, inv.amountCents || 0);
+  const paid = inv.paidCents ?? inv.paidAmountCents;
+  if (typeof paid === 'number' && paid >= 0) {
+    return Math.min(paid, inv.amountCents || 0);
   }
   if (inv.status === 'paid') return inv.amountCents || 0;
   return 0;

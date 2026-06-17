@@ -12,7 +12,7 @@ import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
-import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
+import type { OfficeBillingAccount, OfficeClass, OfficeFamily, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   billingAccountForStudent,
   exportOfficeStudentsCsv,
@@ -36,6 +36,7 @@ type OfficeStudentsViewProps = {
   students: OfficeStudent[];
   classes: OfficeClass[];
   teachers: OfficeTeacher[];
+  families?: OfficeFamily[];
   classNameById: Map<string, string>;
   teacherNameById: Map<string, string>;
   gradeEntries: OfficeGradeEntry[];
@@ -49,6 +50,7 @@ export function OfficeStudentsView({
   students,
   classes,
   teachers,
+  families: _families = [],
   classNameById,
   teacherNameById,
   gradeEntries,
