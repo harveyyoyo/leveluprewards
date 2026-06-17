@@ -269,6 +269,11 @@ export function GoalsManager(props: {
                     {c.name}
                   </SelectItem>
                 ))}
+                {categoryId !== '__none__' &&
+                (categories?.length ?? 0) > 0 &&
+                !(categories || []).some((c) => c.id === categoryId) ? (
+                  <SelectItem value={categoryId}>Unknown category (deleted)</SelectItem>
+                ) : null}
               </SelectContent>
             </Select>
             <p className="text-[11px] text-muted-foreground">When set, only points earned in this category count.</p>
@@ -287,6 +292,9 @@ export function GoalsManager(props: {
                       {studentLabel(s)}
                     </SelectItem>
                   ))}
+                  {studentId && students.length > 0 && !students.some((s) => s.id === studentId) ? (
+                    <SelectItem value={studentId}>Unknown student (removed)</SelectItem>
+                  ) : null}
                 </SelectContent>
               </Select>
             </div>
@@ -305,6 +313,9 @@ export function GoalsManager(props: {
                       {c.name}
                     </SelectItem>
                   ))}
+                  {classId && classes.length > 0 && !classes.some((c) => c.id === classId) ? (
+                    <SelectItem value={classId}>Unknown class (deleted)</SelectItem>
+                  ) : null}
                 </SelectContent>
               </Select>
             </div>
@@ -321,9 +332,14 @@ export function GoalsManager(props: {
                   <SelectItem value="__none__">None</SelectItem>
                   {(prizes || []).map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.name} ({p.points} pts)
+                      {p.name} ({Number(p.points ?? 0)} pts)
                     </SelectItem>
                   ))}
+                  {prizeId !== '__none__' &&
+                  (prizes?.length ?? 0) > 0 &&
+                  !(prizes || []).some((p) => p.id === prizeId) ? (
+                    <SelectItem value={prizeId}>Unknown reward (deleted)</SelectItem>
+                  ) : null}
                 </SelectContent>
               </Select>
             </div>
@@ -367,7 +383,8 @@ export function GoalsManager(props: {
               <ul className="space-y-3">
                 {filteredGoals.map((g) => {
                   const p = progressFor(g);
-                  const pct = g.targetPoints > 0 ? Math.min(100, Math.round((p / g.targetPoints) * 100)) : 0;
+                  const target = Number(g.targetPoints ?? 0);
+                  const pct = target > 0 ? Math.min(100, Math.round((p / target) * 100)) : 0;
                   return (
                     <li key={g.id} className="rounded-2xl border bg-muted/15 p-4 space-y-2">
                       <div className="flex justify-between gap-2 items-start">
@@ -384,7 +401,7 @@ export function GoalsManager(props: {
                       </div>
                       <div className="flex justify-between text-xs font-bold">
                         <span>
-                          {p.toLocaleString()} / {g.targetPoints.toLocaleString()} pts
+                          {p.toLocaleString()} / {target.toLocaleString()} pts
                         </span>
                         <span>{pct}%</span>
                       </div>

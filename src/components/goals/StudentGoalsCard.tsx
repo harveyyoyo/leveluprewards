@@ -129,7 +129,8 @@ export function StudentGoalsCard(props: {
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
         {rows.map(({ goal, progress }) => {
-          const pct = goal.targetPoints > 0 ? Math.min(100, Math.round((progress / goal.targetPoints) * 100)) : 0;
+          const target = Number(goal.targetPoints ?? 0);
+          const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
           const label =
             goal.type === 'class'
               ? 'Class goal'
@@ -150,7 +151,7 @@ export function StudentGoalsCard(props: {
                   className="text-xs font-black whitespace-nowrap shrink-0"
                   style={themeForeground ? { color: themeForeground } : undefined}
                 >
-                  {progress.toLocaleString()} / {goal.targetPoints.toLocaleString()}
+                  {progress.toLocaleString()} / {target.toLocaleString()}
                 </span>
               </div>
               <Progress value={pct} className="h-2" />
