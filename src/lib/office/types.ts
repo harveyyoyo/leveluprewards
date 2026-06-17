@@ -97,12 +97,24 @@ export type OfficeBillingAccountInput = Omit<OfficeBillingAccount, 'id' | 'updat
 
 export type OfficeInvoiceInput = Omit<OfficeInvoice, 'id' | 'createdAt' | 'paidAt'>;
 
+export type OfficeFeatureFlags = {
+  familyProfiles?: boolean;
+  studentPhotos?: boolean;
+  busInfo?: boolean;
+  medicalNotes?: boolean;
+  aiHelp?: boolean;
+  auditLog?: boolean;
+};
+
 /** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */
 export type OfficeSettings = {
   defaultActiveTerm?: string | null;
   statementSchoolName?: string | null;
   /** School-defined term labels (e.g. Fall 2026) — appear in working-term dropdowns before any grades exist. */
   configuredTerms?: string[] | null;
+  /** When true, UI says "Marks" instead of "Grades". */
+  useMarksTerminology?: boolean;
+  features?: OfficeFeatureFlags | null;
   updatedAt: number;
   updatedBy?: string | null;
 };
