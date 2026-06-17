@@ -313,7 +313,7 @@ export function LibraryStudentSelfCheckoutPortal({
     <div
       className={cn(
         'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden',
-        'bg-gradient-to-b from-primary/8 via-background to-background',
+        'bg-gradient-to-b from-primary/10 via-background to-background',
       )}
     >
       <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 py-2.5 shadow-sm supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">

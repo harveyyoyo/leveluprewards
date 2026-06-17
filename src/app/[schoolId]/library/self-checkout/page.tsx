@@ -36,7 +36,8 @@ export default function LibrarySelfCheckoutPage() {
   const getStudentName = useMemo(() => {
     const map = new Map<string, string>();
     for (const s of students ?? []) {
-      map.set(s.id, `${s.firstName} ${s.lastName}`.trim());
+      const name = `${s.firstName ?? ''} ${s.lastName ?? ''}`.trim();
+      if (name) map.set(s.id, name);
     }
     return (id?: string) => (id ? map.get(id) ?? 'Student' : 'Student');
   }, [students]);
