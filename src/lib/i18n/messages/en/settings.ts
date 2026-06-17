@@ -8,7 +8,7 @@ const settings = {
   },
   hub: {
     interfaceTitle: 'Interface & display',
-    interfaceDescription: 'Colors, dark mode, motion, portrait and wide layout, and Auto / Web / App display mode',
+    interfaceDescription: 'Language, colors, dark mode, motion, sound, layout, and display modes',
     schoolTitle: 'School settings',
     schoolDescription: 'Sessions, kiosk behavior, printing, and optional features',
     pillarsTitle: 'Product Pillars',

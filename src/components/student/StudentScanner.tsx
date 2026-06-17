@@ -45,6 +45,7 @@ import {
     SAMPLE_KIOSK_STUDENT_DISPLAY_NAME,
     SAMPLE_KIOSK_STUDENT_ID,
 } from '@/lib/sampleKioskDemo';
+import { useTranslation } from '@/components/providers/LocaleProvider';
 
 export type StudentFoundMeta = { source: 'face'; confidence?: number };
 
@@ -150,6 +151,7 @@ export function StudentScanner({
     const { toast } = useToast();
     const playSound = useArcadeSound();
     const { settings } = useSettings();
+    const { t } = useTranslation();
     const isGraphic = settings.graphicMode === 'graphics';
     const showSampleKioskStudent = settings.enableSampleKioskStudent === true;
     const { captureFaceDescriptor, ensureFaceApiReady } = useFaceDescriptor();
@@ -333,7 +335,7 @@ export function StudentScanner({
                 /denied|permission/i.test(String(e?.message || ''));
             toast({
                 variant: 'destructive',
-                title: 'Camera Error',
+                title: t('student.kiosk.scanner.cameraError'),
                 description: denied
                     ? 'Allow camera access for this site, then try again.'
                     : e?.message || 'Camera access is required for face login.',
@@ -435,7 +437,7 @@ export function StudentScanner({
                         playSound('error');
                         toast({
                             variant: 'destructive',
-                            title: 'Face sign-in failed',
+                            title: t('student.kiosk.scanner.faceSignInFailed'),
                             description: getReadableErrorMessage(e, 'Could not sign in by face.'),
                         });
                         await sleep(1200);
@@ -504,7 +506,7 @@ export function StudentScanner({
                 playSound('error');
                 toast({
                     variant: 'destructive',
-                    title: 'Please Wait',
+                    title: t('student.kiosk.scanner.pleaseWait'),
                     description: `You just signed in. Try again in ${remaining} second${remaining === 1 ? '' : 's'}.`,
                 });
                 return false;
@@ -542,7 +544,7 @@ export function StudentScanner({
                 playSound('error');
                 toast({
                     variant: 'destructive',
-                    title: 'Kiosk Not Ready',
+                    title: t('student.kiosk.scanner.kioskNotReady'),
                     description: studentKioskSessionError,
                 });
                 setNfcId('');
@@ -570,7 +572,7 @@ export function StudentScanner({
             playSound('error');
             toast({
                 variant: 'destructive',
-                title: 'Offline',
+                title: t('student.kiosk.scanner.offline'),
                 description: STUDENT_OFFLINE_SIGNIN_MESSAGE,
             });
             setNfcId('');
@@ -601,8 +603,8 @@ export function StudentScanner({
                     }
                     toast({
                         variant: 'destructive',
-                        title: 'Student Not Found',
-                        description: 'The provided ID does not match any student. Use your student card or ID number to sign in.',
+                        title: t('student.kiosk.scanner.studentNotFound'),
+                        description: t('student.kiosk.studentNotFoundDescription'),
                     });
                 })();
             }
@@ -674,7 +676,7 @@ export function StudentScanner({
         (code) => handleLookup(code),
         (err) => {
             setHasCameraPermission(false);
-            toast({ variant: 'destructive', title: 'Camera Error', description: err });
+            toast({ variant: 'destructive', title: t('student.kiosk.scanner.cameraError'), description: err });
         },
         {
             cameraEnabled: cameraScanSettingOn,
@@ -784,7 +786,7 @@ export function StudentScanner({
                     <TabsList className={cn("grid w-full p-1 rounded-xl mb-4 [@media(max-height:720px)]:mb-2", tabsColsClass, isGraphic ? 'bg-muted/50' : 'bg-muted/50')}>
                         {cardEnabled && (
                             <TabsTrigger value="nfc" onClick={() => nfcInputRef.current?.focus()} className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
-                                <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Card
+                                <Nfc className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> {t('student.kiosk.scanner.tabCard')}
                             </TabsTrigger>
                         )}
                         {typeEnabled && (
@@ -793,17 +795,17 @@ export function StudentScanner({
                                 data-intro-tour="kiosk-login-type-tab"
                                 className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all"
                             >
-                                <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Type
+                                <Type className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> {t('student.kiosk.scanner.tabType')}
                             </TabsTrigger>
                         )}
                         {qrEnabled && (
                         <TabsTrigger value="camera" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
-                            <Camera className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Scan
+                            <Camera className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> {t('student.kiosk.scanner.tabScan')}
                         </TabsTrigger>
                         )}
                         {faceEnabled && (
                             <TabsTrigger value="face" className="flex-1 sm:flex-initial rounded-xl font-black text-[9px] sm:text-[10px] px-1 sm:px-3 py-1.5 uppercase tracking-wider sm:tracking-widest hover:bg-card hover:text-card-foreground hover:shadow-md data-[state=active]:bg-card data-[state=active]:shadow-md transition-all">
-                                <ScanFace className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> Face
+                                <ScanFace className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" /> {t('student.kiosk.scanner.tabFace')}
                             </TabsTrigger>
                         )}
                     </TabsList>
@@ -819,17 +821,17 @@ export function StudentScanner({
                             <div className="space-y-1">
                                 <p className={cn("font-black text-xl sm:text-2xl [@media(max-height:720px)]:text-lg", isGraphic ? 'text-foreground' : 'text-foreground')}>
                                     {isStudentKioskUiContext(loginState, pathname, schoolId) && studentKioskSessionError
-                                        ? 'Check-in Unavailable'
+                                        ? t('student.kiosk.scanner.checkInUnavailable')
                                         : isStudentKioskUiContext(loginState, pathname, schoolId) && !studentKioskSessionEstablished
-                                          ? 'Connecting…'
-                                          : 'System Ready'}
+                                          ? t('student.kiosk.scanner.connecting')
+                                          : t('student.kiosk.scanner.systemReady')}
                                 </p>
                                 <p className="text-muted-foreground text-sm sm:text-base font-semibold [@media(max-height:720px)]:text-xs">
                                     {isStudentKioskUiContext(loginState, pathname, schoolId) && studentKioskSessionError
                                         ? studentKioskSessionError
                                         : isStudentKioskUiContext(loginState, pathname, schoolId) && !studentKioskSessionEstablished
-                                          ? 'This device is registering with the school. Please wait.'
-                                          : 'Please scan your card'}
+                                          ? t('student.kiosk.scanner.registering')
+                                          : t('student.kiosk.scanner.pleaseScanCard')}
                                 </p>
                             </div>
                             <Input
@@ -851,8 +853,8 @@ export function StudentScanner({
                                     <User className="w-4 h-4" />
                                 </div>
                                 <div className="flex-grow text-left">
-                                    <Label className={cn("text-[10px] font-bold uppercase tracking-widest opacity-60", isGraphic ? 'text-foreground' : 'text-foreground')}>Manual Entry</Label>
-                                    <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>Enter your Student ID</p>
+                                    <Label className={cn("text-[10px] font-bold uppercase tracking-widest opacity-60", isGraphic ? 'text-foreground' : 'text-foreground')}>{t('student.kiosk.scanner.manualEntry')}</Label>
+                                    <p className={cn("text-xs font-medium", isGraphic ? 'text-muted-foreground' : 'text-muted-foreground')}>{t('student.kiosk.scanner.enterStudentId')}</p>
                                 </div>
                             </div>
                             <div className="py-4 [@media(max-height:720px)]:py-2">
@@ -865,13 +867,13 @@ export function StudentScanner({
                                     autoFocus
                                 />
                             </div>
-                            <p className="text-xs text-muted-foreground">Use the ID on your student card or ask a teacher.</p>
+                            <p className="text-xs text-muted-foreground">{t('student.kiosk.scanner.idHint')}</p>
                             <Button
                                 data-intro-tour="kiosk-login-submit"
                                 onClick={() => handleLookup(nfcId)}
                                 className={cn("w-full h-12 rounded-xl font-black text-base uppercase tracking-widest shadow-lg transition-all active:scale-95 text-primary-foreground", isGraphic ? 'bg-primary hover:bg-primary/90' : 'bg-primary hover:bg-primary/90')}
                             >
-                                Identify Student
+                                {t('student.kiosk.scanner.identifyStudent')}
                             </Button>
                             {showSampleKioskStudent ? (
                                 <Button
@@ -922,7 +924,7 @@ export function StudentScanner({
                                 )}
 
                                 <p className="text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                    Allow camera access. We sign you in automatically when we recognize your face.
+                                    {t('student.kiosk.scanner.faceCameraHint')}
                                 </p>
                             </div>
                         </TabsContent>
