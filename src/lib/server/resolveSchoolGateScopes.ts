@@ -9,8 +9,7 @@ const APP_CONFIG_GLOBAL = 'global';
  */
 export async function resolveSchoolGateScopes(uid: string, schoolId: string): Promise<string[]> {
   await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  const db = admin.firestore();
+  const db = getFirestore();
   const sid = schoolId.trim().toLowerCase();
   const scopes = new Set<string>();
 

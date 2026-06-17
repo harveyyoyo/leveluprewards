@@ -35,54 +35,87 @@ export const BULLETIN_THEME_IDS = [
 
 export type BulletinThemeId = (typeof BULLETIN_THEME_IDS)[number];
 
-export const PRESET_BULLETIN_THEMES: { id: BulletinThemeId; name: string; className: string }[] = [
+export type BulletinThemePreset = {
+  id: BulletinThemeId;
+  name: string;
+  pageClassName: string;
+  cardClassName: string;
+  accentBorderClassName: string;
+  itemClassName: string;
+};
+
+export const PRESET_BULLETIN_THEMES: BulletinThemePreset[] = [
   {
     id: 'default',
     name: 'Classic Neutral',
-    className:
-      'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100',
+    pageClassName: 'bg-slate-100 dark:bg-slate-950',
+    cardClassName: 'bg-card/95 border-border text-foreground',
+    accentBorderClassName: 'border-t-indigo-500',
+    itemClassName:
+      'bg-white/70 dark:bg-black/25 border-white/30 dark:border-white/10',
   },
   {
     id: 'neon_gold',
     name: 'Neon Gold',
-    className:
-      'bg-gradient-to-br from-amber-500/10 via-amber-600/10 to-transparent border-amber-500/40 text-amber-950 dark:text-amber-50',
+    pageClassName: 'bg-gradient-to-br from-amber-100 via-orange-50 to-yellow-100 dark:from-amber-950 dark:via-orange-950 dark:to-yellow-950',
+    cardClassName:
+      'bg-gradient-to-br from-amber-200/80 via-amber-100/70 to-orange-100/60 border-amber-400/70 text-amber-950 dark:from-amber-900/90 dark:via-amber-950/80 dark:to-orange-950/70 dark:border-amber-500/50 dark:text-amber-50',
+    accentBorderClassName: 'border-t-amber-500',
+    itemClassName: 'bg-amber-50/80 dark:bg-amber-950/50 border-amber-300/50 dark:border-amber-700/40',
   },
   {
     id: 'hyper_gradient',
     name: 'Hyper Gradient',
-    className:
-      'bg-gradient-to-tr from-indigo-500/15 via-purple-500/15 to-pink-500/15 border-purple-500/40 text-indigo-950 dark:text-indigo-50',
+    pageClassName: 'bg-gradient-to-tr from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-950 dark:via-purple-950 dark:to-pink-950',
+    cardClassName:
+      'bg-gradient-to-tr from-indigo-200/75 via-purple-200/70 to-pink-200/65 border-purple-400/70 text-indigo-950 dark:from-indigo-900/85 dark:via-purple-900/80 dark:to-pink-900/75 dark:border-purple-500/50 dark:text-indigo-50',
+    accentBorderClassName: 'border-t-purple-500',
+    itemClassName: 'bg-purple-50/80 dark:bg-purple-950/50 border-purple-300/50 dark:border-purple-700/40',
   },
   {
     id: 'electric',
     name: 'Electric Azure',
-    className:
-      'bg-gradient-to-br from-cyan-500/10 via-blue-500/10 to-transparent border-cyan-400/40 text-cyan-950 dark:text-cyan-50',
+    pageClassName: 'bg-gradient-to-br from-cyan-100 via-sky-50 to-blue-100 dark:from-cyan-950 dark:via-sky-950 dark:to-blue-950',
+    cardClassName:
+      'bg-gradient-to-br from-cyan-200/75 via-sky-100/70 to-blue-100/65 border-cyan-400/70 text-cyan-950 dark:from-cyan-900/85 dark:via-sky-900/80 dark:to-blue-900/75 dark:border-cyan-500/50 dark:text-cyan-50',
+    accentBorderClassName: 'border-t-cyan-500',
+    itemClassName: 'bg-cyan-50/80 dark:bg-cyan-950/50 border-cyan-300/50 dark:border-cyan-700/40',
   },
   {
     id: 'glassmorphic',
     name: 'Glassmorphic',
-    className:
-      'bg-white/40 dark:bg-slate-950/40 backdrop-blur-md border-white/20 dark:border-white/10 text-slate-800 dark:text-slate-200',
+    pageClassName: 'bg-gradient-to-br from-slate-200 via-white to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900',
+    cardClassName:
+      'bg-white/55 dark:bg-slate-950/55 backdrop-blur-xl border-white/40 dark:border-white/15 text-slate-900 dark:text-slate-100',
+    accentBorderClassName: 'border-t-slate-400 dark:border-t-slate-500',
+    itemClassName: 'bg-white/50 dark:bg-white/10 border-white/40 dark:border-white/15 backdrop-blur-sm',
   },
   {
     id: 'forest',
     name: 'Forest Grove',
-    className:
-      'bg-gradient-to-br from-emerald-600/12 via-green-700/10 to-transparent border-emerald-500/35 text-emerald-950 dark:text-emerald-50',
+    pageClassName: 'bg-gradient-to-br from-emerald-100 via-green-50 to-teal-100 dark:from-emerald-950 dark:via-green-950 dark:to-teal-950',
+    cardClassName:
+      'bg-gradient-to-br from-emerald-200/75 via-green-100/70 to-teal-100/65 border-emerald-400/70 text-emerald-950 dark:from-emerald-900/85 dark:via-green-900/80 dark:to-teal-900/75 dark:border-emerald-500/50 dark:text-emerald-50',
+    accentBorderClassName: 'border-t-emerald-500',
+    itemClassName: 'bg-emerald-50/80 dark:bg-emerald-950/50 border-emerald-300/50 dark:border-emerald-700/40',
   },
   {
     id: 'sunset',
     name: 'Sunset Coral',
-    className:
-      'bg-gradient-to-br from-rose-500/12 via-orange-500/10 to-amber-400/10 border-rose-400/40 text-rose-950 dark:text-rose-50',
+    pageClassName: 'bg-gradient-to-br from-rose-100 via-orange-50 to-amber-100 dark:from-rose-950 dark:via-orange-950 dark:to-amber-950',
+    cardClassName:
+      'bg-gradient-to-br from-rose-200/75 via-orange-100/70 to-amber-100/65 border-rose-400/70 text-rose-950 dark:from-rose-900/85 dark:via-orange-900/80 dark:to-amber-900/75 dark:border-rose-500/50 dark:text-rose-50',
+    accentBorderClassName: 'border-t-rose-500',
+    itemClassName: 'bg-rose-50/80 dark:bg-rose-950/50 border-rose-300/50 dark:border-rose-700/40',
   },
   {
     id: 'midnight',
     name: 'Midnight Arcade',
-    className:
-      'bg-gradient-to-b from-slate-900/90 via-violet-950/80 to-slate-950 border-violet-500/30 text-violet-50 dark:text-violet-100',
+    pageClassName: 'bg-gradient-to-b from-slate-900 via-violet-950 to-slate-950',
+    cardClassName:
+      'bg-gradient-to-b from-slate-800/95 via-violet-950/90 to-slate-950/95 border-violet-500/45 text-violet-50',
+    accentBorderClassName: 'border-t-violet-500',
+    itemClassName: 'bg-violet-950/60 border-violet-700/40 text-violet-50',
   },
 ];
 
@@ -200,19 +233,35 @@ export const PRESET_BULLETIN_INCENTIVES: {
   },
 ];
 
-const PRESET_CLASS_BY_ID = Object.fromEntries(PRESET_BULLETIN_THEMES.map((t) => [t.id, t.className])) as Record<
-  string,
-  string
+const PRESET_BY_ID = Object.fromEntries(PRESET_BULLETIN_THEMES.map((t) => [t.id, t])) as Record<
+  BulletinThemeId,
+  BulletinThemePreset
 >;
+
+export function getBulletinThemePreset(themeId: string | undefined): BulletinThemePreset {
+  const id = (themeId || 'default') as BulletinThemeId;
+  return PRESET_BY_ID[id] ?? PRESET_BY_ID.default;
+}
 
 /** Outer card classes for the bulletin board shell (Board page and admin preview). */
 export function getBulletinBoardCardClassName(themeId: string | undefined): string {
-  const id = themeId || 'default';
-  const preset = PRESET_CLASS_BY_ID[id];
-  if (preset && id !== 'default') {
-    return cn('overflow-hidden border shadow-xl relative transition-all duration-300', preset);
-  }
-  return cn('overflow-hidden border shadow-xl relative transition-all duration-300 bg-card border-border');
+  const preset = getBulletinThemePreset(themeId);
+  return cn(
+    'overflow-hidden border shadow-xl relative transition-all duration-300 border-t-8 backdrop-blur-md',
+    preset.accentBorderClassName,
+    preset.cardClassName,
+  );
+}
+
+/** Page background behind the bulletin board card. */
+export function getBulletinBoardPageClassName(themeId: string | undefined): string {
+  return getBulletinThemePreset(themeId).pageClassName;
+}
+
+/** Inner incentive / celebration row styling. */
+export function getBulletinBoardItemClassName(themeId: string | undefined): string {
+  const preset = getBulletinThemePreset(themeId);
+  return cn('rounded-2xl border flex items-center justify-between gap-3 shadow-sm', preset.itemClassName);
 }
 
 /** Used when `bulletinSubtitle` is empty in school settings. */
