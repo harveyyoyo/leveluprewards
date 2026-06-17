@@ -44,7 +44,7 @@ import {
   validSmartScreenLayout,
 } from '@/lib/smartScreen/smartScreenSettings';
 import type { BulletinIncentive, SmartScreenLocationInfo } from '@/hooks/useSmartScreenDisplayData';
-import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 import type { Class, House, Prize, Student } from '@/lib/types';
 import { formatTodayHebrewDate, getUpcomingJewishHolidays } from '@/lib/hebrewCalendar';
 
@@ -182,7 +182,10 @@ export function SmartScreenDisplay({
       .slice(0, 4);
   }, [prizes]);
 
-  const activeBulletin = useMemo(() => activeIncentivesList(bulletinItems).slice(0, 4), [bulletinItems]);
+  const activeBulletin = useMemo(
+    () => incentivesForSurface(bulletinItems, 'smartScreen').slice(0, 4),
+    [bulletinItems],
+  );
 
   const birthdayStudents = useMemo(() => {
     return (students || []).filter((student) => birthdayMatchesToday(student.birthday, now)).slice(0, 3);

@@ -20,7 +20,7 @@ const header = {
     rewards: 'Rewards',
     classroom: 'Classroom',
     attendance: 'Attendance',
-    homework: 'Homework',
+    homework: 'Home',
     library: 'Library',
   },
   layout: {

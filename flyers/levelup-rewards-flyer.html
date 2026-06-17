@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>LevelUp Rewards — PBIS Flyer</title>
+    <title>LevelUp Rewards — General Event Flyer</title>
     <style>
       @page {
         size: letter;
@@ -24,6 +24,9 @@
         --heading-color: var(--accent2);
         --featured-border: var(--accent2);
         --featured-bg: rgba(255, 255, 255, 0.08);
+        --text-scale: 1;
+        --spacing-scale: 1;
+        --print-safe-bottom: 14px;
       }
 
       * {
@@ -260,6 +263,7 @@
           border: none !important;
           box-shadow: none !important;
           border-radius: 0 !important;
+          transform: none !important;
           page-break-after: always;
         }
       }
@@ -275,30 +279,38 @@
         padding: 24px;
       }
 
+      .page-content {
+        display: flex;
+        flex-direction: column;
+        height: calc(100% - var(--print-safe-bottom));
+        min-height: calc(100% - var(--print-safe-bottom));
+        width: 100%;
+      }
+
       .topbar {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        gap: 16px;
-        padding-bottom: 14px;
+        gap: calc(16px * var(--spacing-scale));
+        padding-bottom: calc(14px * var(--spacing-scale));
         border-bottom: 1px solid var(--hair);
       }
 
       .brand {
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: calc(6px * var(--spacing-scale));
       }
 
       .badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
+        gap: calc(8px * var(--spacing-scale));
+        padding: calc(6px * var(--spacing-scale)) calc(10px * var(--spacing-scale));
         border-radius: 999px;
         background: var(--panel);
         border: 1px solid var(--hair);
-        font-size: 11px;
+        font-size: calc(11px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--text);
@@ -315,7 +327,7 @@
 
       h1 {
         margin: 0;
-        font-size: 34px;
+        font-size: calc(34px * var(--text-scale));
         line-height: 1.05;
         letter-spacing: -0.02em;
         background: linear-gradient(135deg, var(--strong) 60%, var(--text));
@@ -325,7 +337,7 @@
 
       .subtitle {
         margin: 0;
-        font-size: 14px;
+        font-size: calc(14px * var(--text-scale));
         line-height: 1.4;
         color: var(--muted);
         max-width: 48ch;
@@ -333,7 +345,7 @@
 
       .right-meta {
         text-align: right;
-        font-size: 11.5px;
+        font-size: calc(11.5px * var(--text-scale));
         line-height: 1.5;
         color: var(--text);
         white-space: nowrap;
@@ -342,15 +354,38 @@
       .grid {
         display: grid;
         grid-template-columns: 1.2fr 0.95fr;
-        gap: 16px;
-        margin-top: 16px;
+        gap: calc(16px * var(--spacing-scale));
+        margin-top: calc(16px * var(--spacing-scale));
+      }
+
+      .page.sparse-layout .grid {
+        flex: 1;
+        align-items: stretch;
+      }
+
+      .page.sparse-layout .grid > div {
+        height: 100%;
+      }
+
+      .page.solo-layout .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page.solo-layout #p1-col-2 {
+        display: none !important;
+      }
+
+      .page.solo-layout .card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .card {
         background: var(--panel);
         border: 1px solid var(--hair);
         border-radius: 16px;
-        padding: 16px;
+        padding: calc(16px * var(--spacing-scale));
         backdrop-filter: blur(10px);
         transition: border-color 0.2s ease, background-color 0.2s ease;
       }
@@ -369,8 +404,8 @@
       }
 
       h2 {
-        margin: 0 0 10px 0;
-        font-size: 13.5px;
+        margin: 0 0 calc(10px * var(--spacing-scale)) 0;
+        font-size: calc(13.5px * var(--text-scale));
         letter-spacing: 0.08em;
         text-transform: uppercase;
         color: var(--heading-color);
@@ -384,10 +419,10 @@
       }
 
       li {
-        margin: 8px 0;
+        margin: calc(8px * var(--spacing-scale)) 0;
         color: var(--text);
         line-height: 1.35;
-        font-size: 13px;
+        font-size: calc(13px * var(--text-scale));
         position: relative;
         padding-left: 20px;
       }
@@ -398,7 +433,7 @@
         left: 0;
         top: 0;
         color: var(--heading-color);
-        font-size: 11px;
+        font-size: calc(11px * var(--text-scale));
         line-height: 18px;
         text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
       }
@@ -409,7 +444,7 @@
 
       .callout {
         border-left: 3px solid var(--accent);
-        padding: 10px 12px 10px 14px;
+        padding: calc(10px * var(--spacing-scale)) calc(12px * var(--spacing-scale)) calc(10px * var(--spacing-scale)) calc(14px * var(--spacing-scale));
         background: var(--panel);
         border-radius: 12px;
       }
@@ -417,19 +452,19 @@
       .callout p {
         margin: 0;
         color: var(--text);
-        font-size: 13px;
+        font-size: calc(13px * var(--text-scale));
         line-height: 1.4;
       }
 
       .kpis {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-top: 12px;
+        gap: calc(10px * var(--spacing-scale));
+        margin-top: calc(12px * var(--spacing-scale));
       }
 
       .kpi {
-        padding: 10px;
+        padding: calc(10px * var(--spacing-scale));
         border-radius: 12px;
         border: 1px solid var(--hair);
         background: var(--panel);
@@ -445,7 +480,7 @@
       }
 
       .kpi .label {
-        font-size: 9.5px;
+        font-size: calc(9.5px * var(--text-scale));
         letter-spacing: 0.06em;
         text-transform: uppercase;
         color: var(--muted);
@@ -453,25 +488,22 @@
 
       .kpi .value {
         margin-top: 4px;
-        font-size: 12px;
+        font-size: calc(12px * var(--text-scale));
         line-height: 1.25;
         color: var(--strong);
         font-weight: 600;
       }
 
       .footer {
-        position: absolute;
-        left: 24px;
-        right: 24px;
-        bottom: 18px;
+        margin-top: auto;
         display: flex;
         justify-content: space-between;
         align-items: flex-end;
         gap: 16px;
-        padding-top: 12px;
+        padding-top: calc(12px * var(--spacing-scale));
         border-top: 1px solid var(--hair);
         color: var(--muted);
-        font-size: 11px;
+        font-size: calc(11px * var(--text-scale));
         line-height: 1.4;
       }
 
@@ -482,11 +514,11 @@
       .pill {
         display: inline-flex;
         align-items: center;
-        padding: 5px 10px;
+        padding: calc(5px * var(--spacing-scale)) calc(10px * var(--spacing-scale));
         border-radius: 999px;
         border: 1px solid var(--hair);
         background: var(--panel);
-        font-size: 10px;
+        font-size: calc(10px * var(--text-scale));
         color: var(--text);
         white-space: nowrap;
       }
@@ -496,19 +528,86 @@
         background: rgba(34, 197, 94, 0.12);
       }
 
+      .screenshot-card {
+        background: #f8fafc !important;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+      }
+
+      .screenshot-card img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+        object-position: center center !important;
+        background: #f8fafc !important;
+      }
+
+      #card-img-portal.screenshot-card {
+        background: #f8fafc !important;
+      }
+
+      #card-img-portal.screenshot-card > div {
+        color: #475569 !important;
+        border-bottom-color: rgba(15, 23, 42, 0.12) !important;
+      }
+
+      #card-img-portal.screenshot-card img {
+        border-color: rgba(15, 23, 42, 0.08) !important;
+      }
+
       .muted {
         color: var(--muted);
       }
     </style>
-  </head>
+    <style id="interactive-list-link-style">
+      .interactive-list-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 10000;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 6, 15, 0.86);
+        color: #eaf0ff;
+        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(14px);
+      }
+
+      .interactive-list-link:hover {
+        border-color: rgba(34, 211, 238, 0.5);
+        color: #ffffff;
+      }
+
+      html.embed .interactive-list-link {
+        display: none !important;
+      }
+
+      @media print {
+        .interactive-list-link {
+          display: none !important;
+        }
+      }
+    </style>
+    <script>
+      try {
+        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+      } catch (_) {}
+    </script>  </head>
   <body>
+    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
     <!-- CONTROL SIDEBAR (Screen Only) -->
     <div class="control-sidebar no-print" role="complementary">
       <div class="sidebar-header">
         <span class="sidebar-logo">⚡</span>
         <div class="sidebar-title-text">
           <h2>LevelUp Flyer Editor</h2>
-          <p class="sidebar-subtitle-text">Customize General PBIS Flyer</p>
+          <p class="sidebar-subtitle-text">Customize General Event Flyer</p>
         </div>
       </div>
 
@@ -559,21 +658,15 @@
       </div>
 
       <div class="sidebar-section">
-        <label class="sidebar-label">Pages to Print</label>
-        <div class="sidebar-checkbox-group">
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="show-page-2" onchange="togglePage2()" />
-            Include Page 2 (Back)
-          </label>
-        </div>
-      </div>
-
-      <div class="sidebar-section">
         <label class="sidebar-label">Toggle Sections</label>
         <div class="sidebar-checkbox-group">
           <label class="sidebar-checkbox-label">
             <input type="checkbox" id="toggle-what-it-does" checked onchange="toggleCard('card-what-it-does', this.checked)" />
             What It Does
+          </label>
+          <label class="sidebar-checkbox-label" style="padding-left: 18px; font-size: 11px; opacity: 0.9;">
+            <input type="checkbox" id="toggle-img-kiosk" checked onchange="toggleCard('card-img-kiosk', this.checked)" />
+            📸 Use Kiosk Screenshot
           </label>
           <label class="sidebar-checkbox-label">
             <input type="checkbox" id="toggle-funding" checked onchange="toggleCard('section-funding', this.checked)" />
@@ -583,41 +676,29 @@
             <input type="checkbox" id="toggle-setup" checked onchange="toggleCard('section-setup', this.checked)" />
             Simple Setup
           </label>
+          <label class="sidebar-checkbox-label" style="padding-left: 18px; font-size: 11px; opacity: 0.9;">
+            <input type="checkbox" id="toggle-img-id" onchange="toggleCard('card-img-id', this.checked)" />
+            📸 Use ID Card Screenshot
+          </label>
           <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-telemetry" checked onchange="toggleCard('card-telemetry', this.checked)" />
+            <input type="checkbox" id="toggle-telemetry" onchange="toggleCard('card-telemetry', this.checked)" />
             Building Telemetry
           </label>
           <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-teachers" checked onchange="toggleCard('section-teachers', this.checked)" />
-            For Teachers Section
+            <input type="checkbox" id="toggle-teachers-students" onchange="toggleCard('card-teachers-students', this.checked)" />
+            Teachers & Students
           </label>
           <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-students" checked onchange="toggleCard('section-students', this.checked)" />
-            For Students Section
+            <input type="checkbox" id="toggle-deans" onchange="toggleCard('card-deans-support', this.checked)" />
+            Deans / PBIS Teams
           </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-deans" checked onchange="toggleCard('section-deans', this.checked)" />
-            For Deans Section
+          <label class="sidebar-checkbox-label" style="padding-left: 18px; font-size: 11px; opacity: 0.9;">
+            <input type="checkbox" id="toggle-img-achievements" onchange="toggleCard('card-img-achievements', this.checked)" />
+            Use Achievements Screenshot
           </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-support" checked onchange="toggleCard('section-support', this.checked)" />
-            Support & Dispensers
-          </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-img-kiosk" checked onchange="toggleCard('card-img-kiosk', this.checked)" />
-            kiosk Screenshot
-          </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-img-id" onchange="toggleCard('card-img-id', this.checked)" />
-            ID Card Screenshot
-          </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-img-achievements" checked onchange="toggleCard('card-img-achievements', this.checked)" />
-            Achievements Screenshot
-          </label>
-          <label class="sidebar-checkbox-label">
-            <input type="checkbox" id="toggle-img-portal" checked onchange="toggleCard('card-img-portal', this.checked)" />
-            Student Portal Mockup
+          <label class="sidebar-checkbox-label" style="padding-left: 18px; font-size: 11px; opacity: 0.9;">
+            <input type="checkbox" id="toggle-img-portal" onchange="toggleCard('card-img-portal', this.checked)" />
+            Use Student Portal Mockup
           </label>
         </div>
       </div>
@@ -635,211 +716,139 @@
         
         <!-- PAGE 1: FRONT -->
         <section class="page" id="page-1-section" aria-label="Front of flyer">
-          <header class="topbar">
-            <div class="brand">
-              <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> PBIS rewards system</div>
-              <h1 contenteditable="true">LevelUp Rewards</h1>
-              <p class="subtitle" contenteditable="true">
-                A principal-ready PBIS rewards system that turns positive behavior into a fun, gamified adventure for students—while standardizing recognition and saving time for teachers.
-              </p>
-            </div>
-            <div class="right-meta">
-              <div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>
-              <div><span contenteditable="true" class="sync-address-city"></span></div>
-              <div class="muted"><span contenteditable="true" class="sync-address-street"></span></div>
-              <div class="muted">
-                <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
-                  ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
-                >
+          <div class="page-content">
+            <header class="topbar">
+              <div class="brand">
+                <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> General event handout</div>
+                <h1 contenteditable="true">LevelUp Rewards</h1>
+                <p class="subtitle" contenteditable="true">
+                  A simple school rewards experience families can understand in seconds: students scan in, earn points, and choose prizes they are excited about.
+                </p>
               </div>
-            </div>
-          </header>
+              <div class="right-meta">
+                <div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>
+                <div><span contenteditable="true" class="sync-address-city"></span></div>
+                <div class="muted"><span contenteditable="true" class="sync-address-street"></span></div>
+                <div class="muted">
+                  <a href="mailto:contact@leveluprewards.app?subject=General%20Flyer%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
+                    ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
+                  >
+                </div>
+              </div>
+            </header>
 
-          <div class="grid">
-            <div class="card featured" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between;">
-              <div>
-                <h2 contenteditable="true">What it does (PBIS rewards & school climate)</h2>
-                <ul>
-                  <li contenteditable="true"><strong>Turns positive behavior into an adventure</strong> with custom avatars, achievements, and level-up milestones.</li>
-                  <li contenteditable="true"><strong>Interactive Arcade Rewards Store</strong> where students check balances, customize profiles, and redeem rewards.</li>
-                  <li contenteditable="true"><strong>School-wide Hype & Leaderboards</strong> with friendly team challenges and digital Hall of Fame recognition.</li>
-                  <li contenteditable="true"><strong>Automates tracking & bookkeeping</strong> so staff spend zero time on paper logs or manually counting points.</li>
-                </ul>
-              </div>
+            <div class="grid">
+              <div id="p1-col-1" style="display: flex; flex-direction: column; gap: calc(16px * var(--spacing-scale));">
+                <div class="card featured" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                  <div>
+                    <h2 contenteditable="true">What students get excited about</h2>
+                    <ul>
+                      <li contenteditable="true"><strong>Scan in and earn:</strong> Students see progress right away at the kiosk or rewards shop.</li>
+                      <li contenteditable="true"><strong>Real rewards:</strong> Schools can offer prizes, privileges, raffles, coupons, and special events.</li>
+                      <li contenteditable="true"><strong>Easy to explain:</strong> Families understand the routine from one quick flyer handout.</li>
+                      <li contenteditable="true"><strong>Fun school culture:</strong> Points turn everyday positive habits into visible momentum.</li>
+                    </ul>
+                  </div>
 
-              <div style="margin-top: 10px; margin-bottom: 10px;">
-                <div class="callout">
-                  <p contenteditable="true">
-                    <strong>Built for student excitement:</strong> Gamified progress, arcade rewards, and friendly competition make positive habits self-sustaining and genuinely fun.
-                  </p>
-                </div>
-              </div>
+                  <div style="margin-top: 10px; margin-bottom: 10px;">
+                    <div class="callout">
+                      <p contenteditable="true">
+                        <strong>Made for public events:</strong> Hand this out at open house, orientation, family night, or a school fair so everyone can see how rewards work.
+                      </p>
+                    </div>
+                  </div>
 
-              <div class="kpis" aria-label="Leadership outcomes">
-                <div class="kpi">
-                  <div class="label" contenteditable="true">Teacher time</div>
-                  <div class="value" contenteditable="true">Less counting, more teaching</div>
+                  <div class="kpis" aria-label="Leadership outcomes">
+                    <div class="kpi">
+                      <div class="label" contenteditable="true">For families</div>
+                      <div class="value" contenteditable="true">Clear in seconds</div>
+                    </div>
+                    <div class="kpi">
+                      <div class="label" contenteditable="true">For students</div>
+                      <div class="value" contenteditable="true">Earn & redeem</div>
+                    </div>
+                    <div class="kpi">
+                      <div class="label" contenteditable="true">For staff</div>
+                      <div class="value" contenteditable="true">Simple routine</div>
+                    </div>
+                  </div>
                 </div>
-                <div class="kpi">
-                  <div class="label" contenteditable="true">Consistency</div>
-                  <div class="value" contenteditable="true">Same system in every room</div>
-                </div>
-                <div class="kpi">
-                  <div class="label" contenteditable="true">Student fun</div>
-                  <div class="value" contenteditable="true">Gamified progress they love</div>
-                </div>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-              <!-- Real Kiosk Screenshot Panel -->
-              <div class="card" id="card-img-kiosk" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
-                <img src="../public/marketing/screenshots/kiosk-rewards-shop.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Kiosk Rewards Shop Screenshot" />
-                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-                  Arcade & PBIS Hub
-                </div>
-              </div>
-              
-              <!-- Real ID Card Screenshot Panel -->
-              <div class="card" id="card-img-id" style="padding: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; height: 140px; position: relative; display: none;">
-                <img src="../public/marketing/screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student ID Card Screenshot" />
-                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-                  Custom Student ID Cards
-                </div>
-              </div>
-              
-              <div class="card" id="card-funding-setup" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                <div id="section-funding">
-                  <h2 contenteditable="true">Funding & procurement</h2>
-                  <ul style="margin-bottom: 10px;">
-                    <li contenteditable="true"><strong>Title I / IV-A funding:</strong> Fully eligible under school improvement, parent engagement, and school climate grant goals.</li>
-                    <li contenteditable="true"><strong>Sole Source vendor:</strong> Direct, simple procurement route for school districts up to $25k.</li>
-                  </ul>
-                </div>
-                <div id="section-setup">
-                  <h2 contenteditable="true">Simple setup</h2>
+                <div class="card" id="card-telemetry" style="display: none;">
+                  <h2 contenteditable="true">Building telemetry</h2>
                   <ul>
-                    <li contenteditable="true"><strong>Zero complex hardware:</strong> Standard touchscreens plug directly into standard outlets and work via Wi-Fi.</li>
+                    <li contenteditable="true"><strong>Live dashboard:</strong> See activity across grades, classes, and student groups.</li>
+                    <li contenteditable="true"><strong>Smart inventory:</strong> Track prize redemptions and know what needs restocking.</li>
                   </ul>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          <footer class="footer">
-            <div>
-              <strong contenteditable="true">LevelUp rewards positive habits.</strong> <span contenteditable="true">A reliable, high-fidelity system designed for NYC schools that value student engagement.</span>
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-1">
-              <span class="pill" contenteditable="true">Title IV-A eligible</span>
-              <span class="pill" contenteditable="true">Sole Source vendor</span>
-              <span class="pill" contenteditable="true">Arcade Rewards Shop</span>
-              <span class="pill" contenteditable="true">Gamified PBIS Hub</span>
-            </div>
-          </footer>
-        </section>
-
-        <!-- PAGE 2: BACK -->
-        <section class="page" id="page-2-section" aria-label="Back of flyer" style="display: none;">
-          <header class="topbar">
-            <div class="brand">
-              <div class="badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Operational flow</div>
-              <h1 contenteditable="true">System integration &amp; tracking</h1>
-              <p class="subtitle" contenteditable="true">
-                Roll out LevelUp across your entire school building in minutes, with real-time consistency tracking and no administrative oversight needed.
-              </p>
-            </div>
-            <div class="right-meta">
-              <div><strong contenteditable="true">LevelUp Rewards</strong></div>
-              <div class="muted" contenteditable="true">PBIS overview playbook</div>
-            </div>
-          </header>
-
-          <div class="grid">
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-              <div class="card" id="card-telemetry">
-                <h2 contenteditable="true">Building-wide telemetry</h2>
-                <ul>
-                  <li contenteditable="true"><strong>1 · Live dashboard:</strong> View real-time activity metrics across grades, homerooms, and custom student cohorts.</li>
-                  <li contenteditable="true"><strong>2 · Teacher adoption stats:</strong> Check participation rates by staff member to ensure unified building-wide compliance.</li>
-                  <li contenteditable="true"><strong>3 · Automated reporting:</strong> Instantly generate behavioral trends and incentive logs for school board reviews.</li>
-                  <li contenteditable="true"><strong>4 · Smart inventory:</strong> Track store prize redemptions and automatically alert coordinators when levels run low.</li>
-                </ul>
-
-                <div style="height: 12px;" id="deans-spacing"></div>
-                <div id="section-teachers">
-                  <h2 contenteditable="true">For teachers</h2>
+                <div class="card" id="card-teachers-students" style="display: none;">
+                  <h2 contenteditable="true">Teachers &amp; students</h2>
                   <ul>
-                    <li contenteditable="true"><strong>Faster recognition</strong> that fits directly into instruction.</li>
-                    <li contenteditable="true"><strong>No more point bookkeeping</strong>—balances and records stay organized automatically.</li>
+                    <li contenteditable="true"><strong>Teachers:</strong> Recognize positive habits without extra bookkeeping.</li>
+                    <li contenteditable="true"><strong>Students:</strong> Watch points, achievements, and rewards build momentum.</li>
                   </ul>
                 </div>
+              </div>
 
-                <div id="section-students">
-                  <h2 contenteditable="true">For students (The fun stuff!)</h2>
-                  <ul>
-                    <li contenteditable="true"><strong>Gamified progression:</strong> Custom avatars, XP achievements, and rank milestones that keep kids motivated.</li>
-                    <li contenteditable="true"><strong>Interactive Arcade Kiosk:</strong> Self-service reward shops and live leaderboards that build school-wide hype.</li>
-                  </ul>
-                </div>
-              </div>
-              
-              <!-- Real App Screenshot Panel -->
-              <div class="card" id="card-img-achievements" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
-                <img src="../public/marketing/screenshots/hall-of-fame.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Hall of Fame Leaderboard Screenshot" />
-                <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-                  Student Level-Up Progression
-                </div>
-              </div>
-            </div>
-
-            <div style="display: flex; flex-direction: column; gap: 16px;">
-              <!-- App Mockup Panel -->
-              <div class="card" id="card-img-portal" style="padding: 6px; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--panel);">
-                <div style="font-size: 9px; color: var(--muted); padding: 2px 6px 6px 6px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
-                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-                  <span style="margin-left: 4px; font-family: monospace;" id="sync-portal-url-display">leveluprewards.app/student</span>
-                </div>
-                <img src="../public/marketing/screenshots/student-home-portal.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Student Portal Dashboard Screenshot" />
-              </div>
-              
-              <div class="card" id="card-deans-support" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                <div id="section-deans">
-                  <h2 contenteditable="true">For deans & PBIS teams</h2>
-                  <ul>
-                    <li contenteditable="true"><strong>Real-time visibility</strong> into recognition patterns and incentive usage.</li>
-                    <li contenteditable="true"><strong>Clean, exportable reporting</strong> to support PBIS/MTSS planning.</li>
-                    <li contenteditable="true"><strong>Controlled access</strong> to support consistent implementation building-wide.</li>
-                  </ul>
+              <div id="p1-col-2" style="display: flex; flex-direction: column; gap: calc(16px * var(--spacing-scale));">
+                <!-- Real Kiosk Screenshot Panel -->
+                <div class="card screenshot-card" id="card-img-kiosk" data-default-height="150" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 150px; position: relative;">
+                  <img src="screenshots/kiosk-rewards-shop.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Kiosk Rewards Shop Screenshot" />
                 </div>
                 
-                <div id="section-support">
-                  <h2 contenteditable="true">Support & Verification</h2>
+                <!-- Real ID Card Screenshot Panel -->
+                <div class="card screenshot-card" id="card-img-id" data-default-height="180" style="padding: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; height: 180px; position: relative; display: none;">
+                  <img src="screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student ID Card Screenshot" />
+                </div>
+                
+                <div class="card" id="card-funding-setup" style="flex: 1; display: flex; flex-direction: column; gap: calc(12px * var(--spacing-scale));">
+                  <div id="section-funding">
+                    <h2 contenteditable="true">Where it fits</h2>
+                    <ul style="margin-bottom: 10px;">
+                      <li contenteditable="true"><strong>Open house:</strong> Show families how positive habits become points, rewards, and celebrations.</li>
+                      <li contenteditable="true"><strong>Student launch:</strong> Explain scanning, earning, and redeeming before the first kiosk day.</li>
+                    </ul>
+                  </div>
+                  <div id="section-setup">
+                    <h2 contenteditable="true">Simple setup</h2>
+                    <ul>
+                      <li contenteditable="true"><strong>Easy school rollout:</strong> Use kiosks, ID cards, and a rewards menu your team can explain quickly.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="card screenshot-card" id="card-img-achievements" data-default-height="160" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 160px; position: relative; display: none;">
+                  <img src="screenshots/hall-of-fame.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Hall of Fame Leaderboard Screenshot" />
+                </div>
+                <div class="card screenshot-card" id="card-img-portal" data-default-height="170" style="padding: 6px; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--panel); height: 170px; display: none; flex-direction: column;">
+                  <div style="font-size: 9px; color: var(--muted); padding: 2px 6px 6px 6px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
+                    <span style="margin-left: 4px; font-family: monospace;" id="sync-portal-url-display">leveluprewards.app/student</span>
+                  </div>
+                  <img src="screenshots/student-home-portal.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08); flex: 1; min-height: 0; object-fit: cover;" alt="LevelUp Student Portal Dashboard Screenshot" />
+                </div>
+                <div class="card" id="card-deans-support" style="display: none;">
+                  <h2 contenteditable="true">For deans &amp; PBIS teams</h2>
                   <ul>
-                    <li contenteditable="true"><strong>Optional automated dispensers</strong> for reliable rewards backed by hardware handshakes.</li>
+                    <li contenteditable="true"><strong>Clean reports</strong> support PBIS/MTSS planning and follow-up conversations.</li>
+                    <li contenteditable="true"><strong>Controlled access</strong> keeps implementation consistent school-wide.</li>
                   </ul>
                 </div>
               </div>
             </div>
-          </div>
 
-          <footer class="footer">
-            <div>
-              <strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong><br />
-              <span class="sync-address-full-container"><span contenteditable="true" class="sync-address-full"></span><br /></span>
-              <a href="mailto:contact@leveluprewards.app?subject=PBIS%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"
-                ><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a
-              >
-            </div>
-            <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-2">
-              <span class="pill" contenteditable="true">PBIS / MTSS aligned</span>
-              <span class="pill" contenteditable="true">Real-time dashboards</span>
-              <span class="pill" contenteditable="true">DPA-ready</span>
-              <span class="pill" contenteditable="true">NY Law 2-d</span>
-            </div>
-          </footer>
+            <footer class="footer">
+              <div>
+                <strong contenteditable="true">LevelUp makes positive habits visible.</strong> <span contenteditable="true">A simple handout for families, students, and staff at school events.</span>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-1">
+                <span class="pill" contenteditable="true">Event-ready handout</span>
+                <span class="pill" contenteditable="true">Family friendly</span>
+                <span class="pill" contenteditable="true">Arcade Rewards Shop</span>
+                <span class="pill" contenteditable="true">Student motivation</span>
+              </div>
+            </footer>
+          </div>
         </section>
 
       </div>
@@ -1086,64 +1095,8 @@
         
         // Update page backgrounds
         const pages = document.querySelectorAll('.page');
-        const isLight = themeKey.startsWith('light');
         pages.forEach(p => {
           p.style.background = theme['page-gradient'];
-          if (isLight) {
-            p.style.color = theme['--text'];
-            // Update strong, h1, h2, h3, badge
-            p.querySelectorAll('strong, h1, h3, .badge').forEach(el => {
-              el.style.color = theme['--text'];
-            });
-            p.querySelectorAll('h2').forEach(el => {
-              el.style.color = theme['--accent'];
-            });
-            p.querySelectorAll('.subtitle').forEach(el => {
-              el.style.color = theme['--muted'];
-            });
-            p.querySelectorAll('.muted').forEach(el => {
-              el.style.color = theme['--muted'];
-            });
-            p.querySelectorAll('.callout').forEach(el => {
-              el.style.background = theme['--panel'];
-              el.style.borderLeftColor = theme['--accent'];
-            });
-            p.querySelectorAll('.kpi').forEach(el => {
-              el.style.background = 'rgba(0,0,0,0.02)';
-              el.style.borderColor = theme['--hair'];
-            });
-            p.querySelectorAll('.card').forEach(el => {
-              el.style.borderColor = theme['--hair'];
-              el.style.background = theme['--panel'];
-            });
-            p.querySelectorAll('.card.featured').forEach(el => {
-              el.style.borderColor = theme['--accent'];
-              el.style.background = 'rgba(0, 0, 0, 0.03)';
-              el.style.borderWidth = '2px';
-            });
-            p.querySelectorAll('.topbar, .footer').forEach(el => {
-              el.style.borderColor = theme['--hair'];
-            });
-            p.querySelectorAll('li::before').forEach(el => {
-              el.style.color = theme['--accent'];
-              el.style.textShadow = 'none';
-            });
-            p.querySelectorAll('.sync-email-link').forEach(el => {
-              el.style.color = theme['--accent'];
-            });
-          } else {
-            // Restore dark colors
-            p.style.color = 'var(--text)';
-            p.style.color = '';
-            p.querySelectorAll('strong, h1, h3, .badge, h2, .subtitle, .muted, .callout, .kpi, .card, .topbar, .footer, li::before, .sync-email-link').forEach(el => {
-              el.style.color = '';
-              el.style.background = '';
-              el.style.borderColor = '';
-              el.style.borderLeftColor = '';
-              el.style.borderWidth = '';
-              el.style.textShadow = '';
-            });
-          }
         });
       }
 
@@ -1157,14 +1110,16 @@
           updateSchoolName();
         } else {
           nameSection.style.display = 'none';
-          badge.innerHTML = '<span class="dot" aria-hidden="true"></span> PBIS rewards system';
+          badge.innerHTML = '<span class="dot" aria-hidden="true"></span> General event handout';
         }
+        autoFitPage();
       }
 
       function updateSchoolName() {
         const schoolName = document.getElementById('school-name-input').value;
         const badge = document.getElementById('flyer-prepared-badge');
         badge.innerHTML = '<span class="dot" aria-hidden="true"></span> Prepared for ' + escapeHtml(schoolName);
+        autoFitPage();
       }
 
       function escapeHtml(str) {
@@ -1203,7 +1158,7 @@
           }
         });
 
-        // Sync full address on Page 2
+        // Keep any full-address placeholders in sync if they are added later.
         const fullAddr = (street && city) ? (street + ', ' + city) : (street || city);
         document.querySelectorAll('.sync-address-full').forEach(el => {
           el.textContent = fullAddr;
@@ -1223,7 +1178,7 @@
 
         // Sync email links
         document.querySelectorAll('.sync-email-link').forEach(el => {
-          el.href = 'mailto:' + email + '?subject=PBIS%20Inquiry';
+          el.href = 'mailto:' + email + '?subject=General%20Flyer%20Inquiry';
         });
 
         // Sync portal URL
@@ -1231,6 +1186,7 @@
         if (portalUrlDisplay) {
           portalUrlDisplay.textContent = web.replace(/^https?:\/\//i, '') + '/student';
         }
+        autoFitPage();
       }
 
       function loadDefaultContactInfo() {
@@ -1242,17 +1198,202 @@
         syncContactInfo();
       }
 
-      function togglePage2() {
-        const checked = document.getElementById('show-page-2').checked;
-        const p2 = document.getElementById('page-2-section');
-        p2.style.display = checked ? 'block' : 'none';
+      function updateParentCards() {
+        // Parent card 1: card-funding-setup
+        const f = document.getElementById('section-funding');
+        const s = document.getElementById('section-setup');
+        const cardFundingSetup = document.getElementById('card-funding-setup');
+        if (cardFundingSetup && f && s) {
+          const anyVisible = (f.style.display !== 'none') || (s.style.display !== 'none');
+          cardFundingSetup.style.display = anyVisible ? '' : 'none';
+        }
       }
 
       function toggleCard(id, show) {
         const el = document.getElementById(id);
         if (el) {
-          el.style.display = show ? '' : 'none';
+          el.style.display = show ? (id === 'card-img-portal' ? 'flex' : '') : 'none';
         }
+        updateParentCards();
+        autoFitPage();
+      }
+
+      function autoFitPage() {
+        const pages = document.querySelectorAll('.page');
+        pages.forEach(page => {
+          const content = page.querySelector('.page-content');
+          if (!content) return;
+
+          // 1. Reset scale variables and images to baseline
+          page.style.setProperty('--text-scale', '1');
+          page.style.setProperty('--spacing-scale', '1');
+          page.style.transform = '';
+          page.style.transformOrigin = '';
+          page.classList.remove('sparse-layout', 'solo-layout');
+
+          const imageCards = page.querySelectorAll('.screenshot-card');
+          imageCards.forEach(card => {
+            if (card.dataset.defaultHeight) {
+              card.style.height = card.dataset.defaultHeight + 'px';
+            }
+          });
+
+          const visibleCards = Array.from(page.querySelectorAll('.card')).filter(card => getComputedStyle(card).display !== 'none');
+          page.classList.toggle('sparse-layout', visibleCards.length <= 3);
+          page.classList.toggle('solo-layout', visibleCards.length === 1);
+
+          const denseOnePageMode = visibleCards.length > 7;
+          if (denseOnePageMode) {
+            page.style.setProperty('--text-scale', '0.68');
+            page.style.setProperty('--spacing-scale', '0.68');
+            const denseHeights = {
+              'card-img-kiosk': 72,
+              'card-img-id': 64,
+              'card-img-achievements': 64,
+              'card-img-portal': 72
+            };
+            imageCards.forEach(card => {
+              if (getComputedStyle(card).display !== 'none') {
+                card.style.height = (denseHeights[card.id] || 64) + 'px';
+              }
+            });
+          }
+
+          // Print page fixed content area is 912px (960px - 48px padding).
+          // Fill most of the page while keeping a small safety buffer for print rounding.
+          const TARGET_HEIGHT = 884;
+
+          // Temporarily release fixed page height to measure natural flow height
+          content.style.height = 'auto';
+          content.style.minHeight = '0';
+          const measureContentHeight = () => content.scrollHeight;
+          let currentHeight = measureContentHeight();
+
+          // If a page is hidden, offsetHeight will be 0.
+          if (currentHeight === 0) {
+            content.style.height = 'calc(100% - var(--print-safe-bottom))';
+            content.style.minHeight = 'calc(100% - var(--print-safe-bottom))';
+            return;
+          }
+
+          if (currentHeight > TARGET_HEIGHT) {
+            // --- SHRINK LOOP ---
+            let iterations = 0;
+            const MAX_ITERATIONS = 12;
+            while (currentHeight > TARGET_HEIGHT && iterations < MAX_ITERATIONS) {
+              iterations++;
+
+              // Strategy 1: Reduce image heights gracefully by 10px down to 80px min
+              let reducedImages = false;
+              imageCards.forEach(card => {
+                if (card.style.display !== 'none') {
+                  const currentImgHeight = parseInt(card.style.height || card.dataset.defaultHeight);
+                  const minHeights = {
+                    'card-img-kiosk': 120,
+                    'card-img-id': 120,
+                    'card-img-achievements': 100,
+                    'card-img-portal': 100
+                  };
+                  const minH = denseOnePageMode ? 64 : (minHeights[card.id] || 90);
+                  if (currentImgHeight > minH) {
+                    card.style.height = Math.max(minH, currentImgHeight - 10) + 'px';
+                    reducedImages = true;
+                  }
+                }
+              });
+
+              if (reducedImages) {
+                currentHeight = measureContentHeight();
+                if (currentHeight <= TARGET_HEIGHT) break;
+              }
+
+              // Strategy 2: Reduce text and spacing scale in small steps
+              if (!reducedImages) {
+                const currentTextScale = parseFloat(page.style.getPropertyValue('--text-scale') || '1');
+                if (currentTextScale > 0.68) {
+                  const nextScale = Math.max(0.68, currentTextScale - 0.05).toFixed(2);
+                  page.style.setProperty('--text-scale', nextScale);
+                  page.style.setProperty('--spacing-scale', nextScale);
+                  currentHeight = measureContentHeight();
+                } else {
+                  break;
+                }
+              }
+            }
+          } else if (currentHeight < TARGET_HEIGHT && !denseOnePageMode) {
+            // --- EXPAND / FILL LOOP ---
+            let iterations = 0;
+            const MAX_ITERATIONS = 15;
+            let lastValidTextScale = 1;
+            let lastValidSpacingScale = 1;
+
+            // Strategy 1: Scale up text and spacing to fill empty spaces
+            while (currentHeight < TARGET_HEIGHT && iterations < MAX_ITERATIONS) {
+              iterations++;
+              const currentTextScale = parseFloat(page.style.getPropertyValue('--text-scale') || '1');
+              if (currentTextScale >= 1.34) break; // cap growth so sparse flyers fill the page without looking inflated
+
+              const nextScale = Math.min(1.34, currentTextScale + 0.03).toFixed(2);
+              page.style.setProperty('--text-scale', nextScale);
+              page.style.setProperty('--spacing-scale', nextScale);
+              
+              currentHeight = measureContentHeight();
+              if (currentHeight > TARGET_HEIGHT) {
+                // Stepped over, revert to last safe scale and break
+                page.style.setProperty('--text-scale', lastValidTextScale.toString());
+                page.style.setProperty('--spacing-scale', lastValidSpacingScale.toString());
+                currentHeight = measureContentHeight();
+                break;
+              } else {
+                lastValidTextScale = nextScale;
+                lastValidSpacingScale = nextScale;
+              }
+            }
+
+            // Strategy 2: Scale up image heights to fill remaining space
+            iterations = 0;
+            let expandedImages = true;
+            while (currentHeight < TARGET_HEIGHT - 10 && expandedImages && iterations < MAX_ITERATIONS) {
+              iterations++;
+              expandedImages = false;
+              
+              // Define max heights for images
+              const maxHeights = {
+                'card-img-kiosk': 320,
+                'card-img-id': 250,
+                'card-img-achievements': 220,
+                'card-img-portal': 250
+              };
+
+              // Try expanding visible images one by one in small steps
+              for (const card of imageCards) {
+                if (card.style.display !== 'none') {
+                  const currentImgHeight = parseInt(card.style.height || card.dataset.defaultHeight);
+                  const maxH = maxHeights[card.id] || 250;
+                  if (currentImgHeight < maxH) {
+                    const lastHeight = card.style.height;
+                    card.style.height = Math.min(maxH, currentImgHeight + 10) + 'px';
+                    
+                    currentHeight = measureContentHeight();
+                    if (currentHeight > TARGET_HEIGHT) {
+                      // Overflowed! Revert this step and stop expanding images
+                      card.style.height = lastHeight;
+                      currentHeight = measureContentHeight();
+                      expandedImages = false;
+                      break;
+                    } else {
+                      expandedImages = true;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Restore normal minHeight behavior
+          content.style.height = 'calc(100% - var(--print-safe-bottom))';
+          content.style.minHeight = 'calc(100% - var(--print-safe-bottom))';
+        });
       }
 
       // Check if URL has ?embed=1 and hide sidebar accordingly
@@ -1263,6 +1404,7 @@
 
       // Initialize
       loadDefaultContactInfo();
+
     </script>
   </body>
 </html>

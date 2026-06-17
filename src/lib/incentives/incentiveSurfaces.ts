@@ -1,12 +1,16 @@
 import type { Settings } from '@/components/providers/SettingsProvider';
 
+import type { BulletinBoardIncentiveSurfaces } from '@/lib/bulletinBoard';
+
 export type IncentiveListItem = {
   id: string;
   title: string;
   description?: string;
   points?: number;
   icon?: string;
+  /** @deprecated Use `surfaces` for per-display assignment. */
   active?: boolean;
+  surfaces?: BulletinBoardIncentiveSurfaces;
   createdAt?: number;
 };
 
@@ -81,11 +85,31 @@ export function incentivesVisibleOnSurface(
   }
 }
 
-export function activeIncentivesList(
+/** Whether a catalog incentive is assigned to a specific display surface. */
+export function incentiveAssignedToSurface(
+  incentive: IncentiveListItem,
+  surface: IncentiveSurfaceKey,
+): boolean {
+  if (incentive.surfaces != null) {
+    return incentive.surfaces[surface] === true;
+  }
+  if (incentive.active === false) return false;
+  return surface === 'bulletinBoard' || surface === 'smartScreen';
+}
+
+export function incentivesForSurface(
   incentives: IncentiveListItem[] | null | undefined,
+  surface: IncentiveSurfaceKey,
 ): IncentiveListItem[] {
   if (!incentives?.length) return [];
   return [...incentives]
-    .filter((item) => item.active !== false)
+    .filter((item) => incentiveAssignedToSurface(item, surface))
     .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+}
+
+/** @deprecated Use `incentivesForSurface(incentives, surface)` instead. */
+export function activeIncentivesList(
+  incentives: IncentiveListItem[] | null | undefined,
+): IncentiveListItem[] {
+  return incentivesForSurface(incentives, 'bulletinBoard');
 }

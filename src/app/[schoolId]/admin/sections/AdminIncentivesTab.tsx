@@ -48,9 +48,9 @@ export function AdminIncentivesTab({ schoolId, settings, updateSettings }: Admin
                   Point-earning opportunities
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Create school-wide reminders of tasks students can complete to earn points. Use{' '}
-                  <span className="font-semibold text-foreground/90">Where to show</span> to pick
-                  bulletin board, Smart Screen, kiosk, or student portal — independently.
+                  Create and delete your school&apos;s incentive catalog here. Use{' '}
+                  <span className="font-semibold text-foreground/90">Where to show</span> to add or
+                  remove incentives from the bulletin board, Smart Screen, kiosk, or student portal.
                 </p>
               </div>
               <BulletinIncentivesPanel schoolId={schoolId} />
@@ -58,7 +58,11 @@ export function AdminIncentivesTab({ schoolId, settings, updateSettings }: Admin
           ) : null}
 
           {section === 'surfaces' ? (
-            <IncentiveSurfacesPanel settings={settings} updateSettings={updateSettings} />
+            <IncentiveSurfacesPanel
+              schoolId={schoolId}
+              settings={settings}
+              updateSettings={updateSettings}
+            />
           ) : null}
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>

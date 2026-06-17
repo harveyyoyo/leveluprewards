@@ -36,9 +36,11 @@ import {
   formatActivePillars,
   PRODUCT_PILLAR_KEYS,
   PRODUCT_PILLAR_LABELS,
+  SUPPLEMENTARY_PRODUCTS,
   type ProductPillarKey,
 } from '@/lib/productPillars';
 import { OfficePortalEntryLink } from '@/components/integrations/OfficePortalEntryLink';
+import { sssPublicHref } from '@/lib/sss/sssPublicUrl';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Helper } from '@/components/ui/helper';
@@ -134,16 +136,12 @@ export default function DeveloperPage() {
     payAttendance: true,
     payLibrary: true,
     payHomework: true,
-    payOffice: false,
-    paySss: false,
   });
   const [editingPillarAccess, setEditingPillarAccess] = useState<Record<ProductPillarKey, boolean>>({
     payClassroom: true,
     payAttendance: true,
     payLibrary: true,
     payHomework: true,
-    payOffice: true,
-    paySss: true,
   });
   const [backupSchool, setBackupSchool] = useState<SchoolInfo | null>(null);
   const [schoolBackups, setSchoolBackups] = useState<BackupInfo[]>([]);
@@ -548,16 +546,12 @@ export default function DeveloperPage() {
         payAttendance: access.payAttendance !== false,
         payLibrary: access.payLibrary !== false,
         payHomework: access.payHomework !== false,
-        payOffice: access.payOffice !== false,
-        paySss: access.paySss !== false,
       });
       setEditingPillars({
         payClassroom: defaults.payClassroom ?? app.payClassroom ?? true,
         payAttendance: defaults.payAttendance ?? app.payAttendance ?? true,
         payLibrary: defaults.payLibrary ?? app.payLibrary ?? true,
         payHomework: defaults.payHomework ?? app.payHomework ?? false,
-        payOffice: defaults.payOffice ?? app.payOffice ?? false,
-        paySss: defaults.paySss ?? app.paySss ?? false,
       });
     };
     try {
@@ -575,16 +569,12 @@ export default function DeveloperPage() {
       payAttendance: true,
       payLibrary: true,
       payHomework: true,
-      payOffice: false,
-      paySss: false,
     });
     setEditingPillarAccess({
       payClassroom: true,
       payAttendance: true,
       payLibrary: true,
       payHomework: true,
-      payOffice: true,
-      paySss: true,
     });
   };
 
@@ -1563,7 +1553,7 @@ export default function DeveloperPage() {
             <DialogHeader>
               <DialogTitle>Product pillars: <span className="font-code">{pillarSchool?.id}</span></DialogTitle>
               <DialogDescription>
-                Choose which product pillars this school can use, then choose which accessible pillars start on by default. Unavailable pillars still appear in school settings, but are disabled.
+                Choose which product pillars this school can use, then choose which accessible pillars start on by default. School Office and Student Special Services are always available via links — they are not pillars.
               </DialogDescription>
             </DialogHeader>
             {pillarSchool ? (
@@ -1580,17 +1570,10 @@ export default function DeveloperPage() {
                               'Classroom seating, quick awards, and full-screen classroom view for teachers.'}
                             {key === 'payAttendance' && 'Class sign-in, attendance rewards, and related admin tabs.'}
                             {key === 'payLibrary' && 'Library catalog, checkout scans, and library notifications.'}
-                            {key === 'payHomework' && 'Teacher homework rewards (not shown on the student portal).'}
-                            {key === 'payOffice' && 'Grades, billing, and office-only student roster (not shared with rewards).'}
-                            {key === 'paySss' && 'Spreadsheet student database for special services — providers, contacts, and family info.'}
+                            {key === 'payHomework' &&
+                              'Student and parent portal — homework, progress, and family access.'}
                           </p>
                         </div>
-                        {key === 'payOffice' && hasAccess && editingPillars[key] ? (
-                          <OfficePortalEntryLink
-                            schoolId={pillarSchool.id}
-                            className="text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
-                          />
-                        ) : null}
                       </div>
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="flex items-center justify-between rounded-lg border bg-background/70 p-3">
@@ -1624,6 +1607,40 @@ export default function DeveloperPage() {
                       </div>
                     </div>
                   );})}
+                  <div className="rounded-xl border p-4 space-y-3">
+                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                      More products
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Always available — not subscription pillars.
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {SUPPLEMENTARY_PRODUCTS.map((product) => (
+                        <div
+                          key={product.id}
+                          className="flex items-start justify-between gap-3 rounded-lg border bg-background/70 p-3"
+                        >
+                          <div className="min-w-0">
+                            <Label className="text-sm font-bold">{product.label}</Label>
+                            <p className="text-xs text-muted-foreground mt-1">{product.description}</p>
+                          </div>
+                          {product.id === 'office' ? (
+                            <OfficePortalEntryLink
+                              schoolId={pillarSchool.id}
+                              className="shrink-0 text-xs font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
+                            />
+                          ) : (
+                            <a
+                              href={sssPublicHref(pillarSchool.id)}
+                              className="shrink-0 text-xs font-bold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:text-violet-300 dark:hover:text-violet-100"
+                            >
+                              Open
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
             ) : null}
             <DialogFooter>

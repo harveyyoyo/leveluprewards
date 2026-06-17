@@ -35,6 +35,14 @@ const STEP_BY_SECTION: Record<ClassroomTabSection, TabWalkthroughStep> = {
       'Hallway Smart Screen is separate — configure it under Admin → Smart Screen.',
     ],
   },
+  raffle: {
+    title: 'Raffle',
+    checklist: [
+      'Set points per ticket and pool rules, then run jackpot reels or the prize wheel.',
+      'Use class scope filters for homeroom drawings; deduct points after the spin when enabled.',
+      'Turn on student kiosk raffle display from pool rules when you want tickets visible on the student portal.',
+    ],
+  },
 };
 
 export function ClassroomManagementHelpWizard({

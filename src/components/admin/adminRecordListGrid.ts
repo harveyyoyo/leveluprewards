@@ -21,6 +21,10 @@ export const PRIZES_LIST_GRID_COLS = prizesListGridColumns({ vendingEnabled: fal
 export const adminRecordListGridClassName =
   'grid w-full min-w-0 [&>*]:min-w-0 [&_button]:min-h-0 [&_button]:min-w-0';
 
+/** Student-style rows: flex stack on phones, shared grid columns from sm up. */
+export const adminRecordListGridResponsiveRowClassName =
+  'w-full min-w-0 max-sm:flex max-sm:flex-wrap max-sm:items-center sm:grid sm:items-center [&>*]:min-w-0 [&_button]:min-h-0 [&_button]:min-w-0';
+
 /** Name column — may shrink/truncate. */
 export const adminRecordListGridNameCellClassName = 'min-w-0 overflow-hidden';
 

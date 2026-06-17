@@ -6,13 +6,11 @@ import { collection } from 'firebase/firestore';
 import { Building2, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useAppContext } from '@/components/providers/OfficeAuthProvider';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { useSettings } from '@/components/providers/OfficeSettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isOfficePillarOn, type PillarSettings } from '@/lib/productPillars';
 import type { OfficeBillingAccount, OfficeGradeEntry, OfficeInvoice } from '@/lib/office/types';
 import { OfficePortalShell } from '@/components/office/OfficePortalShell';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
@@ -47,7 +45,6 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
   const routeSchoolId = params.schoolId?.trim().toLowerCase() ?? '';
   const router = useRouter();
   const firestore = useFirestore();
-  const { settings } = useSettings();
   const { toast } = useToast();
   const {
     loginState,
@@ -79,12 +76,8 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
     () => (firestore && routeSchoolId ? schoolPublicDocRef(firestore, routeSchoolId) : null),
     [firestore, routeSchoolId],
   );
-  const { data: routeSchoolPublic } = useDoc<{
-    name?: string;
-    appSettings?: PillarSettings;
-  }>(routeSchoolPublicRef);
+  const { data: routeSchoolPublic } = useDoc<{ name?: string }>(routeSchoolPublicRef);
 
-  const pillarOn = isOfficePillarOn(routeSchoolPublic?.appSettings ?? settings);
   const handoffPending =
     searchParams?.get('officeHandoff') === '1' &&
     Boolean(searchParams?.get('meta')?.trim() && searchParams?.get('ct')?.trim());
@@ -102,7 +95,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
         schoolId: routeSchoolId,
       }));
   const wantsOfficePortal = hasOfficePortalLoginIntent(loginState);
-  const canAccess = pillarOn && roleVerified && !handoffPending;
+  const canAccess = roleVerified && !handoffPending;
   const canLoadOfficeData = canAccess && !!firestore && !!routeSchoolId;
 
   const gradesQuery = useMemoFirebase(
@@ -188,29 +181,6 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
         <p className="text-sm text-muted-foreground">
           {handoffPending ? 'Completing office sign-in…' : 'Loading School Office…'}
         </p>
-      </div>
-    );
-  }
-
-  if (!pillarOn) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <Card className="max-w-md rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-teal-700" />
-              School Office is off
-            </CardTitle>
-            <CardDescription>
-              Enable the School Office product pillar in Admin → Settings to use grades and billing here.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="rounded-xl">
-              <a href={schoolPortalHref(routeSchoolId)}>Back to portal</a>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     );
   }

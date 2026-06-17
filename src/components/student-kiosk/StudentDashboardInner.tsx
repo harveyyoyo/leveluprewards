@@ -2,6 +2,7 @@
 
 
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -88,7 +89,12 @@ import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForeground
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { useFirestoreSyncAlert } from '@/hooks/useFirestoreSyncAlert';
+import { lookupStudentId } from '@/lib/db/lookup';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
+import {
+  getStudentSignInThrottleStatus,
+  recordStudentSignIn,
+} from '@/lib/students/studentSignInThrottle';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
 import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
@@ -146,7 +152,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
 import { StudentIncentivesCard } from '@/components/incentives/StudentIncentivesCard';
 import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
-import { useStudentKioskSession } from '@/components/providers/StudentKioskSessionProvider';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
 import { appearanceVarsForSurface } from '@/lib/appearance';
 import { STUDENT_KIOSK_REQUEST_EXIT_EVENT } from '@/lib/students/studentKiosk';
@@ -182,8 +187,9 @@ import {
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
 import { StudentKioskFadeScrollPane } from '@/components/student-kiosk/StudentKioskFadeScrollPane';
 import { getStudentPointTypeTotals } from '@/lib/students/studentPointTypes';
-import { couponRedeemStudentMessage, requestCouponRedeemCompliment } from '@/lib/coupons/couponRedeemCompliment';
+import { couponRedeemStudentMessage, fallbackCouponRedeemCompliment, requestCouponRedeemCompliment } from '@/lib/coupons/couponRedeemCompliment';
 import { CouponRedeemCelebration } from '@/components/student-kiosk/CouponRedeemCelebration';
+import { StudentKioskPointsFlyUp } from '@/components/student-kiosk/StudentKioskPointsFlyUp';
 
 
 const PrizeDashboard = dynamic(
@@ -207,11 +213,14 @@ export function StudentDashboardInner({
   onDone,
   onRequestExit,
   onReady,
+  onSwitchStudent,
 }: {
   studentId: string;
   onDone: () => void;
   onRequestExit: () => void;
   onReady?: (studentId: string) => void;
+  /** When another student card is scanned, switch the kiosk session to that student. */
+  onSwitchStudent?: (studentId: string) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -379,12 +388,16 @@ export function StudentDashboardInner({
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
   const [flyPointsReason, setFlyPointsReason] = useState<string | null>(null);
-  const flyDismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const animationKey = useRef(0);
+  const [redeemFxPortalReady, setRedeemFxPortalReady] = useState(false);
   const playSound = useArcadeSound();
+
+  useEffect(() => {
+    setRedeemFxPortalReady(true);
+  }, []);
 
   const queueCelebration = useCallback((msg: string) => {
     celebrationQueueRef.current.push(msg);
@@ -408,21 +421,10 @@ export function StudentDashboardInner({
   useEffect(() => {
     return () => {
       if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
-      if (flyDismissTimerRef.current) clearTimeout(flyDismissTimerRef.current);
     };
   }, []);
 
   const [showRedeem, setShowRedeem] = useState(true);
-  const scheduleFlyDismiss = useCallback((ms: number) => {
-    if (flyDismissTimerRef.current) clearTimeout(flyDismissTimerRef.current);
-    flyDismissTimerRef.current = setTimeout(() => {
-      setFlyPointsValue(null);
-      setFlyCompliment(null);
-      setFlyPointsReason(null);
-      setShowRedeem(false);
-      flyDismissTimerRef.current = null;
-    }, ms);
-  }, []);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
   const [confirmingFunKind, setConfirmingFunKind] = useState<PrizeAiFunReward>('joke');
   const [isRedeemingPrize, setIsRedeemingPrize] = useState(false);
@@ -514,13 +516,17 @@ export function StudentDashboardInner({
 
   const couponCameraScannerOn = showRedeem && showCameraCoupon;
 
+  const couponQrEnabled = settings.couponUseQrCode === true;
+
   useEffect(() => {
-    if (loginScanEnabled || showCameraCoupon) preloadBarcodeScanStack();
+    if (loginScanEnabled || showCameraCoupon) {
+      preloadBarcodeScanStack({ preferQr: couponQrEnabled });
+    }
     syncKioskBarcodeCameraWarm({
       loginScan: false,
       couponCamera: showCameraCoupon,
     });
-  }, [loginScanEnabled, showCameraCoupon]);
+  }, [loginScanEnabled, showCameraCoupon, couponQrEnabled]);
 
   const { videoRef, hasCameraPermission: hookHasPermission, zoom: cameraZoom, setZoom: setCameraZoom, scanStatus } = useBarcodeScanner(
     couponCameraScannerOn,
@@ -533,6 +539,7 @@ export function StudentDashboardInner({
       cameraEnabled: showCameraCoupon,
       keepCameraWarm: showCameraCoupon,
       showScanFeedback: true,
+      preferQr: couponQrEnabled,
     },
   );
 
@@ -658,6 +665,53 @@ export function StudentDashboardInner({
   useEffect(() => {
     void import('@/app/[schoolId]/prize/PrizeDashboard');
   }, []);
+
+  const handleStudentIdScan = useCallback(
+    async (raw: string): Promise<boolean> => {
+      if (!onSwitchStudent || !schoolId || !firestore || !raw.trim()) return false;
+      try {
+        const nextStudentId = await lookupStudentId(firestore, schoolId, raw.trim());
+        if (!nextStudentId) return false;
+        if (nextStudentId === studentId) return true;
+
+        resetLogoutTimer();
+        const throttle = getStudentSignInThrottleStatus(schoolId, nextStudentId, {
+          enabled: settings.studentSignInThrottleEnabled,
+          maxAttempts: settings.studentSignInThrottleMaxAttempts,
+          windowMin: settings.studentSignInThrottleWindowMin,
+        });
+        if (throttle.frozen && throttle.secondsRemaining > 0) {
+          const remaining = throttle.secondsRemaining;
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Please Wait',
+            description: `You just signed in. Try again in ${remaining} second${remaining === 1 ? '' : 's'}.`,
+          });
+          return true;
+        }
+
+        recordStudentSignIn(schoolId, nextStudentId);
+        playSound('login');
+        onSwitchStudent(nextStudentId);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [
+      firestore,
+      onSwitchStudent,
+      playSound,
+      resetLogoutTimer,
+      schoolId,
+      settings.studentSignInThrottleEnabled,
+      settings.studentSignInThrottleMaxAttempts,
+      settings.studentSignInThrottleWindowMin,
+      studentId,
+      toast,
+    ],
+  );
 
   const handlePrizeShelfScan = useCallback(
     async (raw: string) => {
@@ -801,6 +855,11 @@ export function StudentDashboardInner({
       return;
     }
 
+    if (await handleStudentIdScan(raw)) {
+      setCouponCode('');
+      return;
+    }
+
     // Recess pass scan (physical bathroom/break/water cards)
     if (recessKioskCheckoutOn && firestore && schoolId) {
       try {
@@ -916,23 +975,24 @@ export function StudentDashboardInner({
         const points = result.value || 0;
         const category = result.category || 'Coupon';
         const complimentsOn = settings.enableCouponRedeemCompliments !== false;
-        let compliment: string | null = null;
+
+        animationKey.current += 1;
+        setFlyPointsValue(points);
+        setFlyPointsReason(category);
+        setFlyCompliment(complimentsOn ? fallbackCouponRedeemCompliment(category) : null);
 
         if (complimentsOn && schoolId) {
-          compliment = await requestCouponRedeemCompliment(authFetch, {
+          void requestCouponRedeemCompliment(authFetch, {
             schoolId,
             category,
             points,
             firstName: getStudentNickname(student),
             birthday: student.birthday,
+          }).then((compliment) => {
+            if (!compliment?.trim()) return;
+            setFlyCompliment(compliment);
           });
         }
-
-        animationKey.current += 1;
-        setFlyCompliment(compliment);
-        setFlyPointsValue(points);
-        setFlyPointsReason(category);
-        scheduleFlyDismiss(complimentsOn && compliment ? 4800 : 3600);
         if (settings.enableGoals && schoolId && firestore) {
           void import('@/lib/goalsProgress').then((m) =>
             m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
@@ -970,9 +1030,9 @@ export function StudentDashboardInner({
     schoolId,
     libraryPolicy,
     functions,
-    scheduleFlyDismiss,
     handlePrizeShelfScan,
     handlePickupVoucherScan,
+    handleStudentIdScan,
   ]);
 
   const handleRedeemPrizePickupVoucher = useCallback(async () => {
@@ -1045,7 +1105,8 @@ export function StudentDashboardInner({
   usePrizeShelfWedgeScan({
     enabled: Boolean(student && schoolId) && !fullPrizeShopOpen,
     busy: isRedeemingPrize || !!confirmingPrize,
-    onScan: (raw) => {
+    onScan: async (raw) => {
+      if (await handleStudentIdScan(raw)) return;
       if (isPrizeVoucherScanCode(raw)) void handlePickupVoucherScan(raw);
       else void handlePrizeShelfScan(raw);
     },
@@ -1562,14 +1623,12 @@ export function StudentDashboardInner({
           </div>
         )}
 
-        {flyPointsValue !== null && flyPointsReason ? (
-          <CouponRedeemCelebration
-            animationKey={animationKey.current}
-            points={flyPointsValue}
-            category={flyPointsReason}
-            compliment={flyCompliment}
-          />
-        ) : null}
+        {redeemFxPortalReady && flyPointsValue !== null
+          ? createPortal(
+              <StudentKioskPointsFlyUp points={flyPointsValue} animationKey={animationKey.current} />,
+              document.body,
+            )
+          : null}
 
         {/* Graphic Elements */}
         {isGraphic && !effectiveTheme && (
@@ -1702,27 +1761,45 @@ export function StudentDashboardInner({
           {/* Center: redeem coupon (primary focus) */}
           <div
             className={cn(
-              'order-1 flex min-h-0 min-w-0 flex-col gap-3 px-4 sm:px-6 lg:order-2 lg:min-h-full lg:justify-start lg:px-8 lg:py-[clamp(0.5rem,3vh,1.5rem)] [@media(max-height:760px)]:gap-2',
+              'order-1 flex min-h-0 min-w-0 flex-1 flex-col px-4 sm:px-6 lg:order-2 lg:min-h-full lg:px-8',
               studentKioskCenterStackClass,
             )}
           >
-          <StudentKioskRedeemHero
-            themed={{ active: !!effectiveTheme }}
-            primaryForeground={primaryForeground}
-            couponHelperText={couponHelperText}
-            extendedScanModes={extendedScanModes}
-            couponCode={couponCode}
-            setCouponCode={setCouponCode}
-            showManualCoupon={showManualCoupon}
-            showCameraCoupon={showCameraCoupon}
-            couponSectionEnabled={couponSectionEnabled}
-            onRedeemCoupon={() => void handleRedeemCoupon()}
-            videoRef={videoRef}
-            hasCameraPermission={hasCameraPermission}
-            cameraZoom={cameraZoom}
-            onCameraZoomChange={setCameraZoom}
-            scanStatus={scanStatus}
-          />
+            <div className="flex min-h-0 flex-1 flex-col justify-center">
+              <div className="w-full shrink-0">
+                {flyPointsValue !== null && flyPointsReason ? (
+                  <div
+                    className="pointer-events-none mb-3 w-full [@media(max-height:760px)]:mb-2"
+                    aria-live="polite"
+                  >
+                    <CouponRedeemCelebration
+                      animationKey={animationKey.current}
+                      points={flyPointsValue}
+                      category={flyPointsReason}
+                      compliment={flyCompliment}
+                    />
+                  </div>
+                ) : null}
+
+                <StudentKioskRedeemHero
+              themed={{ active: !!effectiveTheme }}
+              primaryForeground={primaryForeground}
+              couponHelperText={couponHelperText}
+              extendedScanModes={extendedScanModes}
+              couponCode={couponCode}
+              setCouponCode={setCouponCode}
+              showManualCoupon={showManualCoupon}
+              showCameraCoupon={showCameraCoupon}
+              couponSectionEnabled={couponSectionEnabled}
+              onRedeemCoupon={() => void handleRedeemCoupon()}
+              videoRef={videoRef}
+              hasCameraPermission={hasCameraPermission}
+              cameraZoom={cameraZoom}
+              onCameraZoomChange={setCameraZoom}
+              scanStatus={scanStatus}
+            />
+              </div>
+            </div>
 
             <EarnedBadgesShowcase
               student={student}

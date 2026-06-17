@@ -186,13 +186,23 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
   },
   attendance: {
     title: 'Attendance tab',
-    subtitle: 'Periods, sign-in points, and teacher rules',
+    subtitle: 'Sign-in, room passes, periods, and teacher rules',
     steps: [
+      {
+        title: 'Room passes (recess)',
+        checklist: [
+          'Open Attendance → Room passes to see who is checked out and recent trips.',
+          'Students scan their ID at the kiosk, then scan a printed pass (RCBATH, RCBREAK, RCWATER) to leave.',
+          'They scan the same pass again to return — no staff checkout needed.',
+          'Print pass cards from the same section; turn on Accept recess pass scans for the kiosk.',
+        ],
+      },
       {
         title: 'Turn attendance on',
         checklist: [
+          'Under Setup, define universal period time slots for sign-ins.',
+          'Use School Defaults for fallback points; configure teachers and classes in Setup below the periods.',
           'Enable Attendance in Settings (gear) if the kiosk should record sign-ins.',
-          'Add Universal Periods with 24-hour start and end times.',
         ],
       },
       {

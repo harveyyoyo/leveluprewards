@@ -367,7 +367,7 @@ export function OfficeGradesView({
         </p>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Button variant="outline" className="rounded-xl gap-2" asChild>
-            <Link href={`${officePublicHref(schoolId, 'reports')}?term=${encodeURIComponent(activeTerm)}`}>
+            <Link href={`${officePublicHref(schoolId, 'reports')}?report=grades&term=${encodeURIComponent(activeTerm)}`}>
               <Printer className="h-4 w-4" />
               Print report
             </Link>

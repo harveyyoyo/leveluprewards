@@ -73,11 +73,19 @@ export function pickBarcodeFormat(value: string): 'CODE128' | 'CODE39' {
   return 'CODE39';
 }
 
-/** Brief delay so SVG barcodes finish layout before window.print(). */
+/** Brief delay so SVG barcodes and QR canvases finish layout before window.print(). */
 export function waitForPrintBarcodes(): Promise<void> {
   return new Promise((resolve) => {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => resolve());
+      requestAnimationFrame(() => {
+        const qrCanvases = document.querySelectorAll('[data-branded-qr] canvas');
+        if (qrCanvases.length === 0) {
+          resolve();
+          return;
+        }
+        // One more frame so high-DPI QR canvases paint before the print dialog captures the page.
+        requestAnimationFrame(() => resolve());
+      });
     });
   });
 }

@@ -5,14 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { HeartHandshake, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { isSchoolPillarEnabled, type PillarSettings, type ProductPillarAccess } from '@/lib/productPillars';
 import { SssPortalShell } from '@/components/sss/SssPortalShell';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { hasVerifiedSssFirestoreAccess } from '@/lib/sss/sssAccess';
@@ -39,7 +37,6 @@ export function SssPortalGate({ children }: { children: React.ReactNode }) {
   const routeSchoolId = useParams<{ schoolId: string }>().schoolId?.trim().toLowerCase() ?? '';
   const router = useRouter();
   const firestore = useFirestore();
-  const { settings, pillarAccess } = useSettings();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { loginState, isInitialized, schoolId: sessionSchoolId, login, logout, userName, isAdmin, isOffice } = useAppContext();
@@ -56,23 +53,13 @@ export function SssPortalGate({ children }: { children: React.ReactNode }) {
     () => (firestore && routeSchoolId ? schoolPublicDocRef(firestore, routeSchoolId) : null),
     [firestore, routeSchoolId],
   );
-  const { data: routeSchoolPublic } = useDoc<{
-    name?: string;
-    appSettings?: PillarSettings;
-    pillarAccess?: ProductPillarAccess;
-  }>(routeSchoolPublicRef);
+  const { data: routeSchoolPublic } = useDoc<{ name?: string }>(routeSchoolPublicRef);
 
-  const pillarOn = isSchoolPillarEnabled('paySss', {
-    appSettings: settings,
-    publicAppSettings: routeSchoolPublic?.appSettings,
-    pillarAccess,
-    publicPillarAccess: routeSchoolPublic?.pillarAccess,
-  });
   const sessionMatchesRoute = !!(routeSchoolId && sessionSchoolId?.trim().toLowerCase() === routeSchoolId);
   const roleVerified =
     (loginState === 'developer' && isAdmin) ||
     (sessionMatchesRoute && hasVerifiedSssFirestoreAccess({ loginState, isAdmin, isOffice, schoolId: routeSchoolId }));
-  const canAccess = pillarOn && roleVerified;
+  const canAccess = roleVerified;
   const canLoadSssData =
     canAccess &&
     !!firestore &&
@@ -110,20 +97,6 @@ export function SssPortalGate({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen items-center justify-center gap-4 bg-[#f5f3ff]">
         <Loader2 className="h-8 w-8 animate-spin text-violet-700" />
         <p className="text-sm text-muted-foreground">Loading Student Special Services…</p>
-      </div>
-    );
-  }
-
-  if (!pillarOn) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <Card className="max-w-md rounded-2xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><HeartHandshake className="h-5 w-5 text-violet-700" />Student Special Services is off</CardTitle>
-            <CardDescription>Enable the Student Special Services pillar in Admin → Settings.</CardDescription>
-          </CardHeader>
-          <CardContent><Button asChild variant="outline" className="rounded-xl"><a href={schoolPortalHref(routeSchoolId)}>Back to portal</a></Button></CardContent>
-        </Card>
       </div>
     );
   }

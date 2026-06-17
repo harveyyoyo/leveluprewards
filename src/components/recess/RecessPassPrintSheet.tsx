@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import type { RecessReasonMeta } from '@/lib/recess/recessReasons';
 import { RecessPassCard } from '@/components/recess/RecessPassCard';
+import { waitForPrintBarcodes } from '@/lib/printBarcode';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -25,12 +26,14 @@ export function RecessPassPrintSheet({
 
   useEffect(() => {
     document.body.classList.add('id-card-printing');
-    let t: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
     if (!isLoading) {
-      t = setTimeout(() => onReady(), 120);
+      void waitForPrintBarcodes().then(() => {
+        if (!cancelled) onReady();
+      });
     }
     return () => {
-      if (t) clearTimeout(t);
+      cancelled = true;
       document.body.classList.remove('id-card-printing');
     };
   }, [isLoading, onReady]);

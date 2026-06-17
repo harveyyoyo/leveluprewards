@@ -504,11 +504,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 setIsTeacher(false);
                                 setIsSecretary(false);
                                 setIsPrizeClerk(false);
+                            } else if (canBypassSchoolAdminPasscode(auth.currentUser)) {
+                                await refreshGoogleIdToken(auth.currentUser);
+                                const verifyResult = await verifyAdminPasscodeLogin(auth, functions, {
+                                    schoolId: savedSchoolId,
+                                    passcode: '',
+                                });
+                                if (verifyResult.ok) {
+                                    setIsAdmin(true);
+                                    setIsTeacher(false);
+                                    setIsSecretary(false);
+                                    setIsPrizeClerk(false);
+                                } else {
+                                    returnToSchoolSession(savedSchoolId);
+                                }
                             } else {
                                 returnToSchoolSession(savedSchoolId);
                             }
                         } catch {
-                            returnToSchoolSession(savedSchoolId);
+                            if (canBypassSchoolAdminPasscode(auth.currentUser)) {
+                                try {
+                                    await refreshGoogleIdToken(auth.currentUser);
+                                    const verifyResult = await verifyAdminPasscodeLogin(auth, functions, {
+                                        schoolId: savedSchoolId,
+                                        passcode: '',
+                                    });
+                                    if (verifyResult.ok) {
+                                        setIsAdmin(true);
+                                        setIsTeacher(false);
+                                        setIsSecretary(false);
+                                        setIsPrizeClerk(false);
+                                    } else {
+                                        returnToSchoolSession(savedSchoolId);
+                                    }
+                                } catch {
+                                    returnToSchoolSession(savedSchoolId);
+                                }
+                            } else {
+                                returnToSchoolSession(savedSchoolId);
+                            }
                         }
                     } else {
                         returnToSchoolSession(savedSchoolId);

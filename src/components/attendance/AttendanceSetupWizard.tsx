@@ -38,7 +38,7 @@ const ADMIN_WALKTHROUGH: WalkStep[] = [
   {
     title: 'Add two example periods',
     checklist: [
-      'In this tab, under Universal Periods, add two rows (you can rename later).',
+      'In this tab, under Setup, add two period rows (you can rename later).',
       'Use 24-hour times so the kiosk clock matches the schedule.',
     ],
     example: {
@@ -81,7 +81,7 @@ const TEACHER_WALKTHROUGH: WalkStep[] = [
   {
     title: 'Confirm periods exist',
     checklist: [
-      'Bell times come from the school (Admin - Attendance - Universal Periods).',
+      'Bell times come from the school (Admin → Attendance → Setup).',
       'If the list is empty, ask an admin to add at least one period before rules work.',
     ],
     example: {

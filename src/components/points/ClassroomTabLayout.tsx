@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { LayoutGrid, BookOpenCheck, Monitor } from 'lucide-react';
+import { LayoutGrid, BookOpenCheck, Monitor, Dices } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
@@ -16,12 +16,14 @@ const SECTION_LABELS: Record<ClassroomTabSection, string> = {
   seating: CLASSROOM_SEATING_SECTION_LABEL,
   behavior: 'Behavior',
   'room-display': 'Room display',
+  raffle: 'Raffle',
 };
 
 const SECTION_ICONS: Record<ClassroomTabSection, React.ComponentType<{ className?: string }>> = {
   seating: LayoutGrid,
   behavior: BookOpenCheck,
   'room-display': Monitor,
+  raffle: Dices,
 };
 
 export type ClassroomTabLayoutProps = {
@@ -30,6 +32,7 @@ export type ClassroomTabLayoutProps = {
   seatingContent: React.ReactNode;
   behaviorContent?: React.ReactNode;
   roomDisplayContent?: React.ReactNode;
+  raffleContent?: React.ReactNode;
   headerAction?: React.ReactNode;
   className?: string;
 };
@@ -40,6 +43,7 @@ export function ClassroomTabLayout({
   seatingContent,
   behaviorContent,
   roomDisplayContent,
+  raffleContent,
   headerAction,
   className,
 }: ClassroomTabLayoutProps) {
@@ -71,6 +75,7 @@ export function ClassroomTabLayout({
     seating: seatingContent,
     behavior: behaviorContent,
     'room-display': roomDisplayContent,
+    raffle: raffleContent,
   };
 
   const hasMultiple = sections.length >= 2;

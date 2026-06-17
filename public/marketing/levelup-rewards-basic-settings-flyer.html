@@ -389,8 +389,49 @@
         if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
       } catch (_) {}
     </script>
-  </head>
+    <style id="interactive-list-link-style">
+      .interactive-list-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 10000;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 6, 15, 0.86);
+        color: #eaf0ff;
+        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(14px);
+      }
+
+      .interactive-list-link:hover {
+        border-color: rgba(34, 211, 238, 0.5);
+        color: #ffffff;
+      }
+
+      html.embed .interactive-list-link {
+        display: none !important;
+      }
+
+      @media print {
+        .interactive-list-link {
+          display: none !important;
+        }
+      }
+    </style>
+    <script>
+      try {
+        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+      } catch (_) {}
+    </script>  </head>
   <body>
+    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
     <p class="hint">Ctrl+P → Letter · Margins: None · Background graphics on</p>
 
     <article class="flyer" aria-label="LevelUp Rewards basic settings admin flyer">

@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState, useEffect, useLayoutEffect, useRef, type ComponentType, type CSSProperties, type MouseEvent } from 'react';
+import { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback, type ComponentType, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
@@ -181,6 +181,16 @@ export default function PortalPage() {
     const [teacherPasscode, setTeacherPasscode] = useState('');
     const [teacherSubmitting, setTeacherSubmitting] = useState(false);
     const gridRef = useRef<HTMLDivElement>(null);
+    const prefetchedPortalHrefs = useRef(new Set<string>());
+
+    const prefetchPortalHref = useCallback(
+        (href: string) => {
+            if (prefetchedPortalHrefs.current.has(href)) return;
+            prefetchedPortalHrefs.current.add(href);
+            router.prefetch(href);
+        },
+        [router],
+    );
 
     const [reduceWhereToMotion, setReduceWhereToMotion] = useState(
         () =>
@@ -602,6 +612,8 @@ export default function PortalPage() {
                                 key={area.id}
                                 href={area.href}
                                 data-intro-tour={`portal-${area.id}`}
+                                onPointerEnter={() => prefetchPortalHref(area.href)}
+                                onFocus={() => prefetchPortalHref(area.href)}
                                 onClick={(e) => {
                                     playSound('click');
                                     if (area.id === 'admin' && !isAdmin) {

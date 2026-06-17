@@ -11,7 +11,7 @@ import {
 } from '@/lib/staff/staffIdCardSubject';
 import { cn, getContrastColor } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
-import { PrintBarcode } from '@/components/print/PrintBarcode';
+import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function StaffIdCard({
@@ -37,6 +37,8 @@ export function StaffIdCard({
 }) {
   const { settings } = useSettings();
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
+  const useQr = settings.idCardUseQrCode === true;
+  const staffInitials = staffIdCardInitials(subject);
   const displayName = staffIdCardDisplayName(subject);
   const roleLabel = staffIdCardRoleLabel(subject);
   const scanCode = staffIdCardScanCode(subject);
@@ -85,6 +87,7 @@ export function StaffIdCard({
         'print-id-card print-staff-id-card',
         isColorEnabled && 'is-colored',
         resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        useQr && 'print-id-card--qr-scan',
         className,
       )}
       style={cardStyle}
@@ -118,13 +121,24 @@ export function StaffIdCard({
       </div>
 
       <div className="print-id-main flex items-center justify-center gap-3 px-2 min-h-0 flex-1">
-        <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-lg font-black"
-          style={avatarStyle}
-          aria-hidden
-        >
-          {staffIdCardInitials(subject)}
-        </div>
+        {useQr ? (
+          <div className="print-id-qr-slot" aria-label={`Staff scan code ${scanCode}`}>
+            <PrintIdCardScanCode
+              value={scanCode}
+              useQr
+              centerLabel={staffInitials}
+              placement="inline"
+            />
+          </div>
+        ) : (
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-2 text-lg font-black"
+            style={avatarStyle}
+            aria-hidden
+          >
+            {staffInitials}
+          </div>
+        )}
         <div className="min-w-0 flex-1 text-left" style={{ color: mainTextColor }}>
           <div className="print-id-name text-left">{displayName}</div>
           <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mainMutedText }}>
@@ -136,12 +150,14 @@ export function StaffIdCard({
         </div>
       </div>
 
-      <div
-        className="print-id-barcode-container mt-auto"
-        style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${barcodeDivider}` }}
-      >
-        <PrintBarcode value={scanCode} variant="id-card" />
-      </div>
+      {!useQr ? (
+        <div
+          className="print-id-barcode-container mt-auto"
+          style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${barcodeDivider}` }}
+        >
+          <PrintIdCardScanCode value={scanCode} placement="footer" />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -818,11 +818,24 @@ function buildCelebrationParticles(effect: ClassroomEffect, count: number): FxPa
     left: Math.random() * 100,
     delay: Math.random() * 0.45,
     duration: 0.95 + Math.random() * 1.25,
-    size: 6 + Math.random() * 12,
+    size: 8 + Math.random() * 14,
     hue: Math.floor(Math.random() * 360),
     angle: Math.random() * 360,
     dist: 28 + Math.random() * 42,
   }));
+}
+
+/** Spread particles across the desk cell (matches sparkles coverage). */
+function cellSpreadTopPercent(particleId: number): string {
+  return `${8 + (particleId % 7) * 13}%`;
+}
+
+function cellSpreadFallTopPercent(particleId: number): string {
+  return `${-12 + (particleId % 8) * 9}%`;
+}
+
+function cellLeftPx(leftPercent: number, sizePx: number): string {
+  return `calc(${leftPercent}% - ${sizePx / 2}px)`;
 }
 
 export function ClassroomEffectOverlay({
@@ -842,14 +855,9 @@ export function ClassroomEffectOverlay({
 
   if (effect === 'none') return null;
 
-  const spillsOverDesk = effect === 'confetti' || effect === 'fireworks' || effect === 'sparkles';
-
   return (
     <div
-      className={cn(
-        'pointer-events-none absolute inset-0 z-10 rounded-[inherit]',
-        spillsOverDesk ? 'overflow-visible' : 'overflow-hidden',
-      )}
+      className="pointer-events-none absolute inset-0 z-10 overflow-visible rounded-[inherit]"
     >
       {effect === 'fireworks'
         ? [0, 0.2, 0.42].map((delay, i) => (
@@ -868,7 +876,7 @@ export function ClassroomEffectOverlay({
       {particles.map((p) => {
         const common: React.CSSProperties = {
           position: 'absolute',
-          left: `${p.left}%`,
+          left: cellLeftPx(p.left, p.size),
           width: p.size,
           height: p.size,
           animationDelay: `${p.delay}s`,
@@ -882,8 +890,8 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 position: 'absolute',
-                left: `${p.left}%`,
-                top: -16 - (p.id % 5) * 4,
+                left: cellLeftPx(p.left, w),
+                top: cellSpreadFallTopPercent(p.id),
                 width: w,
                 height: h,
                 animationDelay: `${p.delay}s`,
@@ -904,7 +912,7 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: -8,
+                top: cellSpreadFallTopPercent(p.id),
                 background: 'white',
                 borderRadius: '50%',
                 opacity: 0.85,
@@ -920,11 +928,11 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                bottom: 0,
-                top: 'auto',
+                top: cellSpreadTopPercent(p.id),
                 color: `hsl(${340 + (p.hue % 20)} 85% 60%)`,
+                filter: 'drop-shadow(0 0 3px currentColor)',
               }}
-              className="block animate-classroom-fx-rise-scoped"
+              className="flex animate-classroom-fx-twinkle-scoped items-center justify-center"
             >
               <Heart className="h-full w-full" fill="currentColor" strokeWidth={0} />
             </span>
@@ -936,11 +944,11 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                bottom: 0,
-                top: 'auto',
+                top: cellSpreadTopPercent(p.id),
                 color: `hsl(${45 + (p.hue % 30)} 95% 60%)`,
+                filter: 'drop-shadow(0 0 3px currentColor)',
               }}
-              className="block animate-classroom-fx-rise-scoped"
+              className="flex animate-classroom-fx-twinkle-scoped items-center justify-center"
             >
               <Star className="h-full w-full" fill="currentColor" strokeWidth={0} />
             </span>
@@ -952,12 +960,11 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: `${10 + (p.id % 7) * 12}%`,
-                left: `${p.left}%`,
+                top: cellSpreadTopPercent(p.id),
                 color: `hsl(${p.hue} 92% 68%)`,
                 filter: 'drop-shadow(0 0 4px currentColor)',
               }}
-              className="block animate-classroom-fx-twinkle-scoped"
+              className="flex animate-classroom-fx-twinkle-scoped items-center justify-center"
             >
               <Sparkles className="h-full w-full" />
             </span>

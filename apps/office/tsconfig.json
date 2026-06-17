@@ -16,8 +16,7 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "typeRoots": ["./node_modules/@types"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": [
@@ -30,7 +29,6 @@
     "src/lib/server/mediaAssetLibrary.ts",
     "src/lib/server/mediaAssetRecapture.ts",
     "src/components/ui/NumericKeypad.tsx",
-    "src/components/ui/command.tsx",
     "src/lib/google/googleSchoolAccess.ts"
   ]
 }

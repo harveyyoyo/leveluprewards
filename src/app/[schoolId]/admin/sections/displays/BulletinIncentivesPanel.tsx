@@ -1,12 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { collection, doc, addDoc, updateDoc, deleteDoc, query } from 'firebase/firestore';
+import { collection, doc, addDoc, deleteDoc, query } from 'firebase/firestore';
 import {
   CheckCircle2,
-  Edit,
   Plus,
-  Settings2,
   Sparkles,
   Tag,
   Trash2,
@@ -15,7 +13,6 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +22,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
+import {
+  adminRecordListGridClassName,
+  adminRecordListGridCompactGapClassName,
+  adminRecordListGridNameCellClassName,
+  adminRecordListGridStyle,
+} from '@/components/admin/adminRecordListGrid';
 import {
   BULLETIN_EMOJI_SUGGESTIONS,
   PRESET_BULLETIN_INCENTIVES,
@@ -36,6 +39,10 @@ import { useToast } from '@/hooks/use-toast';
 type BulletinIncentivesPanelProps = {
   schoolId: string;
 };
+
+/** Icon, name, category, points, delete — fits the incentives panel without horizontal scroll. */
+const INCENTIVES_LIST_GRID_COLS =
+  '2.25rem minmax(0, 1fr) minmax(5.5rem, 0.55fr) minmax(4.25rem, 0.4fr) 2.5rem';
 
 export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelProps) {
   const { toast } = useToast();
@@ -53,32 +60,22 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
   }, [incentives]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingIncentive, setEditingIncentive] = useState<BulletinBoardIncentiveRecord | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [points, setPoints] = useState(50);
   const [icon, setIcon] = useState('🎉');
   const [category, setCategory] = useState('Attendance');
-  const [active, setActive] = useState(true);
 
-  const openModal = (incentive?: BulletinBoardIncentiveRecord) => {
-    if (incentive) {
-      setEditingIncentive(incentive);
-      setTitle(incentive.title);
-      setDescription(incentive.description);
-      setPoints(Number(incentive.points) || 0);
-      setIcon(incentive.icon || '🎉');
-      setCategory(incentive.category || 'Attendance');
-      setActive(incentive.active !== false);
-    } else {
-      setEditingIncentive(null);
-      setTitle('');
-      setDescription('');
-      setPoints(50);
-      setIcon('🎉');
-      setCategory('Attendance');
-      setActive(true);
-    }
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setPoints(50);
+    setIcon('🎉');
+    setCategory('Attendance');
+  };
+
+  const openCreateModal = () => {
+    resetForm();
     setIsModalOpen(true);
   };
 
@@ -91,41 +88,37 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
         points: preset.points,
         icon: preset.icon,
         category: preset.category,
-        active: true,
+        surfaces: {},
         createdAt: Date.now(),
       });
-      toast({ title: 'Preset Added!', description: `The incentive "${preset.title}" was added to the board.` });
+      toast({
+        title: 'Incentive created',
+        description: `"${preset.title}" was added to your catalog. Assign it under Where to show.`,
+      });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: 'Action failed', description: 'Could not add preset incentive.' });
     }
   };
 
-  const handleSaveIncentive = async (e: React.FormEvent) => {
+  const handleCreateIncentive = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!schoolId || !firestore || !title.trim()) return;
 
     try {
-      const payload = {
+      await addDoc(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives'), {
         title: title.trim(),
         description: description.trim(),
         points: Number(points),
         icon: icon.trim() || '🎉',
         category: category.trim() || 'Attendance',
-        active: active !== false,
-        updatedAt: Date.now(),
-      };
-
-      if (editingIncentive) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'bulletinBoardIncentives', editingIncentive.id), payload);
-        toast({ title: 'Incentive Updated!', description: 'The incentive has been successfully updated.' });
-      } else {
-        await addDoc(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives'), {
-          ...payload,
-          createdAt: Date.now(),
-        });
-        toast({ title: 'Incentive Added!', description: 'A new incentive has been posted to the bulletin board.' });
-      }
+        surfaces: {},
+        createdAt: Date.now(),
+      });
+      toast({
+        title: 'Incentive created',
+        description: 'Add it to displays under Where to show.',
+      });
       setIsModalOpen(false);
     } catch (err) {
       console.error(err);
@@ -137,7 +130,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
     if (!schoolId || !firestore || !id) return;
     try {
       await deleteDoc(doc(firestore, 'schools', schoolId, 'bulletinBoardIncentives', id));
-      toast({ title: 'Incentive Deleted', description: 'The incentive has been removed from the board.' });
+      toast({ title: 'Incentive deleted', description: 'Removed from your catalog and all displays.' });
     } catch (err) {
       console.error(err);
       toast({ variant: 'destructive', title: 'Delete failed', description: 'Could not delete the incentive.' });
@@ -151,23 +144,25 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
           <div className="flex min-w-0 items-start gap-2">
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden />
             <div>
-              <p className="text-sm font-bold">Incentive management</p>
-              <p className="text-xs text-muted-foreground">Create or remove options for points-earning incentives.</p>
+              <p className="text-sm font-bold">Incentive catalog</p>
+              <p className="text-xs text-muted-foreground">
+                Create or delete incentives here. Assign them to displays under Where to show.
+              </p>
             </div>
           </div>
           <Button
             type="button"
             className="h-10 shrink-0 gap-1 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg transition-all hover:scale-105 active:scale-95"
-            onClick={() => openModal()}
+            onClick={openCreateModal}
           >
-            <Plus className="h-4 w-4" /> Add Incentive
+            <Plus className="h-4 w-4" /> Create Incentive
           </Button>
         </div>
 
         <div className="space-y-6">
           <div>
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Quick Add Incentives
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Quick add templates
             </h3>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {PRESET_BULLETIN_INCENTIVES.map((preset, idx) => (
@@ -198,21 +193,23 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
 
           <div>
             <h3 className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              <Tag className="h-3.5 w-3.5 text-indigo-500" /> Posted Incentives
+              <Tag className="h-3.5 w-3.5 text-indigo-500" /> Your incentives
               <span className="ml-1 rounded-full border bg-background px-2 py-0.5 text-[10px] font-black">
                 {sortedIncentives.length}
               </span>
             </h3>
             <div className="rounded-2xl border bg-slate-50/40 dark:bg-slate-900/40">
               {isLoading ? (
-                <p className="animate-pulse p-8 text-center text-sm text-muted-foreground">Loading posted incentives...</p>
+                <p className="animate-pulse p-8 text-center text-sm text-muted-foreground">Loading incentives...</p>
               ) : sortedIncentives.length > 0 ? (
                 <ul className="space-y-1 p-2">
                   <AdminRecordListHeader
-                    gridClassName="grid-cols-[76px_minmax(180px,1fr)_44px]"
+                    gridColumns={INCENTIVES_LIST_GRID_COLS}
                     columns={[
-                      { label: 'Edit' },
-                      { label: 'Incentive Name, Category, Points & Status' },
+                      { label: '', id: 'icon' },
+                      { label: 'Name' },
+                      { label: 'Category' },
+                      { label: 'Points', className: 'text-center' },
                       { label: 'Delete', className: 'text-right' },
                     ]}
                   />
@@ -220,48 +217,34 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
                     <li
                       key={inc.id}
                       className={cn(
-                        'grid grid-cols-[76px_minmax(180px,1fr)_44px] items-center gap-3 rounded-xl border px-3 py-2 transition-colors',
-                        inc.active === false
-                          ? 'bg-muted/30 opacity-75'
-                          : 'bg-white hover:border-primary/20 hover:shadow-sm dark:bg-slate-950',
+                        'items-center rounded-xl border px-3 py-2 transition-colors',
+                        'bg-white hover:border-primary/20 hover:shadow-sm dark:bg-slate-950',
+                        adminRecordListGridCompactGapClassName,
+                        adminRecordListGridClassName,
                       )}
+                      style={adminRecordListGridStyle(INCENTIVES_LIST_GRID_COLS)}
                     >
-                      <div className="flex items-center">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background font-semibold text-primary hover:bg-primary/5"
-                          onClick={() => openModal(inc)}
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                      </div>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="shrink-0 text-xl" role="img" aria-label="incentive icon">
-                          {inc.icon || '🎉'}
-                        </span>
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <span className="truncate text-sm font-bold">{inc.title}</span>
-                          <span className="truncate rounded-lg border bg-background px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                            {inc.category}
-                          </span>
-                          <span className="rounded-lg bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400">
-                            +{Number(inc.points) || 0} PTS
-                          </span>
-                          <span
-                            className={cn(
-                              'rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest',
-                              inc.active
-                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400',
-                            )}
-                          >
-                            {inc.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </div>
-                      </div>
+                      <span className="text-xl leading-none" role="img" aria-label="incentive icon">
+                        {inc.icon || '🎉'}
+                      </span>
+                      <span
+                        className={cn(
+                          adminRecordListGridNameCellClassName,
+                          'truncate text-sm font-bold',
+                        )}
+                        title={inc.title}
+                      >
+                        {inc.title}
+                      </span>
+                      <span
+                        className="truncate text-xs font-medium text-muted-foreground"
+                        title={inc.category}
+                      >
+                        {inc.category || '—'}
+                      </span>
+                      <span className="text-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                        +{Number(inc.points) || 0}
+                      </span>
                       <div className="flex items-center justify-end">
                         <Button
                           type="button"
@@ -269,6 +252,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
                           size="icon"
                           className="h-8 w-8 rounded-lg text-rose-600 dark:text-rose-400"
                           onClick={() => handleDeleteIncentive(inc.id)}
+                          aria-label={`Delete ${inc.title}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -278,7 +262,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
                 </ul>
               ) : (
                 <p className="p-12 text-center text-sm text-muted-foreground">
-                  No custom incentives created yet. Add presets or create custom options above.
+                  No incentives yet. Create one above or use a quick-add template.
                 </p>
               )}
             </div>
@@ -290,14 +274,14 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
         <DialogContent className="rounded-3xl p-6 sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base md:text-lg">
-              {editingIncentive ? <Settings2 className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-              {editingIncentive ? 'Edit Board Incentive' : 'Add New Incentive'}
+              <Plus className="h-5 w-5" />
+              Create incentive
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Configure the points value and details of the bulletin board incentive.
+              Add a new opportunity to your catalog. Assign it to displays afterward under Where to show.
             </DialogDescription>
           </DialogHeader>
-          <form className="space-y-4" onSubmit={handleSaveIncentive}>
+          <form className="space-y-4" onSubmit={handleCreateIncentive}>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="incTitle" className="text-xs font-bold">
@@ -392,16 +376,6 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
               </div>
             </div>
 
-            <div className="flex items-center justify-between rounded-2xl border bg-slate-50 p-3 dark:bg-slate-900/40">
-              <div className="space-y-0.5">
-                <p className="text-xs font-bold">Active / Visible on Board</p>
-                <p className="text-[10px] leading-tight text-muted-foreground">
-                  Allows students to view this incentive immediately.
-                </p>
-              </div>
-              <Switch checked={active} onCheckedChange={setActive} />
-            </div>
-
             <DialogFooter className="pt-2">
               <Button
                 type="button"
@@ -415,7 +389,7 @@ export function BulletinIncentivesPanel({ schoolId }: BulletinIncentivesPanelPro
                 type="submit"
                 className="h-10 shrink-0 rounded-xl px-5 text-xs font-black uppercase tracking-widest shadow-lg"
               >
-                {editingIncentive ? 'Save Updates' : 'Post to Board'}
+                Create incentive
               </Button>
             </DialogFooter>
           </form>

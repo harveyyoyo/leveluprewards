@@ -22,7 +22,6 @@ const ADMIN_TAB_ORDER = [
   'bonuspoints',
   'category-badges',
   'goals',
-  'raffle',
   'houses',
   'notifications',
   'branding',

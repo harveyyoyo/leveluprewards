@@ -5,7 +5,12 @@ import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { isPortalTourLaunchArea, portalTourIdForArea, type PortalTourId } from './startPortalTour';
+import {
+  isPortalTourLaunchArea,
+  portalTourIdForArea,
+  portalTourLabelForArea,
+  type PortalTourId,
+} from './startPortalTour';
 
 type PortalAreaTourButtonProps = {
   areaId: string;
@@ -29,6 +34,7 @@ export function PortalAreaTourButton({ areaId, layout = 'default', onLaunchTour 
   if (!isPortalTourLaunchArea(areaId)) return null;
 
   const compact = layout === 'compact';
+  const tourLabel = portalTourLabelForArea(areaId) ?? 'Tour';
 
   return (
     <div className={cn('pointer-events-auto', compact ? 'pt-1 z-20' : 'pt-2')}>
@@ -47,7 +53,7 @@ export function PortalAreaTourButton({ areaId, layout = 'default', onLaunchTour 
         }}
       >
         <HelpCircle className={cn('text-secondary-foreground', compact ? 'mr-1 h-3 w-3' : 'mr-1.5 h-3.5 w-3.5')} />
-        {compact ? 'Welcome Tour' : 'Portal Tour'}
+        {tourLabel}
       </div>
     </div>
   );

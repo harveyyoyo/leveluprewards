@@ -92,7 +92,8 @@ export const redeemCoupon = async (
       if (coupon.expiresAt && nowTs > coupon.expiresAt) {
         throw new Error('This coupon has expired.');
       }
-      if (coupon.used) throw new Error('This coupon has already been used.');
+      const isReusableSample = coupon.reusableSample === true;
+      if (coupon.used && !isReusableSample) throw new Error('This coupon has already been used.');
 
       const studentDoc = await transaction.get(studentRef);
       if (!studentDoc.exists()) throw new Error("Student not found.");
@@ -160,12 +161,13 @@ export const redeemCoupon = async (
         date: Date.now(),
       });
 
-      // Mark coupon as used
-      transaction.update(couponRef, {
-        used: true,
-        usedAt: Date.now(),
-        usedBy: studentId,
-      });
+      if (!isReusableSample) {
+        transaction.update(couponRef, {
+          used: true,
+          usedAt: Date.now(),
+          usedBy: studentId,
+        });
+      }
 
       return { baseValue: addedValue, bonusTotal: evalResult.bonusTotal };
     });

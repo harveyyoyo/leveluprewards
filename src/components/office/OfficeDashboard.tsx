@@ -132,7 +132,7 @@ export function OfficeDashboard({
     {
       href: officePublicHref(schoolId, 'reports'),
       title: 'Reports',
-      subtitle: 'Print grade summaries',
+      subtitle: 'Grades, billing, rosters',
       icon: FileText,
       tint: 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
     },

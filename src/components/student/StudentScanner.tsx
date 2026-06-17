@@ -41,6 +41,10 @@ import {
     clearKioskCameraLoginTabPref,
     type KioskLoginTabId,
 } from '@/lib/kiosk/kioskSessionPrefs';
+import {
+    SAMPLE_KIOSK_STUDENT_DISPLAY_NAME,
+    SAMPLE_KIOSK_STUDENT_ID,
+} from '@/lib/sampleKioskDemo';
 
 export type StudentFoundMeta = { source: 'face'; confidence?: number };
 
@@ -147,6 +151,7 @@ export function StudentScanner({
     const playSound = useArcadeSound();
     const { settings } = useSettings();
     const isGraphic = settings.graphicMode === 'graphics';
+    const showSampleKioskStudent = settings.enableSampleKioskStudent === true;
     const { captureFaceDescriptor, ensureFaceApiReady } = useFaceDescriptor();
     const FACE_MATCH_MIN_CONFIDENCE = 0.9;
 
@@ -174,6 +179,7 @@ export function StudentScanner({
     const cardEnabled = settings.kioskLoginTabCardEnabled !== false;
     const typeEnabled = settings.kioskLoginTabTypeEnabled !== false;
     const qrEnabled = settings.kioskLoginTabScanEnabled !== false;
+    const idCardQrEnabled = settings.idCardUseQrCode === true;
     const faceEnabled = settings.kioskLoginTabFaceEnabled === true;
 
     const availableLoginTabs = useMemo(() => {
@@ -221,10 +227,10 @@ export function StudentScanner({
     }, [schoolId, availableLoginTabs]);
 
     useEffect(() => {
-        if (qrEnabled) preloadBarcodeScanStack();
+        if (qrEnabled) preloadBarcodeScanStack({ preferQr: idCardQrEnabled });
         const scanTabSelected = loginTab === 'camera';
         syncKioskBarcodeCameraWarm({ loginScan: qrEnabled && scanTabSelected });
-    }, [qrEnabled, loginTab]);
+    }, [qrEnabled, idCardQrEnabled, loginTab]);
 
     const scanTabSelected = loginTab === 'camera';
 
@@ -674,6 +680,7 @@ export function StudentScanner({
             cameraEnabled: cameraScanSettingOn,
             keepCameraWarm: false,
             showScanFeedback: true,
+            preferQr: idCardQrEnabled,
         },
     );
 
@@ -866,6 +873,20 @@ export function StudentScanner({
                             >
                                 Identify Student
                             </Button>
+                            {showSampleKioskStudent ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    data-intro-tour="kiosk-login-sample-student"
+                                    onClick={() => {
+                                        setNfcId(SAMPLE_KIOSK_STUDENT_ID);
+                                        void handleLookup(SAMPLE_KIOSK_STUDENT_ID);
+                                    }}
+                                    className="w-full h-11 rounded-xl font-bold text-sm border-dashed"
+                                >
+                                    Try sample: {SAMPLE_KIOSK_STUDENT_DISPLAY_NAME} (ID {SAMPLE_KIOSK_STUDENT_ID})
+                                </Button>
+                            ) : null}
                         </div>
                     </TabsContent>
 
@@ -879,6 +900,7 @@ export function StudentScanner({
                                 onZoomChange={setZoom}
                                 scanStatus={scanStatus}
                                 showScanFeedback
+                                hintText={idCardQrEnabled ? 'Hold the QR on your ID card in the frame' : undefined}
                                 viewportClassName="aspect-video max-h-[220px] [@media(max-height:720px)]:max-h-[160px]"
                                 className="space-y-4 [@media(max-height:720px)]:space-y-2"
                             />

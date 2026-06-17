@@ -5,7 +5,6 @@ import {
   BookOpen,
   Clock,
   DoorOpen,
-  Dices,
   FileText,
   Gift,
   GraduationCap,
@@ -71,13 +70,13 @@ function teacherAddonEnabled(
  * - **Add-on** tabs: optional in the nav row when pinned via **Add more**.
  * - **Admin** and **teacher** are separate sign-ins (`/admin` vs `/teacher`); staff who do both need two accounts.
  * - **Admin** pins school-management tabs (Insights, Houses, …) and toggles school config flags.
- * - **Teachers** pin their own tabs (Raffle, Goals, Attendance, …); admins do not gate teacher nav.
- *   Pinning raffle turns on `enableWeeklyRaffle` (kiosk ticket display still requires Rewards pillar).
+ * - **Teachers** pin their own tabs (Goals, Attendance, …); admins do not gate teacher nav.
+ *   Raffle lives under Classroom; pinning legacy `raffle` normalizes to Classroom.
  *   With Rewards off, staff raffle uses `classroomPoints`; kiosk tickets still require Rewards.
  *
  * | Tab value        | Admin | Teacher | Notes |
  * |------------------|:-----:|:-------:|-------|
- * | raffle, goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
+ * | goals, homework | add-on | add-on | Teacher-operational (not Rewards-gated) |
  * | generated-coupons | — | add-on | Rewards economy (coupon print) |
  * | attendance | add-on | add-on | `payAttendance` pillar |
  * | insights, displays, library, … | add-on | add-on (pin) | School-wide; see `STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES` |
@@ -145,7 +144,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     kind: 'core',
     roles: ['admin', 'teacher'],
     teacherOperated: true,
-    title: `${CLASSROOM_SEATING_SECTION_LABEL}, behavior, alerts, and room display`,
+    title: `${CLASSROOM_SEATING_SECTION_LABEL}, behavior, alerts, room display, and raffle`,
     isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
   {
@@ -287,22 +286,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     },
   },
   {
-    value: 'raffle',
-    label: 'Raffle',
-    icon: Dices,
-    kind: 'addon',
-    roles: ['admin', 'teacher'],
-    teacherOperated: true,
-    isEnabled: (s, role) => {
-      if (role === 'teacher') {
-        if (teacherAddonHidden(s, 'raffle')) return false;
-        return true;
-      }
-      if (adminAddonHidden(s, 'raffle')) return false;
-      return !!s.enableWeeklyRaffle;
-    },
-  },
-  {
     value: 'houses',
     label: 'Houses',
     icon: Home,
@@ -322,7 +305,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     roles: ['admin'],
     title: 'Check students out for a break or bathroom',
     description: 'Sign students out for a quick break or bathroom and time how long they are gone.',
-    isEnabled: (s) => s.enableRecess !== false,
+    isEnabled: () => false,
   },
   {
     value: 'notifications',
@@ -420,7 +403,6 @@ export const STAFF_PORTAL_CANONICAL_TAB_ORDER: readonly string[] = [
   'bonuspoints',
   'category-badges',
   'goals',
-  'raffle',
   'houses',
   'recess',
   'notifications',
@@ -518,7 +500,7 @@ export function staffPortalTeacherPinSideEffects(
 ): Partial<Settings> {
   if (!pinned) return {};
   switch (tabValue) {
-    case 'raffle':
+    case 'classroom':
       return { enableWeeklyRaffle: true };
     case 'goals':
       return { enableGoals: true };
@@ -604,13 +586,13 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   categories:
     'Set up point categories, print coupons, review inventory, and adjust balances.',
   classroom:
-    'Configure Class Awards Live, behavior notes, alerts, and room display.',
+    'Configure Class Awards Live, behavior notes, alerts, room display, and raffle drawings.',
   reports: 'Print and export summaries of points, redemptions, and activity.',
   roster: 'Manage direct student links and search your roster. Class students stay visible automatically.',
   coupons: 'Print coupon sheets and award or deduct points in your classes.',
   redemptions: 'Review prize redemption history for your students.',
   insights: 'View school-wide analytics and engagement trends.',
-  attendance: 'Configure sign-in rules, period slots, and attendance reporting.',
+  attendance: 'Configure sign-in rules, period slots, room passes, and attendance reporting.',
   displays: 'Set up Smart Screen, bulletin board, and Hall of Fame displays for TVs and monitors.',
   incentives:
     'Create point-earning opportunities and choose where students see them — bulletin, Smart Screen, kiosk, or portal.',
@@ -629,7 +611,6 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   'student-portal':
     'Enable the home portal URL, passcodes, and per-student sign-in options.',
   homework: 'Track homework assignments and classroom completion.',
-  raffle: 'Configure weekly raffle rules, ticket pools, and run drawings.',
   'generated-coupons': 'View and manage coupons generated for your classes.',
 };
 

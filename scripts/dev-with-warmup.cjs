@@ -25,6 +25,8 @@ function isWarmupEnabled() {
   const flag = String(process.env.DEV_WARMUP ?? '').trim().toLowerCase();
   if (flag === '0' || flag === 'false' || flag === 'no' || flag === 'off') return false;
   if (flag === '1' || flag === 'true' || flag === 'yes' || flag === 'on') return true;
+  // Windows dev often corrupts .next when warmup + live browsing compete for webpack output.
+  if (process.platform === 'win32') return false;
   return true;
 }
 
@@ -84,7 +86,11 @@ async function main() {
     console.log('[dev:warmup] Background warmup: low-priority HTTP, then heavy pages only in headless Chrome.');
     console.log('[dev:warmup] App is usable while warmup runs (~2-5 min). Disable: DEV_WARMUP=0 or npm run dev:fast\n');
   } else {
-    console.log('[dev] Background warmup off. Re-enable: npm run dev (default) or DEV_WARMUP=1\n');
+    const winNote =
+      process.platform === 'win32'
+        ? ' (default off on Windows; set DEV_WARMUP=1 to enable)'
+        : '';
+    console.log(`[dev] Background warmup off${winNote}. Re-enable: npm run dev:warm or DEV_WARMUP=1\n`);
   }
 
   const dev = spawn(process.execPath, [nextCli, ...nextArgs], {

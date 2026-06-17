@@ -8,8 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
-import { OfficeStudentSheet } from '@/components/office/OfficeStudentSheet';
 import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
+import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import type { OfficeBillingAccount, OfficeClass, OfficeGradeEntry, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   billingAccountForStudent,
@@ -56,12 +58,13 @@ export function OfficeStudentsView({
 }: OfficeStudentsViewProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { openStudent, selectedStudentId } = useOfficeEntityNav();
   const [query, setQuery] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [homeroomFilter, setHomeroomFilter] = useState('all');
   const [rosterFilter, setRosterFilter] = useState<RosterFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
-  const [selected, setSelected] = useState<OfficeStudent | null>(null);
-  const openedFromQuery = useRef(false);
+  const openedHomeroomFromQuery = useRef(false);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
@@ -81,6 +84,7 @@ export function OfficeStudentsView({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const list = students.filter((s) => {
+      if (homeroomFilter !== 'all' && s.teacherId !== homeroomFilter) return false;
       if (rosterFilter === 'unassigned' && s.classId) return false;
       if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
       if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
@@ -104,7 +108,7 @@ export function OfficeStudentsView({
       }
       return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
     });
-  }, [students, query, classFilter, rosterFilter, sortBy, classNameById, gradedForTerm, billingAccounts]);
+  }, [students, query, classFilter, homeroomFilter, rosterFilter, sortBy, classNameById, gradedForTerm, billingAccounts]);
 
   useEffect(() => {
     const f = searchParams.get('filter')?.trim();
@@ -115,19 +119,17 @@ export function OfficeStudentsView({
   }, [searchParams]);
 
   useEffect(() => {
-    if (openedFromQuery.current || isLoading) return;
-    const id = searchParams.get('student')?.trim();
-    if (!id) return;
-    const match = students.find((s) => s.id === id);
-    if (match) {
-      openedFromQuery.current = true;
-      setSelected(match);
+    if (openedHomeroomFromQuery.current) return;
+    const homeroom = searchParams.get('homeroom')?.trim();
+    if (homeroom && teachers.some((t) => t.id === homeroom)) {
+      openedHomeroomFromQuery.current = true;
+      setHomeroomFilter(homeroom);
     }
-  }, [searchParams, students, isLoading]);
+  }, [searchParams, teachers]);
 
   useOfficeUrlSync({
     filter: rosterFilter === 'all' ? undefined : rosterFilter,
-    student: selected?.id,
+    homeroom: homeroomFilter === 'all' ? undefined : homeroomFilter,
     class:
       classFilter === 'all' || classFilter === '__unassigned__' ? undefined : classFilter,
   });
@@ -263,18 +265,36 @@ export function OfficeStudentsView({
                 key={s.id}
                 className={cn(
                   'border-b border-slate-100 last:border-0 dark:border-slate-800 cursor-pointer hover:bg-teal-50/60 dark:hover:bg-teal-950/20',
-                  selected?.id === s.id && 'bg-teal-50/80 dark:bg-teal-950/30',
+                  selectedStudentId === s.id && 'bg-teal-50/80 dark:bg-teal-950/30',
                 )}
-                onClick={() => setSelected(s)}
+                onClick={(event) => handleSelectableRowClick(event, () => openStudent(s))}
               >
                 <td className="px-4 py-3 font-medium">
                   {getOfficeStudentLabel(s)} {s.lastName}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                  {(s.classId && classNameById.get(s.classId)) || '—'}
+                <td className="px-4 py-3 hidden sm:table-cell">
+                  {s.classId ? (
+                    <OfficeEntityLink
+                      kind="class"
+                      id={s.classId}
+                      label={classNameById.get(s.classId) ?? 'Class'}
+                      muted
+                    />
+                  ) : (
+                    '—'
+                  )}
                 </td>
-                <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                  {getOfficeTeacherLabel(s, teacherNameById) || '—'}
+                <td className="px-4 py-3 hidden md:table-cell">
+                  {s.teacherId ? (
+                    <OfficeEntityLink
+                      kind="teacher"
+                      id={s.teacherId}
+                      label={getOfficeTeacherLabel(s, teacherNameById)}
+                      muted
+                    />
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
                   {billingAccountForStudent(billingAccounts, s.id)?.familyName ?? '—'}
@@ -302,19 +322,6 @@ export function OfficeStudentsView({
           </p>
         ) : null}
       </div>
-
-      <OfficeStudentSheet
-        schoolId={schoolId}
-        student={selected}
-        open={!!selected}
-        onOpenChange={(open) => !open && setSelected(null)}
-        classLabel={selected?.classId ? classNameById.get(selected.classId) : undefined}
-        gradeEntries={gradeEntries}
-        billingAccounts={billingAccounts}
-        activeTerm={activeTerm}
-        classes={classes}
-        teachers={teachers}
-      />
     </div>
   );
 }

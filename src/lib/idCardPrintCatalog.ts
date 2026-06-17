@@ -5,6 +5,10 @@
 
 export type IdCardPrinterFamilyId = 'browser_sheet' | 'dtc4500e';
 
+/** Per-run sheet spacing: separated = gaps between labels; attached = edge-to-edge like coupon sheets. */
+export type IdCardSheetSpacing = 'separated' | 'attached';
+export const DEFAULT_ID_CARD_SHEET_SPACING: IdCardSheetSpacing = 'separated';
+
 export interface IdCardPrintProfile {
   id: string;
   name: string;
@@ -100,4 +104,8 @@ export function resolveIdCardPrinterFamily(settings: IdCardPrintSettingsInput): 
 /** Options passed into the student ID print pipeline (`PrintProvider`). */
 export function resolveIdCardPrintJobOptions(settings: IdCardPrintSettingsInput): { printerType?: 'dtc4500e' } {
   return idCardJobPrinterOptions(resolveIdCardPrinterFamily(settings));
+}
+
+export function idCardPrintPageClassName(spacing: IdCardSheetSpacing = DEFAULT_ID_CARD_SHEET_SPACING): string {
+  return spacing === 'attached' ? 'student-id-print-page student-id-print-page--attached' : 'student-id-print-page';
 }

@@ -17,7 +17,7 @@ import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard,
    Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
-   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices, DoorOpen,
+   FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -162,8 +162,6 @@ import {
   AdminIntegrationsTab,
   AdminNotificationsTab,
   AdminPrizesTab,
-  AdminRaffleTab,
-  AdminRecessTab,
   AdminReportsTab,
   AdminStatsTab,
   AdminStudentPortalTab,
@@ -469,10 +467,20 @@ function AdminDashboardInner() {
   useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
   useEffect(() => {
-    const tab = normalizeStaffPortalTabValue(searchParams.get('tab')?.trim().toLowerCase() || '');
+    const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
+    let tab = normalizeStaffPortalTabValue(rawTab);
+    if (tab === 'recess') tab = 'attendance';
     if (tab && ADMIN_SETTINGS_TAB_VALUES.has(tab)) {
       setActiveMainTab(tab);
     }
+  }, [searchParams]);
+
+  const classroomInitialSection = useMemo(() => {
+    const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
+    if (rawTab === 'raffle') return 'raffle' as const;
+    const section = searchParams.get('section')?.trim().toLowerCase();
+    if (section === 'raffle') return 'raffle' as const;
+    return undefined;
   }, [searchParams]);
 
   type AdminAddOnTabDef = {
@@ -594,19 +602,6 @@ function AdminDashboardInner() {
         disable: () => updateSettings({ enableGoals: false, adminHiddenAddOnTabs: removeHidden('goals'), adminPinnedAddOnTabs: removePinned('goals') }),
       },
       {
-        value: 'raffle',
-        label: 'Raffle',
-        icon: Dices,
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'raffle'),
-        enable: () => updateSettings({ enableWeeklyRaffle: true, adminHiddenAddOnTabs: removeHidden('raffle') }),
-        disable: () =>
-          updateSettings({
-            enableWeeklyRaffle: false,
-            adminHiddenAddOnTabs: removeHidden('raffle'),
-            adminPinnedAddOnTabs: removePinned('raffle'),
-          }),
-      },
-      {
         value: 'houses',
         label: 'Houses',
         icon: Home,
@@ -617,25 +612,6 @@ function AdminDashboardInner() {
             enableHouses: false,
             adminHiddenAddOnTabs: removeHidden('houses'),
             adminPinnedAddOnTabs: removePinned('houses'),
-          }),
-      },
-      {
-        value: 'recess',
-        label: 'Recess',
-        icon: DoorOpen,
-        isOn: (s) => s.enableRecess !== false,
-        enable: () =>
-          updateSettings({
-            enableRecess: true,
-            recessStudentKioskEnabled: true,
-            adminHiddenAddOnTabs: removeHidden('recess'),
-          }),
-        disable: () =>
-          updateSettings({
-            enableRecess: false,
-            recessStudentKioskEnabled: false,
-            adminHiddenAddOnTabs: removeHidden('recess'),
-            adminPinnedAddOnTabs: removePinned('recess'),
           }),
       },
       {
@@ -689,6 +665,19 @@ function AdminDashboardInner() {
       updateSettings({ enableHouses: true });
     }
   }, [settings.adminPinnedAddOnTabs, settings.enableHouses, updateSettings]);
+
+  /** Recess tab merged into Attendance → Room passes. */
+  useEffect(() => {
+    const pinned = settings.adminPinnedAddOnTabs || [];
+    if (!pinned.includes('recess')) return;
+    updateSettings({
+      adminPinnedAddOnTabs: staffPortalMergePinnedAddOnValues(
+        pinned.filter((x) => x !== 'recess'),
+        'attendance',
+      ),
+      enableRecess: settings.enableRecess !== false ? true : false,
+    });
+  }, [settings.adminPinnedAddOnTabs, settings.enableRecess, updateSettings]);
 
   /** Publish teachers + desk staff (including librarians) to the portal staff sign-in list. */
   useEffect(() => {
@@ -844,6 +833,8 @@ function AdminDashboardInner() {
         patch.payAttendance = true;
         patch.enableAttendance = true;
         patch.enableClassSignIn = true;
+        patch.enableRecess = true;
+        patch.recessStudentKioskEnabled = true;
         break;
       case 'displays':
         patch.bulletinEnabled = true;
@@ -865,15 +856,8 @@ function AdminDashboardInner() {
       case 'goals':
         patch.enableGoals = true;
         break;
-      case 'raffle':
-        patch.enableWeeklyRaffle = true;
-        break;
       case 'houses':
         patch.enableHouses = true;
-        break;
-      case 'recess':
-        patch.enableRecess = true;
-        patch.recessStudentKioskEnabled = true;
         break;
       case 'notifications':
         patch.enableNotifications = true;
@@ -913,6 +897,8 @@ function AdminDashboardInner() {
           patch.payAttendance = false;
           patch.enableAttendance = false;
           patch.enableClassSignIn = false;
+          patch.enableRecess = false;
+          patch.recessStudentKioskEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
         case 'displays':
@@ -941,18 +927,9 @@ function AdminDashboardInner() {
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
           break;
-        case 'raffle':
-          patch.enableWeeklyRaffle = false;
-          nextHidden = nextHidden.filter((x) => x !== 'raffle');
-          break;
         case 'houses':
           patch.enableHouses = false;
           nextHidden = nextHidden.filter((x) => x !== 'houses');
-          break;
-        case 'recess':
-          patch.enableRecess = false;
-          patch.recessStudentKioskEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -1005,6 +982,8 @@ function AdminDashboardInner() {
           patch.payAttendance = true;
           patch.enableAttendance = true;
           patch.enableClassSignIn = true;
+          patch.enableRecess = true;
+          patch.recessStudentKioskEnabled = true;
           break;
         case 'displays':
           patch.bulletinEnabled = true;
@@ -1025,9 +1004,6 @@ function AdminDashboardInner() {
           break;
         case 'goals':
           patch.enableGoals = true;
-          break;
-        case 'raffle':
-          patch.enableWeeklyRaffle = true;
           break;
         case 'houses':
           patch.enableHouses = true;
@@ -1070,6 +1046,8 @@ function AdminDashboardInner() {
           patch.payAttendance = false;
           patch.enableAttendance = false;
           patch.enableClassSignIn = false;
+          patch.enableRecess = false;
+          patch.recessStudentKioskEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
         case 'displays':
@@ -1098,18 +1076,9 @@ function AdminDashboardInner() {
           patch.enableGoals = false;
           nextHidden = nextHidden.filter((x) => x !== 'goals');
           break;
-        case 'raffle':
-          patch.enableWeeklyRaffle = false;
-          nextHidden = nextHidden.filter((x) => x !== 'raffle');
-          break;
         case 'houses':
           patch.enableHouses = false;
           nextHidden = nextHidden.filter((x) => x !== 'houses');
-          break;
-        case 'recess':
-          patch.enableRecess = false;
-          patch.recessStudentKioskEnabled = false;
-          nextHidden = nextHidden.filter((x) => x !== 'recess');
           break;
         case 'notifications':
           patch.enableNotifications = false;
@@ -1170,7 +1139,10 @@ function AdminDashboardInner() {
     setStaffIdPrintJob(subjects);
   };
 
-  const handlePrintStaffIdCards = (subjects: StaffIdCardSubject[], cornerStyle?: 'rounded' | 'rectangular') => {
+  const handlePrintStaffIdCards = (
+    subjects: StaffIdCardSubject[],
+    options?: { cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: import('@/lib/idCardPrintCatalog').IdCardSheetSpacing },
+  ) => {
     if (!schoolId) {
       toast({ variant: 'destructive', title: 'Cannot print staff ID cards', description: 'Missing schoolId.' });
       return;
@@ -1178,7 +1150,8 @@ function AdminDashboardInner() {
     setStaffIdCardsToPrint({
       subjects,
       schoolId,
-      cornerStyle,
+      cornerStyle: options?.cornerStyle,
+      sheetSpacing: options?.sheetSpacing,
       ...resolveIdCardPrintJobOptions(settings),
     });
   };
@@ -2103,6 +2076,7 @@ function AdminDashboardInner() {
                 classes={classes}
                 students={students}
                 schoolId={schoolId!}
+                initialSection={classroomInitialSection}
               />
             ) : null}
           </TabsContent>
@@ -2235,12 +2209,6 @@ function AdminDashboardInner() {
             />
           </TabsContent>
 
-          <TabsContent value="raffle" className={scrollingAdminTabClassName}>
-            {activeMainTab === 'raffle' ? (
-              <AdminRaffleTab schoolId={schoolId!} students={students ?? []} classes={classes ?? []} />
-            ) : null}
-          </TabsContent>
-
           <TabsContent value="houses" className={scrollingAdminTabClassName}>
             <AdminHousesTab
               schoolId={schoolId!}
@@ -2266,12 +2234,6 @@ function AdminDashboardInner() {
               onUpdateStudent={updateStudent}
               onUpdateTeacher={updateTeacher}
             />
-          </TabsContent>
-
-          <TabsContent value="recess" className={scrollingAdminTabClassName}>
-            {activeMainTab === 'recess' ? (
-              <AdminRecessTab schoolId={schoolId!} students={students ?? []} />
-            ) : null}
           </TabsContent>
 
           <TabsContent value="notifications" className={scrollingAdminTabClassName}>
@@ -2357,7 +2319,10 @@ function AdminDashboardInner() {
             }}
             subjects={staffIdPrintJob}
             onConfirm={(args) => {
-              handlePrintStaffIdCards(args.subjects, args.cornerStyle);
+              handlePrintStaffIdCards(args.subjects, {
+                cornerStyle: args.cornerStyle,
+                sheetSpacing: args.sheetSpacing,
+              });
               setStaffIdPrintJob(null);
             }}
           />
@@ -3555,7 +3520,10 @@ function AdminPage() {
     ? params.schoolId.trim().toLowerCase()
     : ctxSchoolId;
   const router = useRouter();
-  const { isAutoLoggingIn } = useAdminGooglePasscodeBypass({ schoolId, autoLogin: false });
+  const { isAutoLoggingIn, canBypassAdminPasscode, googleAutoLoginExhausted } = useAdminGooglePasscodeBypass({
+    schoolId,
+    autoLogin: true,
+  });
 
   const prizeDeskSession = loginState === 'prizeClerk' && isPrizeClerk;
   const houseCoordinatorSession = loginState === 'houseCoordinator' && isHouseCoordinator;
@@ -3590,7 +3558,7 @@ function AdminPage() {
   }
 
   if (!isAdmin && !prizeDeskSession && !houseCoordinatorSession) {
-    if (isAutoLoggingIn) {
+    if (isAutoLoggingIn || (canBypassAdminPasscode && !googleAutoLoginExhausted)) {
       return <AdminDashboardSkeleton />;
     }
     return <AdminLogin onLogin={handleAdminLogin} />;

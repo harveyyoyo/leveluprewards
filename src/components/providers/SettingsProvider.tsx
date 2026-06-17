@@ -147,6 +147,16 @@ interface Settings {
     enablePrizeAiSurprise: boolean;
     /** When on, the student kiosk adds an AI compliment (by coupon category) when a coupon is redeemed. */
     enableCouponRedeemCompliments?: boolean;
+    /** When on, adds a reusable demo coupon (e.g. code 000) for kiosk testing and walkthroughs. */
+    enableReusableSampleCoupon?: boolean;
+    /** When on, kiosk manual login shows a one-tap John Doe sample student (ID 100). */
+    enableSampleKioskStudent?: boolean;
+    /** Short numeric code for the reusable demo coupon (1–6 digits). */
+    reusableSampleCouponCode?: string;
+    /** Point value awarded each time the reusable demo coupon is redeemed. */
+    reusableSampleCouponValue?: number;
+    /** Category label stored on the reusable demo coupon. */
+    reusableSampleCouponCategory?: string;
     /** Point cost for the built-in Fun AI reward shown when AI surprise is enabled. */
     prizeAiSurpriseDefaultPoints: number;
     enablePrizeCategories: boolean;
@@ -168,6 +178,10 @@ interface Settings {
     idCardPaperId?: string;
     /** Student ID card corners: rounded (ID-1 look) or rectangular (easier to cut on plain paper). */
     idCardCornerStyle?: 'rounded' | 'rectangular';
+    /** When on, student/staff/prize shelf ID cards show a QR code instead of a Code 128 barcode. */
+    idCardUseQrCode?: boolean;
+    /** When on, printed coupons show a QR code on the left instead of a bottom barcode strip. */
+    couponUseQrCode?: boolean;
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
     printerReminderPrizeVouchers?: string;
     /** Browser print page size for prize redeem vouchers (thermal receipt vs small label). */
@@ -663,6 +677,11 @@ const defaultSettings: Settings = {
     enablePrizeImages: false,
     enablePrizeAiSurprise: false,
     enableCouponRedeemCompliments: true,
+    enableReusableSampleCoupon: false,
+    enableSampleKioskStudent: false,
+    reusableSampleCouponCode: '000',
+    reusableSampleCouponValue: 10,
+    reusableSampleCouponCategory: 'Demo',
     prizeAiSurpriseDefaultPoints: 1,
     enablePrizeCategories: false,
     enableWishlist: false,
@@ -676,6 +695,8 @@ const defaultSettings: Settings = {
     idCardPrinterFamily: 'browser_sheet',
     idCardPaperId: defaultPaperForFamily('browser_sheet'),
     idCardCornerStyle: 'rounded',
+    idCardUseQrCode: false,
+    couponUseQrCode: false,
     printerReminderPrizeVouchers: '',
     prizeVoucherPaperFormat: 'label_50x70',
     enableBulkPoints: false,
@@ -709,7 +730,7 @@ const defaultSettings: Settings = {
     enableClassSignIn: false,
     enableFaceLogin: false,
     enableStudentWelcome: false,
-    enableStudentWelcomeBackScreen: false,
+    enableStudentWelcomeBackScreen: true,
     studentWelcomeBackDurationSec: 2,
     defaultWelcomeGreetingStyleId: '',
     enableAttendance: false,
@@ -1161,7 +1182,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     parsed.enableClassSignIn = parsed.enableAttendance;
                 }
                 if (typeof parsed.enableStudentWelcomeBackScreen !== 'boolean') {
-                    parsed.enableStudentWelcomeBackScreen = !!parsed.enableStudentWelcome;
+                    parsed.enableStudentWelcomeBackScreen =
+                        typeof parsed.enableStudentWelcome === 'boolean' ? !!parsed.enableStudentWelcome : true;
                 }
                 if (typeof parsed.enableParentView !== 'boolean') {
                     parsed.enableParentView = false;
@@ -1193,6 +1215,25 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (typeof parsed.kioskCouponRedemptionCameraEnabled !== 'boolean') parsed.kioskCouponRedemptionCameraEnabled = false;
                 if (typeof parsed.enableCouponRedeemCompliments !== 'boolean') {
                     parsed.enableCouponRedeemCompliments = true;
+                }
+                if (typeof parsed.enableReusableSampleCoupon !== 'boolean') {
+                    parsed.enableReusableSampleCoupon = false;
+                }
+                if (typeof parsed.enableSampleKioskStudent !== 'boolean') {
+                    parsed.enableSampleKioskStudent = false;
+                }
+                if (typeof parsed.reusableSampleCouponCode !== 'string' || !/^\d{1,6}$/.test(parsed.reusableSampleCouponCode.trim())) {
+                    parsed.reusableSampleCouponCode = '000';
+                } else {
+                    parsed.reusableSampleCouponCode = parsed.reusableSampleCouponCode.trim().toUpperCase();
+                }
+                if (typeof parsed.reusableSampleCouponValue !== 'number' || !Number.isFinite(parsed.reusableSampleCouponValue)) {
+                    parsed.reusableSampleCouponValue = 10;
+                } else {
+                    parsed.reusableSampleCouponValue = Math.min(1000, Math.max(1, Math.round(parsed.reusableSampleCouponValue)));
+                }
+                if (typeof parsed.reusableSampleCouponCategory !== 'string' || !parsed.reusableSampleCouponCategory.trim()) {
+                    parsed.reusableSampleCouponCategory = 'Demo';
                 }
                 // Keep legacy mode aligned for any old reads.
                 if (!parsed.kioskCouponRedemptionManualEnabled && !parsed.kioskCouponRedemptionCameraEnabled) {
@@ -1319,7 +1360,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                     colorScheme: 'sky' as ColorScheme, 
                     graphicMode: 'graphics',
                     soundEnabled: true,
-                    enableHelperMode: true
+                    enableHelperMode: true,
+                    enableStudentWelcomeBackScreen: true,
+                    enableReusableSampleCoupon: true,
+                    enableSampleKioskStudent: true,
+                    reusableSampleCouponCode: '000',
+                    reusableSampleCouponValue: 10,
+                    reusableSampleCouponCategory: 'Demo',
                 } : {}),
                 ...(isPublicSampleSchoolId(schoolId) ? { payOffice: true } : {}),
             };

@@ -10,7 +10,7 @@ import {
 } from './productPillars';
 
 describe('product pillars', () => {
-  it('defaults pillars to on except homework and office', () => {
+  it('defaults pillars to on except Home', () => {
     expect(isPillarOn({}, 'payLibrary')).toBe(true);
     expect(isPillarOn({}, 'payHomework')).toBe(false);
     expect(isPillarOn({ payHomework: true }, 'payHomework')).toBe(HOMEWORK_PILLAR_LIVE);
@@ -29,9 +29,9 @@ describe('product pillars', () => {
   it('formats active pillar labels', () => {
     expect(formatActivePillars({ payLibrary: false })).toMatch(/^Classroom Management.+Attendance$/);
     if (HOMEWORK_PILLAR_LIVE) {
-      expect(formatActivePillars({ payHomework: true })).toContain('Homework');
+      expect(formatActivePillars({ payHomework: true })).toContain('Home');
     } else {
-      expect(formatActivePillars({ payHomework: true })).not.toContain('Homework');
+      expect(formatActivePillars({ payHomework: true })).not.toContain('Home');
     }
   });
 

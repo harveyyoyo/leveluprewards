@@ -2,10 +2,13 @@ export type DisplayView = 'smart' | 'bulletin' | 'hall-of-fame';
 
 export const LEGACY_DISPLAY_TAB_VALUES = ['bulletinboard', 'smart-screen'] as const;
 
-/** Map legacy admin/teacher tab ids to the unified Displays tab. */
+/** Map legacy admin/teacher tab ids to the unified Displays / Classroom tabs. */
 export function normalizeStaffPortalTabValue(tabValue: string): string {
   if (tabValue === 'bulletinboard' || tabValue === 'smart-screen' || tabValue === 'halloffame') {
     return 'displays';
+  }
+  if (tabValue === 'raffle') {
+    return 'classroom';
   }
   return tabValue;
 }

@@ -327,51 +327,68 @@ export default function Header() {
     </div>
   );
 
-  const schoolNameBlock = () => (
-    <span
-      className="inline-flex max-w-full min-w-0 flex-col items-center justify-center gap-2 text-center sm:flex-row sm:gap-2.5"
-    >
-      {schoolData?.logoUrl && (
-        <span
-          className={cn(
-            'inline-flex h-9 w-auto max-w-[96px] shrink-0 items-center justify-center sm:max-w-[120px]',
-            settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
-            settings.logoDropShadow === 'md' && 'drop-shadow-md',
-            settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
-            settings.logoDropShadow === 'none' && 'drop-shadow-none',
-          )}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={schoolData.logoUrl}
-            alt=""
+  const schoolNameLinkClass =
+    'inline-flex max-w-full min-w-0 rounded-xl transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2';
+
+  const schoolNameBlock = () => {
+    const inner = (
+      <span className="inline-flex max-w-full min-w-0 flex-col items-center justify-center gap-2 text-center sm:flex-row sm:gap-2.5">
+        {schoolData?.logoUrl && (
+          <span
             className={cn(
-              'h-full w-auto object-contain',
-              settings.logoDisplayMode === 'cover' && 'w-full object-cover',
-              settings.logoBorderRadius === 'sm' && 'rounded-sm',
-              settings.logoBorderRadius === 'md' && 'rounded-md',
-              settings.logoBorderRadius === 'lg' && 'rounded-2xl',
-              settings.logoBorderRadius === 'full' && 'rounded-full',
-              settings.logoBorderRadius === 'none' && 'rounded-none',
+              'inline-flex h-9 w-auto max-w-[96px] shrink-0 items-center justify-center sm:max-w-[120px]',
+              settings.logoDropShadow === 'sm' && 'drop-shadow-sm',
+              settings.logoDropShadow === 'md' && 'drop-shadow-md',
+              settings.logoDropShadow === 'lg' && 'drop-shadow-xl',
+              settings.logoDropShadow === 'none' && 'drop-shadow-none',
             )}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={schoolData.logoUrl}
+              alt=""
+              className={cn(
+                'h-full w-auto object-contain',
+                settings.logoDisplayMode === 'cover' && 'w-full object-cover',
+                settings.logoBorderRadius === 'sm' && 'rounded-sm',
+                settings.logoBorderRadius === 'md' && 'rounded-md',
+                settings.logoBorderRadius === 'lg' && 'rounded-2xl',
+                settings.logoBorderRadius === 'full' && 'rounded-full',
+                settings.logoBorderRadius === 'none' && 'rounded-none',
+              )}
+            />
+          </span>
+        )}
+        {isSchoolNamePending ? (
+          <span
+            className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
+            aria-hidden
           />
-        </span>
-      )}
-      {isSchoolNamePending ? (
-        <span
-          className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
-          aria-hidden
-        />
-      ) : (
-        <span
-          className={cn(headerSchoolNameClass, 'text-center')}
-          title={centerLabel || undefined}
-        >
-          {centerLabel}
-        </span>
-      )}
-    </span>
-  );
+        ) : (
+          <span
+            className={cn(headerSchoolNameClass, 'text-center')}
+            title={centerLabel || undefined}
+          >
+            {centerLabel}
+          </span>
+        )}
+      </span>
+    );
+
+    if (!schoolId) return inner;
+
+    return (
+      <Link
+        href={centerHref}
+        data-home-button="true"
+        className={schoolNameLinkClass}
+        aria-label={t('common.home')}
+        title={t('common.home')}
+      >
+        {inner}
+      </Link>
+    );
+  };
 
   // --- COMPACT HEADER (app + mobile) ---
   if (compactDisplay) {
@@ -406,24 +423,30 @@ export default function Header() {
             )}
           </div>
           {schoolId ? (
-            <div
-              className="pointer-events-none z-0 flex min-w-0 items-center justify-center px-2 sm:px-4"
-            >
+            <div className="z-0 flex min-w-0 items-center justify-center px-2 sm:px-4">
               {isSchoolNamePending ? (
                 <span
                   className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
                   aria-hidden
                 />
               ) : (
-                <span
-                  className={cn(
-                    'w-full max-w-full text-center font-school font-black',
-                    headerSchoolNameClass,
-                  )}
-                  title={centerLabel || undefined}
+                <Link
+                  href={centerHref}
+                  data-home-button="true"
+                  className={cn(schoolNameLinkClass, 'justify-center')}
+                  aria-label={t('common.home')}
+                  title={t('common.home')}
                 >
-                  {centerLabel}
-                </span>
+                  <span
+                    className={cn(
+                      'w-full max-w-full text-center font-school font-black',
+                      headerSchoolNameClass,
+                    )}
+                    title={centerLabel || undefined}
+                  >
+                    {centerLabel}
+                  </span>
+                </Link>
               )}
             </div>
           ) : (
@@ -550,9 +573,7 @@ export default function Header() {
 
         {/* Center: school name — in document flow so multi-line names expand the header */}
         {schoolId ? (
-          <div
-            className="pointer-events-none z-0 flex min-w-0 items-center justify-center justify-self-center px-1 sm:px-2"
-          >
+          <div className="z-0 flex min-w-0 items-center justify-center justify-self-center px-1 sm:px-2">
             {schoolNameBlock()}
           </div>
         ) : (

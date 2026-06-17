@@ -8,6 +8,7 @@ import { useSettings } from '../providers/SettingsProvider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
+import { DEFAULT_ID_CARD_SHEET_SPACING, idCardPrintPageClassName, type IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
 
 interface StudentIdPrintSheetProps {
   students: Student[];
@@ -15,9 +16,17 @@ interface StudentIdPrintSheetProps {
   schoolId: string | null;
   onReady: () => void;
   cornerStyle?: 'rounded' | 'rectangular';
+  sheetSpacing?: IdCardSheetSpacing;
 }
 
-export function StudentIdPrintSheet({ students, classes, schoolId, onReady, cornerStyle }: StudentIdPrintSheetProps) {
+export function StudentIdPrintSheet({
+  students,
+  classes,
+  schoolId,
+  onReady,
+  cornerStyle,
+  sheetSpacing = DEFAULT_ID_CARD_SHEET_SPACING,
+}: StudentIdPrintSheetProps) {
   const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
@@ -95,7 +104,7 @@ export function StudentIdPrintSheet({ students, classes, schoolId, onReady, corn
   const sheet = (
     <div id="student-id-print-wrapper">
       {studentChunks.map((chunk, pageIndex) => (
-        <div key={pageIndex} className="student-id-print-page">
+        <div key={pageIndex} className={idCardPrintPageClassName(sheetSpacing)}>
           {chunk.map((s) => (
             <div key={s.id} className="student-id-print-slot">
               <StudentIdCard

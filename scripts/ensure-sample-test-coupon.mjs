@@ -1,5 +1,5 @@
 /**
- * Ensure every school has the sample test coupon (code 100) for kiosk testing.
+ * Ensure every school has the reusable demo coupon (code 000) for kiosk testing.
  *
  * Usage:
  *   node scripts/ensure-sample-test-coupon.mjs
@@ -17,18 +17,19 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 dotenv.config({ path: path.join(ROOT, '.env') });
 dotenv.config({ path: path.join(ROOT, '.env.local'), override: true });
 
-const SAMPLE_TEST_COUPON_CODE = '100';
+const SAMPLE_TEST_COUPON_CODE = '000';
 
 function buildSampleTestCoupon(createdAt) {
   return {
     code: SAMPLE_TEST_COUPON_CODE,
     value: 10,
-    category: 'Test',
-    teacher: 'Teacher',
+    category: 'Demo',
+    teacher: 'Demo',
     used: false,
+    reusableSample: true,
     createdAt,
     redemptionScope: 'school',
-    description: 'Sample coupon for testing',
+    description: 'Reusable demo coupon 000 for John Doe (student 100).',
   };
 }
 

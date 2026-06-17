@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
-import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
@@ -98,7 +98,10 @@ export default function BulletinBoardDisplay({
   );
   const { data: bulletinPosts } = useCollection<BulletinPost>(postsQuery);
 
-  const sortedBulletin = useMemo(() => activeIncentivesList(bulletinIncentives), [bulletinIncentives]);
+  const sortedBulletin = useMemo(
+    () => incentivesForSurface(bulletinIncentives, 'bulletinBoard'),
+    [bulletinIncentives],
+  );
 
   useEffect(() => {
     if (isPreview) return;

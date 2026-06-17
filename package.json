@@ -2,9 +2,6 @@
   "name": "levelup-edu",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/office"
-  ],
   "packageManager": "npm@11.4.2",
   "engines": {
     "node": "22"
@@ -14,7 +11,8 @@
     "prepare": "node scripts/install-agent-git-hooks.mjs",
     "agent:branch": "node scripts/ensure-agent-branch.mjs",
     "dev": "node scripts/dev-with-warmup.cjs",
-    "dev:office": "npm run dev --workspace=levelup-office",
+    "dev:office": "npm run dev --prefix apps/office",
+    "install:office": "npm install --prefix apps/office",
     "dev:warm": "node scripts/dev-with-warmup.cjs",
     "dev:warm:turbo": "cross-env DEV_WARMUP_BUNDLER=turbo node scripts/dev-with-warmup.cjs",
     "dev:warmup": "node scripts/dev-warm-routes.mjs",
@@ -22,11 +20,12 @@
     "dev:stable": "node scripts/dev-webpack.cjs",
     "dev:webpack": "node scripts/dev-webpack.cjs",
     "dev:plain": "next dev -H 127.0.0.1 -p 3000",
-    "dev:reset": "npm run clean:next && npm run dev",
+    "dev:reset": "node scripts/dev-recover.cjs",
+    "dev:recover": "node scripts/dev-recover.cjs",
     "dev:doctor": "node scripts/dev-doctor.mjs",
     "clean:next": "node scripts/clean-next.cjs",
     "dev:turbo": "node scripts/dev-turbo.cjs",
-    "prebuild": "node scripts/copy-face-models.mjs",
+    "prebuild": "node scripts/copy-face-models.mjs && node scripts/guard-no-dev-before-build.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -47,6 +46,7 @@
     "seed:demo-office": "node scripts/seed-demo-office-data.mjs",
     "reseed:sample-school": "node scripts/reseed-sample-school.mjs",
     "ensure:test-coupon": "node scripts/ensure-sample-test-coupon.mjs",
+    "ensure:sample-kiosk-demo": "node scripts/ensure-sample-kiosk-demo.mjs",
     "generate:legal-pdfs": "node scripts/generate-legal-pdfs.mjs",
     "generate:legal-pdfs:text": "node scripts/generate-legal-pdfs-from-text.mjs",
     "generate:flyer-pdf": "node scripts/generate-flyer-pdf.mjs",

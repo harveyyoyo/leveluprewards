@@ -4,7 +4,7 @@ import type { Prize } from '@/lib/types';
 import { cn, getContrastColor } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import DynamicIcon from '@/components/DynamicIcon';
-import { PrintBarcode } from '@/components/print/PrintBarcode';
+import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { prizeScanCodeFor } from '@/lib/prizes/prizeScanCode';
 import { prizeCardColorForId } from '@/lib/prizes/prizeCardColor';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -32,7 +32,9 @@ export function PrizeIdCard({
 }) {
   const { settings } = useSettings();
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
+  const useQr = settings.idCardUseQrCode === true;
   const scanCode = prizeScanCodeFor(prize);
+  const prizeAbbrev = (prize.name ?? 'PR').trim().slice(0, 2).toUpperCase() || 'PR';
   const nameLength = (prize.name ?? '').length;
   const nameFitScale = nameLength >= 28 ? 0.78 : nameLength >= 22 ? 0.88 : 1;
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
@@ -82,6 +84,7 @@ export function PrizeIdCard({
         'print-id-card print-prize-id-card',
         isColorEnabled && 'is-colored',
         resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        useQr && 'print-id-card--qr-scan',
         className,
       )}
       style={cardStyle}
@@ -108,13 +111,25 @@ export function PrizeIdCard({
       </div>
 
       <div className="print-id-main flex items-center justify-center gap-3 px-2 min-h-0 flex-1">
-        <div
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2"
-          style={iconBoxStyle}
-          aria-hidden
-        >
-          <DynamicIcon name={prize.icon || 'Gift'} className="h-8 w-8" />
-        </div>
+        {useQr ? (
+          <div className="print-id-qr-slot" aria-label={`Prize scan code ${scanCode}`}>
+            <PrintIdCardScanCode
+              value={scanCode}
+              useQr
+              variant="prize-id"
+              centerLabel={prizeAbbrev}
+              placement="inline"
+            />
+          </div>
+        ) : (
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2"
+            style={iconBoxStyle}
+            aria-hidden
+          >
+            <DynamicIcon name={prize.icon || 'Gift'} className="h-8 w-8" />
+          </div>
+        )}
         <div className="min-w-0 flex-1 text-left" style={{ color: mainTextColor }}>
           <div className="print-id-name text-left">{prize.name}</div>
           <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mainMutedText }}>
@@ -126,12 +141,14 @@ export function PrizeIdCard({
         </div>
       </div>
 
-      <div
-        className="print-id-barcode-container mt-auto"
-        style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${barcodeDivider}` }}
-      >
-        <PrintBarcode value={scanCode} variant="prize-id" />
-      </div>
+      {!useQr ? (
+        <div
+          className="print-id-barcode-container mt-auto"
+          style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid ${barcodeDivider}` }}
+        >
+          <PrintIdCardScanCode value={scanCode} variant="prize-id" placement="footer" />
+        </div>
+      ) : null}
     </div>
   );
 }

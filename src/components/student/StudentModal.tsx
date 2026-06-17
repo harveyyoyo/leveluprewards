@@ -793,7 +793,11 @@ export function StudentModal({
             <ScrollArea className="h-32 rounded-md border p-2">
               <div className="space-y-2">
                 {allTeachers.map(teacher => (
-                  <div key={teacher.id} className="flex items-center space-x-2">
+                  <label
+                    key={teacher.id}
+                    htmlFor={`teacher-${teacher.id}`}
+                    className="flex items-center space-x-2 rounded-md px-1 py-1 cursor-pointer hover:bg-muted/50"
+                  >
                     <Checkbox
                       id={`teacher-${teacher.id}`}
                       checked={selectedTeacherIds.includes(teacher.id)}
@@ -805,8 +809,8 @@ export function StudentModal({
                         }
                       }}
                     />
-                    <Label htmlFor={`teacher-${teacher.id}`} className="font-normal">{teacher.name}</Label>
-                  </div>
+                    <span className="font-normal">{teacher.name}</span>
+                  </label>
                 ))}
               </div>
             </ScrollArea>

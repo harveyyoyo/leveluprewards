@@ -17,9 +17,11 @@ import { isKioskPortraitDisplay } from '@/lib/kioskPortraitLayout';
 import { ConfirmProvider } from '@/components/providers/ConfirmProvider';
 import { isMarketingLandingPath } from '@/lib/marketingLandings';
 import { shouldHideGlobalAppChrome } from '@/lib/officeRouting';
+import { shouldHideGlobalAppChromeForSss } from '@/lib/sss/sssRouting';
 import { schoolPathAllowedByGate } from '@/lib/auth/schoolGatePathPolicy';
 import { useScrollTopRevealChrome } from '@/hooks/useScrollTopRevealChrome';
 import { useTopEdgeRevealChrome } from '@/hooks/useTopEdgeRevealChrome';
+import { useStudentLayoutChrome } from '@/hooks/useStudentLayoutChrome';
 import { HoverRevealHeaderShell } from '@/components/layout/HoverRevealHeaderShell';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
 import { staffPortalMainClassName } from '@/components/staff/staffPortalNavStyles';
@@ -27,6 +29,7 @@ import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/hooks/use-toast';
 import { KioskFirestoreSyncBanner } from '@/components/kiosk/KioskFirestoreSyncBanner';
+import { portalHubPrefetchRoutes } from '@/lib/portalHub';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -158,7 +161,10 @@ function LayoutClientWrapperInner({
     const kioskPortraitLayout = isKioskPortraitDisplay(settings) && isKioskPortraitRoute;
     const browserHost = typeof window !== 'undefined' ? window.location.host : '';
     const hideOfficeChrome =
-      isOfficeHost || shouldHideGlobalAppChrome(pathname, browserHost) || hideGlobalHeader;
+      isOfficeHost ||
+      shouldHideGlobalAppChrome(pathname, browserHost) ||
+      shouldHideGlobalAppChromeForSss(pathname, browserHost) ||
+      hideGlobalHeader;
     const hideAppChrome =
       isLoginPage || isSignInPage || isMarketingLandingPath(pathname) || hideOfficeChrome;
     const hideHeaderEnabled = settings.hideSiteHeaderOutsidePortal === true;
@@ -167,9 +173,12 @@ function LayoutClientWrapperInner({
       /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    /** Student kiosk: fully hidden until the pointer moves to the top edge or the screen is touched. */
+    const { kioskSignedIn } = useStudentLayoutChrome();
+    /** Student kiosk: hidden until pointer reveal. Sign-in screen reveals on any mouse move. */
     const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
-    const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader);
+    const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader, {
+      revealOnAnyPointerMove: useStudentKioskTopEdgeHeader && !kioskSignedIn,
+    });
     /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
     const usePortalScrollRevealHeader =
       hideHeaderEnabled && canShowGlobalHeader && !isStudentKioskPage && !isPortalChoosePage;
@@ -276,13 +285,20 @@ function LayoutClientWrapperInner({
 
     useEffect(() => {
         if (!routeSchoolId) return;
-        const routes = [
-            `/${routeSchoolId}/portal`,
-            `/${routeSchoolId}/student`,
-            `/${routeSchoolId}/teacher`,
-            `/${routeSchoolId}/admin-sign-in`,
-            `/${routeSchoolId}/prize`,
-        ];
+        const routes = portalHubPrefetchRoutes(routeSchoolId);
+        const prefetchRoutes = () => {
+            for (const route of routes) {
+                if (route !== pathname) router.prefetch(route);
+            }
+        };
+
+        // Portal hub: warm destinations immediately so the first card click is not
+        // blocked on JS chunk download. Other school routes defer to idle time.
+        if (isPortalChoosePage) {
+            prefetchRoutes();
+            return;
+        }
+
         const runWhenIdle = (cb: () => void) => {
             if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
                 const id = window.requestIdleCallback(cb, { timeout: 2500 });
@@ -292,12 +308,8 @@ function LayoutClientWrapperInner({
             return () => globalThis.clearTimeout(id);
         };
 
-        return runWhenIdle(() => {
-            for (const route of routes) {
-                if (route !== pathname) router.prefetch(route);
-            }
-        });
-    }, [pathname, routeSchoolId, router]);
+        return runWhenIdle(prefetchRoutes);
+    }, [isPortalChoosePage, pathname, routeSchoolId, router]);
 
     // Offline support is production-only by default. Local dev keeps unregistering
     // service workers so stale Next chunks from old builds do not break HMR.

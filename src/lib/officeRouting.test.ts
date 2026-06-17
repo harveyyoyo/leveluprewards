@@ -42,11 +42,14 @@ describe('office routing', () => {
     expect(officeHostRedirectPath('/yeshiva')).toBeNull();
     expect(officeHostRedirectPath('/office-bootstrap')).toBeNull();
     expect(officeHostRedirectPath('/yeshiva/portal')).toBe('/yeshiva');
+    expect(officeHostRedirectPath('/yeshiva/office')).toBe('/yeshiva');
+    expect(officeHostRedirectPath('/yeshiva/office/teachers')).toBe('/yeshiva/teachers');
   });
 
   it('rewrites public office paths to internal routes', () => {
     expect(officeHostInternalRewritePath('/yeshiva')).toBe('/yeshiva/office');
     expect(officeHostInternalRewritePath('/yeshiva/grades')).toBe('/yeshiva/office/grades');
+    expect(officeHostInternalRewritePath('/yeshiva/teachers')).toBe('/yeshiva/office/teachers');
     expect(officeHostInternalRewritePath('/yeshiva/office/grades')).toBeNull();
   });
 
@@ -62,6 +65,14 @@ describe('office routing', () => {
           'https:',
         )?.toString(),
       ).toBe('https://office.leveluprewards.app/yeshiva/grades');
+      expect(
+        canonicalOfficeRedirectUrl(
+          '/schoolabc/office',
+          '',
+          'leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://office.leveluprewards.app/schoolabc');
     } finally {
       if (previous === undefined) {
         delete process.env.OFFICE_CANONICAL_HOST;

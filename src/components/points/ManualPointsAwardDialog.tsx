@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
 import { Checkbox } from '@/components/ui/checkbox';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import {
   Dialog,
   DialogContent,
@@ -183,6 +184,12 @@ export function ManualPointsAwardDialog({
     } else {
       setSelectedStudentIds((prev) => prev.filter((id) => id !== studentId));
     }
+  };
+
+  const toggleStudentSelected = (studentId: string) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId) ? prev.filter((id) => id !== studentId) : [...prev, studentId],
+    );
   };
 
   const handleAwardPoints = async () => {
@@ -615,11 +622,26 @@ export function ManualPointsAwardDialog({
                       <li
                         key={s.id}
                         className={cn(
-                          'flex items-center justify-between gap-3 p-3 rounded-xl border bg-background/60',
+                          'flex items-center justify-between gap-3 p-3 rounded-xl border bg-background/60 cursor-pointer transition-colors hover:bg-background/80',
                           checked && 'border-primary/30',
                         )}
+                        role="button"
+                        tabIndex={0}
+                        title={checked ? 'Click row to deselect' : 'Click row to select'}
+                        onClick={(event) =>
+                          handleSelectableRowClick(event, () => toggleStudentSelected(s.id))
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleStudentSelected(s.id);
+                          }
+                        }}
                       >
-                        <div className="flex items-center gap-3">
+                        <div
+                          className="flex items-center gap-3"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <Checkbox
                             checked={checked}
                             onCheckedChange={(v) => handleStudentSelect(s.id, !!v)}

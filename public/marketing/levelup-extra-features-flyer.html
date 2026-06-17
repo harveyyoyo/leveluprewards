@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LevelUp Rewards - Additional Features Flyer</title>
+    <meta
+      name="description"
+      content="Interactive print-ready LevelUp Rewards additional features flyer with included modules, light print theme, live app screenshots, and school-specific copy."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet" />
+    <style>
+      @page {
+        size: letter;
+        margin: 0;
+      }
+
+      :root {
+        color-scheme: dark;
+        --paper: #071225;
+        --paper-2: #0d1d35;
+        --text: #f8fbff;
+        --muted: #b8c7dc;
+        --soft: #dce8f7;
+        --line: rgba(255, 255, 255, 0.16);
+        --panel: rgba(255, 255, 255, 0.075);
+        --panel-strong: rgba(255, 255, 255, 0.12);
+        --accent: #22d3ee;
+        --accent-2: #34d399;
+        --accent-3: #fbbf24;
+        --danger: #fb7185;
+        --shadow: rgba(0, 0, 0, 0.34);
+      }
+
+      html[data-theme="light"] {
+        --paper: #ffffff;
+        --paper-2: #f8fafc;
+        --text: #0f172a;
+        --muted: #475569;
+        --soft: #334155;
+        --line: #cbd5e1;
+        --panel: #ffffff;
+        --panel-strong: #f8fafc;
+        --accent: #2563eb;
+        --accent-2: #059669;
+        --accent-3: #d97706;
+        --shadow: rgba(15, 23, 42, 0.12);
+      }
+
+      html[data-theme="fresh"] {
+        --paper: #07251d;
+        --paper-2: #0e372c;
+        --accent: #5eead4;
+        --accent-2: #bef264;
+        --accent-3: #fde68a;
+      }
+
+      html[data-theme="focus"] {
+        --paper: #0b1220;
+        --paper-2: #111827;
+        --accent: #93c5fd;
+        --accent-2: #38bdf8;
+        --accent-3: #cbd5e1;
+      }
+
+      html[data-theme="celebrate"] {
+        --paper: #101827;
+        --paper-2: #1f2a44;
+        --accent: #38bdf8;
+        --accent-2: #facc15;
+        --accent-3: #fb923c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: Outfit, system-ui, -apple-system, Segoe UI, sans-serif;
+        color: var(--text);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      html[data-theme="light"] body {
+        background: #e5e7eb;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at 15% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 34rem),
+          radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 32rem),
+          linear-gradient(135deg, #030712, #09111f 48%, #020617);
+      }
+
+      .back-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 20;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        background: rgba(3, 7, 18, 0.9);
+        color: #eef7ff;
+        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        text-decoration: none;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+        backdrop-filter: blur(14px);
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 330px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+        padding: 58px 20px 24px;
+        border-right: 1px solid rgba(255, 255, 255, 0.11);
+        background: rgba(2, 6, 23, 0.9);
+        backdrop-filter: blur(18px);
+      }
+
+      .sidebar h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .sidebar p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .section {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .section-title {
+        display: block;
+        margin-bottom: 9px;
+        color: rgba(248, 251, 255, 0.6);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+
+      .field span,
+      .check {
+        color: #d9e6f6;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        padding: 9px 10px;
+        background: rgba(15, 23, 42, 0.92);
+        color: #fff;
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 9px 0;
+      }
+
+      .check input {
+        width: 16px;
+        min-height: 16px;
+        accent-color: var(--accent);
+      }
+
+      .button {
+        width: 100%;
+        min-height: 42px;
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 12px;
+        color: #04111f;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        font: 900 13px/1 Outfit, system-ui, sans-serif;
+        cursor: pointer;
+      }
+
+      .button.secondary {
+        margin-top: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: #eaf5ff;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .hint {
+        margin-top: 9px;
+        color: rgba(184, 199, 220, 0.82);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .stage {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 34px 20px;
+        overflow: auto;
+      }
+
+      .flyer {
+        position: relative;
+        width: 8.5in;
+        min-height: 11in;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background:
+          radial-gradient(circle at 16% 8%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 2.5in),
+          radial-gradient(circle at 92% 2%, color-mix(in srgb, var(--accent-2) 20%, transparent), transparent 2.35in),
+          linear-gradient(145deg, var(--paper), var(--paper-2) 72%, #07101d);
+        box-shadow: 0 34px 90px var(--shadow);
+      }
+
+      html[data-theme="light"] .flyer {
+        border-color: #cbd5e1;
+        background: #ffffff;
+        box-shadow: 0 18px 55px rgba(15, 23, 42, 0.14);
+      }
+
+      .flyer-inner {
+        position: relative;
+        z-index: 1;
+        display: block;
+        min-height: 11in;
+        padding: 0.26in;
+      }
+
+      .simple-header,
+      .simple-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.12in;
+        color: rgba(248, 251, 255, 0.84);
+      }
+
+      .simple-header {
+        align-items: flex-start;
+        margin-bottom: 0.12in;
+        padding-bottom: 0.08in;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      html[data-theme="light"] .simple-header,
+      html[data-theme="light"] .simple-footer {
+        border-color: #cbd5e1;
+        color: #1e293b;
+      }
+
+      .simple-title {
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+      }
+
+      .simple-subtitle,
+      .simple-footer {
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.3;
+      }
+
+      .simple-subtitle {
+        max-width: 3.75in;
+        text-align: right;
+      }
+
+      .simple-footer {
+        margin-top: 0.12in;
+        padding-top: 0.08in;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .hero,
+      .strip,
+      .workflow,
+      .side-panel,
+      .footer {
+        display: none;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.12fr 0.88fr;
+        gap: 0.075in;
+        align-items: stretch;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 0.08in;
+        padding: 7px 10px;
+        border: 1px solid color-mix(in srgb, var(--accent) 46%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--accent) 13%, transparent);
+        color: #e8fbff;
+        font-size: 9.5px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h2 {
+        margin: 0;
+        max-width: 4.9in;
+        font-size: 39px;
+        line-height: 0.98;
+        font-weight: 900;
+      }
+
+      .lead {
+        margin: 0.1in 0 0;
+        max-width: 4.9in;
+        color: var(--soft);
+        font-size: 12.5px;
+        font-weight: 700;
+        line-height: 1.36;
+      }
+
+      .hero-card {
+        display: grid;
+        gap: 0.07in;
+        align-content: stretch;
+      }
+
+      .screen-frame {
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: #08111f;
+        box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+      }
+
+      .screen-frame img {
+        display: block;
+        width: 100%;
+        height: 1.22in;
+        object-fit: cover;
+        object-position: center top;
+      }
+
+      .callout {
+        padding: 0.1in;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .callout strong {
+        display: block;
+        color: #fff;
+        font-size: 15px;
+        line-height: 1.05;
+      }
+
+      .callout span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 9.2px;
+        line-height: 1.35;
+        font-weight: 700;
+      }
+
+      .strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.08in;
+      }
+
+      .stat {
+        min-height: 0.62in;
+        padding: 0.07in;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      .stat strong {
+        display: block;
+        color: #fff;
+        font-size: 18px;
+        line-height: 1;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 8.8px;
+        font-weight: 800;
+        line-height: 1.24;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 0.11in;
+      }
+
+      .step {
+        position: relative;
+        min-height: 0.92in;
+        padding: 0.1in;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.075);
+      }
+
+      .step b {
+        display: block;
+        color: #fff;
+        font-size: 14px;
+      }
+
+      .step p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 9.2px;
+        line-height: 1.32;
+        font-weight: 700;
+      }
+
+      .step small {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 19px;
+        height: 19px;
+        margin-bottom: 8px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #05111f;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .body-grid {
+        display: block;
+        min-height: 0;
+      }
+
+      .modules {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 0.13in;
+        align-content: start;
+      }
+
+      .module {
+        display: grid;
+        grid-template-columns: 1.45in 1fr;
+        gap: 0.14in;
+        min-height: 0.92in;
+        padding: 0.085in;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      html[data-theme="light"] .module {
+        border-color: #d6dee9;
+        background: #ffffff;
+      }
+
+      .module[data-hidden="true"] {
+        display: none;
+      }
+
+      .module figure {
+        margin: 0;
+        overflow: hidden;
+        border-radius: 6px;
+        background: #ffffff;
+      }
+
+      .module img {
+        display: block;
+        width: 100%;
+        height: 0.72in;
+        object-fit: contain;
+        object-position: center;
+      }
+
+      .module b {
+        display: block;
+        color: #fff;
+        font-size: 16px;
+        line-height: 1.08;
+      }
+
+      html[data-theme="light"] .module b {
+        color: #0f172a;
+      }
+
+      .feature-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin: 5px 0 4px;
+      }
+
+      .feature-badge {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid color-mix(in srgb, var(--feature-color) 54%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--feature-color) 16%, transparent);
+        color: #f8fbff;
+        padding: 3px 7px;
+        font-size: 7.8px;
+        font-weight: 900;
+        line-height: 1;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+
+      html[data-theme="light"] .feature-badge {
+        background: color-mix(in srgb, var(--feature-color) 18%, white 82%);
+        color: #0f172a;
+      }
+
+      .module p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 8.9px;
+        line-height: 1.24;
+        font-weight: 700;
+      }
+
+      html[data-theme="light"] .module p {
+        color: #475569;
+      }
+
+      .side-panel {
+        display: grid;
+        gap: 0.075in;
+        align-content: start;
+      }
+
+      .photo-stack {
+        display: grid;
+        gap: 0.08in;
+      }
+
+      .photo-stack figure {
+        margin: 0;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .photo-stack img {
+        display: block;
+        width: 100%;
+        height: 0.92in;
+        object-fit: cover;
+        object-position: center top;
+      }
+
+      .audience-box,
+      .package-box {
+        padding: 0.09in;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.075);
+      }
+
+      .audience-box h3,
+      .package-box h3 {
+        margin: 0 0 8px;
+        color: #fff;
+        font-size: 13px;
+        line-height: 1.05;
+      }
+
+      .audience-box ul,
+      .package-box ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .audience-box li,
+      .package-box li {
+        display: grid;
+        grid-template-columns: 10px 1fr;
+        gap: 7px;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 8.3px;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+
+      .audience-box li::before,
+      .package-box li::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        margin-top: 3px;
+        border-radius: 999px;
+        background: var(--accent-2);
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        gap: 0.16in;
+        padding-top: 0.08in;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        color: rgba(248, 251, 255, 0.72);
+        font-size: 8.8px;
+        line-height: 1.35;
+      }
+
+      .pills {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 5px;
+      }
+
+      .pill {
+        padding: 4px 7px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 999px;
+        color: rgba(248, 251, 255, 0.9);
+        background: rgba(255, 255, 255, 0.06);
+        white-space: nowrap;
+      }
+
+      [contenteditable="true"] {
+        outline: 1px dashed transparent;
+        outline-offset: 2px;
+      }
+
+      [contenteditable="true"]:focus {
+        outline-color: color-mix(in srgb, var(--accent) 70%, white 30%);
+      }
+
+      html.compact .flyer-inner {
+        gap: 0.12in;
+        padding: 0.3in;
+      }
+
+      html.compact h2 {
+        font-size: 40px;
+      }
+
+      html.compact .lead {
+        font-size: 13px;
+      }
+
+      html.compact .module {
+        min-height: 0.74in;
+      }
+
+      html.embed .sidebar,
+      html.embed .back-link {
+        display: none !important;
+      }
+
+      html.embed .app {
+        display: block;
+      }
+
+      html.embed .stage {
+        padding: 0;
+      }
+
+      html.embed .flyer {
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      @supports not (color: color-mix(in srgb, white, black)) {
+        body {
+          background: #030712;
+        }
+      }
+
+      .flyer .hero,
+      .flyer .strip,
+      .flyer .workflow,
+      .flyer .side-panel,
+      .flyer .footer {
+        display: none !important;
+      }
+
+      @media (max-width: 980px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: relative;
+          height: auto;
+          padding-top: 48px;
+        }
+
+        .stage {
+          justify-content: flex-start;
+          padding: 18px 10px;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .sidebar,
+        .back-link {
+          display: none !important;
+        }
+
+        .app {
+          display: block;
+        }
+
+        .stage {
+          display: block;
+          padding: 0;
+        }
+
+        .flyer {
+          width: 8.5in;
+          height: 11in;
+          min-height: 11in;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+      }
+    </style>
+    <script>
+      try {
+        if (new URLSearchParams(location.search).has("embed")) document.documentElement.classList.add("embed");
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <a class="back-link" href="interactive.html">&larr; Interactive flyer list</a>
+    <div class="app">
+      <aside class="sidebar" aria-label="Additional features flyer controls">
+        <h1>Additional Features Flyer</h1>
+        <p>Customize a one-page flyer for schools that want to understand the additional features included with LevelUp.</p>
+
+        <div class="section">
+          <span class="section-title">Theme</span>
+          <label class="field">
+            <span>Visual style</span>
+            <select id="theme-select" aria-label="Theme">
+              <option value="light">Light print</option>
+              <option value="default">Campus navy</option>
+              <option value="fresh">Fresh green</option>
+              <option value="focus">Focused blue</option>
+              <option value="celebrate">Celebration</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" id="compact-toggle" /> Compact print mode</label>
+        </div>
+
+        <div class="section">
+          <span class="section-title">School</span>
+          <label class="field">
+            <span>Prepared for</span>
+            <input id="school-input" type="text" placeholder="your school" />
+          </label>
+          <button class="button" type="button" onclick="window.print()">Print or save PDF</button>
+          <p class="hint">You can also click most text directly on the flyer and edit it before printing.</p>
+        </div>
+
+        <div class="section">
+          <span class="section-title">Feature modules</span>
+          <label class="check"><input type="checkbox" data-module="houses" checked /> Houses</label>
+          <label class="check"><input type="checkbox" data-module="displays" checked /> Displays</label>
+          <label class="check"><input type="checkbox" data-module="incentives" checked /> Incentives</label>
+          <label class="check"><input type="checkbox" data-module="themes" checked /> Theme creations</label>
+          <label class="check"><input type="checkbox" data-module="notifications" checked /> Notifications</label>
+          <label class="check"><input type="checkbox" data-module="recess" checked /> Recess</label>
+          <label class="check"><input type="checkbox" data-module="raffles" checked /> Raffles</label>
+          <label class="check"><input type="checkbox" data-module="badges" checked /> Badges</label>
+        </div>
+      </aside>
+
+      <main class="stage">
+        <article class="flyer" aria-label="LevelUp Rewards additional features flyer">
+          <div class="flyer-inner">
+            <header class="simple-header">
+              <div>
+                <div class="simple-title" id="simple-title" contenteditable="true">LevelUp Additional Features</div>
+                <div class="simple-subtitle" contenteditable="true">Included additional features that extend the core LevelUp system beyond Rewards, Attendance, Library, and Classroom.</div>
+              </div>
+              <div class="simple-subtitle" contenteditable="true">Houses · Displays · Incentives · Themes · Notifications · Recess · Raffles · Badges</div>
+            </header>
+            <section class="hero">
+              <div>
+                <span class="eyebrow" id="prepared-label" contenteditable="true">Additional features showcase</span>
+                <h2 id="headline" contenteditable="true">Go beyond points and prizes.</h2>
+                <p class="lead" id="lead" contenteditable="true">
+                  Houses, displays, incentives, theme creations, notifications, recess, raffles, and badges give schools more ways to celebrate, organize, and keep students engaged.
+                </p>
+              </div>
+              <div class="hero-card">
+                <figure class="screen-frame">
+                  <img src="screenshots/admin-houses.png" alt="LevelUp houses feature screenshot" />
+                </figure>
+                <div class="callout">
+                  <strong id="callout-title" contenteditable="true">Eight included features. One stronger culture loop.</strong>
+                  <span id="callout-copy" contenteditable="true">Use these special features to add spirit, displays, challenges, themes, alerts, recess routines, raffle moments, and badge recognition.</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="strip" aria-label="Product highlights">
+              <div class="stat">
+                <strong contenteditable="true">Houses</strong>
+                <span contenteditable="true">Teams, standings, rosters, house parents, and friendly competition.</span>
+              </div>
+              <div class="stat">
+                <strong contenteditable="true">Incentives</strong>
+                <span contenteditable="true">Point-earning opportunities shown across student-facing surfaces.</span>
+              </div>
+              <div class="stat">
+                <strong contenteditable="true">Displays</strong>
+                <span contenteditable="true">Hall of Fame, Smart Screen, bulletin, and class screens.</span>
+              </div>
+              <div class="stat">
+                <strong contenteditable="true">Moments</strong>
+                <span contenteditable="true">Raffles, badges, notifications, themes, and recess routines.</span>
+              </div>
+            </section>
+
+            <section class="workflow" aria-label="How additional features extend LevelUp">
+              <div class="step">
+                <small>1</small>
+                <b contenteditable="true">Add spirit</b>
+                <p contenteditable="true">Use houses, raffles, badges, and incentives to keep students excited after the basic rewards routine is familiar.</p>
+              </div>
+              <div class="step">
+                <small>2</small>
+                <b contenteditable="true">Show it live</b>
+                <p contenteditable="true">Use displays and theme creations so the program feels visible, branded, and personal across the school.</p>
+              </div>
+              <div class="step">
+                <small>3</small>
+                <b contenteditable="true">Run routines</b>
+                <p contenteditable="true">Use notifications and recess tools to support staff follow-up, out-of-room tracking, and daily coordination.</p>
+              </div>
+            </section>
+
+            <section class="body-grid">
+              <div class="modules" id="module-grid" aria-label="Feature modules"></div>
+              <aside class="side-panel" aria-label="App screenshots and audience benefits">
+                <div class="photo-stack">
+                  <figure>
+                    <img src="screenshots/bulletin-board.png" alt="LevelUp bulletin board display" />
+                  </figure>
+                  <figure>
+                    <img src="screenshots/hall-of-fame.png" alt="LevelUp Hall of Fame display" />
+                  </figure>
+                </div>
+                <div class="audience-box">
+                  <h3 id="audience-title" contenteditable="true">Built for school leaders</h3>
+                  <ul id="audience-list">
+                    <li contenteditable="true">Houses and raffles turn school culture into shared traditions.</li>
+                    <li contenteditable="true">Displays, incentives, badges, and themes make progress visible and personal.</li>
+                    <li contenteditable="true">Notifications and recess tools help staff keep daily routines organized.</li>
+                  </ul>
+                </div>
+                <div class="package-box">
+                  <h3 contenteditable="true">Use what you need now</h3>
+                  <ul>
+                    <li contenteditable="true">Culture set: houses, incentives, raffles, and badges.</li>
+                    <li contenteditable="true">Visibility set: displays and theme creations.</li>
+                    <li contenteditable="true">Routine set: notifications and recess tracking.</li>
+                  </ul>
+                </div>
+              </aside>
+            </section>
+
+            <div class="simple-footer">
+              <span contenteditable="true">LevelUp EdTech Enterprises LLC</span>
+              <span contenteditable="true">Use this page to explain the included feature set for demos, rollout meetings, and planning conversations.</span>
+            </div>
+
+            <footer class="footer">
+              <div>
+                <strong contenteditable="true">LevelUp EdTech Enterprises LLC</strong><br />
+                <span contenteditable="true">Additional features overview for demos, rollout meetings, and planning conversations.</span>
+              </div>
+              <div class="pills">
+                <span class="pill" contenteditable="true">Included features</span>
+                <span class="pill" contenteditable="true">Print-ready IDs</span>
+                <span class="pill" contenteditable="true">Live displays</span>
+                <span class="pill" contenteditable="true">Campus workflows</span>
+              </div>
+            </footer>
+          </div>
+        </article>
+      </main>
+    </div>
+
+    <script>
+      const modules = [
+        {
+          key: "houses",
+          title: "Houses",
+          color: "#34d399",
+          image: "screenshots/special-houses.png",
+          badges: ["Teams", "Standings", "Rosters", "Competitions"],
+          copy: "House standings, rosters, competitions, leading house highlights, and year-long school spirit."
+        },
+        {
+          key: "displays",
+          title: "Displays",
+          color: "#fbbf24",
+          image: "screenshots/special-displays.png",
+          badges: ["Smart Screen", "Bulletin", "Hall of Fame", "Class screens"],
+          copy: "Smart Screen, Bulletin Board, Hall of Fame, and class screens make recognition visible."
+        },
+        {
+          key: "incentives",
+          title: "Incentives",
+          color: "#93c5fd",
+          image: "screenshots/bulletin-board.png",
+          badges: ["Bonus points", "Campaigns", "Bulletin", "Student portal"],
+          copy: "Point-earning opportunities that can appear on bulletin, Smart Screen, kiosk, and portal surfaces."
+        },
+        {
+          key: "themes",
+          title: "Theme creations",
+          color: "#c4b5fd",
+          image: "screenshots/special-theme-creations.png",
+          badges: ["AI themes", "Colors", "Fonts", "ID cards"],
+          copy: "AI-assisted school and student themes with colors, fonts, emoji, card styling, and kiosk previews."
+        },
+        {
+          key: "notifications",
+          title: "Notifications",
+          color: "#67e8f9",
+          image: "screenshots/admin-notifications.png",
+          badges: ["Staff alerts", "Milestones", "Logs", "Follow-up"],
+          copy: "Staff alerts, milestone messages, delivery logs, and school-controlled follow-up settings."
+        },
+        {
+          key: "recess",
+          title: "Recess",
+          color: "#fb923c",
+          image: "screenshots/special-recess.png",
+          badges: ["Pass cards", "Kiosk scans", "Timers", "Return logs"],
+          copy: "Printable break and bathroom pass cards, kiosk scans, active out-of-room tracking, and return logs."
+        },
+        {
+          key: "raffles",
+          title: "Raffles",
+          color: "#f472b6",
+          image: "screenshots/special-raffles.png",
+          badges: ["Tickets", "Wheel", "Jackpot", "Winners"],
+          copy: "Ticket pools, wheel and jackpot-style winner moments, and event-ready school excitement."
+        },
+        {
+          key: "badges",
+          title: "Badges",
+          color: "#22c55e",
+          image: "screenshots/special-badges.png",
+          badges: ["Categories", "Milestones", "Earn periods", "Tiers"],
+          copy: "Category badges, achievement milestones, earn periods, tiers, and student recognition."
+        }
+      ];
+
+      const moduleGrid = document.getElementById("module-grid");
+      const schoolInput = document.getElementById("school-input");
+
+      function activeModuleKeys() {
+        return new Set(
+          Array.from(document.querySelectorAll("[data-module]"))
+            .filter((input) => input.checked)
+            .map((input) => input.dataset.module)
+        );
+      }
+
+      function renderModules() {
+        const enabled = activeModuleKeys();
+        moduleGrid.innerHTML = modules
+          .map((feature) => {
+            const hidden = enabled.has(feature.key) ? "false" : "true";
+            return (
+              '<article class="module" data-hidden="' + hidden + '" style="--feature-color:' + feature.color + '">' +
+                '<figure><img src="' + feature.image + '" alt="' + feature.title + ' screenshot" /></figure>' +
+                '<div>' +
+                  '<b contenteditable="true">' + feature.title + '</b>' +
+                  '<div class="feature-badges">' + feature.badges.map((badge) => '<span class="feature-badge" contenteditable="true">' + badge + '</span>').join("") + '</div>' +
+                  '<p contenteditable="true">' + feature.copy + '</p>' +
+                '</div>' +
+              '</article>'
+            );
+          })
+          .join("");
+      }
+
+      document.getElementById("theme-select").addEventListener("change", (event) => {
+        document.documentElement.dataset.theme = event.target.value;
+      });
+
+      document.getElementById("compact-toggle").addEventListener("change", (event) => {
+        document.documentElement.classList.toggle("compact", event.target.checked);
+      });
+
+      schoolInput.addEventListener("input", () => {
+        const value = schoolInput.value.trim();
+        document.getElementById("simple-title").textContent = value ? "LevelUp Additional Features for " + value : "LevelUp Additional Features";
+      });
+
+      document.querySelectorAll("[data-module]").forEach((input) => {
+        input.addEventListener("change", renderModules);
+      });
+
+      renderModules();
+    </script>
+  </body>
+</html>

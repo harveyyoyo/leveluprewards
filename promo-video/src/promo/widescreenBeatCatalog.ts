@@ -59,8 +59,8 @@ export const WIDESCREEN_BEATS = {
   },
   dashboard: {
     clip: CAPTURE_CLIPS.prizeShop,
-    label: "Prize shop",
-    tagline: "Browse and choose rewards.",
+    label: "Rewards shop",
+    tagline: "Prizes, points, and stock in one list.",
     emoji: "🎁",
     color: "#f59e0b",
   },

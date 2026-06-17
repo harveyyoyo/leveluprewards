@@ -61,6 +61,12 @@ export function schoolPathAllowedByGate(
     }
     return scopes.has('office') || scopes.has('admin');
   }
+  if (section === 'sss') {
+    if (pathname === prefix + 'sss' || pathname === prefix + 'sss/') {
+      return scopes.has('portal') || scopes.has('office') || scopes.has('admin');
+    }
+    return scopes.has('office') || scopes.has('admin');
+  }
   if (section === 'library' || section === 'parent') {
     return true;
   }

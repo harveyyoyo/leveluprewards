@@ -34,6 +34,7 @@ const PROTECTED_SECOND = new Set([
   'smart-screen',
   'displays',
   'office',
+  'sss',
 ]);
 
 /** Allowed without session cookie (server redirect or legacy). */

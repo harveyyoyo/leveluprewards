@@ -53,12 +53,12 @@ async function loadSeedFactory() {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'demo-office-seed-'));
   const outfile = path.join(tempDir, 'seed-factory.mjs');
   const entry = path.join(tempDir, 'entry.ts');
-  const srcRoot = path.resolve('apps/office/src');
+  const srcRoot = path.resolve('src');
 
   await writeFile(
     entry,
     `
-      import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('apps/office/src/lib/office/officeDemoSeedFactory.ts'))};
+      import { buildOfficeDemoSeed } from ${JSON.stringify(path.resolve('src/lib/office/officeDemoSeedFactory.ts'))};
 
       export { buildOfficeDemoSeed };
     `,

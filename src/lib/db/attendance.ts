@@ -6,7 +6,6 @@ import {
   collection,
   runTransaction,
   query,
-  where,
   orderBy,
   limit,
   writeBatch,
@@ -306,6 +305,7 @@ export const listAttendanceLog = async (
       pointsAwarded: data.pointsAwarded ?? 0,
       onTime: data.onTime ?? false,
       periodLabel: data.periodLabel,
+      teacherId: data.teacherId,
     };
   });
 };
@@ -317,27 +317,27 @@ export const listTeacherAttendanceLog = async (
   limitCount: number = 50
 ): Promise<AttendanceLogEntry[]> => {
   if (!teacherId) return [];
+  // Single-field index on signedInAt only — filter teacherId client-side to avoid a composite index.
+  const scanLimit = Math.min(Math.max(limitCount * 10, 200), 500);
   const logRef = collection(firestore, 'schools', schoolId, 'attendanceLog');
-  const q = query(
-    logRef,
-    where('teacherId', '==', teacherId),
-    orderBy('signedInAt', 'desc'),
-    limit(limitCount)
-  );
+  const q = query(logRef, orderBy('signedInAt', 'desc'), limit(scanLimit));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => {
-    const data = d.data();
-    return {
-      id: d.id,
-      studentId: data.studentId ?? '',
-      studentName: data.studentName,
-      signedInAt: data.signedInAt ?? 0,
-      pointsAwarded: data.pointsAwarded ?? 0,
-      onTime: data.onTime ?? false,
-      periodLabel: data.periodLabel,
-      teacherId: data.teacherId,
-    };
-  });
+  return snap.docs
+    .map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        studentId: data.studentId ?? '',
+        studentName: data.studentName,
+        signedInAt: data.signedInAt ?? 0,
+        pointsAwarded: data.pointsAwarded ?? 0,
+        onTime: data.onTime ?? false,
+        periodLabel: data.periodLabel,
+        teacherId: data.teacherId,
+      };
+    })
+    .filter((entry) => entry.teacherId === teacherId)
+    .slice(0, limitCount);
 };
 
 /**

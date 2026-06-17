@@ -19,6 +19,7 @@ import {
   Eye,
   EyeOff,
   Monitor,
+  QrCode,
 } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
@@ -129,7 +130,7 @@ export function AdminBrandingTab({
         items={[
           { id: 'logo', label: 'School Logo' },
           { id: 'photos', label: 'Student Photos' },
-          { id: 'theme', label: 'ID Card Theme' },
+          { id: 'theme', label: 'ID Cards & Themes' },
           { id: 'sponsor', label: 'Sponsor Banner' },
           { id: 'kiosk_profiles', label: 'Kiosk Profiles' },
         ]}
@@ -502,6 +503,38 @@ export function AdminBrandingTab({
             </div>
           </CardHeader>
           <CardContent className="p-6 md:p-8 space-y-6">
+            <div className="flex items-center justify-between rounded-2xl border bg-muted/15 p-5 shadow-sm">
+              <div className="min-w-0 pr-4">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
+                  <p className="text-sm font-bold text-foreground">QR code on ID cards</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  School-wide default: QR on the left with initials inside the code (no bottom barcode strip). Individual students can override this in their theme editor. Leave off for wedge scanners and legacy barcode readers.
+                </p>
+              </div>
+              <Switch
+                checked={settings.idCardUseQrCode === true}
+                onCheckedChange={(checked) => updateSettings({ idCardUseQrCode: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-2xl border bg-muted/15 p-5 shadow-sm">
+              <div className="min-w-0 pr-4">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-4 h-4 text-muted-foreground shrink-0" aria-hidden />
+                  <p className="text-sm font-bold text-foreground">QR code on coupons</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  School-wide: plain QR on the left of each printed coupon (no bottom barcode strip). Best for kiosk camera redemption. Leave off for wedge scanners and legacy barcode readers.
+                </p>
+              </div>
+              <Switch
+                checked={settings.couponUseQrCode === true}
+                onCheckedChange={(checked) => updateSettings({ couponUseQrCode: checked })}
+              />
+            </div>
+
             <div className="rounded-3xl border bg-muted/5 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
               <div className="space-y-2">
                 <h4 className="text-sm font-bold text-foreground">Interactive Theme Designer</h4>

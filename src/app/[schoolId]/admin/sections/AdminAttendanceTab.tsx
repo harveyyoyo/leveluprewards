@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import type { AttendanceRewardRule } from '@/lib/types';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
+import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 export function AdminAttendanceTab(props: any) {
@@ -71,7 +72,7 @@ export function AdminAttendanceTab(props: any) {
     const map = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     return map[new Date().getDay()] ?? 'mon';
   });
-  const [section, setSection] = React.useState<'defaults' | 'periods' | 'teachers'>('defaults');
+  const [mainSection, setMainSection] = React.useState<'setup' | 'defaults' | 'recess'>('setup');
 
   const getAssignedSlotId = (classId: string): string => {
     const byDay = teacherAttendanceConfig?.classPeriodAssignmentsByDay;
@@ -140,16 +141,18 @@ export function AdminAttendanceTab(props: any) {
       <StaffPortalSectionCardContent className="p-6 space-y-6">
         <ContentSectionTreeNav
           items={[
+            { id: 'setup', label: 'Setup' },
             { id: 'defaults', label: 'School Defaults' },
-            { id: 'periods', label: 'Universal Periods' },
-            { id: 'teachers', label: 'Per Teacher' },
+            { id: 'recess', label: 'Room passes' },
           ]}
-          value={section}
-          onValueChange={(id) => setSection(id as 'defaults' | 'periods' | 'teachers')}
+          value={mainSection}
+          onValueChange={(id) => setMainSection(id as 'setup' | 'defaults' | 'recess')}
           className="mb-2"
         />
 
-        {section === 'defaults' && (
+        {mainSection === 'recess' && schoolId ? <RecessAttendanceSection schoolId={schoolId} /> : null}
+
+        {mainSection === 'defaults' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="border-b pb-4">
               <div className="flex items-center gap-1.5">
@@ -247,25 +250,24 @@ export function AdminAttendanceTab(props: any) {
           </div>
         )}
 
-        {section === 'periods' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
-            <div className="border-b pb-4">
-              <div className="flex items-center gap-1.5">
-                <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-ring" /> Universal Periods
-                </h3>
-                <StaffPortalTabInfoPopover
-                  sections={[staffPortalTabInfoSection('Create and manage period time slots used by all teachers for on-time attendance.')]}
-                  ariaLabel="About universal periods"
-                />
+        {mainSection === 'setup' && (
+          <div className="space-y-10 animate-in fade-in-50 duration-200">
+            <div className="space-y-6">
+              <div className="border-b pb-4">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-ring" /> Universal Periods
+                  </h3>
+                  <StaffPortalTabInfoPopover
+                    sections={[staffPortalTabInfoSection('Create and manage period time slots used by all teachers for on-time attendance.')]}
+                    ariaLabel="About universal periods"
+                  />
+                </div>
               </div>
+              <UniversalPeriodsAdmin schoolId={schoolId!} />
             </div>
-            <UniversalPeriodsAdmin schoolId={schoolId!} />
-          </div>
-        )}
 
-        {section === 'teachers' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="space-y-6 border-t pt-8">
             <div className="border-b pb-4">
               <div className="flex items-center gap-1.5">
                 <h3 className="text-lg font-black tracking-tight flex items-center gap-2">
@@ -801,6 +803,7 @@ export function AdminAttendanceTab(props: any) {
                 )}
               </div>
             )}
+            </div>
           </div>
         )}
 

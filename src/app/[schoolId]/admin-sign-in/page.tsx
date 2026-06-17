@@ -89,7 +89,7 @@ function AdminSignInContent() {
     router.replace(next ?? `/${schoolId}/admin`);
   }, [router, schoolId, searchParams]);
 
-  const { canBypassAdminPasscode, isAutoLoggingIn, googleAutoLoginExhausted } =
+  const { isAutoLoggingIn, canBypassAdminPasscode, googleAutoLoginExhausted } =
     useAdminGooglePasscodeBypass({
     schoolId,
     onSuccess: redirectAfterAdminLogin,

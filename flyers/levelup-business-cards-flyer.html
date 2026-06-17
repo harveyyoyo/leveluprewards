@@ -251,6 +251,208 @@
         border: 1px solid var(--hair);
       }
 
+      .print-id-card.design-premium {
+        padding: 12px 15px 10px;
+        border-radius: 16px;
+        background:
+          linear-gradient(115deg, rgba(255, 255, 255, 0.12) 0 18%, transparent 18% 100%),
+          radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--accent2) 30%, transparent), transparent 44%),
+          linear-gradient(135deg, color-mix(in srgb, var(--bg) 88%, var(--accent) 12%), var(--bg));
+      }
+
+      .print-id-card.design-premium::before {
+        content: "";
+        position: absolute;
+        top: 58px;
+        left: 15px;
+        width: 30px;
+        height: 22px;
+        border-radius: 5px;
+        background:
+          linear-gradient(90deg, transparent 45%, rgba(15, 23, 42, 0.22) 45% 55%, transparent 55%),
+          linear-gradient(180deg, #fde68a, #d97706);
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.24);
+        opacity: 0.9;
+      }
+
+      .print-id-card.design-premium .print-id-main {
+        padding-left: 44px;
+      }
+
+      .print-id-card.design-diagonal {
+        border-radius: 4px;
+        background:
+          linear-gradient(130deg, color-mix(in srgb, var(--accent) 28%, transparent) 0 38%, transparent 38% 100%),
+          linear-gradient(130deg, transparent 0 66%, color-mix(in srgb, var(--accent2) 34%, transparent) 66% 100%),
+          var(--bg);
+      }
+
+      .print-id-card.design-diagonal .print-id-header-container {
+        border-bottom: 0;
+      }
+
+      .print-id-card.design-diagonal .print-id-avatar {
+        border-radius: 50%;
+      }
+
+      .print-id-card.design-clean {
+        border-radius: 10px;
+        background:
+          linear-gradient(90deg, color-mix(in srgb, var(--accent2) 26%, transparent) 0 4px, transparent 4px),
+          var(--bg);
+      }
+
+      .print-id-card.design-clean .bc-decor,
+      .print-id-card.design-clean .bc-decor2 {
+        display: none;
+      }
+
+      .print-id-card.design-clean .print-id-header-container {
+        border-bottom-style: dashed;
+      }
+
+      .print-id-card.design-clean .print-id-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 8px;
+      }
+
+      .print-id-card.design-arcade {
+        border-radius: 14px;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+          radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--accent) 36%, transparent), transparent 35%),
+          radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--accent2) 35%, transparent), transparent 40%),
+          var(--bg);
+        background-size: 14px 14px, 14px 14px, auto, auto, auto;
+      }
+
+      .print-id-card.design-arcade .print-id-header {
+        box-shadow: 0 0 16px color-mix(in srgb, var(--accent2) 40%, transparent);
+      }
+
+      .print-id-card.design-arcade .print-id-avatar {
+        border-radius: 14px;
+        box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 22%, transparent);
+      }
+
+      .print-id-card.design-school-card {
+        padding: 10px 12px;
+        border-radius: 7px;
+        border: 1px solid #d8c7a4 !important;
+        background: #f3ebdc !important;
+        color: #111827 !important;
+        box-shadow: none;
+      }
+
+      .print-id-card.design-school-card .bc-decor,
+      .print-id-card.design-school-card .bc-decor2 {
+        display: none;
+      }
+
+      .print-id-card.design-school-card .print-id-header-container {
+        align-items: flex-start;
+        padding-bottom: 5px;
+        margin-bottom: 0;
+        border-bottom: 1px solid #d7c8aa;
+      }
+
+      .print-id-card.design-school-card .print-id-app {
+        gap: 5px;
+      }
+
+      .print-id-card.design-school-card .print-id-app-logo {
+        width: 17px;
+        height: 17px;
+        padding: 2px;
+        border-radius: 2px;
+        background: #fffaf0;
+        border: 1px solid #d7c8aa;
+      }
+
+      .print-id-card.design-school-card .print-id-app-name {
+        color: #111827 !important;
+        font-size: 8px;
+        line-height: 1;
+      }
+
+      .print-id-card.design-school-card .print-id-app-tagline {
+        color: #475569 !important;
+        font-size: 6px;
+        line-height: 1.05;
+      }
+
+      .print-id-card.design-school-card .print-id-school .print-id-header {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        color: #111827 !important;
+        font-size: 7px;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      .print-id-card.design-school-card .print-id-main {
+        flex: 1;
+        align-items: center;
+        padding: 0 0 0 86px;
+        min-height: 80px;
+      }
+
+      .print-id-card.design-school-card .print-id-left {
+        gap: 0;
+      }
+
+      .print-id-card.design-school-card .print-id-avatar {
+        display: none;
+      }
+
+      .print-id-card.design-school-card .print-id-text {
+        justify-content: center;
+      }
+
+      .print-id-card.design-school-card .print-id-name {
+        color: #111827 !important;
+        font-size: 13px;
+        letter-spacing: -0.01em;
+      }
+
+      .print-id-card.design-school-card .print-id-class {
+        margin-top: 2px;
+        color: #111827 !important;
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      .print-id-card.design-school-card .print-id-meta-info {
+        display: none !important;
+      }
+
+      .print-id-card.design-school-card .print-id-barcode-container {
+        position: absolute;
+        left: 18px;
+        top: 68px;
+        width: 58px;
+        padding: 0;
+        margin: 0;
+        border-top: 0;
+        justify-content: flex-start;
+      }
+
+      .print-id-card.design-school-card .bc-qrcode-container {
+        width: 58px !important;
+        height: 58px !important;
+        padding: 4px;
+        border: 0 !important;
+        border-radius: 4px;
+        background: #ffffff !important;
+        box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.08);
+      }
+
       .bc-decor {
         position: absolute;
         bottom: -20px;
@@ -362,9 +564,11 @@
       .print-id-avatar {
         width: 48px;
         height: 48px;
-        border-radius: 8px;
+        border-radius: 12px;
         border: 1px solid var(--hair);
-        background: var(--panel);
+        background:
+          radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent2) 25%, transparent), transparent 55%),
+          var(--panel);
         overflow: hidden;
         display: flex;
         align-items: center;
@@ -374,13 +578,13 @@
       }
 
       .print-id-avatar img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+        width: 68%;
+        height: 68%;
+        object-fit: contain;
         display: block;
       }
 
-      /* Initials fallback styled like student ID app portal */
+      /* Logo fallback styled like the LevelUp app mark */
       .bc-avatar-fallback {
         position: absolute;
         inset: 0;
@@ -388,9 +592,9 @@
         align-items: center;
         justify-content: center;
         font-family: 'Outfit', sans-serif;
-        font-size: 16px;
+        font-size: 11px;
         font-weight: 800;
-        color: var(--strong);
+        color: #ffffff;
         background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
         opacity: 0.95;
         text-shadow: 0 1px 2px rgba(0,0,0,0.25);
@@ -435,59 +639,101 @@
          CANONICAL COUPON STYLE
          ========================================================================== */
       .coupon-scalable {
-        width: 100%;
-        height: 100%;
-        padding: 10px 14px;
-        background: #ffffff !important; /* Authentic coupon white background */
+        width: calc(100% - 16px);
+        height: calc(100% - 16px);
+        margin: 8px;
+        padding: 9px 12px;
+        background:
+          linear-gradient(90deg, rgba(14, 165, 233, 0.08) 0 18%, transparent 18% 100%),
+          repeating-linear-gradient(135deg, rgba(15, 23, 42, 0.035) 0 5px, transparent 5px 10px),
+          #ffffff !important;
         color: #1e293b !important; /* Dark text for high contrast print */
         display: flex;
         flex-direction: column;
         align-items: stretch;
         justify-content: space-between;
         position: relative;
-        border-radius: 8px;
-        overflow: hidden;
+        border-radius: 10px;
+        overflow: visible;
         border: 2px dashed var(--accent2) !important;
+        box-shadow:
+          0 0 0 1px rgba(15, 23, 42, 0.08),
+          inset 0 0 0 3px #ffffff,
+          inset 0 0 0 4px rgba(15, 23, 42, 0.1);
         font-family: 'DM Sans', sans-serif;
+      }
+
+      .coupon-scalable::before,
+      .coupon-scalable::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--bg);
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        transform: translateY(-50%);
+        z-index: 2;
+      }
+
+      .coupon-scalable::before {
+        left: -10px;
+      }
+
+      .coupon-scalable::after {
+        right: -10px;
       }
 
       .coupon-title {
         font-family: 'Outfit', sans-serif;
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 800;
         text-transform: uppercase;
-        color: var(--accent) !important;
-        letter-spacing: 0.04em;
-        border-bottom: 1px dashed rgba(0, 0, 0, 0.15) !important;
-        padding-bottom: 4px;
-        margin-bottom: 4px;
+        color: #0f172a !important;
+        letter-spacing: 0.08em;
+        border-bottom: 1px dashed rgba(15, 23, 42, 0.22) !important;
+        padding-bottom: 5px;
+        margin-bottom: 5px;
         text-align: center;
         line-height: 1.2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+      }
+
+      .coupon-title img {
+        width: 15px;
+        height: 15px;
+        object-fit: contain;
+        flex-shrink: 0;
       }
 
       .coupon-main {
         display: flex;
         align-items: center;
-        gap: 10px;
-        border-bottom: 1px dashed rgba(0, 0, 0, 0.15) !important;
-        padding-bottom: 4px;
-        margin-bottom: 4px;
+        gap: 8px;
+        border-bottom: 1px dashed rgba(15, 23, 42, 0.22) !important;
+        padding-bottom: 5px;
+        margin-bottom: 5px;
         flex: 1;
       }
 
       .coupon-left-badge {
-        background: rgba(6, 182, 212, 0.08) !important;
-        border: 1px solid var(--accent2) !important;
-        color: var(--accent2) !important;
-        padding: 3px 6px;
+        background: var(--accent2) !important;
+        border: 1px solid color-mix(in srgb, var(--accent2) 75%, #0f172a 25%) !important;
+        color: #ffffff !important;
+        padding: 5px 6px;
         border-radius: 6px;
         font-weight: 800;
-        font-size: 8.5px;
+        font-size: 8px;
         text-transform: uppercase;
-        min-width: 44px;
+        min-width: 48px;
         text-align: center;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.05em;
         line-height: 1.2;
+        box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16);
       }
 
       .coupon-details-text {
@@ -498,7 +744,7 @@
 
       .coupon-name {
         font-family: 'Outfit', sans-serif;
-        font-size: 13px;
+        font-size: 12.5px;
         font-weight: 800;
         color: #0f172a !important;
         line-height: 1.1;
@@ -514,16 +760,18 @@
 
       .coupon-barcode-zone {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         align-items: center;
-        gap: 3px;
+        justify-content: space-between;
+        gap: 8px;
       }
 
       .coupon-redemption-label {
-        font-size: 7.5px;
+        flex: 1;
+        font-size: 7px;
         font-weight: 700;
         color: #64748b !important;
-        text-align: center;
+        text-align: left;
         line-height: 1.2;
       }
 
@@ -546,9 +794,63 @@
         height: 100% !important;
         display: block !important;
       }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     </style>
-  </head>
+    <style id="interactive-list-link-style">
+      .interactive-list-link {
+        position: fixed;
+        top: 14px;
+        left: 14px;
+        z-index: 10000;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 13px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(3, 6, 15, 0.86);
+        color: #eaf0ff;
+        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(14px);
+      }
+
+      .interactive-list-link:hover {
+        border-color: rgba(34, 211, 238, 0.5);
+        color: #ffffff;
+      }
+
+      html.embed .interactive-list-link {
+        display: none !important;
+      }
+
+      @media print {
+        .interactive-list-link {
+          display: none !important;
+        }
+      }
+    </style>
+    <script>
+      try {
+        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+      } catch (_) {}
+    </script>  </head>
   <body>
+    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
+    <h1 class="sr-only">LevelUp Rewards Business Cards Builder</h1>
     <!-- CONTROL SIDEBAR -->
     <div class="control-sidebar no-print" role="complementary">
       <div class="sidebar-header">
@@ -564,6 +866,17 @@
         <select id="style-select" class="sidebar-select" onchange="updateCardStyle()">
           <option value="id-card" selected>ID Card Style</option>
           <option value="coupon">Coupon Style</option>
+        </select>
+      </div>
+
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="card-design-select">Credit Card Design Theme</label>
+        <select id="card-design-select" class="sidebar-select" onchange="updateCardStyle()">
+          <option value="design-premium" selected>Premium Chip Card</option>
+          <option value="design-diagonal">Diagonal Pass</option>
+          <option value="design-clean">Clean Contact Card</option>
+          <option value="design-arcade">Arcade Pass</option>
+          <option value="design-school-card">School Rewards Card</option>
         </select>
       </div>
 
@@ -591,7 +904,7 @@
           <input type="text" id="name-input" value="Dovid Teitelbaum" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
           <input type="text" id="title-input" value="Lead Developer" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
           <input type="text" id="badge-input" value="Developer" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
-          <input type="text" id="photo-input" value="https://api.dicebear.com/7.x/avataaars/svg?seed=Dovid" class="sidebar-input" placeholder="Photo / Avatar URL (Optional)" oninput="syncFields()" />
+          <input type="hidden" id="photo-input" value="/logo.png" />
         </div>
       </div>
 
@@ -715,6 +1028,7 @@
       };
 
       let currentStyle = 'id-card';
+      let currentCardDesign = 'design-premium';
 
       function generateCards() {
         const sheet = document.getElementById('sheet-1');
@@ -726,6 +1040,7 @@
             <div class="bcard-container">
               <div class="coupon-scalable">
                 <div class="coupon-title">
+                  <img src="/logo.png" alt="LevelUp logo" />
                   <span class="sync-company-tagline">LevelUp Rewards - PBIS & Climate</span>
                 </div>
                 
@@ -753,7 +1068,7 @@
         } else {
           cardTemplate = `
             <div class="bcard-container">
-              <div class="print-id-card">
+              <div class="print-id-card ${currentCardDesign}">
                 <div class="bc-decor"></div>
                 <div class="bc-decor2"></div>
                 
@@ -775,8 +1090,8 @@
                 <div class="print-id-main">
                   <div class="print-id-left">
                     <div class="print-id-avatar">
-                      <img src="" alt="Avatar" class="sync-avatar" onerror="handleImageError(this)" />
-                      <div class="bc-avatar-fallback"></div>
+                      <img src="/logo.png" alt="LevelUp logo" class="sync-avatar" onerror="handleImageError(this)" />
+                      <div class="bc-avatar-fallback">LU</div>
                     </div>
                     <div class="print-id-text">
                       <div class="print-id-name sync-name">Jane Doe</div>
@@ -818,6 +1133,7 @@
 
       function updateCardStyle() {
         currentStyle = document.getElementById('style-select').value;
+        currentCardDesign = document.getElementById('card-design-select').value;
         
         // Regenerate card DOM templates
         generateCards();
@@ -860,7 +1176,7 @@
         const web = document.getElementById('web-input').value;
         const company = document.getElementById('company-input').value;
         const tagline = document.getElementById('tagline-input').value;
-        const photo = document.getElementById('photo-input').value;
+        const photo = '/logo.png';
 
         updateElements('.sync-name', name);
         updateElements('.sync-title', title);
@@ -875,25 +1191,14 @@
         const companyTaglineText = `${company} - ${tagline}`;
         updateElements('.sync-company-tagline', companyTaglineText);
 
-        // Calculate initials from name
-        const nameParts = name.trim().split(/\s+/);
-        let initials = '';
-        if (nameParts.length > 0 && nameParts[0]) {
-          initials += nameParts[0][0].toUpperCase();
-          if (nameParts.length > 1 && nameParts[nameParts.length - 1]) {
-            initials += nameParts[nameParts.length - 1][0].toUpperCase();
-          }
-        }
-        if (!initials) initials = 'BC';
-
         document.querySelectorAll('.bc-avatar-fallback').forEach(el => {
-          el.textContent = initials;
+          el.textContent = 'LU';
         });
 
-        // Sync avatar source or show initials
+        // Use the LevelUp logo in the business card image slot.
         document.querySelectorAll('.sync-avatar').forEach(img => {
           const fallback = img.nextElementSibling;
-          if (photo && photo.trim() && currentStyle !== 'coupon') {
+          if (currentStyle !== 'coupon') {
             img.src = photo;
             img.style.display = 'block';
             fallback.style.display = 'none';

@@ -27,6 +27,7 @@ import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
 import { waitForPrintBarcodes } from '@/lib/printBarcode';
 import { useToast } from '@/hooks/use-toast';
+import type { IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
 
 const PrintSheet = dynamic(
     () => import('@/components/print/PrintSheet').then((m) => ({ default: m.PrintSheet })),
@@ -78,10 +79,10 @@ interface PrintContextType {
         coupons: Coupon[],
         options?: { couponsPerPage?: CouponPrintPageSize; schoolId: string; cornerStyle?: CouponCornerStyle },
     ) => void;
-    setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
+    setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
-    setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
-    setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => void;
+    setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
+    setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => void;
 }
 
@@ -109,10 +110,10 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         schoolId: string;
         cornerStyle: CouponCornerStyle;
     } | null>(null);
-    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
+    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
-    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
-    const [staffIdPrintData, setStaffIdPrintData] = useState<{ subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' } | null>(null);
+    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
+    const [staffIdPrintData, setStaffIdPrintData] = useState<{ subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
     const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
@@ -269,7 +270,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     cornerStyle: options?.cornerStyle ?? DEFAULT_COUPON_CORNER_STYLE,
                 });
             },
-            setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+            setStudentsToPrint: (data: { students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
                 const sid = (data?.schoolId ?? '').trim();
                 if (!sid) {
                     toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
@@ -278,7 +279,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 setPrintData({ ...data, schoolId: sid });
             },
             printPrizeTickets: setPrizeTicketsToPrint,
-            setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+            setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
                 const sid = (data?.schoolId ?? '').trim();
                 if (!sid) {
                     toast({ variant: 'destructive', title: 'Cannot print prize cards', description: 'Missing schoolId.' });
@@ -286,7 +287,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 }
                 setPrizeIdPrintData({ ...data, schoolId: sid });
             },
-            setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular' }) => {
+            setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
                 const sid = (data?.schoolId ?? '').trim();
                 if (!sid) {
                     toast({ variant: 'destructive', title: 'Cannot print staff ID cards', description: 'Missing schoolId.' });
@@ -325,6 +326,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     schoolId={printData.schoolId}
                     onReady={triggerStudentPrint}
                     cornerStyle={printData.cornerStyle}
+                    sheetSpacing={printData.sheetSpacing}
                 />
             )}
             {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && (
@@ -345,6 +347,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     schoolId={prizeIdPrintData.schoolId}
                     onReady={triggerPrizeIdPrint}
                     cornerStyle={prizeIdPrintData.cornerStyle}
+                    sheetSpacing={prizeIdPrintData.sheetSpacing}
                 />
             )}
             {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
@@ -356,6 +359,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     schoolId={staffIdPrintData.schoolId}
                     onReady={triggerStaffIdPrint}
                     cornerStyle={staffIdPrintData.cornerStyle}
+                    sheetSpacing={staffIdPrintData.sheetSpacing}
                 />
             )}
             {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType === 'dtc4500e' && (

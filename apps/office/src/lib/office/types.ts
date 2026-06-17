@@ -56,7 +56,7 @@ export type OfficeBillingAccount = {
   updatedAt: number;
 };
 
-export type OfficeInvoiceStatus = 'draft' | 'sent' | 'paid' | 'void';
+export type OfficeInvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void';
 
 export type OfficePaymentMethod = 'cash' | 'check' | 'card' | 'transfer' | 'other';
 
@@ -68,10 +68,27 @@ export type OfficeInvoice = {
   dueDate: string;
   status: OfficeInvoiceStatus;
   createdAt: number;
+  /** Cumulative payments applied to this invoice (manual / check / cash). */
+  paidCents?: number;
   paidAt?: number | null;
   /** How payment was recorded when marked paid outside Stripe. */
   paymentMethod?: OfficePaymentMethod | null;
   paymentNote?: string | null;
+};
+
+export type OfficePaymentAllocation = {
+  invoiceId: string;
+  amountCents: number;
+};
+
+export type OfficePayment = {
+  id: string;
+  accountId: string;
+  amountCents: number;
+  method: OfficePaymentMethod;
+  note?: string | null;
+  allocations: OfficePaymentAllocation[];
+  createdAt: number;
 };
 
 export type OfficeGradeEntryInput = Omit<OfficeGradeEntry, 'id' | 'updatedAt' | 'updatedBy'>;

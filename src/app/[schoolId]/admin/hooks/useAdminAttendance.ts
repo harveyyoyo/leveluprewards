@@ -159,6 +159,12 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
       .finally(() => setTeacherAttendanceLogLoading(false));
   }, [selectedAttendanceTeacherId, listTeacherAttendanceLog, toast]);
 
+  // Load teacher log when selection changes (no composite Firestore index required).
+  useEffect(() => {
+    if (!enabled || !selectedAttendanceTeacherId || !listTeacherAttendanceLog) return;
+    loadTeacherAttendanceLog();
+  }, [enabled, selectedAttendanceTeacherId, listTeacherAttendanceLog, loadTeacherAttendanceLog]);
+
   // ---- Save handlers -------------------------------------------------
   const handleSaveAttendanceConfig = useCallback(async () => {
     if (!attendanceConfig || !setAttendanceConfig) return;

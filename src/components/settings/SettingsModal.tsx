@@ -65,7 +65,7 @@ import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinte
 import { SettingsFaceEnrollmentsPanel } from '@/components/settings/SettingsFaceEnrollmentsPanel';
 import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJumpNav';
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
-import { PRODUCT_PILLAR_LABELS, type ProductPillarKey } from '@/lib/productPillars';
+import { SUPPLEMENTARY_PRODUCTS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { OfficePortalEntryLink } from '@/components/integrations/OfficePortalEntryLink';
 import { sssPublicHref } from '@/lib/sss/sssPublicUrl';
@@ -78,6 +78,10 @@ import {
     type SettingsView,
 } from '@/components/settings/settingsModalConfig';
 import { useStaffPortalLayoutMode } from '@/lib/staffPortal/useStaffPortalLayoutMode';
+import { ensureReusableSampleCoupon } from '@/lib/coupons/ensureReusableSampleCoupon';
+import { normalizeReusableSampleCouponCode } from '@/lib/coupons/reusableSampleCoupon';
+import { ensureSampleKioskStudent } from '@/lib/students/ensureSampleKioskStudent';
+import { SAMPLE_KIOSK_STUDENT_DISPLAY_NAME, SAMPLE_KIOSK_STUDENT_ID } from '@/lib/sampleKioskDemo';
 type RoleView = 'global' | 'student' | 'teacher';
 type PreviewMode = 'live' | 'draft';
 
@@ -92,7 +96,7 @@ export function SettingsModal() {
         isAdmin: hasAdminRole,
         schoolId,
     } = useAppContext();
-    const { user: firebaseUser } = useFirebase();
+    const { user: firebaseUser, firestore } = useFirebase();
     const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const [open, setOpen] = useState(false);
@@ -392,6 +396,28 @@ export function SettingsModal() {
         committedRef.current = true;
         if (draft) {
             updateSettings({ ...draft });
+            if (firestore && schoolId) {
+                if (draft.enableReusableSampleCoupon) {
+                    void ensureReusableSampleCoupon(firestore, schoolId, draft).catch((error) => {
+                        console.error('Failed to ensure reusable demo coupon', error);
+                        toast({
+                            variant: 'destructive',
+                            title: 'Demo coupon',
+                            description: 'Settings saved, but the demo coupon could not be created. Try again from Admin.',
+                        });
+                    });
+                }
+                if (draft.enableSampleKioskStudent) {
+                    void ensureSampleKioskStudent(firestore, schoolId).catch((error) => {
+                        console.error('Failed to ensure sample kiosk student', error);
+                        toast({
+                            variant: 'destructive',
+                            title: 'Sample student',
+                            description: 'Settings saved, but John Doe (ID 100) could not be created. Try again from Admin.',
+                        });
+                    });
+                }
+            }
         }
         // Use the same close path as Cancel / overlay (Radix onOpenChange) so focus stack stays consistent.
         handleOpenChange(false);
@@ -1700,6 +1726,92 @@ export function SettingsModal() {
                                         />
                                     </div>
 
+                                    <div className="border-t border-slate-200/60 dark:border-slate-700/50 pt-4 space-y-3">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div className="flex flex-col pr-4">
+                                                <span className="text-sm font-bold">Reusable demo coupon</span>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Adds a short numeric code students can redeem over and over for demos and training (default <span className="font-semibold">000</span>; John Doe logs in as ID 100).
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={local.enableReusableSampleCoupon === true}
+                                                onCheckedChange={(checked) => handleToggle('enableReusableSampleCoupon', checked)}
+                                                disabled={!canManageSchoolSettings}
+                                                aria-label="Reusable demo coupon"
+                                            />
+                                        </div>
+                                        {local.enableReusableSampleCoupon ? (
+                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="reusableSampleCouponCode" className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                        Code
+                                                    </Label>
+                                                    <Input
+                                                        id="reusableSampleCouponCode"
+                                                        inputMode="numeric"
+                                                        pattern="[0-9]*"
+                                                        maxLength={6}
+                                                        className="h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                        value={local.reusableSampleCouponCode ?? '000'}
+                                                        onChange={(e) => {
+                                                            const next = normalizeReusableSampleCouponCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                                                            handleToggle('reusableSampleCouponCode', next);
+                                                        }}
+                                                        disabled={!canManageSchoolSettings}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <Label htmlFor="reusableSampleCouponValue" className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                        Points
+                                                    </Label>
+                                                    <Input
+                                                        id="reusableSampleCouponValue"
+                                                        type="number"
+                                                        min={1}
+                                                        max={1000}
+                                                        className="h-9 rounded-xl text-center font-bold bg-background/50 border-border/50"
+                                                        value={local.reusableSampleCouponValue ?? 10}
+                                                        onChange={(e) => {
+                                                            const n = parseInt(e.target.value, 10);
+                                                            handleToggle(
+                                                                'reusableSampleCouponValue',
+                                                                Number.isFinite(n) ? Math.min(1000, Math.max(1, n)) : 10,
+                                                            );
+                                                        }}
+                                                        disabled={!canManageSchoolSettings}
+                                                    />
+                                                </div>
+                                                <div className="space-y-1 col-span-2 sm:col-span-1">
+                                                    <Label htmlFor="reusableSampleCouponCategory" className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                                                        Category
+                                                    </Label>
+                                                    <Input
+                                                        id="reusableSampleCouponCategory"
+                                                        className="h-9 rounded-xl font-semibold bg-background/50 border-border/50"
+                                                        value={local.reusableSampleCouponCategory ?? 'Demo'}
+                                                        onChange={(e) => handleToggle('reusableSampleCouponCategory', e.target.value.slice(0, 40))}
+                                                        disabled={!canManageSchoolSettings}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                        <div className="flex items-center justify-between gap-4 border-t border-slate-200/60 dark:border-slate-700/50 pt-3">
+                                            <div className="flex flex-col pr-4">
+                                                <span className="text-sm font-bold">Sample kiosk student</span>
+                                                <p className="text-[11px] text-muted-foreground">
+                                                    Show a one-tap login for <span className="font-semibold">{SAMPLE_KIOSK_STUDENT_DISPLAY_NAME}</span> (ID <span className="font-semibold">{SAMPLE_KIOSK_STUDENT_ID}</span>) on manual entry.
+                                                </p>
+                                            </div>
+                                            <Switch
+                                                checked={local.enableSampleKioskStudent === true}
+                                                onCheckedChange={(checked) => handleToggle('enableSampleKioskStudent', checked)}
+                                                disabled={!canManageSchoolSettings}
+                                                aria-label="Sample kiosk student"
+                                            />
+                                        </div>
+                                    </div>
+
                                     <div className="flex items-center justify-between">
                                         <div className="flex flex-col">
                                             <span className="text-sm font-bold">Welcome splash duration</span>
@@ -1890,7 +2002,7 @@ export function SettingsModal() {
                                     <ShieldCheck className="w-3.5 h-3.5" /> Product Pillars
                                 </p>
                                 <p className="text-xs text-muted-foreground leading-normal mb-3">
-                                    Select which products are part of your active plan. School Office and Student Special Services are optional and use their own data (not shared with rewards).
+                                    Select which products are part of your active plan.
                                 </p>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     {(() => {
@@ -1939,12 +2051,14 @@ export function SettingsModal() {
                                                 <div className="flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl opacity-60">
                                                     <div>
                                                         <h4 className="font-bold text-sm text-foreground uppercase tracking-tight flex items-center gap-2">
-                                                            levelup home work
+                                                            levelup home
                                                             <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground border border-border/60 rounded-full px-1.5 py-0.5">Coming soon</span>
                                                         </h4>
-                                                        <p className="text-[10px] text-muted-foreground">Coming soon — not available yet</p>
+                                                        <p className="text-[10px] text-muted-foreground">
+                                                            Student and parent portal — homework, progress, and family access
+                                                        </p>
                                                     </div>
-                                                    <Switch checked={false} disabled aria-label="levelup home work (coming soon)" />
+                                                    <Switch checked={false} disabled aria-label="levelup home (coming soon)" />
                                                 </div>
                                                 <div className={cn("flex items-center justify-between p-3 bg-background/50 border border-border/40 rounded-xl hover:bg-muted/40 transition-colors", unavailablePillarHint('payLibrary') && 'opacity-60')}>
                                                     <div>
@@ -1957,65 +2071,49 @@ export function SettingsModal() {
                                                         disabled={!!unavailablePillarHint('payLibrary') || (enabledCount === 1 && (local.payLibrary ?? true))}
                                                     />
                                                 </div>
-                                                <div className={cn("sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2", unavailablePillarHint('payOffice') && 'opacity-60')}>
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div>
-                                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
-                                                                {PRODUCT_PILLAR_LABELS.payOffice}
-                                                            </h4>
-                                                            <p className="text-[10px] text-muted-foreground">
-                                                                {unavailablePillarHint('payOffice') ?? 'Grades & billing - separate office roster (no rewards portal link)'}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex shrink-0 flex-col items-end gap-2">
-                                                            <Switch
-                                                                checked={local.payOffice === true && !unavailablePillarHint('payOffice')}
-                                                                onCheckedChange={(val) => handleToggle('payOffice', val)}
-                                                                disabled={!!unavailablePillarHint('payOffice')}
-                                                                aria-label={PRODUCT_PILLAR_LABELS.payOffice}
-                                                            />
-                                                            {local.payOffice === true && !unavailablePillarHint('payOffice') && schoolId ? (
-                                                                <OfficePortalEntryLink
-                                                                    schoolId={schoolId}
-                                                                    className="text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
-                                                                />
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className={cn("sm:col-span-2 p-3 bg-background/50 border border-border/40 rounded-xl space-y-2", unavailablePillarHint('paySss') && 'opacity-60')}>
-                                                    <div className="flex items-start justify-between gap-4">
-                                                        <div>
-                                                            <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
-                                                                {PRODUCT_PILLAR_LABELS.paySss}
-                                                            </h4>
-                                                            <p className="text-[10px] text-muted-foreground">
-                                                                {unavailablePillarHint('paySss') ?? 'Spreadsheet student roster — providers, contacts, and family info (separate from office & rewards)'}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex shrink-0 flex-col items-end gap-2">
-                                                            <Switch
-                                                                checked={local.paySss === true && !unavailablePillarHint('paySss')}
-                                                                onCheckedChange={(val) => handleToggle('paySss', val)}
-                                                                disabled={!!unavailablePillarHint('paySss')}
-                                                                aria-label={PRODUCT_PILLAR_LABELS.paySss}
-                                                            />
-                                                            {local.paySss === true && !unavailablePillarHint('paySss') && schoolId ? (
-                                                                <a
-                                                                    href={sssPublicHref(schoolId)}
-                                                                    className="text-[11px] font-bold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:text-violet-300 dark:hover:text-violet-100"
-                                                                >
-                                                                    Open Student Special Services
-                                                                </a>
-                                                            ) : null}
-                                                        </div>
-                                                    </div>
-                                                </div>
                                             </>
                                         );
                                     })()}
                                 </div>
                             </div>
+                            {schoolId ? (
+                                <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-3">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1">
+                                        More products
+                                    </p>
+                                    <p className="text-xs text-muted-foreground leading-normal">
+                                        These standalone products are always available and use their own data (not shared with rewards).
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {SUPPLEMENTARY_PRODUCTS.map((product) => (
+                                            <div
+                                                key={product.id}
+                                                className="flex items-start justify-between gap-4 p-3 bg-background/50 border border-border/40 rounded-xl"
+                                            >
+                                                <div className="min-w-0">
+                                                    <h4 className="font-bold text-sm text-foreground uppercase tracking-tight">
+                                                        {product.label}
+                                                    </h4>
+                                                    <p className="text-[10px] text-muted-foreground mt-0.5">{product.description}</p>
+                                                </div>
+                                                {product.id === 'office' ? (
+                                                    <OfficePortalEntryLink
+                                                        schoolId={schoolId}
+                                                        className="shrink-0 text-[11px] font-bold text-teal-700 underline underline-offset-4 hover:text-teal-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:text-teal-300 dark:hover:text-teal-100"
+                                                    />
+                                                ) : (
+                                                    <a
+                                                        href={sssPublicHref(schoolId)}
+                                                        className="shrink-0 text-[11px] font-bold text-violet-700 underline underline-offset-4 hover:text-violet-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 dark:text-violet-300 dark:hover:text-violet-100"
+                                                    >
+                                                        Open {product.label}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
                         </div>
                     )}
 

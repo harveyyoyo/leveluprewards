@@ -37,6 +37,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import {
   isPrizeSchoolWideTeachers,
   buildTeacherPrizeListItems,
@@ -413,11 +414,9 @@ export function AdminPrizesTab({
                     style={prizeListGridStyle}
                     data-selected={selectedPrizeIds.has(p.id) ? 'true' : 'false'}
                     title={selectedPrizeIds.has(p.id) ? 'Click row to deselect' : 'Click row to select'}
-                    onClick={(event) => {
-                      const target = event.target as HTMLElement;
-                      if (target.closest('button,input,select,textarea,a,[role="button"],[role="combobox"]')) return;
-                      togglePrizeSelected(p.id);
-                    }}
+                    onClick={(event) =>
+                      handleSelectableRowClick(event, () => togglePrizeSelected(p.id))
+                    }
                   >
                     {/* Edit + print */}
                     <div className="flex items-center justify-center gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -994,12 +993,12 @@ export function AdminPrizesTab({
             if (!o) setPrizeIdPrintJob(null);
           }}
           prizes={prizeIdPrintJob}
-          onConfirm={({ prizes, printerType, cornerStyle }) => {
-            setPrizeIdCardsToPrint({ prizes, schoolId, printerType, cornerStyle });
+          onConfirm={(args) => {
+            setPrizeIdCardsToPrint({ ...args, schoolId });
             setPrizeIdPrintJob(null);
             toast({
-              title: prizes.length === 1 ? 'Printing prize card' : 'Printing prize cards',
-              description: `${prizes.length} card(s) sent to the printer.`,
+              title: args.prizes.length === 1 ? 'Printing prize card' : 'Printing prize cards',
+              description: `${args.prizes.length} card(s) sent to the printer.`,
             });
           }}
         />

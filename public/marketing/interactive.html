@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Interactive Flyer Customizers | LevelUp Rewards</title>
+    <meta
+      name="description"
+      content="Customize premium LevelUp Rewards flyers with live previews, section toggles, editable text, theme options, and print-ready layout resizing."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050713;
+        --panel: rgba(10, 16, 34, 0.72);
+        --panel-strong: rgba(15, 23, 42, 0.88);
+        --line: rgba(255, 255, 255, 0.12);
+        --text: #f8fafc;
+        --muted: #9aa7bd;
+        --soft: #cbd5e1;
+        --purple: #d946ef;
+        --cyan: #06b6d4;
+        --blue: #3b82f6;
+        --green: #22c55e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 18% 8%, rgba(217, 70, 239, 0.24), transparent 32rem),
+          radial-gradient(circle at 86% 12%, rgba(6, 182, 212, 0.18), transparent 30rem),
+          radial-gradient(circle at 50% 88%, rgba(59, 130, 246, 0.14), transparent 34rem),
+          linear-gradient(180deg, #060717 0%, #080b18 48%, #03040a 100%);
+        line-height: 1.5;
+        overflow-x: hidden;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .wrap {
+        position: relative;
+        z-index: 1;
+        width: min(1180px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 64px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 58px;
+      }
+
+      .brand {
+        font-size: 1rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .back-link,
+      .ghost-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px 14px;
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--soft);
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      }
+
+      .back-link:hover,
+      .ghost-link:hover {
+        transform: translateY(-1px);
+        border-color: rgba(6, 182, 212, 0.45);
+        background: rgba(6, 182, 212, 0.08);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+        gap: 28px;
+        align-items: end;
+        margin-bottom: 34px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid rgba(217, 70, 239, 0.32);
+        border-radius: 999px;
+        padding: 8px 13px;
+        background: rgba(217, 70, 239, 0.1);
+        color: #f0abfc;
+        font-size: 0.74rem;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 18px 0 0;
+        font-size: clamp(2.6rem, 7vw, 5.75rem);
+        font-weight: 900;
+        line-height: 0.93;
+        letter-spacing: -0.045em;
+      }
+
+      .gradient-text {
+        background: linear-gradient(115deg, #ffffff 0%, #a5f3fc 48%, #f0abfc 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .lead {
+        max-width: 680px;
+        margin: 20px 0 0;
+        color: var(--muted);
+        font-size: clamp(1.05rem, 2vw, 1.24rem);
+      }
+
+      .hero-panel {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 8px;
+        padding: 20px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero-panel p {
+        margin: 0;
+        color: var(--soft);
+        font-weight: 700;
+      }
+
+      .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .stat {
+        min-height: 80px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        background: rgba(2, 6, 23, 0.42);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 1.4rem;
+        line-height: 1;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      .intro-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 26px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 46px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 0.94rem;
+        font-weight: 900;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+      }
+
+      .button-primary {
+        color: #ffffff;
+        background: linear-gradient(135deg, var(--purple), var(--blue) 56%, var(--cyan));
+        box-shadow: 0 14px 34px rgba(59, 130, 246, 0.26);
+      }
+
+      .button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 42px rgba(6, 182, 212, 0.28);
+      }
+
+      .button-secondary {
+        color: var(--soft);
+        border-color: rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.045);
+      }
+
+      .button-secondary:hover {
+        border-color: rgba(217, 70, 239, 0.38);
+        background: rgba(217, 70, 239, 0.08);
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin: 34px 0 18px;
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.46);
+        backdrop-filter: blur(16px);
+      }
+
+      .toolbar p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+        font-weight: 700;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip {
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 7px 11px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--soft);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 8px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+          var(--panel);
+        box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28);
+        backdrop-filter: blur(18px);
+        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+      }
+
+      .card:hover,
+      .card:focus-within {
+        transform: translateY(-4px);
+        border-color: color-mix(in srgb, var(--accent) 52%, white 18%);
+        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.36), 0 0 34px color-mix(in srgb, var(--accent) 26%, transparent);
+      }
+
+      .preview {
+        position: relative;
+        display: block;
+        aspect-ratio: 816 / 1056;
+        overflow: hidden;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background:
+          radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 58%),
+          #070a12;
+      }
+
+      .preview:focus {
+        outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
+        outline-offset: -2px;
+      }
+
+      .preview-frame {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        width: 816px;
+        height: 1056px;
+        overflow: hidden;
+        border-radius: 5px;
+        background: #ffffff;
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.58);
+        transform: translateX(-50%) scale(var(--preview-scale, 0.31));
+        transform-origin: top center;
+      }
+
+      .preview iframe {
+        width: 816px;
+        height: 1056px;
+        border: 0;
+        background: #ffffff;
+        pointer-events: none;
+      }
+
+      .preview-empty {
+        position: absolute;
+        inset: 18px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(2, 6, 23, 0.34);
+        color: var(--soft);
+        text-align: center;
+      }
+
+      .preview-empty span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 58px;
+        height: 58px;
+        margin-bottom: 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--purple), var(--cyan));
+        color: white;
+        font-size: 1.4rem;
+        font-weight: 900;
+      }
+
+      .preview-empty strong {
+        display: block;
+        font-size: 1rem;
+      }
+
+      .preview-empty small {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .load-preview {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        z-index: 3;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: rgba(3, 7, 18, 0.82);
+        color: #ffffff;
+        font: inherit;
+        font-size: 0.76rem;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .card-body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        padding: 18px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 13px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 26px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        padding: 5px 9px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--soft);
+        font-size: 0.68rem;
+        font-weight: 900;
+        letter-spacing: 0.075em;
+        text-transform: uppercase;
+      }
+
+      .audience {
+        border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+        color: color-mix(in srgb, var(--accent) 72%, white);
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.34rem;
+        line-height: 1.08;
+        letter-spacing: -0.02em;
+      }
+
+      .description {
+        margin: 11px 0 16px;
+        color: var(--muted);
+        font-size: 0.93rem;
+      }
+
+      .features {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: auto 0 18px;
+        padding: 0;
+        list-style: none;
+      }
+
+      .features li {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        padding: 7px 9px;
+        background: rgba(255, 255, 255, 0.045);
+        color: #dbeafe;
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .features li::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--accent);
+        box-shadow: 0 0 14px var(--accent);
+      }
+
+      .actions {
+        display: grid;
+        gap: 10px;
+      }
+
+      .footer {
+        margin-top: 54px;
+        padding-top: 28px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: #758195;
+        text-align: center;
+        font-size: 0.88rem;
+        font-weight: 700;
+      }
+
+      @supports not (color: color-mix(in srgb, white, black)) {
+        .card:hover,
+        .card:focus-within {
+          border-color: rgba(6, 182, 212, 0.45);
+        }
+
+        .audience {
+          border-color: rgba(6, 182, 212, 0.45);
+          color: #67e8f9;
+        }
+      }
+
+      @media (max-width: 980px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 680px) {
+        .wrap {
+          width: min(100% - 24px, 1180px);
+          padding-top: 18px;
+        }
+
+        .nav {
+          align-items: flex-start;
+          flex-direction: column-reverse;
+          margin-bottom: 40px;
+        }
+
+        .hero-stats,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .button,
+        .ghost-link,
+        .back-link {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="nav" aria-label="Marketing flyers navigation">
+        <a class="back-link" href="index.html">&larr; Back to flyer gallery</a>
+        <div class="brand">LevelUp Rewards</div>
+      </nav>
+
+      <header class="hero">
+        <div>
+          <span class="eyebrow">Marketing Flyers Portal</span>
+          <h1><span class="gradient-text">Interactive Flyer Customizers</span></h1>
+          <p class="lead">
+            Premium flyer builders for school outreach, procurement conversations, staff rollout, and print-ready
+            leave-behinds. Toggle sections, edit copy on the page, swap themes, and resize layouts for clean PDFs.
+          </p>
+          <div class="intro-actions">
+            <a class="button button-primary" href="#flyer-builders">Explore builders &rarr;</a>
+            <a class="button button-secondary" href="index.html">View all marketing flyers</a>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="Interactive flyer builder highlights">
+          <p>Built for live customization before a meeting, print run, or PDF handoff.</p>
+          <div class="hero-stats">
+            <div class="stat">
+              <strong>6</strong>
+              <span>premium builders</span>
+            </div>
+            <div class="stat">
+              <strong>20+</strong>
+              <span>edit controls</span>
+            </div>
+            <div class="stat">
+              <strong>PDF</strong>
+              <span>print layouts</span>
+            </div>
+          </div>
+        </aside>
+      </header>
+
+      <section class="toolbar" aria-label="Customizer capabilities">
+        <p>Choose a builder below. Hover or focus a card to render the embedded preview.</p>
+        <div class="chips" aria-label="Common interactive features">
+          <span class="chip">Section toggles</span>
+          <span class="chip">Editable text</span>
+          <span class="chip">Theme swapping</span>
+          <span class="chip">Print resizing</span>
+        </div>
+      </section>
+
+      <main id="flyer-builders" class="grid" aria-label="Interactive flyer customizer gallery"></main>
+
+      <footer class="footer">
+        Static interactive gallery for LevelUp Rewards marketing assets. Serve locally with
+        <code>npm run serve:flyers</code> and open <code>/marketing/interactive.html</code>.
+      </footer>
+    </div>
+
+    <script>
+      const flyers = [
+        {
+          title: "General Flyer",
+          href: "levelup-rewards-flyer.html",
+          audience: "Public events",
+          layout: "Event handout builder",
+          accent: "#d946ef",
+          description:
+            "A friendly public-event handout for families, staff, and school visitors that quickly explains how students earn points and redeem rewards.",
+          features: ["One-page Layout", "Editable Event Copy", "Theme Swapping", "Auto Print Scaling"]
+        },
+        {
+          title: "Teacher Companion Guide",
+          href: "levelup-teachers-flyer.html",
+          audience: "Teachers & staff",
+          layout: "Two-page builder",
+          accent: "#8b5cf6",
+          description:
+            "A classroom adoption guide for daily point awards, kiosk scans, raffle moments, teacher routines, and staff-facing rollout.",
+          features: ["Classroom Copy Edits", "Contact Form Fields", "Incentive Toggles", "Single/Double Page Fit"]
+        },
+        {
+          title: "Leadership & Principal Brief",
+          href: "levelup-principals-flyer.html",
+          audience: "Principals",
+          layout: "Two-page builder",
+          accent: "#06b6d4",
+          description:
+            "A principal-ready brief covering PBIS consistency, live telemetry, compliance, rollout readiness, and budget alignment.",
+          features: ["Compliance Toggles", "Editable Signature", "Funding Copy Edits", "Adaptive Layout Reflow"]
+        },
+        {
+          title: "Funding & Procurement Playbook",
+          href: "levelup-funding-flyer.html",
+          audience: "Business office",
+          layout: "Two-page builder",
+          accent: "#22c55e",
+          description:
+            "A procurement guide for Title funding, NYS nonpublic options, MSR attendance workflows, and FAMIS purchasing language.",
+          features: ["Funding Stream Toggles", "Checklist Editing", "Vendor Details", "Print-safe Refit"]
+        },
+        {
+          title: "Staff Business Cards",
+          href: "levelup-business-cards-flyer.html",
+          audience: "Coordinators",
+          layout: "10-up print sheet",
+          accent: "#38bdf8",
+          description:
+            "A 10-up business card sheet for coordinators and staff with shared details, QR fields, role text, and visual themes.",
+          features: ["Unified Details Form", "Card Text Overrides", "QR Builder", "Theme Selector"]
+        },
+        {
+          title: "Rewards Basic Settings",
+          href: "levelup-rewards-basic-settings-flyer.html",
+          audience: "Admins",
+          layout: "One-page builder",
+          accent: "#f59e0b",
+          description:
+            "An admin setup flyer for point values, rewards shop defaults, coupon printing, kiosk setup, and school-ready rules.",
+          features: ["Settings Copy Edits", "QR & Contact Fields", "Print Grayscale Option", "Kiosk Walkthrough"]
+        },
+        {
+          title: "Additional Features Showcase",
+          href: "levelup-extra-features-flyer.html",
+          audience: "Demos & leadership",
+          layout: "Special features builder",
+          accent: "#22d3ee",
+          description:
+            "An included-features flyer focused only on additional features: houses, displays, incentives, theme creations, notifications, recess, raffles, and badges.",
+          features: ["Additional Feature Toggles", "Light Print Theme", "Theme Swapping", "Editable Full Rows"]
+        },
+        {
+          title: "Product Pillars",
+          href: "levelup-pillars-flyer.html",
+          audience: "Demos & leadership",
+          layout: "Pillar builder",
+          accent: "#34d399",
+          description:
+            "A companion interactive flyer for the four current pillars: Rewards, Attendance, Library, and Classroom.",
+          features: ["Pillar Toggles", "Light Print Theme", "Theme Swapping", "Editable Full Rows"]
+        }
+      ];
+
+      const grid = document.getElementById("flyer-builders");
+
+      function createElementFromHTML(html) {
+        const template = document.createElement("template");
+        template.innerHTML = html.trim();
+        return template.content.firstElementChild;
+      }
+
+      function renderCard(flyer, index) {
+        const features = flyer.features.map((feature) => "<li>" + feature + "</li>").join("");
+        return createElementFromHTML(
+          '<article class="card" style="--accent: ' + flyer.accent + '">' +
+            '<div class="preview" tabindex="0" aria-label="Preview ' + flyer.title + '">' +
+              '<div class="preview-empty">' +
+                '<div><span>' + String(index + 1).padStart(2, "0") + '</span><strong>Live preview</strong><small>Loads on hover or focus</small></div>' +
+              '</div>' +
+              '<div class="preview-frame" hidden>' +
+                '<iframe data-src="' + flyer.href + '?embed=1" title="' + flyer.title + ' preview" loading="lazy" tabindex="-1"></iframe>' +
+              '</div>' +
+              '<button class="load-preview" type="button">Load preview</button>' +
+            '</div>' +
+            '<div class="card-body">' +
+              '<div class="meta">' +
+                '<span class="pill audience">' + flyer.audience + '</span>' +
+                '<span class="pill">' + flyer.layout + '</span>' +
+              '</div>' +
+              '<h2>' + flyer.title + '</h2>' +
+              '<p class="description">' + flyer.description + '</p>' +
+              '<ul class="features">' + features + '</ul>' +
+              '<div class="actions">' +
+                '<a class="button button-primary" href="' + flyer.href + '" target="_blank" rel="noopener noreferrer">Open Builder &amp; Customize &nearr;</a>' +
+              '</div>' +
+            '</div>' +
+          '</article>'
+        );
+      }
+
+      function loadPreview(card) {
+        const frame = card.querySelector(".preview-frame");
+        const iframe = card.querySelector("iframe[data-src]");
+        const empty = card.querySelector(".preview-empty");
+        const button = card.querySelector(".load-preview");
+
+        if (!frame || !iframe) return;
+        if (!iframe.src) iframe.src = iframe.dataset.src;
+        frame.hidden = false;
+        if (empty) empty.hidden = true;
+        if (button) button.hidden = true;
+      }
+
+      flyers.forEach((flyer, index) => {
+        const card = renderCard(flyer, index);
+        const preview = card.querySelector(".preview");
+        const button = card.querySelector(".load-preview");
+
+        preview.addEventListener("pointerenter", () => loadPreview(card), { once: true });
+        preview.addEventListener("focus", () => loadPreview(card), { once: true });
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          loadPreview(card);
+        });
+
+        grid.appendChild(card);
+      });
+    </script>
+  </body>
+</html>

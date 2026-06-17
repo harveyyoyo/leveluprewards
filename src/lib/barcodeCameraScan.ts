@@ -22,15 +22,22 @@ export type BarcodeCameraFormat = (typeof BARCODE_CAMERA_FORMATS)[number];
 /** Matches the dashed aim frame in BarcodeScannerCameraView (75% of viewport). */
 export const BARCODE_AIM_FRAME_RATIO = 0.75;
 
-/** Max decode width after ROI crop (keeps ZXing / WASM fast). */
-export const BARCODE_DECODE_MAX_WIDTH = 640;
+/** Max decode width after ROI crop (keeps ZXing / WASM fast; high enough for small QRs). */
+export const BARCODE_DECODE_MAX_WIDTH = 768;
 
 export type BarcodeScanEngine =
   | 'native-video'
   | 'native-roi'
+  | 'native-qr-roi'
+  | 'native-qr-video'
   | 'zxing-roi'
   | 'zxing-full'
   | null;
+
+export type BarcodeScanOptions = {
+  /** Prioritize QR-only native decode (faster when ID cards use QR). */
+  preferQr?: boolean;
+};
 
 export type BarcodeScanAttempt = {
   code: string | null;
@@ -38,6 +45,7 @@ export type BarcodeScanAttempt = {
 };
 
 let detectorPromise: Promise<BarcodeDetector> | null = null;
+let qrDetectorPromise: Promise<BarcodeDetector | null> | null = null;
 let zxingModulePromise: Promise<typeof import('@zxing/browser')> | null = null;
 let detectorKind: 'native' | 'wasm' = 'wasm';
 
@@ -46,6 +54,27 @@ export function loadZxingModule() {
     zxingModulePromise = import('@zxing/browser');
   }
   return zxingModulePromise;
+}
+
+async function createQrDetector(): Promise<BarcodeDetector | null> {
+  const GlobalDetector = (globalThis as typeof globalThis & { BarcodeDetector?: typeof BarcodeDetector })
+    .BarcodeDetector;
+  if (!GlobalDetector) return null;
+  try {
+    const native = new GlobalDetector({ formats: ['qr_code'] });
+    const supported = await GlobalDetector.getSupportedFormats();
+    if (supported.includes('qr_code')) return native;
+  } catch {
+    // Fall through — full-format detector handles QR.
+  }
+  return null;
+}
+
+export function getQrCameraDetector(): Promise<BarcodeDetector | null> {
+  if (!qrDetectorPromise) {
+    qrDetectorPromise = createQrDetector().catch(() => null);
+  }
+  return qrDetectorPromise;
 }
 
 async function createDetector(): Promise<BarcodeDetector> {
@@ -85,19 +114,22 @@ export function getBarcodeDetectorKind(): 'native' | 'wasm' | 'none' {
 }
 
 /** Warm WASM + native detector modules before the user opens the scan tab. */
-export function preloadBarcodeScanStack(): void {
+export function preloadBarcodeScanStack(options?: { preferQr?: boolean }): void {
   void loadZxingModule();
   void getBarcodeCameraDetector().catch(() => {
     // ZXing fallback remains available.
   });
+  if (options?.preferQr) {
+    void getQrCameraDetector();
+  }
 }
 
 /** Ideal constraints for fast rear/environment camera decode on kiosks and tablets. */
 export function barcodeRearCameraConstraints(deviceId?: string): MediaTrackConstraints {
   const base: MediaTrackConstraints = {
     facingMode: 'environment',
-    width: { ideal: 640, max: 1280 },
-    height: { ideal: 480, max: 720 },
+    width: { ideal: 1280, max: 1920 },
+    height: { ideal: 720, max: 1080 },
     frameRate: { ideal: 30, max: 30 },
   };
   if (deviceId) {
@@ -136,6 +168,7 @@ export function drawBarcodeScanRoi(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return false;
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(video, sx, sy, roiW, roiH, 0, 0, canvas.width, canvas.height);
   return true;
 }
@@ -149,6 +182,7 @@ function drawFullFrame(video: HTMLVideoElement, canvas: HTMLCanvasElement): bool
   canvas.height = Math.round(h * scale);
   const ctx = canvas.getContext('2d');
   if (!ctx) return false;
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   return true;
 }
@@ -167,10 +201,13 @@ function getFullCanvas(): HTMLCanvasElement {
   return fullCanvas;
 }
 
-async function detectWithBarcodeDetector(source: HTMLVideoElement | HTMLCanvasElement): Promise<string | null> {
+async function detectWithBarcodeDetector(
+  source: HTMLVideoElement | HTMLCanvasElement,
+  detector?: BarcodeDetector | null,
+): Promise<string | null> {
   try {
-    const detector = await getBarcodeCameraDetector();
-    const results = await detector.detect(source);
+    const active = detector ?? (await getBarcodeCameraDetector());
+    const results = await active.detect(source);
     return results[0]?.rawValue?.trim() || null;
   } catch {
     return null;
@@ -191,11 +228,12 @@ async function decodeWithZxing(
   }
 }
 
-/** Try native detector + ZXing on ROI, then full frame — best chance to read student cards. */
+/** Try native + ZXing on ROI first, then full frame — optimized for centered ID-card QRs. */
 export async function scanVideoFrameHybrid(
   video: HTMLVideoElement,
   zxingReader: BrowserMultiFormatReader | null,
   roi: BarcodeScanRoi = { ratio: BARCODE_AIM_FRAME_RATIO },
+  options: BarcodeScanOptions = {},
 ): Promise<BarcodeScanAttempt> {
   if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
     return { code: null, engine: null };
@@ -204,11 +242,22 @@ export async function scanVideoFrameHybrid(
     return { code: null, engine: null };
   }
 
-  const nativeVideo = await detectWithBarcodeDetector(video);
-  if (nativeVideo) return { code: nativeVideo, engine: 'native-video' };
-
   const roiCanvasEl = getRoiCanvas();
-  if (drawBarcodeScanRoi(video, roiCanvasEl, roi)) {
+  const roiReady = drawBarcodeScanRoi(video, roiCanvasEl, roi);
+
+  if (options.preferQr) {
+    const qrDetector = await getQrCameraDetector();
+    if (qrDetector) {
+      if (roiReady) {
+        const qrRoi = await detectWithBarcodeDetector(roiCanvasEl, qrDetector);
+        if (qrRoi) return { code: qrRoi, engine: 'native-qr-roi' };
+      }
+      const qrVideo = await detectWithBarcodeDetector(video, qrDetector);
+      if (qrVideo) return { code: qrVideo, engine: 'native-qr-video' };
+    }
+  }
+
+  if (roiReady) {
     const nativeRoi = await detectWithBarcodeDetector(roiCanvasEl);
     if (nativeRoi) return { code: nativeRoi, engine: 'native-roi' };
 
@@ -217,6 +266,9 @@ export async function scanVideoFrameHybrid(
       if (zxingRoi) return { code: zxingRoi, engine: 'zxing-roi' };
     }
   }
+
+  const nativeVideo = await detectWithBarcodeDetector(video);
+  if (nativeVideo) return { code: nativeVideo, engine: 'native-video' };
 
   if (zxingReader) {
     const fullCanvasEl = getFullCanvas();
@@ -250,6 +302,10 @@ export async function scanVideoFrameWithZxing(
 
 export function describeBarcodeScanEngine(engine: BarcodeScanEngine): string {
   switch (engine) {
+    case 'native-qr-roi':
+      return 'QR native (aim frame)';
+    case 'native-qr-video':
+      return 'QR native (full frame)';
     case 'native-video':
       return 'Native (full frame)';
     case 'native-roi':

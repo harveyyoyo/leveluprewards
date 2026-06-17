@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { officePublicHref } from '@/lib/officePublicUrl';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
-import { ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
+import { ArrowUpRight, ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
 import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { planOfficeClassPromotion } from '@/lib/office/officeClassPromotion';
 import { downloadCsv, getOfficeStudentFullName, getOfficeStudentLabel, getOfficeTeacherLabel } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
@@ -38,7 +39,6 @@ type OfficeClassesViewProps = {
   classes: OfficeClass[];
   teacherNameById: Map<string, string>;
   isLoading: boolean;
-  onSelectStudent?: (student: OfficeStudent) => void;
 };
 
 export function OfficeClassesView({
@@ -47,10 +47,10 @@ export function OfficeClassesView({
   classes,
   teacherNameById,
   isLoading,
-  onSelectStudent,
 }: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { openStudent, openClass } = useOfficeEntityNav();
 
   const exportClassRoster = () => {
     const rows: string[][] = [];
@@ -98,6 +98,8 @@ export function OfficeClassesView({
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const promotionPlan = useMemo(() => planOfficeClassPromotion(classes), [classes]);
 
   const openNewClass = () => {
     setEditingClass(null);
@@ -156,6 +158,35 @@ export function OfficeClassesView({
       toast({ title: 'Class updated' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not move student', description: (e as Error).message });
+    }
+  };
+
+  const handleApplyPromotion = async () => {
+    if (!firestore || promotionPlan.changes.length === 0) return;
+    setBusy(true);
+    try {
+      const batch = writeBatch(firestore);
+      const now = Date.now();
+      for (const row of promotionPlan.changes) {
+        batch.update(doc(firestore, 'schools', schoolId, 'officeClasses', row.classId), {
+          name: row.nextName,
+          updatedAt: now,
+        });
+      }
+      await batch.commit();
+      toast({
+        title: 'Class names advanced',
+        description: `${promotionPlan.changes.length} class${promotionPlan.changes.length === 1 ? '' : 'es'} updated for next year.`,
+      });
+      setPromoteOpen(false);
+    } catch (e) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not advance class names',
+        description: (e as Error).message,
+      });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -263,6 +294,17 @@ export function OfficeClassesView({
             variant="outline"
             size="sm"
             className="rounded-xl gap-1.5"
+            disabled={classes.length === 0 || promotionPlan.changes.length === 0}
+            onClick={() => setPromoteOpen(true)}
+          >
+            <ArrowUpRight className="h-4 w-4" />
+            Advance for next year
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-xl gap-1.5"
             disabled={students.length === 0}
             onClick={exportClassRoster}
           >
@@ -301,7 +343,11 @@ export function OfficeClassesView({
                 }}
               >
                 <span>
-                  <span className="font-semibold text-foreground">{cls.name}</span>
+                  {cls.id === '__unassigned__' ? (
+                    <span className="font-semibold text-foreground">{cls.name}</span>
+                  ) : (
+                    <OfficeEntityLink kind="class" id={cls.id} label={cls.name} className="text-base" />
+                  )}
                   <span className="ml-2 text-sm text-muted-foreground">{list.length} students</span>
                 </span>
                 <div className="flex items-center gap-1">
@@ -342,27 +388,17 @@ export function OfficeClassesView({
                         highlightStudentId === s.id && 'bg-teal-50/80 dark:bg-teal-950/30',
                       )}
                     >
-                      {onSelectStudent ? (
-                        <button
-                          type="button"
-                          className="min-w-0 flex-1 text-left text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
-                          onClick={() => {
-                            setHighlightStudentId(s.id);
-                            setExpandedClassId(cls.id === '__unassigned__' ? null : cls.id);
-                            onSelectStudent(s);
-                          }}
-                        >
+                      <button
+                        type="button"
+                        className="min-w-0 flex-1 text-left text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
+                        onClick={() => {
+                          setHighlightStudentId(s.id);
+                          setExpandedClassId(cls.id === '__unassigned__' ? null : cls.id);
+                          openStudent(s.id);
+                        }}
+                      >
                           {getOfficeStudentLabel(s)} {s.lastName}
-                        </button>
-                      ) : (
-                        <Link
-                          href={`${officePublicHref(schoolId, 'students')}?student=${encodeURIComponent(s.id)}`}
-                          className="min-w-0 flex-1 text-sm font-medium hover:text-teal-800 dark:hover:text-teal-300"
-                          onClick={() => setHighlightStudentId(s.id)}
-                        >
-                          {getOfficeStudentLabel(s)} {s.lastName}
-                        </Link>
-                      )}
+                      </button>
                       <Select
                         value={s.classId && classes.some((c) => c.id === s.classId) ? s.classId : '__none__'}
                         onValueChange={(v) => void assignStudentToClass(s, v)}
@@ -395,6 +431,59 @@ export function OfficeClassesView({
           </p>
         ) : null}
       </div>
+
+      <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+        <DialogContent className="max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Advance class names for next year</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1 text-sm">
+            <p className="text-muted-foreground">
+              Bumps each class name up one grade. Students stay in the same class — only the label changes
+              (for example, Grade 5 becomes Grade 6).
+            </p>
+            {promotionPlan.changes.length > 0 ? (
+              <ul className="max-h-56 space-y-2 overflow-y-auto rounded-xl border p-3">
+                {promotionPlan.changes.map((row) => (
+                  <li key={row.classId} className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{row.currentName}</span>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                    <span className="font-medium text-teal-800 dark:text-teal-300">{row.nextName}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="rounded-xl border border-dashed p-4 text-center text-muted-foreground">
+                No classes matched Grade, Kindergarten, or ordinal formats.
+              </p>
+            )}
+            {promotionPlan.skipped.length > 0 ? (
+              <div className="rounded-xl bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Skipped ({promotionPlan.skipped.length})</p>
+                <p className="mt-1">
+                  {promotionPlan.skipped
+                    .slice(0, 4)
+                    .map((row) => `${row.name} (${row.reason})`)
+                    .join(' · ')}
+                  {promotionPlan.skipped.length > 4 ? ' · …' : ''}
+                </p>
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPromoteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleApplyPromotion()}
+              disabled={busy || promotionPlan.changes.length === 0}
+            >
+              Apply {promotionPlan.changes.length} change{promotionPlan.changes.length === 1 ? '' : 's'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={dialogOpen}

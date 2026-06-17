@@ -8,6 +8,7 @@ import {
   Clock,
   Gift,
   HelpCircle,
+  LogOut,
   ScanBarcode,
   Sparkles,
   Ticket,
@@ -66,13 +67,12 @@ export function StudentKioskLogoutControls({
       }
     : undefined;
 
-  const countdownPillStyle = t
+  const clusterStyle = t
     ? {
         borderColor: urgent
           ? 'color-mix(in srgb, #f97316 65%, var(--theme-primary))'
-          : 'color-mix(in srgb, var(--theme-primary) 40%, transparent)',
+          : 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
         backgroundColor: 'color-mix(in srgb, var(--theme-card) 94%, white)',
-        color: 'var(--theme-text)',
       }
     : undefined;
 
@@ -85,109 +85,110 @@ export function StudentKioskLogoutControls({
       : 'hsl(var(--primary))';
 
   return (
-    <div className={cn('flex flex-wrap items-center justify-end gap-2.5', className)}>
+    <div
+      className={cn(
+        'flex w-fit flex-col items-center gap-1 rounded-xl border-2 p-1.5 shadow-sm transition-shadow',
+        urgent && 'shadow-[0_0_0_2px_color-mix(in_srgb,#f97316_35%,transparent)]',
+        !t && 'border-slate-200/90 bg-white/95 dark:border-slate-600 dark:bg-slate-900/90',
+        className,
+      )}
+      style={clusterStyle}
+    >
       {isKioskLocked ? (
         <div
           className={cn(
-            'flex items-center gap-2 rounded-2xl border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest',
-            !t && 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
+            'flex w-full items-center justify-center gap-1 rounded-lg px-1 py-0.5 text-[8px] font-bold uppercase tracking-[0.14em]',
+            !t && 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200',
           )}
-          style={lockedPillStyle}
+          style={
+            t
+              ? {
+                  backgroundColor: 'color-mix(in srgb, #ef4444 18%, var(--theme-card))',
+                  color: 'var(--theme-text)',
+                }
+              : lockedPillStyle
+          }
           aria-label={tr('student.kiosk.lockedAria')}
         >
-          <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+          <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
           </span>
           {tr('student.kiosk.locked')}
         </div>
       ) : autoLogoutEnabled ? (
         <div
-          className={cn(
-            'flex items-center rounded-2xl border-2 p-1.5 shadow-sm transition-shadow',
-            urgent && 'shadow-[0_0_0_2px_color-mix(in_srgb,#f97316_35%,transparent)]',
-            !t && 'border-slate-200 bg-white/95 dark:border-slate-600 dark:bg-slate-900/90',
-          )}
-          style={countdownPillStyle}
+          className="relative h-8 w-8 shrink-0"
           role="timer"
           aria-live="polite"
           aria-label={`Auto logout in ${logoutTimer} ${logoutTimer === 1 ? 'second' : 'seconds'}`}
           title={logoutTimer === 1 ? '1 second until auto logout' : `${logoutTimer} seconds until auto logout`}
         >
-          <div className="relative h-9 w-9 shrink-0">
-            <svg className="h-9 w-9 -rotate-90" viewBox="0 0 36 36" aria-hidden>
-              <circle
-                cx="18"
-                cy="18"
-                r={ringRadius}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                className="opacity-20"
-              />
-              <circle
-                cx="18"
-                cy="18"
-                r={ringRadius}
-                fill="none"
-                stroke={ringStroke}
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeDasharray={ringCircumference}
-                strokeDashoffset={ringOffset}
-                className="transition-[stroke-dashoffset] duration-1000 ease-linear"
-              />
-            </svg>
-            <span
-              className={cn(
-                'absolute inset-0 flex items-center justify-center text-sm font-black tabular-nums leading-none',
-                urgent && !t && 'text-orange-600 dark:text-orange-400',
-              )}
-              style={t && urgent ? { color: '#f97316' } : undefined}
-            >
-              {logoutTimer}
-            </span>
-          </div>
+          <svg className="h-8 w-8 -rotate-90" viewBox="0 0 36 36" aria-hidden>
+            <circle
+              cx="18"
+              cy="18"
+              r={ringRadius}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              className="opacity-20"
+            />
+            <circle
+              cx="18"
+              cy="18"
+              r={ringRadius}
+              fill="none"
+              stroke={ringStroke}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeDasharray={ringCircumference}
+              strokeDashoffset={ringOffset}
+              className="transition-[stroke-dashoffset] duration-1000 ease-linear"
+            />
+          </svg>
+          <span
+            className={cn(
+              'absolute inset-0 flex items-center justify-center text-xs font-black tabular-nums leading-none',
+              urgent && !t && 'text-orange-600 dark:text-orange-400',
+            )}
+            style={t && urgent ? { color: '#f97316' } : undefined}
+          >
+            {logoutTimer}
+          </span>
         </div>
       ) : (
-        <div
+        <p
           className={cn(
-            'rounded-2xl border-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest opacity-80',
-            !t && 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300',
+            'w-full px-0.5 text-center text-[8px] font-bold uppercase leading-tight tracking-[0.12em] opacity-75',
+            !t && 'text-slate-600 dark:text-slate-300',
           )}
-          style={
-            t
-              ? {
-                  borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
-                  backgroundColor: 'color-mix(in srgb, var(--theme-card) 92%, white)',
-                  color: 'var(--theme-text)',
-                }
-              : undefined
-          }
+          style={t ? { color: 'var(--theme-text)' } : undefined}
           aria-label={tr('student.kiosk.noAutoLogout')}
         >
           {tr('student.kiosk.sessionStaysOpen')}
-        </div>
+        </p>
       )}
       <Button
         type="button"
-        size="sm"
-        variant="ghost"
         className={cn(
-          'h-7 whitespace-nowrap rounded-md px-2 text-xs font-medium normal-case tracking-normal opacity-80 hover:opacity-100',
-          !t && 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+          'h-8 w-8 min-h-8 min-w-8 shrink-0 rounded-full border-2 p-0 shadow-sm [&_svg]:size-3',
+          !t && 'border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90',
         )}
         style={
           t
             ? {
-                color: 'var(--theme-page-text)',
+                borderColor: 'var(--theme-primary)',
+                backgroundColor: 'var(--theme-primary)',
+                color: primaryForeground,
               }
             : undefined
         }
         onClick={onLogout}
         aria-label={tr('student.kiosk.logOutNowAria')}
+        title={tr('student.kiosk.logOutNowAria')}
       >
-        {tr('student.kiosk.logOutNow')}
+        <LogOut aria-hidden />
       </Button>
     </div>
   );
@@ -515,7 +516,7 @@ function ScanCouponScanZone({
           aria-hidden
         />
       </div>
-      <div className="relative z-[1] flex w-full flex-col items-center gap-1">{children}</div>
+      <div className="relative z-[1] flex w-full flex-col items-center justify-center gap-1">{children}</div>
     </div>
   );
 }
@@ -600,32 +601,36 @@ export function StudentKioskRedeemHero({
         </Button>
       </form>
       <ScanCouponScanZone themed={themed}>
-        <ScanBarcode
-          className={cn('h-8 w-8 shrink-0 sm:h-10 sm:w-10 [@media(max-height:760px)]:h-6 [@media(max-height:760px)]:w-6', !t && 'text-amber-200')}
-          style={
-            t
-              ? {
-                  color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
-                }
-              : undefined
-          }
-          aria-hidden
-        />
-        <span
-          className={cn(
-            'max-w-full text-2xl font-black uppercase tracking-[0.14em] leading-none sm:text-3xl md:text-4xl lg:text-5xl sm:tracking-[0.2em] [@media(max-height:760px)]:text-xl',
-            !t && 'text-amber-50',
-          )}
-          style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
-        >
-          Scan coupon
-        </span>
-        <p
-          className="w-full text-center text-xs font-semibold opacity-90 sm:text-sm [@media(max-height:760px)]:text-[10px]"
-          style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
-        >
-          Scan with your barcode scanner, or type the code above
-        </p>
+        <div className="flex w-full flex-col items-center justify-center gap-2">
+          <div className="flex w-full items-center justify-center gap-3 sm:gap-4">
+            <ScanBarcode
+              className={cn('h-8 w-8 shrink-0 sm:h-10 sm:w-10 [@media(max-height:760px)]:h-6 [@media(max-height:760px)]:w-6', !t && 'text-amber-200')}
+              style={
+                t
+                  ? {
+                      color: 'color-mix(in srgb, var(--theme-primary) 72%, white)',
+                    }
+                  : undefined
+              }
+              aria-hidden
+            />
+            <span
+              className={cn(
+                'text-center text-2xl font-black uppercase tracking-[0.14em] leading-none sm:text-3xl md:text-4xl lg:text-5xl sm:tracking-[0.2em] [@media(max-height:760px)]:text-xl',
+                !t && 'text-amber-50',
+              )}
+              style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
+            >
+              Scan coupon
+            </span>
+          </div>
+          <p
+            className="w-full max-w-md text-center text-xs font-semibold opacity-90 sm:text-sm [@media(max-height:760px)]:text-[10px]"
+            style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
+          >
+            Scan with your barcode scanner, or type the code above
+          </p>
+        </div>
       </ScanCouponScanZone>
       <p
         className="text-center text-[9px] [@media(max-height:760px)]:hidden"

@@ -105,3 +105,23 @@ export function portalHubGridMaxWidthClass(count: number, compactDisplay: boolea
   if (count === 3) return 'max-w-[min(22rem,calc(100%-0.5rem))] sm:max-w-md md:max-w-6xl';
   return 'max-w-[min(100%,calc(100%-0.5rem))] sm:max-w-3xl md:max-w-5xl lg:max-w-6xl';
 }
+
+/** Common portal-hub destinations to warm via `router.prefetch` (first click snappiness). */
+export const PORTAL_HUB_PREFETCH_SEGMENTS = [
+  'student',
+  'teacher',
+  'admin',
+  'admin-sign-in',
+  'prize',
+  'student-home',
+  'parent',
+] as const;
+
+export function portalHubPrefetchRoutes(schoolId: string): string[] {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid) return [];
+  return [
+    `/${sid}/portal`,
+    ...PORTAL_HUB_PREFETCH_SEGMENTS.map((segment) => `/${sid}/${segment}`),
+  ];
+}

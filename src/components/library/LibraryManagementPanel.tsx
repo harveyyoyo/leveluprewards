@@ -25,6 +25,7 @@ import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -549,11 +550,26 @@ export function LibraryManagementPanel({
                       return (
                         <li
                           key={item.id}
-                          className={`flex items-center gap-4 rounded-2xl border p-3 bg-background transition-all hover:border-primary/25 hover:shadow-sm ${
+                          className={`flex items-center gap-4 rounded-2xl border p-3 bg-background transition-all hover:border-primary/25 hover:shadow-sm cursor-pointer ${
                             isSelected ? 'border-primary/30 bg-primary/[0.01]' : 'border-border/60'
                           }`}
+                          role="button"
+                          tabIndex={0}
+                          title={isSelected ? 'Click row to deselect' : 'Click row to select'}
+                          onClick={(event) =>
+                            handleSelectableRowClick(event, () => toggleSelect(item.id))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              toggleSelect(item.id);
+                            }
+                          }}
                         >
-                          <div className="flex items-center shrink-0">
+                          <div
+                            className="flex items-center shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => toggleSelect(item.id)}
@@ -634,7 +650,10 @@ export function LibraryManagementPanel({
                           </div>
 
                           {/* Direct Quick Action Buttons (No Dropdown Menu) */}
-                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                          <div
+                            className="flex items-center gap-1 shrink-0 ml-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <Button
                               variant="ghost"
                               size="icon"

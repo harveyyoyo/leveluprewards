@@ -34,7 +34,7 @@ export function StudentKioskTopBar({
   return (
     <div
       className={cn(
-        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-3 py-2 sm:px-4 sm:py-2.5 [@media(max-height:760px)]:px-2.5 [@media(max-height:760px)]:py-1.5',
+        'relative z-10 w-full shrink-0 rounded-2xl border-2 px-2.5 py-1.5 sm:px-3 sm:py-1.5 [@media(max-height:760px)]:px-2 [@media(max-height:760px)]:py-1',
         studentKioskHeaderGapClass,
         !themed && 'border-primary/35 bg-card/95 shadow-sm',
       )}
@@ -47,26 +47,67 @@ export function StudentKioskTopBar({
           : undefined
       }
     >
-      <div className="mb-1 grid grid-cols-[1fr_auto_1fr] items-start gap-x-2 sm:mb-1.5 [@media(max-height:760px)]:mb-0.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <p
-            className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs [@media(max-height:760px)]:text-[9px]"
-            style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 sm:gap-x-3">
+        <div className="flex min-w-0 items-center gap-2 [@media(max-height:760px)]:gap-1.5">
+          <div
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[10px] font-black uppercase sm:h-9 sm:w-9 [@media(max-height:760px)]:h-7 [@media(max-height:760px)]:w-7',
+              !themed && 'student-kiosk-gradient-brand text-white shadow-md',
+            )}
+            style={
+              themed
+                ? {
+                    backgroundColor: 'var(--theme-primary)',
+                    color: primaryForeground,
+                  }
+                : undefined
+            }
           >
-            Welcome
-          </p>
-          {headerExtras ? <div className="shrink-0">{headerExtras}</div> : null}
+            {student.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={student.photoUrl}
+                alt=""
+                className={cn(
+                  'h-full w-full',
+                  photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
+                )}
+              />
+            ) : (
+              <span aria-hidden>
+                {(student.firstName?.[0] || '')}
+                {(student.lastName?.[0] || '')}
+              </span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p
+                className="text-[9px] font-bold uppercase tracking-[0.24em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
+                style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+              >
+                Welcome
+              </p>
+              {headerExtras ? <div className="shrink-0">{headerExtras}</div> : null}
+            </div>
+            <h1
+              className="min-w-0 truncate text-base font-black uppercase leading-none tracking-wide sm:text-lg md:text-xl [@media(max-height:760px)]:text-sm"
+              style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+            >
+              {displayName}
+            </h1>
+          </div>
         </div>
 
         <div className="text-center">
           <p
-            className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-60 sm:text-xs [@media(max-height:760px)]:text-[9px]"
+            className="text-[9px] font-bold uppercase tracking-[0.24em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
             style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
           >
             Balance
           </p>
           <p
-            className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
+            className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl [@media(max-height:760px)]:text-2xl"
             style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
           >
             {points.toLocaleString()}
@@ -74,50 +115,10 @@ export function StudentKioskTopBar({
         </div>
 
         {trailingActions ? (
-          <div className="flex flex-wrap items-start justify-end gap-1.5">{trailingActions}</div>
+          <div className="flex shrink-0 items-center justify-end">{trailingActions}</div>
         ) : (
           <div aria-hidden />
         )}
-      </div>
-
-      <div className="flex min-w-0 items-center gap-2 sm:gap-2.5 [@media(max-height:760px)]:gap-1.5">
-        <div
-          className={cn(
-            'flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg text-xs font-black uppercase sm:h-10 sm:w-10 md:h-11 md:w-11 [@media(max-height:760px)]:h-8 [@media(max-height:760px)]:w-8',
-            !themed && 'student-kiosk-gradient-brand text-white shadow-md',
-          )}
-          style={
-            themed
-              ? {
-                  backgroundColor: 'var(--theme-primary)',
-                  color: primaryForeground,
-                }
-              : undefined
-          }
-        >
-          {student.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={student.photoUrl}
-              alt=""
-              className={cn(
-                'h-full w-full',
-                photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain',
-              )}
-            />
-          ) : (
-            <span aria-hidden>
-              {(student.firstName?.[0] || '')}
-              {(student.lastName?.[0] || '')}
-            </span>
-          )}
-        </div>
-        <h1
-          className="min-w-0 truncate text-lg font-black uppercase leading-tight tracking-wide sm:text-xl md:text-2xl lg:text-3xl [@media(max-height:760px)]:text-base"
-          style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
-        >
-          {displayName}
-        </h1>
       </div>
     </div>
   );

@@ -178,5 +178,12 @@ export function officeHostRedirectPath(pathname: string): string | null {
     return `/${parts[0].toLowerCase()}`;
   }
 
+  // Legacy /{school}/office/… bookmarks on office host → clean public path.
+  if (parts.length >= 2 && isSchoolIdSegment(parts[0]) && parts[1].toLowerCase() === 'office') {
+    const school = parts[0].toLowerCase();
+    const tail = parts.slice(2);
+    return tail.length ? `/${school}/${tail.join('/')}` : `/${school}`;
+  }
+
   return null;
 }

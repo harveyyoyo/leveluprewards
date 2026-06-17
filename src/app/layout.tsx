@@ -6,6 +6,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LayoutClientWrapper from "@/components/layout/LayoutClientWrapper";
 import { isOfficeHostname, OFFICE_CHROME_REQUEST_HEADER } from '@/lib/officeRouting';
+import { isSssHostname, SSS_CHROME_REQUEST_HEADER } from '@/lib/sss/sssRouting';
 import "./globals.css";
 
 
@@ -64,9 +65,13 @@ export default async function RootLayout({
     headerList.get('host') ??
     '';
   const isOfficeHost = isOfficeHostname(requestHost);
+  const isSssHost = isSssHostname(requestHost);
   const officeChromeFromMiddleware =
     headerList.get(OFFICE_CHROME_REQUEST_HEADER) === 'hidden';
-  const hideGlobalHeader = officeChromeFromMiddleware || isOfficeHost;
+  const sssChromeFromMiddleware =
+    headerList.get(SSS_CHROME_REQUEST_HEADER) === 'hidden';
+  const hideGlobalHeader =
+    officeChromeFromMiddleware || sssChromeFromMiddleware || isOfficeHost || isSssHost;
 
   return (
     <html

@@ -7,7 +7,7 @@ import { couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRul
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
-import { PrintBarcode } from '@/components/print/PrintBarcode';
+import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { useSchoolDisplayName } from '@/hooks/useSchoolDisplayName';
 
 function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
@@ -68,6 +68,7 @@ export function Coupon({
   const { settings } = useSettings();
   const schoolDisplayName = useSchoolDisplayName(schoolId);
   const title = schoolDisplayName ? `${APP_NAME} - ${schoolDisplayName}` : APP_NAME;
+  const useQr = settings.couponUseQrCode === true;
 
   const isColored = settings.enableColorPrinting && coupon.color;
   const redemptionLabel = couponRedemptionLabelForPrint(coupon);
@@ -88,6 +89,7 @@ export function Coupon({
           : cornerStyle === 'rounded'
             ? 'rounded-[0.75em] print-coupon--rounded'
             : 'rounded-[0.75em]',
+        useQr && 'print-coupon--qr-scan',
         !isColored && 'border-slate-400 text-slate-800',
       )}
     >
@@ -96,24 +98,42 @@ export function Coupon({
           NEW
         </div>
       )}
-      <CouponTitle text={title} compact={hasLimitLine} />
+      <CouponTitle text={title} compact={hasLimitLine || useQr} />
       <div
-        className={cn("coupon-main w-full flex items-center justify-center gap-[0.45em] border-y shrink-0", hasLimitLine ? 'py-[0.08em]' : 'py-[0.125em]', !isColored && 'border-slate-200')}
-        /* Tailwind has no alpha modifier for currentColor (`border-[currentColor]/30` compiles to nothing). */
+        className={cn(
+          'coupon-main w-full flex items-center shrink-0 border-y',
+          useQr ? 'gap-[0.35em] py-[0.06em] px-[0.02em]' : 'justify-center gap-[0.45em] py-[0.125em]',
+          hasLimitLine && !useQr && 'py-[0.08em]',
+          !isColored && 'border-slate-200',
+        )}
         style={isColored ? { borderColor: 'color-mix(in srgb, currentColor 30%, transparent)' } : undefined}
       >
-        <div className="flex flex-col items-center leading-none">
-          <span className="text-[1.125em] font-black text-black leading-none">{Number(coupon.value ?? 0)}</span>
-          <span className="text-[0.4375em] font-bold uppercase tracking-[0.2em] mt-[0.125em]">
-            Points
-          </span>
-        </div>
-        <div className="text-left leading-snug">
-          <div className="font-bold italic text-[0.6em] leading-tight">
-            {coupon.category}
+        {useQr ? (
+          <div className="coupon-qr-slot shrink-0" aria-label={`Coupon scan code ${coupon.code}`}>
+            <PrintIdCardScanCode
+              value={coupon.code}
+              useQr
+              hideCenterBadge
+              variant="coupon"
+              placement="inline"
+              className="coupon-qr"
+            />
           </div>
-          <div className={cn(isColored ? 'opacity-80' : 'text-slate-600', 'leading-tight text-[0.45em]')}>
-            Issued by: {coupon.teacher}
+        ) : null}
+        <div className={cn('flex items-center', useQr ? 'min-w-0 flex-1 justify-start gap-[0.35em]' : 'justify-center gap-[0.45em]')}>
+          <div className="flex flex-col items-center leading-none shrink-0">
+            <span className="text-[1.125em] font-black text-black leading-none">{Number(coupon.value ?? 0)}</span>
+            <span className="text-[0.4375em] font-bold uppercase tracking-[0.2em] mt-[0.125em]">
+              Points
+            </span>
+          </div>
+          <div className="text-left leading-snug min-w-0">
+            <div className="font-bold italic text-[0.6em] leading-tight">
+              {coupon.category}
+            </div>
+            <div className={cn(isColored ? 'opacity-80' : 'text-slate-600', 'leading-tight text-[0.45em]')}>
+              Issued by: {coupon.teacher}
+            </div>
           </div>
         </div>
       </div>
@@ -126,7 +146,9 @@ export function Coupon({
             {redemptionLabel}
           </div>
         )}
-        <PrintBarcode value={coupon.code} variant="coupon" className="coupon-barcode w-full max-w-full" />
+        {!useQr ? (
+          <PrintIdCardScanCode value={coupon.code} variant="coupon" className="coupon-barcode w-full max-w-full" />
+        ) : null}
         {(coupon.startsAt || coupon.expiresAt) && (
           <div className={cn('uppercase opacity-70 leading-none flex flex-col gap-[0.04em]', hasLimitLine ? 'text-[0.28em]' : 'text-[0.33em]')}>
             {coupon.startsAt && (

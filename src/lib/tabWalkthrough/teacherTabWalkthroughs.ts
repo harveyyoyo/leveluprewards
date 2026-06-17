@@ -73,6 +73,13 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Use Room display to show session stats on a classroom screen.',
         ],
       },
+      {
+        title: 'Raffle',
+        checklist: [
+          'Open the Raffle section for ticket pools, jackpot reels, and the prize wheel.',
+          'Confirm points-per-ticket if ticket counts look wrong.',
+        ],
+      },
     ],
   },
   prizes: {
@@ -114,33 +121,27 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       },
     ],
   },
-  raffle: {
-    title: 'Raffle tab',
-    subtitle: 'Ticket drawings from student points',
-    steps: [
-      {
-        title: 'Run a drawing',
-        checklist: [
-          'Confirm points-per-ticket in school settings if tickets look wrong.',
-          'Spin or draw winners, then record results for your class or school.',
-        ],
-      },
-    ],
-  },
   attendance: {
     title: 'Attendance tab',
-    subtitle: 'Sign-in rewards for your classes',
+    subtitle: 'Sign-in rewards and room passes',
     steps: [
       {
         title: 'Set up rules',
         checklist: [
-          'Confirm Universal Periods exist (admin → Attendance).',
+          'Open Setup and confirm Universal Periods exist (admin → Attendance).',
           'Add at least one reward rule: class, period, and point values.',
         ],
         example: {
           heading: 'Example rule',
           rows: ['Class: morning group', 'Period 1', '5 pts sign-in + 2 on-time bonus'],
         },
+      },
+      {
+        title: 'Room passes',
+        checklist: [
+          'Open Room passes to print bathroom, break, and other pass cards.',
+          'See who is checked out now and recent return times.',
+        ],
       },
       {
         title: 'Test the kiosk',
@@ -193,5 +194,6 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
 };
 
 export function getTeacherTabWalkthrough(tabId: string): TabWalkthroughConfig | null {
+  if (tabId === 'raffle') return TEACHER_TAB_WALKTHROUGHS.classroom ?? null;
   return TEACHER_TAB_WALKTHROUGHS[tabId] ?? null;
 }

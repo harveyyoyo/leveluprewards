@@ -8,15 +8,23 @@ import { useSettings } from '../providers/SettingsProvider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
+import { DEFAULT_ID_CARD_SHEET_SPACING, idCardPrintPageClassName, type IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
 
 interface PrizeIdPrintSheetProps {
   prizes: Prize[];
   schoolId: string | null;
   onReady: () => void;
   cornerStyle?: 'rounded' | 'rectangular';
+  sheetSpacing?: IdCardSheetSpacing;
 }
 
-export function PrizeIdPrintSheet({ prizes, schoolId, onReady, cornerStyle }: PrizeIdPrintSheetProps) {
+export function PrizeIdPrintSheet({
+  prizes,
+  schoolId,
+  onReady,
+  cornerStyle,
+  sheetSpacing = DEFAULT_ID_CARD_SHEET_SPACING,
+}: PrizeIdPrintSheetProps) {
   const { settings } = useSettings();
   const firestore = useFirestore();
   const appConfigRef = useMemoFirebase(() => (firestore ? doc(firestore, 'appConfig', 'global') : null), [firestore]);
@@ -54,7 +62,7 @@ export function PrizeIdPrintSheet({ prizes, schoolId, onReady, cornerStyle }: Pr
   const sheet = (
     <div id="student-id-print-wrapper">
       {prizeChunks.map((chunk, pageIndex) => (
-        <div key={pageIndex} className="student-id-print-page">
+        <div key={pageIndex} className={idCardPrintPageClassName(sheetSpacing)}>
           {chunk.map((p) => (
             <PrizeIdCard
               key={p.id}

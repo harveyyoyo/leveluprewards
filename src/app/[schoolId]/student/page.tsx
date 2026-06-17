@@ -538,6 +538,7 @@ function StudentLoginPage() {
               onDone={finishStudentSession}
               onRequestExit={handleStudentLogout}
               onReady={handleDashboardReady}
+              onSwitchStudent={onScannerStudent}
             />
           </SchoolGate>
         </ErrorBoundary>

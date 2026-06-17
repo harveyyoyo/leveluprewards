@@ -19,33 +19,43 @@ export function RecessPassCard({
 
   return (
     <div
-      className={cn('print-id-card print-recess-pass-card border-2', meta.badge, className)}
+      className={cn(
+        'print-id-card print-prize-id-card print-recess-pass-card border-2',
+        meta.badge,
+        className,
+      )}
       style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
     >
-      <div className="print-id-header-container border-b border-border/40 px-3 py-2">
-        <p className="text-[8pt] font-black uppercase tracking-widest text-center">{schoolName}</p>
-        <p className="text-[7pt] font-semibold uppercase tracking-wide text-center opacity-70">
-          Recess pass — scan at student kiosk
+      <div className="print-id-header-container border-b border-border/40 px-2 py-1.5">
+        <p className="text-[7pt] font-black uppercase tracking-widest text-center leading-tight">
+          {schoolName}
+        </p>
+        <p className="text-[6pt] font-semibold uppercase tracking-wide text-center opacity-70">
+          Recess pass
         </p>
       </div>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-5 text-center">
+      <div className="print-recess-pass-body flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-3 py-2 text-center">
         <span
           className={cn(
-            'flex h-16 w-16 items-center justify-center rounded-2xl border-2',
+            'print-recess-pass-icon flex h-10 w-10 items-center justify-center rounded-xl border-2',
             meta.badge,
           )}
         >
-          <Icon className="h-9 w-9" aria-hidden />
+          <Icon className="h-5 w-5" aria-hidden />
         </span>
-        <p className="text-xl font-black uppercase tracking-wide">{meta.label}</p>
-        <p className="max-w-[14rem] text-[9pt] leading-snug opacity-80">{meta.kioskDescription}</p>
+        <p className="print-recess-pass-label text-sm font-black uppercase tracking-wide leading-tight">
+          {meta.label}
+        </p>
+        <p className="print-recess-pass-copy max-w-[12rem] text-[7pt] leading-snug opacity-80">
+          {meta.kioskDescription}
+        </p>
       </div>
 
-      <div className="border-t border-border/40 bg-white px-2 py-2">
+      <div className="print-id-barcode-container border-t border-border/40 px-2 py-1.5">
         <PrintBarcode value={scanCode} variant="prize-id" />
-        <p className="mt-1 text-center text-[7pt] font-semibold text-muted-foreground">
-          1. Student scans ID · 2. Scan this pass · 3. Scan pass again to return
+        <p className="mt-0.5 text-center text-[6pt] font-semibold text-muted-foreground leading-tight">
+          Scan at kiosk after student ID · scan again to return
         </p>
       </div>
     </div>

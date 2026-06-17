@@ -9,7 +9,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 import {
-  activeIncentivesList,
+  incentivesForSurface,
   incentivesVisibleOnSurface,
   type IncentiveSurfaceKey,
 } from '@/lib/incentives/incentiveSurfaces';
@@ -45,7 +45,7 @@ export function StudentIncentivesCard({
   );
   const { data: incentives, isLoading } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
 
-  const activeIncentives = useMemo(() => activeIncentivesList(incentives), [incentives]);
+  const activeIncentives = useMemo(() => incentivesForSurface(incentives, surface), [incentives, surface]);
   const visibleIncentives = useMemo(
     () => activeIncentives.slice(0, maxItems),
     [activeIncentives, maxItems],

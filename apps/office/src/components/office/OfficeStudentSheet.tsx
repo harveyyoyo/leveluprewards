@@ -20,6 +20,7 @@ import {
 } from '@/lib/office/officeUtils';
 import type { OfficeBillingAccount, OfficeGradeEntry, OfficeStudent, OfficeClass, OfficeTeacher } from '@/lib/office/types';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
+import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 
 type OfficeStudentSheetProps = {
   schoolId: string;
@@ -79,7 +80,7 @@ export function OfficeStudentSheet({
   const termGrades = grades.filter((g) => g.termLabel === activeTerm);
   const account = billingAccountForStudent(billingAccounts, student.id);
   const addGradeHref = `${officePublicHref(schoolId, 'grades')}?student=${encodeURIComponent(student.id)}&term=${encodeURIComponent(activeTerm)}`;
-  const printReportHref = `${officePublicHref(schoolId, 'reports')}?student=${encodeURIComponent(student.id)}&term=${encodeURIComponent(activeTerm)}`;
+  const printReportHref = `${officePublicHref(schoolId, 'reports')}?report=grades&student=${encodeURIComponent(student.id)}&term=${encodeURIComponent(activeTerm)}`;
   const billingHref = officePublicHref(schoolId, 'billing');
 
   const handleSave = async () => {
@@ -197,11 +198,28 @@ export function OfficeStudentSheet({
             </div>
           )}
           {!isEditing && (
-            <SheetDescription>
-              {classLabel || 'No class'}
-              {getOfficeTeacherLabel(student, teacherNameById)
-                ? ` · ${getOfficeTeacherLabel(student, teacherNameById)}`
-                : ''}
+            <SheetDescription className="flex flex-wrap items-center gap-1">
+              {student.classId ? (
+                <OfficeEntityLink
+                  kind="class"
+                  id={student.classId}
+                  label={classLabel || 'Class'}
+                  muted
+                />
+              ) : (
+                <span>No class</span>
+              )}
+              {student.teacherId ? (
+                <>
+                  <span>·</span>
+                  <OfficeEntityLink
+                    kind="teacher"
+                    id={student.teacherId}
+                    label={getOfficeTeacherLabel(student, teacherNameById)}
+                    muted
+                  />
+                </>
+              ) : null}
             </SheetDescription>
           )}
         </SheetHeader>

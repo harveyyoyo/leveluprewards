@@ -38,6 +38,7 @@ import { isCompactDisplayMode } from '@/lib/displayMode';
 import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { useIntroTourStaffTabListener } from '@/lib/introTourStaffTab';
 import { Checkbox } from '@/components/ui/checkbox';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StaffPortalNav } from '@/components/staff/StaffPortalNav';
@@ -56,7 +57,7 @@ import {
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { TeacherPortalTabPane } from '@/components/staff/TeacherPortalTabPane';
 import { StaffPortalWelcomeTab } from '@/components/staff/StaffPortalWelcomeTab';
-import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs, staffPortalAllAddOnTabValues, staffPortalMergePinnedAddOnValues } from '@/lib/staffPortal';
+import { staffPortalTabIsValid, staffPortalTeacherPinSideEffects, useStaffPortalTabs, staffPortalAllAddOnTabValues, staffPortalMergePinnedAddOnValues, normalizeStaffPortalTabValue } from '@/lib/staffPortal';
 import { Switch } from '@/components/ui/switch';
 
 import DynamicIcon from '@/components/DynamicIcon';
@@ -71,6 +72,8 @@ import {
 } from '@/lib/teacherBudget';
 
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
 import {
   TabWalkthroughHeaderAction,
   TabWalkthroughProvider,
@@ -98,13 +101,13 @@ import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
+import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
+import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
 import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
 import {
   teacherPortalTabContentClassName,
 } from '@/components/staff/teacherPortalLayout';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
-import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
@@ -680,7 +683,10 @@ function TeacherRosterTab({
     const appName = appConfig?.appName?.trim() || APP_NAME;
     const appTagline = appConfig?.appTagline?.trim() ?? APP_TAGLINE;
 
-    const printStudentIdCards = (studentsToPrint: Student[], cornerStyle?: 'rounded' | 'rectangular') => {
+    const printStudentIdCards = (
+        studentsToPrint: Student[],
+        options?: { cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: import('@/lib/idCardPrintCatalog').IdCardSheetSpacing },
+    ) => {
         if (!schoolId) {
             toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
             return;
@@ -689,7 +695,8 @@ function TeacherRosterTab({
             students: studentsToPrint,
             classes,
             schoolId,
-            cornerStyle,
+            cornerStyle: options?.cornerStyle,
+            sheetSpacing: options?.sheetSpacing,
             ...resolveIdCardPrintJobOptions(settings),
         });
     };
@@ -900,7 +907,10 @@ function TeacherRosterTab({
                 students={studentIdPrintJob.students}
                 classes={studentIdPrintJob.classes}
                 onConfirm={(args) => {
-                    printStudentIdCards(args.students, args.cornerStyle);
+                    printStudentIdCards(args.students, {
+                        cornerStyle: args.cornerStyle,
+                        sheetSpacing: args.sheetSpacing,
+                    });
                     setStudentIdPrintJob(null);
                 }}
             />
@@ -1070,16 +1080,33 @@ function RecentRedemptions({ schoolId, students, classes, teacherId }: { schoolI
                         <ul className="space-y-3 pr-4">
                             {filteredRedemptions.map((item) => (
                                 <li key={item.id} className={cn(
-                                    "group flex justify-between items-center bg-card p-4 rounded-2xl border transition-all hover:shadow-md",
+                                    "group flex justify-between items-center bg-card p-4 rounded-2xl border transition-all hover:shadow-md cursor-pointer",
                                     item.fulfilled ? "border-border/60 opacity-60" : "border-primary/20 shadow-sm"
-                                )}>
+                                )}
+                                    role="button"
+                                    tabIndex={0}
+                                    title={item.fulfilled ? 'Click row to mark unfulfilled' : 'Click row to mark fulfilled'}
+                                    onClick={(event) =>
+                                        handleSelectableRowClick(event, () =>
+                                            handleFulfillmentToggle(item.studentId, item.id, !item.fulfilled),
+                                        )
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleFulfillmentToggle(item.studentId, item.id, !item.fulfilled);
+                                        }
+                                    }}
+                                >
                                     <div className="flex items-center gap-4">
+                                        <div onClick={(e) => e.stopPropagation()}>
                                         <Checkbox
                                             id={`fulfilled-${item.id}`}
                                             checked={item.fulfilled}
                                             onCheckedChange={(checked) => handleFulfillmentToggle(item.studentId, item.id, !!checked)}
                                             className="w-6 h-6 rounded-lg data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                                         />
+                                        </div>
                                         <div>
                                             <p className="font-semibold leading-none mb-1">
                                                 {item.desc.replace('Redeemed: ', '')}
@@ -1279,6 +1306,9 @@ function TeacherAttendanceTab({
     periods: AttendanceScheduleSlot[];
     categories: Category[];
 }) {
+    const { schoolId } = useAppContext();
+    const [mainSection, setMainSection] = useState<'setup' | 'recess'>('setup');
+
     return (
         <StaffPortalTabPanel
             tabValue="attendance"
@@ -1289,17 +1319,35 @@ function TeacherAttendanceTab({
                 </div>
             }
         >
-            <StaffPortalSectionCard className="w-full overflow-hidden">
-                <StaffPortalSectionCardContent className="p-4 md:p-6">
-                    <p className="mb-4 max-w-prose text-sm text-muted-foreground">
-                        New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
-                    </p>
-                    <TeacherAttendanceRewardsPanel
-                        teacherId={teacherId}
-                        classes={classes}
-                        periods={periods}
-                        categories={categories}
+            <StaffPortalSectionCard className="w-full overflow-hidden bg-background/95 backdrop-blur-md">
+                <StaffPortalSectionCardContent className="p-4 md:p-6 space-y-6">
+                    <ContentSectionTreeNav
+                        items={[
+                            { id: 'setup', label: 'Setup' },
+                            { id: 'recess', label: 'Room passes' },
+                        ]}
+                        value={mainSection}
+                        onValueChange={(id) => setMainSection(id as 'setup' | 'recess')}
+                        className="mb-2"
                     />
+
+                    {mainSection === 'recess' && schoolId ? (
+                        <RecessAttendanceSection schoolId={schoolId} variant="teacher" />
+                    ) : null}
+
+                    {mainSection === 'setup' ? (
+                        <>
+                            <p className="max-w-prose text-sm text-muted-foreground">
+                                New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
+                            </p>
+                            <TeacherAttendanceRewardsPanel
+                                teacherId={teacherId}
+                                classes={classes}
+                                periods={periods}
+                                categories={categories}
+                            />
+                        </>
+                    ) : null}
                 </StaffPortalSectionCardContent>
             </StaffPortalSectionCard>
         </StaffPortalTabPanel>
@@ -1771,8 +1819,15 @@ function TeacherPrinterInnerBody({
 
     const resolvedTeacherTab = useMemo(() => {
         if (secretaryMode) return 'coupons';
-        return staffPortalTabIsValid(activeTeacherTab, allTabValues) ? activeTeacherTab : defaultTab;
+        const normalized = normalizeStaffPortalTabValue(activeTeacherTab);
+        return staffPortalTabIsValid(normalized, allTabValues) ? normalized : defaultTab;
     }, [secretaryMode, activeTeacherTab, allTabValues, defaultTab]);
+
+    const classroomInitialSection = useMemo<ClassroomTabSection | undefined>(() => {
+        const raw = activeTeacherTab.trim().toLowerCase();
+        if (raw === 'raffle') return 'raffle';
+        return undefined;
+    }, [activeTeacherTab]);
 
     useEffect(() => {
         if (!schoolId || secretaryMode) {
@@ -2050,6 +2105,9 @@ function TeacherPrinterInnerBody({
                                     schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
                                     isGraphic={isGraphic}
                                     manualAccentColor={teacherAccent}
+                                    initialSection={classroomInitialSection}
+                                    canEditRaffleSettings={!secretaryMode}
+                                    raffleOperatorName={teacherName || undefined}
                                     manualBudgetOptions={
                                         isAdmin
                                             ? undefined
@@ -2137,18 +2195,6 @@ function TeacherPrinterInnerBody({
                                             rafflePointsPerTicket={settings.rafflePointsPerTicket}
                                         />
                             </TeacherPortalTabPane>
-
-                            {teacherTabEnabled('raffle') && (
-                                <TeacherPortalTabPane tabId="raffle" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                        <AdminRaffleTab
-                                            schoolId={schoolId!}
-                                            students={studentsForTeacherActions}
-                                            classes={classesForTeacherUi}
-                                            canEditSettings={!secretaryMode}
-                                            operatorName={teacherName || undefined}
-                                        />
-                                </TeacherPortalTabPane>
-                            )}
 
                                 {teacherTabEnabled('goals') && (
                                     <TeacherPortalTabPane tabId="goals" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>

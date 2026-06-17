@@ -5,6 +5,7 @@ import type {
   OfficeStudent,
   OfficeTeacher,
 } from '@/lib/office/types';
+import { invoiceBalanceDueCents } from '@/lib/office/officeBillingPayments';
 
 /** Trimmed string from legacy Firestore rows that may omit or mistype name fields. */
 function officeStudentNamePart(value: unknown): string {
@@ -62,6 +63,24 @@ export function countOfficeStudentsByTeacher(
     counts.set(id, (counts.get(id) ?? 0) + 1);
   }
   return counts;
+}
+
+export function officeStudentsForTeacher(students: OfficeStudent[], teacherId: string): OfficeStudent[] {
+  const id = teacherId.trim();
+  if (!id) return [];
+  return students
+    .filter((s) => s.teacherId?.trim() === id)
+    .slice()
+    .sort((a, b) => getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b)));
+}
+
+export function officeStudentsForClass(students: OfficeStudent[], classId: string): OfficeStudent[] {
+  const id = classId.trim();
+  if (!id) return [];
+  return students
+    .filter((s) => s.classId?.trim() === id)
+    .slice()
+    .sort((a, b) => getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b)));
 }
 
 export function getSuggestedTermLabel(): string {
@@ -135,7 +154,7 @@ export function formatGradeDisplay(entry: Pick<OfficeGradeEntry, 'letterGrade' |
 }
 
 export function isInvoiceOpen(inv: OfficeInvoice): boolean {
-  return inv.status === 'sent' || inv.status === 'draft';
+  return inv.status === 'sent' || inv.status === 'partial' || inv.status === 'draft';
 }
 
 export function billingStatusForAccount(
@@ -282,7 +301,7 @@ export function buildOverdueFamiliesDigest(
       familyName: account?.familyName ?? 'Account',
       contactEmail: account?.contactEmail?.trim() || null,
       invoiceCount: list.length,
-      totalCents: list.reduce((sum, i) => sum + (i.amountCents || 0), 0),
+      totalCents: list.reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0),
       oldestDueDate: list.map((i) => i.dueDate).sort()[0] ?? '',
     });
   }
@@ -338,9 +357,7 @@ export function buildOfficeDashboardInsights(
   billingAccounts: OfficeBillingAccount[] = [],
 ): OfficeDashboardInsights {
   const overdueInvoices = invoices.filter((i) => isInvoiceOverdue(i));
-  const openBalanceCents = invoices
-    .filter(isInvoiceOpen)
-    .reduce((sum, i) => sum + (i.amountCents || 0), 0);
+  const openBalanceCents = invoices.reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0);
   const termSubjects = gradeSubjectsForTerm(gradeEntries, activeTerm);
   const subjectGaps = studentsMissingSubjectsForTerm(students, gradeEntries, activeTerm);
   const studentsWithSubjectGaps = subjectGaps.length;

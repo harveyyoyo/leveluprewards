@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,15 +16,27 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Prize, Student } from '@/lib/types';
 import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
 import { staffIdCardDisplayName } from '@/lib/staff/staffIdCardSubject';
-import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
+import {
+  DEFAULT_ID_CARD_SHEET_SPACING,
+  ID_CARD_FAMILIES,
+  idCardJobPrinterOptions,
+  resolveIdCardPrinterFamily,
+  type IdCardPrinterFamilyId,
+  type IdCardSheetSpacing,
+} from '@/lib/idCardPrintCatalog';
 import { Printer } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type CornerStyle = 'rounded' | 'rectangular';
-type StudentPrintConfirm = (args: { students: Student[]; classes: Class[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
-type PrizePrintConfirm = (args: { prizes: Prize[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
-type StaffPrintConfirm = (args: { subjects: StaffIdCardSubject[]; printerType?: 'dtc4500e'; cornerStyle?: CornerStyle }) => void;
+type IdCardPrintRunOptions = {
+  printerType?: 'dtc4500e';
+  cornerStyle?: CornerStyle;
+  sheetSpacing?: IdCardSheetSpacing;
+};
+type StudentPrintConfirm = (args: { students: Student[]; classes: Class[] } & IdCardPrintRunOptions) => void;
+type PrizePrintConfirm = (args: { prizes: Prize[] } & IdCardPrintRunOptions) => void;
+type StaffPrintConfirm = (args: { subjects: StaffIdCardSubject[] } & IdCardPrintRunOptions) => void;
 
 type IdCardPrintSetupDialogProps =
   | {
@@ -55,6 +67,16 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
   const { toast } = useToast();
   const { settings } = useSettings();
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>(settings.idCardCornerStyle ?? 'rounded');
+  const [printOutput, setPrintOutput] = useState<IdCardPrinterFamilyId>(() => resolveIdCardPrinterFamily(settings));
+  const [sheetSpacing, setSheetSpacing] = useState<IdCardSheetSpacing>(DEFAULT_ID_CARD_SHEET_SPACING);
+  const usesSheetPrinter = printOutput === 'browser_sheet';
+
+  useEffect(() => {
+    if (!open) return;
+    setCornerStyle(settings.idCardCornerStyle ?? 'rounded');
+    setPrintOutput(resolveIdCardPrinterFamily(settings));
+    setSheetSpacing(DEFAULT_ID_CARD_SHEET_SPACING);
+  }, [open, settings]);
 
   const summaryLine = useMemo(() => {
     if (props.variant === 'prize') {
@@ -101,13 +123,18 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
       return;
     }
 
-    const printerOptions = resolveIdCardPrintJobOptions(settings);
+    const runOptions: IdCardPrintRunOptions = {
+      cornerStyle,
+      ...idCardJobPrinterOptions(printOutput),
+      ...(usesSheetPrinter ? { sheetSpacing } : {}),
+    };
+
     if (props.variant === 'prize') {
-      props.onConfirm({ prizes: props.prizes, cornerStyle, ...printerOptions });
+      props.onConfirm({ prizes: props.prizes, ...runOptions });
     } else if (props.variant === 'staff') {
-      props.onConfirm({ subjects: props.subjects, cornerStyle, ...printerOptions });
+      props.onConfirm({ subjects: props.subjects, ...runOptions });
     } else {
-      props.onConfirm({ students: props.students, classes: props.classes, cornerStyle, ...printerOptions });
+      props.onConfirm({ students: props.students, classes: props.classes, ...runOptions });
     }
   };
 
@@ -139,6 +166,57 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="id-card-print-output" className="text-[11px] font-semibold">
+              Printer / output
+            </Label>
+            <Select
+              value={printOutput}
+              onValueChange={(v) => setPrintOutput(v === 'dtc4500e' ? 'dtc4500e' : 'browser_sheet')}
+            >
+              <SelectTrigger id="id-card-print-output" className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ID_CARD_FAMILIES.map((family) => (
+                  <SelectItem key={family.id} value={family.id}>
+                    {family.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground leading-snug">
+              {ID_CARD_FAMILIES.find((f) => f.id === printOutput)?.shortDescription}
+            </p>
+          </div>
+
+          {usesSheetPrinter && itemCount > 1 ? (
+            <div className="space-y-2">
+              <Label htmlFor="id-card-print-spacing" className="text-[11px] font-semibold">
+                Sheet spacing
+              </Label>
+              <Select
+                value={sheetSpacing}
+                onValueChange={(v) => {
+                  const next = v === 'attached' ? 'attached' : 'separated';
+                  setSheetSpacing(next);
+                  if (next === 'attached') setCornerStyle('rectangular');
+                }}
+              >
+                <SelectTrigger id="id-card-print-spacing" className="rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="separated">Separated (gaps between cards)</SelectItem>
+                  <SelectItem value="attached">Attached (edge-to-edge, like coupons)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground leading-snug">
+                On one letter sheet, choose whether cards keep label gaps or print flush against each other.
+              </p>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="id-card-print-corners" className="text-[11px] font-semibold">
               Card corners

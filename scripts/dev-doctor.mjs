@@ -41,14 +41,15 @@ const localhost = results.find((r) => r.host === 'localhost');
 
 if (!configured?.home && !configured?.login) {
   console.log('\nDev server not healthy. Try:');
-  console.log('  1. Stop all terminals running next dev');
-  console.log('  2. npm run dev:reset');
+  console.log('  1. npm run dev:recover   (stop port 3000, clean .next, restart stable dev)');
+  console.log('  2. npm run dev:fast      (stable local dev; no background warmup)');
   console.log('  3. npm run dev:doctor');
+  console.log('\nAvoid npm run build while dev is running — it corrupts .next.');
   process.exit(1);
 }
 
 if (!configured?.login) {
-  console.log('\n/login failed on the configured host - run: npm run dev:reset');
+  console.log('\n/login failed on the configured host - run: npm run dev:recover');
   process.exit(1);
 }
 

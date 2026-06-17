@@ -60,12 +60,14 @@ export function AdminRaffleTab({
   /** When false, raffle rules are read-only (e.g. secretary coupon-only mode). */
   canEditSettings = true,
   operatorName,
+  embedded = false,
 }: {
   schoolId: string;
   students: Student[];
   classes?: Class[];
   canEditSettings?: boolean;
   operatorName?: string;
+  embedded?: boolean;
 }) {
   const { toast } = useToast();
   const { settings, updateSettings } = useSettings();
@@ -434,31 +436,9 @@ export function AdminRaffleTab({
         : `With deduct on, each pull removes each student’s full ticket value in points (slots × ${pointsPerTicket}).`
       : 'Deduct is off: spins never change balances.';
 
-  return (
-    <>
-      <StaffPortalTabPanel
-        tabValue="raffle"
-        infoSections={[
-            canEditSettings
-              ? {
-                  title: 'What is this for?',
-                  body: (
-                    <div className="space-y-2 text-sm">
-                      <p>Configure the pool below, then open the jackpot reels or spinning wheel — same odds, different animation.</p>
-                      <p>Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).</p>
-                      <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
-                    </div>
-                  ),
-                }
-              : {
-                  title: 'What is this for?',
-                  body: 'Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session.',
-                },
-          ]}
-          trailing={<TabWalkthroughHeaderAction />}
-      >
-      <StaffPortalSectionCard className="w-full overflow-hidden">
-        <StaffPortalSectionCardContent className="space-y-8">
+  const raffleBody = (
+    <StaffPortalSectionCard className="w-full overflow-hidden">
+      <StaffPortalSectionCardContent className="space-y-8">
             {!rewardsPillarOn ? (
               <p className="rounded-xl border border-violet-300/40 bg-violet-50 px-3 py-2.5 text-xs font-medium text-violet-950 dark:bg-violet-950/30 dark:text-violet-100">
                 LevelUp Rewards is off — ticket counts and deductions use <strong>classroom points</strong> from the
@@ -467,6 +447,19 @@ export function AdminRaffleTab({
             ) : null}
             {canEditSettings ? (
               <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/10 px-3.5 py-3">
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-sm font-semibold leading-snug">Student kiosk raffle</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      Show ticket counts on the student portal when Rewards is on.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={!!settings.enableWeeklyRaffle}
+                    onCheckedChange={(checked) => updateSettings({ enableWeeklyRaffle: checked })}
+                    aria-label="Enable student kiosk raffle"
+                  />
+                </div>
                 <h2 className="text-[0.65rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">Pool rules</h2>
                 <div className="rounded-2xl border bg-muted/15 p-4 shadow-sm sm:p-5">
                   <div className="grid gap-4 lg:grid-cols-3 items-start">
@@ -918,9 +911,10 @@ export function AdminRaffleTab({
             </section>
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
-      </StaffPortalTabPanel>
+  );
 
-      <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
+  const drawDialog = (
+    <Dialog open={drawDialogOpen} onOpenChange={setDrawDialogOpen}>
         <DialogContent size="xl" className="gap-0 p-0 sm:p-0 max-h-[95vh] overflow-y-auto overflow-x-hidden">
           <DialogTitle className="sr-only">
             {drawDialogMode === 'wheel' ? 'Prize wheel' : 'Jackpot'}
@@ -953,6 +947,46 @@ export function AdminRaffleTab({
           </div>
         </DialogContent>
       </Dialog>
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {raffleBody}
+        {drawDialog}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <StaffPortalTabPanel
+        tabValue="classroom"
+        infoSections={[
+          canEditSettings
+            ? {
+                title: 'What is this for?',
+                body: (
+                  <div className="space-y-2 text-sm">
+                    <p>Configure the pool below, then open the jackpot reels or spinning wheel — same odds, different animation.</p>
+                    <p>
+                      Set <strong>points per ticket</strong> to <strong>0</strong> for a general raffle. Otherwise use{' '}
+                      <strong>equal odds</strong> (one entry per qualifying student) or <strong>scaled odds</strong> (more points → more tickets).
+                    </p>
+                    <p>If <strong>Deduct points when you pull</strong> is on, points are taken after the spin when there is a ticket value.</p>
+                  </div>
+                ),
+              }
+            : {
+                title: 'What is this for?',
+                body: 'Rules are read-only here. Use the draw buttons for your current class scope; edit settings from a teacher or admin session.',
+              },
+        ]}
+        trailing={<TabWalkthroughHeaderAction />}
+      >
+        {raffleBody}
+      </StaffPortalTabPanel>
+      {drawDialog}
     </>
   );
 }

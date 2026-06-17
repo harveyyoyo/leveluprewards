@@ -64,6 +64,10 @@ service cloud.firestore {
       return isDeveloper() || isAdmin(schoolId) || isOffice(schoolId);
     }
 
+    function canAccessSss(schoolId) {
+      return isDeveloper() || isAdmin(schoolId) || isOffice(schoolId);
+    }
+
     function staffAccountIsOfficeRole(data) {
       return data.role == 'office';
     }
@@ -470,6 +474,10 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      match /sssStudents/{studentId} {
+        allow read, write: if canAccessSss(schoolId);
+      }
+
       match /officeClasses/{classId} {
         allow read, write: if canAccessOffice(schoolId);
       }
@@ -487,6 +495,10 @@ service cloud.firestore {
       }
 
       match /officeInvoices/{invoiceId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officePayments/{paymentId} {
         allow read, write: if canAccessOffice(schoolId);
       }
 

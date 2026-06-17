@@ -17,6 +17,7 @@ type OfficeGradeReportViewProps = {
   entries: OfficeGradeEntry[];
   studentLabelById: Map<string, string>;
   classNameById: Map<string, string>;
+  embedded?: boolean;
 };
 
 export function OfficeGradeReportView({
@@ -25,6 +26,7 @@ export function OfficeGradeReportView({
   entries,
   studentLabelById,
   classNameById,
+  embedded = false,
 }: OfficeGradeReportViewProps) {
   const searchParams = useSearchParams();
   const { term: activeTerm, configuredTerms } = useOfficeTerm(schoolId);
@@ -121,10 +123,17 @@ export function OfficeGradeReportView({
   return (
     <div className="space-y-6 print:space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between no-print">
-        <div>
-          <h2 className="text-lg font-bold">Grade report</h2>
-          <p className="text-sm text-muted-foreground">Print a simple term summary for families or records.</p>
-        </div>
+        {!embedded ? (
+          <div>
+            <h2 className="text-lg font-bold">Grade report</h2>
+            <p className="text-sm text-muted-foreground">Print a simple term summary for families or records.</p>
+          </div>
+        ) : (
+          <div>
+            <h3 className="text-base font-bold">Grade report</h3>
+            <p className="text-sm text-muted-foreground">Filter by term, class, or student, then print or export CSV.</p>
+          </div>
+        )}
         <div className="flex flex-wrap items-end gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold uppercase text-muted-foreground">Term</Label>

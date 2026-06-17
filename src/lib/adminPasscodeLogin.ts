@@ -1,6 +1,7 @@
 import type { Auth } from 'firebase/auth';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { authFetch } from '@/lib/authFetch';
+import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { isCallableInfrastructureError, messageFromVerifySchoolAccessError } from '@/lib/loginResult';
 
 type VerifyAdminResult = { ok: true } | { ok: false; message: string; infrastructureFailure?: boolean };
@@ -19,13 +20,34 @@ async function verifyAdminPasscodeViaApi(
     };
   }
 
-  const res = await authFetch(auth, '/api/auth/verify-admin-passcode', {
-    method: 'POST',
-    body: JSON.stringify({
-      schoolId: schoolId.trim().toLowerCase(),
-      passcode,
-    }),
-  });
+  const isGoogleBypass = passcode.trim().length === 0;
+  if (isGoogleBypass) {
+    await refreshGoogleIdToken(user);
+  }
+
+  let res: Response;
+  if (isGoogleBypass) {
+    const token = await user.getIdToken(true);
+    res = await fetch('/api/auth/verify-admin-passcode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        schoolId: schoolId.trim().toLowerCase(),
+        passcode,
+      }),
+    });
+  } else {
+    res = await authFetch(auth, '/api/auth/verify-admin-passcode', {
+      method: 'POST',
+      body: JSON.stringify({
+        schoolId: schoolId.trim().toLowerCase(),
+        passcode,
+      }),
+    });
+  }
 
   if (res.ok) return { ok: true };
 
@@ -47,11 +69,15 @@ async function verifyAdminPasscodeViaApi(
 }
 
 async function verifyAdminPasscodeViaCallable(
+  auth: Auth,
   functions: Functions,
   schoolId: string,
   passcode: string,
 ): Promise<VerifyAdminResult> {
   try {
+    if (passcode.trim().length === 0) {
+      await refreshGoogleIdToken(auth.currentUser);
+    }
     const verify = httpsCallable(functions, 'verifySchoolPasscode');
     await verify({
       schoolId: schoolId.trim().toLowerCase(),
@@ -84,12 +110,17 @@ export async function verifyAdminPasscodeLogin(
     return { ok: false, message: 'No Firebase session yet. Refresh the page and try again.' };
   }
 
+  if (args.passcode.trim().length === 0) {
+    await refreshGoogleIdToken(auth.currentUser);
+  }
+
   if (process.env.NODE_ENV === 'development') {
     const apiResult = await verifyAdminPasscodeViaApi(auth, args.schoolId, args.passcode);
     if (apiResult.ok) return apiResult;
 
     if (apiResult.status === 503 || apiResult.status === 502) {
       const callableResult = await verifyAdminPasscodeViaCallable(
+        auth,
         functions,
         args.schoolId,
         args.passcode,
@@ -103,7 +134,7 @@ export async function verifyAdminPasscodeLogin(
     return { ok: false, message: apiResult.message };
   }
 
-  const callableResult = await verifyAdminPasscodeViaCallable(functions, args.schoolId, args.passcode);
+  const callableResult = await verifyAdminPasscodeViaCallable(auth, functions, args.schoolId, args.passcode);
   if (callableResult.ok) return callableResult;
 
   // For Google bypass (empty passcode), the callable and API route may have different

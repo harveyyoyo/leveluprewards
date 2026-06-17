@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Award, ChevronRight, Loader2, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
+import { Award, ChevronRight, Loader2, QrCode, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -285,6 +285,7 @@ export function ThemeGeneratorModal({
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
     const { schoolId } = useAppContext();
+    const showIdCardScanOverride = !!previewStudent;
     const authFetch = useAuthFetch();
     const firestore = useFirestore();
     // Students/kiosks cannot read private `schools/{id}`. Use public mirror when not staff.
@@ -749,6 +750,48 @@ export function ThemeGeneratorModal({
                                             </div>
                                         </div>
                                     </div>
+                                    {showIdCardScanOverride ? (
+                                        <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
+                                            <Label htmlFor="theme-id-card-scan" className="flex items-center gap-2">
+                                                <QrCode className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                                ID card scan code
+                                            </Label>
+                                            <Select
+                                                value={
+                                                    previewTheme.idCardUseQr === undefined
+                                                        ? 'inherit'
+                                                        : previewTheme.idCardUseQr
+                                                          ? 'qr'
+                                                          : 'barcode'
+                                                }
+                                                onValueChange={(v) => {
+                                                    if (v === 'inherit') {
+                                                        commitThemeFrom((prev) => {
+                                                            if (!prev) return prev;
+                                                            const { idCardUseQr: _removed, ...rest } = prev;
+                                                            return rest;
+                                                        });
+                                                        return;
+                                                    }
+                                                    updateTheme({ idCardUseQr: v === 'qr' });
+                                                }}
+                                            >
+                                                <SelectTrigger id="theme-id-card-scan" className="h-10">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="inherit">
+                                                        School default ({settings.idCardUseQrCode ? 'QR' : 'Barcode'})
+                                                    </SelectItem>
+                                                    <SelectItem value="qr">QR code (left side)</SelectItem>
+                                                    <SelectItem value="barcode">Barcode (bottom strip)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <p className="text-[10px] leading-snug text-muted-foreground">
+                                                Overrides the school-wide branding setting for this student only. QR shows on the left with initials inside the code.
+                                            </p>
+                                        </div>
+                                    ) : null}
                                     <div className="grid grid-cols-5 gap-2">
                                         {[
                                             { key: 'background', label: 'BG' },

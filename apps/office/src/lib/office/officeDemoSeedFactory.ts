@@ -8,6 +8,7 @@ import type {
   OfficeTeacher,
 } from '@/lib/office/types';
 import { getSuggestedTermLabel } from '@/lib/office/officeUtils';
+import { accountBalanceFromInvoices } from '@/lib/office/officeBillingPayments';
 
 const OFFICE_DEMO_STAFF_ACCOUNT_ID = 'demo_office_staff';
 
@@ -234,10 +235,10 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
   });
 
   for (const account of billingAccounts) {
-    const open = invoices
-      .filter((i) => i.accountId === account.id && (i.status === 'sent' || i.status === 'draft'))
-      .reduce((sum, i) => sum + i.amountCents, 0);
-    account.balanceCents = open;
+    account.balanceCents = accountBalanceFromInvoices(
+      account.id,
+      invoices.filter((i) => i.accountId === account.id),
+    );
   }
 
   return {

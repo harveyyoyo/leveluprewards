@@ -30,6 +30,7 @@ import {
   StaffPortalSectionCardTitle,
 } from "@/components/staff/StaffPortalSection";
 import { Checkbox } from "@/components/ui/checkbox";
+import { handleSelectableRowClick } from "@/lib/ui/selectableRowClick";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -53,9 +54,9 @@ import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/componen
 import { AdminRecordListHeader } from "@/components/admin/AdminRecordListHeader";
 import { AdminRecordListScroll } from "@/components/admin/AdminRecordListScroll";
 import {
-  adminRecordListGridClassName,
   adminRecordListGridCompactGapClassName,
   adminRecordListGridNameCellClassName,
+  adminRecordListGridResponsiveRowClassName,
   adminRecordListGridStyle,
   studentsListGridColumns,
 } from "@/components/admin/adminRecordListGrid";
@@ -538,11 +539,7 @@ export function AdminStudentsTab({
 
 
           <AdminRecordListScroll>
-            <ul
-              className={cn(
-                "flex w-full min-w-0 flex-col gap-1.5 pr-12",
-              )}
-            >
+            <ul className="flex w-full min-w-0 flex-col gap-1.5">
               {filteredStudents.length === 0 ? (
                 <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -622,15 +619,31 @@ export function AdminStudentsTab({
                   <li
                     key={s.id}
                     className={cn(
-                      "flex flex-wrap items-center gap-2 overflow-visible py-1.5 px-2 rounded-xl border transition-all sm:grid sm:flex-nowrap sm:items-center",
-                      adminRecordListGridClassName,
+                      "overflow-visible py-1.5 px-2 rounded-xl border transition-all",
+                      adminRecordListGridResponsiveRowClassName,
                       adminRecordListGridCompactGapClassName,
-                      "cursor-default",
+                      "cursor-pointer select-none",
                       selectedStudentIds.has(s.id)
                         ? "bg-secondary border-ring/45 hover:bg-secondary"
                         : "bg-secondary/45 border-transparent hover:bg-secondary/80",
                     )}
                     style={studentsListGridStyle}
+                    role="button"
+                    tabIndex={0}
+                    title={
+                      selectedStudentIds.has(s.id)
+                        ? "Click row to deselect"
+                        : "Click row to select"
+                    }
+                    onClick={(event) =>
+                      handleSelectableRowClick(event, () => toggleStudentSelected(s.id))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleStudentSelected(s.id);
+                      }
+                    }}
                   >
                     <div
                       className="flex items-center justify-center shrink-0 sm:justify-self-center"
@@ -659,9 +672,13 @@ export function AdminStudentsTab({
                     </div>
                     <div
                       className={cn(
-                        "flex max-sm:flex-[1_1_10rem] items-center gap-2",
+                        "flex min-w-0 flex-1 max-sm:basis-full items-center gap-2 sm:col-span-1",
                         adminRecordListGridNameCellClassName,
                       )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        toggleStudentSelected(s.id);
+                      }}
                     >
                       <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-secondary border border-ring/35 flex items-center justify-center text-xs font-bold text-secondary-foreground flex-shrink-0">
                         {s.photoUrl ? (

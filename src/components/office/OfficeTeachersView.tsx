@@ -19,8 +19,11 @@ import type { OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { countOfficeStudentsByTeacher } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 type OfficeTeachersViewProps = {
   schoolId: string;
@@ -32,6 +35,7 @@ type OfficeTeachersViewProps = {
 export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: OfficeTeachersViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { openTeacher, selectedTeacherId } = useOfficeEntityNav();
   const [query, setQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OfficeTeacher | null>(null);
@@ -123,8 +127,9 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black tracking-tight">Teachers</h1>
-          <p className="mt-1 text-sm text-muted-foreground max-w-xl">
-            Classroom and homeroom teachers for the office roster. Assign each student on{' '}
+          <p className="text-sm text-muted-foreground max-w-xl">
+            Classroom and homeroom teachers for the office roster. Click a teacher for their profile and assigned
+            students. Assign each student on{' '}
             <Link href={officePublicHref(schoolId, 'students')} className="font-medium text-teal-800 underline-offset-2 hover:underline">
               Students
             </Link>{' '}
@@ -163,7 +168,14 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
           {filtered.map((t) => {
             const count = studentCountByTeacher.get(t.id) ?? 0;
             return (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <li
+                key={t.id}
+                className={cn(
+                  'flex flex-wrap items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-teal-50/60 dark:hover:bg-teal-950/20',
+                  selectedTeacherId === t.id && 'bg-teal-50/80 dark:bg-teal-950/30',
+                )}
+                onClick={(event) => handleSelectableRowClick(event, () => openTeacher(t))}
+              >
                 <div className="min-w-0">
                   <p className="font-semibold">{t.name}</p>
                   {t.email ? (
@@ -177,7 +189,16 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
                   </p>
                 </div>
                 <div className="flex gap-1">
-                  <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg" onClick={() => openEdit(t)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-lg"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      openEdit(t);
+                    }}
+                  >
                     <Pencil className="h-3.5 w-3.5" />
                     Edit
                   </Button>
@@ -186,7 +207,10 @@ export function OfficeTeachersView({ schoolId, teachers, students, isLoading }: 
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive"
-                    onClick={() => void handleDelete(t)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleDelete(t);
+                    }}
                     disabled={busy}
                     aria-label={`Remove ${t.name}`}
                   >

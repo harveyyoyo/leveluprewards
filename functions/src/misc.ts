@@ -5,6 +5,11 @@ import { FieldValue } from "firebase-admin/firestore";
 import { studentMayRedeemCouponData } from "./couponRedemption";
 import { decryptField } from "./crypto";
 import { isAllowedGoogleEmailOnAllowlist } from "./googleAllowlist";
+import {
+  buildReusableSampleCouponDoc,
+  isReusableSampleCouponRedemption,
+  resolveReusableSampleCouponConfig,
+} from "./shared/reusableSampleCoupon";
 
 import "./init";
 
@@ -518,6 +523,8 @@ async function redeemCouponForStudent(
     schoolRef.collection("badges").get(),
   ]);
   const appSettings = schoolSnap.exists ? (schoolSnap.data()?.appSettings || {}) : {};
+  const reusableSampleCfg = resolveReusableSampleCouponConfig(appSettings);
+  const isReusableSample = isReusableSampleCouponRedemption(appSettings, couponCode);
   const achievements = appSettings.enableAchievements === true
     ? achievementsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
     : [];
@@ -529,15 +536,23 @@ async function redeemCouponForStudent(
 
   return db.runTransaction(async (tx) => {
     const couponSnap = await tx.get(couponRef);
-    if (!couponSnap.exists) throw new functions.https.HttpsError("not-found", "Coupon code not found.");
-    const coupon = couponSnap.data() as any;
+    let coupon: any;
+    if (!couponSnap.exists) {
+      if (!isReusableSample) {
+        throw new functions.https.HttpsError("not-found", "Coupon code not found.");
+      }
+      coupon = buildReusableSampleCouponDoc(reusableSampleCfg);
+      tx.set(couponRef, coupon);
+    } else {
+      coupon = couponSnap.data() as any;
+    }
     if (coupon.startsAt && typeof coupon.startsAt === "number" && now < coupon.startsAt) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon is not valid yet.");
     }
     if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
     }
-    if (coupon.used === true) {
+    if (coupon.used === true && !isReusableSample) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon has already been used.");
     }
 
@@ -622,7 +637,9 @@ async function redeemCouponForStudent(
     const cat = String(coupon.category || "Coupon");
     const code = String(coupon.code || couponCode);
     tx.set(studentRef.collection("activities").doc(), { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
-    tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
+    if (!isReusableSample) {
+      tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
+    }
     return { value, bonusTotal, category: categoryName };
   });
 }
@@ -1305,12 +1322,18 @@ exports.getCouponSnapshot = functions.https.onCall(
     }
     const db = admin.firestore();
 
+    const schoolSnap = await db.collection("schools").doc(schoolId).get();
+    const appSettings = schoolSnap.exists ? (schoolSnap.data()?.appSettings || {}) : {};
+    const reusableSampleCfg = resolveReusableSampleCouponConfig(appSettings);
     const snap = await db.collection("schools").doc(schoolId).collection("coupons").get();
     const now = Date.now();
     const coupons: any[] = [];
     for (const d of snap.docs) {
       const c = d.data() as any;
-      if (c.used === true) continue;
+      const code = String(c.code || d.id).toUpperCase();
+      const isReusableSample =
+        reusableSampleCfg.enabled && code === reusableSampleCfg.code;
+      if (c.used === true && !isReusableSample) continue;
       if (c.expiresAt && typeof c.expiresAt === "number" && now > c.expiresAt) continue;
       coupons.push({
         code: String(c.code || d.id).toUpperCase(),
@@ -1322,6 +1345,14 @@ exports.getCouponSnapshot = functions.https.onCall(
         createdByTeacherId: typeof c.createdByTeacherId === "string" ? c.createdByTeacherId : undefined,
         allowedClassIds: Array.isArray(c.allowedClassIds) ? c.allowedClassIds : undefined,
         allowedTeacherIds: Array.isArray(c.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
+      });
+    }
+    if (reusableSampleCfg.enabled && !coupons.some((c) => c.code === reusableSampleCfg.code)) {
+      coupons.push({
+        code: reusableSampleCfg.code,
+        value: reusableSampleCfg.value,
+        category: reusableSampleCfg.category,
+        redemptionScope: "school",
       });
     }
     return { updatedAt: now, coupons };

@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { buildBulletinDisplayHref } from '@/lib/displays/displayRoutes';
 import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES, type BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
-import { activeIncentivesList, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
 
 type BulletinSettingsPanelProps = {
   schoolId: string;
@@ -41,7 +41,10 @@ export function BulletinSettingsPanel({
     [firestore, schoolId],
   );
   const { data: incentives } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
-  const activeIncentives = useMemo(() => activeIncentivesList(incentives), [incentives]);
+  const activeIncentives = useMemo(
+    () => incentivesForSurface(incentives, 'bulletinBoard'),
+    [incentives],
+  );
   const showIncentivesOnBoard = incentivesVisibleOnSurface(settings, 'bulletinBoard');
 
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
@@ -177,7 +180,7 @@ export function BulletinSettingsPanel({
                   Incentives on this board
                 </span>
                 <span className="rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-black">
-                  {activeIncentives.length} active
+                  {activeIncentives.length} assigned
                 </span>
                 <span
                   className={
@@ -190,7 +193,8 @@ export function BulletinSettingsPanel({
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Create and choose surfaces in Admin → Incentives. This panel only controls bulletin layout and theme.
+                Create incentives in Admin → Incentives → Manage, then assign them under Where to show.
+                This panel only controls bulletin layout and theme.
               </p>
             </div>
         </div>

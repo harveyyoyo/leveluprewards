@@ -24,7 +24,7 @@ const GUIDE_SECTIONS: GuideItem[] = [
   {
     icon: GraduationCap,
     title: 'Grades & terms',
-    body: 'Terms are labels like Fall 2026 — not a separate calendar you must build first. Add terms under Settings → School terms, pick one as default for new staff, or create a term automatically when you save a grade. Print family summaries from Reports.',
+    body: 'Terms are labels like Fall 2026 — not a separate calendar you must build first. Add terms under Settings → School terms, pick one as default for new staff, or create a term automatically when you save a grade. Print grades, billing statements, rosters, and other office reports from Reports.',
   },
   {
     icon: BookOpen,

@@ -38,6 +38,8 @@ export type UseBarcodeScannerOptions = {
     keepCameraWarm?: boolean;
     /** Show live scan feedback on the camera UI (kiosk). */
     showScanFeedback?: boolean;
+    /** Fast QR-only native path when school ID cards use QR codes. */
+    preferQr?: boolean;
 };
 
 interface UseBarcodeScanner {
@@ -70,6 +72,7 @@ export function useBarcodeScanner(
 ): UseBarcodeScanner {
     const cameraEnabled = options?.cameraEnabled !== false;
     const keepCameraWarm = options?.keepCameraWarm ?? cameraEnabled;
+    const preferQr = options?.preferQr === true;
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [hasCameraPermission, setHasCameraPermission] = useState(true);
@@ -92,7 +95,13 @@ export function useBarcodeScanner(
     const lastStatusUiAtRef = useRef(0);
     const onScanRef = useRef(onScan);
     const onErrorRef = useRef(onError);
+    const preferQrRef = useRef(preferQr);
     const decodeActiveRef = useRef(decodeActive);
+
+    useEffect(() => {
+        preferQrRef.current = preferQr;
+        if (preferQr) preloadBarcodeScanStack({ preferQr: true });
+    }, [preferQr]);
 
     const shouldAcceptScan = useMemo(() => createScanDeduper(1200), []);
 
@@ -252,7 +261,7 @@ export function useBarcodeScanner(
                             decodePausedRef.current = false;
                             patchStatus({ phase: 'scanning' });
                         }
-                    }, 300);
+                    }, 200);
                 });
         },
         [patchStatus, shouldAcceptScan],
@@ -269,7 +278,9 @@ export function useBarcodeScanner(
     const runDecodeFrame = useCallback(
         async (video: HTMLVideoElement) => {
             const reader = await ensureZxingReader();
-            const attempt = await scanVideoFrameHybrid(video, reader);
+            const attempt = await scanVideoFrameHybrid(video, reader, undefined, {
+                preferQr: preferQrRef.current,
+            });
             const engineLabel = describeBarcodeScanEngine(attempt.engine);
             noteFrameAttempt(video, attempt.engine ? engineLabel : null, !!attempt.code);
             if (attempt.code) {

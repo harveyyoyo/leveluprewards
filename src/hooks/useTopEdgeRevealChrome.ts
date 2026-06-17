@@ -34,12 +34,20 @@ function updatePointerYVisibility(
   }
 }
 
+export type UseTopEdgeRevealChromeOptions = {
+  /** Any pointer movement reveals chrome (student kiosk sign-in). Default: top-edge only. */
+  revealOnAnyPointerMove?: boolean;
+};
+
 /**
  * Keeps chrome hidden until the pointer enters the top edge (or moves over the revealed header).
  * Touch screens also reveal chrome on tap; it lingers briefly so kiosk header controls stay reachable.
  * Used on student kiosk where inner panels scroll instead of the document.
  */
-export function useTopEdgeRevealChrome(active: boolean) {
+export function useTopEdgeRevealChrome(
+  active: boolean,
+  { revealOnAnyPointerMove = false }: UseTopEdgeRevealChromeOptions = {},
+) {
   const [visible, setVisible] = useState(false);
   const visibleRef = useRef(false);
   const touchLingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,6 +81,10 @@ export function useTopEdgeRevealChrome(active: boolean) {
     };
 
     const onMouseMove = (event: MouseEvent) => {
+      if (revealOnAnyPointerMove && !visibleRef.current) {
+        setVisibleIfChanged(true);
+        return;
+      }
       updatePointerYVisibility(event.clientY, visibleRef, setVisibleIfChanged);
     };
 
@@ -112,7 +124,7 @@ export function useTopEdgeRevealChrome(active: boolean) {
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchmove', onTouchMove);
     };
-  }, [active]);
+  }, [active, revealOnAnyPointerMove]);
 
   return visible;
 }

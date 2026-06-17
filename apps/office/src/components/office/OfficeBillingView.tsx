@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,18 @@ import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { CreditCard } from 'lucide-react';
 import type { OfficeBillingAccount, OfficeInvoice, OfficePaymentMethod, OfficeInvoiceStatus } from '@/lib/office/types';
 import type { OfficeStudent } from '@/lib/office/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  accountBalanceFromInvoices,
+  autoAllocatePayment,
+  invoiceBalanceDueCents,
+  invoicePaidCents,
+  invoiceRemainingCents,
+  isInvoicePayable,
+  resolveInvoiceStatusAfterPayment,
+  sumPaymentAllocations,
+} from '@/lib/office/officeBillingPayments';
+import type { OfficePaymentAllocation } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 
 type OfficeBillingViewProps = {
@@ -82,7 +94,10 @@ export function OfficeBillingView({
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
-  const [payTarget, setPayTarget] = useState<OfficeInvoice | null>(null);
+  const [payAccount, setPayAccount] = useState<OfficeBillingAccount | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paySelectedIds, setPaySelectedIds] = useState<string[]>([]);
+  const [payAllocations, setPayAllocations] = useState<Record<string, string>>({});
   const [paymentMethod, setPaymentMethod] = useState<OfficePaymentMethod>('check');
   const [paymentNote, setPaymentNote] = useState('');
 
@@ -127,10 +142,7 @@ export function OfficeBillingView({
   }, [invoices]);
 
   const openBalanceCents = useMemo(
-    () =>
-      invoices
-        .filter((i) => i.status === 'sent' || i.status === 'draft')
-        .reduce((sum, i) => sum + (i.amountCents || 0), 0),
+    () => invoices.reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0),
     [invoices],
   );
 
@@ -149,7 +161,9 @@ export function OfficeBillingView({
       list = list.filter(
         (a) =>
           (a.balanceCents || 0) > 0 ||
-          (invoicesByAccount.get(a.id) ?? []).some((i) => i.status === 'sent' || i.status === 'draft'),
+          (invoicesByAccount.get(a.id) ?? []).some(
+            (i) => i.status === 'sent' || i.status === 'partial' || i.status === 'draft',
+          ),
       );
     }
     if (!q) return list;
@@ -341,7 +355,7 @@ export function OfficeBillingView({
 
     setBusy(true);
     try {
-      const message = `Hi ${account.familyName}, this is a reminder that invoice "${inv.label}" ($${((inv.amountCents || 0) / 100).toFixed(2)}) for your student(s) is currently unpaid. Due date: ${inv.dueDate}. Please login or contact the office to clear the balance. Thank you!`;
+      const message = `Hi ${account.familyName}, this is a reminder that invoice "${inv.label}" (${formatCents(invoiceRemainingCents(inv))} remaining of ${formatCents(inv.amountCents || 0)}) for your student(s) is currently unpaid. Due date: ${inv.dueDate}. Please login or contact the office to clear the balance. Thank you!`;
       
       const collName = channel === 'sms' ? 'sms' : 'whatsapp';
       const ref = doc(collection(firestore, collName));
@@ -438,11 +452,23 @@ export function OfficeBillingView({
               ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status }
               : i,
           );
+          const updatedInvoice = nextInvoices.find((i) => i.id === editInvoiceId)!;
+          const oldRemaining = invoiceBalanceDueCents(existing);
+          const newRemaining =
+            status === 'sent' || status === 'partial'
+              ? Math.max(0, cents - invoicePaidCents(existing))
+              : 0;
           let balanceCents = account.balanceCents || 0;
-          if (existing.status === 'sent') {
-            balanceCents = Math.max(0, balanceCents + (cents - (existing.amountCents || 0)));
+          if (existing.status === 'sent' || existing.status === 'partial') {
+            balanceCents = Math.max(0, balanceCents - oldRemaining + newRemaining);
           } else if (status === 'sent' && existing.status === 'draft') {
             balanceCents += cents;
+          }
+          const resolvedStatus = resolveInvoiceStatusAfterPayment(updatedInvoice, invoicePaidCents(updatedInvoice));
+          if (resolvedStatus !== status) {
+            await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
+              status: resolvedStatus,
+            });
           }
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
             balanceCents,
@@ -504,12 +530,13 @@ export function OfficeBillingView({
         status: 'void',
       });
       const account = accounts.find((a) => a.id === inv.accountId);
-      if (account && (inv.status === 'sent' || inv.status === 'draft')) {
+      const balanceReduction = invoiceBalanceDueCents(inv);
+      if (account && balanceReduction > 0) {
         const nextInvoices = invoices.map((i) =>
           i.id === inv.id ? { ...i, status: 'void' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
+          balanceCents: Math.max(0, (account.balanceCents || 0) - balanceReduction),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -543,38 +570,149 @@ export function OfficeBillingView({
     }
   };
 
-  const openRecordPayment = (inv: OfficeInvoice) => {
-    setPayTarget(inv);
+  const redistributePayAllocations = useCallback(
+    (amountStr: string, selectedIds: string[]) => {
+      const cents = parseUsdToCents(amountStr);
+      if (cents == null || cents <= 0 || selectedIds.length === 0) {
+        setPayAllocations({});
+        return;
+      }
+      const allocs = autoAllocatePayment(invoices, cents, new Set(selectedIds));
+      const map: Record<string, string> = {};
+      for (const row of allocs) {
+        map[row.invoiceId] = (row.amountCents / 100).toFixed(2);
+      }
+      setPayAllocations(map);
+    },
+    [invoices],
+  );
+
+  const openRecordPayment = (account: OfficeBillingAccount, focusInvoice?: OfficeInvoice) => {
+    const payable = (invoicesByAccount.get(account.id) ?? []).filter(isInvoicePayable);
+    if (payable.length === 0) {
+      toast({ variant: 'destructive', title: 'No open invoices', description: 'Send an invoice before recording a payment.' });
+      return;
+    }
+    const selectedIds = payable.map((i) => i.id);
+    const defaultCents = focusInvoice
+      ? invoiceRemainingCents(focusInvoice)
+      : payable.reduce((sum, i) => sum + invoiceRemainingCents(i), 0);
+    setPayAccount(account);
+    setPaySelectedIds(selectedIds);
+    setPaymentAmount(defaultCents > 0 ? (defaultCents / 100).toFixed(2) : '');
     setPaymentMethod('check');
     setPaymentNote('');
     setPayOpen(true);
+    if (defaultCents > 0) {
+      const allocs = autoAllocatePayment(invoices, defaultCents, new Set(selectedIds));
+      const map: Record<string, string> = {};
+      for (const row of allocs) {
+        map[row.invoiceId] = (row.amountCents / 100).toFixed(2);
+      }
+      setPayAllocations(map);
+    } else {
+      setPayAllocations({});
+    }
   };
 
-  const markPaid = async (inv: OfficeInvoice, method: OfficePaymentMethod, note: string) => {
-    if (!firestore) return;
-    try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
-        status: 'paid',
-        paidAt: Date.now(),
-        paymentMethod: method,
-        paymentNote: note.trim() || null,
+  const togglePayInvoice = (invoiceId: string, checked: boolean) => {
+    setPaySelectedIds((prev) => {
+      const next = checked ? [...prev, invoiceId] : prev.filter((id) => id !== invoiceId);
+      redistributePayAllocations(paymentAmount, next);
+      return next;
+    });
+  };
+
+  const recordPayment = async () => {
+    if (!firestore || !payAccount) return;
+    const paymentCents = parseUsdToCents(paymentAmount);
+    if (paymentCents == null || paymentCents <= 0) {
+      toast({ variant: 'destructive', title: 'Enter a valid payment amount.' });
+      return;
+    }
+    const allocations: OfficePaymentAllocation[] = [];
+    for (const invoiceId of paySelectedIds) {
+      const raw = payAllocations[invoiceId]?.trim();
+      if (!raw) continue;
+      const cents = parseUsdToCents(raw);
+      if (cents == null || cents <= 0) continue;
+      allocations.push({ invoiceId, amountCents: cents });
+    }
+    if (allocations.length === 0) {
+      toast({ variant: 'destructive', title: 'Apply the payment to at least one invoice.' });
+      return;
+    }
+    if (sumPaymentAllocations(allocations) !== paymentCents) {
+      toast({
+        variant: 'destructive',
+        title: 'Allocation mismatch',
+        description: 'The per-invoice amounts must add up to the payment total.',
       });
-      const account = accounts.find((a) => a.id === inv.accountId);
-      if (account) {
-        const nextInvoices = invoices.map((i) =>
-          i.id === inv.id ? { ...i, status: 'paid' as const, paidAt: Date.now() } : i,
-        );
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - (inv.amountCents || 0)),
-          status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
-          updatedAt: Date.now(),
+      return;
+    }
+    setBusy(true);
+    try {
+      const batch = writeBatch(firestore);
+      const now = Date.now();
+      const paymentRef = doc(collection(firestore, 'schools', schoolId, 'officePayments'));
+      batch.set(paymentRef, {
+        accountId: payAccount.id,
+        amountCents: paymentCents,
+        method: paymentMethod,
+        note: paymentNote.trim() || null,
+        allocations,
+        createdAt: now,
+      });
+
+      let nextInvoices = [...invoices];
+      for (const alloc of allocations) {
+        const inv = invoices.find((i) => i.id === alloc.invoiceId);
+        if (!inv) continue;
+        const newPaid = invoicePaidCents(inv) + alloc.amountCents;
+        const status = resolveInvoiceStatusAfterPayment(inv, newPaid);
+        batch.update(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
+          paidCents: newPaid,
+          status,
+          paidAt: status === 'paid' ? now : inv.paidAt ?? null,
+          paymentMethod: status === 'paid' ? paymentMethod : inv.paymentMethod ?? null,
+          paymentNote: status === 'paid' && paymentNote.trim() ? paymentNote.trim() : inv.paymentNote ?? null,
         });
+        nextInvoices = nextInvoices.map((i) =>
+          i.id === inv.id
+            ? {
+                ...i,
+                paidCents: newPaid,
+                status,
+                paidAt: status === 'paid' ? now : i.paidAt ?? null,
+                paymentMethod: status === 'paid' ? paymentMethod : i.paymentMethod ?? null,
+              }
+            : i,
+        );
       }
-      toast({ title: 'Payment recorded' });
+
+      batch.update(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', payAccount.id), {
+        balanceCents: accountBalanceFromInvoices(payAccount.id, nextInvoices),
+        status: billingStatusForAccount(payAccount.id, nextInvoices, payAccount.status),
+        updatedAt: now,
+      });
+
+      await batch.commit();
+      toast({
+        title: 'Payment recorded',
+        description:
+          allocations.length > 1
+            ? `${formatCents(paymentCents)} applied across ${allocations.length} invoices.`
+            : `${formatCents(paymentCents)} applied.`,
+      });
       setPayOpen(false);
-      setPayTarget(null);
+      setPayAccount(null);
+      setPaymentAmount('');
+      setPaySelectedIds([]);
+      setPayAllocations({});
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update failed', description: (e as Error).message });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -588,12 +726,13 @@ export function OfficeBillingView({
         account?.familyName ?? '',
         inv.label,
         formatCents(inv.amountCents),
+        formatCents(invoiceRemainingCents(inv)),
         inv.dueDate,
         inv.status,
         isInvoiceOverdue(inv) ? 'yes' : 'no',
       ]);
     }
-    downloadCsv(`billing-${schoolId}.csv`, ['Account', 'Description', 'Amount', 'Due', 'Status', 'Overdue'], rows);
+    downloadCsv(`billing-${schoolId}.csv`, ['Account', 'Description', 'Amount', 'Remaining', 'Due', 'Status', 'Overdue'], rows);
     toast({
       title: 'Exported',
       description:
@@ -617,8 +756,9 @@ export function OfficeBillingView({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Family accounts and invoices live in the office pillar only. Record check, cash, or transfer payments here;
-          online card payments (Stripe) can be added later.
+          Family accounts and invoices live in the office pillar only. Record partial payments, split one check across
+          multiple invoices, and track check, cash, or transfer payments here; online card payments (Stripe) can be added
+          later.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="rounded-xl gap-2" onClick={exportBillingCsv} disabled={invoices.length === 0}>
@@ -738,6 +878,16 @@ export function OfficeBillingView({
                       variant="outline"
                       size="sm"
                       className="h-8 rounded-lg text-xs"
+                      onClick={() => openRecordPayment(account)}
+                      disabled={(acctInvoices.filter(isInvoicePayable).length ?? 0) === 0}
+                    >
+                      Record payment
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs"
                       onClick={() => openNewInvoice(account.id)}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
@@ -770,6 +920,12 @@ export function OfficeBillingView({
                       <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span>
                           {inv.label} · due {inv.dueDate} · {formatCents(inv.amountCents)}
+                          {invoicePaidCents(inv) > 0 && inv.status !== 'paid' ? (
+                            <span className="text-muted-foreground">
+                              {' '}
+                              · {formatCents(invoiceRemainingCents(inv))} due
+                            </span>
+                          ) : null}
                         </span>
                         <span className="flex items-center gap-2">
                           {isInvoiceOverdue(inv) ? (
@@ -782,6 +938,8 @@ export function OfficeBillingView({
                               'rounded-full px-2 py-0.5 text-xs font-semibold uppercase',
                               inv.status === 'paid'
                                 ? 'bg-emerald-100 text-emerald-800'
+                                : inv.status === 'partial'
+                                  ? 'bg-sky-100 text-sky-900'
                                 : inv.status === 'sent'
                                   ? 'bg-amber-100 text-amber-900'
                                   : 'bg-slate-100 text-slate-600',
@@ -800,7 +958,7 @@ export function OfficeBillingView({
                               Send
                             </Button>
                           ) : null}
-                          {inv.status !== 'paid' && inv.status !== 'void' ? (
+                          {isInvoicePayable(inv) ? (
                             <>
                               {isInvoiceOverdue(inv) && account.contactEmail?.trim() ? (
                                 <Button asChild type="button" size="sm" variant="outline" className="h-7 rounded-lg gap-1">
@@ -809,7 +967,7 @@ export function OfficeBillingView({
                                       email: account.contactEmail.trim(),
                                       familyName: account.familyName,
                                       invoiceLabel: inv.label,
-                                      amountCents: inv.amountCents,
+                                      amountCents: invoiceRemainingCents(inv),
                                       dueDate: inv.dueDate,
                                     })}
                                   >
@@ -818,7 +976,7 @@ export function OfficeBillingView({
                                   </a>
                                 </Button>
                               ) : null}
-                              {inv.status === 'sent' ? (
+                              {inv.status === 'sent' || inv.status === 'partial' ? (
                                 <>
                                   <Button
                                     type="button"
@@ -859,7 +1017,7 @@ export function OfficeBillingView({
                               >
                                 <Copy className="h-3 w-3" />
                               </Button>
-                              {inv.status === 'draft' || inv.status === 'sent' ? (
+                              {inv.status === 'draft' || inv.status === 'sent' || inv.status === 'partial' ? (
                                 <Button
                                   type="button"
                                   size="sm"
@@ -876,7 +1034,7 @@ export function OfficeBillingView({
                                 size="sm"
                                 variant="outline"
                                 className="h-7 rounded-lg"
-                                onClick={() => openRecordPayment(inv)}
+                                onClick={() => openRecordPayment(account, inv)}
                               >
                                 Record payment
                               </Button>
@@ -955,14 +1113,17 @@ export function OfficeBillingView({
                     return (studentLabelById.get(s.id) ?? '').toLowerCase().includes(q);
                   })
                   .map((s) => (
-                  <label key={s.id} className="flex items-center gap-2 text-sm">
+                  <label
+                    key={s.id}
+                    className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 cursor-pointer hover:bg-muted/40"
+                  >
                     <input
                       type="checkbox"
                       checked={selectedStudentIds.includes(s.id)}
                       onChange={() => toggleStudent(s.id)}
                       className="h-4 w-4 accent-teal-700"
                     />
-                    {studentLabelById.get(s.id)}
+                    <span className="flex-1">{studentLabelById.get(s.id)}</span>
                   </label>
                   ))}
               </div>
@@ -979,17 +1140,97 @@ export function OfficeBillingView({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={payOpen} onOpenChange={setPayOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
+      <Dialog
+        open={payOpen}
+        onOpenChange={(open) => {
+          setPayOpen(open);
+          if (!open) {
+            setPayAccount(null);
+            setPaymentAmount('');
+            setPaySelectedIds([]);
+            setPayAllocations({});
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle>Record payment</DialogTitle>
           </DialogHeader>
-          {payTarget ? (
+          {payAccount ? (
             <p className="text-sm text-muted-foreground">
-              {payTarget.label} · {formatCents(payTarget.amountCents)}
+              {payAccount.familyName} · balance {formatCents(payAccount.balanceCents || 0)}
             </p>
           ) : null}
           <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Payment amount (USD)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPaymentAmount(next);
+                  redistributePayAllocations(next, paySelectedIds);
+                }}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>Apply to invoices</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 rounded-lg text-xs"
+                  onClick={() => redistributePayAllocations(paymentAmount, paySelectedIds)}
+                >
+                  Fill oldest first
+                </Button>
+              </div>
+              <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border p-2">
+                {(payAccount ? (invoicesByAccount.get(payAccount.id) ?? []).filter(isInvoicePayable) : []).map(
+                  (inv) => (
+                    <div key={inv.id} className="flex flex-wrap items-center gap-2 rounded-lg px-2 py-1.5">
+                      <Checkbox
+                        checked={paySelectedIds.includes(inv.id)}
+                        onCheckedChange={(checked) => togglePayInvoice(inv.id, checked === true)}
+                        aria-label={`Apply payment to ${inv.label}`}
+                      />
+                      <div className="min-w-0 flex-1 text-sm">
+                        <p className="truncate font-medium">{inv.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Due {inv.dueDate} · {formatCents(invoiceRemainingCents(inv))} remaining
+                        </p>
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        disabled={!paySelectedIds.includes(inv.id)}
+                        value={payAllocations[inv.id] ?? ''}
+                        onChange={(e) =>
+                          setPayAllocations((prev) => ({ ...prev, [inv.id]: e.target.value }))
+                        }
+                        className="h-8 w-24 rounded-lg text-sm"
+                        aria-label={`Amount for ${inv.label}`}
+                      />
+                    </div>
+                  ),
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Allocated:{' '}
+                {formatCents(
+                  Object.entries(payAllocations)
+                    .filter(([id]) => paySelectedIds.includes(id))
+                    .reduce((sum, [, raw]) => sum + (parseUsdToCents(raw) ?? 0), 0),
+                )}{' '}
+                of {formatCents(parseUsdToCents(paymentAmount) ?? 0)}
+              </p>
+            </div>
             <div className="space-y-2">
               <Label>Payment method</Label>
               <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as OfficePaymentMethod)}>
@@ -1019,11 +1260,8 @@ export function OfficeBillingView({
             <Button variant="outline" onClick={() => setPayOpen(false)}>
               Cancel
             </Button>
-            <Button
-              disabled={busy || !payTarget}
-              onClick={() => payTarget && void markPaid(payTarget, paymentMethod, paymentNote)}
-            >
-              Mark paid
+            <Button disabled={busy || !payAccount} onClick={() => void recordPayment()}>
+              Record payment
             </Button>
           </DialogFooter>
         </DialogContent>

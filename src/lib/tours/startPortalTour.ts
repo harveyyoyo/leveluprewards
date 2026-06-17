@@ -26,6 +26,17 @@ export function isPortalTourLaunchArea(areaId: string): boolean {
   return areaId in PORTAL_AREA_TO_TOUR;
 }
 
+const PORTAL_TOUR_LABEL: Record<PortalTourId, string> = {
+  admin: 'Admin Tour',
+  teacher: 'Teacher Tour',
+  student: 'Student Tour',
+};
+
+export function portalTourLabelForArea(areaId: string): string | undefined {
+  const tourId = portalTourIdForArea(areaId);
+  return tourId ? PORTAL_TOUR_LABEL[tourId] : undefined;
+}
+
 export function clearPortalTourProgress(tourId: PortalTourId): void {
   if (typeof window === 'undefined') return;
   window.localStorage.removeItem(`arcade_tour_progress_${tourId}`);

@@ -39,18 +39,21 @@ export function useAdminGooglePasscodeBypass({
     setIsAutoLoggingIn(true);
     try {
       // ID token can briefly omit Google identities right after popup/redirect link.
-      await refreshGoogleIdToken(user);
-      let result = await loginSchoolAdmin(login, user, sid, '');
-      if (!result.ok) {
+      const maxAttempts = 3;
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
         await refreshGoogleIdToken(user);
-        result = await loginSchoolAdmin(login, user, sid, '');
+        const result = await loginSchoolAdmin(login, user, sid, '');
+        if (result.ok) {
+          onSuccess?.();
+          return true;
+        }
+        if (attempt < maxAttempts - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+        } else {
+          onError?.(result.message);
+        }
       }
-      if (!result.ok) {
-        onError?.(result.message);
-        return false;
-      }
-      onSuccess?.();
-      return true;
+      return false;
     } finally {
       setIsAutoLoggingIn(false);
     }

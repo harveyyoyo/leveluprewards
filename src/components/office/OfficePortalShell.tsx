@@ -17,6 +17,7 @@ import {
   OFFICE_MAIN_ZOOM,
   OFFICE_SIDEBAR_PANE_CLASS,
 } from '@/lib/office/officeTheme';
+import { OfficeEntityNavProvider } from '@/components/office/OfficeEntityNavProvider';
 
 function getInitials(name: string | null | undefined): string {
   if (!name?.trim()) return '?';
@@ -200,7 +201,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             </div>
           </header>
           <main className="flex-1 py-4 sm:py-6">
-            <div className={cn(OFFICE_CONTENT_PANE_CLASS, 'w-full px-4 sm:px-6')}>{children}</div>
+            <div className={cn(OFFICE_CONTENT_PANE_CLASS, 'w-full px-4 sm:px-6')}>
+              <OfficeEntityNavProvider schoolId={schoolId}>{children}</OfficeEntityNavProvider>
+            </div>
           </main>
         </div>
         </div>

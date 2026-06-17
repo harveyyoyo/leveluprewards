@@ -176,9 +176,23 @@ export function canonicalOfficeRedirectUrl(
   if (parts[1].toLowerCase() !== 'office') return null;
 
   const publicTail = parts.slice(2).join('/');
-  const publicPath = publicTail
-    ? `/${school.toLowerCase()}/office/${publicTail}`
-    : `/${school.toLowerCase()}/office`;
+  const devOrigin = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
+  let devOriginUrl: string | null = null;
+  if (devOrigin) {
+    try {
+      devOriginUrl = new URL(/^https?:\/\//i.test(devOrigin) ? devOrigin : `http://${devOrigin}`).origin;
+    } catch {
+      devOriginUrl = null;
+    }
+  }
+  const usesOfficeAppRoutes = !!devOriginUrl && targetOrigin === devOriginUrl;
+  const publicPath = usesOfficeAppRoutes
+    ? publicTail
+      ? `/${school.toLowerCase()}/office/${publicTail}`
+      : `/${school.toLowerCase()}/office`
+    : publicTail
+      ? `/${school.toLowerCase()}/${publicTail}`
+      : `/${school.toLowerCase()}`;
   const target = new URL(`${targetOrigin}${publicPath}`);
   target.search = search || '';
   return target;
@@ -192,6 +206,13 @@ export function officeHostRedirectPath(pathname: string): string | null {
   // Rewards portal routes do not belong on the office subdomain.
   if (parts.length >= 2 && isSchoolIdSegment(parts[0]) && parts[1].toLowerCase() === 'portal') {
     return `/${parts[0].toLowerCase()}`;
+  }
+
+  // Legacy /{school}/office/… bookmarks on office host → clean public path.
+  if (parts.length >= 2 && isSchoolIdSegment(parts[0]) && parts[1].toLowerCase() === 'office') {
+    const school = parts[0].toLowerCase();
+    const tail = parts.slice(2);
+    return tail.length ? `/${school}/${tail.join('/')}` : `/${school}`;
   }
 
   return null;

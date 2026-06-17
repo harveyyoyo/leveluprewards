@@ -173,6 +173,8 @@ export interface StudentTheme {
   fontStyle?: 'normal' | 'italic';
   /** Optional font weight override. */
   fontWeight?: number;
+  /** Per-student ID card scan format. When set, overrides the school-wide branding default. */
+  idCardUseQr?: boolean;
 }
 
 export interface Student {
@@ -284,6 +286,8 @@ export interface Coupon {
   allowedTeacherIds?: string[];
   /** Human-readable redemption limits for printing on the coupon (set when generated). */
   redemptionPrintNote?: string;
+  /** When true, coupon can be redeemed repeatedly (demo sample coupon from kiosk settings). */
+  reusableSample?: boolean;
 }
 
 /**

@@ -12,7 +12,7 @@ export const studentTourSteps: IntroStep[] = [
   {
     id: 'student-manual-login',
     title: 'Manual Entry',
-    body: 'Tap Manual Entry, type 100 (the test student ID), then tap Identify Student.',
+    body: 'Tap Manual Entry, type 100 (John Doe), or use Try sample, then tap Identify Student.',
     onRoute: '/student',
     target: 'kiosk-login-type-tab',
     requireTarget: true,
@@ -20,8 +20,8 @@ export const studentTourSteps: IntroStep[] = [
   },
   {
     id: 'student-test-id',
-    title: 'Test Student',
-    body: 'Enter 100 in the field, then tap Identify Student to log in as the test student.',
+    title: 'John Doe (sample)',
+    body: 'Enter 100 or tap Try sample: John Doe, then tap Identify Student to log in.',
     onRoute: '/student',
     target: 'kiosk-login-id',
     requireTarget: true,
@@ -34,7 +34,7 @@ export const studentTourSteps: IntroStep[] = [
     onRoute: '/student',
     target: 'kiosk-redeem',
     advanceOnTarget: 'kiosk-redeem',
-    navigateHint: 'Log in as the test student (ID 100) to see this screen.',
+    navigateHint: 'Log in as John Doe (ID 100) to see this screen.',
   },
   {
     id: 'student-finish',

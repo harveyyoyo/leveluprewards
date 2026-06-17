@@ -10,13 +10,12 @@ export const PRODUCT_PILLAR_KEYS = [
   'payAttendance',
   'payLibrary',
   'payHomework',
-  'payOffice',
 ] as const;
 
 export type ProductPillarKey = (typeof PRODUCT_PILLAR_KEYS)[number];
 
 /**
- * When false, homework pillar UI and runtime gates stay off until the product ships.
+ * When false, Home pillar UI and runtime gates stay off until the product ships.
  * Settings may still store payHomework for early-access schools once this is true.
  */
 export const HOMEWORK_PILLAR_LIVE = false;
@@ -25,12 +24,30 @@ export const PRODUCT_PILLAR_LABELS: Record<ProductPillarKey, string> = {
   payClassroom: 'Classroom Management',
   payAttendance: 'Attendance',
   payLibrary: 'Library',
-  payHomework: 'Homework',
-  payOffice: 'School Office',
+  payHomework: 'Home',
 };
+
+/** Standalone products — always linked from settings, not subscription pillars. */
+export const SUPPLEMENTARY_PRODUCTS = [
+  {
+    id: 'office',
+    label: 'School Office',
+    description: 'Grades & billing — separate office roster (not shared with rewards).',
+  },
+  {
+    id: 'sss',
+    label: 'Student Special Services',
+    description:
+      'Spreadsheet student roster — providers, contacts, and family info (separate from office & rewards).',
+  },
+] as const;
 
 export type PillarSettings = Partial<Record<ProductPillarKey, boolean>> & {
   payRewards?: boolean;
+  /** @deprecated Legacy flag — office is always available. */
+  payOffice?: boolean;
+  /** @deprecated Legacy flag — SSS is always available. */
+  paySss?: boolean;
 };
 
 export type ProductPillarAccess = Partial<Record<ProductPillarKey, boolean>>;
@@ -50,7 +67,7 @@ export function hasPillarAccess(
   return access?.[pillar] !== false;
 }
 
-/** Pillars default to on when unset (except School Office and Homework, which are opt-in). */
+/** Pillars default to on when unset (except Home, which is opt-in). */
 export function isPillarOn(
   settings: PillarSettings | null | undefined,
   pillar: ProductPillarKey,
@@ -58,7 +75,7 @@ export function isPillarOn(
 ): boolean {
   if (!hasPillarAccess(access, pillar)) return false;
   if (pillar === 'payHomework' && !HOMEWORK_PILLAR_LIVE) return false;
-  if (pillar === 'payOffice' || pillar === 'payHomework') {
+  if (pillar === 'payHomework') {
     return settings?.[pillar] === true;
   }
   return settings?.[pillar] !== false;
@@ -77,9 +94,30 @@ export function applyPillarAccessToSettings<T extends PillarSettings>(
   return next;
 }
 
-/** School Office pillar — grades & billing portal (off unless explicitly enabled). */
-export function isOfficePillarOn(settings: PillarSettings | null | undefined): boolean {
-  return isPillarOn(settings, 'payOffice');
+/** School Office — always available (not a subscription pillar). */
+export function isOfficePillarOn(_settings?: PillarSettings | null): boolean {
+  return true;
+}
+
+/** Student Special Services — always available (not a subscription pillar). */
+export function isSssPillarOn(
+  _settings?: PillarSettings | null,
+  _access?: ProductPillarAccess | null,
+): boolean {
+  return true;
+}
+
+/** @deprecated Office and SSS are no longer pillars; always returns true. */
+export function isSchoolPillarEnabled(
+  _pillar: 'payOffice' | 'paySss',
+  _options?: {
+    appSettings?: PillarSettings | null;
+    publicAppSettings?: PillarSettings | null;
+    pillarAccess?: ProductPillarAccess | null;
+    publicPillarAccess?: ProductPillarAccess | null;
+  },
+): boolean {
+  return true;
 }
 
 /**

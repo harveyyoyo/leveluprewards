@@ -34,7 +34,7 @@ export const CAPTURE_PATHS = {
   portalHub: clip("portal/portal-hub-overview.mp4"),
   marketingKioskReady: screenshot("kiosk-system-ready.png"),
   marketingKioskWelcome: screenshot("kiosk-welcome.png"),
-  marketingKioskRewardsShop: screenshot("kiosk-rewards-shop.png"),
+  marketingKioskRewardsShop: screenshot("live-admin-rewards-full.png"),
   marketingStudentHomePortal: screenshot("student-home-portal.png"),
   marketingAdminIdCard: screenshot("admin-id-card.png"),
   marketingPortalHub: screenshot("portal-hub.png"),

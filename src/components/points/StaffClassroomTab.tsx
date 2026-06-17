@@ -10,10 +10,12 @@ import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import {
   buildClassroomSections,
   CLASSROOM_TAB_LABEL,
+  type ClassroomTabSection,
 } from '@/lib/classroom/classroomTabSections';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn, isParentPortalOn } from '@/lib/productPillars';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
+import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
 import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
 import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
@@ -41,6 +43,9 @@ export type StaffClassroomTabProps = {
   className?: string;
   manualAccentColor?: string;
   manualBudgetOptions?: React.ComponentProps<typeof ManualPointsAwardDialog>['budgetOptions'];
+  initialSection?: ClassroomTabSection;
+  canEditRaffleSettings?: boolean;
+  raffleOperatorName?: string;
 };
 
 export function StaffClassroomTab({
@@ -55,6 +60,9 @@ export function StaffClassroomTab({
   className,
   manualAccentColor: _manualAccentColor,
   manualBudgetOptions: _manualBudgetOptions,
+  initialSection,
+  canEditRaffleSettings = true,
+  raffleOperatorName,
 }: StaffClassroomTabProps) {
   const deferredStudents = useDeferredValue(students ?? []);
   const { loginState } = useAppContext();
@@ -88,7 +96,10 @@ export function StaffClassroomTab({
   );
   const seatingScope = managerTeacherId ?? (isAdminVariant ? 'admin' : 'staff');
 
-  const sections = useMemo(() => buildClassroomSections(), []);
+  const sections = useMemo(
+    () => buildClassroomSections(settings, isAdminVariant ? 'admin' : 'teacher'),
+    [settings, isAdminVariant],
+  );
 
   const classAwardsLiveContent = useMemo(
     () => (
@@ -139,6 +150,25 @@ export function StaffClassroomTab({
     [schoolId, seatingScope, sortedClasses, deferredStudents],
   );
 
+  const raffleContent = useMemo(
+    () => (
+      <AdminRaffleTab
+        embedded
+        schoolId={schoolId}
+        students={deferredStudents}
+        classes={sortedClasses}
+        canEditSettings={canEditRaffleSettings}
+        operatorName={raffleOperatorName}
+      />
+    ),
+    [schoolId, deferredStudents, sortedClasses, canEditRaffleSettings, raffleOperatorName],
+  );
+
+  const defaultSection = useMemo(() => {
+    if (initialSection && sections.includes(initialSection)) return initialSection;
+    return 'seating';
+  }, [initialSection, sections]);
+
   const headerAction = useMemo(
     () => <ClassroomManagementHelpWizard sections={sections} />,
     [sections],
@@ -171,12 +201,13 @@ export function StaffClassroomTab({
   return (
     <ClassroomTabLayout
       className={className}
-      defaultSection="seating"
+      defaultSection={defaultSection}
       sections={sections}
       headerAction={headerAction}
       seatingContent={classAwardsLiveContent}
       behaviorContent={behaviorContent}
       roomDisplayContent={roomDisplayContent}
+      raffleContent={raffleContent}
     />
   );
 }
