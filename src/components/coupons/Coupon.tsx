@@ -8,6 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
+import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 import { useSchoolDisplayName } from '@/hooks/useSchoolDisplayName';
 
 function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
@@ -160,6 +161,7 @@ export function Coupon({
           </div>
         )}
       </div>
+      <PrintLevelUpDomain className="text-[0.26em] font-semibold uppercase tracking-[0.12em] opacity-60 leading-none mt-[0.04em]" />
     </div>
   );
 }

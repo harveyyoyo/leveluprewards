@@ -15,6 +15,8 @@ import "./init";
 
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
+/** Public demo schools on the login page — kiosk may register without prior portal passcode. */
+const PUBLIC_SAMPLE_SCHOOL_IDS = new Set(["schoolabc", "yeshiva"]);
 
 // ========================================================================
 // Auth helpers
@@ -906,6 +908,7 @@ exports.enterSchoolKioskSession = functions.https.onCall(
     requireString(data.schoolId, "schoolId");
 
     const schoolId = String(data.schoolId).trim().toLowerCase();
+    const passcode = typeof data.passcode === "string" ? String(data.passcode).trim() : "";
     const db = admin.firestore();
     const publicSnap = await db.collection("schoolPublic").doc(schoolId).get();
     if (!publicSnap.exists) {
@@ -918,10 +921,27 @@ exports.enterSchoolKioskSession = functions.https.onCall(
       throw new functions.https.HttpsError("permission-denied", "School entry required.");
     }
     if (
-      await schoolAccessPasscodeIsRequired(db, schoolId) &&
+      !PUBLIC_SAMPLE_SCHOOL_IDS.has(schoolId) &&
+      (await schoolAccessPasscodeIsRequired(db, schoolId)) &&
       !(await hasExistingSchoolPortalAccess(schoolId, context.auth!.uid, context))
     ) {
-      throw new functions.https.HttpsError("permission-denied", "School passcode required.");
+      if (!passcode) {
+        throw new functions.https.HttpsError("permission-denied", "School passcode required.");
+      }
+      const schoolSnap = await db.collection("schools").doc(schoolId).get();
+      const schoolData = schoolSnap.data() || {};
+      const legacyExpected = schoolAccessPasscodeFrom(schoolData);
+      const passcodeOk = await verifyPasscodeCredential(
+        schoolId,
+        PASSCODE_SECRET_IDS.schoolAccess,
+        passcode,
+        legacyExpected,
+        { kind: "school", fields: ["schoolAccessPasscode", "passcode"] },
+      );
+      if (!passcodeOk) {
+        throw new functions.https.HttpsError("permission-denied", "Invalid passcode.");
+      }
+      await ensureAnonymousPortalSession(schoolId, context.auth!.uid);
     }
 
     await db

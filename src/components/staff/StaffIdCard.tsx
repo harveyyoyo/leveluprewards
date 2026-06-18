@@ -12,6 +12,7 @@ import {
 import { cn, getContrastColor } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
+import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
 export function StaffIdCard({
@@ -107,6 +108,7 @@ export function StaffIdCard({
             <span className="print-id-app-tagline" style={{ color: mainMutedText }}>
               {appTagline ?? APP_TAGLINE}
             </span>
+            <PrintLevelUpDomain style={{ color: mainMutedText }} />
           </div>
         </div>
         <div className="print-id-school" style={headerStyle}>

@@ -7,16 +7,18 @@ type SchoolRouteParams =
   | { schoolId?: string | string[] | undefined }
   | Promise<{ schoolId?: string | string[] | undefined }>;
 
+import { normalizeSchoolId } from '@/lib/schoolId';
+
 function normalizeSchoolSegment(raw: unknown): string {
-  if (typeof raw !== 'string' || !raw.trim()) return '';
-  return raw.trim();
+  const id = normalizeSchoolId(typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : '');
+  if (!id) notFound();
+  return id;
 }
 
 async function resolvedSchoolParams(params: SchoolRouteParams): Promise<{ schoolId: string }> {
   const p = params instanceof Promise ? await params : params;
-  const id = normalizeSchoolSegment(Array.isArray(p.schoolId) ? p.schoolId[0] : p?.schoolId);
-  if (!id) notFound();
-  return { schoolId: id };
+  const raw = Array.isArray(p.schoolId) ? p.schoolId[0] : p?.schoolId;
+  return { schoolId: normalizeSchoolSegment(raw) };
 }
 
 export async function generateMetadata({ params }: { params: SchoolRouteParams }): Promise<Metadata> {

@@ -22,9 +22,9 @@ function emitChange() {
 }
 
 function readStoredMode(): StaffPortalLayoutMode {
-  if (typeof window === 'undefined') return 'standard';
+  if (typeof window === 'undefined') return 'wide';
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === 'wide' ? 'wide' : 'standard';
+  return stored === 'standard' ? 'standard' : 'wide';
 }
 
 function writeStoredMode(next: StaffPortalLayoutMode) {
@@ -51,7 +51,7 @@ function getSnapshot(): StaffPortalLayoutMode {
 }
 
 function getServerSnapshot(): StaffPortalLayoutMode {
-  return 'standard';
+  return 'wide';
 }
 
 /** Shared staff-portal layout preference (standard centered vs wide full width). */

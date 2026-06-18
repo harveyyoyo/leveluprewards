@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo, Suspense, RefObject } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -19,6 +19,7 @@ import { isCompactDisplayMode } from '@/lib/displayMode';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -80,7 +81,7 @@ import { useStaggeredCardListEntrance } from '@/hooks/useStaggeredCardListEntran
 import { cn, getStudentNickname, getContrastColor } from '@/lib/utils';
 import { ensureContrast, resolveStudentThemeWithSchoolDefault, primaryForegroundFor } from '@/lib/themeContrast';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
-import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { normalizeSchoolId } from '@/lib/schoolId';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeScanCode } from '@/lib/prizes/prizeScanCode';
@@ -205,8 +206,48 @@ function StudentKioskPageFallback() {
   );
 }
 
+function StudentKioskSessionWait({
+  error,
+  onBack,
+}: {
+  error: string | null;
+  onBack: () => void;
+}) {
+  const { settings } = useSettings();
+  const { t } = useTranslation();
+  const animBackdrop = globalAnimatedBackdropActive(settings);
+
+  return (
+    <div
+      className={cn(
+        'min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center',
+        animBackdrop ? 'bg-transparent' : 'bg-background',
+      )}
+    >
+      {error ? (
+        <>
+          <p className="text-sm font-semibold text-destructive">Could not connect this kiosk</p>
+          <p className="max-w-md text-sm text-muted-foreground">{error}</p>
+          <Button type="button" variant="outline" onClick={onBack}>
+            Back to school portal
+          </Button>
+        </>
+      ) : (
+        <>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground font-medium animate-pulse">{t('student.kiosk.loading')}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function StudentLoginPage() {
-  const { loginState, isInitialized, schoolId, login, logout } = useAppContext();
+  const { loginState, isInitialized, schoolId: ctxSchoolId, logout } = useAppContext();
+  const { studentKioskSessionEstablished, studentKioskSessionError } = useAuth();
+  const params = useParams<{ schoolId: string }>();
+  const routeSchoolId = normalizeSchoolId(typeof params.schoolId === 'string' ? params.schoolId : '');
+  const schoolId = normalizeSchoolId(ctxSchoolId) || routeSchoolId;
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -377,12 +418,21 @@ function StudentLoginPage() {
 
   useEffect(() => {
     if (!pendingStudentLogin) return;
+    if (!studentKioskSessionEstablished) return;
+    if (studentKioskSessionError) return;
     onScannerStudent(pendingStudentLogin.id);
     setPendingStudentLogin(null);
     if (schoolId) {
       router.replace(`/${schoolId}/student`, { scroll: false });
     }
-  }, [pendingStudentLogin, onScannerStudent, router, schoolId]);
+  }, [
+    pendingStudentLogin,
+    onScannerStudent,
+    router,
+    schoolId,
+    studentKioskSessionEstablished,
+    studentKioskSessionError,
+  ]);
 
   const handleDashboardReady = useCallback((readyStudentId: string) => {
     if (dashboardReadyStudentRef.current === readyStudentId) {
@@ -437,27 +487,6 @@ function StudentLoginPage() {
     if (loginState !== 'admin') return;
     logout({ staffNavigateTo: 'student' });
   }, [isInitialized, loginState, logout, schoolId]);
-
-  /** School chooser has no kiosk token — upgrade to student session in-place so scanning works (no extra screen). */
-  useEffect(() => {
-    if (!isInitialized || !schoolId) return;
-    if (loginState !== 'school') return;
-    let cancelled = false;
-    void (async () => {
-      const authResult = await login('student', { schoolId });
-      if (cancelled || authResult.ok) return;
-      playSound('error');
-      toast({
-        variant: 'destructive',
-        title: 'Could not start kiosk',
-        description: authResult.message,
-      });
-      router.replace(`/${schoolId}/portal`);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [isInitialized, login, loginState, playSound, router, schoolId, toast]);
 
   useEffect(() => {
     if (!isInitialized || !schoolId) return;
@@ -522,6 +551,15 @@ function StudentLoginPage() {
   }
 
   if (activeStudentId) {
+    if (!studentKioskSessionEstablished || studentKioskSessionError) {
+      return (
+        <StudentKioskSessionWait
+          error={studentKioskSessionError}
+          onBack={() => router.replace(schoolId ? `/${schoolId}/portal` : '/login')}
+        />
+      );
+    }
+
     return (
       <>
         {loginMeta?.source === 'face' && (
@@ -556,9 +594,20 @@ function StudentLoginPage() {
 
   return (
     <ErrorBoundary name="StudentLoginPage">
+      {/* KioskLoginPrizeTeasers is hoisted outside the session-gate conditional so its Firestore
+          listener is never torn down and restarted during the brief kiosk-session establishment
+          window. Rapid subscribe→unsubscribe→resubscribe cycles trigger the Firestore v11
+          "INTERNAL ASSERTION FAILED: Unexpected state" SDK bug with persistent local cache. */}
+      <KioskLoginPrizeTeasers schoolId={schoolId} />
+      {!studentKioskSessionEstablished || studentKioskSessionError ? (
+        <StudentKioskSessionWait
+          error={studentKioskSessionError}
+          onBack={() => router.replace(schoolId ? `/${schoolId}/portal` : '/login')}
+        />
+      ) : (
+      <>
       {/* Single column fills #screen-view so the scanner stays vertically centered in the viewport (not clustered top). */}
       <div className="relative flex w-full flex-1 flex-col min-h-dvh" data-kiosk-snapshot-root>
-        <KioskLoginPrizeTeasers schoolId={schoolId} />
         <TooltipProvider>
           <div
             className={cn(
@@ -591,6 +640,8 @@ function StudentLoginPage() {
           </div>
         )}
       </div>
+      </>
+      )}
     </ErrorBoundary>
   );
 }

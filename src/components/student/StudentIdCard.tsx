@@ -19,6 +19,7 @@ import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import { GoogleFontLoader } from '@/components/themes/GoogleFontLoader';
 
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
+import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 
 
 
@@ -229,6 +230,8 @@ export function StudentIdCard({
             <span className="print-id-app-name">{appName || APP_NAME}</span>
 
             <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>
+
+            <PrintLevelUpDomain />
 
           </div>
 

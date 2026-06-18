@@ -13,6 +13,9 @@ import {
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { isOfficeHostname, isOfficeSchoolScopedPath } from '@/lib/officeRouting';
+import { normalizeSchoolId, studentKioskLoginCredentials } from '@/lib/schoolId';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 
 const ALLOWED = new Set([
   'school',
@@ -158,6 +161,8 @@ function SchoolSessionGateBody({
   const router = useRouter();
   const pathname = usePathname();
   const route = routeSchoolId.trim().toLowerCase();
+  const canAutoEnterPublicKiosk =
+    isPublicSampleSchoolId(route) && isStudentKioskRoute(pathname, route);
 
   const schoolLoginHref = useCallback(
     (options?: { changeSchool?: boolean }) =>
@@ -179,8 +184,8 @@ function SchoolSessionGateBody({
     if (!isInitialized || isUserLoading) return;
 
     if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
-      if (loginState === 'loggedOut' && isStaffSignInLink) {
-        void login('student', { schoolId: route });
+      if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {
+        void login('student', studentKioskLoginCredentials(route));
         return;
       }
       redirectToSchoolLogin();
@@ -189,16 +194,17 @@ function SchoolSessionGateBody({
 
     if (loginState === 'developer') return;
 
-    const sessionSchool = schoolId?.trim().toLowerCase() ?? '';
+    const sessionSchool = normalizeSchoolId(schoolId);
     if (!sessionSchool || sessionSchool !== route) {
       if (loginState === 'school' && sessionSchool && sessionSchool !== route) {
         redirectToSchoolLogin({ changeSchool: true });
         return;
       }
-      // Student / school chooser sessions may restore schoolId shortly after navigation.
-      if (loginState !== 'student' && loginState !== 'school') {
-        redirectToSchoolLogin();
+      if (loginState === 'student' || loginState === 'school') {
+        void login('student', studentKioskLoginCredentials(route));
+        return;
       }
+      redirectToSchoolLogin();
       return;
     }
 
@@ -230,6 +236,7 @@ function SchoolSessionGateBody({
     route,
     router,
     pathname,
+    canAutoEnterPublicKiosk,
     schoolLoginHref,
     redirectToSchoolLogin,
   ]);
@@ -243,7 +250,7 @@ function SchoolSessionGateBody({
   }
 
   if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
-    if (loginState === 'loggedOut' && isStaffSignInLink) {
+    if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {
       return (
         <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
           <div className="animate-pulse font-semibold text-foreground">Loading…</div>
@@ -254,7 +261,7 @@ function SchoolSessionGateBody({
   }
 
   if (loginState !== 'developer') {
-    const sessionSchool = schoolId?.trim().toLowerCase();
+    const sessionSchool = normalizeSchoolId(schoolId);
     if (!sessionSchool || sessionSchool !== route) {
       return (
         <SessionGateLoading

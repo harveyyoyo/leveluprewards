@@ -188,7 +188,8 @@ async function checkSchoolRole(
   return allowed;
 }
 
-async function checkDeveloperAllowlist(idToken: string, uid: string): Promise<boolean> {
+/** Whether `uid` appears in `appConfig/developerAllowlist.uids` (Firestore REST + caller token). */
+export async function isDeveloperAllowlistUid(idToken: string, uid: string): Promise<boolean> {
   const cached = developerUidCache.get(uid);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.allowed;
@@ -332,7 +333,7 @@ export async function verifyBearerSchoolStaff(
   }
 
   const staff = await checkSchoolRole(idToken, verified.uid, sid);
-  const developer = staff ? false : await checkDeveloperAllowlist(idToken, verified.uid);
+  const developer = staff ? false : await isDeveloperAllowlistUid(idToken, verified.uid);
   if (!staff && !developer) {
     return {
       ok: false,
@@ -426,7 +427,7 @@ export async function guardAiRoute(
     schoolId = raw.trim().toLowerCase();
 
     const staff = await checkSchoolRole(idToken, verified.uid, schoolId);
-    const developer = staff ? false : await checkDeveloperAllowlist(idToken, verified.uid);
+    const developer = staff ? false : await isDeveloperAllowlistUid(idToken, verified.uid);
     if (!staff && !developer) {
       return {
         ok: false,
@@ -499,7 +500,7 @@ export async function guardDeveloperRoute(
     return { ok: false, response: jsonError(400, 'Invalid JSON body.') };
   }
 
-  const developer = await checkDeveloperAllowlist(idToken, verified.uid);
+  const developer = await isDeveloperAllowlistUid(idToken, verified.uid);
   if (!developer) {
     return { ok: false, response: jsonError(403, 'Developer access is required.') };
   }
@@ -538,7 +539,7 @@ export async function guardDeveloperAuth(
     return { ok: false, response: res };
   }
 
-  const developer = await checkDeveloperAllowlist(match[1]!, verified.uid);
+  const developer = await isDeveloperAllowlistUid(match[1]!, verified.uid);
   if (!developer) {
     return { ok: false, response: jsonError(403, 'Developer access is required.') };
   }

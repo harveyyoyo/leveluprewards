@@ -53,7 +53,8 @@ export function AdminStudentPortalTab({ schoolId, students }: Props) {
   const appLogoUrl = appConfig?.appLogoUrl ?? null;
 
   const portalUrl = useMemo(() => {
-    if (typeof window === 'undefined' || !schoolId) return `/${schoolId}/student-home`;
+    if (!schoolId) return '/login';
+    if (typeof window === 'undefined') return `/${schoolId}/student-home`;
     return `${window.location.origin}/${schoolId}/student-home`;
   }, [schoolId]);
 

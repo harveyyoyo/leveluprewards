@@ -7,6 +7,9 @@ import { buildSiteContactHref } from '@/lib/siteContact';
 export const APP_NAME = 'LevelUp';
 export const APP_TAGLINE = 'School Rewards System';
 
+/** Public site domain shown on optional printed coupon / ID card attribution. */
+export const APP_SITE_DOMAIN = 'leveluprewards.app';
+
 /** Verified business contact for procurement and school inquiries. */
 export const SITE_CONTACT_EMAIL = 'contact@leveluprewards.app';
 /** @deprecated Use {@link getContactFormHref} in UI instead of mailto links. */

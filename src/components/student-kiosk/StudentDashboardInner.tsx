@@ -90,6 +90,7 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { useFirestoreSyncAlert } from '@/hooks/useFirestoreSyncAlert';
 import { lookupStudentId } from '@/lib/db/lookup';
+import { studentKioskLoginCredentials } from '@/lib/schoolId';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import {
   getStudentSignInThrottleStatus,
@@ -224,7 +225,7 @@ export function StudentDashboardInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges, login } = useAppContext();
   const { show: firestoreSyncAlert } = useFirestoreSyncAlert();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
@@ -254,6 +255,9 @@ export function StudentDashboardInner({
   const isGraphic = settings.graphicMode === 'graphics';
   const animBackdrop = globalAnimatedBackdropActive(settings);
   const signInRecordedRef = useRef(false);
+  const [kioskReconnectKey, setKioskReconnectKey] = useState(0);
+  const [kioskReconnectError, setKioskReconnectError] = useState<string | null>(null);
+  const [kioskReconnecting, setKioskReconnecting] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const hasShownWelcomeRef = useRef<string | null>(null);
   const dismissWelcome = useCallback(() => setShowWelcome(false), []);
@@ -273,8 +277,37 @@ export function StudentDashboardInner({
     signInRecordedRef.current = false;
   }, [studentId]);
 
-  const studentDocRef = useMemoFirebase(() => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null, [firestore, schoolId, studentId]);
-  const { data: student, isLoading: studentLoading } = useDoc<Student>(studentDocRef);
+  const studentDocRef = useMemoFirebase(
+    () => schoolId ? doc(firestore, 'schools', schoolId, 'students', studentId) : null,
+    [firestore, schoolId, studentId, kioskReconnectKey],
+  );
+  const { data: student, isLoading: studentLoading, error: studentError } = useDoc<Student>(studentDocRef, {
+    reportPermissionErrors: false,
+  });
+
+  const reconnectKiosk = useCallback(async () => {
+    if (!schoolId || kioskReconnecting) return;
+    setKioskReconnecting(true);
+    setKioskReconnectError(null);
+    try {
+      const result = await login('student', studentKioskLoginCredentials(schoolId));
+      if (!result.ok) {
+        setKioskReconnectError(result.message);
+        return;
+      }
+      setKioskReconnectKey((value) => value + 1);
+    } catch (err) {
+      setKioskReconnectError(
+        getReadableErrorMessage(err, 'Could not reconnect this kiosk. Check your connection and try again.'),
+      );
+    } finally {
+      setKioskReconnecting(false);
+    }
+  }, [kioskReconnecting, login, schoolId]);
+
+  useEffect(() => {
+    setKioskReconnectError(null);
+  }, [schoolId, studentId]);
 
   const houseDocRef = useMemoFirebase(
     () =>
@@ -286,7 +319,7 @@ export function StudentDashboardInner({
         : null,
     [firestore, schoolId, student?.houseId, settings.enableHouses, settings.showHouseOnStudentKiosk],
   );
-  const { data: studentHouse } = useDoc<House>(houseDocRef);
+  const { data: studentHouse } = useDoc<House>(houseDocRef, { reportPermissionErrors: false });
 
   usePrizeAiFunAudienceCacheReset(schoolId, studentId, student);
 
@@ -306,7 +339,9 @@ export function StudentDashboardInner({
   const birthdayToday = !!student?.birthday && student.birthday.substring(5) === todayInSchoolTz.md;
 
   const prizesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null, [firestore, schoolId]);
-  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery);
+  const { data: prizes, isLoading: prizesLoading } = useCollection<Prize>(prizesQuery, {
+    reportPermissionErrors: false,
+  });
   const rewardPrizes = useMemo(
     () => withUnifiedAiFunPrize(prizes, {
       enablePrizeAiSurprise: kioskAiFunInShop,
@@ -316,13 +351,13 @@ export function StudentDashboardInner({
   );
 
   const classesQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null, [firestore, schoolId]);
-  const { data: classes } = useCollection<Class>(classesQuery);
+  const { data: classes } = useCollection<Class>(classesQuery, { reportPermissionErrors: false });
 
   const categoriesQuery = useMemoFirebase(
     () => (schoolId && settings.payLibrary !== false ? collection(firestore, 'schools', schoolId, 'categories') : null),
     [firestore, schoolId, settings.payLibrary],
   );
-  const { data: categories } = useCollection<Category>(categoriesQuery);
+  const { data: categories } = useCollection<Category>(categoriesQuery, { reportPermissionErrors: false });
 
   const libraryPolicy = useMemo(
     () => getLibraryPolicyFromSettings(settings, categories),
@@ -339,7 +374,9 @@ export function StudentDashboardInner({
         : null,
     [firestore, schoolId, studentId, settings.payLibrary],
   );
-  const { data: libraryCheckoutsRaw } = useCollection<LibraryItem>(libraryCheckoutsQuery);
+  const { data: libraryCheckoutsRaw } = useCollection<LibraryItem>(libraryCheckoutsQuery, {
+    reportPermissionErrors: false,
+  });
   const myLibraryBooks = useMemo(
     () => (libraryCheckoutsRaw ?? []).filter((i) => i.status === 'checked_out'),
     [libraryCheckoutsRaw],
@@ -360,7 +397,9 @@ export function StudentDashboardInner({
         : null,
     [firestore, schoolId, studentId, settings.payLibrary, libraryKioskCheckoutOn],
   );
-  const { data: libraryActivities } = useCollection<HistoryItem>(libraryActivitiesQuery);
+  const { data: libraryActivities } = useCollection<HistoryItem>(libraryActivitiesQuery, {
+    reportPermissionErrors: false,
+  });
   const libraryBooksRead = useMemo(
     () => listStudentLibraryBooksRead(libraryActivities),
     [libraryActivities],
@@ -1408,6 +1447,34 @@ export function StudentDashboardInner({
     },
     [rewardPrizes, student, kioskAiFunInShop, categories],
   );
+
+  if ((studentError || kioskReconnecting) && !studentLoading) {
+    return (
+      <div
+        className={cn(
+          'min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center',
+          animBackdrop ? 'bg-transparent' : 'bg-background',
+        )}
+      >
+        {kioskReconnecting ? (
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+        ) : null}
+        <p className="text-sm font-semibold text-destructive">
+          {kioskReconnecting ? 'Reconnecting kiosk' : 'Could not load this student'}
+        </p>
+        <p className="max-w-md text-sm text-muted-foreground">
+          {kioskReconnectError ||
+            'This kiosk could not confirm its school connection. Try reconnecting, or go back to the school portal and open Student Check-in again.'}
+        </p>
+        <Button type="button" variant="outline" onClick={onDone}>
+          Back to scanner
+        </Button>
+        <Button type="button" variant="secondary" onClick={reconnectKiosk} disabled={kioskReconnecting}>
+          {kioskReconnecting ? 'Reconnecting...' : 'Reconnect kiosk'}
+        </Button>
+      </div>
+    );
+  }
 
   if (studentLoading || !student || !schoolId) {
     return (

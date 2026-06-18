@@ -4,6 +4,7 @@ import { useAppContext } from "@/components/AppProvider";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { normalizeSchoolId, studentKioskLoginCredentials } from '@/lib/schoolId';
 
 const ALLOWED = [
   'student',
@@ -23,13 +24,14 @@ export function SchoolGate({ children }: { children: React.ReactNode }) {
   const { schoolId, isInitialized, loginState, login } = useAppContext();
   const router = useRouter();
   const params = useParams<{ schoolId?: string }>();
-  const routeSchoolId =
-    typeof params?.schoolId === 'string' ? params.schoolId.trim().toLowerCase() : '';
+  const routeSchoolId = normalizeSchoolId(
+    typeof params?.schoolId === 'string' ? params.schoolId : '',
+  );
 
   useEffect(() => {
-    if (!isInitialized || schoolId || !routeSchoolId) return;
+    if (!isInitialized || normalizeSchoolId(schoolId) || !routeSchoolId) return;
     if (loginState !== 'student' && loginState !== 'school') return;
-    void login('student', { schoolId: routeSchoolId });
+    void login('student', studentKioskLoginCredentials(routeSchoolId));
   }, [isInitialized, schoolId, routeSchoolId, loginState, login]);
 
   useEffect(() => {

@@ -166,6 +166,8 @@ interface Settings {
     /** When on, include the student's theme emoji (or school default theme) on printed prize redeem vouchers. */
     enableStudentEmojiOnPrizeTickets: boolean;
     enableColorPrinting: boolean;
+    /** When on, printed coupons and ID cards include a small leveluprewards.app attribution line. */
+    showLevelUpDomainOnPrints?: boolean;
     /** Optional staff reminder shown near student ID / bulk card print (browser cannot pick a printer). */
     printerReminderIdCards?: string;
     /** Saved ID card print setups (printer family + paper) for Admin → Students. */
@@ -689,6 +691,7 @@ const defaultSettings: Settings = {
     enableVendingMachine: false,
     enableStudentEmojiOnPrizeTickets: false,
     enableColorPrinting: true,
+    showLevelUpDomainOnPrints: false,
     printerReminderIdCards: '',
     idCardPrintProfiles: [],
     lastIdCardPrintProfileId: undefined,

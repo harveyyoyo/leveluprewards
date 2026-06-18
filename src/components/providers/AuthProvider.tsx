@@ -18,6 +18,7 @@ import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { loginErr, loginOk, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+import { normalizeSchoolId } from '@/lib/schoolId';
 import { APP_NAME } from '@/lib/appBranding';
 import {
     syncFirebaseSessionCookie,
@@ -34,6 +35,8 @@ import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
+import { establishStudentKioskSessionClient } from '@/lib/auth/enterKioskSessionClient';
+import { studentKioskLoginCredentials } from '@/lib/schoolId';
 import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 import { verifyAdminPasscodeLogin } from '@/lib/adminPasscodeLogin';
@@ -200,7 +203,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [schoolId, setSchoolId] = useState<string | null>(null);
     const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
     const [isKioskLocked, setIsKioskLocked] = useState(false);
-    const [studentKioskSessionEstablished, setStudentKioskSessionEstablished] = useState(true);
+    const [studentKioskSessionEstablished, setStudentKioskSessionEstablished] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        return !isStudentKioskRoute(window.location.pathname, normalizeSchoolId(localStorage.getItem('schoolId')));
+    });
     const [studentKioskSessionError, setStudentKioskSessionError] = useState<string | null>(null);
 
     const [isAdmin, setIsAdmin] = useState(false);
@@ -214,12 +220,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [userName, setUserName] = useState<string | null>(null);
     const [userId, setUserId] = useState<string | null>(null);
     const [teacherDocId, setTeacherDocId] = useState<string | null>(null);
+    const kioskSessionRequestRef = useRef<string | null>(null);
 
     const { isUserLoading, functions, firestore, auth } = useFirebase();
     const router = useRouter();
 
+    useEffect(() => {
+        if (schoolId == null) return;
+        const normalized = normalizeSchoolId(schoolId);
+        if (!normalized) {
+            setSchoolId(null);
+            localStorage.removeItem('schoolId');
+            return;
+        }
+        if (normalized !== schoolId) {
+            setSchoolId(normalized);
+            localStorage.setItem('schoolId', normalized);
+        }
+    }, [schoolId]);
+
     const returnToSchoolSession = useCallback((sid: string) => {
-        setSchoolId(sid);
+        const normalized = normalizeSchoolId(sid);
+        if (!normalized) return;
+        setSchoolId(normalized);
         setLoginState('school');
         setIsAdmin(false);
         setIsTeacher(false);
@@ -232,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserName(null);
         setTeacherDocId(null);
         localStorage.setItem('loginState', 'school');
-        localStorage.setItem('schoolId', sid);
+        localStorage.setItem('schoolId', normalized);
         localStorage.removeItem('userName');
         localStorage.removeItem('teacherDocId');
     }, []);
@@ -243,26 +266,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return (params.get('kioskEntry') || params.get('entry') || '').trim();
     }, []);
 
-    const establishStudentKioskSession = useCallback(async (sid: string) => {
-        // Without a network path, Cloud Functions cannot register this device for badge lookup.
-        // Still allow the student session so the kiosk UI works offline (lookups will fail until online).
+    const establishStudentKioskSession = useCallback(async (sid: string, passcode?: string) => {
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
             return;
         }
-        try {
-            const enter = httpsCallable(functions, 'enterSchoolKioskSession');
-            await enter({ schoolId: sid });
-            return;
-        } catch (err) {
-            if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-                return;
-            }
-            const code = getEntryCodeFromUrl();
-            if (!code) throw err;
-            const verify = httpsCallable(functions, 'verifySchoolEntryCode');
-            await verify({ schoolId: sid, code });
+        if (!auth || !functions) {
+            throw new Error('Firebase is not ready yet.');
         }
-    }, [functions, getEntryCodeFromUrl]);
+        await establishStudentKioskSessionClient(auth, functions, sid, {
+            passcode,
+            getEntryCodeFromUrl,
+        });
+    }, [auth, functions, getEntryCodeFromUrl]);
 
     const logout = useCallback((options?: LogoutOptions) => {
         setIsAdmin(false);
@@ -438,7 +453,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const restore = async () => {
             try {
             const savedState = localStorage.getItem('loginState') as LoginState | null;
-            const savedSchoolId = localStorage.getItem('schoolId');
+            const rawSavedSchoolId = localStorage.getItem('schoolId');
+            const savedSchoolId = normalizeSchoolId(rawSavedSchoolId);
+            if (rawSavedSchoolId && !savedSchoolId) {
+                localStorage.removeItem('schoolId');
+            }
             const savedName = localStorage.getItem('userName');
             const savedTeacherDocId = localStorage.getItem('teacherDocId');
             const savedDeveloperSupportSession = localStorage.getItem(DEVELOPER_SUPPORT_SESSION_KEY) === 'true';
@@ -775,14 +794,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setStudentKioskSessionError(null);
             return;
         }
-        setStudentKioskSessionEstablished(false);
-        setStudentKioskSessionError(null);
         if (!isInitialized || !schoolId || !functions || !auth.currentUser) {
+            // Not ready yet — don't pre-announce false; wait until all deps are available
+            // to avoid a false→true→false oscillation that unmounts Firestore listeners
+            // and triggers the Firestore v11 "INTERNAL ASSERTION FAILED" SDK bug.
             return;
         }
+        if (studentKioskSessionEstablished) {
+            return;
+        }
+        setStudentKioskSessionEstablished(false);
+        setStudentKioskSessionError(null);
         let cancelled = false;
         const sid = schoolId.trim().toLowerCase();
-        void establishStudentKioskSession(sid)
+        const requestKey = `${sid}:${auth.currentUser.uid}`;
+        if (kioskSessionRequestRef.current === requestKey) {
+            return;
+        }
+        kioskSessionRequestRef.current = requestKey;
+        const kioskPasscode = studentKioskLoginCredentials(sid).passcode;
+        void establishStudentKioskSession(sid, kioskPasscode)
             .then(() => {
                 if (!cancelled) {
                     setStudentKioskSessionEstablished(true);
@@ -797,11 +828,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         getReadableErrorMessage(err, 'Could not prepare this device for student check-in.'),
                     );
                 }
+            })
+            .finally(() => {
+                if (kioskSessionRequestRef.current === requestKey) {
+                    kioskSessionRequestRef.current = null;
+                }
             });
         return () => {
             cancelled = true;
         };
-    }, [isInitialized, loginState, schoolId, functions, auth?.currentUser, establishStudentKioskSession]);
+    }, [isInitialized, loginState, schoolId, functions, auth?.currentUser, establishStudentKioskSession, studentKioskSessionEstablished]);
 
     useEffect(() => {
         // This effect is not necessary anymore as the Cloud Function will handle role provisioning on login.
@@ -991,6 +1027,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     );
                 }
                 try {
+                    setStudentKioskSessionEstablished(false);
+                    setStudentKioskSessionError(null);
                     if (credentials.passcode && credentials.passcode.trim()) {
                         const verifyResult = await verifySchoolAccessViaApi(
                             auth,
@@ -1002,9 +1040,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             return loginErr(verifyResult.message);
                         }
                     }
-                    await establishStudentKioskSession(lowerSchoolId);
+                    await establishStudentKioskSession(lowerSchoolId, credentials.passcode?.trim());
+                    setStudentKioskSessionEstablished(true);
+                    setStudentKioskSessionError(null);
                 } catch (e) {
                     console.error('Student login: could not create kiosk session', e);
+                    setStudentKioskSessionEstablished(false);
+                    setStudentKioskSessionError(
+                        getReadableErrorMessage(e, 'Could not open student check-in. Check your connection and try again.'),
+                    );
                     return loginErr(
                         getReadableErrorMessage(e, 'Could not open student check-in. Check your connection and try again.'),
                     );

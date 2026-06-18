@@ -23,6 +23,7 @@ import {
     schoolPublicDocRef,
     schoolPublicPatchFromSchoolUpdates,
 } from '@/lib/schoolPublic';
+import { authFetch } from '@/lib/authFetch';
 import { httpsCallable } from "firebase/functions";
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -495,6 +496,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
 
     const updateSchool = useCallback(async (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => {
         if (!firestore) return;
+        if (!auth.currentUser) {
+            const message = 'No Firebase session. Sign in at /developer and try again.';
+            playSound('error');
+            toast({ variant: 'destructive', title: 'School update failed', description: message });
+            throw new Error(message);
+        }
         try {
             const hasPasscodePatch =
                 updates.passcode !== undefined ||
@@ -502,9 +509,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 updates.adminPasscode !== undefined;
 
             if (hasPasscodePatch) {
-                const response = await fetch(`/api/school/${encodeURIComponent(schoolId)}/passcodes`, {
+                const response = await authFetch(auth, `/api/school/${encodeURIComponent(schoolId)}/passcodes`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify({
                         passcode: updates.passcode,
@@ -514,7 +520,12 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 });
                 if (!response.ok) {
                     const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-                    throw new Error(payload?.error || 'Passcode update failed.');
+                    const apiError = payload?.error || 'Passcode update failed.';
+                    const message =
+                        response.status === 403 && apiError === 'Admin access required.'
+                            ? 'Developer sign-in could not authorize this save. Sign out, sign in again at /developer with your allowed Google account (or local dev passcode), then try again.'
+                            : apiError;
+                    throw new Error(message);
                 }
             }
 
@@ -530,8 +541,9 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
             playSound('error');
             toast({ variant: 'destructive', title: "School update failed", description: (e as Error).message });
+            throw e;
         }
-    }, [firestore, playSound, toast]);
+    }, [firestore, auth, playSound, toast]);
 
     const devSyncSchoolPublicIndex = useCallback(async () => {
         if (!firestore || !auth.currentUser) return;

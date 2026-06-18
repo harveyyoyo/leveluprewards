@@ -1,681 +1,421 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LevelUp Rewards — Teacher Companion</title>
     <style>
-      @page {
-        size: letter;
-        margin: 0.5in;
-      }
-
+      @page { size: letter; margin: 0.5in; }
       :root {
-        --bg: #0b1220;
-        --panel: rgba(255, 255, 255, 0.05);
-        --text: #eaf0ff;
-        --muted: rgba(234, 240, 255, 0.78);
-        --hair: rgba(234, 240, 255, 0.15);
-        --accent: #7c3aed;
-        --accent2: #06b6d4;
-        --success: #22c55e;
-        --black: #0a0a0a;
+        --bg: #0b1220; --panel: rgba(255,255,255,0.05); --text: #eaf0ff;
+        --muted: rgba(234,240,255,0.78); --hair: rgba(234,240,255,0.15);
+        --accent: #7c3aed; --accent2: #06b6d4; --success: #22c55e;
+        --black: #0a0a0a; --strong: #ffffff; --heading-color: var(--accent2);
+        --featured-border: var(--accent2); --featured-bg: rgba(255,255,255,0.08);
       }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        font-family:
-          ui-sans-serif,
-          system-ui,
-          -apple-system,
-          Segoe UI,
-          Roboto,
-          Helvetica,
-          Arial,
-          "Apple Color Emoji",
-          "Segoe UI Emoji";
-        color: var(--text);
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      /* SCREEN STYLES (Default / Desktop Immersive View) */
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"; color: var(--text); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       @media screen {
-        body {
-          background-color: #03060f;
-          background-image: 
-            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
-            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          gap: 32px;
-          padding: 48px 16px;
-          min-height: 100vh;
-          overflow-y: auto;
-        }
-
-        .page {
-          width: 7.5in;
-          height: 10in;
-          border-radius: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .page:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.8), 0 0 60px rgba(99, 102, 241, 0.15);
-          border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        /* Interactive Print Banner */
-        .print-banner {
-          width: 100%;
-          max-width: 7.5in;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 16px;
-          padding: 16px 24px;
-          backdrop-filter: blur(16px);
-          box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
-          margin-bottom: 8px;
-        }
-
-        .banner-content {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 20px;
-        }
-
-        .banner-brand {
-          display: flex;
-          align-items: center;
-          gap: 16px;
-        }
-
-        .banner-logo {
-          font-size: 24px;
-          background: linear-gradient(135deg, var(--accent), var(--accent2));
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          filter: drop-shadow(0 0 8px rgba(124, 58, 237, 0.5));
-        }
-
-        .banner-text {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .banner-title {
-          font-size: 15px;
-          font-weight: 800;
-          color: #ffffff;
-          letter-spacing: -0.01em;
-        }
-
-        .banner-desc {
-          font-size: 12px;
-          color: rgba(234, 240, 255, 0.65);
-        }
-
-        .banner-actions {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .banner-btn {
-          font-family: inherit;
-          font-size: 13px;
-          font-weight: 700;
-          padding: 10px 18px;
-          border-radius: 12px;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .primary-btn {
-          background: linear-gradient(135deg, #7c3aed, #06b6d4);
-          color: #ffffff;
-          box-shadow: 0 8px 20px -6px rgba(124, 58, 237, 0.5);
-        }
-
-        .primary-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 12px 24px -4px rgba(124, 58, 237, 0.6);
-          filter: brightness(1.1);
-        }
-
-        .secondary-btn {
-          background: rgba(255, 255, 255, 0.06);
-          color: rgba(234, 240, 255, 0.85);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .secondary-btn:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #ffffff;
-        }
+        body { background-color: #03060f; display: flex !important; flex-direction: row !important; align-items: stretch !important; justify-content: flex-start !important; min-height: 100vh; margin: 0; padding: 0; overflow: hidden; }
+        .control-sidebar { width: 330px; min-width: 330px; background: #090e1a; border-right: 1px solid rgba(255,255,255,0.08); padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; height: 100vh; overflow-y: auto; color: #eaf0ff; box-sizing: border-box; font-size: 13px; }
+        .sidebar-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 16px; }
+        .sidebar-logo { font-size: 24px; }
+        .sidebar-title-text h2 { font-size: 16px !important; font-weight: 800; color: #fff !important; margin: 0 !important; letter-spacing: -0.01em; text-transform: none !important; }
+        .sidebar-subtitle-text { font-size: 11px; color: rgba(234,240,255,0.5); margin-top: 2px; }
+        .sidebar-section { display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px; }
+        .sidebar-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(234,240,255,0.5); font-weight: 700; }
+        .sidebar-input, .sidebar-select { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 12px; color: #fff; font-family: inherit; font-size: 12.5px; width: 100%; outline: none; box-sizing: border-box; }
+        .sidebar-select option { background-color: #090e1a; color: #ffffff; }
+        .sidebar-input:focus, .sidebar-select:focus { border-color: var(--accent2); box-shadow: 0 0 0 2px rgba(6,182,212,0.2); }
+        .sidebar-checkbox-group { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+        .sidebar-checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(234,240,255,0.85); cursor: pointer; }
+        .sidebar-checkbox-label input { cursor: pointer; }
+        .sidebar-btn { background: linear-gradient(135deg,var(--accent),var(--accent2)); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 8px; text-shadow: 0 1px 2px rgba(0,0,0,0.2); box-shadow: 0 4px 12px rgba(6,182,212,0.15); }
+        .sidebar-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(6,182,212,0.25); }
+        .sidebar-btn:active { transform: translateY(0); }
+        .proposal-main { flex: 1; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; gap: 32px; box-sizing: border-box; background-image: radial-gradient(at 0% 0%,rgba(124,58,237,0.1) 0px,transparent 50%),radial-gradient(at 100% 100%,rgba(6,182,212,0.08) 0px,transparent 50%); }
+        .page { width: 7.5in; height: 10in; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 30px 60px -15px rgba(0,0,0,0.7),0 0 50px rgba(99,102,241,0.1); transition: transform 0.3s ease,box-shadow 0.3s ease; }
+        .page:hover { transform: translateY(-2px); box-shadow: 0 35px 70px -10px rgba(0,0,0,0.8),0 0 60px rgba(99,102,241,0.15); border-color: rgba(255,255,255,0.15); }
+        .card:hover { border-color: rgba(255,255,255,0.18) !important; }
+        .kpi:hover { transform: translateY(-1px); }
+        @media (max-width:1023px) { body { flex-direction: column !important; overflow-y: auto !important; } .control-sidebar { width: 100%; min-width: 0; height: auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); } .proposal-main { height: auto; overflow-y: visible; } }
       }
-
-      /* PRINT STYLES (Overrides for PDF/Printer) */
-      @media print {
-        .no-print {
-          display: none !important;
-        }
-        body {
-          background: transparent !important;
-          padding: 0 !important;
-          margin: 0 !important;
-          display: block !important;
-        }
-        .page {
-          width: 7.5in !important;
-          height: 10in !important;
-          margin: 0 !important;
-          border: none !important;
-          box-shadow: none !important;
-          border-radius: 0 !important;
-          page-break-after: always;
-        }
-      }
-
-      /* FLYER CONTAINER CORE STYLES */
-      .page {
-        position: relative;
-        overflow: hidden;
-        background:
-          radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%),
-          radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%),
-          linear-gradient(180deg, #081022, #070b16 70%, #05060c);
-        padding: 24px;
-      }
-
-      .topbar {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-        padding-bottom: 14px;
-        border-bottom: 1px solid var(--hair);
-      }
-
-      .brand {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 10px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        font-size: 11px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.9);
-        width: max-content;
-      }
-
-      .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 3px;
-        background: linear-gradient(135deg, var(--accent), var(--accent2));
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
-      }
-
-      h1 {
-        margin: 0;
-        font-size: 34px;
-        line-height: 1.05;
-        letter-spacing: -0.02em;
-        background: linear-gradient(135deg, #ffffff 60%, rgba(234, 240, 255, 0.7));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-
-      .subtitle {
-        margin: 0;
-        font-size: 14px;
-        line-height: 1.4;
-        color: var(--muted);
-        max-width: 48ch;
-      }
-
-      .right-meta {
-        text-align: right;
-        font-size: 11.5px;
-        line-height: 1.5;
-        color: rgba(234, 240, 255, 0.8);
-        white-space: nowrap;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: 1.2fr 0.95fr;
-        gap: 16px;
-        margin-top: 16px;
-      }
-
-      .card {
-        background: var(--panel);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 16px;
-        backdrop-filter: blur(10px);
-        transition: border-color 0.2s ease, background-color 0.2s ease;
-      }
-
-      @media screen {
-        .card:hover {
-          border-color: rgba(255, 255, 255, 0.18);
-          background-color: rgba(255, 255, 255, 0.07);
-        }
-      }
-
-      h2 {
-        margin: 0 0 10px 0;
-        font-size: 13.5px;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--accent2);
-        font-weight: 700;
-      }
-
-      ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-
-      li {
-        margin: 8px 0;
-        color: rgba(234, 240, 255, 0.88);
-        line-height: 1.35;
-        font-size: 13px;
-        position: relative;
-        padding-left: 20px;
-      }
-
-      li::before {
-        content: "✦";
-        position: absolute;
-        left: 0;
-        top: 0;
-        color: var(--accent2);
-        font-size: 11px;
-        line-height: 18px;
-        text-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
-      }
-
-      li strong {
-        color: #ffffff;
-      }
-
-      .callout {
-        border-left: 3px solid var(--accent);
-        padding: 10px 12px 10px 14px;
-        background: rgba(124, 58, 237, 0.1);
-        border-radius: 12px;
-      }
-
-      .callout p {
-        margin: 0;
-        color: rgba(234, 240, 255, 0.92);
-        font-size: 13px;
-        line-height: 1.4;
-      }
-
-      .kpis {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-top: 12px;
-      }
-
-      .kpi {
-        padding: 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        background: rgba(255, 255, 255, 0.04);
-        transition: transform 0.2s ease;
-      }
-
-      @media screen {
-        .kpi:hover {
-          transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.07);
-          border-color: rgba(255, 255, 255, 0.15);
-        }
-      }
-
-      .kpi .label {
-        font-size: 9.5px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: rgba(234, 240, 255, 0.6);
-      }
-
-      .kpi .value {
-        margin-top: 4px;
-        font-size: 12px;
-        line-height: 1.25;
-        color: rgba(255, 255, 255, 0.95);
-        font-weight: 600;
-      }
-
-      .footer {
-        position: absolute;
-        left: 24px;
-        right: 24px;
-        bottom: 18px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-end;
-        gap: 16px;
-        padding-top: 12px;
-        border-top: 1px solid var(--hair);
-        color: rgba(234, 240, 255, 0.75);
-        font-size: 11px;
-        line-height: 1.4;
-      }
-
-      .footer strong {
-        color: rgba(255, 255, 255, 0.95);
-      }
-
-      .pill {
-        display: inline-flex;
-        align-items: center;
-        padding: 5px 10px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.05);
-        font-size: 10px;
-        color: rgba(234, 240, 255, 0.85);
-        white-space: nowrap;
-      }
-
-      .pill.sole {
-        border-color: rgba(34, 197, 94, 0.35);
-        background: rgba(34, 197, 94, 0.12);
-      }
-
-      .muted {
-        color: rgba(234, 240, 255, 0.65);
-      }
+      @media print { .no-print { display: none !important; } body { background: transparent !important; padding: 0 !important; margin: 0 !important; display: block !important; } .page { width: 7.5in !important; height: 10in !important; margin: 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; page-break-after: always; } }
+      .page { position: relative; overflow: hidden; background: radial-gradient(1200px 700px at 10% 10%,rgba(124,58,237,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(6,182,212,0.25),transparent 55%),linear-gradient(180deg,#081022,#070b16 70%,#05060c); padding: 24px; }
+      .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--hair); }
+      .brand { display: flex; flex-direction: column; gap: 6px; }
+      .badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 999px; background: var(--panel); border: 1px solid var(--hair); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); width: max-content; }
+      .dot { width: 10px; height: 10px; border-radius: 3px; background: linear-gradient(135deg,var(--accent),var(--accent2)); box-shadow: 0 0 0 2px var(--black); }
+      h1 { margin: 0; font-size: 34px; line-height: 1.05; letter-spacing: -0.02em; background: linear-gradient(135deg,var(--strong) 60%,var(--text)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+      .subtitle { margin: 0; font-size: 14px; line-height: 1.4; color: var(--muted); max-width: 48ch; }
+      .right-meta { text-align: right; font-size: 11.5px; line-height: 1.5; color: var(--text); white-space: nowrap; }
+      .grid { display: grid; grid-template-columns: 1.2fr 0.95fr; gap: 16px; margin-top: 16px; }
+      .card { background: var(--panel); border: 1px solid var(--hair); border-radius: 16px; padding: 16px; backdrop-filter: blur(10px); transition: border-color 0.2s ease,background-color 0.2s ease; }
+      .card.featured { border: 2px solid var(--featured-border) !important; background: var(--featured-bg) !important; box-shadow: 0 0 24px rgba(6,182,212,0.15); }
+      h2 { margin: 0 0 10px 0; font-size: 13.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--heading-color); font-weight: 700; }
+      ul { list-style: none; margin: 0; padding: 0; }
+      li { margin: 8px 0; color: var(--text); line-height: 1.35; font-size: 13px; position: relative; padding-left: 20px; }
+      li::before { content: "✦"; position: absolute; left: 0; top: 0; color: var(--heading-color); font-size: 11px; line-height: 18px; text-shadow: 0 0 8px rgba(6,182,212,0.6); }
+      li strong { color: var(--strong); }
+      .callout { border-left: 3px solid var(--accent); padding: 10px 12px 10px 14px; background: var(--panel); border-radius: 12px; }
+      .callout p { margin: 0; color: var(--text); font-size: 13px; line-height: 1.4; }
+      .kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-top: 12px; }
+      .kpi { padding: 10px; border-radius: 12px; border: 1px solid var(--hair); background: var(--panel); transition: transform 0.2s ease; }
+      .kpi .label { font-size: 9.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+      .kpi .value { margin-top: 4px; font-size: 12px; line-height: 1.25; color: var(--strong); font-weight: 600; }
+      .footer { position: absolute; left: 24px; right: 24px; bottom: 18px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; padding-top: 12px; border-top: 1px solid var(--hair); color: var(--muted); font-size: 11px; line-height: 1.4; }
+      .footer strong { color: var(--strong); }
+      .pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--hair); background: var(--panel); font-size: 10px; color: var(--text); white-space: nowrap; }
+      .muted { color: var(--muted); }
     </style>
-    <style id="interactive-list-link-style">
-      .interactive-list-link {
-        position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 10000;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 9px 13px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(3, 6, 15, 0.86);
-        color: #eaf0ff;
-        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
-        letter-spacing: 0.01em;
-        text-decoration: none;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(14px);
-      }
-
-      .interactive-list-link:hover {
-        border-color: rgba(34, 211, 238, 0.5);
-        color: #ffffff;
-      }
-
-      html.embed .interactive-list-link {
-        display: none !important;
-      }
-
-      @media print {
-        .interactive-list-link {
-          display: none !important;
-        }
-      }
-    </style>
-    <script>
-      try {
-        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
-      } catch (_) {}
-    </script>  </head>
+  </head>
   <body>
-    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
-    <!-- PRINT BANNER (Screen Only) -->
-    <div class="print-banner no-print" role="banner">
-      <div class="banner-content">
-        <div class="banner-brand">
-          <span class="banner-logo">⚡</span>
-          <div class="banner-text">
-            <span class="banner-title">Interactive PBIS Teacher Companion Flyer</span>
-            <span class="banner-desc">Full preview of the double-sided color brochure. Ready to print or download.</span>
-          </div>
+    <!-- CONTROL SIDEBAR (Screen Only) -->
+    <div class="control-sidebar no-print" role="complementary">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">&#127822;</span>
+        <div class="sidebar-title-text">
+          <h2>LevelUp Flyer Editor</h2>
+          <p class="sidebar-subtitle-text">Customize Teacher Companion</p>
         </div>
-        <div class="banner-actions">
-          <button class="banner-btn secondary-btn" onclick="window.close()">Close Preview</button>
-          <button class="banner-btn primary-btn" onclick="window.print()">
-            🖨️ Print Flyer (Ctrl+P)
-          </button>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="theme-select">Visual Theme</label>
+        <select id="theme-select" class="sidebar-select" onchange="updateTheme()">
+          <option value="navy" selected>Bold Navy (Default)</option>
+          <option value="green">Emerald Forest</option>
+          <option value="sunset">Purple Sunset</option>
+          <option value="cyber">Classic Neon</option>
+          <option value="crimson">Crimson Culture</option>
+          <option value="gold">Quest Gold</option>
+          <option value="aurora">Winter Aurora</option>
+          <option value="sapphire">Royal Sapphire</option>
+          <option value="obsidian">Grayscale Midnight</option>
+          <option value="sand">Sahara Sand</option>
+          <option value="light">Classic Light (Ink-Saver)</option>
+          <option value="light-sky">Light Sky Breeze</option>
+          <option value="light-mint">Light Mint Garden</option>
+          <option value="light-amber">Light Amber Sun</option>
+        </select>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="prepared-mode">Prepared For</label>
+        <select id="prepared-mode" class="sidebar-select" onchange="updatePreparedMode()">
+          <option value="generic">Generic (Default)</option>
+          <option value="school">This School</option>
+        </select>
+        <div id="school-name-section" style="display:none;margin-top:8px;">
+          <label class="sidebar-label" for="school-name-input">School Name</label>
+          <input type="text" id="school-name-input" value="St. Jude Academy" class="sidebar-input" oninput="updateSchoolName()" />
         </div>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label">Contact Details</label>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input type="text" id="company-input" value="LevelUp EdTech Enterprises LLC" class="sidebar-input" placeholder="Company Name" oninput="syncContactInfo()" />
+          <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Contact Email" oninput="syncContactInfo()" />
+          <input type="text" id="street-input" value="" class="sidebar-input" placeholder="Street Address" oninput="syncContactInfo()" />
+          <input type="text" id="city-input" value="" class="sidebar-input" placeholder="City, State" oninput="syncContactInfo()" />
+          <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website URL" oninput="syncContactInfo()" />
+          <button type="button" class="sidebar-btn" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);margin-top:4px;" onclick="loadDefaultContactInfo()">Load Default Contact Info</button>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label">Pages to Print</label>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="show-page-2" onchange="togglePage2()" /> Include Page 2 (Back)</label>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label">Toggle Sections</label>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-classroom" checked onchange="toggleCard('card-classroom',this.checked)" /> Classroom Toolkit</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-raffles" checked onchange="toggleCard('card-raffles',this.checked)" /> Raffles &amp; Rewards</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-setup" checked onchange="toggleCard('section-setup-teacher',this.checked)" /> Instant Setup</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-routines" checked onchange="toggleCard('card-routines',this.checked)" /> Classroom Routines</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-climate" checked onchange="toggleCard('section-climate',this.checked)" /> Climate Section</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-coupons" checked onchange="toggleCard('card-coupons',this.checked)" /> Coupons Section</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-ai" checked onchange="toggleCard('section-ai-support',this.checked)" /> AI Support Section</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-img-achievements" checked onchange="toggleCard('card-img-achievements',this.checked)" /> Achievement Screenshot</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-img-kiosk" checked onchange="toggleCard('card-img-kiosk',this.checked)" /> Kiosk Screenshot</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" id="toggle-img-portal" checked onchange="toggleCard('card-img-portal',this.checked)" /> Portal Mockup</label>
+        </div>
+      </div>
+      <div style="margin-top:auto;padding-top:10px;">
+        <button class="sidebar-btn" onclick="window.print()">&#128424; Print / Save PDF</button>
       </div>
     </div>
 
-    <!-- PAGE 1: FRONT -->
-    <section class="page" aria-label="Front of flyer">
-      <header class="topbar">
-        <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> Teacher Companion</div>
-          <h1>LevelUp Rewards</h1>
-          <p class="subtitle">
-            A classroom-ready PBIS rewards companion that automates point tracking, simplifies redemptions, and builds positive energy—so teachers spend less time bookkeeping and more time teaching.
-          </p>
-        </div>
-        <div class="right-meta">
-          <div><strong>LevelUp EdTech Enterprises LLC</strong></div>
-          <div>Address available on request</div>
-          <div class="muted">Address available on request</div>
-          <div class="muted">
-            <a href="#" style="color: var(--accent2); text-decoration: none;"
-              >Contact details available on request</a
-            >
-          </div>
-        </div>
-      </header>
+    <!-- MAIN PREVIEW PANEL -->
+    <div class="proposal-main">
+      <div id="flyer-pages" style="display:flex;flex-direction:column;gap:32px;align-items:center;">
 
-      <div class="grid">
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <h2>Classroom magic (PBIS points & routines)</h2>
-            <ul>
-              <li><strong>1-Tap positive reinforcement</strong> on your phone or desktop. Award points in under 5 seconds for behavior, effort, or respect.</li>
-              <li><strong>Spreadsheet-free records</strong> automatically tracked. No more losing track of paper tickets, tokens, or manual tallies.</li>
-              <li><strong>Student-led balance checks</strong> at hallway kiosks. Students scan their physical barcodes to view progress, badges, and prizes.</li>
-              <li><strong>Engaging classroom tools</strong> including live standings, streaks, and random raffle drawings to build healthy classroom momentum.</li>
-            </ul>
+        <!-- PAGE 1: FRONT -->
+        <section class="page" id="page-1-section" aria-label="Front of flyer">
+          <header class="topbar">
+            <div class="brand">
+              <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Teacher Companion</div>
+              <h1 contenteditable="true">LevelUp Rewards</h1>
+              <p class="subtitle" contenteditable="true">A classroom-ready PBIS rewards companion that automates point tracking, simplifies redemptions, and builds positive energy&#8212;so teachers spend less time bookkeeping and more time teaching.</p>
+            </div>
+            <div class="right-meta">
+              <div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>
+              <div><span contenteditable="true" class="sync-address-city"></span></div>
+              <div class="muted"><span contenteditable="true" class="sync-address-street"></span></div>
+              <div class="muted"><a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Teacher%20Inquiry" class="sync-email-link" style="color:var(--heading-color);text-decoration:none;"><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a></div>
+            </div>
+          </header>
+
+          <div class="grid">
+            <div class="card featured" id="card-classroom" style="display:flex;flex-direction:column;justify-content:space-between;">
+              <div>
+                <h2 contenteditable="true">Your Classroom Toolkit</h2>
+                <ul>
+                  <li contenteditable="true"><strong>1-Tap positive reinforcement</strong> on your phone or desktop. Award points in under 5 seconds for behavior, effort, or respect.</li>
+                  <li contenteditable="true"><strong>Spreadsheet-free records</strong> automatically tracked. No more losing track of paper tickets, tokens, or manual tallies.</li>
+                  <li contenteditable="true"><strong>NFC card &amp; barcode login</strong> &#8212; students tap their NFC card or scan a barcode at hallway kiosks to view progress, badges, and prizes instantly.</li>
+                  <li contenteditable="true"><strong>Engaging classroom tools</strong> including live standings, achievement streaks, and raffle drawings to build healthy classroom momentum.</li>
+                </ul>
+              </div>
+              <div style="margin-top:10px;margin-bottom:10px;">
+                <div class="callout">
+                  <p contenteditable="true"><strong>Designed for busy classrooms:</strong> less physical clutter, zero point-counting chores&#8212;and a rewards system that students are genuinely excited about.</p>
+                </div>
+              </div>
+              <div class="kpis" aria-label="Classroom outcomes">
+                <div class="kpi"><div class="label" contenteditable="true">Award time</div><div class="value" contenteditable="true">Under 5 seconds per student</div></div>
+                <div class="kpi"><div class="label" contenteditable="true">Setup</div><div class="value" contenteditable="true">1-click roster import</div></div>
+                <div class="kpi"><div class="label" contenteditable="true">Bookkeeping</div><div class="value" contenteditable="true">100% automated cloud sync</div></div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="card" id="card-img-achievements" style="padding:0;overflow:hidden;border:1px solid rgba(255,255,255,0.15);border-radius:16px;height:180px;position:relative;">
+                <img src="../public/marketing/screenshots/student-home-portal.png" style="width:100%;height:100%;object-fit:cover;" alt="LevelUp Student Portal" />
+                <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:6px;font-size:10px;border:1px solid rgba(255,255,255,0.15);color:#fff;">Student Badges &amp; Streaks</div>
+              </div>
+              <div class="card" id="card-raffles" style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
+                <div>
+                  <h2 contenteditable="true">Raffles &amp; Rewards</h2>
+                  <ul style="margin-bottom:10px;">
+                    <li contenteditable="true"><strong>Digital classroom coupons</strong> &#8212; students purchase passes (Homework Pass, Seat Swaps) directly from their portal using points.</li>
+                    <li contenteditable="true"><strong>Healthy competition</strong> &#8212; sort students into houses to build team camaraderie and positive peer motivation.</li>
+                  </ul>
+                </div>
+                <div id="section-setup-teacher">
+                  <h2 contenteditable="true">Instant Setup</h2>
+                  <ul><li contenteditable="true"><strong>Zero complex hardware</strong> &#8212; kiosks are ready to roll out on any school network with standard wall outlets and Wi-Fi.</li></ul>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div style="margin-top: 10px; margin-bottom: 10px;">
-            <div class="callout">
-              <p>
-                <strong>Designed for busy classrooms:</strong> less physical clutter, zero point-counting chores—and an exciting rewards program that students genuinely trust.
-              </p>
+          <footer class="footer">
+            <div><strong contenteditable="true">More teaching, less counting.</strong> <span contenteditable="true">Built for NYC classroom teachers who want a simple, fair incentives program.</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;" id="pills-page-1">
+              <span class="pill" contenteditable="true">Classroom portal</span>
+              <span class="pill" contenteditable="true">1-Tap awarding</span>
+              <span class="pill" contenteditable="true">NFC + Barcode login</span>
+              <span class="pill" contenteditable="true">Zero paperwork</span>
+            </div>
+          </footer>
+        </section>
+
+        <!-- PAGE 2: BACK -->
+        <section class="page" id="page-2-section" aria-label="Back of flyer" style="display:none;">
+          <header class="topbar">
+            <div class="brand">
+              <div class="badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Classroom routines</div>
+              <h1 contenteditable="true">Routines that build momentum</h1>
+              <p class="subtitle" contenteditable="true">How to weave LevelUp into your daily instructional rhythm without adding a single minute of extra work or point bookkeeping.</p>
+            </div>
+            <div class="right-meta">
+              <div><strong contenteditable="true">LevelUp Rewards</strong></div>
+              <div class="muted" contenteditable="true">Teacher playbook one-pager</div>
+            </div>
+          </header>
+
+          <div class="grid">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="card" id="card-routines">
+                <h2 contenteditable="true">The Quickstart Routine</h2>
+                <ul>
+                  <li contenteditable="true"><strong>1 &middot; Name the win:</strong> Call out the specific positive behavior in the moment (e.g., &ldquo;Excellent focus during reading!&rdquo;).</li>
+                  <li contenteditable="true"><strong>2 &middot; Tap to award:</strong> Open your portal on your phone or desktop and add points in one tap, or scan a student barcode.</li>
+                  <li contenteditable="true"><strong>3 &middot; Watch them level up:</strong> Students tap NFC cards or scan barcodes at hallway kiosks to see points pop and milestones unlock.</li>
+                  <li contenteditable="true"><strong>4 &middot; Celebrate together:</strong> Host raffle spins or let students trade points for exciting store prizes.</li>
+                </ul>
+                <div style="height:12px;"></div>
+                <div id="section-climate">
+                  <h2 contenteditable="true">For Classroom Climate</h2>
+                  <ul>
+                    <li contenteditable="true"><strong>Daily focus</strong> &#8212; give students a clear, measurable goal to work toward every week.</li>
+                    <li contenteditable="true"><strong>Positive transitions</strong> &#8212; project house standings or top students during transition blocks to keep energy positive.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="card" id="card-img-kiosk" style="padding:0;overflow:hidden;border:1px solid rgba(255,255,255,0.15);border-radius:16px;height:130px;position:relative;">
+                <img src="../public/marketing/screenshots/kiosk-rewards-shop.png" style="width:100%;height:100%;object-fit:cover;" alt="LevelUp Kiosk" />
+                <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:6px;font-size:10px;border:1px solid rgba(255,255,255,0.15);color:#fff;">Student Arcade &amp; PBIS Hub</div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="card" id="card-img-portal" style="padding:6px;overflow:hidden;border:1px solid var(--hair);border-radius:16px;background:var(--panel);">
+                <div style="font-size:9px;color:var(--muted);padding:2px 6px 6px 6px;border-bottom:1px solid var(--hair);margin-bottom:6px;display:flex;align-items:center;gap:4px;">
+                  <span style="width:5px;height:5px;border-radius:50%;background:#ef4444;display:inline-block;"></span>
+                  <span style="width:5px;height:5px;border-radius:50%;background:#eab308;display:inline-block;"></span>
+                  <span style="width:5px;height:5px;border-radius:50%;background:#22c55e;display:inline-block;"></span>
+                  <span style="margin-left:4px;font-family:monospace;" id="sync-portal-url-display">leveluprewards.app/staff/teacher</span>
+                </div>
+                <img src="../public/marketing/screenshots/admin-stats.png" style="width:100%;border-radius:10px;display:block;border:1px solid rgba(255,255,255,0.08);" alt="LevelUp Teacher Dashboard" />
+              </div>
+              <div class="card" id="card-coupons" style="flex:1;display:flex;flex-direction:column;justify-content:space-between;">
+                <div>
+                  <h2 contenteditable="true">Automated Store &amp; Coupons</h2>
+                  <ul style="margin-bottom:10px;">
+                    <li contenteditable="true"><strong>Instant checkouts</strong> &#8212; hallway kiosks handle checkout logs automatically&#8212;no clipboard sheets or messy counters.</li>
+                    <li contenteditable="true"><strong>Custom coupon codes</strong> &#8212; print single-use paper coupon codes that credit student balances instantly.</li>
+                    <li contenteditable="true"><strong>School-wide unity</strong> &#8212; work with other teachers so students meet the same consistent culture system in every room.</li>
+                  </ul>
+                </div>
+                <div id="section-ai-support">
+                  <h2 contenteditable="true">Built-in AI Support</h2>
+                  <ul><li contenteditable="true"><strong>In-app AI help assistant</strong> &#8212; get instant answers to any question about LevelUp features directly inside the app.</li></ul>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="kpis" aria-label="Classroom outcomes">
-            <div class="kpi">
-              <div class="label">Awarding time</div>
-              <div class="value">Under 5 seconds per student</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Setup</div>
-              <div class="value">1-click roster import</div>
-            </div>
-            <div class="kpi">
-              <div class="label">Bookkeeping</div>
-              <div class="value">100% automated cloud sync</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- Achievements Graphic Panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
-            <img src="screenshots/admin-badges.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Badges & Milestones Screenshot" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-              Student Badges & Streaks
-            </div>
-          </div>
-          
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+          <footer class="footer">
             <div>
-              <h2>Raffles & Rewards</h2>
-              <ul style="margin-bottom: 10px;">
-                <li><strong>Digital classroom coupons:</strong> Students purchase passes (like Homework Pass, Seat Swaps) directly from their portal using points.</li>
-                <li><strong>Healthy competition:</strong> Sort students into houses to build team camaraderie and positive peer motivation.</li>
-              </ul>
+              <strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong><br />
+              <span class="sync-address-full-container"><span contenteditable="true" class="sync-address-full"></span><br /></span>
+              <a href="mailto:contact@leveluprewards.app?subject=NYC%20DOE%20Teacher%20Inquiry" class="sync-email-link" style="color:var(--heading-color);text-decoration:none;"><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a>
             </div>
-            <div>
-              <h2>Instant Setup</h2>
-              <ul>
-                <li><strong>Zero complex hardware:</strong> Kiosks are ready to roll out on any school network with standard wall outlets and Wi-Fi.</li>
-              </ul>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;" id="pills-page-2">
+              <span class="pill" contenteditable="true">Simple class setup</span>
+              <span class="pill" contenteditable="true">Smartboard ready</span>
+              <span class="pill" contenteditable="true">Live standings</span>
+              <span class="pill" contenteditable="true">Printable coupons</span>
             </div>
-          </div>
-        </div>
+          </footer>
+        </section>
+
       </div>
+    </div>
 
-      <footer class="footer">
-        <div>
-          <strong>More teaching, less counting.</strong> Built for NYC classroom teachers who want a simple, fair incentives program.
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
-          <span class="pill">Classroom portal</span>
-          <span class="pill">1-Tap awarding</span>
-          <span class="pill">Interactive wheels</span>
-          <span class="pill">Zero paperwork</span>
-        </div>
-      </footer>
-    </section>
+    <script>
+      const THEMES = {
+        navy: { '--bg':'#0b1220','--accent':'#7c3aed','--accent2':'#06b6d4','--panel':'rgba(255,255,255,0.05)','--text':'#eaf0ff','--muted':'rgba(234,240,255,0.78)','--hair':'rgba(234,240,255,0.15)','--success':'#22c55e','--black':'#0a0a0a','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(124,58,237,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(6,182,212,0.25),transparent 55%),linear-gradient(180deg,#081022,#070b16 70%,#05060c)' },
+        green: { '--bg':'#041d1a','--accent':'#059669','--accent2':'#10b981','--panel':'rgba(255,255,255,0.05)','--text':'#ecfdf5','--muted':'rgba(236,253,245,0.78)','--hair':'rgba(236,253,245,0.15)','--success':'#34d399','--black':'#020d0c','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(5,150,105,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(16,185,129,0.25),transparent 55%),linear-gradient(180deg,#041a17,#02110e 70%,#010706)' },
+        sunset: { '--bg':'#1a0b18','--accent':'#db2777','--accent2':'#f97316','--panel':'rgba(255,255,255,0.05)','--text':'#fdf2f8','--muted':'rgba(253,242,248,0.78)','--hair':'rgba(253,242,248,0.15)','--success':'#22c55e','--black':'#090208','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(219,39,119,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(249,115,22,0.25),transparent 55%),linear-gradient(180deg,#180916,#0e040d 70%,#060105)' },
+        cyber: { '--bg':'#08070d','--accent':'#d946ef','--accent2':'#f43f5e','--panel':'rgba(255,255,255,0.05)','--text':'#fae8ff','--muted':'rgba(250,232,255,0.78)','--hair':'rgba(250,232,255,0.15)','--success':'#10b981','--black':'#030205','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(217,70,239,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(244,63,94,0.25),transparent 55%),linear-gradient(180deg,#07060b,#040307 70%,#010103)' },
+        crimson: { '--bg':'#1e050b','--accent':'#e11d48','--accent2':'#fb7185','--panel':'rgba(255,255,255,0.05)','--text':'#fff1f2','--muted':'rgba(255,241,242,0.78)','--hair':'rgba(255,241,242,0.15)','--success':'#10b981','--black':'#0a0103','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(225,29,72,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(251,113,133,0.25),transparent 55%),linear-gradient(180deg,#180308,#0e0104 70%,#050001)' },
+        gold: { '--bg':'#1a1206','--accent':'#d97706','--accent2':'#fbbf24','--panel':'rgba(255,255,255,0.05)','--text':'#fef3c7','--muted':'rgba(254,243,199,0.78)','--hair':'rgba(254,243,199,0.15)','--success':'#10b981','--black':'#0a0702','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(217,119,6,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(251,191,36,0.25),transparent 55%),linear-gradient(180deg,#150e05,#0a0702 70%,#030201)' },
+        aurora: { '--bg':'#061318','--accent':'#06b6d4','--accent2':'#10b981','--panel':'rgba(255,255,255,0.05)','--text':'#ecfeff','--muted':'rgba(236,254,255,0.78)','--hair':'rgba(236,254,255,0.15)','--success':'#34d399','--black':'#020709','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(6,182,212,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(16,185,129,0.25),transparent 55%),linear-gradient(180deg,#051014,#02070a 70%,#010304)' },
+        sapphire: { '--bg':'#0a0e1c','--accent':'#3b82f6','--accent2':'#6366f1','--panel':'rgba(255,255,255,0.05)','--text':'#eff6ff','--muted':'rgba(239,246,255,0.78)','--hair':'rgba(239,246,255,0.15)','--success':'#10b981','--black':'#04060c','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(59,130,246,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(99,102,241,0.25),transparent 55%),linear-gradient(180deg,#080b16,#04050a 70%,#010204)' },
+        obsidian: { '--bg':'#0d0d0e','--accent':'#f3f4f6','--accent2':'#9ca3af','--panel':'rgba(255,255,255,0.05)','--text':'#f9fafb','--muted':'rgba(249,250,251,0.78)','--hair':'rgba(249,250,251,0.15)','--success':'#10b981','--black':'#050506','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(243,244,246,0.15),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(156,163,175,0.12),transparent 55%),linear-gradient(180deg,#0b0b0c,#060607 70%,#020202)' },
+        sand: { '--bg':'#1a0f0a','--accent':'#ea580c','--accent2':'#f59e0b','--panel':'rgba(255,255,255,0.05)','--text':'#fff7ed','--muted':'rgba(255,247,237,0.78)','--hair':'rgba(255,247,237,0.15)','--success':'#10b981','--black':'#0a0604','--strong':'#ffffff','--heading-color':'var(--accent2)','--featured-border':'var(--accent2)','--featured-bg':'rgba(255,255,255,0.08)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(234,88,12,0.3),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(245,158,11,0.25),transparent 55%),linear-gradient(180deg,#150c08,#0a0604 70%,#030201)' },
+        light: { '--bg':'#f8fafc','--accent':'#4f46e5','--accent2':'#0ea5e9','--panel':'rgba(15,23,42,0.04)','--text':'#0f172a','--muted':'#475569','--hair':'rgba(15,23,42,0.12)','--success':'#16a34a','--black':'#ffffff','--strong':'#090d16','--heading-color':'var(--accent)','--featured-border':'var(--accent)','--featured-bg':'rgba(0,0,0,0.03)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(79,70,229,0.08),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(14,165,233,0.08),transparent 55%),linear-gradient(180deg,#ffffff,#f1f5f9 70%,#e2e8f0)' },
+        'light-sky': { '--bg':'#f0f9ff','--accent':'#0284c7','--accent2':'#0ea5e9','--panel':'rgba(2,132,199,0.04)','--text':'#0f172a','--muted':'#334155','--hair':'rgba(2,132,199,0.12)','--success':'#16a34a','--black':'#ffffff','--strong':'#031b2b','--heading-color':'var(--accent)','--featured-border':'var(--accent)','--featured-bg':'rgba(0,0,0,0.03)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(2,132,199,0.08),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(14,165,233,0.08),transparent 55%),linear-gradient(180deg,#ffffff,#f0f9ff 70%,#e0f2fe)' },
+        'light-mint': { '--bg':'#f0fdf4','--accent':'#16a34a','--accent2':'#10b981','--panel':'rgba(22,163,74,0.04)','--text':'#052e16','--muted':'#14532d','--hair':'rgba(22,163,74,0.12)','--success':'#16a34a','--black':'#ffffff','--strong':'#022310','--heading-color':'var(--accent)','--featured-border':'var(--accent)','--featured-bg':'rgba(0,0,0,0.03)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(22,163,74,0.08),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(16,185,129,0.08),transparent 55%),linear-gradient(180deg,#ffffff,#f0fdf4 70%,#dcfce7)' },
+        'light-amber': { '--bg':'#fffbeb','--accent':'#b45309','--accent2':'#d97706','--panel':'rgba(180,83,9,0.04)','--text':'#451a03','--muted':'#78350f','--hair':'rgba(180,83,9,0.12)','--success':'#16a34a','--black':'#ffffff','--strong':'#270f02','--heading-color':'var(--accent)','--featured-border':'var(--accent)','--featured-bg':'rgba(0,0,0,0.03)','page-gradient':'radial-gradient(1200px 700px at 10% 10%,rgba(180,83,9,0.08),transparent 60%),radial-gradient(900px 600px at 90% 20%,rgba(217,119,6,0.08),transparent 55%),linear-gradient(180deg,#ffffff,#fffbeb 70%,#fef3c7)' }
+      };
 
-    <!-- PAGE 2: BACK -->
-    <section class="page" aria-label="Back of flyer">
-      <header class="topbar">
-        <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> Classroom routines</div>
-          <h1>Routines that build momentum</h1>
-          <p class="subtitle">
-            How to weave LevelUp into your daily instructional rhythm without adding a single minute of extra work or point bookkeeping.
-          </p>
-        </div>
-        <div class="right-meta">
-          <div><strong>LevelUp Rewards</strong></div>
-          <div class="muted">Teacher playbook one-pager</div>
-        </div>
-      </header>
+      function updateTheme() {
+        const themeKey = document.getElementById('theme-select').value;
+        const theme = THEMES[themeKey] || THEMES.navy;
+        const root = document.documentElement;
+        for (const [key, value] of Object.entries(theme)) {
+          if (key === 'page-gradient') continue;
+          root.style.setProperty(key, value);
+        }
+        const pages = document.querySelectorAll('.page');
+        const isLight = themeKey.startsWith('light');
+        pages.forEach(p => {
+          p.style.background = theme['page-gradient'];
+          if (isLight) {
+            p.style.color = theme['--text'];
+            p.querySelectorAll('strong, h1, h3, .badge').forEach(el => { el.style.color = theme['--text']; });
+            p.querySelectorAll('h2').forEach(el => { el.style.color = theme['--accent']; });
+            p.querySelectorAll('.subtitle').forEach(el => { el.style.color = theme['--muted']; });
+            p.querySelectorAll('.muted').forEach(el => { el.style.color = theme['--muted']; });
+            p.querySelectorAll('.callout').forEach(el => { el.style.background = theme['--panel']; el.style.borderLeftColor = theme['--accent']; });
+            p.querySelectorAll('.kpi').forEach(el => { el.style.background = 'rgba(0,0,0,0.02)'; el.style.borderColor = theme['--hair']; });
+            p.querySelectorAll('.card').forEach(el => { el.style.borderColor = theme['--hair']; el.style.background = theme['--panel']; });
+            p.querySelectorAll('.card.featured').forEach(el => { el.style.borderColor = theme['--accent']; el.style.background = 'rgba(0,0,0,0.03)'; el.style.borderWidth = '2px'; });
+            p.querySelectorAll('.topbar, .footer').forEach(el => { el.style.borderColor = theme['--hair']; });
+            p.querySelectorAll('li::before').forEach(el => { el.style.color = theme['--accent']; el.style.textShadow = 'none'; });
+            p.querySelectorAll('.sync-email-link').forEach(el => { el.style.color = theme['--accent']; });
+          } else {
+            p.style.color = '';
+            p.querySelectorAll('strong,h1,h3,.badge,h2,.subtitle,.muted,.callout,.kpi,.card,.topbar,.footer,li::before,.sync-email-link').forEach(el => {
+              el.style.color = ''; el.style.background = ''; el.style.borderColor = ''; el.style.borderLeftColor = ''; el.style.borderWidth = ''; el.style.textShadow = '';
+            });
+          }
+        });
+      }
 
-      <div class="grid">
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <div class="card">
-            <h2>The quickstart routine</h2>
-            <ul>
-              <li><strong>1 · Name the win:</strong> Call out the specific positive behavior in the moment (e.g., "Excellent focus during reading!").</li>
-              <li><strong>2 · Tap to award:</strong> Open your portal on your phone or desktop and add points in one tap, or scan a student barcode.</li>
-              <li><strong>3 · Watch them level up:</strong> Students scan cards at hallway kiosks to see points pop and milestones unlock.</li>
-              <li><strong>4 · Celebrate together:</strong> Host raffle spins or let students trade points for exciting store prizes.</li>
-            </ul>
+      function updatePreparedMode() {
+        const mode = document.getElementById('prepared-mode').value;
+        const nameSection = document.getElementById('school-name-section');
+        const badge = document.getElementById('flyer-prepared-badge');
+        if (mode === 'school') { nameSection.style.display = 'block'; updateSchoolName(); }
+        else { nameSection.style.display = 'none'; badge.innerHTML = '<span class="dot" aria-hidden="true"></span> Teacher Companion'; }
+      }
 
-            <div style="height: 12px"></div>
-            <h2>For classroom climate</h2>
-            <ul>
-              <li><strong>Daily focus:</strong> Give students a clear, measurable goal to work toward every week.</li>
-              <li><strong>Positive transitions:</strong> Project house standings or top students during transition blocks to keep energy positive.</li>
-            </ul>
-          </div>
-          
-          <!-- Real App Screenshot Panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 130px; position: relative;">
-            <img src="screenshots/student-home-portal.png" style="width: 100%; height: 100%; object-fit: cover;" alt="LevelUp Student Dashboard Screenshot" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
-              Student Arcade & PBIS Hub
-            </div>
-          </div>
-        </div>
+      function updateSchoolName() {
+        const schoolName = document.getElementById('school-name-input').value;
+        document.getElementById('flyer-prepared-badge').innerHTML = '<span class="dot" aria-hidden="true"></span> Prepared for ' + escapeHtml(schoolName);
+      }
 
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-          <!-- App Mockup Panel -->
-          <div class="card" style="padding: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; background: rgba(0,0,0,0.4);">
-            <div style="font-size: 9px; color: rgba(255,255,255,0.4); padding: 2px 6px 6px 6px; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
-              <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e; display: inline-block;"></span>
-              <span style="margin-left: 4px; font-family: monospace;">portal.Website available on request/staff/raffle</span>
-            </div>
-            <img src="screenshots/teacher-raffle.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08);" alt="LevelUp Teacher Raffle Dashboard Screenshot" />
-          </div>
-          
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <h2>Automated Store & Coupons</h2>
-              <ul>
-                <li><strong>Instant checkouts:</strong> Hallway kiosks handle checkout logs automatically—no clipboard sheets or messy counters.</li>
-                <li><strong>Custom coupon codes:</strong> Print single-use paper coupon codes that credit student balances instantly.</li>
-                <li><strong>School-wide unity:</strong> Work with other teachers so students meet the same consistent culture system in every room.</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h2>Support Team</h2>
-              <ul>
-                <li><strong>Real people:</strong> Instant in-app chat support and ready-to-print posters for your classroom walls.</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+      function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
 
-      <footer class="footer">
-        <div>
-          <strong>LevelUp EdTech Enterprises LLC</strong><br />
-          Address available on request<br />
-          <a href="#" style="color: var(--accent2); text-decoration: none;"
-            >Contact details available on request</a
-          >
-        </div>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
-          <span class="pill">Simple class setup</span>
-          <span class="pill">Smartboard ready</span>
-          <span class="pill">Live standings</span>
-          <span class="pill">Printable coupons</span>
-        </div>
-      </footer>
-    </section>
+      function syncContactInfo() {
+        const company = document.getElementById('company-input').value;
+        const email = document.getElementById('email-input').value;
+        const street = document.getElementById('street-input').value;
+        const city = document.getElementById('city-input').value;
+        const web = document.getElementById('web-input').value;
+        document.querySelectorAll('.sync-company').forEach(el => { el.textContent = company; });
+        document.querySelectorAll('.sync-address-city').forEach(el => { el.textContent = city; el.parentElement.style.display = city ? '' : 'none'; });
+        document.querySelectorAll('.sync-address-street').forEach(el => { el.textContent = street; el.parentElement.style.display = street ? '' : 'none'; });
+        const fullAddr = (street && city) ? (street + ', ' + city) : (street || city);
+        document.querySelectorAll('.sync-address-full').forEach(el => { el.textContent = fullAddr; });
+        document.querySelectorAll('.sync-address-full-container').forEach(el => { el.style.display = fullAddr ? '' : 'none'; });
+        document.querySelectorAll('.sync-email').forEach(el => { el.textContent = email; });
+        document.querySelectorAll('.sync-email-link').forEach(el => { el.href = 'mailto:' + email + '?subject=NYC%20DOE%20Teacher%20Inquiry'; });
+        const urlDisplay = document.getElementById('sync-portal-url-display');
+        if (urlDisplay) urlDisplay.textContent = web.replace(/^https?:\/\//i,'') + '/staff/teacher';
+      }
+
+      function loadDefaultContactInfo() {
+        document.getElementById('company-input').value = 'LevelUp EdTech Enterprises LLC';
+        document.getElementById('email-input').value = 'contact@leveluprewards.app';
+        document.getElementById('street-input').value = '';
+        document.getElementById('city-input').value = '';
+        document.getElementById('web-input').value = 'leveluprewards.app';
+        syncContactInfo();
+      }
+
+      function togglePage2() {
+        document.getElementById('page-2-section').style.display = document.getElementById('show-page-2').checked ? 'block' : 'none';
+      }
+
+      function toggleCard(id, show) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = show ? '' : 'none';
+      }
+
+      if (new URLSearchParams(window.location.search).has('embed')) {
+        document.querySelector('.control-sidebar').style.display = 'none';
+        document.querySelector('.proposal-main').style.padding = '0';
+      }
+
+      loadDefaultContactInfo();
+    </script>
   </body>
 </html>

@@ -48,7 +48,7 @@ export function KioskLoginPrizeTeasers({ schoolId }: { schoolId: string | null |
     () => (enabled && schoolId && firestore ? collection(firestore, 'schools', schoolId, 'prizes') : null),
     [enabled, schoolId, firestore],
   );
-  const { data: prizesRaw } = useCollection<Prize>(prizesQuery);
+  const { data: prizesRaw } = useCollection<Prize>(prizesQuery, { reportPermissionErrors: false });
 
   const listedPrizes = useMemo(
     () => (prizesRaw ?? []).filter(prizeIsListed),

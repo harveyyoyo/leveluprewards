@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { normalizeSchoolId } from '@/lib/schoolId';
 import { SchoolDeveloperLoginForm } from '@/components/auth/SchoolDeveloperLoginForm';
 import { useAuth } from '@/components/providers/AuthProvider';
 
@@ -53,7 +54,7 @@ export default function LoginPage() {
     changeSchoolResetDoneRef.current = false;
 
     if (schoolFromQuery) {
-      setInitialSchoolId(schoolFromQuery);
+      setInitialSchoolId(normalizeSchoolId(schoolFromQuery) || undefined);
       return;
     }
 
@@ -78,7 +79,7 @@ export default function LoginPage() {
       // ignore
     }
 
-    const inferred = (fromReferrer || fromStorage).trim().toLowerCase();
+    const inferred = normalizeSchoolId(fromReferrer || fromStorage);
     if (inferred) setInitialSchoolId(inferred);
   }, [changeSchool, clearSchoolChooserSession, schoolFromQuery]);
 

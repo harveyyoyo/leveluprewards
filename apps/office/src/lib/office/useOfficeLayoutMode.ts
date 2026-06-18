@@ -7,13 +7,13 @@ export type OfficeLayoutMode = 'standard' | 'wide';
 const STORAGE_KEY = 'school-office-layout-mode';
 
 function readStoredMode(): OfficeLayoutMode {
-  if (typeof window === 'undefined') return 'standard';
+  if (typeof window === 'undefined') return 'wide';
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === 'wide' ? 'wide' : 'standard';
+  return stored === 'standard' ? 'standard' : 'wide';
 }
 
 export function useOfficeLayoutMode() {
-  const [mode, setMode] = useState<OfficeLayoutMode>('standard');
+  const [mode, setMode] = useState<OfficeLayoutMode>('wide');
 
   useEffect(() => {
     setMode(readStoredMode());

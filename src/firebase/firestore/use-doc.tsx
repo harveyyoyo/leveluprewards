@@ -24,6 +24,11 @@ export interface UseDocResult<T> {
   error: FirestoreError | Error | null; // Error object, or null.
 }
 
+type UseDocOptions = {
+  /** Optional panels can handle permission errors locally instead of showing the global runtime overlay. */
+  reportPermissionErrors?: boolean;
+};
+
 /**
  * React hook to subscribe to a single Firestore document in real-time.
  * Handles nullable references.
@@ -40,8 +45,10 @@ export interface UseDocResult<T> {
  */
 export function useDoc<T = any>(
   memoizedDocRef: DocumentReference<DocumentData> | null | undefined,
+  options: UseDocOptions = {},
 ): UseDocResult<T> {
   type StateDataType = WithId<T> | null;
+  const reportPermissionErrors = options.reportPermissionErrors ?? true;
 
   const [data, setData] = useState<StateDataType>(null);
   /** When a ref is present, start in a loading state so the first paint matches the in-flight snapshot (avoids a one-frame "loaded + null" flash and dependent logic firing too early). */
@@ -82,13 +89,14 @@ export function useDoc<T = any>(
         setData(null)
         setIsLoading(false)
 
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+        if (reportPermissionErrors) {
+          errorEmitter.emit('permission-error', contextualError);
+        }
       }
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, reportPermissionErrors]); // Re-run if the memoizedDocRef changes.
 
   return { data, isLoading, error };
 }

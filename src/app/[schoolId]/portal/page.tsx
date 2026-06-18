@@ -1,8 +1,9 @@
 'use client';
 import { useMemo, useState, useEffect, useLayoutEffect, useRef, useCallback, type ComponentType, type CSSProperties, type MouseEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
+import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
 import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -163,7 +164,11 @@ function WhereToDrawnTitle({
 
 export default function PortalPage() {
     const { t, dir } = useTranslation();
-    const { loginState, isInitialized, schoolId, isAdmin, isOffice, login, logout } = useAppContext();
+    const params = useParams<{ schoolId: string }>();
+    const { loginState, isInitialized, schoolId: ctxSchoolId, isAdmin, isOffice, login, logout } = useAppContext();
+    const schoolId =
+        normalizeSchoolId(ctxSchoolId) ||
+        normalizeSchoolId(typeof params.schoolId === 'string' ? params.schoolId : '');
     const { canBypassAdminPasscode, loginAsAdminViaGoogle } = useAdminGooglePasscodeBypass({
         schoolId,
         autoLogin: false,

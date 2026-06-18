@@ -67,6 +67,7 @@ import {
 import { DeveloperRemoteSupportViewer } from '@/components/support/DeveloperRemoteSupportViewer';
 import { DeveloperSchoolInsightsPanel } from '@/components/developer/DeveloperSchoolInsightsPanel';
 import { DeveloperSchoolScreensSheet } from '@/components/developer/DeveloperSchoolScreensSheet';
+import { authFetch } from '@/lib/authFetch';
 import {
   isJewishOrthodoxSchool,
   SCHOOL_PROFILE_LABELS,
@@ -110,7 +111,7 @@ export default function DeveloperPage() {
   } = useAppContext();
   const firestore = useFirestore();
   const functions = useFunctions();
-  const { user: firebaseUser } = useFirebase();
+  const { user: firebaseUser, auth } = useFirebase();
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings, updateSettings } = useSettings();
@@ -129,6 +130,10 @@ export default function DeveloperPage() {
   const [editingSchoolName, setEditingSchoolName] = useState('');
   const [editingSchoolAccessPasscode, setEditingSchoolAccessPasscode] = useState('');
   const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
+  const [editingPasscodeStatus, setEditingPasscodeStatus] = useState<{
+    schoolAccessConfigured: boolean;
+    adminConfigured: boolean;
+  } | null>(null);
   const [editingJewishOrthodox, setEditingJewishOrthodox] = useState(false);
   const [pillarSchool, setPillarSchool] = useState<SchoolInfo | null>(null);
   const [editingPillars, setEditingPillars] = useState<Record<ProductPillarKey, boolean>>({
@@ -468,21 +473,52 @@ export default function DeveloperPage() {
     setEditingSchoolName(school.name);
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+    setEditingPasscodeStatus(null);
     setEditingJewishOrthodox(isJewishOrthodoxSchool(school, school.id));
 
     if (!firestore) return;
     try {
       const snap = await getDoc(doc(firestore, 'schools', school.id));
       const data = (snap.data() ?? school) as SchoolInfo;
-      setEditingSchool(data);
+      setEditingSchool({ ...data, id: school.id });
       setEditingSchoolName(data.name);
-      setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(data));
-      setEditingAdminPasscode(adminPasscodeFrom(data));
       setEditingJewishOrthodox(isJewishOrthodoxSchool(data, school.id));
     } catch {
-      setEditingSchoolAccessPasscode(schoolAccessPasscodeFrom(school));
-      setEditingAdminPasscode(adminPasscodeFrom(school));
       setEditingJewishOrthodox(isJewishOrthodoxSchool(school, school.id));
+    }
+
+    try {
+      const res = await authFetch(auth, `/api/school/${encodeURIComponent(school.id)}/passcodes`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const status = (await res.json()) as {
+          schoolAccessConfigured?: boolean;
+          adminConfigured?: boolean;
+        };
+        setEditingPasscodeStatus({
+          schoolAccessConfigured: status.schoolAccessConfigured === true,
+          adminConfigured: status.adminConfigured === true,
+        });
+      } else {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        const apiError = payload?.error || `Passcode status unavailable (${res.status}).`;
+        const description =
+          res.status === 403
+            ? 'Could not verify saved passcodes. Sign out, sign in again at /developer, then reopen this school.'
+            : apiError;
+        toast({
+          variant: 'destructive',
+          title: 'Could not load passcode status',
+          description,
+        });
+      }
+    } catch {
+      toast({
+        variant: 'destructive',
+        title: 'Could not load passcode status',
+        description: 'Check your connection and try opening this school again.',
+      });
     }
   }
 
@@ -491,6 +527,7 @@ export default function DeveloperPage() {
     setEditingSchoolName('');
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+    setEditingPasscodeStatus(null);
     setEditingJewishOrthodox(false);
   }
 
@@ -507,14 +544,14 @@ export default function DeveloperPage() {
     if (editingSchoolName && editingSchoolName !== editingSchool.name) {
       updates.name = editingSchoolName;
     }
-    const currentSchoolAccessPasscode = schoolAccessPasscodeFrom(editingSchool);
-    const currentAdminPasscode = adminPasscodeFrom(editingSchool);
-    if (editingSchoolAccessPasscode !== currentSchoolAccessPasscode) {
-      updates.passcode = editingSchoolAccessPasscode;
-      updates.schoolAccessPasscode = editingSchoolAccessPasscode;
+    const nextSchoolAccessPasscode = editingSchoolAccessPasscode.trim();
+    const nextAdminPasscode = editingAdminPasscode.trim();
+    if (nextSchoolAccessPasscode) {
+      updates.passcode = nextSchoolAccessPasscode;
+      updates.schoolAccessPasscode = nextSchoolAccessPasscode;
     }
-    if (editingAdminPasscode !== currentAdminPasscode) {
-      updates.adminPasscode = editingAdminPasscode;
+    if (nextAdminPasscode) {
+      updates.adminPasscode = nextAdminPasscode;
     }
     const nextProfile: SchoolProfileType = editingJewishOrthodox ? 'jewish_orthodox' : 'standard';
     const currentProfile: SchoolProfileType = isJewishOrthodoxSchool(editingSchool, editingSchool.id)
@@ -524,14 +561,20 @@ export default function DeveloperPage() {
       updates.schoolProfile = nextProfile;
     }
 
-    if (Object.keys(updates).length > 0) {
+    if (Object.keys(updates).length === 0) {
+      toast({ title: 'No changes were made.' });
+      handleCloseEditModal();
+      return;
+    }
+
+    try {
       await updateSchool(editingSchool.id, updates);
       playSound('success');
       toast({ title: `School "${editingSchool.id}" updated!` });
-    } else {
-      toast({ title: 'No changes were made.' });
+      handleCloseEditModal();
+    } catch {
+      // BackupProvider already surfaced the error toast.
     }
-    handleCloseEditModal();
   }
 
   const handleOpenPillarsModal = async (school: SchoolInfo) => {
@@ -1522,23 +1565,43 @@ export default function DeveloperPage() {
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="new-school-access-passcode-edit" className="text-right">School Login</Label>
-                <Input
-                  id="new-school-access-passcode-edit"
-                  value={editingSchoolAccessPasscode}
-                  onChange={(e) => setEditingSchoolAccessPasscode(e.target.value)}
-                  className="col-span-3 font-code tracking-widest"
-                  autoComplete="off"
-                />
+                <div className="col-span-3 space-y-1">
+                  <Input
+                    id="new-school-access-passcode-edit"
+                    value={editingSchoolAccessPasscode}
+                    onChange={(e) => setEditingSchoolAccessPasscode(e.target.value)}
+                    className="font-code tracking-widest"
+                    autoComplete="off"
+                    placeholder={
+                      editingPasscodeStatus?.schoolAccessConfigured
+                        ? 'Passcode is set — enter a new value to change'
+                        : 'Enter school login passcode'
+                    }
+                  />
+                  {editingPasscodeStatus?.schoolAccessConfigured ? (
+                    <p className="text-[11px] text-muted-foreground">A school login passcode is already saved (stored securely).</p>
+                  ) : null}
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="new-admin-passcode-edit" className="text-right">Admin Login</Label>
-                <Input
-                  id="new-admin-passcode-edit"
-                  value={editingAdminPasscode}
-                  onChange={(e) => setEditingAdminPasscode(e.target.value)}
-                  className="col-span-3 font-code tracking-widest"
-                  autoComplete="off"
-                />
+                <div className="col-span-3 space-y-1">
+                  <Input
+                    id="new-admin-passcode-edit"
+                    value={editingAdminPasscode}
+                    onChange={(e) => setEditingAdminPasscode(e.target.value)}
+                    className="font-code tracking-widest"
+                    autoComplete="off"
+                    placeholder={
+                      editingPasscodeStatus?.adminConfigured
+                        ? 'Passcode is set — enter a new value to change'
+                        : 'Enter admin login passcode'
+                    }
+                  />
+                  {editingPasscodeStatus?.adminConfigured ? (
+                    <p className="text-[11px] text-muted-foreground">An admin passcode is already saved (stored securely).</p>
+                  ) : null}
+                </div>
               </div>
             </div>
             <DialogFooter>

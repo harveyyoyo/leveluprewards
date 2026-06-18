@@ -14,7 +14,7 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
 ]);
 
 /** Path segments on the office host (after /{schoolId}/). */
-const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'billing', 'reports', 'settings']);
+const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'teachers', 'billing', 'reports', 'settings']);
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 

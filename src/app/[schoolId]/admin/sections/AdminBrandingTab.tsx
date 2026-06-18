@@ -20,6 +20,7 @@ import {
   EyeOff,
   Monitor,
   QrCode,
+  Printer,
 } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
@@ -43,6 +44,7 @@ import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkt
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { OpenSchoolSettingsLink } from '@/components/settings/OpenSchoolSettingsLink';
 import { useTranslation } from '@/components/providers/LocaleProvider';
+import { APP_SITE_DOMAIN } from '@/lib/appBranding';
 
 export function AdminBrandingTab({
   schoolId,
@@ -90,7 +92,7 @@ export function AdminBrandingTab({
   const [newSponsorSpeed, setNewSponsorSpeed] = useState<'slow' | 'normal' | 'fast' | 'very_fast' | 'static'>('normal');
   const [newSponsorPosition, setNewSponsorPosition] = useState<'top' | 'bottom'>('bottom');
   const [newSponsorIcon, setNewSponsorIcon] = useState('🎉');
-  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'sponsor' | 'kiosk_profiles'>('logo');
+  const [section, setSection] = useState<'logo' | 'photos' | 'theme' | 'print_branding' | 'sponsor' | 'kiosk_profiles'>('logo');
 
   // Kiosk Profile Management States
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -131,6 +133,7 @@ export function AdminBrandingTab({
           { id: 'logo', label: 'School Logo' },
           { id: 'photos', label: 'Student Photos' },
           { id: 'theme', label: 'ID Cards & Themes' },
+          { id: 'print_branding', label: 'Print Branding' },
           { id: 'sponsor', label: 'Sponsor Banner' },
           { id: 'kiosk_profiles', label: 'Kiosk Profiles' },
         ]}
@@ -613,6 +616,52 @@ export function AdminBrandingTab({
               onSave={handleSchoolDefaultThemeSave}
               onRemoveTheme={handleClearSchoolDefaultTheme}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 4. PRINT BRANDING */}
+      {section === 'print_branding' && (
+        <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
+          <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+                  <Printer className="w-5 h-5 text-ring" />
+                  Print Branding
+                </CardTitle>
+                <StaffPortalTabInfoPopover
+                  sections={[
+                    staffPortalTabInfoSection(
+                      `Optionally add a small ${APP_SITE_DOMAIN} line on printed point coupons and ID cards (student, staff, and prize cards).`,
+                    ),
+                  ]}
+                  ariaLabel="About print branding"
+                />
+              </div>
+              <TabWalkthroughHeaderAction />
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border bg-muted/10 p-5">
+              <div className="space-y-1">
+                <Label htmlFor="showLevelUpDomainOnPrints" className="text-sm font-bold">
+                  Show {APP_SITE_DOMAIN} on prints
+                </Label>
+                <p className="text-xs text-muted-foreground max-w-lg leading-relaxed">
+                  Adds a subtle site attribution to every printed coupon and ID card. Off by default so schools can keep prints fully school-branded.
+                </p>
+              </div>
+              <Switch
+                id="showLevelUpDomainOnPrints"
+                checked={settings.showLevelUpDomainOnPrints === true}
+                onCheckedChange={(checked) => {
+                  updateSettings({ showLevelUpDomainOnPrints: checked });
+                  playSound('click');
+                }}
+                className="shrink-0"
+              />
+            </div>
           </CardContent>
         </Card>
       )}

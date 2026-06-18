@@ -9,6 +9,7 @@ import {
 import { verifySchoolGateJwt } from '@/lib/auth/verifySchoolGateJwt';
 import { resolveSchoolGateScopes } from '@/lib/server/resolveSchoolGateScopes';
 import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { isDeveloperAllowlistUid } from '@/lib/apiAuth';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 
@@ -140,12 +141,24 @@ export async function verifyStaffForSchoolApi(
     return { uid, schoolId: sid, scopes };
   }
 
+  if (bearerToken && (await isDeveloperAllowlistUid(bearerToken, uid))) {
+    scopes.add('dev');
+    return { uid, schoolId: sid, scopes };
+  }
+
   try {
     await getFirebaseAdminAuth();
     const admin = (await import('firebase-admin')).default;
     const db = admin.firestore();
     if (await hasStaffRoleDoc(db, sid, uid)) {
       if (!scopes.has('admin')) scopes.add('teacher');
+      return { uid, schoolId: sid, scopes };
+    }
+
+    const devSnap = await db.collection('appConfig').doc('developerAllowlist').get();
+    const devUids = devSnap.exists ? devSnap.data()?.uids : undefined;
+    if (Array.isArray(devUids) && devUids.includes(uid)) {
+      scopes.add('dev');
       return { uid, schoolId: sid, scopes };
     }
   } catch {

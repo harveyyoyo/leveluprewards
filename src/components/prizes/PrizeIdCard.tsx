@@ -5,6 +5,7 @@ import { cn, getContrastColor } from '@/lib/utils';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import DynamicIcon from '@/components/DynamicIcon';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
+import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 import { prizeScanCodeFor } from '@/lib/prizes/prizeScanCode';
 import { prizeCardColorForId } from '@/lib/prizes/prizeCardColor';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -172,6 +173,7 @@ function PrizeIdCardAppText({
       <span className="print-id-app-tagline" style={{ color: mutedText }}>
         {appTagline ?? APP_TAGLINE}
       </span>
+      <PrintLevelUpDomain style={{ color: mutedText }} />
     </div>
   );
 }

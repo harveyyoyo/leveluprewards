@@ -20,6 +20,7 @@ import {
 } from '@/lib/sss/sssRouting';
 import { applySecurityHeaders } from '@/lib/middleware/securityHeaders';
 import { checkAuthGuard } from '@/lib/middleware/authGuard';
+import { invalidSchoolPathRedirect } from '@/lib/middleware/invalidSchoolPath';
 
 function portalChromeRequestHeaders(request: NextRequest): Headers {
   const forwardedHost =
@@ -38,6 +39,18 @@ function portalChromeRequestHeaders(request: NextRequest): Headers {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  if (invalidSchoolPathRedirect(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    if (!url.searchParams.has('changeSchool')) {
+      url.searchParams.set('changeSchool', '1');
+    }
+    const redirect = NextResponse.redirect(url);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
+
   const forwardedHost =
     request.headers.get('x-fh-requested-host') ??
     request.headers.get('x-forwarded-host') ??

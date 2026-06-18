@@ -57,12 +57,14 @@ export function AdminFamilyPortalsTab({ schoolId, students }: Props) {
   const passcodeRequired = settings.studentPortalRequirePasscode !== false;
 
   const parentPortalUrl = useMemo(() => {
-    if (typeof window === 'undefined' || !schoolId) return `/${schoolId}/parent`;
+    if (!schoolId) return '/login';
+    if (typeof window === 'undefined') return `/${schoolId}/parent`;
     return `${window.location.origin}/${schoolId}/parent`;
   }, [schoolId]);
 
   const studentPortalUrl = useMemo(() => {
-    if (typeof window === 'undefined' || !schoolId) return `/${schoolId}/student-home`;
+    if (!schoolId) return '/login';
+    if (typeof window === 'undefined') return `/${schoolId}/student-home`;
     return `${window.location.origin}/${schoolId}/student-home`;
   }, [schoolId]);
 
