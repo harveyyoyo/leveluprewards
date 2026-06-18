@@ -49,7 +49,7 @@ export function StaffIdDTCPrintSheet({ subjects, schoolId, onReady }: StaffIdDTC
       cancelled = true;
       if (t) clearTimeout(t);
     };
-  }, [isAppConfigLoading, isSchoolLoading, onReady]);
+  }, [isAppConfigLoading, isSchoolLoading, onReady, subjects]);
 
   if (subjects.length === 0 || !bodyEl) {
     return null;

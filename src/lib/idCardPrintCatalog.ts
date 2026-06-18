@@ -30,7 +30,7 @@ export const ID_CARD_FAMILIES: Array<{
   {
     id: 'dtc4500e',
     label: 'Direct-to-card (DTC)',
-    shortDescription: 'CR80 card stock — one physical card per student. Queue prints one card at a time.',
+    shortDescription: 'CR80 card stock — one physical card per print. Multiple cards open the print dialog once per card.',
   },
 ];
 

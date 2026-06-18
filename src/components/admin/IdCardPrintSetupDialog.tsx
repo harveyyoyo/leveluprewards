@@ -187,6 +187,9 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
             </Select>
             <p className="text-xs text-muted-foreground leading-snug">
               {ID_CARD_FAMILIES.find((f) => f.id === printOutput)?.shortDescription}
+              {!usesSheetPrinter && itemCount > 1
+                ? ' Each card prints separately — click Print in the dialog for every card.'
+                : null}
             </p>
           </div>
 

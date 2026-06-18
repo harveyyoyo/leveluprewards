@@ -49,7 +49,7 @@ export function PrizeIdDTCPrintSheet({ prizes, schoolId, onReady }: PrizeIdDTCPr
       cancelled = true;
       if (t) clearTimeout(t);
     };
-  }, [isAppConfigLoading, isSchoolLoading, onReady]);
+  }, [isAppConfigLoading, isSchoolLoading, onReady, prizes]);
 
   if (prizes.length === 0 || !bodyEl) {
     return null;

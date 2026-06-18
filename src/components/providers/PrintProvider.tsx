@@ -28,6 +28,13 @@ import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from
 import { waitForPrintBarcodes } from '@/lib/printBarcode';
 import { useToast } from '@/hooks/use-toast';
 import type { IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
+import {
+    DTC_MULTI_CARD_START_TOAST,
+    dtcCardProgressToast,
+    dtcPrintIndex,
+    nextDtcPrintIndex,
+    type DtcPrintIndex,
+} from '@/lib/dtcPrintQueue';
 
 const PrintSheet = dynamic(
     () => import('@/components/print/PrintSheet').then((m) => ({ default: m.PrintSheet })),
@@ -110,10 +117,33 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         schoolId: string;
         cornerStyle: CouponCornerStyle;
     } | null>(null);
-    const [printData, setPrintData] = useState<{ students: Student[]; classes: Class[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
+    type StudentIdPrintJob = {
+        students: Student[];
+        classes: Class[];
+        schoolId: string;
+        printerType?: 'dtc4500e';
+        cornerStyle?: 'rounded' | 'rectangular';
+        sheetSpacing?: IdCardSheetSpacing;
+    } & DtcPrintIndex;
+    type PrizeIdPrintJob = {
+        prizes: Prize[];
+        schoolId: string;
+        printerType?: 'dtc4500e';
+        cornerStyle?: 'rounded' | 'rectangular';
+        sheetSpacing?: IdCardSheetSpacing;
+    } & DtcPrintIndex;
+    type StaffIdPrintJob = {
+        subjects: StaffIdCardSubject[];
+        schoolId: string;
+        printerType?: 'dtc4500e';
+        cornerStyle?: 'rounded' | 'rectangular';
+        sheetSpacing?: IdCardSheetSpacing;
+    } & DtcPrintIndex;
+
+    const [printData, setPrintData] = useState<StudentIdPrintJob | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
-    const [prizeIdPrintData, setPrizeIdPrintData] = useState<{ prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
-    const [staffIdPrintData, setStaffIdPrintData] = useState<{ subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing } | null>(null);
+    const [prizeIdPrintData, setPrizeIdPrintData] = useState<PrizeIdPrintJob | null>(null);
+    const [staffIdPrintData, setStaffIdPrintData] = useState<StaffIdPrintJob | null>(null);
     const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
@@ -149,9 +179,24 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         if (printData && printData.students.length > 0 && !studentPrintTriggered.current) {
             studentPrintTriggered.current = true;
             const afterPrint = () => {
-                setPrintData(null);
-                studentPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
+                setPrintData((prev) => {
+                    if (!prev) {
+                        studentPrintTriggered.current = false;
+                        return null;
+                    }
+                    if (prev.printerType === 'dtc4500e') {
+                        const idx = dtcPrintIndex(prev);
+                        const nextIdx = nextDtcPrintIndex(idx, prev.students.length);
+                        if (nextIdx !== null) {
+                            studentPrintTriggered.current = false;
+                            toast(dtcCardProgressToast(nextIdx, prev.students.length));
+                            return { ...prev, dtcIndex: nextIdx };
+                        }
+                    }
+                    studentPrintTriggered.current = false;
+                    return null;
+                });
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
@@ -161,7 +206,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 });
             });
         }
-    }, [printData, playSound]);
+    }, [printData, playSound, toast]);
 
     const prizePrintTriggered = useRef(false);
     const prizeTicketAfterPrintRef = useRef<(() => void) | null>(null);
@@ -200,9 +245,24 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         if (prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && !prizeIdPrintTriggered.current) {
             prizeIdPrintTriggered.current = true;
             const afterPrint = () => {
-                setPrizeIdPrintData(null);
-                prizeIdPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
+                setPrizeIdPrintData((prev) => {
+                    if (!prev) {
+                        prizeIdPrintTriggered.current = false;
+                        return null;
+                    }
+                    if (prev.printerType === 'dtc4500e') {
+                        const idx = dtcPrintIndex(prev);
+                        const nextIdx = nextDtcPrintIndex(idx, prev.prizes.length);
+                        if (nextIdx !== null) {
+                            prizeIdPrintTriggered.current = false;
+                            toast(dtcCardProgressToast(nextIdx, prev.prizes.length));
+                            return { ...prev, dtcIndex: nextIdx };
+                        }
+                    }
+                    prizeIdPrintTriggered.current = false;
+                    return null;
+                });
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
@@ -212,16 +272,31 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 });
             });
         }
-    }, [prizeIdPrintData, playSound]);
+    }, [prizeIdPrintData, playSound, toast]);
 
     const staffIdPrintTriggered = useRef(false);
     const triggerStaffIdPrint = React.useCallback(() => {
         if (staffIdPrintData && staffIdPrintData.subjects.length > 0 && !staffIdPrintTriggered.current) {
             staffIdPrintTriggered.current = true;
             const afterPrint = () => {
-                setStaffIdPrintData(null);
-                staffIdPrintTriggered.current = false;
                 window.removeEventListener('afterprint', afterPrint);
+                setStaffIdPrintData((prev) => {
+                    if (!prev) {
+                        staffIdPrintTriggered.current = false;
+                        return null;
+                    }
+                    if (prev.printerType === 'dtc4500e') {
+                        const idx = dtcPrintIndex(prev);
+                        const nextIdx = nextDtcPrintIndex(idx, prev.subjects.length);
+                        if (nextIdx !== null) {
+                            staffIdPrintTriggered.current = false;
+                            toast(dtcCardProgressToast(nextIdx, prev.subjects.length));
+                            return { ...prev, dtcIndex: nextIdx };
+                        }
+                    }
+                    staffIdPrintTriggered.current = false;
+                    return null;
+                });
             };
             window.addEventListener('afterprint', afterPrint);
             playSound('swoosh');
@@ -231,7 +306,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                 });
             });
         }
-    }, [staffIdPrintData, playSound]);
+    }, [staffIdPrintData, playSound, toast]);
 
     const libraryPrintTriggered = useRef(false);
     const triggerLibraryStickerPrint = React.useCallback(() => {
@@ -276,7 +351,14 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     toast({ variant: 'destructive', title: 'Cannot print ID cards', description: 'Missing schoolId.' });
                     return;
                 }
-                setPrintData({ ...data, schoolId: sid });
+                if (data.printerType === 'dtc4500e' && data.students.length > 1) {
+                    toast(DTC_MULTI_CARD_START_TOAST);
+                }
+                setPrintData({
+                    ...data,
+                    schoolId: sid,
+                    ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
+                });
             },
             printPrizeTickets: setPrizeTicketsToPrint,
             setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
@@ -285,7 +367,14 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     toast({ variant: 'destructive', title: 'Cannot print prize cards', description: 'Missing schoolId.' });
                     return;
                 }
-                setPrizeIdPrintData({ ...data, schoolId: sid });
+                if (data.printerType === 'dtc4500e' && data.prizes.length > 1) {
+                    toast(DTC_MULTI_CARD_START_TOAST);
+                }
+                setPrizeIdPrintData({
+                    ...data,
+                    schoolId: sid,
+                    ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
+                });
             },
             setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
                 const sid = (data?.schoolId ?? '').trim();
@@ -293,7 +382,14 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     toast({ variant: 'destructive', title: 'Cannot print staff ID cards', description: 'Missing schoolId.' });
                     return;
                 }
-                setStaffIdPrintData({ ...data, schoolId: sid });
+                if (data.printerType === 'dtc4500e' && data.subjects.length > 1) {
+                    toast(DTC_MULTI_CARD_START_TOAST);
+                }
+                setStaffIdPrintData({
+                    ...data,
+                    schoolId: sid,
+                    ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
+                });
             },
             setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => {
                 const sid = (options?.schoolId ?? '').trim();
@@ -329,9 +425,20 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     sheetSpacing={printData.sheetSpacing}
                 />
             )}
-            {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && (
-                <StudentIdDTCPrintSheet students={printData.students} classes={printData.classes} schoolId={printData.schoolId} onReady={triggerStudentPrint} />
-            )}
+            {printData && printData.students.length > 0 && printData.printerType === 'dtc4500e' && (() => {
+                const dtcIdx = dtcPrintIndex(printData);
+                const dtcStudent = printData.students[dtcIdx];
+                if (!dtcStudent) return null;
+                return (
+                    <StudentIdDTCPrintSheet
+                        key={dtcStudent.id}
+                        students={[dtcStudent]}
+                        classes={printData.classes}
+                        schoolId={printData.schoolId}
+                        onReady={triggerStudentPrint}
+                    />
+                );
+            })()}
             {prizeTicketsToPrint.length > 0 && (
                 <PrizeRedeemTicketPrintSheet
                     tickets={prizeTicketsToPrint}
@@ -350,9 +457,19 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     sheetSpacing={prizeIdPrintData.sheetSpacing}
                 />
             )}
-            {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (
-                <PrizeIdDTCPrintSheet prizes={prizeIdPrintData.prizes} schoolId={prizeIdPrintData.schoolId} onReady={triggerPrizeIdPrint} />
-            )}
+            {prizeIdPrintData && prizeIdPrintData.prizes.length > 0 && prizeIdPrintData.printerType === 'dtc4500e' && (() => {
+                const dtcIdx = dtcPrintIndex(prizeIdPrintData);
+                const dtcPrize = prizeIdPrintData.prizes[dtcIdx];
+                if (!dtcPrize) return null;
+                return (
+                    <PrizeIdDTCPrintSheet
+                        key={dtcPrize.id}
+                        prizes={[dtcPrize]}
+                        schoolId={prizeIdPrintData.schoolId}
+                        onReady={triggerPrizeIdPrint}
+                    />
+                );
+            })()}
             {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType !== 'dtc4500e' && (
                 <StaffIdPrintSheet
                     subjects={staffIdPrintData.subjects}
@@ -362,9 +479,20 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     sheetSpacing={staffIdPrintData.sheetSpacing}
                 />
             )}
-            {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType === 'dtc4500e' && (
-                <StaffIdDTCPrintSheet subjects={staffIdPrintData.subjects} schoolId={staffIdPrintData.schoolId} onReady={triggerStaffIdPrint} />
-            )}
+            {staffIdPrintData && staffIdPrintData.subjects.length > 0 && staffIdPrintData.printerType === 'dtc4500e' && (() => {
+                const dtcIdx = dtcPrintIndex(staffIdPrintData);
+                const dtcSubject = staffIdPrintData.subjects[dtcIdx];
+                if (!dtcSubject) return null;
+                const subjectKey = dtcSubject.kind === 'teacher' ? dtcSubject.teacher.id : dtcSubject.account.id;
+                return (
+                    <StaffIdDTCPrintSheet
+                        key={subjectKey}
+                        subjects={[dtcSubject]}
+                        schoolId={staffIdPrintData.schoolId}
+                        onReady={triggerStaffIdPrint}
+                    />
+                );
+            })()}
             {libraryPrintJob && libraryPrintJob.items.length > 0 && (
                 <LibraryBarcodePrintSheet
                     items={libraryPrintJob.items}
