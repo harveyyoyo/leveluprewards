@@ -445,7 +445,7 @@ export const PROMOTION_FLYERS: readonly PromotionFlyer[] = [
     id: 'feature-houses',
     name: 'School Houses',
     description:
-      'Spirit houses, sorting ceremony, house parents, point rollups, and Hall of Fame integration.',
+      'Houses, sorting ceremony, house parents, point rollups, and Hall of Fame integration.',
     href: '/marketing/flyer-feature-houses.html',
     audience: 'features',
     preview: { border: 'border-violet-500/40', tag: 'Houses' },
