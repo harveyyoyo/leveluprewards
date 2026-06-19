@@ -40,7 +40,7 @@ import {
   seedHouseThemePack,
   syncHousePointsFromStudents,
 } from '@/lib/db';
-import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/houses/housePresets';
+import { type HousePresetThemeId, visibleHousePresetThemes } from '@/lib/houses/housePresets';
 import {
   applyHouseWizardSettings,
   buildHouseHallOfFameHref,
@@ -73,6 +73,7 @@ type Props = {
   houses: House[];
   students: Student[];
   updateSettings: (patch: Partial<Settings>) => void;
+  includeJewishOrthodoxPresets?: boolean;
   onComplete?: () => void;
 };
 
@@ -83,6 +84,7 @@ export function HouseSetupWizard({
   houses,
   students,
   updateSettings,
+  includeJewishOrthodoxPresets = false,
   onComplete,
 }: Props) {
   const firestore = useFirestore();
@@ -97,9 +99,14 @@ export function HouseSetupWizard({
     [students],
   );
 
+  const availableHousePresetThemes = useMemo(
+    () => visibleHousePresetThemes({ includeJewishOrthodox: includeJewishOrthodoxPresets }),
+    [includeJewishOrthodoxPresets],
+  );
+
   const selectedTheme = useMemo(
-    () => HOUSE_PRESET_THEMES.find((t) => t.id === draft.themeId),
-    [draft.themeId],
+    () => availableHousePresetThemes.find((t) => t.id === draft.themeId),
+    [availableHousePresetThemes, draft.themeId],
   );
 
   const reset = useCallback(() => {
@@ -118,6 +125,12 @@ export function HouseSetupWizard({
       setDraft((d) => (d.assignMode === 'skip' ? d : { ...d, assignMode: 'skip' }));
     }
   }, [step, unassignedCount]);
+
+  useEffect(() => {
+    if (draft.themeId !== 'skip' && !availableHousePresetThemes.some((theme) => theme.id === draft.themeId)) {
+      setDraft((d) => ({ ...d, themeId: availableHousePresetThemes[0]?.id ?? 'quick' }));
+    }
+  }, [availableHousePresetThemes, draft.themeId]);
 
   const canGoNext = useMemo(() => {
     if (step === 1) {
@@ -284,7 +297,7 @@ export function HouseSetupWizard({
                 <p className="text-xs text-muted-foreground mt-0.5">Skip seeding — use your current roster.</p>
               </button>
             ) : null}
-            {HOUSE_PRESET_THEMES.map((theme) => {
+            {availableHousePresetThemes.map((theme) => {
               const selected = draft.themeId === theme.id;
               return (
                 <button
