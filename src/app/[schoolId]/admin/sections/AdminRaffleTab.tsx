@@ -22,6 +22,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
+import { RaffleAnimationNotice } from '@/components/raffle/RaffleAnimationNotice';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import { rafflePointsFieldLabel } from '@/lib/raffleStudentPoints';
@@ -715,6 +716,7 @@ export function AdminRaffleTab({
               <p className="text-xs text-muted-foreground">
                 Same pool and deduct behavior — only the animation changes. Wheel slices reflect ticket weights.
               </p>
+              <RaffleAnimationNotice />
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"

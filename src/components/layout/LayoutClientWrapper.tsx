@@ -200,7 +200,9 @@ function LayoutClientWrapperInner({
     const isSmartScreenPage =
       typeof pathname === 'string' &&
       (pathname.includes('/smart-screen') || pathname.includes('/displays'));
-    const isHouseSortingPage = typeof pathname === 'string' && pathname.includes('/house-sorting');
+    const isHouseSortingPage =
+      typeof pathname === 'string' &&
+      (pathname.includes('/house-sorting') || pathname.includes('/houses-realm'));
     const isPresentationPage = isPresentationRoute(pathname);
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||

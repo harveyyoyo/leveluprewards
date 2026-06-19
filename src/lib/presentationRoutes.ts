@@ -2,6 +2,7 @@
 export function isPresentationRoute(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return (
+    pathname.includes('/houses-realm') ||
     pathname.includes('/house-sorting') ||
     pathname.includes('/classroom-screen') ||
     pathname.includes('/smart-screen') ||

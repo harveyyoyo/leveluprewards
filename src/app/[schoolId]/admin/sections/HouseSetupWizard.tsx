@@ -502,7 +502,7 @@ export function HouseSetupWizard({
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl flex-1">
-                <Link href={`/${schoolId}/house-sorting`} target="_blank" rel="noopener noreferrer">
+                <Link href={`/${schoolId}/houses-realm/ceremony`} target="_blank" rel="noopener noreferrer">
                   <Wand2 className="mr-2 h-4 w-4" />
                   Sorting ceremony
                 </Link>

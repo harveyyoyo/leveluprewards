@@ -567,6 +567,65 @@ html[data-office-portal] .office-content-pane {
     ) {
     color: inherit;
   }
+
+  /* Houses realm — standalone fullscreen experience */
+  html[data-houses-realm] body {
+    background-color: #12081f !important;
+    color: #f8f4ff !important;
+  }
+
+  html[data-houses-realm] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
+
+  .houses-realm-root {
+    color: #f8f4ff;
+    background: #12081f;
+  }
+
+  .houses-realm-bg {
+    background:
+      radial-gradient(ellipse 80% 55% at 50% -10%, rgba(139, 92, 246, 0.35), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(245, 158, 11, 0.12), transparent 55%),
+      linear-gradient(180deg, #1a0f2e 0%, #12081f 45%, #0a0612 100%);
+  }
+
+  .houses-realm-stars {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.35), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.25), transparent),
+      radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.2), transparent);
+    background-size: 200px 200px;
+  }
+
+  .houses-realm-display {
+    font-family: Fraunces, ui-serif, Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Manage panel cards inside dark houses realm */
+  html[data-houses-realm] .houses-realm-manage :where(.bg-card, .bg-background) {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #f8f4ff;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.text-foreground) {
+    color: #f8f4ff !important;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.text-muted-foreground) {
+    color: rgba(248, 244, 255, 0.55) !important;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.border-border) {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
   
   .coupon-preview-container {
     container-type: inline-size;

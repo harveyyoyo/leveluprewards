@@ -36,6 +36,7 @@ import {
     type ResolvedDisplayMode,
 } from '@/lib/displayMode';
 import { resolveMainPortalCards, type MainPortalCardId } from '@/lib/portalHub';
+import type { ClassroomCelebrationEffect } from '@/lib/classroomSeatingChart';
 import {
     getBrowserLegacyModeSignals,
     resolveLegacyModePreference,
@@ -102,6 +103,10 @@ interface Settings {
     showHouseOnStudentKiosk: boolean;
     /** Sorting ceremony: ask a fun decoy question before each house reveal (configured in Admin → Houses). */
     houseSortingUseFakeQuestions?: boolean;
+    /** Sorting ceremony reveal effect — same options as classroom points celebrations. */
+    houseSortingCelebrationEffect?: ClassroomCelebrationEffect;
+    /** Sorting ceremony: kiosk-style fly-up with the house name on reveal. */
+    houseSortingShowFlyUp?: boolean;
     enableChallenges: boolean;
     // Analytics
     enableTeacherCharts: boolean;
@@ -663,6 +668,8 @@ const defaultSettings: Settings = {
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,
+    houseSortingCelebrationEffect: 'confetti',
+    houseSortingShowFlyUp: true,
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,

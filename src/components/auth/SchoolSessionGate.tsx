@@ -107,7 +107,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
 
-  if (section === 'house-sorting') {
+  if (section === 'house-sorting' || section === 'houses-realm') {
     return (
       loginState === 'admin' ||
       loginState === 'teacher' ||
