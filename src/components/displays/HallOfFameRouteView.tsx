@@ -260,12 +260,12 @@ export default function HallOfFamePage({
     const getSortByLabel = () => {
         if (rankType === 'goals') return 'All Active & Completed Goals';
         if (rankType === 'houses') {
-            if (sortBy === 'points') return 'House Hall of Fame · Current house points';
-            if (sortBy === 'lifetimePoints') return 'House Hall of Fame · Lifetime house points';
-            if (sortBy === 'period_day') return 'House Hall of Fame · Points earned today';
-            if (sortBy === 'period_week') return 'House Hall of Fame · Points earned this week';
-            if (sortBy === 'period_month') return 'House Hall of Fame · Points earned this month';
-            return `House Hall of Fame · ${sortBy} points`;
+            if (sortBy === 'points') return 'Hall of Fame · Current house points';
+            if (sortBy === 'lifetimePoints') return 'Hall of Fame · Lifetime house points';
+            if (sortBy === 'period_day') return 'Hall of Fame · Points earned today';
+            if (sortBy === 'period_week') return 'Hall of Fame · Points earned this week';
+            if (sortBy === 'period_month') return 'Hall of Fame · Points earned this month';
+            return `Hall of Fame · ${sortBy} points`;
         }
         if (rankType === 'classes') {
             if (sortBy === 'points') return 'Class totals (current balances)';
@@ -574,7 +574,7 @@ export default function HallOfFamePage({
         return skeleton;
     }
     const showHallLocalDecor = !animBackdrop && !isPreview;
-    const hallLabel = rankType === 'houses' ? 'House Hall of Fame' : 'Hall of Fame';
+    const hallLabel = rankType === 'houses' ? 'Hall of Fame' : 'Hall of Fame';
     const scopeLabel = rankType === 'houses' ? 'All Houses' : getScopeName();
     const getAccentColor = (item: any): string | undefined =>
         item?.type === 'house' && item.accentColor ? item.accentColor : undefined;

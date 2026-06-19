@@ -2,16 +2,18 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { House, Student } from '@/lib/types';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { Check, Loader2, Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { pickRandomSortingQuestion } from '@/lib/houses/sortingCeremonyQuestions';
+import { Loader2, MessageCircleQuestion, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+
+type CeremonyStep = 'question' | 'name' | 'reveal';
 
 export default function HouseSortingPage() {
   const params = useParams();
@@ -39,222 +41,271 @@ export default function HouseSortingPage() {
     [houses],
   );
 
+  const houseById = useMemo(() => new Map(sortedHouses.map((h) => [h.id, h])), [sortedHouses]);
+
   const queue = useMemo(
     () =>
-      (students || [])
-        .filter((s) => !s.houseId)
-        .sort(
-          (a, b) =>
-            (a.lastName ?? '').localeCompare(b.lastName ?? '') ||
-            (a.firstName ?? '').localeCompare(b.firstName ?? ''),
-        ),
+      [...(students || [])].sort(
+        (a, b) =>
+          (a.lastName ?? '').localeCompare(b.lastName ?? '') ||
+          (a.firstName ?? '').localeCompare(b.firstName ?? ''),
+      ),
     [students],
   );
 
+  const useFakeQuestions = settings.houseSortingUseFakeQuestions === true;
+
   const [index, setIndex] = useState(0);
-  const [assignments, setAssignments] = useState<Record<string, string>>({});
-  const [selectedHouseId, setSelectedHouseId] = useState<string | null>(null);
-  const [revealed, setRevealed] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [step, setStep] = useState<CeremonyStep>(useFakeQuestions ? 'question' : 'name');
+  const [fakeQuestion, setFakeQuestion] = useState(() => pickRandomSortingQuestion());
   const [done, setDone] = useState(false);
 
-  const commitAssignments = async (map: Record<string, string>) => {
-    if (!firestore || !schoolId) return;
-    setBusy(true);
-    try {
-      await Promise.all(
-        Object.entries(map).map(([studentId, houseId]) =>
-          updateDoc(doc(firestore, 'schools', schoolId, 'students', studentId), {
-            houseId,
-            updatedAt: Date.now(),
-          }),
-        ),
-      );
-      setDone(true);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const currentStudent = queue[index];
-  const currentHouse =
-    currentStudent && assignments[currentStudent.id]
-      ? sortedHouses.find((h) => h.id === assignments[currentStudent.id])
-      : null;
+  const currentHouse = currentStudent?.houseId ? houseById.get(currentStudent.houseId) : undefined;
+
+  const goToReveal = () => setStep('reveal');
+
+  const initialStepForStudent = useFakeQuestions ? 'question' : 'name';
 
   useEffect(() => {
-    setSelectedHouseId(null);
-  }, [currentStudent?.id]);
+    document.documentElement.setAttribute('data-presentation', 'house-sorting');
+    document.body.classList.add('overflow-hidden');
+    return () => {
+      document.documentElement.removeAttribute('data-presentation');
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, []);
 
-  const revealNext = () => {
-    if (!currentStudent || !selectedHouseId) return;
-    setAssignments((prev) => ({ ...prev, [currentStudent.id]: selectedHouseId }));
-    setRevealed(true);
-  };
+  useEffect(() => {
+    setStep(initialStepForStudent);
+    setFakeQuestion(pickRandomSortingQuestion());
+  }, [currentStudent?.id, initialStepForStudent]);
 
   const advance = () => {
-    setRevealed(false);
     if (index + 1 >= queue.length) {
-      setAssignments((prev) => {
-        void commitAssignments(prev);
-        return prev;
-      });
+      setDone(true);
       return;
     }
     setIndex((i) => i + 1);
   };
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== ' ' && event.key !== 'Enter') return;
+      event.preventDefault();
+      if (step === 'question' || step === 'name') {
+        setStep('reveal');
+        return;
+      }
+      if (index + 1 >= queue.length) {
+        setDone(true);
+        return;
+      }
+      setIndex((i) => i + 1);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [step, index, queue.length]);
+
   const staffOk =
-    loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'houseCoordinator';
+    loginState === 'admin' ||
+    loginState === 'developer' ||
+    loginState === 'teacher' ||
+    loginState === 'houseCoordinator';
 
   if (!settings.enableHouses) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 text-center">
-        <p className="text-muted-foreground">Houses are not enabled for this school.</p>
+      <div className="absolute inset-0 flex min-h-dvh items-center justify-center bg-[#0f0720] p-8 text-center text-white/70">
+        <p>Houses are not enabled for this school.</p>
       </div>
     );
   }
 
   if (!staffOk) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-8 text-center">
-        <p className="text-muted-foreground">Sign in as school staff to run the sorting ceremony.</p>
+      <div className="absolute inset-0 flex min-h-dvh items-center justify-center bg-[#0f0720] p-8 text-center text-white/70">
+        <p>Staff sign-in is required to run this presentation.</p>
       </div>
     );
   }
 
   if (housesLoading || studentsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-violet-600" />
+      <div className="absolute inset-0 flex min-h-dvh items-center justify-center bg-[#0f0720]">
+        <Loader2 className="h-10 w-10 animate-spin text-violet-400" />
       </div>
     );
   }
 
-  if (sortedHouses.length === 0) {
+  if (sortedHouses.length === 0 || queue.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-lg font-bold">Create houses first</p>
-        <Button asChild>
-          <Link href={`/${schoolId}/admin`}>Open Admin</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (queue.length === 0 || done) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-8 text-center bg-gradient-to-b from-violet-950 to-background text-white">
-        <Sparkles className="h-12 w-12 text-amber-400" />
-        <h1 className="text-3xl font-black uppercase tracking-widest">
-          {done ? 'Sorting complete!' : 'Everyone has a house'}
-        </h1>
-        <p className="text-white/70 max-w-md">
-          {done
-            ? 'Students have been assigned. Close this tab or return to Admin → Houses.'
-            : 'All students already belong to a house.'}
+      <div className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#0f0720] p-8 text-center text-white">
+        <p className="text-lg font-bold">Nothing to present yet</p>
+        <p className="text-white/60 max-w-md text-sm">
+          Add houses and students in Admin before launching the ceremony.
         </p>
-        <Button variant="secondary" asChild>
-          <Link href={`/${schoolId}/admin`}>Back to Admin</Link>
-        </Button>
       </div>
     );
   }
 
-  const accentColor =
-    currentHouse?.color ??
-    (selectedHouseId ? sortedHouses.find((h) => h.id === selectedHouseId)?.color : undefined) ??
-    '#7c3aed';
+  if (done) {
+    return (
+      <div className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center gap-4 bg-gradient-to-b from-violet-950 to-[#0f0720] p-8 text-center text-white">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 240, damping: 22 }}
+        >
+          <Sparkles className="mx-auto h-14 w-14 text-amber-400 mb-6" />
+          <h1 className="text-3xl font-black uppercase tracking-widest text-white sm:text-5xl">Ceremony complete</h1>
+          <p className="text-white/70 max-w-md mt-4 text-lg">Every student has been celebrated.</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  const accentColor = currentHouse?.color ?? '#7c3aed';
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center p-6 text-center text-white"
+      className="absolute inset-0 flex min-h-dvh flex-col items-center justify-center overflow-hidden p-6 sm:p-10 text-center text-white"
       style={{
-        background: `radial-gradient(circle at 50% 20%, ${accentColor}55, #0f0720 70%)`,
+        background: `radial-gradient(circle at 50% 18%, ${accentColor}44, #0f0720 72%)`,
       }}
     >
-      <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/60 mb-4">
-        Are you ready?
-      </p>
-      <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight mb-2">
-        House sorting
-      </h1>
-      <p className="text-white/70 mb-2">
-        Student {index + 1} of {queue.length}
-      </p>
-      <p className="text-xs text-white/50 mb-8 max-w-md">
-        Choose a house, reveal to the room, then go to the next student. Saves when you finish.
-      </p>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_100%,rgba(255,255,255,0.06),transparent_55%)]" />
 
-      {!revealed ? (
-        <div className="space-y-8 max-w-2xl w-full">
-          <p className="text-2xl sm:text-3xl font-bold">
-            {currentStudent?.firstName} {currentStudent?.lastName}
-          </p>
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+        className="relative z-10 mb-10"
+      >
+        <p className="mb-3 text-[10px] font-black uppercase tracking-[0.45em] text-white/50">
+          House ceremony
+        </p>
+        <p className="text-sm text-white/50">
+          {index + 1} of {queue.length}
+        </p>
+      </motion.div>
 
-          <div className="space-y-3">
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-white/50">
-              Choose house
+      <AnimatePresence mode="wait">
+        {step === 'question' ? (
+          <motion.div
+            key={`question-${currentStudent?.id}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="relative z-10 w-full max-w-3xl space-y-8"
+          >
+            <p className="text-3xl font-black tracking-tight text-white sm:text-5xl md:text-6xl">
+              {currentStudent?.firstName} {currentStudent?.lastName}
             </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {sortedHouses.map((house) => {
-                const selected = selectedHouseId === house.id;
-                return (
-                  <button
-                    key={house.id}
-                    type="button"
-                    onClick={() => setSelectedHouseId(house.id)}
-                    className={cn(
-                      'relative rounded-2xl border-2 px-4 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80',
-                      selected
-                        ? 'border-white bg-white/15 scale-105 shadow-lg'
-                        : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10',
-                    )}
-                    style={selected ? { borderColor: house.color, boxShadow: `0 0 24px ${house.color}44` } : undefined}
-                    aria-pressed={selected}
-                    aria-label={`Assign to ${house.name}`}
-                  >
-                    <HouseBadge house={house} size="lg" className="text-sm" />
-                    {selected ? (
-                      <span
-                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-violet-900 shadow"
-                        aria-hidden
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+            <div className="rounded-3xl border border-white/15 bg-white/10 px-6 py-10 backdrop-blur-md">
+              <MessageCircleQuestion className="mx-auto mb-5 h-12 w-12 text-amber-300" aria-hidden />
+              <p className="text-xl font-bold leading-snug text-white sm:text-3xl">{fakeQuestion}</p>
             </div>
-          </div>
+          </motion.div>
+        ) : step === 'name' ? (
+          <motion.div
+            key={`name-${currentStudent?.id}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            className="relative z-10 w-full max-w-3xl space-y-6"
+          >
+            <p className="text-3xl font-black tracking-tight text-white sm:text-5xl md:text-6xl">
+              {currentStudent?.firstName} {currentStudent?.lastName}
+            </p>
+            <p className="text-lg font-medium text-white/60 sm:text-xl">
+              Ready to reveal their house?
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={`reveal-${currentStudent?.id}`}
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+            className="relative z-10 w-full max-w-3xl space-y-8"
+          >
+            <p className="text-3xl font-black tracking-tight text-white sm:text-5xl md:text-6xl">
+              {currentStudent?.firstName} {currentStudent?.lastName}
+            </p>
+            {currentHouse ? (
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: {},
+                  visible: { transition: { staggerChildren: 0.12 } },
+                }}
+                className="space-y-4"
+              >
+                <motion.p
+                  variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                  className="text-lg font-bold uppercase tracking-[0.2em] text-white/85 sm:text-xl"
+                >
+                  Belongs to
+                </motion.p>
+                <motion.div
+                  variants={{ hidden: { opacity: 0, scale: 0.9 }, visible: { opacity: 1, scale: 1 } }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 22 }}
+                >
+                  <HouseBadge house={currentHouse} size="lg" className="scale-125 text-base sm:scale-150 sm:text-lg" />
+                </motion.div>
+                {currentHouse.motto ? (
+                  <motion.p
+                    variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                    className="text-lg italic text-white/70"
+                  >
+                    &ldquo;{currentHouse.motto}&rdquo;
+                  </motion.p>
+                ) : null}
+              </motion.div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                className="space-y-3"
+              >
+                <p className="text-2xl font-bold text-amber-200 sm:text-3xl">No house assigned yet</p>
+                <p className="text-base text-white/60 sm:text-lg">
+                  Assign this student in Admin → Houses, then run the ceremony again.
+                </p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      <div className="fixed bottom-8 left-1/2 z-20 flex -translate-x-1/2 gap-3">
+        {step === 'question' || step === 'name' ? (
           <Button
+            type="button"
             size="lg"
-            className="rounded-full px-10 py-6 text-lg font-black uppercase tracking-widest"
-            onClick={revealNext}
-            disabled={!selectedHouseId}
+            className="min-w-[12rem] rounded-full bg-violet-500 px-8 text-base font-bold text-white shadow-lg shadow-violet-900/40 hover:bg-violet-400"
+            onClick={goToReveal}
           >
             Reveal house
           </Button>
-        </div>
-      ) : (
-        <div className={cn('space-y-6 animate-in zoom-in-95 duration-500')}>
-          <p className="text-xl font-bold text-white/90">{currentStudent?.firstName} belongs to</p>
-          {currentHouse ? <HouseBadge house={currentHouse} size="lg" className="text-sm scale-125" /> : null}
-          {currentHouse?.motto ? (
-            <p className="text-white/70 italic">&ldquo;{currentHouse.motto}&rdquo;</p>
-          ) : null}
+        ) : (
           <Button
+            type="button"
             size="lg"
-            className="rounded-full px-10 font-black uppercase tracking-widest"
+            className="min-w-[12rem] rounded-full bg-white/15 px-8 text-base font-bold text-white shadow-lg backdrop-blur-sm hover:bg-white/25"
             onClick={advance}
-            disabled={busy}
           >
-            {index + 1 >= queue.length ? 'Finish' : 'Next student'}
+            {index + 1 >= queue.length ? 'Finish ceremony' : 'Next student'}
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

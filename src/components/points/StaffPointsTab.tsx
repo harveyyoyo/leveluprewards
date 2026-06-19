@@ -55,7 +55,7 @@ export type StaffPointsTabProps = {
   onEditCategory?: (category: Category) => void;
 
   onDeleteCategory?: (categoryId: string) => void;
-
+  onUpdateCategory?: (category: Category) => void | Promise<void>;
   manualDescription?: string;
 
   manualBudgetOptions?: React.ComponentProps<typeof ManualPointsAwardDialog>['budgetOptions'];
@@ -105,6 +105,8 @@ export function StaffPointsTab({
   onEditCategory,
 
   onDeleteCategory,
+
+  onUpdateCategory,
 
   manualDescription,
 
@@ -187,6 +189,8 @@ export function StaffPointsTab({
           onEditCategory={onEditCategory}
 
           onDeleteCategory={onDeleteCategory}
+
+          onUpdateCategory={onUpdateCategory}
 
           canEditCategory={
 

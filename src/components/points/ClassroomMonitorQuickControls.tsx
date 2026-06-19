@@ -6,12 +6,16 @@ import {
   ArrowUpRight,
   ChevronDown,
   GraduationCap,
+  GripVertical,
   Hash,
   Monitor,
+  NotebookPen,
   Palette,
   PanelTop,
+  Redo2,
   RotateCcw,
   Sparkles,
+  Undo2,
   Volume2,
   VolumeX,
   Zap,
@@ -132,12 +136,20 @@ function ClassroomMonitorToolbarOptionsMenu({
   isFullscreen,
   rewardsPillarOn,
   onChange,
+  classScreenUrl,
+  onResetSessionDisplay,
+  behaviorNotesTipsOn,
+  onBehaviorNotesTipsChange,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
   isFullscreen: boolean;
   rewardsPillarOn: boolean;
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
+  classScreenUrl?: string | null;
+  onResetSessionDisplay?: () => void;
+  behaviorNotesTipsOn: boolean;
+  onBehaviorNotesTipsChange: (on: boolean) => void;
 }) {
   const menus = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
 
@@ -194,6 +206,42 @@ function ClassroomMonitorToolbarOptionsMenu({
               <span className="font-semibold">Burst award</span>
             </span>
           </label>
+          <label className="flex cursor-pointer items-start gap-2">
+            <Checkbox
+              className="mt-0.5"
+              checked={behaviorNotesTipsOn}
+              onCheckedChange={(v) => onBehaviorNotesTipsChange(v === true)}
+            />
+            <span className="text-xs leading-snug">
+              <span className="font-semibold">Behavior notes</span> — shortcut tips on the monitor.
+            </span>
+          </label>
+        </div>
+
+        <div className="space-y-2 border-t border-border/40 pt-3">
+          <p className="text-[11px] font-bold text-foreground">Session &amp; display</p>
+          {classScreenUrl ? (
+            <a
+              href={classScreenUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-xs font-semibold no-underline transition-colors hover:bg-muted"
+            >
+              <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span className="min-w-0 flex-1">{CLASS_AWARDS_STUDENT_LAUNCH_LABEL}</span>
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
+            </a>
+          ) : null}
+          {onResetSessionDisplay ? (
+            <button
+              type="button"
+              className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-left text-xs font-semibold transition-colors hover:bg-muted"
+              onClick={onResetSessionDisplay}
+            >
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Reset screen
+            </button>
+          ) : null}
         </div>
 
         <div className="space-y-2 border-t border-border/40 pt-3">
@@ -270,6 +318,16 @@ export function ClassroomMonitorQuickControls({
   onClassChange,
   onResetSessionDisplay,
   classScreenUrl,
+  onToggleEditMode,
+  onUndo,
+  onRedo,
+  undoDisabled = false,
+  redoDisabled = false,
+  undoTitle = 'Undo',
+  redoTitle = 'Redo',
+  awardActions,
+  behaviorNotesTipsOn,
+  onBehaviorNotesTipsChange,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
@@ -283,12 +341,81 @@ export function ClassroomMonitorQuickControls({
   onResetSessionDisplay?: () => void;
   /** Read-only projector mirror — omit when class screen launch is disabled. */
   classScreenUrl?: string | null;
+  onToggleEditMode?: () => void;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  undoDisabled?: boolean;
+  redoDisabled?: boolean;
+  undoTitle?: string;
+  redoTitle?: string;
+  awardActions?: ReactNode;
+  behaviorNotesTipsOn: boolean;
+  onBehaviorNotesTipsChange: (on: boolean) => void;
 }) {
   const activeDesign = normalizeClassroomDesign(prefs.design);
   const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
   const flyUpValue = !prefs.showKioskFlyUp ? 'off' : prefs.kioskFlyUpSize;
 
-  if (!isFullscreen || editMode) return null;
+  if (!isFullscreen) return null;
+
+  const sessionToolbarButtons = (
+    <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border/50 bg-muted/20 p-0.5">
+      {onToggleEditMode ? (
+        <button
+          type="button"
+          className={cn(
+            monitorSelectTriggerClass(design, isFullscreen),
+            'inline-flex items-center gap-1 border-0 px-2 py-1.5 shadow-none sm:px-2.5',
+            editMode && 'bg-primary/15 text-primary ring-1 ring-primary/30',
+          )}
+          aria-label={editMode ? 'Done arranging' : 'Arrange seats'}
+          title={editMode ? 'Done arranging seats' : 'Arrange seats — drag desks to match your room'}
+          onClick={onToggleEditMode}
+        >
+          <GripVertical className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="hidden sm:inline">{editMode ? 'Done' : 'Arrange'}</span>
+        </button>
+      ) : null}
+      {!editMode && onUndo && onRedo ? (
+        <>
+          <button
+            type="button"
+            className={cn(
+              monitorSelectTriggerClass(design, isFullscreen),
+              'inline-flex items-center justify-center border-0 px-2 py-1.5 shadow-none',
+            )}
+            aria-label={undoTitle}
+            title={undoTitle}
+            disabled={undoDisabled}
+            onClick={onUndo}
+          >
+            <Undo2 className="h-4 w-4 shrink-0" aria-hidden />
+          </button>
+          <button
+            type="button"
+            className={cn(
+              monitorSelectTriggerClass(design, isFullscreen),
+              'inline-flex items-center justify-center border-0 px-2 py-1.5 shadow-none',
+            )}
+            aria-label={redoTitle}
+            title={redoTitle}
+            disabled={redoDisabled}
+            onClick={onRedo}
+          >
+            <Redo2 className="h-4 w-4 shrink-0" aria-hidden />
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+
+  if (editMode) {
+    return (
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:items-center sm:gap-2">
+        {sessionToolbarButtons}
+      </div>
+    );
+  }
 
   return (
     <div className="flex w-full min-w-0 flex-wrap items-start gap-1.5 sm:items-center sm:gap-2">
@@ -298,7 +425,13 @@ export function ClassroomMonitorQuickControls({
         isFullscreen={isFullscreen}
         rewardsPillarOn={rewardsPillarOn}
         onChange={onChange}
+        classScreenUrl={classScreenUrl}
+        onResetSessionDisplay={onResetSessionDisplay}
+        behaviorNotesTipsOn={behaviorNotesTipsOn}
+        onBehaviorNotesTipsChange={onBehaviorNotesTipsChange}
       />
+
+      {sessionToolbarButtons}
 
       {onClassChange ? (
         <ClassroomMonitorClassMenu
@@ -532,38 +665,31 @@ export function ClassroomMonitorQuickControls({
         </button>
       ) : null}
 
-      {classScreenUrl ? (
-        <a
-          href={classScreenUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={cn(
-            monitorSelectTriggerClass(design, isFullscreen),
-            'inline-flex items-center gap-1.5 no-underline',
-          )}
-          aria-label={CLASS_AWARDS_STUDENT_LAUNCH_LABEL}
-          title="Open read-only class screen on your projector — mirrors awards and effects, hides behavior notes."
-        >
-          <Monitor className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Class screen</span>
-          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-        </a>
-      ) : null}
+      <button
+        type="button"
+        className={cn(
+          monitorSelectTriggerClass(design, isFullscreen),
+          'inline-flex items-center justify-center px-2 py-2 sm:px-2.5',
+          !behaviorNotesTipsOn && 'opacity-60',
+        )}
+        aria-label={
+          behaviorNotesTipsOn ? 'Hide behavior notes tips' : 'Show behavior notes tips'
+        }
+        title={
+          behaviorNotesTipsOn
+            ? 'Behavior notes tips on — click to hide shortcut reminders'
+            : 'Behavior notes tips off — click to show shortcut reminders'
+        }
+        onClick={() => onBehaviorNotesTipsChange(!behaviorNotesTipsOn)}
+      >
+        <NotebookPen className="h-4 w-4 shrink-0" aria-hidden />
+      </button>
 
-      {onResetSessionDisplay ? (
-        <button
-          type="button"
-          className={cn(
-            monitorSelectTriggerClass(design, isFullscreen),
-            'inline-flex items-center gap-1.5',
-          )}
-          aria-label="Reset session display"
-          title="Clear on-screen session totals. Stored student points are not changed."
-          onClick={onResetSessionDisplay}
-        >
-          <RotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Reset screen</span>
-        </button>
+      {awardActions ? (
+        <>
+          <span className="hidden h-7 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
+          <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">{awardActions}</div>
+        </>
       ) : null}
     </div>
   );

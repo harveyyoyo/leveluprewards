@@ -30,6 +30,7 @@ import {
   writeHousePointsRollup,
   writeHousePointsRollupsFromDeltas,
 } from './housePoints';
+import { shouldRollupCategoryToHouse } from '../houses/houseCategoryRollup';
 import { ensureStudentHasClassPrimaryTeacher } from '@/lib/studentTeacherRoster';
 
 export { lookupStudentId } from './lookup';
@@ -231,7 +232,7 @@ export const awardPointsToStudent = async (
       const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, { desc: description, amount: points, date: now });
 
-      if (houseSnap) {
+      if (houseSnap && shouldRollupCategoryToHouse(description, allCategories)) {
         writeHousePointsRollup(transaction, houseSnap, points + bonusTotal);
       }
     });
@@ -336,7 +337,7 @@ export const awardPointsToMultipleStudents = async (
           const mainActivityRef = doc(collection(studentDoc.ref, 'activities'));
           transaction.set(mainActivityRef, { desc: description, amount: points, date: now });
 
-          if (options?.rollupHousePoints && studentData.houseId) {
+          if (options?.rollupHousePoints && studentData.houseId && shouldRollupCategoryToHouse(description, allCategories)) {
             houseDeltas.set(
               studentData.houseId,
               (houseDeltas.get(studentData.houseId) ?? 0) + totalAward,
@@ -377,6 +378,7 @@ export const deductPointsFromMultipleStudents = async (
   studentIds: string[],
   points: number,
   reason: string,
+  allCategories: Category[] = [],
   options?: Pick<AwardPointsOptions, 'rollupHousePoints'>,
 ): Promise<{ success: boolean; message: string; count: number; }> => {
   if (points <= 0) {
@@ -424,7 +426,11 @@ export const deductPointsFromMultipleStudents = async (
           const activityRef = doc(collection(studentDoc.ref, 'activities'));
           transaction.set(activityRef, { desc: reason, amount: -points, date: now });
 
-          if (options?.rollupHousePoints && studentData.houseId) {
+          if (
+            options?.rollupHousePoints &&
+            studentData.houseId &&
+            shouldRollupCategoryToHouse(reason, allCategories)
+          ) {
             houseDeltas.set(
               studentData.houseId,
               (houseDeltas.get(studentData.houseId) ?? 0) - points,

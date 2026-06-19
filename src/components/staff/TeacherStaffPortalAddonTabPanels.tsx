@@ -32,6 +32,7 @@ import { AdminNotificationsTab } from '@/app/[schoolId]/admin/sections/AdminNoti
 import { AdminIntegrationsTab } from '@/app/[schoolId]/admin/sections/AdminIntegrationsTab';
 import { AdminStudentPortalTab } from '@/app/[schoolId]/admin/sections/AdminStudentPortalTab';
 import { AdminBrandingTab } from '@/app/[schoolId]/admin/sections/AdminBrandingTab';
+import { teacherCanManageHouses } from '@/lib/houses/teacherHouseAccess';
 import { LibraryItemModal } from '@/components/library/LibraryItemModal';
 import { AchievementModal } from '@/components/badges/AchievementModal';
 import { BadgeModal } from '@/components/badges/BadgeModal';
@@ -73,6 +74,8 @@ export type TeacherStaffPortalAddonTabPanelsProps = {
   coupons: Coupon[] | null | undefined;
   schoolName?: string;
   schoolLogoUrl?: string | null;
+  /** Logged-in teacher — used for houses permission gating. */
+  currentTeacher?: Teacher | null;
 };
 
 function AddonPane({
@@ -103,6 +106,7 @@ export function TeacherStaffPortalAddonTabPanels({
   coupons,
   schoolName,
   schoolLogoUrl,
+  currentTeacher,
 }: TeacherStaffPortalAddonTabPanelsProps) {
   const confirm = useConfirm();
   const { toast } = useToast();
@@ -369,7 +373,7 @@ export function TeacherStaffPortalAddonTabPanels({
         </AddonPane>
       )}
 
-      {teacherTabEnabled('houses') && (
+      {teacherTabEnabled('houses') && teacherCanManageHouses(currentTeacher) && (
         <AddonPane tabId="houses" activeTab={activeTab}>
           <AdminHousesTab
             schoolId={schoolId}

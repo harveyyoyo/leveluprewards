@@ -10,6 +10,7 @@ export type HouseIdeasPanelProps = {
   linkedToStudentRewards: boolean;
   hasHouses: boolean;
   unassignedCount: number;
+  includeJewishOrthodoxPresets?: boolean;
   sortingHref: string;
   onSetupWizard: () => void;
   onPopulateSample: () => void;
@@ -36,13 +37,13 @@ const BASE_IDEAS: HouseIdea[] = [
     id: 'sorting',
     icon: Wand2,
     title: 'Hold a sorting ceremony',
-    detail: 'Pick each student’s house, then reveal on a big screen—great for the first week or new enrollments.',
+    detail: 'Assign houses on Rosters first, then open the fullscreen ceremony to present every student to the room.',
   },
   {
     id: 'tv',
     icon: Monitor,
     title: 'Lobby monitor board',
-    detail: 'Open House Hall of Fame in fullscreen on a gym or front-office display.',
+    detail: 'Open Hall of Fame in fullscreen on a gym or front-office display.',
   },
   {
     id: 'parents',
@@ -72,7 +73,7 @@ const BASE_IDEAS: HouseIdea[] = [
     id: 'sample',
     icon: Sparkles,
     title: 'Try a theme pack',
-    detail: 'Populate sample adds Phoenix/Tide-style teams—or pick Sports, Elements, or Yeshiva middot packs.',
+    detail: 'Populate sample adds Phoenix/Tide-style teams, or pick another starter pack.',
   },
 ];
 
@@ -80,6 +81,7 @@ export function HouseIdeasPanel({
   linkedToStudentRewards,
   hasHouses,
   unassignedCount,
+  includeJewishOrthodoxPresets = false,
   sortingHref,
   onSetupWizard,
   onPopulateSample,
@@ -92,7 +94,16 @@ export function HouseIdeasPanel({
     if (idea.id === 'manual' && linkedToStudentRewards) return false;
     if (idea.id === 'sync' && (!linkedToStudentRewards || !hasHouses || !onSync)) return false;
     return true;
-  });
+  }).map((idea) =>
+    idea.id === 'sample'
+      ? {
+          ...idea,
+          detail: includeJewishOrthodoxPresets
+            ? 'Populate sample adds Phoenix/Tide-style teams - or pick Sports, Elements, or Yeshiva middot packs.'
+            : 'Populate sample adds Phoenix/Tide-style teams - or pick Sports or Elements packs.',
+        }
+      : idea,
+  );
 
   const actionFor = (id: string) => {
     switch (id) {

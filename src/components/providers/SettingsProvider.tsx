@@ -20,6 +20,10 @@ import {
     type ProductPillarKey,
 } from '@/lib/productPillars';
 import type { StudentTheme } from '@/lib/types';
+import {
+    DEFAULT_STUDENT_THEME_FONT_SCALE,
+    DEFAULT_STUDENT_THEME_FONT_TRACKING,
+} from '@/lib/types';
 import type { IdCardPrinterFamilyId, IdCardPrintProfile } from '@/lib/idCardPrintCatalog';
 import { defaultPaperForFamily } from '@/lib/idCardPrintCatalog';
 import type { PrizeVoucherPaperFormat } from '@/lib/prizes/prizeVoucherPrint';
@@ -96,6 +100,8 @@ interface Settings {
     housePointsSource?: 'studentRollup' | 'manual';
     /** Show house name/color on the student kiosk header. */
     showHouseOnStudentKiosk: boolean;
+    /** Sorting ceremony: ask a fun decoy question before each house reveal (configured in Admin → Houses). */
+    houseSortingUseFakeQuestions?: boolean;
     enableChallenges: boolean;
     // Analytics
     enableTeacherCharts: boolean;
@@ -328,6 +334,8 @@ interface Settings {
     classroomMonitorIncludeLastName?: boolean;
     /** Show student sticker / theme emoji on desk avatars. */
     classroomMonitorIncludeStudentEmoji?: boolean;
+    /** Show behavior-notes shortcut tips on the live monitor by default. Default on when unset. */
+    classroomMonitorShowBehaviorNotesTips?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
     kioskAiFunIdleOffSec?: number;
     /** @deprecated Voucher idle timeout removed; print-voucher prompts are always available. */
@@ -654,6 +662,7 @@ const defaultSettings: Settings = {
     enableHouses: false,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
+    houseSortingUseFakeQuestions: false,
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,
@@ -756,8 +765,8 @@ const defaultSettings: Settings = {
     animatedBackgroundStyle: 'arcade',
     hiddenAnimatedBackgroundIds: [],
     defaultStudentTheme: {
-        fontScale: 1.1,
-        fontTracking: 0.02,
+        fontScale: DEFAULT_STUDENT_THEME_FONT_SCALE,
+        fontTracking: DEFAULT_STUDENT_THEME_FONT_TRACKING,
         background: '#f3ece0',
         text: '#020617',
         primary: '#2557a7',
@@ -775,6 +784,7 @@ const defaultSettings: Settings = {
     classroomMonitorIncludeSessionLastAward: true,
     classroomMonitorIncludeLastName: false,
     classroomMonitorIncludeStudentEmoji: false,
+    classroomMonitorShowBehaviorNotesTips: true,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,
     studentSignInThrottleMaxAttempts: 10,

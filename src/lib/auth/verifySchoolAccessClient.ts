@@ -130,9 +130,74 @@ async function verifySchoolAccessViaApiRoute(
   return { ok: false, message, status: res.status };
 }
 
+function apiRouteResultToVerifyResult(
+  apiResult: { ok: true } | { ok: false; message: string; status: number },
+): VerifySchoolAccessResult {
+  if (apiResult.ok) return apiResult;
+  return {
+    ok: false,
+    message: apiResult.message,
+    infrastructureFailure: canUseSchoolAccessApiFallback(apiResult.status),
+    credentialFailure:
+      apiResult.status === 403 || apiResult.status === 404 || apiResult.status === 412,
+  };
+}
+
+/**
+ * Run callable + SSR API in parallel; first success wins.
+ * Waits for every attempt before returning a credential error (avoids false negatives when one backend is slower).
+ */
+async function raceSchoolAccessVerification(
+  auth: Auth,
+  schoolId: string,
+  passcode: string,
+  functions: Functions | undefined,
+  options?: { allowDeveloperBypass?: boolean },
+): Promise<VerifySchoolAccessResult> {
+  const tasks: Promise<VerifySchoolAccessResult>[] = [
+    verifySchoolAccessViaApiRoute(auth, schoolId, passcode).then(apiRouteResultToVerifyResult),
+  ];
+  if (functions) {
+    tasks.push(verifySchoolAccessViaCallable(auth, functions, schoolId, passcode, options));
+  }
+
+  return new Promise((resolve) => {
+    let remaining = tasks.length;
+    let resolved = false;
+    const successes: VerifySchoolAccessResult[] = [];
+    const credentialFailures: VerifySchoolAccessResult[] = [];
+    const otherFailures: VerifySchoolAccessResult[] = [];
+
+    const finish = () => {
+      if (resolved) return;
+      if (successes.length > 0) {
+        resolved = true;
+        resolve(successes[0]!);
+        return;
+      }
+      if (remaining > 0) return;
+      resolved = true;
+      resolve(
+        credentialFailures[0] ??
+          otherFailures[0] ?? { ok: false, message: 'Could not verify school access.' },
+      );
+    };
+
+    for (const task of tasks) {
+      void task.then((result) => {
+        remaining -= 1;
+        if (result.ok) successes.push(result);
+        else if (result.credentialFailure) credentialFailures.push(result);
+        else otherFailures.push(result);
+        finish();
+      });
+    }
+  });
+}
+
 /**
  * School access gate used by the login page.
- * Production: callable first (independently deployed Admin SDK), SSR API backup.
+ * Production: callable + SSR API in parallel (avoids Cloud Function cold-start delay on first login).
  * Development: local SSR API first (works with .env.local Admin creds), callable backup.
  */
 export async function verifySchoolAccessViaApi(
@@ -169,36 +234,7 @@ export async function verifySchoolAccessViaApi(
     return { ok: false, message: apiResult.message };
   }
 
-  if (functions) {
-    const callableResult = await verifySchoolAccessViaCallable(
-      auth,
-      functions,
-      schoolId,
-      passcode,
-      devOptions,
-    );
-    if (callableResult.ok) return callableResult;
-    if (!shouldTrySchoolAccessApiAfterCallableFailure(callableResult)) {
-      return { ok: false, message: callableResult.message };
-    }
-  }
-
-  const apiResult = await verifySchoolAccessViaApiRoute(auth, schoolId, passcode);
-  if (apiResult.ok) return apiResult;
-
-  if (functions && canUseSchoolAccessApiFallback(apiResult.status)) {
-    const callableRetry = await verifySchoolAccessViaCallable(
-      auth,
-      functions,
-      schoolId,
-      passcode,
-      devOptions,
-    );
-    if (callableRetry.ok) return callableRetry;
-    if (!shouldTrySchoolAccessApiAfterCallableFailure(callableRetry)) {
-      return { ok: false, message: callableRetry.message };
-    }
-  }
-
-  return { ok: false, message: apiResult.message };
+  const raced = await raceSchoolAccessVerification(auth, schoolId, passcode, functions, devOptions);
+  if (raced.ok) return raced;
+  return { ok: false, message: raced.message };
 }

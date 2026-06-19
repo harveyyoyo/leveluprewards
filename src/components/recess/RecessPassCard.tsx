@@ -9,10 +9,12 @@ export function RecessPassCard({
   meta,
   schoolName,
   className,
+  cornerStyle,
 }: {
   meta: RecessReasonMeta;
   schoolName: string;
   className?: string;
+  cornerStyle?: 'rounded' | 'rectangular';
 }) {
   const Icon = meta.icon;
   const scanCode = recessPassScanCodeFor(meta.value);
@@ -21,6 +23,7 @@ export function RecessPassCard({
     <div
       className={cn(
         'print-id-card print-prize-id-card print-recess-pass-card border-2',
+        cornerStyle === 'rectangular' && 'print-id-card--rectangular',
         meta.badge,
         className,
       )}

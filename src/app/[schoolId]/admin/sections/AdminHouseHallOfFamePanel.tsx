@@ -87,7 +87,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
       <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 space-y-3">
         <p className="text-sm font-bold text-foreground">Turn on Houses first</p>
         <p className="text-xs text-muted-foreground">
-          The House Hall of Fame display needs the house system enabled. Use the Setup wizard on Rosters &amp; Points, or enable Houses in Settings.
+          The Hall of Fame display needs the house system enabled. Use the Setup wizard on Rosters &amp; Points, or enable Houses in Settings.
         </p>
         <Button className="rounded-xl" onClick={() => updateSettings({ enableHouses: true })}>
           Enable houses
@@ -102,7 +102,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 mb-2">
             <Trophy className="w-3.5 h-3.5" aria-hidden />
-            House Hall of Fame
+            Hall of Fame
           </div>
           <h3 className="text-lg font-black tracking-tight text-foreground">Big-screen house leaderboard</h3>
             <p className="text-xs text-muted-foreground mt-1 max-w-xl">

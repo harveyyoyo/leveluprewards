@@ -107,6 +107,8 @@ export interface Teacher {
   spentThisMonth?: number;
   /** House ids where this teacher is a house parent. */
   houseParentHouseIds?: string[];
+  /** When true, this teacher can manage houses (rosters, sorting, manual house points). Admins always can. */
+  canManageHouses?: boolean;
 }
 
 /** One row in an optional category rubric (teacher quick-award). */
@@ -122,6 +124,14 @@ export interface Category {
   points: number;
   color?: string;
   teacherId?: string;
+  /** Emoji or short label shown on category chips (e.g. "⭐"). */
+  icon?: string;
+  /** Optional uploaded image used instead of color dot / emoji. */
+  imageUrl?: string;
+  /** When false, student awards in this category do not roll up to house standings. Default: counts. */
+  countsForHousePoints?: boolean;
+  /** Special “golden ticket” category — highlighted in lists and awards. */
+  isGoldenTicket?: boolean;
   /** Optional preset levels (e.g. behavior tiers); shown as quick picks in the teacher portal. */
   rubricLevels?: CategoryRubricLevel[];
 }
@@ -165,7 +175,7 @@ export interface StudentTheme {
   fontFamily?: string;
   /** Full CSS background value (gradient or pattern). When set, used instead of solid background. */
   backgroundStyle?: string | null;
-  /** Optional global font scale (1 = default, 1.1 = slightly larger). */
+  /** Optional global font scale (1 = standard; default +1 step is 1.1). */
   fontScale?: number;
   /** Optional letter-spacing override for printed text (stored in `em`). */
   fontTracking?: number;
@@ -176,6 +186,11 @@ export interface StudentTheme {
   /** Per-student ID card scan format. When set, overrides the school-wide branding default. */
   idCardUseQr?: boolean;
 }
+
+/** Default student / ID card text size: +1 step above standard (1.0). */
+export const DEFAULT_STUDENT_THEME_FONT_SCALE = 1.1;
+/** Default student / ID card letter-spacing: Wide. */
+export const DEFAULT_STUDENT_THEME_FONT_TRACKING = 0.06;
 
 export interface Student {
   id: string;

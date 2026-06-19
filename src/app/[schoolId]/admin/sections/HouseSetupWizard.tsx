@@ -40,7 +40,7 @@ import {
   seedHouseThemePack,
   syncHousePointsFromStudents,
 } from '@/lib/db';
-import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/houses/housePresets';
+import { type HousePresetThemeId, visibleHousePresetThemes } from '@/lib/houses/housePresets';
 import {
   applyHouseWizardSettings,
   buildHouseHallOfFameHref,
@@ -73,6 +73,7 @@ type Props = {
   houses: House[];
   students: Student[];
   updateSettings: (patch: Partial<Settings>) => void;
+  includeJewishOrthodoxPresets?: boolean;
   onComplete?: () => void;
 };
 
@@ -83,6 +84,7 @@ export function HouseSetupWizard({
   houses,
   students,
   updateSettings,
+  includeJewishOrthodoxPresets = false,
   onComplete,
 }: Props) {
   const firestore = useFirestore();
@@ -97,9 +99,14 @@ export function HouseSetupWizard({
     [students],
   );
 
+  const availableHousePresetThemes = useMemo(
+    () => visibleHousePresetThemes({ includeJewishOrthodox: includeJewishOrthodoxPresets }),
+    [includeJewishOrthodoxPresets],
+  );
+
   const selectedTheme = useMemo(
-    () => HOUSE_PRESET_THEMES.find((t) => t.id === draft.themeId),
-    [draft.themeId],
+    () => availableHousePresetThemes.find((t) => t.id === draft.themeId),
+    [availableHousePresetThemes, draft.themeId],
   );
 
   const reset = useCallback(() => {
@@ -118,6 +125,12 @@ export function HouseSetupWizard({
       setDraft((d) => (d.assignMode === 'skip' ? d : { ...d, assignMode: 'skip' }));
     }
   }, [step, unassignedCount]);
+
+  useEffect(() => {
+    if (draft.themeId !== 'skip' && !availableHousePresetThemes.some((theme) => theme.id === draft.themeId)) {
+      setDraft((d) => ({ ...d, themeId: availableHousePresetThemes[0]?.id ?? 'quick' }));
+    }
+  }, [availableHousePresetThemes, draft.themeId]);
 
   const canGoNext = useMemo(() => {
     if (step === 1) {
@@ -244,7 +257,7 @@ export function HouseSetupWizard({
         {step === 0 && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This wizard sets up named houses, how points are tracked, student rosters, and the House Hall of Fame monitor
+              This wizard sets up named houses, how points are tracked, student rosters, and the Hall of Fame monitor
               board. You can change everything later on the Houses tab.
             </p>
             <ul className="text-sm space-y-2">
@@ -252,7 +265,7 @@ export function HouseSetupWizard({
                 { icon: Sparkles, text: 'Create house teams from a starter theme' },
                 { icon: Link2, text: 'Link house standings to student rewards (recommended)' },
                 { icon: Users, text: 'Assign students and optional point sync' },
-                { icon: Monitor, text: 'Configure the House Hall of Fame display' },
+                { icon: Monitor, text: 'Configure the Hall of Fame display' },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2">
                   <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden />
@@ -284,7 +297,7 @@ export function HouseSetupWizard({
                 <p className="text-xs text-muted-foreground mt-0.5">Skip seeding — use your current roster.</p>
               </button>
             ) : null}
-            {HOUSE_PRESET_THEMES.map((theme) => {
+            {availableHousePresetThemes.map((theme) => {
               const selected = draft.themeId === theme.id;
               return (
                 <button
@@ -411,7 +424,7 @@ export function HouseSetupWizard({
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                House Hall of Fame — sort by
+                Hall of Fame — sort by
               </Label>
               <Select
                 value={draft.hallOfFameSortBy}
@@ -485,7 +498,7 @@ export function HouseSetupWizard({
               <Button asChild variant="outline" className="rounded-xl flex-1">
                 <Link href={hofHref} target="_blank" rel="noopener noreferrer">
                   <Monitor className="mr-2 h-4 w-4" />
-                  Open House Hall of Fame
+                  Open Hall of Fame
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl flex-1">

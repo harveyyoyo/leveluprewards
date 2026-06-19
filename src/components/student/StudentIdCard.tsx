@@ -5,6 +5,10 @@
 import React from 'react';
 
 import type { Student } from '@/lib/types';
+import {
+  DEFAULT_STUDENT_THEME_FONT_SCALE,
+  DEFAULT_STUDENT_THEME_FONT_TRACKING,
+} from '@/lib/types';
 
 import { cn } from '@/lib/utils';
 
@@ -95,13 +99,20 @@ export function StudentIdCard({
 
   const themeFontFamily = theme?.fontFamily;
 
-  const themeTracking = typeof theme?.fontTracking === 'number' ? theme.fontTracking : undefined;
+  const themeTracking = theme
+    ? (theme.fontTracking ?? DEFAULT_STUDENT_THEME_FONT_TRACKING)
+    : undefined;
 
   const themeFontStyle = theme?.fontStyle;
 
   const themeFontWeight = typeof theme?.fontWeight === 'number' ? theme.fontWeight : undefined;
 
-  const themeFontScale = typeof theme?.fontScale === 'number' && theme.fontScale > 0 ? theme.fontScale : undefined;
+  const themeFontScale =
+    theme && typeof theme.fontScale === 'number' && theme.fontScale > 0
+      ? theme.fontScale
+      : theme
+        ? DEFAULT_STUDENT_THEME_FONT_SCALE
+        : undefined;
 
 
 

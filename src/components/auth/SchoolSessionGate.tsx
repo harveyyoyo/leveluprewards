@@ -107,6 +107,15 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
 
+  if (section === 'house-sorting') {
+    return (
+      loginState === 'admin' ||
+      loginState === 'teacher' ||
+      loginState === 'houseCoordinator' ||
+      loginState === 'developer'
+    );
+  }
+
   if (section === 'classroom') return canAccessHallOfFameRoute(loginState);
 
   if (section === 'smart-screen' || section === 'displays' || section === 'bulletin-board') {

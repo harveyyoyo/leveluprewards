@@ -82,6 +82,14 @@ export function schoolPathAllowedByGate(
     );
   }
 
+  if (section === 'house-sorting') {
+    return (
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('houseCoordinator')
+    );
+  }
+
   if (section === 'smart-screen' || section === 'displays' || section === 'bulletin-board') {
     return (
       scopes.has('portal') ||

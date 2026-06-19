@@ -1,7 +1,9 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { springCinematic } from '@/lib/animation';
+import { isPresentationRoute } from '@/lib/presentationRoutes';
 
 /**
  * Next.js `template.tsx` remounts on route changes, so this runs a subtle enter
@@ -10,7 +12,13 @@ import { springCinematic } from '@/lib/animation';
  * Uses shared easing from `@/lib/animation` for cross-dashboard consistency.
  */
 export default function AppRouteTemplate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const reduceMotion = useReducedMotion();
+
+  // Transform on this wrapper breaks `position: fixed` fullscreen children.
+  if (isPresentationRoute(pathname)) {
+    return <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>;
+  }
 
   return (
     <motion.div

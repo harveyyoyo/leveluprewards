@@ -1,4 +1,5 @@
 import type { StudentTheme } from './types';
+import { DEFAULT_STUDENT_THEME_FONT_TRACKING } from './types';
 import { normalizeStudentTheme } from './themeContrast';
 
 const rawDemoStudentThemes: StudentTheme[] = [
@@ -38,7 +39,7 @@ const rawDemoStudentThemes: StudentTheme[] = [
     cardBackground: '#f3e8ff',
     accent: '#7e22ce',
     emoji: '🎾',
-    fontTracking: 0.02,
+    fontTracking: DEFAULT_STUDENT_THEME_FONT_TRACKING,
   },
   // Sports — American football
   {

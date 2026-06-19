@@ -161,13 +161,37 @@ export function AdminHouseRosterCard({
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Lifetime</p>
               {manualPoints ? (
-                <button
-                  type="button"
-                  className="mt-1 text-lg font-black tabular-nums text-muted-foreground hover:underline"
-                  onClick={onOpenPoints}
-                >
-                  {house.lifetimePoints ?? 0}
-                </button>
+                <div className="mt-1 flex items-center justify-center gap-1 sm:justify-start">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={busy !== null}
+                    onClick={() => onNudgePoints(0, -5)}
+                    aria-label={`Remove 5 lifetime points from ${house.name}`}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <button
+                    type="button"
+                    className="min-w-[3rem] text-lg font-black tabular-nums text-muted-foreground hover:underline"
+                    onClick={onOpenPoints}
+                  >
+                    {house.lifetimePoints ?? 0}
+                  </button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={busy !== null}
+                    onClick={() => onNudgePoints(0, 5)}
+                    aria-label={`Add 5 lifetime points to ${house.name}`}
+                  >
+                    <PlusIcon className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               ) : (
                 <p className="mt-1 text-lg font-black tabular-nums text-muted-foreground">
                   {house.lifetimePoints ?? 0}

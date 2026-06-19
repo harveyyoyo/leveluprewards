@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useMemo, useCallback, Fragment, type ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -88,6 +89,13 @@ import { usePrint } from '@/components/providers/PrintProvider';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
 import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
+import { normalizeStudentTheme } from '@/lib/themeContrast';
+import type { StudentTheme } from '@/lib/types';
+
+const ThemeGeneratorModal = dynamic(
+  () => import('@/components/themes/ThemeGeneratorModal').then((m) => m.ThemeGeneratorModal),
+  { ssr: false },
+);
 import {
     COUPONS_PER_PRINT_PAGE,
     COUPON_PRINT_PAGE_SIZE_OPTIONS,
@@ -633,6 +641,8 @@ function TeacherRosterTab({
     const [studentIdPreview, setStudentIdPreview] = useState<Student | null>(null);
     const [studentIdPrintJob, setStudentIdPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
     const [staffIdPreview, setStaffIdPreview] = useState<StaffIdCardSubject | null>(null);
+    const [idCardThemeOpen, setIdCardThemeOpen] = useState(false);
+    const [idCardThemeStudent, setIdCardThemeStudent] = useState<Student | null>(null);
 
     const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
     const classIdsForTeacher = useMemo(
@@ -939,10 +949,23 @@ function TeacherRosterTab({
                             />
                         </div>
                     </div>
-                    <DialogFooter className="shrink-0">
+                    <DialogFooter className="shrink-0 flex-wrap gap-2">
                         <Button type="button" variant="secondary" className="rounded-xl" onClick={() => setStudentIdPreview(null)}>
                             Close
                         </Button>
+                        {settings.enableStudentThemes !== false ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-xl"
+                            onClick={() => {
+                              setIdCardThemeStudent(studentIdPreview);
+                              setIdCardThemeOpen(true);
+                            }}
+                          >
+                            Card theme
+                          </Button>
+                        ) : null}
                         <Button
                             type="button"
                             className="rounded-xl"
@@ -974,6 +997,63 @@ function TeacherRosterTab({
             isColorEnabled={settings.enableColorPrinting}
             onPrint={(subject) => printStaffIdCard(subject)}
         />
+
+        {idCardThemeStudent && idCardThemeOpen ? (
+          <ThemeGeneratorModal
+            isOpen={idCardThemeOpen}
+            onOpenChange={(open) => {
+              setIdCardThemeOpen(open);
+              if (!open) setIdCardThemeStudent(null);
+            }}
+            studentName={
+              [idCardThemeStudent.firstName, idCardThemeStudent.lastName].filter(Boolean).join(' ').trim() ||
+              idCardThemeStudent.firstName ||
+              'Student'
+            }
+            previewStudent={idCardThemeStudent}
+            classLabel={classMap.get(idCardThemeStudent.classId || '')?.name || 'Unassigned'}
+            currentTheme={idCardThemeStudent.theme}
+            onSave={async (theme: StudentTheme) => {
+              const normalized = normalizeStudentTheme(theme) ?? theme;
+              try {
+                await updateStudent({ ...idCardThemeStudent, theme: normalized });
+                setStudentIdPreview((prev) =>
+                  prev && prev.id === idCardThemeStudent.id ? { ...prev, theme: normalized } : prev,
+                );
+                toast({ title: 'Card theme saved', description: 'The ID card preview will use this theme.' });
+                setIdCardThemeOpen(false);
+                setIdCardThemeStudent(null);
+              } catch (e) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not save theme',
+                  description: getReadableErrorMessage(e, 'Try again.'),
+                });
+              }
+            }}
+            onRemoveTheme={
+              idCardThemeStudent.theme
+                ? async () => {
+                    try {
+                      await updateStudent({ ...idCardThemeStudent, theme: undefined });
+                      setStudentIdPreview((prev) =>
+                        prev && prev.id === idCardThemeStudent.id ? { ...prev, theme: undefined } : prev,
+                      );
+                      toast({ title: 'Theme removed' });
+                      setIdCardThemeOpen(false);
+                      setIdCardThemeStudent(null);
+                    } catch (e) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Could not remove theme',
+                        description: getReadableErrorMessage(e, 'Try again.'),
+                      });
+                    }
+                  }
+                : undefined
+            }
+          />
+        ) : null}
         </>
     );
 }
@@ -2241,6 +2321,7 @@ function TeacherPrinterInnerBody({
                                 coupons={coupons}
                                 schoolName={schoolDocData?.name?.trim()}
                                 schoolLogoUrl={schoolDocData?.logoUrl ?? null}
+                                currentTeacher={currentTeacher ?? null}
                             />
                 </TabWalkthroughProvider>
                 </div>

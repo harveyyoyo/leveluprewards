@@ -22,7 +22,7 @@ import { normalizeSchoolId } from '@/lib/schoolId';
 import { APP_NAME } from '@/lib/appBranding';
 import {
     syncFirebaseSessionCookie,
-    syncSchoolGateCookie,
+    syncSchoolSessionCookies,
     clearFirebaseSessionCookieSync,
     clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
@@ -745,20 +745,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         let cancelled = false;
         void (async () => {
-            const okFb = await syncFirebaseSessionCookie(auth);
-            if (cancelled) return;
-            if (!okFb) {
-                reportSessionSyncFailure('firebase-session');
-                return;
-            }
             const sid = schoolId?.trim();
-            if (sid) {
-                const okSchoolGate = await syncSchoolGateCookie(auth, sid);
-                if (cancelled) return;
-                if (!okSchoolGate) {
-                    reportSessionSyncFailure('school-gate');
-                    return;
-                }
+            const ok = sid
+                ? await syncSchoolSessionCookies(auth, sid)
+                : await syncFirebaseSessionCookie(auth);
+            if (cancelled) return;
+            if (!ok) {
+                reportSessionSyncFailure(sid ? 'school-gate' : 'firebase-session');
+                return;
             }
             if (cancelled) return;
             if (typeof window === 'undefined') return;

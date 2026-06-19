@@ -1,10 +1,29 @@
 import type { CSSProperties } from 'react';
 
 /** Shared grid templates — fluid columns that fit the panel (no horizontal scroll). */
-export const TEACHERS_LIST_GRID_COLS =
-  '2.25rem minmax(0, 0.85fr) minmax(0, 1fr) minmax(2.25rem, 0.65fr) minmax(2.25rem, 0.65fr) minmax(3.5rem, 0.7fr)';
+/** Teachers list — optional Houses permission column when houses are enabled. */
+export function teachersListGridColumns(enableHouses: boolean): string {
+  const base =
+    '2.25rem minmax(0, 0.85fr) minmax(0, 1fr) minmax(2.25rem, 0.65fr) minmax(2.25rem, 0.65fr)';
+  return enableHouses
+    ? `${base} 2.75rem minmax(3.5rem, 0.7fr)`
+    : `${base} minmax(3.5rem, 0.7fr)`;
+}
 
-export const DESK_STAFF_LIST_GRID_COLS =
+/** @deprecated Prefer `teachersListGridColumns(enableHouses)`. */
+export const TEACHERS_LIST_GRID_COLS = teachersListGridColumns(false);
+
+export function deskStaffListGridColumns(enableHouses: boolean): string {
+  const base = '2.25rem minmax(0, 0.85fr) minmax(0, 1fr)';
+  return enableHouses
+    ? `${base} 2.75rem minmax(3.5rem, 0.7fr)`
+    : `${base} minmax(3.5rem, 0.7fr)`;
+}
+
+export const DESK_STAFF_LIST_GRID_COLS = deskStaffListGridColumns(false);
+
+/** @deprecated Prefer `deskStaffListGridColumns(enableHouses)`. */
+export const DESK_STAFF_LIST_GRID_COLS_LEGACY =
   '2.25rem minmax(0, 0.85fr) minmax(0, 1fr) minmax(3.5rem, 0.7fr)';
 
 /** Prizes shop — act, name, then one column per inline setting. */

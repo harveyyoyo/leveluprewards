@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Home,
   Plus,
@@ -74,8 +74,9 @@ import {
   assignStudentsToHousesRandom,
   listHouses,
 } from '@/lib/db';
-import { HOUSE_PRESET_THEMES, type HousePresetThemeId } from '@/lib/houses/housePresets';
+import { type HousePresetThemeId, visibleHousePresetThemes } from '@/lib/houses/housePresets';
 import { useFirestore } from '@/firebase';
+import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 
 export function AdminHousesTab({
   schoolId,
@@ -102,6 +103,7 @@ export function AdminHousesTab({
   const { toast } = useToast();
   const confirm = useConfirm();
   const { settings, updateSettings } = useSettings();
+  const { schoolProfile } = useSchoolProfile();
   const [sampleDialogOpen, setSampleDialogOpen] = useState(false);
   const [sampleThemeId, setSampleThemeId] = useState<HousePresetThemeId>('classic');
   const [sampleAssignStudents, setSampleAssignStudents] = useState(true);
@@ -127,6 +129,17 @@ export function AdminHousesTab({
 
   const housePointsSource = resolveHousePointsSource(settings);
   const studentPointsRollup = isHouseStudentPointsRollupEnabled(settings);
+  const includeJewishOrthodoxHousePresets = schoolProfile === 'jewish_orthodox';
+  const availableHousePresetThemes = useMemo(
+    () => visibleHousePresetThemes({ includeJewishOrthodox: includeJewishOrthodoxHousePresets }),
+    [includeJewishOrthodoxHousePresets],
+  );
+
+  useEffect(() => {
+    if (!availableHousePresetThemes.some((theme) => theme.id === sampleThemeId)) {
+      setSampleThemeId(availableHousePresetThemes[0]?.id ?? 'classic');
+    }
+  }, [availableHousePresetThemes, sampleThemeId]);
 
   const sortedHouses = useMemo(
     () =>
@@ -380,6 +393,9 @@ export function AdminHousesTab({
       const points = Math.max(0, (house.points ?? 0) + deltaCurrent);
       const lifetimePoints = Math.max(0, (house.lifetimePoints ?? 0) + deltaLifetime);
       await onUpdateHouse({ ...house, points, lifetimePoints });
+      if (deltaCurrent < 0 || deltaLifetime < 0) {
+        toast({ title: 'House points reduced', description: `${house.name}: ${points.toLocaleString()} current · ${lifetimePoints.toLocaleString()} lifetime.` });
+      }
     } catch {
       toast({ variant: 'destructive', title: 'Could not adjust points' });
     } finally {
@@ -619,7 +635,7 @@ export function AdminHousesTab({
                   </Label>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                     {studentPointsRollup
-                      ? "On: house scores follow students' LevelUp points. Use Sync from students if totals look wrong."
+                      ? "On: house scores follow students' LevelUp points (per category — turn off “Counts toward house points” on any category in Points). Use Sync from students if totals look wrong."
                       : 'Off: adjust house points manually on each roster card (+/-). Student wallets stay separate.'}
                   </p>
                 </div>
@@ -629,6 +645,22 @@ export function AdminHousesTab({
                     updateSettings(housePointsSourceSettingsPatch(checked ? 'studentRollup' : 'manual'))
                   }
                   aria-label="Link house totals to student rewards"
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-4">
+                <div>
+                  <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    Sorting ceremony — fun questions
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    When on, the fullscreen ceremony shows a decoy question before each house reveal. Assign houses on
+                    Rosters before you present.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.houseSortingUseFakeQuestions === true}
+                  onCheckedChange={(v) => updateSettings({ houseSortingUseFakeQuestions: v })}
+                  aria-label="Sorting ceremony fun questions"
                 />
               </div>
               <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-4">
@@ -649,6 +681,7 @@ export function AdminHousesTab({
               linkedToStudentRewards={studentPointsRollup}
               hasHouses={sortedHouses.length > 0}
               unassignedCount={unassignedStudents.length}
+              includeJewishOrthodoxPresets={includeJewishOrthodoxHousePresets}
               sortingHref={sortingHref}
               onSetupWizard={() => setWizardOpen(true)}
               onPopulateSample={() => setSampleDialogOpen(true)}
@@ -667,6 +700,7 @@ export function AdminHousesTab({
         houses={sortedHouses}
         students={students ?? []}
         updateSettings={updateSettings}
+        includeJewishOrthodoxPresets={includeJewishOrthodoxHousePresets}
       />
 
       <AlertDialog open={sampleDialogOpen} onOpenChange={setSampleDialogOpen}>
@@ -681,7 +715,7 @@ export function AdminHousesTab({
                 </p>
                 <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
                   <p className="text-xs font-bold uppercase tracking-widest text-foreground">Starter theme</p>
-                  {HOUSE_PRESET_THEMES.map((theme) => (
+                  {availableHousePresetThemes.map((theme) => (
                     <label key={theme.id} className="flex items-start gap-2 cursor-pointer">
                       <input
                         type="radio"

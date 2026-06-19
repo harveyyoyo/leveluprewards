@@ -6,6 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Award, ChevronRight, Loader2, QrCode, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
+import {
+    DEFAULT_STUDENT_THEME_FONT_SCALE,
+    DEFAULT_STUDENT_THEME_FONT_TRACKING,
+} from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { GoogleFontLoader } from './GoogleFontLoader';
@@ -48,7 +52,7 @@ function StudentPortalThemePreview({
 
     const { vars, effective } = themed;
     const themeBg = vars['--theme-bg'];
-    const fontScale = effective.fontScale ?? 1.1;
+    const fontScale = effective.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE;
     const previewStyle: CSSProperties = {
         ...vars,
         background:
@@ -691,7 +695,7 @@ export function ThemeGeneratorModal({
                                         <div className="space-y-1">
                                             <Label htmlFor="theme-font-scale">Text size</Label>
                                             <Select
-                                                value={String(previewTheme.fontScale ?? 1.1)}
+                                                value={String(previewTheme.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE)}
                                                 onValueChange={(v) => updateTheme({ fontScale: parseFloat(v) })}
                                             >
                                                 <SelectTrigger id="theme-font-scale">
@@ -699,10 +703,10 @@ export function ThemeGeneratorModal({
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="0.85">Extra small</SelectItem>
-                                                    <SelectItem value="1">Standard (Smaller)</SelectItem>
-                                                    <SelectItem value="1.1">+1 step</SelectItem>
-                                                    <SelectItem value="1.15">Default (Bigger)</SelectItem>
-                                                    <SelectItem value="1.2">+1 step</SelectItem>
+                                                    <SelectItem value="1">-1 step</SelectItem>
+                                                    <SelectItem value="1.1">Default (+1 step)</SelectItem>
+                                                    <SelectItem value="1.15">+2 steps</SelectItem>
+                                                    <SelectItem value="1.2">+3 steps</SelectItem>
                                                     <SelectItem value="1.25">Large</SelectItem>
                                                     <SelectItem value="1.3">Extra large</SelectItem>
                                                 </SelectContent>
@@ -711,7 +715,7 @@ export function ThemeGeneratorModal({
                                         <div className="space-y-1">
                                             <Label htmlFor="theme-font-tracking">Text tracking</Label>
                                             <Select
-                                                value={String(previewTheme.fontTracking ?? 0.02)}
+                                                value={String(previewTheme.fontTracking ?? DEFAULT_STUDENT_THEME_FONT_TRACKING)}
                                                 onValueChange={(v) => updateTheme({ fontTracking: parseFloat(v) })}
                                             >
                                                 <SelectTrigger id="theme-font-tracking">
@@ -721,7 +725,7 @@ export function ThemeGeneratorModal({
                                                     <SelectItem value="-0.01">Tighter</SelectItem>
                                                     <SelectItem value="0">Default</SelectItem>
                                                     <SelectItem value="0.02">Slight</SelectItem>
-                                                    <SelectItem value="0.06">Wide</SelectItem>
+                                                    <SelectItem value="0.06">Default (Wide)</SelectItem>
                                                     <SelectItem value="0.1">Widest</SelectItem>
                                                 </SelectContent>
                                             </Select>

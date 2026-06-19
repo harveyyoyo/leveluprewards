@@ -11,6 +11,10 @@ export type HousePresetTheme = {
   houses: HouseSeed[];
 };
 
+export type HousePresetVisibility = {
+  includeJewishOrthodox: boolean;
+};
+
 /** Starter packs for Admin → Houses (not affiliated with any external house program). */
 export const HOUSE_PRESET_THEMES: HousePresetTheme[] = [
   {
@@ -288,6 +292,17 @@ export function getHousePresetTheme(id: HousePresetThemeId): HousePresetTheme {
   const theme = HOUSE_PRESET_THEMES.find((t) => t.id === id);
   if (!theme) throw new Error(`Unknown house preset theme: ${id}`);
   return theme;
+}
+
+export function isHousePresetThemeVisible(
+  theme: HousePresetTheme,
+  visibility: HousePresetVisibility,
+): boolean {
+  return theme.id !== 'yeshiva' || visibility.includeJewishOrthodox;
+}
+
+export function visibleHousePresetThemes(visibility: HousePresetVisibility): HousePresetTheme[] {
+  return HOUSE_PRESET_THEMES.filter((theme) => isHousePresetThemeVisible(theme, visibility));
 }
 
 /** Collect preset keys from a house doc (current + legacy fields). */

@@ -68,7 +68,7 @@ export function HouseHallOfFameCard({
         'overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/5 via-background to-muted/20 p-4 shadow-sm',
         className,
       )}
-      aria-label="House Hall of Fame"
+      aria-label="Hall of Fame"
     >
       <motion.div variants={staggerItem} className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
@@ -78,7 +78,7 @@ export function HouseHallOfFameCard({
             </span>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                House Hall of Fame
+                Hall of Fame
               </p>
               <h3 className="font-headline text-xl font-black tracking-tight">
                 {champion.name} leads the houses

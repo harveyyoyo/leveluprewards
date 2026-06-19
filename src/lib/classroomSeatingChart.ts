@@ -70,6 +70,8 @@ export type ClassroomSeatingPrefs = {
   showClassAwardButton: boolean;
   /** Show Burst select-and-award on the teacher desk row. */
   showBurstAward: boolean;
+  /** Show behavior-notes shortcut tips on the live monitor. */
+  showBehaviorNotesTips: boolean;
   /** When Rewards pillar is on: local classroom balance vs school reward categories. Ignored when Rewards is off. */
   awardSource: ClassroomAwardSource;
   /** Play arcade sounds when awarding or deducting points from the chart. */
@@ -135,7 +137,7 @@ export const DEFAULT_CLASSROOM_QUICK_AWARDS: ClassroomQuickAward[] = [
 ];
 
 /** Bump when classroom tap/effect defaults change — triggers one-time localStorage migration. */
-export const CLASSROOM_PREFS_VERSION = 20;
+export const CLASSROOM_PREFS_VERSION = 21;
 
 export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   autoAwardMs: 3000,
@@ -159,6 +161,7 @@ export const DEFAULT_CLASSROOM_PREFS: ClassroomSeatingPrefs = {
   showRandomPicker: false,
   showClassAwardButton: false,
   showBurstAward: false,
+  showBehaviorNotesTips: true,
   awardSource: 'local',
   awardSounds: true,
   monitorMenuTabs: { ...DEFAULT_MONITOR_MENU_TABS },
@@ -311,6 +314,8 @@ export function loadClassroomPrefs(schoolId: string, scope: string): ClassroomSe
       showClassAwardButton:
         parsed.showClassAwardButton ?? DEFAULT_CLASSROOM_PREFS.showClassAwardButton,
       showBurstAward: parsed.showBurstAward ?? DEFAULT_CLASSROOM_PREFS.showBurstAward,
+      showBehaviorNotesTips:
+        parsed.showBehaviorNotesTips ?? DEFAULT_CLASSROOM_PREFS.showBehaviorNotesTips,
       awardSource: normalizeClassroomAwardSource(parsed.awardSource),
       awardSounds: parsed.awardSounds ?? DEFAULT_CLASSROOM_PREFS.awardSounds,
       monitorMenuTabs: normalizeMonitorMenuTabs(parsed.monitorMenuTabs),

@@ -30,6 +30,7 @@ import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useToast } from '@/hooks/use-toast';
 import { KioskFirestoreSyncBanner } from '@/components/kiosk/KioskFirestoreSyncBanner';
 import { portalHubPrefetchRoutes } from '@/lib/portalHub';
+import { isPresentationRoute } from '@/lib/presentationRoutes';
 
 // Lazy-load heavy, non-critical UI components to reduce initial JS bundle.
 // AnimatedSiteBackground: 68 KB (30+ theme layer components)
@@ -199,9 +200,13 @@ function LayoutClientWrapperInner({
     const isSmartScreenPage =
       typeof pathname === 'string' &&
       (pathname.includes('/smart-screen') || pathname.includes('/displays'));
+    const isHouseSortingPage = typeof pathname === 'string' && pathname.includes('/house-sorting');
+    const isPresentationPage = isPresentationRoute(pathname);
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||
       isSmartScreenPage ||
+      isHouseSortingPage ||
+      isPresentationPage ||
       (fullscreen &&
         (pathname?.includes('/hall-of-fame') ||
           pathname?.includes('/bulletin-board') ||
@@ -423,7 +428,8 @@ function LayoutClientWrapperInner({
             name === 'ChunkLoadError' ||
             /chunk load/i.test(msg) ||
             /loading chunk/i.test(msg) ||
-            /failed to fetch dynamically imported module/i.test(msg);
+            /failed to fetch dynamically imported module/i.test(msg) ||
+            /missing actionqueuecontext/i.test(msg);
 
         const onWindowError = (ev: ErrorEvent) => {
             const msg = String(ev.message || ev.error?.message || '');
@@ -477,8 +483,12 @@ function LayoutClientWrapperInner({
                         kioskPortraitLayout && 'kiosk-portrait-layout',
                         // Lock viewport height so only inner panels scroll (student kiosk + app-shell staff routes).
                         // Portal hub: fixed layers + in-flow footer — constrain shell so main flex-1 fills without a page scrollbar.
-                        (appShellNoPageScroll || isStudentKioskSurface || isPortalChoosePage) &&
+                        (appShellNoPageScroll ||
+                            isStudentKioskSurface ||
+                            isPortalChoosePage ||
+                            isPresentationPage) &&
                             'h-dvh max-h-dvh',
+                        isPresentationPage && 'overflow-hidden',
                         (appShellNoPageScroll || isStudentKioskSurface) &&
                             'overflow-hidden overflow-x-hidden',
                         isPortalChoosePage && 'overflow-x-hidden',
@@ -512,7 +522,9 @@ function LayoutClientWrapperInner({
                         className={cn(
                             'flex-1 min-w-0',
                             usePortalScrollRevealHeader && 'pt-[var(--global-header-height,5rem)]',
-                            hideAppChrome || isAdminSignInPage
+                            isPresentationPage
+                                ? 'relative z-10 flex h-dvh min-h-0 w-full max-w-none flex-col overflow-hidden p-0'
+                                : hideAppChrome || isAdminSignInPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskSurface
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'

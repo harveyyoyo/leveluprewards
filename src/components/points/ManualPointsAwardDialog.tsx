@@ -254,10 +254,16 @@ export function ManualPointsAwardDialog({
         playSound('success');
         const queued = !!(result as { queued?: boolean }).queued;
         toast({
-          title: queued ? 'Saved for later' : 'Points Awarded!',
+          title: queued
+            ? 'Saved for later'
+            : selectedCategory.isGoldenTicket
+              ? 'Golden ticket awarded!'
+              : 'Points Awarded!',
           description: queued
             ? result.message
-            : `Awarded ${points} points to ${result.count} student(s).`,
+            : selectedCategory.isGoldenTicket
+              ? `Golden ticket — ${points} points to ${result.count} student(s).`
+              : `Awarded ${points} points to ${result.count} student(s).`,
         });
         if (!queued) {
           setLastAction({

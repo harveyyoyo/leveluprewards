@@ -13,6 +13,7 @@ export function AdminCategoriesTab({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
+  onUpdateCategory,
   availableCoupons,
   redeemedCoupons,
   getStudentName,
@@ -28,6 +29,7 @@ export function AdminCategoriesTab({
   onAddCategory: () => void;
   onEditCategory: (c: Category) => void;
   onDeleteCategory: (categoryId: string) => void;
+  onUpdateCategory?: (category: Category) => void | Promise<void>;
   availableCoupons?: Coupon[];
   redeemedCoupons?: Coupon[];
   getStudentName?: (id?: string) => string;
@@ -59,6 +61,7 @@ export function AdminCategoriesTab({
       onAddCategory={onAddCategory}
       onEditCategory={onEditCategory}
       onDeleteCategory={onDeleteCategory}
+      onUpdateCategory={onUpdateCategory}
       couponManagementContent={couponManagementContent}
     />
   );

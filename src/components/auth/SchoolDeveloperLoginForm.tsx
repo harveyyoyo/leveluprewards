@@ -64,6 +64,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
   const [isDeveloper, setIsDeveloper] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginPhase, setLoginPhase] = useState<'idle' | 'verifying' | 'session'>('idle');
   const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
   const [googleSchoolLoginError, setGoogleSchoolLoginError] = useState<string | null>(null);
   const [googleSignInBlocked, setGoogleSignInBlocked] = useState<null | 'operation-not-allowed'>(
@@ -515,6 +516,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       setGoogleSchoolLoginError(null);
     }
     setIsSubmitting(true);
+    setLoginPhase('verifying');
     try {
       const result = await login('school', { schoolId: sid, passcode });
       if (!result.ok) {
@@ -541,6 +543,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         });
         return;
       }
+      setLoginPhase('session');
       const navigated = await navigateAfterSchoolLogin(auth, sid);
       if (!navigated) {
         playSound('error');
@@ -554,6 +557,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
       }
     } finally {
       setIsSubmitting(false);
+      setLoginPhase('idle');
     }
   };
 
@@ -805,7 +809,11 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                 >
                   {(isSubmitting || isGoogleSigningIn) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
                   {isSubmitting || isGoogleSigningIn
-                    ? 'Signing in...'
+                    ? loginPhase === 'session'
+                      ? 'Opening your school portal…'
+                      : loginPhase === 'verifying'
+                        ? 'Verifying school…'
+                        : 'Signing in…'
                     : isDeveloperOnly || isDeveloper
                       ? allowDevPasscodeLogin && developerPasscode.trim()
                         ? 'Sign in with passcode'
