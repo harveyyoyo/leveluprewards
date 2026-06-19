@@ -37,13 +37,13 @@ const BASE_IDEAS: HouseIdea[] = [
     id: 'sorting',
     icon: Wand2,
     title: 'Hold a sorting ceremony',
-    detail: 'Pick each student’s house, then reveal on a big screen—great for the first week or new enrollments.',
+    detail: 'Assign houses on Rosters first, then open the fullscreen ceremony to present every student to the room.',
   },
   {
     id: 'tv',
     icon: Monitor,
     title: 'Lobby monitor board',
-    detail: 'Open House Hall of Fame in fullscreen on a gym or front-office display.',
+    detail: 'Open Hall of Fame in fullscreen on a gym or front-office display.',
   },
   {
     id: 'parents',

@@ -49,8 +49,8 @@
 
 .print-id-barcode-container .print-id-qr.branded-qr-code,
 .print-id-barcode-container .print-id-qr .branded-qr-code {
-  width: calc(0.36in * var(--print-id-font-scale, 1));
-  height: calc(0.36in * var(--print-id-font-scale, 1));
+  width: calc(0.36in * var(--print-id-font-scale, 1.1));
+  height: calc(0.36in * var(--print-id-font-scale, 1.1));
   max-width: 38%;
 }
 
@@ -550,6 +550,81 @@ html[data-office-portal] .office-content-pane {
       .font-extrabold
     ) {
     color: inherit;
+  }
+
+  /* House sorting ceremony — fullscreen presentation; keep bold headings readable on dark stage */
+  html[data-presentation='house-sorting'] body {
+    background-color: #0f0720 !important;
+    color: #fff !important;
+  }
+
+  html[data-presentation='house-sorting'] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
+
+  /* Houses realm — standalone fullscreen experience */
+  html[data-houses-realm] body {
+    background-color: #12081f !important;
+    color: #f8f4ff !important;
+  }
+
+  html[data-houses-realm] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
+
+  .houses-realm-root {
+    color: #f8f4ff;
+    background: #12081f;
+  }
+
+  .houses-realm-bg {
+    background:
+      radial-gradient(ellipse 80% 55% at 50% -10%, rgba(139, 92, 246, 0.35), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(245, 158, 11, 0.12), transparent 55%),
+      linear-gradient(180deg, #1a0f2e 0%, #12081f 45%, #0a0612 100%);
+  }
+
+  .houses-realm-stars {
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.35), transparent),
+      radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.25), transparent),
+      radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.2), transparent);
+    background-size: 200px 200px;
+  }
+
+  .houses-realm-display {
+    font-family: Fraunces, ui-serif, Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  /* Manage panel cards inside dark houses realm */
+  html[data-houses-realm] .houses-realm-manage :where(.bg-card, .bg-background) {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #f8f4ff;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.text-foreground) {
+    color: #f8f4ff !important;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.text-muted-foreground) {
+    color: rgba(248, 244, 255, 0.55) !important;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(.border-border) {
+    border-color: rgba(255, 255, 255, 0.12) !important;
   }
   
   .coupon-preview-container {
@@ -1189,7 +1264,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 /* Student ID Card (screen preview)
    Single physical size: ISO/IEC 7810 ID-1 (85.6mm × 53.98mm) — matches DTC/card printer output and Avery print below. */
 .print-id-card {
-  /* Set inline from StudentIdCard when a theme uses fontScale (default 1). */
+  /* Set inline from StudentIdCard when a theme uses fontScale (default +1 step = 1.1). */
   --print-id-font-scale: 1.1;
   --print-id-name-fit-scale: 1;
   border: 1px solid hsl(var(--border));
@@ -1275,7 +1350,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 }
 .print-levelup-domain {
   display: block;
-  font-size: calc(7px * var(--print-id-font-scale, 1));
+  font-size: calc(7px * var(--print-id-font-scale, 1.1));
   font-weight: 600;
   letter-spacing: 0.04em;
   line-height: 1.15;
@@ -1467,7 +1542,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 }
 .print-id-card .print-id-barcode-container .print-barcode-svg {
   width: 100%;
-  max-height: calc(0.44in * var(--print-id-font-scale, 1));
+  max-height: calc(0.44in * var(--print-id-font-scale, 1.1));
   transform: none;
 }
 
@@ -1487,7 +1562,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 }
 
 .print-recess-pass-card .print-id-barcode-container .print-barcode-svg {
-  max-height: calc(0.38in * var(--print-id-font-scale, 1));
+  max-height: calc(0.38in * var(--print-id-font-scale, 1.1));
 }
 
 .print-id-card .print-id-barcode-container .font-barcode,
@@ -3124,6 +3199,49 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     color: #000000 !important;
     transform: scaleY(1.5) !important;
     transform-origin: top !important;
+  }
+
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-id-header-container {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1px !important;
+    padding-bottom: 3px !important;
+    margin-bottom: 3px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-recess-pass-body {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    padding: 2px 8px !important;
+    gap: 2px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-recess-pass-icon {
+    width: 9mm !important;
+    height: 9mm !important;
+    border-radius: 6px !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-recess-pass-icon svg {
+    width: 5mm !important;
+    height: 5mm !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-recess-pass-label {
+    font-size: 10pt !important;
+    line-height: 1.05 !important;
+    font-weight: 800 !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-recess-pass-copy {
+    font-size: 6pt !important;
+    line-height: 1.15 !important;
+    max-width: 72mm !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-id-barcode-container {
+    margin-top: auto !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.12) !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-recess-pass-card .print-id-barcode-container .print-barcode-svg {
+    max-height: 8mm !important;
   }
 
   /* Preserve theme backgrounds and ink in PDF/print (pair with StudentIdCard inline printColorAdjust). */

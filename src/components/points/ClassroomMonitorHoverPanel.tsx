@@ -23,8 +23,8 @@ function PanelChrome({
         type="button"
         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border/50 bg-background/80 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
         onClick={onDismiss}
-        aria-label={`Hide ${label}`}
-        title={`Hide ${label} (hover edge to show again)`}
+        aria-label={`Dismiss ${label}`}
+        title={`Dismiss ${label}`}
       >
         <X className="h-3.5 w-3.5" aria-hidden />
       </button>
@@ -63,20 +63,28 @@ export function ClassroomMonitorHoverPanel({
   children,
   className,
   contentClassName,
+  onDismissPermanent,
 }: {
   position: 'top' | 'right';
   peekLabel: string;
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  /** When set, X dismisses for good — parent should unmount this panel (no peek restore). */
+  onDismissPermanent?: () => void;
 }) {
   const [dismissed, setDismissed] = useState(false);
   const [hovering, setHovering] = useState(false);
   const reducedMotion = useReducedMotion();
-  const expanded = !dismissed || hovering;
+  const canPeekRestore = !onDismissPermanent;
+  const expanded = !canPeekRestore || !dismissed || hovering;
   const isTop = position === 'top';
 
   const handleDismiss = () => {
+    if (onDismissPermanent) {
+      onDismissPermanent();
+      return;
+    }
     setDismissed(true);
     setHovering(false);
   };
@@ -89,15 +97,15 @@ export function ClassroomMonitorHoverPanel({
     return (
       <div
         className={cn('relative shrink-0', className)}
-        onMouseEnter={() => dismissed && setHovering(true)}
+        onMouseEnter={() => canPeekRestore && dismissed && setHovering(true)}
         onMouseLeave={() => setHovering(false)}
       >
-        {dismissed && !hovering ? <div className="h-[18px] shrink-0" aria-hidden /> : null}
+        {canPeekRestore && dismissed && !hovering ? <div className="h-[18px] shrink-0" aria-hidden /> : null}
         <motion.div
           className={cn(
             'border-b border-border/40 bg-muted/15',
-            dismissed ? 'absolute inset-x-0 top-0 z-30 shadow-md' : 'relative',
-            dismissed && hovering && 'shadow-lg',
+            canPeekRestore && dismissed ? 'absolute inset-x-0 top-0 z-30 shadow-md' : 'relative',
+            canPeekRestore && dismissed && hovering && 'shadow-lg',
           )}
           initial={false}
           animate={{
@@ -109,7 +117,9 @@ export function ClassroomMonitorHoverPanel({
             <PanelChrome label={peekLabel} onDismiss={handleDismiss} />
             {children}
           </div>
-          {dismissed && !hovering ? <PeekAffordance position="top" label={peekLabel} /> : null}
+          {canPeekRestore && dismissed && !hovering ? (
+            <PeekAffordance position="top" label={peekLabel} />
+          ) : null}
         </motion.div>
       </div>
     );
@@ -122,13 +132,13 @@ export function ClassroomMonitorHoverPanel({
         expanded ? 'w-44 shrink-0 lg:w-52' : 'w-[18px] shrink-0',
         className,
       )}
-      onMouseEnter={() => dismissed && setHovering(true)}
+      onMouseEnter={() => canPeekRestore && dismissed && setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
       <motion.aside
         className={cn(
           'absolute right-0 top-0 bottom-0 z-30 flex w-44 min-h-0 flex-col border-l border-border/50 bg-muted/10 pl-3 pr-2 lg:w-52',
-          dismissed && hovering && 'shadow-lg',
+          canPeekRestore && dismissed && hovering && 'shadow-lg',
         )}
         initial={false}
         animate={{
@@ -140,7 +150,9 @@ export function ClassroomMonitorHoverPanel({
           <PanelChrome label={peekLabel} onDismiss={handleDismiss} />
           {children}
         </div>
-        {dismissed && !hovering ? <PeekAffordance position="right" label={peekLabel} /> : null}
+        {canPeekRestore && dismissed && !hovering ? (
+          <PeekAffordance position="right" label={peekLabel} />
+        ) : null}
       </motion.aside>
     </div>
   );

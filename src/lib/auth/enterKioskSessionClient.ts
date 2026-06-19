@@ -66,10 +66,54 @@ function callableErrorCode(err: unknown): string {
   return typeof code === 'string' ? code : '';
 }
 
+async function raceKioskSessionRegistration(
+  callCallable: () => Promise<void>,
+  callApi: () => Promise<void>,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let remaining = 2;
+    let credentialError: unknown = null;
+    let otherError: unknown = null;
+
+    const finish = () => {
+      if (remaining > 0) return;
+      reject(credentialError ?? otherError ?? new Error('Could not register kiosk session.'));
+    };
+
+    const onSuccess = () => resolve();
+    const onFailure = (err: unknown, credential: boolean) => {
+      remaining -= 1;
+      if (credential) credentialError = err;
+      else otherError = err;
+      finish();
+    };
+
+    void callCallable()
+      .then(onSuccess)
+      .catch((err) => {
+        const code = callableErrorCode(err);
+        const credential =
+          code === 'permission-denied' ||
+          code === 'functions/permission-denied' ||
+          code === 'not-found' ||
+          code === 'functions/not-found';
+        onFailure(err, credential);
+      });
+
+    void callApi()
+      .then(onSuccess)
+      .catch((err) => {
+        const status = (err as { status?: number })?.status ?? 0;
+        const credential = status === 403 || status === 404 || status === 412;
+        onFailure(err, credential);
+      });
+  });
+}
+
 /**
  * Registers the current browser for kiosk student lookups and Firestore reads.
  * Local dev: SSR API first (Admin SDK + demo-school bypass), callable backup.
- * Production: callable first, SSR API backup when infrastructure errors.
+ * Production: callable + SSR API in parallel (avoids Cloud Function cold-start delay).
  */
 export async function establishStudentKioskSessionClient(
   auth: Auth,
@@ -128,7 +172,7 @@ export async function establishStudentKioskSessionClient(
   }
 
   try {
-    await callCallable();
+    await raceKioskSessionRegistration(callCallable, callApi);
     return;
   } catch (callableErr) {
     const status = (callableErr as { status?: number })?.status ?? 0;

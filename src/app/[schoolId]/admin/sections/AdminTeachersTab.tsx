@@ -36,11 +36,14 @@ import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader'
 import { AdminRecordListScroll } from '@/components/admin/AdminRecordListScroll';
 import {
   DESK_STAFF_LIST_GRID_COLS,
-  TEACHERS_LIST_GRID_COLS,
+  deskStaffListGridColumns,
+  teachersListGridColumns,
   adminRecordListGridCompactGapClassName,
   adminRecordListGridClassName,
   adminRecordListGridStyle,
 } from '@/components/admin/adminRecordListGrid';
+import { Switch } from '@/components/ui/switch';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
 function staffRoleLabel(role: StaffAccountRole) {
@@ -80,6 +83,7 @@ export function AdminTeachersTab({
   onAddTeacher,
   onAddLeadership,
   onEditTeacher,
+  onUpdateTeacher,
   onDeleteTeacher,
   onUpdateStudent,
   onUpdateClass,
@@ -96,6 +100,7 @@ export function AdminTeachersTab({
   onAddTeacher: () => void;
   onAddLeadership: () => void;
   onEditTeacher: (t: Teacher) => void;
+  onUpdateTeacher?: (teacher: Teacher) => void | Promise<void>;
   onDeleteTeacher: (teacherId: string) => void;
   onUpdateStudent: (student: Student) => Promise<void>;
   onUpdateClass?: (updatedClass: Class) => Promise<void>;
@@ -104,6 +109,7 @@ export function AdminTeachersTab({
   onPreviewStaffIdCard?: (subject: StaffIdCardSubject) => void;
   onOpenStaffIdPrintSetup?: (subjects: StaffIdCardSubject[]) => void;
 }) {
+  const { settings } = useSettings();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<StaffAccount | null>(null);
   const [username, setUsername] = useState('');
@@ -122,8 +128,14 @@ export function AdminTeachersTab({
   const [expandedClassesTeacherId, setExpandedClassesTeacherId] = useState('');
   const [expandedStudentsTeacherId, setExpandedStudentsTeacherId] = useState('');
 
-  const teachersListGridStyle = adminRecordListGridStyle(TEACHERS_LIST_GRID_COLS);
-  const deskStaffListGridStyle = adminRecordListGridStyle(DESK_STAFF_LIST_GRID_COLS);
+  const [teacherToggleBusyId, setTeacherToggleBusyId] = useState<string | null>(null);
+
+  const teachersListGridStyle = adminRecordListGridStyle(
+    teachersListGridColumns(settings.enableHouses),
+  );
+  const deskStaffListGridStyle = adminRecordListGridStyle(
+    deskStaffListGridColumns(settings.enableHouses),
+  );
 
   const classroomTeachers = useMemo(
     () => (teachers ?? []).filter((t) => !isLeadershipPersonnel(t)),
@@ -313,13 +325,14 @@ export function AdminTeachersTab({
           <ul className="space-y-2">
             {classroomTeachers.length > 0 ? (
               <AdminRecordListHeader
-                gridColumns={TEACHERS_LIST_GRID_COLS}
+                gridColumns={teachersListGridColumns(settings.enableHouses)}
                 columns={[
                   { label: 'Edit' },
                   { label: 'Name' },
                   { label: 'Login' },
                   { label: 'Cls', className: 'text-center' },
                   { label: 'Std', className: 'text-center' },
+                  ...(settings.enableHouses ? [{ label: 'Houses', className: 'text-center' as const }] : []),
                   { label: 'Act', className: 'text-right' },
                 ]}
               />
@@ -403,6 +416,22 @@ export function AdminTeachersTab({
                       />
                     </Button>
                   </div>
+                  {settings.enableHouses ? (
+                    <div className="flex items-center justify-center">
+                      <Switch
+                        checked={t.canManageHouses === true}
+                        disabled={!onUpdateTeacher || teacherToggleBusyId === t.id}
+                        onCheckedChange={(checked) => {
+                          if (!onUpdateTeacher) return;
+                          setTeacherToggleBusyId(t.id);
+                          void Promise.resolve(
+                            onUpdateTeacher({ ...t, canManageHouses: checked }),
+                          ).finally(() => setTeacherToggleBusyId(null));
+                        }}
+                        aria-label={`${t.name} can manage houses`}
+                      />
+                    </div>
+                  ) : null}
                   <div className="flex items-center justify-end gap-0.5">
                     {renderCopyLinkButton(teacherPortalKey(t))}
                     <Button
@@ -649,11 +678,12 @@ export function AdminTeachersTab({
           <ul className="space-y-2">
             {leadershipStaff.length > 0 ? (
               <AdminRecordListHeader
-                gridColumns={DESK_STAFF_LIST_GRID_COLS}
+                gridColumns={deskStaffListGridColumns(settings.enableHouses)}
                 columns={[
                   { label: 'Edit' },
                   { label: 'Name' },
                   { label: 'Login' },
+                  ...(settings.enableHouses ? [{ label: 'Houses', className: 'text-center' as const }] : []),
                   { label: 'Act', className: 'text-right' },
                 ]}
               />
@@ -699,6 +729,22 @@ export function AdminTeachersTab({
                   <span className="px-0.5 text-border">·</span>
                   <span className="font-code text-foreground">{t.passcode}</span>
                 </div>
+                {settings.enableHouses ? (
+                  <div className="flex items-center justify-center">
+                    <Switch
+                      checked={t.canManageHouses === true || isLeadershipPersonnel(t)}
+                      disabled={!onUpdateTeacher || teacherToggleBusyId === t.id || isLeadershipPersonnel(t)}
+                      onCheckedChange={(checked) => {
+                        if (!onUpdateTeacher || isLeadershipPersonnel(t)) return;
+                        setTeacherToggleBusyId(t.id);
+                        void Promise.resolve(
+                          onUpdateTeacher({ ...t, canManageHouses: checked }),
+                        ).finally(() => setTeacherToggleBusyId(null));
+                      }}
+                      aria-label={`${t.name} can manage houses`}
+                    />
+                  </div>
+                ) : null}
                 <div className="flex items-center justify-end gap-0.5">
                   {renderCopyLinkButton(teacherPortalKey(t))}
                   <Button

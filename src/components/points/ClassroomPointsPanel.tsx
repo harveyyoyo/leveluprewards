@@ -102,7 +102,6 @@ import {
 } from '@/lib/teacherBudget';
 import { ClassroomMonitorHoverPanel } from '@/components/points/ClassroomMonitorHoverPanel';
 import { ClassroomMonitorQuickControls } from '@/components/points/ClassroomMonitorQuickControls';
-import { ClassroomSessionActivityList } from '@/components/points/ClassroomSessionActivityList';
 import {
   ClassroomMonitorActionButton,
   ClassroomTeacherDesk,
@@ -210,7 +209,7 @@ function ClassroomPointsPanelInner({
   const isStudentAudience = isFullscreen && audience === 'student';
   const { toast } = useToast();
   const playSound = useArcadeSound({ ignoreSchoolSoundMute: true });
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const firestore = useFirestore();
   const sessionOnly = sessionOnlyProp ?? isClassroomOnlyMode(settings);
   const rewardsPillarOn = isRewardsPillarOn(settings);
@@ -299,10 +298,15 @@ function ClassroomPointsPanelInner({
     }),
     [chartPrefsForAwards],
   );
+  const behaviorNotesTipsOn = settings.classroomMonitorShowBehaviorNotesTips !== false;
   const [editMode, setEditMode] = useState(false);
 
   useEffect(() => {
     if (isFullscreen || !onSectionHintChange) return;
+    if (!behaviorNotesTipsOn) {
+      onSectionHintChange(null);
+      return () => onSectionHintChange(null);
+    }
     onSectionHintChange({
       prefs,
       editMode,
@@ -311,7 +315,16 @@ function ClassroomPointsPanelInner({
       classroomNoteDeduct,
     });
     return () => onSectionHintChange(null);
-  }, [attendanceEnabled, bathroomTimerOn, classroomNoteDeduct, editMode, isFullscreen, onSectionHintChange, prefs]);
+  }, [
+    attendanceEnabled,
+    bathroomTimerOn,
+    behaviorNotesTipsOn,
+    classroomNoteDeduct,
+    editMode,
+    isFullscreen,
+    onSectionHintChange,
+    prefs,
+  ]);
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pendingAward, setPendingAward] = useState<PendingAward | null>(null);
@@ -1518,6 +1531,13 @@ function ClassroomPointsPanelInner({
     [prefs, updatePrefs],
   );
 
+  const setBehaviorNotesTipsOn = useCallback(
+    (on: boolean) => {
+      updateSettings({ classroomMonitorShowBehaviorNotesTips: on });
+    },
+    [updateSettings],
+  );
+
   const handleMonitorClassChange = useCallback(
     (nextClassId: string) => {
       if (!nextClassId || nextClassId === filterClassId) return;
@@ -1600,49 +1620,13 @@ function ClassroomPointsPanelInner({
         : 8;
   const frontAtBottom = prefs.frontAtBottom;
 
-  const arrangeSeatsButton = (
-    <ClassroomToolButton
-      design={design}
-      icon={GripVertical}
-      label={editMode ? 'Done arranging' : 'Arrange seats'}
-      primary={editMode}
-      large
-      onClick={() => {
-        setEditMode((v) => !v);
-        setBurstMode(false);
-        setBurstSelected([]);
-        setPendingAward(null);
-        clearAutoTimer();
-      }}
-    />
-  );
-
-  const historyActions = !editMode ? (
-    <div className="flex items-center gap-1">
-      <ClassroomToolButton
-        design={design}
-        icon={Undo2}
-        label="Undo"
-        title={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
-        deskRow
-        iconOnly
-        onClick={() => void handleUndo()}
-        disabled={!lastAction || isUndoing}
-      />
-      <ClassroomToolButton
-        design={design}
-        icon={Redo2}
-        label="Redo"
-        title={redoAction ? 'Redo (Ctrl+Y)' : 'Nothing to redo yet'}
-        deskRow
-        iconOnly
-        onClick={() => void handleRedo()}
-        disabled={!redoAction || isUndoing}
-      />
-    </div>
-  ) : null;
-
-  const sessionActivity = sessionData.activity ?? [];
+  const toggleEditMode = useCallback(() => {
+    setEditMode((v) => !v);
+    setBurstMode(false);
+    setBurstSelected([]);
+    setPendingAward(null);
+    clearAutoTimer();
+  }, [clearAutoTimer]);
 
   const monitorAwardActions =
     !editMode &&
@@ -1651,7 +1635,7 @@ function ClassroomPointsPanelInner({
       prefs.showClassAwardButton ||
       prefs.showBurstAward ||
       (prefs.showBurstAward && burstMode && burstSelected.length > 0)) ? (
-      <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
         {prefs.showRandomPicker ? (
           <ClassroomMonitorActionButton
             design={design}
@@ -1734,8 +1718,6 @@ function ClassroomPointsPanelInner({
     <ClassroomTeacherDesk
       design={design}
       frontAtBottom={frontAtBottom}
-      leadingAction={historyActions}
-      trailingAction={arrangeSeatsButton}
     />
   );
 
@@ -1800,8 +1782,12 @@ function ClassroomPointsPanelInner({
           ) : null}
         </div>
       ) : null}
-      {isFullscreen && !editMode && !isStudentAudience ? (
-        <ClassroomMonitorHoverPanel position="top" peekLabel="Tips">
+      {isFullscreen && !editMode && !isStudentAudience && behaviorNotesTipsOn ? (
+        <ClassroomMonitorHoverPanel
+          position="top"
+          peekLabel="Behavior notes"
+          onDismissPermanent={() => setBehaviorNotesTipsOn(false)}
+        >
           <ClassroomSeatingShortcutsHint
             prefs={prefs}
             editMode={editMode}
@@ -1812,7 +1798,7 @@ function ClassroomPointsPanelInner({
           />
         </ClassroomMonitorHoverPanel>
       ) : null}
-      {!(isFullscreen && (editMode || isStudentAudience)) ? (
+      {!isStudentAudience ? (
         <div
           className={cn(
             'flex w-full min-w-0 shrink-0 items-start gap-2 border-b border-border/50 pb-3 sm:items-center',
@@ -1827,7 +1813,7 @@ function ClassroomPointsPanelInner({
               'items-start sm:items-center',
             )}
           >
-            {isFullscreen && !editMode ? (
+            {isFullscreen ? (
               <ClassroomMonitorQuickControls
                 design={design}
                 prefs={prefs}
@@ -1840,11 +1826,52 @@ function ClassroomPointsPanelInner({
                 onResetSessionDisplay={resetSessionDisplay}
                 classScreenUrl={classScreenUrl}
                 onClassChange={
-                  isFullscreen && classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
+                  classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
                 }
+                onToggleEditMode={toggleEditMode}
+                onUndo={() => void handleUndo()}
+                onRedo={() => void handleRedo()}
+                undoDisabled={!lastAction || isUndoing}
+                redoDisabled={!redoAction || isUndoing}
+                undoTitle={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
+                redoTitle={redoAction ? 'Redo (Ctrl+Y)' : 'Nothing to redo yet'}
+                awardActions={monitorAwardActions}
+                behaviorNotesTipsOn={behaviorNotesTipsOn}
+                onBehaviorNotesTipsChange={setBehaviorNotesTipsOn}
               />
             ) : (
               <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+                {!editMode ? (
+                  <>
+                    <ClassroomToolButton
+                      design={design}
+                      icon={Undo2}
+                      label="Undo"
+                      title={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
+                      deskRow
+                      iconOnly
+                      onClick={() => void handleUndo()}
+                      disabled={!lastAction || isUndoing}
+                    />
+                    <ClassroomToolButton
+                      design={design}
+                      icon={Redo2}
+                      label="Redo"
+                      title={redoAction ? 'Redo (Ctrl+Y)' : 'Nothing to redo yet'}
+                      deskRow
+                      iconOnly
+                      onClick={() => void handleRedo()}
+                      disabled={!redoAction || isUndoing}
+                    />
+                  </>
+                ) : null}
+                <ClassroomToolButton
+                  design={design}
+                  icon={GripVertical}
+                  label={editMode ? 'Done arranging' : 'Arrange seats'}
+                  primary={editMode}
+                  onClick={toggleEditMode}
+                />
                 <ClassroomToolButton
                   design={design}
                   icon={Maximize2}
@@ -1855,18 +1882,18 @@ function ClassroomPointsPanelInner({
             )}
           </div>
 
-          {monitorAwardActions ? (
-            <span className="hidden h-7 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
+          {!isFullscreen && monitorAwardActions ? (
+            <>
+              <span className="hidden h-7 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
+              {monitorAwardActions}
+            </>
           ) : null}
-
-          {monitorAwardActions}
         </div>
       ) : null}
 
       <div
         className={cn(
-          'grid min-h-0 min-w-0 flex-1',
-          !editMode ? 'grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1',
+          'flex min-h-0 min-w-0 flex-1 flex-col',
           isFullscreen ? 'w-full' : 'pt-3',
         )}
       >
@@ -1874,7 +1901,6 @@ function ClassroomPointsPanelInner({
           className={cn(
             'flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden',
             !editMode && 'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3',
-            isFullscreen && !editMode && 'mr-0 rounded-r-none border-r-0',
           )}
         >
 
@@ -2068,7 +2094,7 @@ function ClassroomPointsPanelInner({
         </div>
       )}
 
-      {!editMode && !isFullscreen && (
+      {!editMode && !isFullscreen && behaviorNotesTipsOn ? (
         <p className="flex shrink-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
           <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
           <>Tap once = instant +{prefs.defaultPoints}.</>
@@ -2083,35 +2109,9 @@ function ClassroomPointsPanelInner({
             {bathroomEnabled ? ' · Alt+click = bathroom pass' : ''}
           </span>
         </p>
-      )}
+      ) : null}
 
         </div>
-
-        {!editMode ? (
-          isFullscreen && !isStudentAudience ? (
-            <ClassroomMonitorHoverPanel position="right" peekLabel="Activity">
-              <ClassroomSessionActivityList
-                entries={sessionActivity}
-                borderless
-                hideTitle
-                className="min-h-0 flex-1"
-              />
-            </ClassroomMonitorHoverPanel>
-          ) : (
-            <aside
-              className={cn(
-                'flex min-h-0 flex-col self-stretch border-l border-border/50 bg-muted/10',
-                'hidden w-40 shrink-0 pl-3 pr-1 sm:flex lg:w-48 xl:w-52',
-              )}
-            >
-              <ClassroomSessionActivityList
-                entries={sessionActivity}
-                borderless
-                className="min-h-0 flex-1"
-              />
-            </aside>
-          )
-        ) : null}
       </div>
 
       {awardMenu}

@@ -417,6 +417,7 @@ function AdminDashboardInner() {
   const [newTeacherEmail, setNewTeacherEmail] = useState('');
   const [newTeacherPhone, setNewTeacherPhone] = useState('');
   const [newTeacherPersonnelRole, setNewTeacherPersonnelRole] = useState<TeacherPersonnelRole>('teacher');
+  const [newTeacherCanManageHouses, setNewTeacherCanManageHouses] = useState(false);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [isTeacherModalOpen, setIsTeacherModalOpen] = useState(false);
 
@@ -1301,6 +1302,8 @@ function AdminDashboardInner() {
       clearPersonnelRole: personnelRole === 'teacher',
     };
 
+    const houseFields = settings.enableHouses ? { canManageHouses: newTeacherCanManageHouses } : {};
+
     if (editingTeacher) {
       if (budgetVal === undefined) {
         updateTeacher(
@@ -1312,6 +1315,7 @@ function AdminDashboardInner() {
             email: obfuscateField(newTeacherEmail),
             phone: obfuscateField(newTeacherPhone),
             ...personnelFields,
+            ...houseFields,
           },
           updateTeacherOptions,
         );
@@ -1329,6 +1333,7 @@ function AdminDashboardInner() {
           email: obfuscateField(newTeacherEmail),
           phone: obfuscateField(newTeacherPhone),
           ...personnelFields,
+          ...houseFields,
         };
         if (budgetChanged) {
           updateTeacher({
@@ -1348,6 +1353,7 @@ function AdminDashboardInner() {
         email: obfuscateField(newTeacherEmail),
         phone: obfuscateField(newTeacherPhone),
         ...personnelFields,
+        ...houseFields,
       });
     } else {
       addTeacher({
@@ -1361,6 +1367,7 @@ function AdminDashboardInner() {
         spentThisMonth: 0,
         budgetWindowKey: budgetWindowKeyForDate(periodForSave ?? 'month'),
         ...personnelFields,
+        ...houseFields,
       });
     }
 
@@ -1372,6 +1379,7 @@ function AdminDashboardInner() {
     setNewTeacherEmail('');
     setNewTeacherPhone('');
     setNewTeacherPersonnelRole('teacher');
+    setNewTeacherCanManageHouses(false);
     setEditingTeacher(null);
     setIsTeacherModalOpen(false);
   };
@@ -1932,9 +1940,11 @@ function AdminDashboardInner() {
                 setNewTeacherPersonnelRole(
                   isLeadershipPersonnel(t) ? normalizeTeacherPersonnelRole(t.personnelRole) : 'teacher',
                 );
+                setNewTeacherCanManageHouses(t.canManageHouses === true);
                 setIsTeacherModalOpen(true);
               }}
               onUpdateStudent={updateStudent}
+              onUpdateTeacher={updateTeacher}
               onUpdateClass={updateClass}
               onDeleteTeacher={async (id) => {
                 const teacher = (teachers || []).find((t) => t.id === id);
@@ -2055,6 +2065,7 @@ function AdminDashboardInner() {
               }}
               onAddCategory={() => handleOpenCategoryModal(null)}
               onEditCategory={(c) => handleOpenCategoryModal(c)}
+              onUpdateCategory={(c) => updateCategory(c)}
               onDeleteCategory={async (id) => {
                 const cat = (categories || []).find((c) => c.id === id);
                 const ok = await confirm({
@@ -2362,6 +2373,7 @@ function AdminDashboardInner() {
             setNewTeacherEmail('');
             setNewTeacherPhone('');
             setNewTeacherPersonnelRole('teacher');
+            setNewTeacherCanManageHouses(false);
           }
         }}>
           <DialogContent>
@@ -2459,6 +2471,21 @@ function AdminDashboardInner() {
                     </div>
                   </div>
                 )}
+                {settings.enableHouses ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/20 p-3">
+                    <div>
+                      <Label htmlFor="new-teacher-houses" className="text-sm font-bold">Can manage houses</Label>
+                      <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                        Lets this teacher open the Houses tab, adjust rosters, and run the sorting ceremony.
+                      </p>
+                    </div>
+                    <Switch
+                      id="new-teacher-houses"
+                      checked={newTeacherCanManageHouses}
+                      onCheckedChange={setNewTeacherCanManageHouses}
+                    />
+                  </div>
+                ) : null}
               </div>
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => {
@@ -2472,6 +2499,7 @@ function AdminDashboardInner() {
                   setNewTeacherEmail('');
                   setNewTeacherPhone('');
                   setNewTeacherPersonnelRole('teacher');
+                  setNewTeacherCanManageHouses(false);
                 }}>Cancel</Button>
                 <Button type="submit">
                   {editingTeacher

@@ -28,6 +28,7 @@ import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from
 import { waitForPrintBarcodes } from '@/lib/printBarcode';
 import { useToast } from '@/hooks/use-toast';
 import type { IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
+import type { RecessReasonMeta } from '@/lib/recess/recessReasons';
 import {
     DTC_MULTI_CARD_START_TOAST,
     dtcCardProgressToast,
@@ -76,6 +77,16 @@ const PrizeIdDTCPrintSheet = dynamic(
     { ssr: false },
 );
 
+const RecessPassPrintSheet = dynamic(
+    () => import('@/components/recess/RecessPassPrintSheet').then((m) => ({ default: m.RecessPassPrintSheet })),
+    { ssr: false },
+);
+
+const RecessPassDTCPrintSheet = dynamic(
+    () => import('@/components/recess/RecessPassDTCPrintSheet').then((m) => ({ default: m.RecessPassDTCPrintSheet })),
+    { ssr: false },
+);
+
 const LibraryBarcodePrintSheet = dynamic(
     () => import('@/components/print/LibraryBarcodePrintSheet').then((m) => ({ default: m.LibraryBarcodePrintSheet })),
     { ssr: false },
@@ -90,6 +101,7 @@ interface PrintContextType {
     printPrizeTickets: (tickets: PrizeRedeemTicket[]) => void;
     setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
+    setRecessPassesToPrint: (data: { passes: RecessReasonMeta[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => void;
 }
 
@@ -139,11 +151,19 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         cornerStyle?: 'rounded' | 'rectangular';
         sheetSpacing?: IdCardSheetSpacing;
     } & DtcPrintIndex;
+    type RecessPassPrintJob = {
+        passes: RecessReasonMeta[];
+        schoolId: string;
+        printerType?: 'dtc4500e';
+        cornerStyle?: 'rounded' | 'rectangular';
+        sheetSpacing?: IdCardSheetSpacing;
+    } & DtcPrintIndex;
 
     const [printData, setPrintData] = useState<StudentIdPrintJob | null>(null);
     const [prizeTicketsToPrint, setPrizeTicketsToPrint] = useState<PrizeRedeemTicket[]>([]);
     const [prizeIdPrintData, setPrizeIdPrintData] = useState<PrizeIdPrintJob | null>(null);
     const [staffIdPrintData, setStaffIdPrintData] = useState<StaffIdPrintJob | null>(null);
+    const [recessPassPrintData, setRecessPassPrintData] = useState<RecessPassPrintJob | null>(null);
     const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
@@ -308,6 +328,40 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
         }
     }, [staffIdPrintData, playSound, toast]);
 
+    const recessPassPrintTriggered = useRef(false);
+    const triggerRecessPassPrint = React.useCallback(() => {
+        if (recessPassPrintData && recessPassPrintData.passes.length > 0 && !recessPassPrintTriggered.current) {
+            recessPassPrintTriggered.current = true;
+            const afterPrint = () => {
+                window.removeEventListener('afterprint', afterPrint);
+                setRecessPassPrintData((prev) => {
+                    if (!prev) {
+                        recessPassPrintTriggered.current = false;
+                        return null;
+                    }
+                    if (prev.printerType === 'dtc4500e') {
+                        const idx = dtcPrintIndex(prev);
+                        const nextIdx = nextDtcPrintIndex(idx, prev.passes.length);
+                        if (nextIdx !== null) {
+                            recessPassPrintTriggered.current = false;
+                            toast(dtcCardProgressToast(nextIdx, prev.passes.length));
+                            return { ...prev, dtcIndex: nextIdx };
+                        }
+                    }
+                    recessPassPrintTriggered.current = false;
+                    return null;
+                });
+            };
+            window.addEventListener('afterprint', afterPrint);
+            playSound('swoosh');
+            waitForPrintBarcodes().finally(() => {
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => window.print());
+                });
+            });
+        }
+    }, [recessPassPrintData, playSound, toast]);
+
     const libraryPrintTriggered = useRef(false);
     const triggerLibraryStickerPrint = React.useCallback(() => {
         if (libraryPrintJob && libraryPrintJob.items.length > 0 && !libraryPrintTriggered.current) {
@@ -386,6 +440,21 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     toast(DTC_MULTI_CARD_START_TOAST);
                 }
                 setStaffIdPrintData({
+                    ...data,
+                    schoolId: sid,
+                    ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
+                });
+            },
+            setRecessPassesToPrint: (data: { passes: RecessReasonMeta[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => {
+                const sid = (data?.schoolId ?? '').trim();
+                if (!sid) {
+                    toast({ variant: 'destructive', title: 'Cannot print recess passes', description: 'Missing schoolId.' });
+                    return;
+                }
+                if (data.printerType === 'dtc4500e' && data.passes.length > 1) {
+                    toast(DTC_MULTI_CARD_START_TOAST);
+                }
+                setRecessPassPrintData({
                     ...data,
                     schoolId: sid,
                     ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
@@ -490,6 +559,29 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                         subjects={[dtcSubject]}
                         schoolId={staffIdPrintData.schoolId}
                         onReady={triggerStaffIdPrint}
+                    />
+                );
+            })()}
+            {recessPassPrintData && recessPassPrintData.passes.length > 0 && recessPassPrintData.printerType !== 'dtc4500e' && (
+                <RecessPassPrintSheet
+                    passes={recessPassPrintData.passes}
+                    schoolId={recessPassPrintData.schoolId}
+                    onReady={triggerRecessPassPrint}
+                    cornerStyle={recessPassPrintData.cornerStyle}
+                    sheetSpacing={recessPassPrintData.sheetSpacing}
+                />
+            )}
+            {recessPassPrintData && recessPassPrintData.passes.length > 0 && recessPassPrintData.printerType === 'dtc4500e' && (() => {
+                const dtcIdx = dtcPrintIndex(recessPassPrintData);
+                const dtcPass = recessPassPrintData.passes[dtcIdx];
+                if (!dtcPass) return null;
+                return (
+                    <RecessPassDTCPrintSheet
+                        key={dtcPass.value}
+                        passes={[dtcPass]}
+                        schoolId={recessPassPrintData.schoolId}
+                        onReady={triggerRecessPassPrint}
+                        cornerStyle={recessPassPrintData.cornerStyle}
                     />
                 );
             })()}

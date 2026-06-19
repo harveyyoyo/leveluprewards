@@ -132,13 +132,16 @@ export default function Header() {
   const isLoginPage = pathname === '/' || pathname.startsWith('/s/');
   const isDeveloperMode = loginState === 'developer' && !schoolId;
   const fullscreen = searchParams?.get('fullscreen') === '1';
+  const isHouseSortingPage =
+    pathname?.includes('/house-sorting') || pathname?.includes('/houses-realm');
   const isFullscreenSpecialPage =
-    fullscreen &&
+    isHouseSortingPage ||
+    (fullscreen &&
     (pathname?.includes('/hall-of-fame') ||
       pathname?.includes('/bulletin-board') ||
       pathname?.includes('/smart-screen') ||
       pathname?.includes('/displays') ||
-      pathname?.includes('/classroom'));
+      pathname?.includes('/classroom')));
 
   const handleLogout = () => {
     playSound('swoosh');

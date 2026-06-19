@@ -15,6 +15,10 @@
  * page background, card background, and primary/accent chips.
  */
 import type { StudentTheme } from './types';
+import {
+  DEFAULT_STUDENT_THEME_FONT_SCALE,
+  DEFAULT_STUDENT_THEME_FONT_TRACKING,
+} from './types';
 import { LEVELUP_BRAND_PRIMARY_HEX } from './appBranding';
 
 /** CSS custom properties consumed by `student-theme-surface` and the student portal. */
@@ -305,6 +309,13 @@ export function normalizeStudentTheme(
   const accent = clampHex(theme.accent);
   if (accent && worstContrast(accent) < 4.5) {
     out.accent = ensureContrastAcrossSurfaces(accent, surfaces, 4.5);
+  }
+
+  if (typeof out.fontScale !== 'number' || !(out.fontScale > 0)) {
+    out.fontScale = DEFAULT_STUDENT_THEME_FONT_SCALE;
+  }
+  if (typeof out.fontTracking !== 'number') {
+    out.fontTracking = DEFAULT_STUDENT_THEME_FONT_TRACKING;
   }
 
   return out;

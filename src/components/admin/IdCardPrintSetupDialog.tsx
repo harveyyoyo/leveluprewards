@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Prize, Student } from '@/lib/types';
 import type { StaffIdCardSubject } from '@/lib/staff/staffIdCardSubject';
+import type { RecessReasonMeta } from '@/lib/recess/recessReasons';
 import { staffIdCardDisplayName } from '@/lib/staff/staffIdCardSubject';
 import {
   DEFAULT_ID_CARD_SHEET_SPACING,
@@ -37,6 +38,7 @@ type IdCardPrintRunOptions = {
 type StudentPrintConfirm = (args: { students: Student[]; classes: Class[] } & IdCardPrintRunOptions) => void;
 type PrizePrintConfirm = (args: { prizes: Prize[] } & IdCardPrintRunOptions) => void;
 type StaffPrintConfirm = (args: { subjects: StaffIdCardSubject[] } & IdCardPrintRunOptions) => void;
+type RecessPassPrintConfirm = (args: { passes: RecessReasonMeta[] } & IdCardPrintRunOptions) => void;
 
 type IdCardPrintSetupDialogProps =
   | {
@@ -60,6 +62,13 @@ type IdCardPrintSetupDialogProps =
       onOpenChange: (open: boolean) => void;
       subjects: StaffIdCardSubject[];
       onConfirm: StaffPrintConfirm;
+    }
+  | {
+      variant: 'recess-pass';
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      passes: RecessReasonMeta[];
+      onConfirm: RecessPassPrintConfirm;
     };
 
 export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
@@ -79,6 +88,12 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
   }, [open, settings]);
 
   const summaryLine = useMemo(() => {
+    if (props.variant === 'recess-pass') {
+      const n = props.passes.length;
+      if (n === 0) return 'No recess passes in this print run.';
+      if (n === 1) return `1 recess pass — ${props.passes[0].label}`;
+      return `${n} recess passes`;
+    }
     if (props.variant === 'prize') {
       const n = props.prizes.length;
       if (n === 0) return 'No prize cards in this print run.';
@@ -102,11 +117,13 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
   }, [props]);
 
   const itemCount =
-    props.variant === 'prize'
-      ? props.prizes.length
-      : props.variant === 'staff'
-        ? props.subjects.length
-        : props.students.length;
+    props.variant === 'recess-pass'
+      ? props.passes.length
+      : props.variant === 'prize'
+        ? props.prizes.length
+        : props.variant === 'staff'
+          ? props.subjects.length
+          : props.students.length;
 
   const handlePrint = () => {
     if (itemCount === 0) {
@@ -114,11 +131,13 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
         variant: 'destructive',
         title: 'Nothing to print',
         description:
-          props.variant === 'prize'
-            ? 'There are no prize cards in this run.'
-            : props.variant === 'staff'
-              ? 'There are no staff ID cards in this run.'
-              : 'There are no students in this run.',
+          props.variant === 'recess-pass'
+            ? 'There are no recess passes in this run.'
+            : props.variant === 'prize'
+              ? 'There are no prize cards in this run.'
+              : props.variant === 'staff'
+                ? 'There are no staff ID cards in this run.'
+                : 'There are no students in this run.',
       });
       return;
     }
@@ -129,7 +148,9 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
       ...(usesSheetPrinter ? { sheetSpacing } : {}),
     };
 
-    if (props.variant === 'prize') {
+    if (props.variant === 'recess-pass') {
+      props.onConfirm({ passes: props.passes, ...runOptions });
+    } else if (props.variant === 'prize') {
       props.onConfirm({ prizes: props.prizes, ...runOptions });
     } else if (props.variant === 'staff') {
       props.onConfirm({ subjects: props.subjects, ...runOptions });
@@ -139,17 +160,21 @@ export function IdCardPrintSetupDialog(props: IdCardPrintSetupDialogProps) {
   };
 
   const title =
-    props.variant === 'prize'
-      ? 'Print prize cards'
-      : props.variant === 'staff'
-        ? 'Print staff ID cards'
-        : 'Print ID cards';
+    props.variant === 'recess-pass'
+      ? 'Print recess passes'
+      : props.variant === 'prize'
+        ? 'Print prize cards'
+        : props.variant === 'staff'
+          ? 'Print staff ID cards'
+          : 'Print ID cards';
   const cardLabel =
-    props.variant === 'prize'
-      ? 'prize shelf cards'
-      : props.variant === 'staff'
-        ? 'staff ID cards'
-        : 'ID cards';
+    props.variant === 'recess-pass'
+      ? 'recess pass cards'
+      : props.variant === 'prize'
+        ? 'prize shelf cards'
+        : props.variant === 'staff'
+          ? 'staff ID cards'
+          : 'ID cards';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -749,14 +749,15 @@ type FxParticle = {
   trail?: boolean;
 };
 
-function scopedParticleCount(effect: ClassroomEffect): number {
-  if (effect === 'fireworks') return 72;
-  if (effect === 'sparkles') return 30;
-  if (effect === 'snow') return 28;
-  if (effect === 'hearts') return 18;
-  if (effect === 'stars') return 20;
-  if (effect === 'confetti') return 56;
-  return 0;
+function scopedParticleCount(effect: ClassroomEffect, scope: 'cell' | 'viewport' = 'cell'): number {
+  let base = 0;
+  if (effect === 'fireworks') base = 72;
+  else if (effect === 'sparkles') base = 30;
+  else if (effect === 'snow') base = 28;
+  else if (effect === 'hearts') base = 18;
+  else if (effect === 'stars') base = 20;
+  else if (effect === 'confetti') base = 56;
+  return scope === 'viewport' ? Math.round(base * 1.6) : base;
 }
 
 function buildCelebrationParticles(effect: ClassroomEffect, count: number): FxParticle[] {
@@ -834,6 +835,22 @@ function cellSpreadFallTopPercent(particleId: number): string {
   return `${-12 + (particleId % 8) * 9}%`;
 }
 
+function viewportSpreadTopPercent(particleId: number): string {
+  return `${6 + (particleId % 14) * 6}%`;
+}
+
+function viewportSpreadFallTopPercent(particleId: number): string {
+  return `${-10 + (particleId % 12) * 5}%`;
+}
+
+function spreadTopPercent(particleId: number, scope: 'cell' | 'viewport'): string {
+  return scope === 'viewport' ? viewportSpreadTopPercent(particleId) : cellSpreadTopPercent(particleId);
+}
+
+function spreadFallTopPercent(particleId: number, scope: 'cell' | 'viewport'): string {
+  return scope === 'viewport' ? viewportSpreadFallTopPercent(particleId) : cellSpreadFallTopPercent(particleId);
+}
+
 function cellLeftPx(leftPercent: number, sizePx: number): string {
   return `calc(${leftPercent}% - ${sizePx / 2}px)`;
 }
@@ -842,22 +859,28 @@ export function ClassroomEffectOverlay({
   effect,
   runId,
   points = 0,
+  scope = 'cell',
 }: {
   effect: ClassroomEffect;
   runId: number;
   points?: number;
+  /** `viewport` fills the ceremony / fullscreen layer instead of a desk cell. */
+  scope?: 'cell' | 'viewport';
 }) {
   const particles = useMemo((): FxParticle[] => {
     if (effect === 'none') return [];
-    return buildCelebrationParticles(effect, scopedParticleCount(effect));
+    return buildCelebrationParticles(effect, scopedParticleCount(effect, scope));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runId regenerates particles each play
-  }, [effect, runId]);
+  }, [effect, runId, scope]);
 
   if (effect === 'none') return null;
 
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-10 overflow-visible rounded-[inherit]"
+      className={cn(
+        'pointer-events-none absolute inset-0 z-10 overflow-visible',
+        scope === 'cell' ? 'rounded-[inherit]' : '',
+      )}
     >
       {effect === 'fireworks'
         ? [0, 0.2, 0.42].map((delay, i) => (
@@ -891,7 +914,7 @@ export function ClassroomEffectOverlay({
               style={{
                 position: 'absolute',
                 left: cellLeftPx(p.left, w),
-                top: cellSpreadFallTopPercent(p.id),
+                top: spreadFallTopPercent(p.id, scope),
                 width: w,
                 height: h,
                 animationDelay: `${p.delay}s`,
@@ -912,7 +935,7 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: cellSpreadFallTopPercent(p.id),
+                top: spreadFallTopPercent(p.id, scope),
                 background: 'white',
                 borderRadius: '50%',
                 opacity: 0.85,
@@ -928,7 +951,7 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: cellSpreadTopPercent(p.id),
+                top: spreadTopPercent(p.id, scope),
                 color: `hsl(${340 + (p.hue % 20)} 85% 60%)`,
                 filter: 'drop-shadow(0 0 3px currentColor)',
               }}
@@ -944,7 +967,7 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: cellSpreadTopPercent(p.id),
+                top: spreadTopPercent(p.id, scope),
                 color: `hsl(${45 + (p.hue % 30)} 95% 60%)`,
                 filter: 'drop-shadow(0 0 3px currentColor)',
               }}
@@ -960,7 +983,7 @@ export function ClassroomEffectOverlay({
               key={p.id}
               style={{
                 ...common,
-                top: cellSpreadTopPercent(p.id),
+                top: spreadTopPercent(p.id, scope),
                 color: `hsl(${p.hue} 92% 68%)`,
                 filter: 'drop-shadow(0 0 4px currentColor)',
               }}

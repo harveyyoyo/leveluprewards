@@ -257,7 +257,7 @@ export function HouseSetupWizard({
         {step === 0 && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              This wizard sets up named houses, how points are tracked, student rosters, and the House Hall of Fame monitor
+              This wizard sets up named houses, how points are tracked, student rosters, and the Hall of Fame monitor
               board. You can change everything later on the Houses tab.
             </p>
             <ul className="text-sm space-y-2">
@@ -265,7 +265,7 @@ export function HouseSetupWizard({
                 { icon: Sparkles, text: 'Create house teams from a starter theme' },
                 { icon: Link2, text: 'Link house standings to student rewards (recommended)' },
                 { icon: Users, text: 'Assign students and optional point sync' },
-                { icon: Monitor, text: 'Configure the House Hall of Fame display' },
+                { icon: Monitor, text: 'Configure the Hall of Fame display' },
               ].map(({ icon: Icon, text }) => (
                 <li key={text} className="flex items-center gap-2">
                   <ChevronRight className="h-4 w-4 text-ring shrink-0" aria-hidden />
@@ -424,7 +424,7 @@ export function HouseSetupWizard({
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                House Hall of Fame — sort by
+                Hall of Fame — sort by
               </Label>
               <Select
                 value={draft.hallOfFameSortBy}
@@ -498,11 +498,11 @@ export function HouseSetupWizard({
               <Button asChild variant="outline" className="rounded-xl flex-1">
                 <Link href={hofHref} target="_blank" rel="noopener noreferrer">
                   <Monitor className="mr-2 h-4 w-4" />
-                  Open House Hall of Fame
+                  Open Hall of Fame
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-xl flex-1">
-                <Link href={`/${schoolId}/house-sorting`} target="_blank" rel="noopener noreferrer">
+                <Link href={`/${schoolId}/houses-realm/ceremony`} target="_blank" rel="noopener noreferrer">
                   <Wand2 className="mr-2 h-4 w-4" />
                   Sorting ceremony
                 </Link>

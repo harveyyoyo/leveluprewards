@@ -116,6 +116,7 @@ export function ClassAwardsLiveSettingsSection({
   const includeSessionLastAward = settings.classroomMonitorIncludeSessionLastAward !== false;
   const includeLastName = settings.classroomMonitorIncludeLastName === true;
   const includeStudentEmoji = settings.classroomMonitorIncludeStudentEmoji === true;
+  const behaviorNotesTipsOn = settings.classroomMonitorShowBehaviorNotesTips !== false;
   const balanceLabel = rewardsPillarOn ? 'LevelUp reward balance' : 'Classroom point balance';
   const classSignInEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
 
@@ -387,6 +388,26 @@ export function ClassAwardsLiveSettingsSection({
                 disabled={!canEdit}
                 onCheckedChange={(v) => updateSettings({ classroomStudentDisplayEnabled: v })}
                 aria-label="Enable class screen launch"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card/60 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <Label htmlFor="classroom-behavior-notes-tips" className="text-sm font-bold">
+                  Behavior notes
+                </Label>
+                <p className="text-[11px] text-muted-foreground">
+                  Show keyboard shortcut tips on the live monitor. Teachers can dismiss them with X (turns
+                  this off) or toggle from the toolbar.
+                </p>
+              </div>
+              <Switch
+                id="classroom-behavior-notes-tips"
+                checked={behaviorNotesTipsOn}
+                disabled={!canEdit}
+                onCheckedChange={(v) => updateSettings({ classroomMonitorShowBehaviorNotesTips: v })}
               />
             </div>
           </div>

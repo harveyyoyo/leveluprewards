@@ -52,6 +52,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, HistoryItem, Class, House, LibraryItem, PrizeAiFunReward, Category } from '@/lib/types';
+import { DEFAULT_STUDENT_THEME_FONT_SCALE } from '@/lib/types';
 import type { AiSurpriseKind } from '@/lib/prizes/prizeAiFunClientStorage';
 import {
   computeDaysOverdue,
@@ -1521,7 +1522,7 @@ export function StudentDashboardInner({
   // Keep legacy variable name used widely in this file.
   const activeTheme = effectiveTheme;
 
-  const fontScale = effectiveTheme?.fontScale ?? 1.1;
+  const fontScale = effectiveTheme?.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE;
   const themeBg = effectiveTheme?.background || '#020617';
   const themeCard = effectiveTheme?.cardBackground || themeBg;
   const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');

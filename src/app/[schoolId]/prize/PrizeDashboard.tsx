@@ -33,6 +33,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Student, Prize, PrizeAiFunReward, Category } from '@/lib/types';
+import { DEFAULT_STUDENT_THEME_FONT_SCALE } from '@/lib/types';
 import {
     Gift,
     LogOut,
@@ -1110,7 +1111,7 @@ export function PrizeDashboard({
         settings.defaultStudentTheme,
         settings.enableStudentThemes,
     );
-    const fontScale = activeTheme?.fontScale ?? 1.1;
+    const fontScale = activeTheme?.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE;
     const themeBg = activeTheme?.background || '#020617';
     const themeCard = activeTheme?.cardBackground || themeBg;
     const computedThemeText =

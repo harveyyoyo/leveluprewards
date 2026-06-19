@@ -32,11 +32,13 @@ import {
   RECESS_REASONS,
   RECESS_REASON_BY_VALUE,
   recessReasonBadgeClasses,
+  type RecessReasonMeta,
 } from '@/lib/recess/recessReasons';
 import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
 import { recessPassScanCodeFor } from '@/lib/recess/recessPassScanCode';
-import { RecessPassPrintSheet } from '@/components/recess/RecessPassPrintSheet';
 import { PrintBarcode } from '@/components/print/PrintBarcode';
+import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
+import { usePrint } from '@/components/providers/PrintProvider';
 
 const LIMIT_OPTIONS = [5, 10, 15] as const;
 
@@ -59,9 +61,10 @@ export function RecessAttendanceSection({
   const firestore = useFirestore();
   const { toast } = useToast();
   const { settings, updateSettings } = useSettings();
+  const { setRecessPassesToPrint } = usePrint();
   const maxMinutes = resolveRecessMaxMinutes(settings);
 
-  const [printingPasses, setPrintingPasses] = useState(false);
+  const [passPrintJob, setPassPrintJob] = useState<RecessReasonMeta[] | null>(null);
   const [selectedPassReasons, setSelectedPassReasons] = useState<Set<RecessReason>>(
     () => new Set(RECESS_REASONS.map((r) => r.value)),
   );
@@ -96,7 +99,7 @@ export function RecessAttendanceSection({
       });
       return;
     }
-    setPrintingPasses(true);
+    setPassPrintJob(passesToPrint);
   };
 
   const activePasses = useActiveRecessPasses(schoolId, true);
@@ -279,13 +282,21 @@ export function RecessAttendanceSection({
         </StaffPortalSectionCardContent>
       </StaffPortalSectionCard>
 
-      {printingPasses ? (
-        <RecessPassPrintSheet
-          passes={passesToPrint}
-          schoolId={schoolId}
-          onReady={() => {
-            window.print();
-            setPrintingPasses(false);
+      {passPrintJob ? (
+        <IdCardPrintSetupDialog
+          variant="recess-pass"
+          open
+          onOpenChange={(open) => {
+            if (!open) setPassPrintJob(null);
+          }}
+          passes={passPrintJob}
+          onConfirm={(args) => {
+            setRecessPassesToPrint({ ...args, schoolId });
+            setPassPrintJob(null);
+            toast({
+              title: args.passes.length === 1 ? 'Printing recess pass' : 'Printing recess passes',
+              description: `${args.passes.length} pass card(s) sent to the printer.`,
+            });
           }}
         />
       ) : null}

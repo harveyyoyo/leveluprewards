@@ -84,7 +84,17 @@ interface AppContextType {
   addTeacher: (newTeacher: Omit<Teacher, 'id'>) => Promise<void>;
   updateTeacher: (teacher: Teacher, options?: { clearTeacherBudget?: boolean; clearPersonnelRole?: boolean }) => Promise<void>;
   deleteTeacher: (teacherId: string) => Promise<void>;
-  addCategory: (category: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] }) => Promise<Category | undefined>;
+  addCategory: (category: {
+    name: string;
+    points: number;
+    color?: string;
+    teacherId?: string;
+    rubricLevels?: CategoryRubricLevel[];
+    icon?: string;
+    imageUrl?: string;
+    countsForHousePoints?: boolean;
+    isGoldenTicket?: boolean;
+  }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
@@ -495,7 +505,17 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     return getDb().then((db) => db.deleteTeacher(firestore, schoolId, id));
   }, [firestore, schoolId]);
 
-  const addCategory_ = useCallback(async (data: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] }) => {
+  const addCategory_ = useCallback(async (data: {
+    name: string;
+    points: number;
+    color?: string;
+    teacherId?: string;
+    rubricLevels?: CategoryRubricLevel[];
+    icon?: string;
+    imageUrl?: string;
+    countsForHousePoints?: boolean;
+    isGoldenTicket?: boolean;
+  }) => {
     if (!firestore || !schoolId) return undefined;
     return getDb().then((db) => db.addCategory(firestore, schoolId, data));
   }, [firestore, schoolId]);
@@ -683,11 +703,11 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
   const deductPointsFromMultipleStudents_ = useCallback(async (studentIds: string[], points: number, reason: string) => {
     if (!firestore || !schoolId) return { success: false, message: 'Not logged in.', count: 0 };
     return getDb().then((db) =>
-      db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason, {
+      db.deductPointsFromMultipleStudents(firestore, schoolId, studentIds, points, reason, categories || [], {
         rollupHousePoints: houseRollup,
       }),
     );
-  }, [firestore, schoolId, houseRollup]);
+  }, [firestore, schoolId, houseRollup, categories]);
 
   const redeemPrize_ = useCallback(async (studentId: string, prize: Prize, quantity: number, pointsOverride?: number, options?: { markFulfilled?: boolean; issuePickupVoucher?: boolean }) => {
     if (!schoolId) return Promise.reject("Not logged into a school.");

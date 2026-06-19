@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import type { RecessReasonMeta } from '@/lib/recess/recessReasons';
 import { RecessPassCard } from '@/components/recess/RecessPassCard';
 import { waitForPrintBarcodes } from '@/lib/printBarcode';
+import { DEFAULT_ID_CARD_SHEET_SPACING, idCardPrintPageClassName, type IdCardSheetSpacing } from '@/lib/idCardPrintCatalog';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 
@@ -12,10 +13,14 @@ export function RecessPassPrintSheet({
   passes,
   schoolId,
   onReady,
+  cornerStyle,
+  sheetSpacing = DEFAULT_ID_CARD_SHEET_SPACING,
 }: {
   passes: RecessReasonMeta[];
   schoolId: string;
   onReady: () => void;
+  cornerStyle?: 'rounded' | 'rectangular';
+  sheetSpacing?: IdCardSheetSpacing;
 }) {
   const firestore = useFirestore();
   const schoolDocRef = useMemoFirebase(
@@ -53,10 +58,10 @@ export function RecessPassPrintSheet({
   const sheet = (
     <div id="student-id-print-wrapper">
       {pages.map((chunk, pageIndex) => (
-        <div key={pageIndex} className="student-id-print-page">
+        <div key={pageIndex} className={idCardPrintPageClassName(sheetSpacing)}>
           {chunk.map((meta) => (
             <div key={meta.value} className="student-id-print-slot">
-              <RecessPassCard meta={meta} schoolName={schoolName} />
+              <RecessPassCard meta={meta} schoolName={schoolName} cornerStyle={cornerStyle} />
             </div>
           ))}
         </div>
