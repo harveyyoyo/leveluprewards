@@ -232,6 +232,7 @@ export function StudentDashboardInner({
   const { functions, auth } = useFirebase();
   const { toast } = useToast();
   const { settings } = useSettings();
+  const { t } = useTranslation();
   const { kioskAiFunActive, markKioskRewardsActivity } = useKioskAiFunAndVoucherIdleActive(
     settings.kioskAiFunIdleOffSec,
     isKioskLocked,
@@ -516,8 +517,8 @@ export function StudentDashboardInner({
   const handleManualLogout = useCallback(() => {
     playSound('swoosh');
     onDone();
-    toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
-  }, [onDone, playSound, toast]);
+    toast({ title: t('student.kiosk.loggedOut'), description: t('student.kiosk.loggedOutDescription') });
+  }, [onDone, playSound, t, toast]);
 
   const [logoutTimer, setLogoutTimer] = useState(settings.kioskSessionTimeoutSec ?? 10);
 
@@ -531,12 +532,12 @@ export function StudentDashboardInner({
     if (isKioskLocked || !kioskAutoLogoutOn) return;
     if (logoutTimer <= 0) {
       onDone();
-      toast({ title: 'Session ended', description: 'Returning to kiosk home.' });
+      toast({ title: t('student.kiosk.sessionEnded'), description: t('student.kiosk.sessionEndedDescription') });
       return;
     }
-    const timerId = window.setTimeout(() => setLogoutTimer((t) => t - 1), 1000);
+    const timerId = window.setTimeout(() => setLogoutTimer((n) => n - 1), 1000);
     return () => window.clearTimeout(timerId);
-  }, [isKioskLocked, kioskAutoLogoutOn, logoutTimer, onDone, toast]);
+  }, [isKioskLocked, kioskAutoLogoutOn, logoutTimer, onDone, t, toast]);
 
   useEffect(() => {
     if (isKioskLocked || !kioskAutoLogoutOn) return;
@@ -2072,14 +2073,17 @@ export function StudentDashboardInner({
                 style={themeSurfaceStyle}
               >
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Redeem prize?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('student.kiosk.redeemPrize')}</AlertDialogTitle>
                   <AlertDialogDescription
                     className="break-words [overflow-wrap:anywhere]"
                     style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
                   >
-                    Redeem{' '}
+                    {t('student.kiosk.redeem')}{' '}
                     <span className="text-xl font-black sm:text-2xl [overflow-wrap:anywhere]">{confirmingPrize?.name}</span>
-                    {confirmingPrize ? ` for ${(confirmingPrize.points || 0).toLocaleString()} points` : ''}?
+                    {confirmingPrize
+                      ? ` ${t('student.kiosk.redeemConfirmFor', { points: (confirmingPrize.points || 0).toLocaleString() })}`
+                      : ''}
+                    ?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 {confirmingPrize?.aiFunReward === 'picker' ? (

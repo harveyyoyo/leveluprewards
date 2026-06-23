@@ -1,6 +1,7 @@
 const portal = {
   loading: 'טוען פורטל…',
   whereTo: 'לאן?',
+  quickAccess: 'גישה מהירה',
   adminPortal: {
     title: 'פורטל מנהל',
     description: 'ניהול תלמידים, כיתות, מורים, נקודות, פרסים ועוד…',

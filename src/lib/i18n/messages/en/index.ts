@@ -9,6 +9,7 @@ import auth from '@/lib/i18n/messages/en/auth';
 import staff from '@/lib/i18n/messages/en/staff';
 import settings from '@/lib/i18n/messages/en/settings';
 import student from '@/lib/i18n/messages/en/student';
+import parent from '@/lib/i18n/messages/en/parent';
 
 const en = {
   ...common,
@@ -21,6 +22,7 @@ const en = {
   ...staff,
   ...settings,
   ...student,
+  ...parent,
 } satisfies MessageTree;
 
 export default en;
