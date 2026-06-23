@@ -559,6 +559,7 @@ export function StudentKioskRedeemHero({
   scanStatus,
   className,
 }: StudentKioskRedeemHeroProps) {
+  const { t: tr } = useTranslation();
   const t = themed.active;
 
   if (!couponSectionEnabled) return null;
@@ -573,7 +574,7 @@ export function StudentKioskRedeemHero({
         }}
       >
         <Input
-          placeholder="Code appears here when scanned"
+          placeholder={tr('student.kiosk.codePlaceholder')}
           value={couponCode}
           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
           className="h-12 w-full min-w-0 rounded-xl border-2 font-mono text-left text-base tracking-widest sm:flex-1 [@media(max-height:760px)]:h-10"
@@ -597,7 +598,7 @@ export function StudentKioskRedeemHero({
               : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
           }
         >
-          Redeem
+          {tr('student.kiosk.redeem')}
         </Button>
       </form>
       <ScanCouponScanZone themed={themed}>
@@ -621,14 +622,16 @@ export function StudentKioskRedeemHero({
               )}
               style={t ? { color: 'rgba(248, 250, 252, 0.97)' } : undefined}
             >
-              Scan coupon
+              {extendedScanModes ? tr('student.kiosk.scanCouponOrLibSticker') : tr('student.kiosk.scanCoupon')}
             </span>
           </div>
           <p
             className="w-full max-w-md text-center text-xs font-semibold opacity-90 sm:text-sm [@media(max-height:760px)]:text-[10px]"
             style={t ? { color: 'rgba(248, 250, 252, 0.92)' } : undefined}
           >
-            Scan with your barcode scanner, or type the code above
+            {extendedScanModes
+              ? tr('student.kiosk.scanHintLibrary')
+              : tr('student.kiosk.scanHint')}
           </p>
         </div>
       </ScanCouponScanZone>
@@ -638,7 +641,7 @@ export function StudentKioskRedeemHero({
           t ? { color: 'var(--theme-text)', opacity: 0.7 } : { color: 'hsl(var(--muted-foreground))' }
         }
       >
-        Available coupon codes can be viewed in the Admin panel.
+        {tr('student.kiosk.adminCouponHint')}
       </p>
     </div>
   );
@@ -690,7 +693,7 @@ export function StudentKioskRedeemHero({
             >
               <Wallet className="h-5 w-5 sm:h-6 sm:w-6 [@media(max-height:760px)]:h-4 [@media(max-height:760px)]:w-4" style={t ? { color: 'var(--theme-primary)' } : undefined} />
             </div>
-            {extendedScanModes ? 'Scan coupon, pass, or book' : 'Redeem Coupon'}
+            {extendedScanModes ? tr('student.kiosk.scanCouponPassOrBook') : tr('student.kiosk.redeemCoupon')}
           </CardTitle>
         </Helper>
       </CardHeader>
@@ -706,7 +709,7 @@ export function StudentKioskRedeemHero({
               }}
             >
               <Input
-                placeholder="Or type coupon code"
+                placeholder={tr('student.kiosk.couponPlaceholder')}
                 value={couponCode}
                 onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                 className="h-10 w-full min-w-0 rounded-lg border-2 font-mono text-left text-sm tracking-widest sm:flex-1 [@media(max-height:760px)]:h-9"
@@ -733,7 +736,7 @@ export function StudentKioskRedeemHero({
                     : { backgroundColor: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))' }
                 }
               >
-                Redeem
+                {tr('student.kiosk.redeem')}
               </Button>
             </form>
           </div>
@@ -762,12 +765,13 @@ export function StudentKioskMorePrizesButton({
   onClick,
   className,
 }: StudentKioskMorePrizesButtonProps) {
+  const { t: tr } = useTranslation();
   const t = themed.active;
 
   const label = (
     <>
       <Gift className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
-      More prizes
+      {tr('student.kiosk.morePrizes')}
     </>
   );
 
@@ -837,6 +841,7 @@ export function StudentKioskMoreActivityButton({
   onClick,
   className,
 }: StudentKioskMoreActivityButtonProps) {
+  const { t: tr } = useTranslation();
   const t = themed.active;
 
   return (
@@ -859,7 +864,7 @@ export function StudentKioskMoreActivityButton({
     >
       <span className="flex items-center justify-center gap-2">
         <Clock className="h-4 w-4 shrink-0 sm:h-5 sm:w-5" aria-hidden />
-        More activity
+        {tr('student.kiosk.moreActivity')}
       </span>
     </Button>
   );

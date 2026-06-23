@@ -86,3 +86,34 @@ Create a task that runs (for example) daily at 3 AM — `setup-gcs-backup.ps1` r
 
 The backup script reads bucket settings from `.gcs-backup.env` (created during setup). If automatic scheduling fails, run the `schtasks /Create` command printed by `setup-gcs-backup.ps1`.
 
+## Env file backup (`.env.local`)
+
+Secrets stay out of GitHub on purpose. After `npm run setup:gcs-backup`, env files are backed up to the **same private GCS bucket**:
+
+- **Latest copy**: `gs://$GCS_BACKUP_BUCKET/$GCS_BACKUP_PREFIX/env/latest/.env.local`
+- **History** (30 days): `.../env/history/.env.local-YYYYMMDD-HHMMSS`
+
+### Auto-upload on change
+
+Setup registers a Windows task (`SchoolArcade-Env-Backup-Watcher`) that starts when you sign in and uploads whenever `.env.local` or `.env` changes.
+
+Manual one-shot upload:
+
+```powershell
+npm run backup:env
+```
+
+Run the watcher yourself (for example while developing):
+
+```powershell
+npm run watch:env-backup
+```
+
+Restore on a new computer (after setup):
+
+```powershell
+npm run restore:env
+```
+
+Logs: `.local-backups/env-watch.log`
+

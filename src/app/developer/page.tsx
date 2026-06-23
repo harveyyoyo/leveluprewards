@@ -1058,6 +1058,32 @@ export default function DeveloperPage() {
 
             <Card>
               <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden />
+                  Flyer tools
+                </CardTitle>
+                <CardDescription>
+                  Developer-only shortcuts for the internal flyer galleries and builders.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <Button type="button" variant="secondary" className="justify-center gap-2" asChild>
+                  <a href="/marketing/interactive.html">
+                    <Link2 className="h-4 w-4" aria-hidden />
+                    Interactive builders
+                  </a>
+                </Button>
+                <Button type="button" variant="outline" className="justify-center gap-2" asChild>
+                  <a href="/marketing/index.html">
+                    <Link2 className="h-4 w-4" aria-hidden />
+                    Regular gallery
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
                 <CardTitle className="text-base">Demo school: yeshiva</CardTitle>
                 <CardDescription>
                   Jewish Orthodox sample school on the public login page. Reset restores default rewards and School Office data.

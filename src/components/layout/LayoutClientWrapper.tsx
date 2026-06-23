@@ -203,17 +203,20 @@ function LayoutClientWrapperInner({
     const isHouseSortingPage =
       typeof pathname === 'string' &&
       (pathname.includes('/house-sorting') || pathname.includes('/houses-realm'));
+    const isClassroomRealmPage =
+      typeof pathname === 'string' &&
+      (pathname.includes('/classroom-realm') || pathname.includes('/classroom'));
     const isPresentationPage = isPresentationRoute(pathname);
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||
       isSmartScreenPage ||
       isHouseSortingPage ||
+      isClassroomRealmPage ||
       isPresentationPage ||
       (fullscreen &&
         (pathname?.includes('/hall-of-fame') ||
           pathname?.includes('/bulletin-board') ||
-          pathname?.includes('/displays') ||
-          pathname?.includes('/classroom')));
+          pathname?.includes('/displays')));
 
     const schoolPathMatch =
       typeof pathname === 'string'

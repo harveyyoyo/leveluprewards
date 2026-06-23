@@ -1,4 +1,4 @@
-export type HousesRealmSegment = '' | 'manage' | 'ceremony' | 'hall-of-fame';
+export type HousesRealmSegment = '' | 'setup' | 'manage' | 'ceremony' | 'hall-of-fame';
 
 function housesDevOrigin(): string | null {
   const raw = process.env.NEXT_PUBLIC_HOUSES_DEV_ORIGIN?.trim();

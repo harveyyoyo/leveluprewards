@@ -17,12 +17,11 @@ export function buildClassroomFullscreenUrl({
   audience = 'teacher',
 }: ClassroomFullscreenUrlParams): string {
   const params = new URLSearchParams();
-  params.set('fullscreen', '1');
   if (classId) params.set('classId', classId);
   if (scope) params.set('scope', scope);
   if (audience === 'student') params.set('audience', 'student');
   const q = params.toString();
-  return `/${schoolId}/classroom${q ? `?${q}` : ''}`;
+  return `/${schoolId}/classroom-realm/live${q ? `?${q}` : ''}`;
 }
 
 export function openClassroomFullscreenTab(params: ClassroomFullscreenUrlParams) {

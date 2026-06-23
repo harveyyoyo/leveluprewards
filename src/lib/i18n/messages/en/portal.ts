@@ -1,6 +1,7 @@
 const portal = {
   loading: 'Loading portal…',
   whereTo: 'Where to?',
+  quickAccess: 'Quick access',
   adminPortal: {
     title: 'Admin Portal',
     description: 'Manage students, classes, teachers, points, prizes and much more…',

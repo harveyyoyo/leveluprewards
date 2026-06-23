@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LevelUp Rewards — Basic Settings (Admin)</title>
+    <title>LevelUp Rewards — Admin Setup Quick Guide</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -454,6 +454,10 @@
         .sidebar-checkbox-label input { width: 16px; height: 16px; accent-color: #38bdf8; }
         body.theme-clean .shape-navy, body.theme-clean .shape-blob { display: none; }
         body.theme-blue { --navy: #0f3b75; --navy-deep: #155eaa; --gold-bg: #dbeafe; --gold-text: #1d4ed8; --blob: #bfdbfe; }
+        body.theme-mint { --navy: #14532d; --navy-deep: #166534; --gold-bg: #dcfce7; --gold-text: #15803d; --blob: #bbf7d0; --border: #bbf7d0; }
+        body.theme-warm { --navy: #7c2d12; --navy-deep: #9a3412; --gold-bg: #ffedd5; --gold-text: #c2410c; --blob: #fed7aa; --border: #fdba74; }
+        body.theme-slate { --navy: #1e293b; --navy-deep: #0f172a; --gold-bg: #e2e8f0; --gold-text: #334155; --blob: #cbd5e1; --border: #cbd5e1; }
+        body.theme-forest { --navy: #064e3b; --navy-deep: #065f46; --gold-bg: #d1fae5; --gold-text: #047857; --blob: #a7f3d0; --border: #6ee7b7; }
 
         @media (max-width: 1080px) {
           body { flex-direction: column; align-items: center; padding: 16px; gap: 20px; }
@@ -513,8 +517,8 @@
       <div class="sidebar-header">
         <span class="sidebar-logo">LU</span>
         <div>
-          <h2 class="sidebar-title">Basic Settings</h2>
-          <p class="sidebar-subtitle">Interactive flyer controls for the admin quick-start one-page flyer.</p>
+          <h2 class="sidebar-title">Admin Setup Guide</h2>
+          <p class="sidebar-subtitle">Interactive controls for the rewards setup quick guide.</p>
         </div>
       </div>
       <div class="sidebar-section">
@@ -522,6 +526,10 @@
         <select id="theme-select" class="sidebar-select" onchange="applyBasicSettingsTheme(this.value)">
           <option value="clean" selected>Clean printer friendly</option>
           <option value="blue">Soft blue accent</option>
+          <option value="mint">Mint garden</option>
+          <option value="warm">Warm amber</option>
+          <option value="slate">Slate professional</option>
+          <option value="forest">Forest green</option>
         </select>
         <p class="sidebar-note">This flyer is already light so it prints well on a regular printer.</p>
       </div>
@@ -555,11 +563,11 @@
       <div class="shape-blob" aria-hidden="true"></div>
 
       <header class="hero">
-        <div class="badge" aria-hidden="true">✨ Admin quick guide</div>
-        <h1>Set up rewards.<br />Launch in minutes.</h1>
+        <div class="badge" aria-hidden="true">Admin setup quick guide</div>
+        <h1>Set up rewards.<br />Launch with confidence.</h1>
         <p class="lead">
-          Configure the essentials once in Admin—point categories, prize costs, and coupon rules—then teachers
-          award and students check in at the kiosk (tap card or type ID), not the school login page.
+          Configure the essentials once in Admin: point categories, prize costs, coupon rules, and kiosk access,
+          so teachers can award points and students can redeem without confusion.
         </p>
       </header>
 
@@ -674,9 +682,9 @@
             />
           </div>
           <div class="cta-center">
-            <p class="eyebrow">📍 Student kiosk</p>
-            <h2>Open /student</h2>
-            <p class="sub">Hallway device · kiosk sign-in · not /login</p>
+            <p class="eyebrow">Student kiosk</p>
+            <h2>Launch the student flow</h2>
+            <p class="sub">Kiosk sign-in, rewards shop, and coupon redemption in one place.</p>
           </div>
           <div class="cta-stat">
             <div class="big">5 min</div>
@@ -686,16 +694,16 @@
 
         <div class="trust-row">
           <div class="trust-badges">
-            <span>✓ PBIS aligned</span>
-            <span>♡ Teacher-friendly</span>
-            <span>🛡️ School-wide control</span>
+            <span>PBIS aligned</span>
+            <span>Teacher-friendly</span>
+            <span>School-wide control</span>
           </div>
-          <a class="url" href="https://leveluprewards.app">leveluprewards.app · contact@leveluprewards.app</a>
+          <a class="url" href="https://leveluprewards.app">Set up your launch: leveluprewards.app · contact@leveluprewards.app</a>
         </div>
       </footer>
     </article>
     <script>
-      const defaultBasicHeadline = 'Set up rewards.<br />Launch in minutes.';
+      const defaultBasicHeadline = 'Set up rewards.<br />Launch with confidence.';
 
       function escapeBasicHtml(value) {
         return value.replace(/[&<>"']/g, (char) => ({
@@ -708,8 +716,8 @@
       }
 
       function applyBasicSettingsTheme(theme) {
-        document.body.classList.toggle('theme-clean', theme === 'clean');
-        document.body.classList.toggle('theme-blue', theme === 'blue');
+        document.body.classList.remove('theme-clean', 'theme-blue', 'theme-mint', 'theme-warm', 'theme-slate', 'theme-forest');
+        document.body.classList.add('theme-' + (theme || 'clean'));
       }
 
       function updateBasicPreparedFor(value) {

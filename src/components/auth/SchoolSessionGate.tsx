@@ -116,7 +116,9 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     );
   }
 
-  if (section === 'classroom') return canAccessHallOfFameRoute(loginState);
+  if (section === 'classroom-realm' || section === 'classroom') {
+    return canAccessHallOfFameRoute(loginState);
+  }
 
   if (section === 'smart-screen' || section === 'displays' || section === 'bulletin-board') {
     return (

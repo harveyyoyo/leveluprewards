@@ -35,7 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 
 import { cn } from '@/lib/utils';
-import { isCompactDisplayMode } from '@/lib/displayMode';
+import { isCompactDisplayMode, isMobileDisplayMode } from '@/lib/displayMode';
 import { countPendingTeacherAwards } from '@/lib/pendingTeacherAwards';
 import { useIntroTourStaffTabListener } from '@/lib/introTourStaffTab';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -109,8 +109,7 @@ import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
-import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { ClassroomTabLauncher } from '@/components/classroom/ClassroomTabLauncher';
 import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
 import {
   teacherPortalTabContentClassName,
@@ -1842,12 +1841,14 @@ function TeacherPrinterInnerBody({
     const isGraphic = settings.graphicMode === 'graphics';
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const playSound = useArcadeSound();
+    const mobileDisplay = isMobileDisplayMode(settings.displayMode);
 
     const staffPortalRole = secretaryMode ? 'secretary' : 'teacher';
     const { isWide } = useStaffPortalLayout();
     const { mainTabs, addMoreTabs, allTabValues, defaultTab, addOnTabDefs } = useStaffPortalTabs({
         role: staffPortalRole,
         settings,
+        resolvedDisplayMode: settings.displayMode,
         pinnedAddOnValues: settings.teacherPinnedAddOnTabs || [],
         mainTabOrder: settings.teacherMainTabOrder,
     });
@@ -1914,12 +1915,6 @@ function TeacherPrinterInnerBody({
         const normalized = normalizeStaffPortalTabValue(activeTeacherTab);
         return staffPortalTabIsValid(normalized, allTabValues) ? normalized : defaultTab;
     }, [secretaryMode, activeTeacherTab, allTabValues, defaultTab]);
-
-    const classroomInitialSection = useMemo<ClassroomTabSection | undefined>(() => {
-        const raw = activeTeacherTab.trim().toLowerCase();
-        if (raw === 'raffle') return 'raffle';
-        return undefined;
-    }, [activeTeacherTab]);
 
     useEffect(() => {
         if (!schoolId || secretaryMode) {
@@ -2069,6 +2064,8 @@ function TeacherPrinterInnerBody({
                         onRemoveTab={(value) => toggleTeacherPinnedAddOn(value, false)}
                         onTurnAllOn={enableAllTeacherAddOnTabs}
                         onTurnAllOff={disableAllTeacherAddOnTabs}
+                        forceCompactNav={mobileDisplay}
+                        hideAddMore={mobileDisplay}
                     />
                 </div>
             ) : null}
@@ -2187,39 +2184,7 @@ function TeacherPrinterInnerBody({
 
                             {teacherTabEnabled('classroom') && (
                             <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <StaffClassroomTab
-                                    variant="teacher"
-                                    schoolId={schoolId!}
-                                    categories={categories}
-                                    classes={classes}
-                                    students={studentsForTeacherActions}
-                                    managerTeacherId={managerTeacherId}
-                                    schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
-                                    isGraphic={isGraphic}
-                                    manualAccentColor={teacherAccent}
-                                    initialSection={classroomInitialSection}
-                                    canEditRaffleSettings={!secretaryMode}
-                                    raffleOperatorName={teacherName || undefined}
-                                    manualBudgetOptions={
-                                        isAdmin
-                                            ? undefined
-                                            : {
-                                                  isAdmin: false,
-                                                  currentTeacher: currentTeacher ?? null,
-                                                  onBudgetSpend: async (totalCost) => {
-                                                      if (!currentTeacher) return;
-                                                      const next =
-                                                          currentTeacher.monthlyBudget !== undefined
-                                                              ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
-                                                              : {
-                                                                    ...currentTeacher,
-                                                                    spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
-                                                                };
-                                                      await updateTeacher(next);
-                                                  },
-                                              }
-                                    }
-                                />
+                                <ClassroomTabLauncher schoolId={schoolId!} />
                             </TeacherPortalTabPane>
                             )}
 
@@ -2363,6 +2328,11 @@ function TeacherPrinterInnerBody({
                         >
                             <strong className="font-bold">Offline awards pending:</strong>{' '}
                             {pendingTeacherAwardCount} batch{pendingTeacherAwardCount === 1 ? '' : 'es'} will sync when you are online.
+                        </div>
+                    ) : null}
+                    {mobileDisplay && !embedded && !secretaryMode ? (
+                        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-950 dark:text-emerald-100">
+                            <strong className="font-bold">Mobile mode:</strong> only Points, Students, Redemptions, and Attendance are shown here. Switch to Web or App in Settings for the full teacher portal.
                         </div>
                     ) : null}
                     {embedded && settings.enableTeacherBudgets && currentTeacher?.monthlyBudget !== undefined ? (

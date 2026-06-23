@@ -1,15 +1,39 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Castle, ExternalLink, Home, Settings2, Sparkles, Trophy } from 'lucide-react';
+import { Castle, ExternalLink, Home, Settings2, Sparkles, Trophy, Wand2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { housesRealmHref } from '@/lib/housesRealmUrl';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import {
+  housesRealmThemeVars,
+  resolveHousesRealmTheme,
+} from '@/lib/houses/housesRealmThemes';
+
+const ACCENT_GRADIENT = 'linear-gradient(135deg, var(--hr-accent-from), var(--hr-accent-to))';
+
+/** Mirror the active Houses realm theme onto `<html>` so the body + gradients pick up `--hr-*`. */
+export function useHousesRealmTheme(active: boolean) {
+  const { settings } = useSettings();
+  const themeId = resolveHousesRealmTheme(settings.housesRealmTheme).id;
+  useEffect(() => {
+    if (!active) return;
+    const el = document.documentElement;
+    const vars = housesRealmThemeVars(resolveHousesRealmTheme(themeId));
+    for (const [key, value] of Object.entries(vars)) el.style.setProperty(key, value);
+    return () => {
+      for (const key of Object.keys(vars)) el.style.removeProperty(key);
+    };
+  }, [active, themeId]);
+}
 
 const NAV = [
   { id: 'home', label: 'Home', segment: '' as const, icon: Home },
+  { id: 'setup', label: 'Theme', segment: 'setup' as const, icon: Wand2 },
   { id: 'manage', label: 'Manage', segment: 'manage' as const, icon: Settings2 },
   { id: 'ceremony', label: 'Ceremony', segment: 'ceremony' as const, icon: Sparkles },
   { id: 'hall', label: 'Hall of Fame', segment: 'hall-of-fame' as const, icon: Trophy },
@@ -27,6 +51,7 @@ export function HousesRealmShell({
 }) {
   const pathname = usePathname();
   const base = `/${schoolId.trim().toLowerCase()}/houses-realm`;
+  useHousesRealmTheme(!hideChrome);
 
   if (hideChrome) {
     return <div className="houses-realm-root min-h-dvh">{children}</div>;
@@ -39,11 +64,21 @@ export function HousesRealmShell({
 
       <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/10 bg-black/25 p-4 backdrop-blur-md lg:flex">
         <div className="mb-8 flex items-center gap-3 px-2">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-violet-600 shadow-lg shadow-violet-900/40">
-            <Castle className="h-5 w-5 text-white" aria-hidden />
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-2xl shadow-lg shadow-black/40"
+            style={{ backgroundImage: ACCENT_GRADIENT }}
+          >
+            <Castle className="h-5 w-5" style={{ color: 'var(--hr-on-accent)' }} aria-hidden />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-amber-200/70">LevelUp</p>
+            <p
+              className="text-[10px] font-black uppercase tracking-[0.35em]"
+              style={{ color: 'var(--hr-accent-text)' }}
+            >
+              {schoolId
+                ? schoolId.charAt(0).toUpperCase() + schoolId.slice(1).replace(/[-_]/g, ' ')
+                : 'LevelUp'}
+            </p>
             <p className="font-serif text-lg font-bold text-white">Houses</p>
           </div>
         </div>
@@ -84,26 +119,49 @@ export function HousesRealmShell({
       </aside>
 
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md lg:hidden">
+        {/* Mobile header — title only */}
+        <header className="flex items-center border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md lg:hidden">
           <p className="font-serif text-lg font-bold text-white">Houses</p>
-          <div className="flex gap-1">
-            {NAV.map((item) => {
-              const href = housesRealmHref(schoolId, item.segment);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.id}
-                  href={href}
-                  className="rounded-lg p-2 text-white/60 hover:bg-white/10 hover:text-white"
-                  aria-label={item.label}
-                >
-                  <Icon className="h-4 w-4" />
-                </Link>
-              );
-            })}
-          </div>
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto pb-20 lg:pb-0">{children}</main>
+
+        {/* Mobile bottom tab bar */}
+        <nav
+          className="fixed bottom-0 inset-x-0 z-30 flex items-stretch border-t border-white/10 bg-black/60 backdrop-blur-xl lg:hidden"
+          aria-label="Houses navigation"
+        >
+          {NAV.map((item) => {
+            const href = housesRealmHref(schoolId, item.segment);
+            const active =
+              item.segment === ''
+                ? pathname === base || pathname === `${base}/`
+                : pathname?.startsWith(`${base}/${item.segment}`);
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.id}
+                href={href}
+                className="flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-center transition-colors"
+                aria-label={item.label}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon
+                  className="h-5 w-5 shrink-0"
+                  style={{ color: active ? 'var(--hr-accent-text)' : undefined }}
+                  aria-hidden
+                />
+                <span
+                  className="text-[9px] font-bold uppercase tracking-wider leading-none"
+                  style={{
+                    color: active ? 'var(--hr-accent-text)' : 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
@@ -125,7 +183,12 @@ export function HousesRealmHero({
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
       className="mx-auto flex max-w-4xl flex-col items-center px-6 py-16 text-center sm:py-24"
     >
-      <p className="mb-4 text-[10px] font-black uppercase tracking-[0.5em] text-amber-200/60">Houses</p>
+      <p
+        className="mb-4 text-[10px] font-black uppercase tracking-[0.5em]"
+        style={{ color: 'var(--hr-accent-text)' }}
+      >
+        Houses
+      </p>
       <h1 className="houses-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl">{title}</h1>
       {subtitle ? <p className="max-w-xl text-base text-white/60 sm:text-lg">{subtitle}</p> : null}
       {children ? <div className="mt-10 flex flex-wrap justify-center gap-4">{children}</div> : null}

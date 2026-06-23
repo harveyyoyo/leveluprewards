@@ -38,6 +38,12 @@
       }
       html[data-theme="scholastic"] { --paper:#101827; --paper-2:#1e293b; --accent:#93c5fd; --accent-2:#facc15; --accent-3:#c4b5fd; }
       html[data-theme="fresh"] { --paper:#06251d; --paper-2:#0e3a2e; --accent:#bef264; --accent-2:#5eead4; --accent-3:#fde68a; }
+      html[data-theme="light-sky"] { --paper:#ffffff; --paper-2:#f0f9ff; --text:#0f172a; --muted:#475569; --line:#bae6fd; --panel:#ffffff; --accent:#0284c7; --accent-2:#0ea5e9; --accent-3:#0369a1; }
+      html[data-theme="light-mint"] { --paper:#ffffff; --paper-2:#f0fdf4; --text:#052e16; --muted:#166534; --line:#bbf7d0; --panel:#ffffff; --accent:#16a34a; --accent-2:#10b981; --accent-3:#15803d; }
+      html[data-theme="light-amber"] { --paper:#ffffff; --paper-2:#fffbeb; --text:#451a03; --muted:#92400e; --line:#fde68a; --panel:#ffffff; --accent:#b45309; --accent-2:#d97706; --accent-3:#ea580c; }
+      html[data-theme="light-rose"] { --paper:#ffffff; --paper-2:#fff1f2; --text:#4c0519; --muted:#9f1239; --line:#fecdd3; --panel:#ffffff; --accent:#be123c; --accent-2:#e11d48; --accent-3:#f43f5e; }
+      html[data-theme="slate"] { --paper:#0f172a; --paper-2:#1e293b; --text:#f8fafc; --muted:#cbd5e1; --line:rgba(255,255,255,.14); --panel:rgba(255,255,255,.06); --accent:#94a3b8; --accent-2:#38bdf8; --accent-3:#f8fafc; }
+      html[data-theme="sunset"] { --paper:#1a0b18; --paper-2:#2a1024; --text:#fdf2f8; --muted:#f9a8d4; --line:rgba(255,255,255,.14); --panel:rgba(255,255,255,.06); --accent:#db2777; --accent-2:#f97316; --accent-3:#facc15; }
       * { box-sizing: border-box; }
       html, body {
         margin: 0;
@@ -54,6 +60,10 @@
           linear-gradient(135deg,#030712,#08111f);
       }
       html[data-theme="light"] body { background: #e5e7eb; }
+      html[data-theme="light-sky"] body,
+      html[data-theme="light-mint"] body,
+      html[data-theme="light-amber"] body,
+      html[data-theme="light-rose"] body { background: #e5e7eb; }
       .back-link {
         position: fixed;
         top: 14px;
@@ -105,6 +115,27 @@
       }
       .check { display: flex; align-items: center; gap: 8px; margin: 9px 0; }
       .check input { width: 16px; min-height: 16px; accent-color: var(--accent); }
+      .pillar-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        margin: 9px 0;
+      }
+      .page-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 7px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+        color: rgba(217,230,246,.9);
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .page-check input { width: 13px; min-height: 13px; accent-color: var(--accent-2); }
       .button {
         width: 100%;
         min-height: 42px;
@@ -116,7 +147,7 @@
         font: 900 13px/1 Outfit, system-ui, sans-serif;
         cursor: pointer;
       }
-      .stage { display: flex; align-items: flex-start; justify-content: center; padding: 34px 20px; overflow: auto; }
+      .stage { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 32px; padding: 34px 20px; overflow: auto; }
       .flyer {
         width: 8.5in;
         min-height: 11in;
@@ -139,6 +170,130 @@
         min-height: 11in;
         padding: .32in;
       }
+      .insert-page .flyer-inner {
+        display: flex;
+        flex-direction: column;
+        gap: .2in;
+      }
+      .insert-topline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: .2in;
+        padding-bottom: .13in;
+        border-bottom: 1px solid var(--line);
+      }
+      .insert-kicker {
+        display: inline-flex;
+        width: fit-content;
+        margin-bottom: .1in;
+        padding: 7px 10px;
+        border: 1px solid color-mix(in srgb,var(--pillar-color,var(--accent)) 48%,transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb,var(--pillar-color,var(--accent)) 14%,transparent);
+        color: var(--text);
+        font-size: 9.5px;
+        font-weight: 900;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+      }
+      .insert-title {
+        margin: 0;
+        max-width: 5.9in;
+        color: var(--text);
+        font-size: 43px;
+        line-height: .96;
+        font-weight: 900;
+      }
+      .insert-subtitle {
+        margin: .13in 0 0;
+        max-width: 5.65in;
+        color: var(--soft);
+        font-size: 15px;
+        line-height: 1.35;
+        font-weight: 750;
+      }
+      .insert-meta {
+        min-width: 1.65in;
+        padding: .11in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.35;
+        text-align: right;
+      }
+      .insert-meta strong { display: block; color: var(--text); font-size: 11px; }
+      .insert-grid {
+        display: grid;
+        grid-template-columns: 1.03fr .97fr;
+        gap: .18in;
+        align-items: stretch;
+        flex: 1;
+        min-height: 0;
+      }
+      .insert-visual {
+        display: flex;
+        flex-direction: column;
+        gap: .09in;
+        margin: 0;
+        padding: .13in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: #0f172a;
+      }
+      .insert-visual img {
+        width: 100%;
+        height: 5.25in;
+        object-fit: contain;
+        object-position: center;
+        border-radius: 6px;
+        background: #f8fafc;
+      }
+      .insert-visual figcaption {
+        color: #475569;
+        font-size: 9.5px;
+        font-weight: 900;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+      .insert-story { display: grid; gap: .13in; align-content: stretch; }
+      .insert-card {
+        padding: .16in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      .insert-card h3 { margin: 0 0 .08in; color: var(--text); font-size: 16px; line-height: 1.05; }
+      .insert-card p,
+      .insert-card li { color: var(--muted); font-size: 12px; line-height: 1.37; font-weight: 750; }
+      .insert-card p { margin: 0; }
+      .insert-card ul { margin: 0; padding-left: .18in; }
+      .insert-card li { margin: .07in 0; }
+      .insert-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: .1in; }
+      .insert-step {
+        padding: .12in;
+        border: 1px solid color-mix(in srgb,var(--pillar-color,var(--accent)) 45%,var(--line));
+        border-radius: 8px;
+        background: color-mix(in srgb,var(--pillar-color,var(--accent)) 12%,transparent);
+      }
+      .insert-step strong { display: block; color: var(--text); font-size: 12px; }
+      .insert-step span { display: block; margin-top: 5px; color: var(--muted); font-size: 9.5px; font-weight: 750; line-height: 1.28; }
+      .insert-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .16in;
+        padding-top: .1in;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+      }
+      .insert-tags { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
       .simple-header,
       .simple-footer {
         display: flex;
@@ -315,7 +470,8 @@
         .sidebar, .back-link { display: none !important; }
         .app { display: block; }
         .stage { display: block; padding: 0; }
-        .flyer { width: 8.5in; height: 11in; min-height: 11in; border: 0; border-radius: 0; box-shadow: none; }
+        .flyer { width: 8.5in; height: 11in; min-height: 11in; border: 0; border-radius: 0; box-shadow: none; page-break-after: always; }
+        .flyer:last-child { page-break-after: auto; }
       }
     </style>
     <script>
@@ -333,10 +489,16 @@
           <label class="field">
             <span>Visual style</span>
             <select id="theme-select">
-              <option value="light">Light print</option>
+              <option value="light" selected>Light print</option>
+              <option value="light-sky">Light sky breeze</option>
+              <option value="light-mint">Light mint garden</option>
+              <option value="light-amber">Light amber sun</option>
+              <option value="light-rose">Light rose brief</option>
               <option value="default">Campus teal</option>
               <option value="scholastic">Scholastic blue</option>
               <option value="fresh">Fresh green</option>
+              <option value="slate">Slate midnight</option>
+              <option value="sunset">Purple sunset</option>
             </select>
           </label>
         </div>
@@ -350,10 +512,22 @@
         </div>
         <div class="section">
           <span class="section-title">Pillars</span>
-          <label class="check"><input type="checkbox" data-pillar="rewards" checked /> Rewards</label>
-          <label class="check"><input type="checkbox" data-pillar="attendance" checked /> Attendance</label>
-          <label class="check"><input type="checkbox" data-pillar="library" checked /> Library</label>
-          <label class="check"><input type="checkbox" data-pillar="classroom" checked /> Classroom</label>
+          <div class="pillar-row">
+            <label class="check"><input type="checkbox" data-pillar="rewards" checked /> Rewards</label>
+            <label class="page-check" title="Add separate page for Rewards"><input type="checkbox" data-pillar-page="rewards" /> page</label>
+          </div>
+          <div class="pillar-row">
+            <label class="check"><input type="checkbox" data-pillar="attendance" checked /> Attendance</label>
+            <label class="page-check" title="Add separate page for Attendance"><input type="checkbox" data-pillar-page="attendance" /> page</label>
+          </div>
+          <div class="pillar-row">
+            <label class="check"><input type="checkbox" data-pillar="library" checked /> Library</label>
+            <label class="page-check" title="Add separate page for Library"><input type="checkbox" data-pillar-page="library" /> page</label>
+          </div>
+          <div class="pillar-row">
+            <label class="check"><input type="checkbox" data-pillar="classroom" checked /> Classroom</label>
+            <label class="page-check" title="Add separate page for Classroom"><input type="checkbox" data-pillar-page="classroom" /> page</label>
+          </div>
         </div>
       </aside>
 
@@ -363,7 +537,7 @@
             <header class="simple-header">
               <div>
                 <div class="simple-title" id="simple-title" contenteditable="true">LevelUp Product Pillars</div>
-                <div class="simple-subtitle simple-explain" contenteditable="true">The four main parts of LevelUp: the core systems schools use to organize motivation, daily routines, books, and classrooms.</div>
+                <div class="simple-subtitle simple-explain" contenteditable="true">A simple map of the four systems schools can use to organize motivation, attendance, books, and classroom routines.</div>
               </div>
               <div class="simple-subtitle" contenteditable="true">Rewards · Attendance · Library · Classroom</div>
             </header>
@@ -413,14 +587,14 @@
 
             <div class="simple-footer">
               <span contenteditable="true">LevelUp EdTech Enterprises LLC</span>
-              <span contenteditable="true">Use this page to explain the main pillars during planning, demos, and school rollout conversations.</span>
+              <span contenteditable="true">Choose the pillar to launch first, then grow when staff are ready.</span>
               <span contenteditable="true">leveluprewards.app · contact@leveluprewards.app</span>
             </div>
 
             <footer class="footer">
               <div>
                 <strong contenteditable="true">LevelUp EdTech Enterprises LLC</strong><br />
-                <span contenteditable="true">leveluprewards.app · contact@leveluprewards.app</span>
+                <span contenteditable="true">Plan the rollout: leveluprewards.app · contact@leveluprewards.app</span>
               </div>
               <div class="pills">
                 <span class="pill" contenteditable="true">Rewards</span>
@@ -442,7 +616,12 @@
           color: "#38bdf8",
           image: "screenshots/kiosk-rewards-shop.png",
           badges: ["Points", "Coupons", "Prize shop", "Redemptions", "Kiosk"],
-          copy: "Build the daily motivation loop: students earn points, redeem rewards, scan coupons, and see progress from the kiosk."
+          copy: "Build the daily motivation loop: students earn points, redeem rewards, scan coupons, and see progress from the kiosk.",
+          pageTitle: "Make positive behavior visible, motivating, and easy to redeem.",
+          pageSubtitle: "Rewards connects the full motivation loop: students earn points, track progress, choose meaningful rewards, redeem easily, and celebrate success.",
+          pageLead: "Rewards turns backend point totals into real student-facing moments: visible progress, meaningful choices, simple redemption, and public celebration.",
+          useCases: ["Launch a prize shop students can browse.", "Print or scan coupons for events and privileges.", "Show families how students earn and redeem."],
+          steps: [["Earn", "Award points for positive routines."], ["Choose", "Let students see reward options."], ["Redeem", "Close the loop with a scan."]]
         },
         {
           key: "attendance",
@@ -450,7 +629,12 @@
           color: "#86efac",
           image: "screenshots/admin-attendance.png",
           badges: ["Periods", "Sign-in", "On-time rewards", "Logs", "Reports"],
-          copy: "Track the school day with period routines, attendance records, and reward rules that encourage students to arrive on time."
+          copy: "Track the school day with period routines, attendance records, and reward rules that encourage students to arrive on time.",
+          pageTitle: "Connect attendance routines to recognition and clean daily records.",
+          pageSubtitle: "Attendance supports period routines, sign-ins, clean logs, and on-time recognition so daily accountability stays connected to positive culture.",
+          pageLead: "Attendance supports accountability while staying connected to positive student culture, helping teams recognize on-time habits and keep daily records clean.",
+          useCases: ["Period-based sign-in routines.", "On-time reward rules and attendance incentives.", "Attendance logs for teams that need quick visibility."],
+          steps: [["Configure", "Set periods and expectations."], ["Record", "Capture sign-ins and status."], ["Reward", "Recognize on-time habits."]]
         },
         {
           key: "library",
@@ -458,7 +642,12 @@
           color: "#a7f3d0",
           image: "screenshots/admin-library.png",
           badges: ["Catalog", "Checkout", "Due dates", "Labels", "Reading rewards"],
-          copy: "Manage library operations while connecting reading habits to the same student recognition system."
+          copy: "Manage library operations while connecting reading habits to the same student recognition system.",
+          pageTitle: "Bring book checkout, labels, due dates, and reading rewards together.",
+          pageSubtitle: "Library brings cataloging, checkout, due dates, labels, and reading rewards into the same student recognition ecosystem.",
+          pageLead: "Library operations connect with the same student identities, incentives, and recognition system used across the rest of LevelUp.",
+          useCases: ["Catalog books and prepare labels.", "Track checkouts, due dates, and returns.", "Encourage reading habits with reward connections."],
+          steps: [["Catalog", "Organize books and labels."], ["Checkout", "Track student borrowing."], ["Motivate", "Connect reading to rewards."]]
         },
         {
           key: "classroom",
@@ -466,21 +655,36 @@
           color: "#facc15",
           image: "screenshots/live-admin-rewards-full.png",
           badges: ["Quick awards", "Seating chart", "Notes", "Class screen", "Room routines"],
-          copy: "Give teachers fast tools for class routines, positive recognition, and student progress during the regular school day."
+          copy: "Give teachers fast tools for class routines, positive recognition, and student progress during the regular school day.",
+          pageTitle: "Give teachers fast daily tools without splitting the system.",
+          pageSubtitle: "Classroom gives teachers simple routines, quick recognition tools, and visible class momentum during the regular school day.",
+          pageLead: "Classroom tools help teachers picture LevelUp in everyday work: quick awards, room routines, student context, and visible progress.",
+          useCases: ["Quick awards during class routines.", "Seating-chart and note workflows.", "Class screens that show progress and recognition."],
+          steps: [["Notice", "Spot the student moment."], ["Award", "Recognize quickly."], ["Guide", "Use class context to follow up."]]
         }
       ];
 
       const grid = document.getElementById("pillar-grid");
       const schoolInput = document.getElementById("school-input");
+      const stage = document.querySelector(".stage");
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
 
       function activePillars() {
         return new Set(Array.from(document.querySelectorAll("[data-pillar]")).filter((input) => input.checked).map((input) => input.dataset.pillar));
       }
 
+      function activePillarPages() {
+        return new Set(Array.from(document.querySelectorAll("[data-pillar-page]")).filter((input) => input.checked).map((input) => input.dataset.pillarPage));
+      }
+
       function renderPillars() {
         const enabled = activePillars();
+        const pagePillars = activePillarPages();
         grid.innerHTML = pillars.map((pillar) =>
-          '<article class="pillar" data-hidden="' + (enabled.has(pillar.key) ? "false" : "true") + '" style="--pillar-color:' + pillar.color + '">' +
+          '<article class="pillar" data-hidden="' + (enabled.has(pillar.key) && !pagePillars.has(pillar.key) ? "false" : "true") + '" style="--pillar-color:' + pillar.color + '">' +
             '<figure><img src="' + pillar.image + '" alt="' + pillar.title + ' screenshot" /></figure>' +
             '<div><b contenteditable="true">' + pillar.title + '</b>' +
               '<div class="feature-badges">' + pillar.badges.map((badge) => '<span class="feature-badge" contenteditable="true">' + badge + '</span>').join("") + '</div>' +
@@ -489,14 +693,78 @@
         ).join("");
       }
 
+      function buildPillarPage(pillar) {
+        return (
+          '<article class="flyer insert-page" aria-label="' + escapeHtml(pillar.title) + ' pillar guide" style="--pillar-color:' + escapeHtml(pillar.color) + '">' +
+            '<div class="flyer-inner">' +
+              '<header class="insert-topline">' +
+                '<div>' +
+                  '<span class="insert-kicker" contenteditable="true">Product pillar</span>' +
+                  '<h2 class="insert-title" contenteditable="true">' + escapeHtml(pillar.pageTitle) + '</h2>' +
+                  '<p class="insert-subtitle" contenteditable="true">' + escapeHtml(pillar.pageSubtitle) + '</p>' +
+                '</div>' +
+                '<div class="insert-meta">' +
+                  '<strong contenteditable="true">LevelUp Product Pillars</strong>' +
+                  '<span contenteditable="true">' + escapeHtml(pillar.title) + '</span><br />' +
+                  '<span contenteditable="true">Planning and rollout guide</span>' +
+                '</div>' +
+              '</header>' +
+              '<section class="insert-grid">' +
+                '<figure class="insert-visual">' +
+                  '<img src="' + escapeHtml(pillar.image) + '" alt="' + escapeHtml(pillar.title) + ' screenshot" />' +
+                  '<figcaption contenteditable="true">' + escapeHtml(pillar.title) + ' pillar screenshot and workflow preview</figcaption>' +
+                '</figure>' +
+                '<div class="insert-story">' +
+                  '<div class="insert-card">' +
+                    '<h3 contenteditable="true">Why this pillar matters</h3>' +
+                    '<p contenteditable="true">' + escapeHtml(pillar.pageLead) + '</p>' +
+                  '</div>' +
+                  '<div class="insert-card">' +
+                    '<h3 contenteditable="true">Best use cases</h3>' +
+                    '<ul>' + pillar.useCases.map((useCase) => '<li contenteditable="true">' + escapeHtml(useCase) + '</li>').join("") + '</ul>' +
+                  '</div>' +
+                  '<div class="insert-steps">' +
+                    pillar.steps.map((step) => '<div class="insert-step"><strong contenteditable="true">' + escapeHtml(step[0]) + '</strong><span contenteditable="true">' + escapeHtml(step[1]) + '</span></div>').join("") +
+                  '</div>' +
+                '</div>' +
+              '</section>' +
+              '<footer class="insert-bottom">' +
+                '<span contenteditable="true">LevelUp EdTech Enterprises LLC - Plan the rollout at leveluprewards.app - contact@leveluprewards.app</span>' +
+                '<div class="insert-tags">' +
+                  '<span class="pill" contenteditable="true">Planning guide</span>' +
+                  '<span class="pill" contenteditable="true">Pillar workflow</span>' +
+                  '<span class="pill" contenteditable="true">Screenshot included</span>' +
+                '</div>' +
+              '</footer>' +
+            '</div>' +
+          '</article>'
+        );
+      }
+
+      function renderPillarPages() {
+        document.querySelectorAll(".insert-page").forEach((page) => page.remove());
+        const enabled = activePillars();
+        const pagePillars = activePillarPages();
+        const html = pillars
+          .filter((pillar) => enabled.has(pillar.key) && pagePillars.has(pillar.key))
+          .map(buildPillarPage)
+          .join("");
+        if (html) stage.insertAdjacentHTML("beforeend", html);
+      }
+
+      function renderAll() {
+        renderPillars();
+        renderPillarPages();
+      }
+
       document.getElementById("theme-select").addEventListener("change", (event) => { document.documentElement.dataset.theme = event.target.value; });
       schoolInput.addEventListener("input", () => {
         const value = schoolInput.value.trim();
         document.getElementById("simple-title").textContent = value ? "LevelUp Product Pillars for " + value : "LevelUp Product Pillars";
       });
-      document.querySelectorAll("[data-pillar]").forEach((input) => input.addEventListener("change", renderPillars));
+      document.querySelectorAll("[data-pillar], [data-pillar-page]").forEach((input) => input.addEventListener("change", renderAll));
 
-      renderPillars();
+      renderAll();
     </script>
   </body>
 </html>

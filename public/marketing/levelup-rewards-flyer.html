@@ -557,6 +557,136 @@
       .muted {
         color: var(--muted);
       }
+
+      .feature-page {
+        justify-content: space-between;
+        gap: 20px;
+      }
+
+      .feature-page .topbar {
+        padding-bottom: 16px;
+      }
+
+      .feature-page .badge {
+        font-size: 10px;
+      }
+
+      .feature-page h1 {
+        max-width: 13ch;
+        font-size: 42px;
+      }
+
+      .feature-page .subtitle {
+        max-width: 52ch;
+        font-size: 15px;
+      }
+
+      .feature-page-body {
+        display: grid;
+        grid-template-columns: 1.02fr 0.98fr;
+        gap: 18px;
+        flex: 1;
+        min-height: 0;
+        margin-top: 18px;
+      }
+
+      .feature-lead-card,
+      .feature-detail-card,
+      .feature-visual-card {
+        background: var(--panel);
+        border: 1px solid var(--hair);
+        border-radius: 18px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+      }
+
+      .feature-lead-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 18px;
+      }
+
+      .feature-lead-card h2,
+      .feature-detail-card h2 {
+        font-size: 15px;
+      }
+
+      .feature-lead-card p {
+        margin: 0;
+        color: var(--text);
+        font-size: 18px;
+        line-height: 1.35;
+        font-weight: 750;
+      }
+
+      .feature-detail-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .feature-detail-card li {
+        font-size: 15px;
+        line-height: 1.45;
+        margin: 12px 0;
+      }
+
+      .feature-visual-card {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 280px;
+        background: #f8fafc !important;
+        color: #0f172a;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+      }
+
+      .feature-visual-card img {
+        width: 100%;
+        height: 100%;
+        min-height: 250px;
+        object-fit: contain;
+        object-position: center center;
+        border-radius: 12px;
+        background: #f8fafc;
+      }
+
+      .feature-visual-card figcaption {
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .feature-steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .feature-step {
+        border: 1px solid var(--hair);
+        border-radius: 14px;
+        padding: 12px;
+        background: var(--panel);
+      }
+
+      .feature-step strong {
+        display: block;
+        color: var(--strong);
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .feature-step span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.3;
+      }
     </style>
     <style id="interactive-list-link-style">
       .interactive-list-link {
@@ -628,6 +758,8 @@
           <option value="light-sky">Light Sky Breeze</option>
           <option value="light-mint">Light Mint Garden</option>
           <option value="light-amber">Light Amber Sun</option>
+          <option value="light-rose">Light Rose Brief</option>
+          <option value="light-slate">Light Slate Pro</option>
         </select>
       </div>
 
@@ -703,6 +835,52 @@
         </div>
       </div>
 
+      <div class="sidebar-section">
+        <label class="sidebar-label">Make These Their Own Page</label>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('what-it-does', this.checked)" />
+            What Students Get Excited About
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('kiosk', this.checked)" />
+            Kiosk Rewards Shop Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('funding', this.checked)" />
+            Where It Fits
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('setup', this.checked)" />
+            Simple Setup
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('id-card', this.checked)" />
+            ID Card Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('telemetry', this.checked)" />
+            Building Telemetry
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('teachers-students', this.checked)" />
+            Teachers & Students
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('deans-support', this.checked)" />
+            Deans / PBIS Teams
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('achievements', this.checked)" />
+            Achievements Screenshot
+          </label>
+          <label class="sidebar-checkbox-label">
+            <input type="checkbox" onchange="setFeaturePageMode('portal', this.checked)" />
+            Student Portal Mockup
+          </label>
+        </div>
+      </div>
+
       <div style="margin-top: auto; padding-top: 10px;">
         <button class="sidebar-btn w-full" onclick="window.print()">
           🖨️ Print / Save PDF
@@ -719,10 +897,10 @@
           <div class="page-content">
             <header class="topbar">
               <div class="brand">
-                <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> General event handout</div>
+                <div class="badge" id="flyer-prepared-badge" contenteditable="true"><span class="dot" aria-hidden="true"></span> Public event flyer</div>
                 <h1 contenteditable="true">LevelUp Rewards</h1>
                 <p class="subtitle" contenteditable="true">
-                  A simple school rewards experience families can understand in seconds: students scan in, earn points, and choose prizes they are excited about.
+                  A family-friendly handout for open house, orientation, and school events: students scan in, earn points, and choose rewards they are excited about.
                 </p>
               </div>
               <div class="right-meta">
@@ -739,7 +917,7 @@
 
             <div class="grid">
               <div id="p1-col-1" style="display: flex; flex-direction: column; gap: calc(16px * var(--spacing-scale));">
-                <div class="card featured" id="card-what-it-does" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                <div class="card featured" id="card-what-it-does" data-feature-key="what-it-does" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
                   <div>
                     <h2 contenteditable="true">What students get excited about</h2>
                     <ul>
@@ -773,14 +951,14 @@
                     </div>
                   </div>
                 </div>
-                <div class="card" id="card-telemetry" style="display: none;">
+                <div class="card" id="card-telemetry" data-feature-key="telemetry" style="display: none;">
                   <h2 contenteditable="true">Building telemetry</h2>
                   <ul>
                     <li contenteditable="true"><strong>Live dashboard:</strong> See activity across grades, classes, and student groups.</li>
                     <li contenteditable="true"><strong>Smart inventory:</strong> Track prize redemptions and know what needs restocking.</li>
                   </ul>
                 </div>
-                <div class="card" id="card-teachers-students" style="display: none;">
+                <div class="card" id="card-teachers-students" data-feature-key="teachers-students" style="display: none;">
                   <h2 contenteditable="true">Teachers &amp; students</h2>
                   <ul>
                     <li contenteditable="true"><strong>Teachers:</strong> Recognize positive habits without extra bookkeeping.</li>
@@ -791,34 +969,34 @@
 
               <div id="p1-col-2" style="display: flex; flex-direction: column; gap: calc(16px * var(--spacing-scale));">
                 <!-- Real Kiosk Screenshot Panel -->
-                <div class="card screenshot-card" id="card-img-kiosk" data-default-height="150" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 150px; position: relative;">
+                <div class="card screenshot-card" id="card-img-kiosk" data-feature-key="kiosk" data-default-height="150" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 150px; position: relative;">
                   <img src="screenshots/kiosk-rewards-shop.png" style="width: 100%; height: 100%; object-fit: contain;" alt="LevelUp Kiosk Rewards Shop Screenshot" />
                 </div>
                 
                 <!-- Real ID Card Screenshot Panel -->
-                <div class="card screenshot-card" id="card-img-id" data-default-height="180" style="padding: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; height: 180px; position: relative; display: none;">
+                <div class="card screenshot-card" id="card-img-id" data-feature-key="id-card" data-default-height="180" style="padding: 0; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; height: 180px; position: relative; display: none;">
                   <img src="screenshots/admin-id-card.png" style="width: 100%; height: 100%; object-fit: contain;" alt="LevelUp Student ID Card Screenshot" />
                 </div>
                 
                 <div class="card" id="card-funding-setup" style="flex: 1; display: flex; flex-direction: column; gap: calc(12px * var(--spacing-scale));">
-                  <div id="section-funding">
+                  <div id="section-funding" data-feature-key="funding">
                     <h2 contenteditable="true">Where it fits</h2>
                     <ul style="margin-bottom: 10px;">
                       <li contenteditable="true"><strong>Open house:</strong> Show families how positive habits become points, rewards, and celebrations.</li>
                       <li contenteditable="true"><strong>Student launch:</strong> Explain scanning, earning, and redeeming before the first kiosk day.</li>
                     </ul>
                   </div>
-                  <div id="section-setup">
+                  <div id="section-setup" data-feature-key="setup">
                     <h2 contenteditable="true">Simple setup</h2>
                     <ul>
                       <li contenteditable="true"><strong>Easy school rollout:</strong> Use kiosks, ID cards, and a rewards menu your team can explain quickly.</li>
                     </ul>
                   </div>
                 </div>
-                <div class="card screenshot-card" id="card-img-achievements" data-default-height="160" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 160px; position: relative; display: none;">
+                <div class="card screenshot-card" id="card-img-achievements" data-feature-key="achievements" data-default-height="160" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 160px; position: relative; display: none;">
                   <img src="screenshots/hall-of-fame.png" style="width: 100%; height: 100%; object-fit: contain;" alt="LevelUp Hall of Fame Leaderboard Screenshot" />
                 </div>
-                <div class="card screenshot-card" id="card-img-portal" data-default-height="170" style="padding: 6px; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--panel); height: 170px; display: none; flex-direction: column;">
+                <div class="card screenshot-card" id="card-img-portal" data-feature-key="portal" data-default-height="170" style="padding: 6px; overflow: hidden; border: 1px solid var(--hair); border-radius: 16px; background: var(--panel); height: 170px; display: none; flex-direction: column;">
                   <div style="font-size: 9px; color: var(--muted); padding: 2px 6px 6px 6px; border-bottom: 1px solid var(--hair); margin-bottom: 6px; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
                     <span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
                     <span style="width: 5px; height: 5px; border-radius: 50%; background: #eab308; display: inline-block;"></span>
@@ -827,7 +1005,7 @@
                   </div>
                   <img src="screenshots/student-home-portal.png" style="width: 100%; border-radius: 10px; display: block; border: 1px solid rgba(255,255,255,0.08); flex: 1; min-height: 0; object-fit: contain;" alt="LevelUp Student Portal Dashboard Screenshot" />
                 </div>
-                <div class="card" id="card-deans-support" style="display: none;">
+                <div class="card" id="card-deans-support" data-feature-key="deans-support" style="display: none;">
                   <h2 contenteditable="true">For deans &amp; PBIS teams</h2>
                   <ul>
                     <li contenteditable="true"><strong>Clean reports</strong> support PBIS/MTSS planning and follow-up conversations.</li>
@@ -839,7 +1017,7 @@
 
             <footer class="footer">
               <div>
-                <strong contenteditable="true">LevelUp makes positive habits visible.</strong> <span contenteditable="true">A simple handout for families, students, and staff at school events.</span>
+                <strong contenteditable="true">Scan. Earn. Redeem.</strong> <span contenteditable="true">A simple way to show families how positive habits become visible student motivation.</span>
               </div>
               <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end" id="pills-page-1">
                 <span class="pill" contenteditable="true">Event-ready handout</span>
@@ -1079,6 +1257,38 @@
           '--featured-border': 'var(--accent)',
           '--featured-bg': 'rgba(0, 0, 0, 0.03)',
           'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(180, 83, 9, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(217, 119, 6, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fffbeb 70%, #fef3c7)'
+        },
+        'light-rose': {
+          '--bg': '#fff1f2',
+          '--accent': '#be123c',
+          '--accent2': '#e11d48',
+          '--panel': 'rgba(190, 18, 60, 0.04)',
+          '--text': '#4c0519',
+          '--muted': '#9f1239',
+          '--hair': 'rgba(190, 18, 60, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          '--strong': '#27020a',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(190, 18, 60, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(225, 29, 72, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fff1f2 70%, #ffe4e6)'
+        },
+        'light-slate': {
+          '--bg': '#f8fafc',
+          '--accent': '#334155',
+          '--accent2': '#0f766e',
+          '--panel': 'rgba(51, 65, 85, 0.04)',
+          '--text': '#0f172a',
+          '--muted': '#475569',
+          '--hair': 'rgba(51, 65, 85, 0.12)',
+          '--success': '#16a34a',
+          '--black': '#ffffff',
+          '--strong': '#020617',
+          '--heading-color': 'var(--accent)',
+          '--featured-border': 'var(--accent2)',
+          '--featured-bg': 'rgba(0, 0, 0, 0.03)',
+          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(51, 65, 85, 0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(15, 118, 110, 0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f8fafc 70%, #e2e8f0)'
         }
       };
 
@@ -1110,7 +1320,7 @@
           updateSchoolName();
         } else {
           nameSection.style.display = 'none';
-          badge.innerHTML = '<span class="dot" aria-hidden="true"></span> General event handout';
+          badge.innerHTML = '<span class="dot" aria-hidden="true"></span> Public event flyer';
         }
         autoFitPage();
       }
@@ -1198,6 +1408,285 @@
         syncContactInfo();
       }
 
+      const featurePageModes = {};
+      const COMPACT_FEATURES = {
+        'what-it-does': { elementId: 'card-what-it-does', toggleId: 'toggle-what-it-does', display: 'flex' },
+        kiosk: { elementId: 'card-img-kiosk', toggleId: 'toggle-img-kiosk', display: '' },
+        funding: { elementId: 'section-funding', toggleId: 'toggle-funding', display: '' },
+        setup: { elementId: 'section-setup', toggleId: 'toggle-setup', display: '' },
+        'id-card': { elementId: 'card-img-id', toggleId: 'toggle-img-id', display: '' },
+        telemetry: { elementId: 'card-telemetry', toggleId: 'toggle-telemetry', display: '' },
+        'teachers-students': { elementId: 'card-teachers-students', toggleId: 'toggle-teachers-students', display: '' },
+        'deans-support': { elementId: 'card-deans-support', toggleId: 'toggle-deans', display: '' },
+        achievements: { elementId: 'card-img-achievements', toggleId: 'toggle-img-achievements', display: '' },
+        portal: { elementId: 'card-img-portal', toggleId: 'toggle-img-portal', display: 'flex' }
+      };
+
+      const FEATURE_PAGE_DATA = {
+        'what-it-does': {
+          eyebrow: 'Family event explainer',
+          title: 'Students scan, earn, and choose rewards.',
+          subtitle: 'A family-friendly explanation of how students scan in, earn points, and redeem rewards during the school day.',
+          lead: 'LevelUp turns positive behavior into a visible routine: students earn points, see progress, and redeem for rewards that feel real.',
+          image: 'screenshots/kiosk-rewards-shop.png',
+          caption: 'Rewards shop preview',
+          bullets: [
+            ['Clear for families', 'The message is simple enough for open house, orientation, family night, or a school fair.'],
+            ['Motivating for students', 'Points connect everyday positive habits to prizes, privileges, raffles, coupons, and celebrations.'],
+            ['Easy for staff', 'The system supports a repeatable routine instead of asking teachers to explain a complicated program.']
+          ],
+          steps: [
+            ['1. Scan', 'Students check in or redeem with a kiosk or card.'],
+            ['2. Earn', 'Positive actions become visible points and progress.'],
+            ['3. Redeem', 'Students choose rewards from the school menu.']
+          ]
+        },
+        kiosk: {
+          eyebrow: 'Interactive rewards shop',
+          title: 'A rewards menu students can actually see.',
+          subtitle: 'Give the kiosk screenshot room to breathe when the visual is the main selling point for families and students.',
+          lead: 'The student experience is simple and tangible: colorful rewards, clear point costs, and a choose-and-redeem flow students can understand quickly.',
+          image: 'screenshots/kiosk-rewards-shop.png',
+          caption: 'Kiosk rewards shop screenshot',
+          bullets: [
+            ['Visual motivation', 'Students can see the rewards they are working toward instead of hearing about points in the abstract.'],
+            ['Flexible menus', 'Schools can highlight prizes, privileges, events, raffles, and classroom incentives.'],
+            ['Event friendly', 'Families can understand the “earn and redeem” loop from a single screenshot.']
+          ],
+          steps: [
+            ['Browse', 'Students see available rewards.'],
+            ['Choose', 'Point costs make goals concrete.'],
+            ['Celebrate', 'Redemption makes positive habits visible.']
+          ]
+        },
+        funding: {
+          eyebrow: 'Where it fits',
+          title: 'Built for the moments when families ask, “How does this work?”',
+          subtitle: 'Designed for launch moments, public events, and quick conversations about why the rewards routine belongs in the school day.',
+          lead: 'LevelUp works best when it is introduced as a school culture routine, not another app. This page frames the program for public handouts.',
+          image: 'screenshots/student-home-portal.png',
+          caption: 'Student portal preview',
+          bullets: [
+            ['Open house', 'Show families how positive habits become points, rewards, and celebrations.'],
+            ['Student launch', 'Explain scanning, earning, and redeeming before the first kiosk day.'],
+            ['Community events', 'Use the flyer as a simple leave-behind for families, partners, and school visitors.']
+          ],
+          steps: [
+            ['Introduce', 'Explain the reward routine.'],
+            ['Demonstrate', 'Show the kiosk or card flow.'],
+            ['Send home', 'Let families keep the handout.']
+          ]
+        },
+        setup: {
+          eyebrow: 'Simple setup',
+          title: 'A school rollout your team can explain quickly.',
+          subtitle: 'A practical implementation story for schools that want a clear path from setup to launch.',
+          lead: 'Schools can start with a small rewards menu, add student cards or kiosks, and expand the routine as staff and students build momentum.',
+          image: 'screenshots/admin-id-card.png',
+          caption: 'Student card setup screenshot',
+          bullets: [
+            ['Start small', 'Launch with a focused rewards list and the behaviors your school already wants to celebrate.'],
+            ['Use familiar tools', 'Kiosks, ID cards, and simple staff workflows keep the rollout approachable.'],
+            ['Grow over time', 'Add raffles, coupons, events, achievements, and student-facing features as adoption builds.']
+          ],
+          steps: [
+            ['Configure', 'Set rewards and school details.'],
+            ['Print', 'Use cards or event handouts.'],
+            ['Launch', 'Start scanning and redeeming.']
+          ]
+        },
+        'id-card': {
+          eyebrow: 'Student cards',
+          title: 'A printable card that makes rewards feel official.',
+          subtitle: 'Scan-ready, school-branded cards make the rewards routine easy to introduce, print, and hand out.',
+          lead: 'Cards give students a physical connection to the rewards program and make the scan flow easier at kiosks, stores, and events.',
+          image: 'screenshots/admin-id-card.png',
+          caption: 'Printable student ID card screenshot',
+          bullets: [
+            ['Scan ready', 'QR-based cards can support quick lookup or redemption flows.'],
+            ['School branded', 'Cards can carry school identity, student details, and LevelUp context.'],
+            ['Print friendly', 'Use them for launch day, orientation, incentive events, or student reward access.']
+          ],
+          steps: [
+            ['Create', 'Build the card layout.'],
+            ['Print', 'Prepare cards for students.'],
+            ['Scan', 'Use cards during reward moments.']
+          ]
+        },
+        telemetry: {
+          eyebrow: 'Building telemetry',
+          title: 'See whether the rewards routine is gaining momentum.',
+          subtitle: 'Built for school leaders who need visibility, follow-through, and a clear view of how the rewards routine is performing.',
+          lead: 'LevelUp helps teams spot activity patterns, understand what students redeem, and keep the rewards program fresh.',
+          image: 'screenshots/live-admin-rewards-full.png',
+          caption: 'Admin rewards dashboard screenshot',
+          bullets: [
+            ['Live activity', 'Review participation across grades, classes, houses, and student groups.'],
+            ['Inventory awareness', 'See what students are redeeming so the rewards menu stays stocked and relevant.'],
+            ['Better conversations', 'Use activity trends to support PBIS, MTSS, and school culture planning.']
+          ],
+          steps: [
+            ['Observe', 'Watch reward activity.'],
+            ['Adjust', 'Tune menus and incentives.'],
+            ['Report', 'Share progress with teams.']
+          ]
+        },
+        'teachers-students': {
+          eyebrow: 'Daily use',
+          title: 'Simple enough for teachers. Exciting enough for students.',
+          subtitle: 'A classroom-and-common-space view of the daily routine: staff recognize positive habits and students see momentum build.',
+          lead: 'Teachers can recognize positive habits without building a separate tracking system, while students get a clear reason to keep participating.',
+          image: 'screenshots/teacher-raffle.png',
+          caption: 'Teacher raffle and student motivation screenshot',
+          bullets: [
+            ['For teachers', 'Recognition can fit into normal routines instead of creating extra bookkeeping.'],
+            ['For students', 'Points, achievements, raffles, and rewards create visible momentum.'],
+            ['For culture', 'Positive habits become easier to name, notice, and celebrate across the building.']
+          ],
+          steps: [
+            ['Notice', 'Recognize the behavior.'],
+            ['Reward', 'Add points or entries.'],
+            ['Repeat', 'Build the habit loop.']
+          ]
+        },
+        'deans-support': {
+          eyebrow: 'PBIS team support',
+          title: 'A cleaner way to support schoolwide culture work.',
+          subtitle: 'Designed for deans, PBIS teams, and administrators who need consistency, visibility, and follow-up.',
+          lead: 'LevelUp can support reward routines while giving culture teams a clearer picture of participation and program health.',
+          image: 'screenshots/admin-stats.png',
+          caption: 'Admin stats screenshot',
+          bullets: [
+            ['Clean reports', 'Support PBIS and MTSS conversations with clearer participation signals.'],
+            ['Controlled access', 'Keep implementation consistent across staff roles and school spaces.'],
+            ['Program health', 'Know which incentives are working and where the routine needs support.']
+          ],
+          steps: [
+            ['Coordinate', 'Align the school routine.'],
+            ['Monitor', 'Review activity and redemptions.'],
+            ['Follow up', 'Support students and staff.']
+          ]
+        },
+        achievements: {
+          eyebrow: 'Achievements and recognition',
+          title: 'Make progress public in a way students can celebrate.',
+          subtitle: 'Achievement visuals show the fun, social side of the rewards program and make progress feel public and celebratory.',
+          lead: 'Leaderboards, achievements, and celebration screens help turn positive behavior into shared school momentum.',
+          image: 'screenshots/hall-of-fame.png',
+          caption: 'Hall of fame achievement screenshot',
+          bullets: [
+            ['Visible wins', 'Students can see accomplishments and milestones build over time.'],
+            ['School energy', 'Recognition screens help make positive culture feel alive in shared spaces.'],
+            ['Flexible celebration', 'Use achievements for houses, classes, grade levels, or schoolwide campaigns.']
+          ],
+          steps: [
+            ['Earn', 'Students build progress.'],
+            ['Recognize', 'Achievements become visible.'],
+            ['Celebrate', 'The school shares the win.']
+          ]
+        },
+        portal: {
+          eyebrow: 'Student portal',
+          title: 'A home base for points, goals, and rewards.',
+          subtitle: 'The student portal gives families and students a clear place to check points, goals, and rewards after the event.',
+          lead: 'The student-facing view gives learners a place to see progress, understand goals, and stay connected to rewards.',
+          image: 'screenshots/student-home-portal.png',
+          caption: 'Student portal mockup',
+          bullets: [
+            ['Progress at a glance', 'Students can see points and reward opportunities without asking staff for an update.'],
+            ['Clear goals', 'The portal helps students understand what they are working toward.'],
+            ['Family friendly', 'A simple visual page makes the rewards program easier to explain outside school.']
+          ],
+          steps: [
+            ['Check', 'View points and status.'],
+            ['Plan', 'Choose a goal reward.'],
+            ['Redeem', 'Use the school routine.']
+          ]
+        }
+      };
+
+      function isFeatureEnabled(key) {
+        const config = COMPACT_FEATURES[key];
+        const toggle = config ? document.getElementById(config.toggleId) : null;
+        return !toggle || toggle.checked;
+      }
+
+      function applyCompactFeatureVisibility() {
+        Object.entries(COMPACT_FEATURES).forEach(([key, config]) => {
+          const el = document.getElementById(config.elementId);
+          if (!el) return;
+          const showCompact = isFeatureEnabled(key) && !featurePageModes[key];
+          el.style.display = showCompact ? config.display : 'none';
+        });
+        updateParentCards();
+      }
+
+      function setFeaturePageMode(key, enabled) {
+        featurePageModes[key] = enabled;
+        applyCompactFeatureVisibility();
+        renderFeaturePages();
+        syncContactInfo();
+        updateTheme();
+        autoFitPage();
+      }
+
+      function renderFeaturePages() {
+        document.querySelectorAll('.expanded-feature-page').forEach(page => page.remove());
+        const holder = document.getElementById('flyer-pages');
+        Object.keys(FEATURE_PAGE_DATA).forEach(key => {
+          if (!featurePageModes[key] || !isFeatureEnabled(key)) return;
+          const feature = FEATURE_PAGE_DATA[key];
+          const page = document.createElement('section');
+          page.className = 'page expanded-feature-page';
+          page.setAttribute('aria-label', feature.title);
+          page.innerHTML =
+            '<div class="page-content feature-page">' +
+              '<header class="topbar">' +
+                '<div class="brand">' +
+                  '<div class="badge"><span class="dot" aria-hidden="true"></span> ' + escapeHtml(feature.eyebrow) + '</div>' +
+                  '<h1 contenteditable="true">' + escapeHtml(feature.title) + '</h1>' +
+                  '<p class="subtitle" contenteditable="true">' + escapeHtml(feature.subtitle) + '</p>' +
+                '</div>' +
+                '<div class="right-meta">' +
+                  '<div><strong contenteditable="true" class="sync-company">LevelUp EdTech Enterprises LLC</strong></div>' +
+                  '<div><span contenteditable="true" class="sync-address-city"></span></div>' +
+                  '<div class="muted"><span contenteditable="true" class="sync-address-street"></span></div>' +
+                  '<div class="muted"><a href="mailto:contact@leveluprewards.app?subject=General%20Flyer%20Inquiry" class="sync-email-link" style="color: var(--heading-color); text-decoration: none;"><span contenteditable="true" class="sync-email">contact@leveluprewards.app</span></a></div>' +
+                '</div>' +
+              '</header>' +
+              '<div class="feature-page-body">' +
+                '<div class="feature-lead-card">' +
+                  '<div>' +
+                    '<h2 contenteditable="true">Why this matters</h2>' +
+                    '<p contenteditable="true">' + escapeHtml(feature.lead) + '</p>' +
+                  '</div>' +
+                  '<div class="feature-steps">' +
+                    feature.steps.map(step => '<div class="feature-step"><strong contenteditable="true">' + escapeHtml(step[0]) + '</strong><span contenteditable="true">' + escapeHtml(step[1]) + '</span></div>').join('') +
+                  '</div>' +
+                '</div>' +
+                '<figure class="feature-visual-card">' +
+                  '<img src="' + escapeHtml(feature.image) + '" alt="' + escapeHtml(feature.caption) + '" />' +
+                  '<figcaption contenteditable="true">' + escapeHtml(feature.caption) + '</figcaption>' +
+                '</figure>' +
+              '</div>' +
+              '<div class="feature-detail-card">' +
+                '<h2 contenteditable="true">Key talking points</h2>' +
+                '<ul>' +
+                  feature.bullets.map(item => '<li contenteditable="true"><strong>' + escapeHtml(item[0]) + ':</strong> ' + escapeHtml(item[1]) + '</li>').join('') +
+                '</ul>' +
+              '</div>' +
+              '<footer class="footer">' +
+                  '<div><strong contenteditable="true">LevelUp Rewards</strong> <span contenteditable="true">A focused handout for this part of the rewards experience.</span></div>' +
+                '<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">' +
+                  '<span class="pill" contenteditable="true">Feature spotlight</span>' +
+                  '<span class="pill" contenteditable="true">Event handout ready</span>' +
+                '</div>' +
+              '</footer>' +
+            '</div>';
+          holder.appendChild(page);
+        });
+      }
+
       function updateParentCards() {
         // Parent card 1: card-funding-setup
         const f = document.getElementById('section-funding');
@@ -1210,11 +1699,10 @@
       }
 
       function toggleCard(id, show) {
-        const el = document.getElementById(id);
-        if (el) {
-          el.style.display = show ? (id === 'card-img-portal' ? 'flex' : '') : 'none';
-        }
-        updateParentCards();
+        applyCompactFeatureVisibility();
+        renderFeaturePages();
+        syncContactInfo();
+        updateTheme();
         autoFitPage();
       }
 

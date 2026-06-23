@@ -470,11 +470,11 @@ function StudentLoginPage() {
     playSound('swoosh');
     if (activeStudentIdRef.current) {
       finishStudentSession();
-      toast({ title: 'Logged Out', description: 'Returning to kiosk home.' });
+      toast({ title: t('student.kiosk.loggedOut'), description: t('student.kiosk.loggedOutDescription') });
     } else {
       router.push(schoolId ? `/${schoolId}/portal` : '/login');
     }
-  }, [finishStudentSession, playSound, router, schoolId, toast]);
+  }, [finishStudentSession, playSound, router, schoolId, t, toast]);
 
   useEffect(() => {
     window.addEventListener(STUDENT_KIOSK_REQUEST_EXIT_EVENT, handleStudentLogout);
@@ -505,7 +505,7 @@ function StudentLoginPage() {
       >
         <div className="text-center space-y-4">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground font-medium animate-pulse">Opening staff prize desk…</p>
+          <p className="text-muted-foreground font-medium animate-pulse">{t('student.kiosk.openingPrizeDesk')}</p>
         </div>
       </div>
     );

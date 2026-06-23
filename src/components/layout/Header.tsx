@@ -49,6 +49,7 @@ import { StaffPortalLayoutToggle } from '@/components/staff/StaffPortalLayoutTog
 import {
   isCompactDisplayMode,
   isDockItemOnDisplayMode,
+  isMobileDisplayMode,
   type ResolvedDisplayMode,
 } from '@/lib/displayMode';
 // import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
@@ -134,14 +135,16 @@ export default function Header() {
   const fullscreen = searchParams?.get('fullscreen') === '1';
   const isHouseSortingPage =
     pathname?.includes('/house-sorting') || pathname?.includes('/houses-realm');
+  const isClassroomRealmPage =
+    pathname?.includes('/classroom-realm') || pathname?.includes('/classroom');
   const isFullscreenSpecialPage =
     isHouseSortingPage ||
+    isClassroomRealmPage ||
     (fullscreen &&
     (pathname?.includes('/hall-of-fame') ||
       pathname?.includes('/bulletin-board') ||
       pathname?.includes('/smart-screen') ||
-      pathname?.includes('/displays') ||
-      pathname?.includes('/classroom')));
+      pathname?.includes('/displays')));
 
   const handleLogout = () => {
     playSound('swoosh');
@@ -217,6 +220,7 @@ export default function Header() {
 
   const resolvedDisplayMode = settings.displayMode as ResolvedDisplayMode;
   const compactDisplay = isCompactDisplayMode(resolvedDisplayMode);
+  const mobileDisplay = isMobileDisplayMode(resolvedDisplayMode);
   const visibleDockItems = portalDockItems.filter((item) =>
     isDockItemOnDisplayMode(item.id, resolvedDisplayMode),
   );
@@ -410,6 +414,8 @@ export default function Header() {
               : cn(
                   'mb-2 rounded-b-2xl border border-border/10 border-t-0 bg-card/95 px-1 py-2 shadow-[0_4px_20px_hsl(var(--primary)/0.08)] backdrop-blur-md',
                   'sm:mb-3 sm:gap-x-3 sm:rounded-b-3xl sm:px-2 sm:py-3',
+                  mobileDisplay &&
+                    'border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 via-card/95 to-card/95 shadow-[0_4px_24px_hsl(160_84%_39%/0.12)]',
                 ),
           )}
         >
@@ -426,7 +432,12 @@ export default function Header() {
             )}
           </div>
           {schoolId ? (
-            <div className="z-0 flex min-w-0 items-center justify-center px-2 sm:px-4">
+            <div className="z-0 flex min-w-0 flex-col items-center justify-center px-2 sm:px-4">
+              {mobileDisplay ? (
+                <span className="mb-1 inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
+                  Mobile
+                </span>
+              ) : null}
               {isSchoolNamePending ? (
                 <span
                   className="inline-block h-[1.05em] w-[min(11rem,58vw)] max-w-full animate-pulse rounded-md bg-muted"
@@ -481,7 +492,7 @@ export default function Header() {
               </DropdownMenu>
             )}
 
-            {schoolId ? (
+            {schoolId && !mobileDisplay ? (
               <Link
                 href={webHomeHref}
                 data-home-button="true"

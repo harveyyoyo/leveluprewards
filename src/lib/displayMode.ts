@@ -1,3 +1,5 @@
+import type { StaffPortalRole } from '@/lib/staffPortal/types';
+
 export type DisplayModePreference = 'auto' | 'web' | 'app' | 'mobile';
 export type ResolvedDisplayMode = 'web' | 'app' | 'mobile';
 
@@ -13,6 +15,14 @@ export const MOBILE_PORTAL_IDS = new Set(['print', 'redeem']);
 
 /** Bottom dock destinations kept in mobile display. */
 export const MOBILE_DOCK_IDS = new Set(['print', 'redeem']);
+
+/** Teacher portal tabs kept in mobile display (daily on-the-go tools). */
+export const MOBILE_TEACHER_TAB_VALUES = new Set([
+  'coupons',
+  'roster',
+  'redemptions',
+  'attendance',
+]);
 
 export function normalizeDisplayModePreference(value: unknown): DisplayModePreference {
   if (value === 'web' || value === 'app' || value === 'mobile' || value === 'auto') return value;
@@ -36,6 +46,36 @@ export function isPortalAreaOnDisplayMode(portalId: string, mode: ResolvedDispla
 export function isDockItemOnDisplayMode(dockId: string, mode: ResolvedDisplayMode): boolean {
   if (!isMobileDisplayMode(mode)) return true;
   return MOBILE_DOCK_IDS.has(dockId);
+}
+
+export function isStaffPortalTabOnDisplayMode(
+  tabValue: string,
+  role: StaffPortalRole,
+  mode: ResolvedDisplayMode,
+): boolean {
+  if (!isMobileDisplayMode(mode)) return true;
+  if (role === 'admin') return false;
+  if (role === 'secretary') return tabValue === 'coupons';
+  return MOBILE_TEACHER_TAB_VALUES.has(tabValue);
+}
+
+/** Default tab when mobile filtering removes the current selection. */
+export function staffPortalMobileDefaultTab(
+  role: StaffPortalRole,
+  allowedTabValues: string[],
+): string {
+  if (role === 'secretary') return 'coupons';
+  const priority = ['coupons', 'roster', 'redemptions', 'attendance'];
+  for (const value of priority) {
+    if (allowedTabValues.includes(value)) return value;
+  }
+  return allowedTabValues[0] ?? 'coupons';
+}
+
+export function displayModeLabel(mode: ResolvedDisplayMode): string {
+  if (mode === 'mobile') return 'Mobile';
+  if (mode === 'app') return 'App';
+  return 'Web';
 }
 
 /** Resolve stored preference to the layout the UI should render. */

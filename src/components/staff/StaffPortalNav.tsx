@@ -38,6 +38,10 @@ export type StaffPortalNavProps = {
   onTurnAllOn?: () => void;
   /** Remove every pinned optional feature tab from the sidebar. */
   onTurnAllOff?: () => void;
+  /** Mobile display: always use the compact section picker (never sidebar). */
+  forceCompactNav?: boolean;
+  /** Mobile display: hide Add more tab controls. */
+  hideAddMore?: boolean;
 };
 
 /**
@@ -56,6 +60,8 @@ export function StaffPortalNav({
   addMoreMenu,
   onTurnAllOn,
   onTurnAllOff,
+  forceCompactNav = false,
+  hideAddMore = false,
 }: StaffPortalNavProps) {
   const { t } = useTranslation();
   const portalLabel =
@@ -89,19 +95,24 @@ export function StaffPortalNav({
   };
 
   const addMoreDropdown =
-    addMoreMenu ??
-    (addMoreTabs.length > 0 || onTurnAllOn || onTurnAllOff ? (
-      <StaffPortalAddFeatureTabsMenu
-        tabs={localizedAddMoreTabs}
-        onAddTab={onAddTab ?? onTabChange}
-        onTurnAllOn={onTurnAllOn}
-        onTurnAllOff={onTurnAllOff}
-      />
-    ) : null);
+    hideAddMore
+      ? null
+      : addMoreMenu ??
+        (addMoreTabs.length > 0 || onTurnAllOn || onTurnAllOff ? (
+          <StaffPortalAddFeatureTabsMenu
+            tabs={localizedAddMoreTabs}
+            onAddTab={onAddTab ?? onTabChange}
+            onTurnAllOn={onTurnAllOn}
+            onTurnAllOff={onTurnAllOff}
+          />
+        ) : null);
+
+  const showCompactNav = forceCompactNav;
+  const showSidebarNav = !forceCompactNav;
 
   return (
     <>
-      <div className="lg:hidden" data-intro-tour="staff-nav-sidebar">
+      <div className={showCompactNav ? 'block' : 'lg:hidden'} data-intro-tour="staff-nav-sidebar">
         <Label htmlFor={mobileSelectId} className="sr-only">
           {portalLabel} section
         </Label>
@@ -133,7 +144,7 @@ export function StaffPortalNav({
                 </SelectItem>
               ) : null}
             </SelectGroup>
-            {localizedAddMoreTabs.length > 0 ? (
+            {localizedAddMoreTabs.length > 0 && !hideAddMore ? (
               <>
                 <SelectSeparator />
                 <SelectGroup>
@@ -152,7 +163,7 @@ export function StaffPortalNav({
         </Select>
       </div>
 
-      <div className="hidden w-full min-w-0 lg:block">
+      <div className={showSidebarNav ? 'hidden w-full min-w-0 lg:block' : 'hidden'}>
         <AdminMainTabsList
           orientation="vertical"
           inWorkspace

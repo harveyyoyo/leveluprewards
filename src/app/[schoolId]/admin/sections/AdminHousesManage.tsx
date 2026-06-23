@@ -14,7 +14,7 @@ import {
   Trophy,
   Search,
 } from 'lucide-react';
-import { HouseSetupWizard } from '@/app/[schoolId]/admin/sections/HouseSetupWizard';
+import { housesRealmOpenHref } from '@/lib/housesRealmUrl';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { AdminHouseHallOfFamePanel } from '@/app/[schoolId]/admin/sections/AdminHouseHallOfFamePanel';
 import {
@@ -63,6 +63,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { HouseBadge } from '@/components/houses/HouseBadge';
 import {
   HouseStandingsChartBlock,
@@ -84,6 +85,9 @@ import {
 import { type HousePresetThemeId, visibleHousePresetThemes } from '@/lib/houses/housePresets';
 import { useFirestore } from '@/firebase';
 import { useSchoolProfile } from '@/hooks/useSchoolProfile';
+import { AdminHousesOverviewGrid } from '@/components/houses/admin/AdminHousesOverviewGrid';
+
+export type AdminHousesSection = 'overview' | 'rosters' | 'setup' | 'hallOfFame';
 
 export function AdminHousesManage({
   schoolId,
@@ -95,6 +99,8 @@ export function AdminHousesManage({
   onDeleteHouse,
   onUpdateStudent,
   onUpdateTeacher,
+  section,
+  onSectionChange,
 }: {
   schoolId: string;
   houses: House[] | null | undefined;
@@ -105,6 +111,9 @@ export function AdminHousesManage({
   onDeleteHouse: (houseId: string, houseStudents: Student[]) => Promise<void>;
   onUpdateStudent: (student: Student) => Promise<void> | void;
   onUpdateTeacher: (teacher: Teacher) => Promise<void> | void;
+  /** When provided, sections are controlled externally (no tree nav rendered). */
+  section?: AdminHousesSection;
+  onSectionChange?: (s: AdminHousesSection) => void;
 }) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -127,9 +136,13 @@ export function AdminHousesManage({
   const [draftMotto, setDraftMotto] = useState('');
   const [memberSearch, setMemberSearch] = useState<Record<string, string>>({});
   const [transferStudent, setTransferStudent] = useState<{ student: Student; fromHouseId: string } | null>(null);
-  const [mainSection, setMainSection] = useState<'overview' | 'rosters' | 'setup' | 'hallOfFame'>('overview');
+  const [mainSection, setMainSection] = useState<AdminHousesSection>('overview');
+  const activeSection: AdminHousesSection = section !== undefined ? section : mainSection;
+  const setActiveSection = (s: AdminHousesSection) => {
+    if (section !== undefined && onSectionChange) onSectionChange(s);
+    else setMainSection(s);
+  };
   const [houseSearch, setHouseSearch] = useState('');
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [pointsAdjustHouse, setPointsAdjustHouse] = useState<House | null>(null);
   const [draftCurrentPts, setDraftCurrentPts] = useState('0');
   const [draftLifetimePts, setDraftLifetimePts] = useState('0');
@@ -285,7 +298,18 @@ export function AdminHousesManage({
       } else {
         await assignStudentsToHousesRandom(firestore, schoolId, ids, sortedHouses);
       }
-      toast({ title: 'Students assigned', description: `${count} student${count === 1 ? '' : 's'} assigned (${mode}).` });
+      toast({
+        title: 'Students assigned',
+        description: `${count} student${count === 1 ? '' : 's'} assigned (${mode}).`,
+        action: (
+          <ToastAction
+            altText="Run sorting ceremony"
+            onClick={() => window.open(sortingHref, '_blank', 'noopener,noreferrer')}
+          >
+            Run ceremony
+          </ToastAction>
+        ),
+      });
     } catch {
       toast({ variant: 'destructive', title: 'Failed to assign students' });
     } finally {
@@ -321,12 +345,14 @@ export function AdminHousesManage({
     if (!ok) return;
     setBusy('reset');
     try {
-      for (const house of sortedHouses) {
-        const houseStudents = (students || []).filter((s) => s.houseId === house.id);
-        await onDeleteHouse(house.id, houseStudents);
-      }
+      await Promise.all(
+        sortedHouses.map((house) => {
+          const houseStudents = (students || []).filter((s) => s.houseId === house.id);
+          return onDeleteHouse(house.id, houseStudents);
+        }),
+      );
       toast({ title: 'Houses reset', description: 'All houses were removed and students unassigned.' });
-      setMainSection('overview');
+      setActiveSection('overview');
       setExpandedHouseIds(new Set());
     } catch {
       toast({ variant: 'destructive', title: 'Could not reset houses' });
@@ -346,6 +372,11 @@ export function AdminHousesManage({
   };
 
   const sortingHref = `/${schoolId}/houses-realm/ceremony`;
+  const openAiSetup = () => {
+    if (typeof window !== 'undefined') {
+      window.open(housesRealmOpenHref(schoolId, 'setup'), '_blank', 'noopener,noreferrer');
+    }
+  };
 
   const standingsRows = useMemo(
     () => buildHouseStandingsRows(sortedHouses, students ?? []),
@@ -417,25 +448,34 @@ export function AdminHousesManage({
     >
     <StaffPortalSectionCard className="w-full overflow-hidden">
       <StaffPortalSectionCardContent className="space-y-6">
-        <ContentSectionTreeNav
-          branchLabel="Houses"
-          fullWidth
-          items={[
-            { id: 'overview', label: 'Overview', icon: LayoutGrid },
-            { id: 'rosters', label: 'Rosters', icon: Users, badge: sortedHouses.length || undefined },
-            { id: 'setup', label: 'Setup', icon: Settings },
-            { id: 'hallOfFame', label: 'Hall of Fame', icon: Trophy },
-          ]}
-          value={mainSection}
-          onValueChange={(id) => setMainSection(id as typeof mainSection)}
-          className="bg-muted/50 p-1.5 rounded-2xl border"
-        />
+        {section === undefined && (
+          <ContentSectionTreeNav
+            branchLabel="Houses"
+            fullWidth
+            items={[
+              { id: 'overview', label: 'Overview', icon: LayoutGrid },
+              {
+                id: 'rosters',
+                label: 'Rosters',
+                icon: Users,
+                badge: unassignedStudents.length > 0
+                  ? `⚠ ${unassignedStudents.length} unassigned`
+                  : (sortedHouses.length || undefined),
+              },
+              { id: 'setup', label: 'Setup', icon: Settings },
+              { id: 'hallOfFame', label: 'Hall of Fame', icon: Trophy },
+            ]}
+            value={activeSection}
+            onValueChange={(id) => setActiveSection(id as AdminHousesSection)}
+            className="bg-muted/50 p-1.5 rounded-2xl border"
+          />
+        )}
 
-        {mainSection === 'hallOfFame' ? (
+        {activeSection === 'hallOfFame' ? (
           <AdminHouseHallOfFamePanel schoolId={schoolId} />
         ) : null}
 
-        {mainSection === 'overview' && sortedHouses.length > 0 ? (
+        {activeSection === 'overview' && sortedHouses.length > 0 ? (
           <div className="space-y-6">
             <AdminHousesStatsStrip
               houseCount={sortedHouses.length}
@@ -451,17 +491,18 @@ export function AdminHousesManage({
                 onFormatChange={(format) => updateSettings({ houseStandingsChartFormat: format })}
               />
             ) : null}
+            <AdminHousesOverviewGrid rows={standingsRows} />
           </div>
         ) : null}
 
-        {mainSection === 'overview' && sortedHouses.length === 0 ? (
+        {activeSection === 'overview' && sortedHouses.length === 0 ? (
           <EmptyState
             icon={Home}
             title="No houses yet"
-            description="Run the setup wizard for a guided start, or load a sample theme pack."
+            description="Set up with AI for a themed start, or load a sample theme pack."
             action={{
-              label: 'Setup wizard',
-              onClick: () => setWizardOpen(true),
+              label: 'Set up with AI',
+              onClick: openAiSetup,
               icon: Sparkles,
             }}
             secondaryAction={{
@@ -472,7 +513,7 @@ export function AdminHousesManage({
           />
         ) : null}
 
-        {mainSection === 'rosters' ? (
+        {activeSection === 'rosters' ? (
           <div className="space-y-4">
             {unassignedStudents.length > 0 && sortedHouses.length > 0 ? (
               <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -509,8 +550,8 @@ export function AdminHousesManage({
                 title="No houses to roster"
                 description="Add houses first, then assign students from each team card."
                 action={{
-                  label: 'Setup wizard',
-                  onClick: () => setWizardOpen(true),
+                  label: 'Set up with AI',
+                  onClick: openAiSetup,
                   icon: Sparkles,
                 }}
               />
@@ -588,13 +629,13 @@ export function AdminHousesManage({
           </div>
         ) : null}
 
-        {mainSection === 'setup' ? (
+        {activeSection === 'setup' ? (
           <div className="space-y-6">
             <div className="flex flex-col gap-3 rounded-2xl border bg-muted/20 p-4 md:p-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">House setup</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Create teams, run the guided setup, or reset everything to start over.
+                  Create teams, set up with AI, or reset everything to start over.
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -603,10 +644,10 @@ export function AdminHousesManage({
                   variant="outline"
                   size="sm"
                   className="gap-2 rounded-xl shrink-0"
-                  onClick={() => setWizardOpen(true)}
+                  onClick={openAiSetup}
                 >
                   <Sparkles className="h-4 w-4" aria-hidden />
-                  Setup wizard
+                  Set up with AI
                 </Button>
                 <Button
                   type="button"
@@ -729,25 +770,15 @@ export function AdminHousesManage({
               unassignedCount={unassignedStudents.length}
               includeJewishOrthodoxPresets={includeJewishOrthodoxHousePresets}
               sortingHref={sortingHref}
-              onSetupWizard={() => setWizardOpen(true)}
+              onSetupWizard={openAiSetup}
               onPopulateSample={() => setSampleDialogOpen(true)}
-              onHallOfFame={() => setMainSection('hallOfFame')}
+              onHallOfFame={() => setActiveSection('hallOfFame')}
               onSync={sortedHouses.length > 0 ? () => void runSyncTotals() : undefined}
               syncBusy={busy === 'sync'}
             />
           </div>
         ) : null}
       </StaffPortalSectionCardContent>
-
-      <HouseSetupWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        schoolId={schoolId}
-        houses={sortedHouses}
-        students={students ?? []}
-        updateSettings={updateSettings}
-        includeJewishOrthodoxPresets={includeJewishOrthodoxHousePresets}
-      />
 
       <AlertDialog open={sampleDialogOpen} onOpenChange={setSampleDialogOpen}>
         <AlertDialogContent>
