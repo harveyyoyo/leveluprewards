@@ -17,7 +17,6 @@ import {
   Zap,
   CheckCircle2,
   RefreshCw,
-  Printer,
   ChevronRight,
   Flame,
   Award,
@@ -322,11 +321,6 @@ export function ShowcaseLanding() {
               Try Live Demo
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
             </a>
-            <Link href="/flyers" className="relative group py-1 transition-colors hover:text-[#102a45] flex items-center gap-1">
-              <Printer className="h-3.5 w-3.5" />
-              Printable Flyers
-              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
-            </Link>
             <a href="#audiences" className="relative group py-1 transition-colors hover:text-[#102a45]">
               Who We Serve
               <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#c9a227] transition-all duration-300 group-hover:w-full" />
@@ -1400,7 +1394,6 @@ export function ShowcaseLanding() {
                 <span className="text-xs uppercase font-extrabold tracking-widest text-[#102a45]">Navigation</span>
                 <a href="#features" className="hover:text-[#102a45] transition-colors">Features</a>
                 <a href="#simulator" className="hover:text-[#102a45] transition-colors">Simulator Sandbox</a>
-                <Link href="/flyers" className="hover:text-[#102a45] transition-colors">Printable Flyers</Link>
               </div>
 
               <div className="flex flex-col gap-2.5">

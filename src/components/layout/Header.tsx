@@ -134,14 +134,16 @@ export default function Header() {
   const fullscreen = searchParams?.get('fullscreen') === '1';
   const isHouseSortingPage =
     pathname?.includes('/house-sorting') || pathname?.includes('/houses-realm');
+  const isClassroomRealmPage =
+    pathname?.includes('/classroom-realm') || pathname?.includes('/classroom');
   const isFullscreenSpecialPage =
     isHouseSortingPage ||
+    isClassroomRealmPage ||
     (fullscreen &&
     (pathname?.includes('/hall-of-fame') ||
       pathname?.includes('/bulletin-board') ||
       pathname?.includes('/smart-screen') ||
-      pathname?.includes('/displays') ||
-      pathname?.includes('/classroom')));
+      pathname?.includes('/displays')));
 
   const handleLogout = () => {
     playSound('swoosh');

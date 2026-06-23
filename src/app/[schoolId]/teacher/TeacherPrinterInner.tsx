@@ -109,8 +109,7 @@ import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
-import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { ClassroomTabLauncher } from '@/components/classroom/ClassroomTabLauncher';
 import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
 import {
   teacherPortalTabContentClassName,
@@ -1915,12 +1914,6 @@ function TeacherPrinterInnerBody({
         return staffPortalTabIsValid(normalized, allTabValues) ? normalized : defaultTab;
     }, [secretaryMode, activeTeacherTab, allTabValues, defaultTab]);
 
-    const classroomInitialSection = useMemo<ClassroomTabSection | undefined>(() => {
-        const raw = activeTeacherTab.trim().toLowerCase();
-        if (raw === 'raffle') return 'raffle';
-        return undefined;
-    }, [activeTeacherTab]);
-
     useEffect(() => {
         if (!schoolId || secretaryMode) {
             setPendingTeacherAwardCount(0);
@@ -2187,39 +2180,7 @@ function TeacherPrinterInnerBody({
 
                             {teacherTabEnabled('classroom') && (
                             <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <StaffClassroomTab
-                                    variant="teacher"
-                                    schoolId={schoolId!}
-                                    categories={categories}
-                                    classes={classes}
-                                    students={studentsForTeacherActions}
-                                    managerTeacherId={managerTeacherId}
-                                    schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
-                                    isGraphic={isGraphic}
-                                    manualAccentColor={teacherAccent}
-                                    initialSection={classroomInitialSection}
-                                    canEditRaffleSettings={!secretaryMode}
-                                    raffleOperatorName={teacherName || undefined}
-                                    manualBudgetOptions={
-                                        isAdmin
-                                            ? undefined
-                                            : {
-                                                  isAdmin: false,
-                                                  currentTeacher: currentTeacher ?? null,
-                                                  onBudgetSpend: async (totalCost) => {
-                                                      if (!currentTeacher) return;
-                                                      const next =
-                                                          currentTeacher.monthlyBudget !== undefined
-                                                              ? teacherWithBudgetAfterSpend(currentTeacher, totalCost)
-                                                              : {
-                                                                    ...currentTeacher,
-                                                                    spentThisMonth: (currentTeacher.spentThisMonth || 0) + totalCost,
-                                                                };
-                                                      await updateTeacher(next);
-                                                  },
-                                              }
-                                    }
-                                />
+                                <ClassroomTabLauncher schoolId={schoolId!} />
                             </TeacherPortalTabPane>
                             )}
 

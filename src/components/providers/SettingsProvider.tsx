@@ -46,6 +46,7 @@ import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
+import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 
 type ColorScheme =
     | 'default'
@@ -95,6 +96,8 @@ interface Settings {
     recessMaxMinutes?: number;
     /** School house system: rosters, house totals, sorting ceremony, Hall of Fame. */
     enableHouses: boolean;
+    /** Visual theme for the dedicated Houses realm (background, glow, accents). School-wide. */
+    housesRealmTheme?: HousesRealmThemeId;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
     /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
@@ -665,6 +668,7 @@ const defaultSettings: Settings = {
     recessStudentKioskEnabled: true,
     recessMaxMinutes: 10,
     enableHouses: false,
+    housesRealmTheme: 'cosmic',
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,

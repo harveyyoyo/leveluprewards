@@ -81,8 +81,8 @@ const FORMAT_OPTIONS: {
 }[] = [
   { id: 'columns', label: 'Column chart', icon: BarChart3 },
   { id: 'horizontal', label: 'Horizontal bars', icon: BarChartHorizontal },
-  { id: 'line', label: 'Line chart', icon: LineChart },
-  { id: 'area', label: 'Area chart', icon: AreaChartIcon },
+  { id: 'line', label: 'Ranking line', icon: LineChart },
+  { id: 'area', label: 'Ranking area', icon: AreaChartIcon },
   { id: 'pie', label: 'Pie chart', icon: PieChart },
   { id: 'donut', label: 'Donut chart', icon: Circle },
   { id: 'radar', label: 'Radar chart', icon: Hexagon },
@@ -307,8 +307,9 @@ function HouseStandingsChartBody({
           <Line
             type="monotone"
             dataKey="points"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
+            stroke="hsl(var(--muted-foreground))"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
             isAnimationActive
             animationDuration={700}
             dot={({ cx, cy, index }) => {
@@ -318,14 +319,14 @@ function HouseStandingsChartBody({
                   key={index}
                   cx={cx}
                   cy={cy}
-                  r={5}
+                  r={6}
                   fill={fill}
                   stroke="hsl(var(--background))"
                   strokeWidth={2}
                 />
               );
             }}
-            activeDot={{ r: 7, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+            activeDot={{ r: 8, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
           />
         </RechartsLineChart>
       </ChartContainer>
@@ -337,10 +338,12 @@ function HouseStandingsChartBody({
       <ChartContainer config={chartConfig} className="h-[min(260px,38vh)] w-full aspect-auto">
         <AreaChart data={chartData} margin={CHART_MARGIN}>
           <defs>
-            <linearGradient id="house-area-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
-            </linearGradient>
+            {chartData.map((d) => (
+              <linearGradient key={d.id} id={`house-area-fill-${d.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={d.fill} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={d.fill} stopOpacity={0.02} />
+              </linearGradient>
+            ))}
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
@@ -361,26 +364,28 @@ function HouseStandingsChartBody({
           <Area
             type="monotone"
             dataKey="points"
-            stroke="hsl(var(--primary))"
-            strokeWidth={2}
-            fill="url(#house-area-fill)"
+            stroke="hsl(var(--muted-foreground))"
+            strokeWidth={1.5}
+            strokeDasharray="4 3"
+            fill="url(#house-area-fill-mixed)"
             isAnimationActive
             animationDuration={700}
             dot={({ cx, cy, index }) => {
-              const fill = chartData[index]?.fill ?? 'hsl(var(--primary))';
+              const d = chartData[index];
+              const fill = d?.fill ?? 'hsl(var(--primary))';
               return (
                 <circle
                   key={index}
                   cx={cx}
                   cy={cy}
-                  r={5}
+                  r={6}
                   fill={fill}
                   stroke="hsl(var(--background))"
                   strokeWidth={2}
                 />
               );
             }}
-            activeDot={{ r: 7, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+            activeDot={{ r: 8, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
           />
         </AreaChart>
       </ChartContainer>

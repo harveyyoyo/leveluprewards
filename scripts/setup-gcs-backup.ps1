@@ -133,6 +133,26 @@ function Register-BackupSchedule([string]$RepoRoot) {
   }
 }
 
+function Register-EnvWatcherSchedule([string]$RepoRoot) {
+  $taskName = "SchoolArcade-Env-Backup-Watcher"
+  $launcher = Join-Path $RepoRoot "scripts\run-env-backup-watch.cmd"
+  $trCommand = "`"$launcher`""
+
+  try {
+    Start-Process -FilePath "schtasks.exe" -ArgumentList "/Delete","/TN",$taskName,"/F" -Wait -PassThru -WindowStyle Hidden | Out-Null
+    $createArgs = "/Create","/TN",$taskName,"/SC","ONLOGON","/TR",$trCommand,"/F"
+    $create = Start-Process -FilePath "schtasks.exe" -ArgumentList $createArgs -Wait -PassThru -WindowStyle Hidden
+    if ($create.ExitCode -ne 0) {
+      throw "schtasks /Create exited $($create.ExitCode)"
+    }
+    Write-Host "Scheduled env watcher task: $taskName (runs at Windows sign-in)"
+  } catch {
+    Write-Warning "Could not register env watcher task automatically: $($_.Exception.Message)"
+    Write-Host "Run manually from an elevated Command Prompt:"
+    Write-Host "  schtasks /Create /TN `"$taskName`" /SC ONLOGON /TR `"$launcher`" /F"
+  }
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $Gcloud = Resolve-GcloudCmd
 
@@ -156,11 +176,19 @@ Write-BackupConfig -RepoRoot $RepoRoot -BucketName $Bucket -Prefix $Prefix -Rete
 
 if (-not $SkipSchedule) {
   Register-BackupSchedule -RepoRoot $RepoRoot
+  Register-EnvWatcherSchedule -RepoRoot $RepoRoot
 }
 
 if (-not $SkipInitialBackup) {
-  Write-Host "Running initial backup..."
+  Write-Host "Running initial folder backup..."
   & (Join-Path $RepoRoot "scripts\backup-local-folder-to-gcs.ps1")
+
+  $hasEnv = (Test-Path (Join-Path $RepoRoot ".env.local")) -or (Test-Path (Join-Path $RepoRoot ".env"))
+  if ($hasEnv) {
+    Write-Host "Running initial env backup..."
+    & (Join-Path $RepoRoot "scripts\backup-env-to-gcs.ps1")
+  }
 }
 
 Write-Host "GCS backup setup complete."
+Write-Host "Env files auto-upload when changed (watcher starts at sign-in, or run: npm run watch:env-backup)"

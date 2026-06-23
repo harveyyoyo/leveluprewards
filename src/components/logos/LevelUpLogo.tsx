@@ -13,12 +13,13 @@ export function LevelUpLogo({
   tone?: 'dark' | 'light';
 }) {
   const isLightTone = tone === 'light';
-  const arrowFill = isLightTone ? 'oklch(0.34 0.06 252)' : 'oklch(0.28 0.06 252)';
+  // light tone: gold arrow stroke, dark navy wordmark — high contrast on cream background
+  const arrowFill = isLightTone ? 'oklch(0.28 0.07 252)' : 'oklch(0.28 0.06 252)';
   const textColor = isLightTone ? '#102a45' : 'var(--brand-cream)';
-  const barColor = textColor;
-  const strokeStart = isLightTone ? 'oklch(0.42 0.08 252)' : 'oklch(0.78 0.13 90)';
-  const strokeEnd = isLightTone ? 'oklch(0.30 0.06 252)' : 'var(--brand-cream)';
-  const subtitleColor = isLightTone ? 'rgba(26,46,66,0.78)' : 'var(--brand-cream)';
+  const barColor = isLightTone ? 'oklch(0.85 0.05 250)' : 'var(--brand-cream)';
+  const strokeStart = isLightTone ? '#c9a227' : 'oklch(0.78 0.13 90)';
+  const strokeEnd = isLightTone ? '#f0d060' : 'var(--brand-cream)';
+  const subtitleColor = isLightTone ? 'rgba(16,42,69,0.65)' : 'var(--brand-cream)';
   const textRevealDelay = isLightTone ? 1.1 : 1.8;
   const lineRevealDelay = isLightTone ? 1.45 : 2.2;
   const subtitleRevealDelay = isLightTone ? 1.75 : 2.6;

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LevelUp Rewards — Basic Settings (Admin)</title>
+    <title>LevelUp Rewards — Admin Setup Quick Guide</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -66,7 +66,8 @@
       }
 
       @media print {
-        .hint {
+        .hint,
+        .no-print {
           display: none !important;
         }
         html,
@@ -77,15 +78,16 @@
 
       .flyer {
         width: 8.5in;
+        height: 11in;
         min-height: 11in;
         margin: 0 auto;
         background: var(--white);
         position: relative;
         overflow: hidden;
-        padding: 0.55in 0.6in 0.5in;
+        padding: 0.38in 0.5in 0.34in;
         display: flex;
         flex-direction: column;
-        gap: 0.28in;
+        gap: 0.16in;
       }
 
       .shape-navy {
@@ -122,7 +124,7 @@
         z-index: 1;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 8px;
       }
 
       .shot {
@@ -138,12 +140,12 @@
         width: 100%;
         height: auto;
         aspect-ratio: 16 / 10;
-        object-fit: cover;
+        object-fit: contain;
         object-position: top center;
       }
 
       .shot figcaption {
-        padding: 6px 10px;
+        padding: 5px 9px;
         font-size: 9px;
         font-weight: 600;
         color: var(--muted);
@@ -166,17 +168,17 @@
       }
 
       h1 {
-        font-size: 34px;
+        font-size: 30px;
         font-weight: 800;
         line-height: 1.08;
         letter-spacing: -0.03em;
         color: var(--navy);
-        margin-bottom: 12px;
+        margin-bottom: 8px;
       }
 
       .lead {
-        font-size: 13.5px;
-        line-height: 1.55;
+        font-size: 12.4px;
+        line-height: 1.42;
         color: var(--muted);
         max-width: 42ch;
       }
@@ -186,14 +188,14 @@
         z-index: 1;
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 8px;
       }
 
       .feature {
         display: flex;
-        gap: 12px;
+        gap: 9px;
         align-items: flex-start;
-        padding: 14px 14px 13px;
+        padding: 10px 11px;
         border: 1px solid var(--border);
         border-radius: 14px;
         background: var(--white);
@@ -224,8 +226,8 @@
       }
 
       .feature p {
-        font-size: 11px;
-        line-height: 1.45;
+        font-size: 10.2px;
+        line-height: 1.32;
         color: var(--muted);
       }
 
@@ -240,13 +242,13 @@
         letter-spacing: 0.16em;
         text-transform: uppercase;
         color: #94a3b8;
-        margin-bottom: 14px;
+        margin-bottom: 8px;
       }
 
       .steps {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 16px;
+        gap: 12px;
       }
 
       .step {
@@ -255,11 +257,11 @@
       }
 
       .step-num {
-        font-size: 44px;
+        font-size: 34px;
         font-weight: 800;
         line-height: 1;
         color: #e2e8f0;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
       }
 
       .step h4 {
@@ -270,8 +272,8 @@
       }
 
       .step p {
-        font-size: 11px;
-        line-height: 1.45;
+        font-size: 10.2px;
+        line-height: 1.3;
         color: var(--muted);
       }
 
@@ -285,15 +287,15 @@
         display: grid;
         grid-template-columns: 1.35in 1fr auto;
         align-items: center;
-        gap: 18px;
-        padding: 18px 20px;
+        gap: 14px;
+        padding: 12px 16px;
         border-radius: 16px;
         background: var(--navy);
         color: #fff;
       }
 
       .cta-thumb {
-        width: 1.35in;
+        width: 1.05in;
         border-radius: 10px;
         overflow: hidden;
         border: 2px solid rgba(255, 255, 255, 0.2);
@@ -306,7 +308,7 @@
         width: 100%;
         height: auto;
         aspect-ratio: 3 / 4;
-        object-fit: cover;
+        object-fit: contain;
         object-position: top center;
       }
 
@@ -320,7 +322,7 @@
       }
 
       .cta-center h2 {
-        font-size: 22px;
+        font-size: 19px;
         font-weight: 800;
         letter-spacing: -0.02em;
         line-height: 1.1;
@@ -357,7 +359,7 @@
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-        margin-top: 12px;
+        margin-top: 8px;
         padding: 0 2px;
       }
 
@@ -382,6 +384,85 @@
         color: var(--navy);
         text-decoration: none;
         white-space: nowrap;
+      }
+
+      @media screen {
+        html,
+        body {
+          width: auto;
+          min-height: 100vh;
+        }
+
+        body {
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          padding: 32px 24px 32px 332px;
+          background:
+            radial-gradient(circle at 0% 0%, rgba(26, 54, 93, 0.12), transparent 38%),
+            linear-gradient(135deg, #eef4ff 0%, #f8fafc 55%, #eefdfa 100%);
+        }
+
+        .hint {
+          display: none;
+        }
+
+        .control-sidebar {
+          position: fixed;
+          inset: 0 auto 0 0;
+          z-index: 20;
+          width: 292px;
+          padding: 22px;
+          background: rgba(15, 39, 68, 0.96);
+          border-right: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: 24px 0 50px rgba(15, 39, 68, 0.2);
+          backdrop-filter: blur(18px);
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+          color: #fff;
+        }
+
+        .sidebar-header { display: flex; align-items: center; gap: 12px; }
+        .sidebar-logo {
+          width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+          background: linear-gradient(135deg, #f59e0b, #38bdf8); color: #0f2744; font-weight: 900;
+        }
+        .sidebar-title { margin: 0; font-size: 16px; color: #fff; }
+        .sidebar-subtitle { margin: 2px 0 0; font-size: 11px; color: rgba(255,255,255,.66); line-height: 1.35; }
+        .sidebar-section { padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); }
+        .sidebar-label {
+          display: block; margin-bottom: 8px; font-size: 10px; font-weight: 900;
+          letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.6);
+        }
+        .sidebar-select, .sidebar-input, .sidebar-btn {
+          width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); font: inherit;
+        }
+        .sidebar-select, .sidebar-input {
+          padding: 11px 12px; background: rgba(255,255,255,.08); color: #fff; font-size: 13px; font-weight: 750;
+        }
+        .sidebar-select option { color: #111827; }
+        .sidebar-btn {
+          display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+          padding: 12px 14px; margin-top: 9px; cursor: pointer; background: rgba(255,255,255,.08);
+          color: rgba(255,255,255,.92); font-size: 13px; font-weight: 850; text-decoration: none;
+        }
+        .sidebar-btn.primary { background: linear-gradient(135deg, #f59e0b, #2563eb); border-color: transparent; color: #fff; }
+        .sidebar-note { margin: 8px 0 0; color: rgba(255,255,255,.62); font-size: 11px; line-height: 1.45; }
+        .sidebar-checkbox-group { display: grid; gap: 9px; }
+        .sidebar-checkbox-label { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.86); font-size: 12px; font-weight: 800; }
+        .sidebar-checkbox-label input { width: 16px; height: 16px; accent-color: #38bdf8; }
+        body.theme-clean .shape-navy, body.theme-clean .shape-blob { display: none; }
+        body.theme-blue { --navy: #0f3b75; --navy-deep: #155eaa; --gold-bg: #dbeafe; --gold-text: #1d4ed8; --blob: #bfdbfe; }
+        body.theme-mint { --navy: #14532d; --navy-deep: #166534; --gold-bg: #dcfce7; --gold-text: #15803d; --blob: #bbf7d0; --border: #bbf7d0; }
+        body.theme-warm { --navy: #7c2d12; --navy-deep: #9a3412; --gold-bg: #ffedd5; --gold-text: #c2410c; --blob: #fed7aa; --border: #fdba74; }
+        body.theme-slate { --navy: #1e293b; --navy-deep: #0f172a; --gold-bg: #e2e8f0; --gold-text: #334155; --blob: #cbd5e1; --border: #cbd5e1; }
+        body.theme-forest { --navy: #064e3b; --navy-deep: #065f46; --gold-bg: #d1fae5; --gold-text: #047857; --blob: #a7f3d0; --border: #6ee7b7; }
+
+        @media (max-width: 1080px) {
+          body { flex-direction: column; align-items: center; padding: 16px; gap: 20px; }
+          .control-sidebar { position: static; width: min(100%, 8.5in); border-radius: 18px; }
+        }
       }
     </style>
     <script>
@@ -430,8 +511,51 @@
         if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
       } catch (_) {}
     </script>  </head>
-  <body>
+  <body class="has-sidebar theme-clean">
     <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
+    <aside class="control-sidebar no-print" role="complementary" aria-label="Flyer controls">
+      <div class="sidebar-header">
+        <span class="sidebar-logo">LU</span>
+        <div>
+          <h2 class="sidebar-title">Admin Setup Guide</h2>
+          <p class="sidebar-subtitle">Interactive controls for the rewards setup quick guide.</p>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="theme-select">Print Theme</label>
+        <select id="theme-select" class="sidebar-select" onchange="applyBasicSettingsTheme(this.value)">
+          <option value="clean" selected>Clean printer friendly</option>
+          <option value="blue">Soft blue accent</option>
+          <option value="mint">Mint garden</option>
+          <option value="warm">Warm amber</option>
+          <option value="slate">Slate professional</option>
+          <option value="forest">Forest green</option>
+        </select>
+        <p class="sidebar-note">This flyer is already light so it prints well on a regular printer.</p>
+      </div>
+      <div class="sidebar-section">
+        <label class="sidebar-label" for="school-input">Prepared for</label>
+        <input id="school-input" class="sidebar-input" type="text" placeholder="your school" oninput="updateBasicPreparedFor(this.value)" />
+        <p class="sidebar-note">Adds the school name to the flyer headline.</p>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-label">Toggle sections</span>
+        <div class="sidebar-checkbox-group">
+          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".shots" checked onchange="toggleBasicSection(this)" /> Screenshots</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".features" checked onchange="toggleBasicSection(this)" /> Settings cards</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".how" checked onchange="toggleBasicSection(this)" /> How it works</label>
+          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".cta-block" checked onchange="toggleBasicSection(this)" /> Footer / contact block</label>
+        </div>
+      </div>
+      <div class="sidebar-section">
+        <a class="sidebar-btn" href="interactive.html">Back to interactive flyers</a>
+        <button class="sidebar-btn primary" onclick="window.print()">Print flyer</button>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-label">Included sections</span>
+        <p class="sidebar-note">Kiosk sign-in, rewards shop screenshots, point categories, coupon printing, school rules, and launch steps.</p>
+      </div>
+    </aside>
     <p class="hint">Ctrl+P → Letter · Margins: None · Background graphics on</p>
 
     <article class="flyer" aria-label="LevelUp Rewards basic settings admin flyer">
@@ -439,32 +563,32 @@
       <div class="shape-blob" aria-hidden="true"></div>
 
       <header class="hero">
-        <div class="badge" aria-hidden="true">✨ Admin quick guide</div>
-        <h1>Set up rewards.<br />Launch in minutes.</h1>
+        <div class="badge" aria-hidden="true">Admin setup quick guide</div>
+        <h1>Set up rewards.<br />Launch with confidence.</h1>
         <p class="lead">
-          Configure the essentials once in Admin—point categories, prize costs, and coupon rules—then teachers
-          award and students check in at the kiosk (tap card or type ID), not the school login page.
+          Configure the essentials once in Admin: point categories, prize costs, coupon rules, and kiosk access,
+          so teachers can award points and students can redeem without confusion.
         </p>
       </header>
 
       <div class="shots" aria-label="Kiosk flow screenshots">
         <figure class="shot">
           <img
-            src="/marketing/screenshots/kiosk-system-ready.png"
+            src="screenshots/kiosk-system-ready.png"
             alt="Kiosk idle sign-in screen"
             width="640"
             height="400"
-            loading="lazy"
+            loading="eager"
           />
           <figcaption>1 · Sign in at the kiosk</figcaption>
         </figure>
         <figure class="shot">
           <img
-            src="/marketing/screenshots/kiosk-rewards-shop.png"
+            src="screenshots/kiosk-rewards-shop.png"
             alt="Rewards shop after kiosk sign-in"
             width="640"
             height="400"
-            loading="lazy"
+            loading="eager"
           />
           <figcaption>2 · Redeem from the shop</figcaption>
         </figure>
@@ -550,17 +674,17 @@
         <div class="cta-banner">
           <div class="cta-thumb">
             <img
-              src="/marketing/screenshots/kiosk-rewards-shop.png"
+              src="screenshots/kiosk-rewards-shop.png"
               alt=""
               width="162"
               height="216"
-              loading="lazy"
+              loading="eager"
             />
           </div>
           <div class="cta-center">
-            <p class="eyebrow">📍 Student kiosk</p>
-            <h2>Open /student</h2>
-            <p class="sub">Hallway device · kiosk sign-in · not /login</p>
+            <p class="eyebrow">Student kiosk</p>
+            <h2>Launch the student flow</h2>
+            <p class="sub">Kiosk sign-in, rewards shop, and coupon redemption in one place.</p>
           </div>
           <div class="cta-stat">
             <div class="big">5 min</div>
@@ -570,13 +694,46 @@
 
         <div class="trust-row">
           <div class="trust-badges">
-            <span>✓ PBIS aligned</span>
-            <span>♡ Teacher-friendly</span>
-            <span>🛡️ School-wide control</span>
+            <span>PBIS aligned</span>
+            <span>Teacher-friendly</span>
+            <span>School-wide control</span>
           </div>
-          <a class="url" href="Website available on request">Website available on request</a>
+          <a class="url" href="https://leveluprewards.app">Set up your launch: leveluprewards.app · contact@leveluprewards.app</a>
         </div>
       </footer>
     </article>
+    <script>
+      const defaultBasicHeadline = 'Set up rewards.<br />Launch with confidence.';
+
+      function escapeBasicHtml(value) {
+        return value.replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;',
+        }[char]));
+      }
+
+      function applyBasicSettingsTheme(theme) {
+        document.body.classList.remove('theme-clean', 'theme-blue', 'theme-mint', 'theme-warm', 'theme-slate', 'theme-forest');
+        document.body.classList.add('theme-' + (theme || 'clean'));
+      }
+
+      function updateBasicPreparedFor(value) {
+        const name = value.trim();
+        const headline = document.querySelector('.hero h1');
+        if (!headline) return;
+        headline.innerHTML = name
+          ? 'Set up rewards.<br />Launch at ' + escapeBasicHtml(name) + '.'
+          : defaultBasicHeadline;
+      }
+
+      function toggleBasicSection(input) {
+        document.querySelectorAll(input.dataset.toggleSelector).forEach((section) => {
+          section.style.display = input.checked ? '' : 'none';
+        });
+      }
+    </script>
   </body>
 </html>

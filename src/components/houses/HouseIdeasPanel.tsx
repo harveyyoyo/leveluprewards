@@ -30,8 +30,8 @@ const BASE_IDEAS: HouseIdea[] = [
   {
     id: 'wizard',
     icon: Sparkles,
-    title: 'Run the setup wizard',
-    detail: 'Starter themes, link to student rewards, roster assignment, and monitor display in one flow.',
+    title: 'Set up with AI',
+    detail: 'Type a word and AI builds a matching theme plus a full set of houses, then sorts students in one step.',
   },
   {
     id: 'sorting',
@@ -110,7 +110,7 @@ export function HouseIdeasPanel({
       case 'wizard':
         return (
           <Button type="button" size="sm" variant="secondary" className="rounded-lg h-8" onClick={onSetupWizard}>
-            Open wizard
+            Open Set up
           </Button>
         );
       case 'sorting':

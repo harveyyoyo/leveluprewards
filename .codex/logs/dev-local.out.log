@@ -1,0 +1,192 @@
+
+> levelup-edu@0.1.0 dev:fast
+> node scripts/dev-webpack.cjs
+
+[dev] http://127.0.0.1:3000
+[dev] If pages are blank or you see Cannot find module ./*.js -> npm run dev:reset
+
+  ▲ Next.js 14.2.35
+  - Local:        http://127.0.0.1:3000
+  - Network:      http://127.0.0.1:3000
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 2.9s
+ ○ Compiling /src/middleware ...
+ ✓ Compiled /src/middleware in 849ms (217 modules)
+ ✓ Compiled /icon.png in 366ms (104 modules)
+ GET /favicon.ico 200 in 472ms
+ ✓ Compiled in 485ms (217 modules)
+ ○ Compiling /[schoolId]/house-sorting ...
+ ✓ Compiled /[schoolId]/house-sorting in 26.6s (6138 modules)
+ GET / 200 in 5848ms
+ GET / 200 in 27313ms
+ GET /schoolabc/house-sorting 200 in 27980ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 533ms (3109 modules)
+ ✓ Compiled in 701ms (2843 modules)
+ POST /api/auth/school-gate 200 in 2389ms
+ POST /api/auth/school-gate 200 in 2390ms
+ POST /api/auth/session 200 in 2400ms
+ POST /api/auth/session 200 in 2120ms
+ POST /api/auth/session 200 in 2401ms
+ POST /api/auth/school-gate 200 in 24ms
+ GET / 200 in 265ms
+ GET / 200 in 40ms
+ GET /login?changeSchool=1 200 in 28ms
+ ✓ Compiled /icon.png in 467ms (3114 modules)
+ GET /icon.png?45673b488b5225b3 200 in 932ms
+ GET /login?changeSchool=1 200 in 1104ms
+ ✓ Compiled /api/auth/school-gate in 382ms (3148 modules)
+ ✓ Compiled (3241 modules)
+ POST /api/auth/school-gate 200 in 779ms
+ POST /api/auth/session 200 in 787ms
+ GET / 200 in 160ms
+ GET /login?changeSchool=1 200 in 73ms
+ GET /icon.png?45673b488b5225b3 200 in 35ms
+ GET /login?changeSchool=1 200 in 58ms
+ POST /api/auth/session 200 in 27ms
+ POST /api/auth/school-gate 200 in 33ms
+ GET /favicon.ico 200 in 16ms
+ ✓ Compiled in 2.1s (5971 modules)
+ GET /login?school=schoolabc&next=%2Fschoolabc%2Fhouse-sorting&_rsc=g0rnx 200 in 130ms
+ GET /?_rsc=1p60s 200 in 132ms
+ GET /?_rsc=1p60s 200 in 127ms
+ GET /?_rsc=1p60s 200 in 21ms
+ GET /icon.png?45673b488b5225b3 200 in 36ms
+ GET /icon.png?45673b488b5225b3 200 in 51ms
+ GET /login?changeSchool=1 200 in 165ms
+ GET / 200 in 33ms
+ GET /login?changeSchool=1 200 in 30ms
+ GET /icon.png?45673b488b5225b3 200 in 27ms
+ GET /login?changeSchool=1 200 in 52ms
+ ✓ Compiled /api/auth/school-gate in 297ms (3148 modules)
+ ✓ Compiled (3241 modules)
+ POST /api/auth/session 200 in 699ms
+ POST /api/auth/school-gate 200 in 704ms
+ ✓ Compiled in 1846ms (6098 modules)
+ GET /?_rsc=1p60s 200 in 133ms
+ GET /?_rsc=1p60s 200 in 135ms
+ GET /login?school=schoolabc&next=%2Fschoolabc%2Fhouse-sorting&_rsc=g0rnx 200 in 140ms
+ GET /?_rsc=1p60s 200 in 21ms
+ GET /icon.png?45673b488b5225b3 200 in 45ms
+ GET /icon.png?45673b488b5225b3 200 in 43ms
+ GET /login?changeSchool=1 200 in 155ms
+ GET /login?changeSchool=1 200 in 47ms
+ GET /icon.png?45673b488b5225b3 200 in 15ms
+ ✓ Compiled /api/auth/verify-school-access in 412ms (3151 modules)
+ POST /api/auth/verify-school-access 200 in 2197ms
+ ✓ Compiled /api/auth/school-gate in 386ms (3156 modules)
+ ✓ Compiled (3248 modules)
+ POST /api/auth/school-gate 200 in 1059ms
+ POST /api/auth/school-gate 200 in 604ms
+ POST /api/auth/session 200 in 611ms
+ POST /api/auth/session 200 in 1067ms
+ ○ Compiling /[schoolId]/portal ...
+ ✓ Compiled /[schoolId]/portal in 1028ms (6112 modules)
+ GET /schoolabc/portal 200 in 1980ms
+ ✓ Compiled /api/manifest in 453ms (3262 modules)
+ GET /api/manifest?schoolId=schoolabc 200 in 523ms
+ POST /api/auth/session 200 in 41ms
+ POST /api/auth/school-gate 200 in 49ms
+ GET /icon.png?45673b488b5225b3 200 in 17ms
+ ○ Compiling /[schoolId]/admin ...
+ POST /api/auth/school-gate 200 in 18149ms
+ POST /api/auth/session 200 in 18772ms
+ GET /api/manifest?schoolId=schoolabc 200 in 36ms
+ GET /api/classroom/behavior-notes?schoolId=schoolabc 200 in 1369ms
+ GET /schoolabc/classroom?fullscreen=1&classId=sc4&scope=admin 200 in 2891ms
+ GET /schoolabc/classroom?fullscreen=1&classId=sc4&scope=admin 200 in 99ms
+ GET /api/manifest?schoolId=schoolabc 200 in 22ms
+ GET /icon.png?45673b488b5225b3 200 in 26ms
+ POST /api/auth/session 200 in 33ms
+ POST /api/auth/school-gate 200 in 42ms
+ GET /schoolabc/houses-realm 200 in 2368ms
+ GET /api/manifest?schoolId=schoolabc 200 in 81ms
+ GET /schoolabc/houses-realm 200 in 105ms
+ GET /api/manifest?schoolId=schoolabc 200 in 24ms
+ GET /icon.png?45673b488b5225b3 200 in 21ms
+ POST /api/auth/session 200 in 44ms
+ POST /api/auth/school-gate 200 in 52ms
+ GET /api/manifest?schoolId=schoolabc 200 in 21ms
+ GET / 200 in 191ms
+ GET /login?changeSchool=1 200 in 100ms
+ GET /login?changeSchool=1 200 in 35ms
+ POST /api/auth/session 200 in 34ms
+ POST /api/auth/school-gate 200 in 43ms
+ GET / 200 in 50ms
+ GET /login?changeSchool=1 200 in 38ms
+ GET /icon.png?45673b488b5225b3 200 in 34ms
+ GET /login?changeSchool=1 200 in 72ms
+ POST /api/auth/session 200 in 36ms
+ POST /api/auth/school-gate 200 in 40ms
+ GET / 404 in 1830ms
+ GET /_next/static/css/app/layout.css?v=1782191422408 404 in 37ms
+ GET /_next/static/chunks/main-app.js?v=1782191422408 404 in 2563ms
+ GET /_next/static/chunks/app/error.js 404 in 1904ms
+ GET /_next/static/chunks/app/layout.js 404 in 2558ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 2563ms
+ GET /_next/static/chunks/app/global-error.js 404 in 2561ms
+ GET /login?changeSchool=1 200 in 2653ms
+ GET /_next/static/chunks/app/template.js 404 in 38ms
+ GET /favicon.ico 200 in 1665ms
+ GET /login?changeSchool=1 200 in 1807ms
+ GET / 200 in 48ms
+ GET /_next/static/css/app/layout.css?v=1782191437240 404 in 56ms
+ GET /_next/static/chunks/main-app.js?v=1782191437240 404 in 64ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 61ms
+ GET /_next/static/chunks/app/global-error.js 404 in 74ms
+ GET /_next/static/chunks/app/page.js 404 in 73ms
+ GET /login?changeSchool=1 200 in 117ms
+ GET /_next/static/chunks/app/layout.js 404 in 41ms
+ GET /_next/static/chunks/app/error.js 404 in 41ms
+ GET /_next/static/chunks/app/template.js 404 in 41ms
+ GET /icon.png?45673b488b5225b3 200 in 31ms
+ GET /login?changeSchool=1 200 in 50ms
+ GET / 200 in 58ms
+ GET /_next/static/css/app/layout.css?v=1782191439425 404 in 30ms
+ GET /_next/static/chunks/main-app.js?v=1782191439425 404 in 77ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 75ms
+ GET /_next/static/chunks/app/page.js 404 in 78ms
+ GET /_next/static/chunks/app/global-error.js 404 in 76ms
+ GET /login?changeSchool=1 200 in 130ms
+ GET /_next/static/chunks/app/layout.js 404 in 42ms
+ GET /_next/static/chunks/app/template.js 404 in 39ms
+ GET /_next/static/chunks/app/error.js 404 in 42ms
+ GET /icon.png?45673b488b5225b3 200 in 29ms
+ GET /login?changeSchool=1 200 in 66ms
+ GET /icon.png?45673b488b5225b3 200 in 18ms
+ GET /api/manifest?schoolId=schoolabc 200 in 770ms
+ GET /?_rsc=1p60s 200 in 86ms
+ GET /_next/static/css/app/layout.css?v=1782191466598 404 in 170ms
+ GET /?_rsc=1p60s 200 in 218ms
+ GET /_next/static/css/app/layout.css?v=1782191466842 404 in 37ms
+ GET / 200 in 94ms
+ GET /_next/static/css/app/layout.css?v=1782191466917 404 in 49ms
+ GET /_next/static/chunks/main-app.js?v=1782191466917 404 in 154ms
+ GET / 200 in 174ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 120ms
+ GET /_next/static/chunks/app/page.js 404 in 119ms
+ GET /_next/static/css/app/layout.css?v=1782191467035 404 in 57ms
+ GET /_next/static/chunks/app/error.js 404 in 116ms
+ GET /_next/static/chunks/app/template.js 404 in 7052ms
+ GET /_next/static/chunks/main-app.js?v=1782191467035 404 in 7042ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 9811ms
+ GET /_next/static/chunks/app/page.js 404 in 9810ms
+ GET /_next/static/chunks/app/error.js 404 in 6195ms
+ GET /_next/static/chunks/app/template.js 404 in 2749ms
+ GET /schoolabc/houses-realm/manage?_rsc=1v2da 200 in 2786ms
+ GET /_next/static/chunks/app/%5BschoolId%5D/houses-realm/manage/page.js 404 in 36ms
+ GET /_next/static/chunks/app/%5BschoolId%5D/houses-realm/setup/page.js 404 in 34ms
+ GET /schoolabc/houses-realm/manage 200 in 474ms
+ GET /_next/static/css/app/layout.css?v=1782191477139 404 in 41ms
+ GET /api/manifest?schoolId=schoolabc 200 in 88ms
+ GET /_next/static/chunks/main-app.js?v=1782191477139 404 in 67ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 65ms
+ GET /_next/static/chunks/app/%5BschoolId%5D/houses-realm/manage/page.js 404 in 51ms
+ GET /_next/static/chunks/app/%5BschoolId%5D/layout.js 404 in 46ms
+ GET /_next/static/chunks/app/%5BschoolId%5D/error.js 404 in 42ms
+ GET /_next/static/chunks/app/error.js 404 in 40ms
+ GET /_next/static/chunks/app/template.js 404 in 22ms
+ GET /icon.png?45673b488b5225b3 200 in 36ms
+[?25h

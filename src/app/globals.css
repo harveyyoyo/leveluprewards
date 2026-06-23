@@ -568,9 +568,11 @@ html[data-office-portal] .office-content-pane {
     color: inherit;
   }
 
-  /* Houses realm — standalone fullscreen experience */
+  /* Houses realm — standalone fullscreen experience.
+     Colors are driven by `--hr-*` custom properties set per theme (see housesRealmThemes.ts);
+     the literal values below are the Cosmic-theme fallbacks. */
   html[data-houses-realm] body {
-    background-color: #12081f !important;
+    background-color: var(--hr-base, #12081f) !important;
     color: #f8f4ff !important;
   }
 
@@ -586,21 +588,22 @@ html[data-office-portal] .office-content-pane {
 
   .houses-realm-root {
     color: #f8f4ff;
-    background: #12081f;
+    background: var(--hr-base, #12081f);
   }
 
   .houses-realm-bg {
     background:
-      radial-gradient(ellipse 80% 55% at 50% -10%, rgba(139, 92, 246, 0.35), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 100% 100%, rgba(245, 158, 11, 0.12), transparent 55%),
-      linear-gradient(180deg, #1a0f2e 0%, #12081f 45%, #0a0612 100%);
+      radial-gradient(ellipse 80% 55% at 50% -10%, var(--hr-glow-top, rgba(139, 92, 246, 0.35)), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, var(--hr-glow-bottom, rgba(245, 158, 11, 0.12)), transparent 55%),
+      linear-gradient(180deg, var(--hr-grad-from, #1a0f2e) 0%, var(--hr-grad-mid, #12081f) 45%, var(--hr-grad-to, #0a0612) 100%);
+    transition: background 600ms ease;
   }
 
   .houses-realm-stars {
     background-image:
-      radial-gradient(1px 1px at 20% 30%, rgba(255, 255, 255, 0.35), transparent),
-      radial-gradient(1px 1px at 60% 70%, rgba(255, 255, 255, 0.25), transparent),
-      radial-gradient(1px 1px at 80% 20%, rgba(255, 255, 255, 0.2), transparent);
+      radial-gradient(1px 1px at 20% 30%, var(--hr-star, rgba(255, 255, 255, 0.35)), transparent),
+      radial-gradient(1px 1px at 60% 70%, var(--hr-star, rgba(255, 255, 255, 0.25)), transparent),
+      radial-gradient(1px 1px at 80% 20%, var(--hr-star, rgba(255, 255, 255, 0.2)), transparent);
     background-size: 200px 200px;
   }
 
@@ -624,6 +627,65 @@ html[data-office-portal] .office-content-pane {
   }
 
   html[data-houses-realm] .houses-realm-manage :where(.border-border) {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Classroom realm — standalone fullscreen experience.
+     Colors are driven by `--cr-*` custom properties (see classroomRealmThemes.ts). */
+  html[data-classroom-realm] body {
+    background-color: var(--cr-base, #0c1222) !important;
+    color: #f0f4ff !important;
+  }
+
+  html[data-classroom-realm] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: inherit;
+  }
+
+  .classroom-realm-root {
+    color: #f0f4ff;
+    background: var(--cr-base, #0c1222);
+  }
+
+  .classroom-realm-bg {
+    background:
+      radial-gradient(ellipse 80% 55% at 50% -10%, var(--cr-glow-top, rgba(99, 102, 241, 0.35)), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, var(--cr-glow-bottom, rgba(20, 184, 166, 0.14)), transparent 55%),
+      linear-gradient(180deg, var(--cr-grad-from, #131a2e) 0%, var(--cr-grad-mid, #0c1222) 45%, var(--cr-grad-to, #060a14) 100%);
+    transition: background 600ms ease;
+  }
+
+  .classroom-realm-grid {
+    background-image:
+      linear-gradient(var(--cr-grid, rgba(99, 102, 241, 0.08)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--cr-grid, rgba(99, 102, 241, 0.08)) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .classroom-realm-display {
+    font-family: Fraunces, ui-serif, Georgia, serif;
+    letter-spacing: -0.02em;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background) {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #f0f4ff;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground) {
+    color: #f0f4ff !important;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground) {
+    color: rgba(240, 244, 255, 0.55) !important;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.border-border) {
     border-color: rgba(255, 255, 255, 0.12) !important;
   }
   
@@ -3826,8 +3888,9 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   --brand-cream: oklch(0.93 0.04 88);
 }
 
-.level-up-logo-cinematic .font-black {
-  color: var(--brand-cream) !important;
+/* dark-tone only: cream wordmark. Light tone uses its own inline color. */
+.level-up-logo-cinematic.tone-dark .font-black {
+  color: var(--brand-cream);
 }
 
 @keyframes luc-float {

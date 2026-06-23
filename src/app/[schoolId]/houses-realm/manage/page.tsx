@@ -1,15 +1,25 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { LayoutGrid, Settings, Trophy, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { HousesRealmShell } from '@/components/houses/HousesRealmShell';
-import { AdminHousesManage } from '@/app/[schoolId]/admin/sections/AdminHousesManage';
+import { AdminHousesManage, type AdminHousesSection } from '@/app/[schoolId]/admin/sections/AdminHousesManage';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { collection } from 'firebase/firestore';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { House, Student, Teacher } from '@/lib/types';
+
+const MANAGE_TABS: { id: AdminHousesSection; label: string; icon: LucideIcon }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutGrid },
+  { id: 'rosters', label: 'Rosters', icon: Users },
+  { id: 'setup', label: 'Settings', icon: Settings },
+  { id: 'hallOfFame', label: 'Hall of Fame', icon: Trophy },
+];
 
 export default function HousesRealmManagePage() {
   const params = useParams();
@@ -25,6 +35,7 @@ export default function HousesRealmManagePage() {
     updateStudent,
     updateTeacher,
   } = useAppContext();
+  const [activeTab, setActiveTab] = useState<AdminHousesSection>('overview');
 
   const housesQuery = useMemoFirebase(
     () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
@@ -72,7 +83,34 @@ export default function HousesRealmManagePage() {
 
   return (
     <HousesRealmShell schoolId={schoolId}>
-      <div className="houses-realm-manage mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      {/* Top-level section tabs */}
+      <div className="sticky top-0 z-10 border-b border-white/10 bg-black/30 backdrop-blur-md">
+        <div className="mx-auto max-w-6xl flex gap-0 overflow-x-auto px-4 sm:px-6">
+          {MANAGE_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 border-b-2 px-4 py-3.5 text-sm font-semibold transition-colors',
+                  active
+                    ? 'text-white'
+                    : 'border-transparent text-white/50 hover:text-white/80',
+                )}
+                style={active ? { borderBottomColor: 'var(--hr-accent-text)' } : undefined}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="houses-realm-manage mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <AdminHousesManage
           schoolId={schoolId}
           houses={houses}
@@ -96,6 +134,8 @@ export default function HousesRealmManagePage() {
           }}
           onUpdateStudent={updateStudent}
           onUpdateTeacher={updateTeacher}
+          section={activeTab}
+          onSectionChange={setActiveTab}
         />
       </div>
     </HousesRealmShell>

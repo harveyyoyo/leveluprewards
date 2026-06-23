@@ -73,6 +73,80 @@
         --accent-3: #fb923c;
       }
 
+      html[data-theme="light-sky"] {
+        --paper: #ffffff;
+        --paper-2: #f0f9ff;
+        --text: #0f172a;
+        --muted: #475569;
+        --soft: #334155;
+        --line: #bae6fd;
+        --panel: #ffffff;
+        --panel-strong: #f0f9ff;
+        --accent: #0284c7;
+        --accent-2: #0ea5e9;
+        --accent-3: #0369a1;
+        --shadow: rgba(2, 132, 199, 0.12);
+      }
+
+      html[data-theme="light-mint"] {
+        --paper: #ffffff;
+        --paper-2: #f0fdf4;
+        --text: #052e16;
+        --muted: #166534;
+        --soft: #14532d;
+        --line: #bbf7d0;
+        --panel: #ffffff;
+        --panel-strong: #f0fdf4;
+        --accent: #16a34a;
+        --accent-2: #10b981;
+        --accent-3: #15803d;
+        --shadow: rgba(22, 163, 74, 0.12);
+      }
+
+      html[data-theme="light-amber"] {
+        --paper: #ffffff;
+        --paper-2: #fffbeb;
+        --text: #451a03;
+        --muted: #92400e;
+        --soft: #78350f;
+        --line: #fde68a;
+        --panel: #ffffff;
+        --panel-strong: #fffbeb;
+        --accent: #b45309;
+        --accent-2: #d97706;
+        --accent-3: #ea580c;
+        --shadow: rgba(180, 83, 9, 0.12);
+      }
+
+      html[data-theme="light-rose"] {
+        --paper: #ffffff;
+        --paper-2: #fff1f2;
+        --text: #4c0519;
+        --muted: #9f1239;
+        --soft: #881337;
+        --line: #fecdd3;
+        --panel: #ffffff;
+        --panel-strong: #fff1f2;
+        --accent: #be123c;
+        --accent-2: #e11d48;
+        --accent-3: #f43f5e;
+        --shadow: rgba(190, 18, 60, 0.12);
+      }
+
+      html[data-theme="slate"] {
+        --paper: #0f172a;
+        --paper-2: #1e293b;
+        --text: #f8fafc;
+        --muted: #cbd5e1;
+        --soft: #e2e8f0;
+        --line: rgba(255, 255, 255, 0.14);
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-strong: rgba(255, 255, 255, 0.1);
+        --accent: #94a3b8;
+        --accent-2: #38bdf8;
+        --accent-3: #f8fafc;
+      }
+
       * {
         box-sizing: border-box;
       }
@@ -87,7 +161,10 @@
         print-color-adjust: exact;
       }
 
-      html[data-theme="light"] body {
+      html[data-theme="light-sky"] body,
+      html[data-theme="light-mint"] body,
+      html[data-theme="light-amber"] body,
+      html[data-theme="light-rose"] body {
         background: #e5e7eb;
       }
 
@@ -195,10 +272,38 @@
         margin: 9px 0;
       }
 
+      .feature-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 8px;
+        margin: 9px 0;
+      }
+
+      .page-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 7px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(217, 230, 246, 0.9);
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 1;
+      }
+
       .check input {
         width: 16px;
         min-height: 16px;
         accent-color: var(--accent);
+      }
+
+      .page-check input {
+        width: 13px;
+        min-height: 13px;
+        accent-color: var(--accent-2);
       }
 
       .button {
@@ -229,8 +334,10 @@
 
       .stage {
         display: flex;
+        flex-direction: column;
         align-items: flex-start;
         justify-content: center;
+        gap: 32px;
         padding: 34px 20px;
         overflow: auto;
       }
@@ -261,6 +368,202 @@
         display: block;
         min-height: 11in;
         padding: 0.26in;
+      }
+
+      .insert-page .flyer-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2in;
+      }
+
+      .insert-topline {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.2in;
+        padding-bottom: 0.13in;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .insert-kicker {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 0.1in;
+        padding: 7px 10px;
+        border: 1px solid color-mix(in srgb, var(--insert-color, var(--accent)) 48%, transparent);
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--insert-color, var(--accent)) 14%, transparent);
+        color: var(--text);
+        font-size: 9.5px;
+        font-weight: 900;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .insert-title {
+        margin: 0;
+        max-width: 5.9in;
+        color: var(--text);
+        font-size: 43px;
+        line-height: 0.96;
+        font-weight: 900;
+      }
+
+      .insert-subtitle {
+        margin: 0.13in 0 0;
+        max-width: 5.65in;
+        color: var(--soft);
+        font-size: 15px;
+        line-height: 1.35;
+        font-weight: 750;
+      }
+
+      .insert-meta {
+        min-width: 1.65in;
+        padding: 0.11in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+        line-height: 1.35;
+        text-align: right;
+      }
+
+      .insert-meta strong {
+        display: block;
+        color: var(--text);
+        font-size: 11px;
+      }
+
+      .insert-hero-grid {
+        display: grid;
+        grid-template-columns: 1.03fr 0.97fr;
+        gap: 0.18in;
+        align-items: stretch;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .insert-visual {
+        display: flex;
+        flex-direction: column;
+        gap: 0.09in;
+        margin: 0;
+        padding: 0.13in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: #0f172a;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.05);
+      }
+
+      .insert-visual img {
+        width: 100%;
+        height: 5.2in;
+        object-fit: contain;
+        object-position: center;
+        border-radius: 6px;
+        background: #f8fafc;
+      }
+
+      .insert-visual figcaption {
+        color: #475569;
+        font-size: 9.5px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .insert-story {
+        display: grid;
+        gap: 0.13in;
+        align-content: stretch;
+      }
+
+      .insert-card {
+        padding: 0.16in;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .insert-card h3 {
+        margin: 0 0 0.08in;
+        color: var(--text);
+        font-size: 16px;
+        line-height: 1.05;
+      }
+
+      .insert-card p,
+      .insert-card li {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.37;
+        font-weight: 750;
+      }
+
+      .insert-card p {
+        margin: 0;
+      }
+
+      .insert-card ul {
+        margin: 0;
+        padding-left: 0.18in;
+      }
+
+      .insert-card li {
+        margin: 0.07in 0;
+      }
+
+      .insert-steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.1in;
+      }
+
+      .insert-step {
+        padding: 0.12in;
+        border: 1px solid color-mix(in srgb, var(--insert-color, var(--accent)) 45%, var(--line));
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--insert-color, var(--accent)) 12%, transparent);
+      }
+
+      .insert-step strong {
+        display: block;
+        color: var(--text);
+        font-size: 12px;
+      }
+
+      .insert-step span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 9.5px;
+        font-weight: 750;
+        line-height: 1.28;
+      }
+
+      .insert-bottom {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.16in;
+        padding-top: 0.1in;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 800;
+      }
+
+      .insert-tags {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 5px;
       }
 
       .simple-header,
@@ -774,6 +1077,11 @@
           border: 0;
           border-radius: 0;
           box-shadow: none;
+          page-break-after: always;
+        }
+
+        .flyer:last-child {
+          page-break-after: auto;
         }
       }
     </style>
@@ -795,11 +1103,16 @@
           <label class="field">
             <span>Visual style</span>
             <select id="theme-select" aria-label="Theme">
-              <option value="light">Light print</option>
+              <option value="light" selected>Light print</option>
+              <option value="light-sky">Light sky breeze</option>
+              <option value="light-mint">Light mint garden</option>
+              <option value="light-amber">Light amber sun</option>
+              <option value="light-rose">Light rose brief</option>
               <option value="default">Campus navy</option>
               <option value="fresh">Fresh green</option>
               <option value="focus">Focused blue</option>
               <option value="celebrate">Celebration</option>
+              <option value="slate">Slate midnight</option>
             </select>
           </label>
           <label class="check"><input type="checkbox" id="compact-toggle" /> Compact print mode</label>
@@ -817,24 +1130,48 @@
 
         <div class="section">
           <span class="section-title">Feature modules</span>
-          <label class="check"><input type="checkbox" data-module="houses" checked /> Houses</label>
-          <label class="check"><input type="checkbox" data-module="displays" checked /> Displays</label>
-          <label class="check"><input type="checkbox" data-module="incentives" checked /> Incentives</label>
-          <label class="check"><input type="checkbox" data-module="themes" checked /> Theme creations</label>
-          <label class="check"><input type="checkbox" data-module="notifications" checked /> Notifications</label>
-          <label class="check"><input type="checkbox" data-module="recess" checked /> Recess</label>
-          <label class="check"><input type="checkbox" data-module="raffles" checked /> Raffles</label>
-          <label class="check"><input type="checkbox" data-module="badges" checked /> Badges</label>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="houses" checked /> Houses</label>
+            <label class="page-check" title="Add separate page for Houses"><input type="checkbox" data-feature-page="houses" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="displays" checked /> Displays</label>
+            <label class="page-check" title="Add separate page for Displays"><input type="checkbox" data-feature-page="displays" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="incentives" checked /> Incentives</label>
+            <label class="page-check" title="Add separate page for Incentives"><input type="checkbox" data-feature-page="incentives" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="themes" checked /> Theme creations</label>
+            <label class="page-check" title="Add separate page for Theme creations"><input type="checkbox" data-feature-page="themes" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="notifications" checked /> Notifications</label>
+            <label class="page-check" title="Add separate page for Notifications"><input type="checkbox" data-feature-page="notifications" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="recess" checked /> Recess</label>
+            <label class="page-check" title="Add separate page for Recess"><input type="checkbox" data-feature-page="recess" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="raffles" checked /> Raffles</label>
+            <label class="page-check" title="Add separate page for Raffles"><input type="checkbox" data-feature-page="raffles" /> page</label>
+          </div>
+          <div class="feature-row">
+            <label class="check"><input type="checkbox" data-module="badges" checked /> Badges</label>
+            <label class="page-check" title="Add separate page for Badges"><input type="checkbox" data-feature-page="badges" /> page</label>
+          </div>
         </div>
       </aside>
 
       <main class="stage">
-        <article class="flyer" aria-label="LevelUp Rewards additional features flyer">
+        <article class="flyer overview-page" aria-label="LevelUp Rewards additional features flyer">
           <div class="flyer-inner">
             <header class="simple-header">
               <div>
                 <div class="simple-title" id="simple-title" contenteditable="true">LevelUp Additional Features</div>
-                <div class="simple-subtitle" contenteditable="true">Included additional features that extend the core LevelUp system beyond Rewards, Attendance, Library, and Classroom.</div>
+                <div class="simple-subtitle" contenteditable="true">A quick showcase of the add-on tools that make recognition more visible, personal, and easy to run every day.</div>
               </div>
               <div class="simple-subtitle" contenteditable="true">Houses · Displays · Incentives · Themes · Notifications · Recess · Raffles · Badges</div>
             </header>
@@ -926,13 +1263,14 @@
 
             <div class="simple-footer">
               <span contenteditable="true">LevelUp EdTech Enterprises LLC</span>
+              <span contenteditable="true">Add spirit, visibility, and daily routines when your core launch is ready.</span>
               <span contenteditable="true">leveluprewards.app · contact@leveluprewards.app</span>
             </div>
 
             <footer class="footer">
               <div>
                 <strong contenteditable="true">LevelUp EdTech Enterprises LLC</strong><br />
-                <span contenteditable="true">leveluprewards.app · contact@leveluprewards.app</span>
+                <span contenteditable="true">Explore the extras: leveluprewards.app · contact@leveluprewards.app</span>
               </div>
               <div class="pills">
                 <span class="pill" contenteditable="true">Included features</span>
@@ -954,7 +1292,12 @@
           color: "#34d399",
           image: "screenshots/special-houses.png",
           badges: ["Teams", "Standings", "Rosters", "Competitions"],
-          copy: "House standings, rosters, competitions, leading house highlights, and year-long school spirit."
+          copy: "House standings, rosters, competitions, leading house highlights, and year-long school spirit.",
+          pageTitle: "Turn school spirit into a year-long team experience.",
+          pageSubtitle: "Houses give students a shared identity, visible team progress, and friendly competition that can last all year.",
+          pageLead: "Houses help schools organize students into teams, celebrate shared identity, and create friendly competition that lasts beyond a single rewards event.",
+          useCases: ["Launch house rosters and standings during assemblies.", "Recognize leading houses on displays and bulletin boards.", "Invite house parents or staff leads into the routine."],
+          steps: [["Create teams", "Build rosters and identity."], ["Track standing", "Make progress visible."], ["Celebrate together", "Use events and displays."]]
         },
         {
           key: "displays",
@@ -962,7 +1305,12 @@
           color: "#fbbf24",
           image: "screenshots/special-displays.png",
           badges: ["Smart Screen", "Bulletin", "Hall of Fame", "Class screens"],
-          copy: "Smart Screen, Bulletin Board, Hall of Fame, and class screens make recognition visible."
+          copy: "Smart Screen, Bulletin Board, Hall of Fame, and class screens make recognition visible.",
+          pageTitle: "Make recognition visible across the building.",
+          pageSubtitle: "Displays make recognition visible in hallways, classrooms, and shared spaces so students can see the culture loop in real time.",
+          pageLead: "Displays turn points, achievements, events, and schoolwide highlights into shared moments on hallway screens, classroom views, and celebration boards.",
+          useCases: ["Run a Smart Screen in common areas.", "Show Hall of Fame and bulletin highlights.", "Give classrooms a simple recognition surface."],
+          steps: [["Choose a screen", "Pick hallway or class views."], ["Feature wins", "Highlight students and groups."], ["Keep it fresh", "Rotate moments often."]]
         },
         {
           key: "incentives",
@@ -970,7 +1318,12 @@
           color: "#93c5fd",
           image: "screenshots/bulletin-board.png",
           badges: ["Bonus points", "Campaigns", "Bulletin", "Student portal"],
-          copy: "Point-earning opportunities that can appear on bulletin, Smart Screen, kiosk, and portal surfaces."
+          copy: "Point-earning opportunities that can appear on bulletin, Smart Screen, kiosk, and portal surfaces.",
+          pageTitle: "Give students clear reasons to participate today.",
+          pageSubtitle: "Incentives turn short-term goals, bonus opportunities, and school events into clear reasons for students to participate today.",
+          pageLead: "Incentives let schools spotlight short-term goals, bonus-point opportunities, and themed challenges that keep the rewards routine from feeling static.",
+          useCases: ["Promote weekly goals and bonus opportunities.", "Connect incentives to assemblies, attendance, or school events.", "Show student-facing campaign details on displays."],
+          steps: [["Pick a goal", "Choose the behavior or event."], ["Publish it", "Show the opportunity."], ["Reward momentum", "Celebrate participation."]]
         },
         {
           key: "themes",
@@ -978,7 +1331,12 @@
           color: "#c4b5fd",
           image: "screenshots/special-theme-creations.png",
           badges: ["AI themes", "Colors", "Fonts", "ID cards"],
-          copy: "AI-assisted school and student themes with colors, fonts, emoji, card styling, and kiosk previews."
+          copy: "AI-assisted school and student themes with colors, fonts, emoji, card styling, and kiosk previews.",
+          pageTitle: "Make the rewards system feel like your school.",
+          pageSubtitle: "Theme creation helps the rewards system feel like your school, with colors, card styles, and previews that match local identity.",
+          pageLead: "Theme creation helps schools shape the look of student-facing experiences, cards, and displays so LevelUp feels connected to local culture.",
+          useCases: ["Create themed cards for events or groups.", "Match colors and visuals to school identity.", "Preview student-facing screens before launch."],
+          steps: [["Choose identity", "Start with school style."], ["Generate options", "Explore visual themes."], ["Apply widely", "Use across cards and screens."]]
         },
         {
           key: "notifications",
@@ -986,7 +1344,12 @@
           color: "#67e8f9",
           image: "screenshots/admin-notifications.png",
           badges: ["Staff alerts", "Milestones", "Logs", "Follow-up"],
-          copy: "Staff alerts, milestone messages, delivery logs, and school-controlled follow-up settings."
+          copy: "Staff alerts, milestone messages, delivery logs, and school-controlled follow-up settings.",
+          pageTitle: "Keep staff informed without adding another routine.",
+          pageSubtitle: "Notifications give staff timely alerts, milestone messages, logs, and follow-up settings that support daily operations.",
+          pageLead: "Notifications help staff understand milestones, follow-up moments, and school activity without needing to monitor every screen manually.",
+          useCases: ["Alert staff to milestone moments.", "Track delivery and follow-up logs.", "Support school-controlled communication settings."],
+          steps: [["Set triggers", "Choose what matters."], ["Notify staff", "Send helpful updates."], ["Review logs", "Keep accountability clear."]]
         },
         {
           key: "recess",
@@ -994,7 +1357,12 @@
           color: "#fb923c",
           image: "screenshots/special-recess.png",
           badges: ["Pass cards", "Kiosk scans", "Timers", "Return logs"],
-          copy: "Printable break and bathroom pass cards, kiosk scans, active out-of-room tracking, and return logs."
+          copy: "Printable break and bathroom pass cards, kiosk scans, active out-of-room tracking, and return logs.",
+          pageTitle: "Support movement routines with simple scan-based tracking.",
+          pageSubtitle: "Recess and pass tools connect printable cards, kiosk scans, timers, and return logs into one simple movement routine.",
+          pageLead: "Recess and pass tools help schools manage daily movement routines while keeping the process student-friendly and staff-visible.",
+          useCases: ["Print pass cards for common routines.", "Use kiosk scans for check-out and return.", "Review active timers and return history."],
+          steps: [["Print passes", "Prepare student cards."], ["Scan out", "Start the routine."], ["Scan back", "Close the loop."]]
         },
         {
           key: "raffles",
@@ -1002,7 +1370,12 @@
           color: "#f472b6",
           image: "screenshots/special-raffles.png",
           badges: ["Tickets", "Wheel", "Jackpot", "Winners"],
-          copy: "Ticket pools, wheel and jackpot-style winner moments, and event-ready school excitement."
+          copy: "Ticket pools, wheel and jackpot-style winner moments, and event-ready school excitement.",
+          pageTitle: "Create reward moments students can feel in the room.",
+          pageSubtitle: "Raffles turn earned participation into visible winner moments that bring anticipation and celebration into the room.",
+          pageLead: "Raffles turn earned participation into exciting winner moments that can anchor assemblies, classroom celebrations, and schoolwide campaigns.",
+          useCases: ["Run ticket pools for positive behavior.", "Use wheel or jackpot-style winner moments.", "Create event-ready celebration routines."],
+          steps: [["Earn tickets", "Tie entries to behavior."], ["Draw winners", "Make it visible."], ["Celebrate", "Close with energy."]]
         },
         {
           key: "badges",
@@ -1010,12 +1383,22 @@
           color: "#22c55e",
           image: "screenshots/special-badges.png",
           badges: ["Categories", "Milestones", "Earn periods", "Tiers"],
-          copy: "Category badges, achievement milestones, earn periods, tiers, and student recognition."
+          copy: "Category badges, achievement milestones, earn periods, tiers, and student recognition.",
+          pageTitle: "Recognize progress students can build over time.",
+          pageSubtitle: "Badges recognize milestones, categories, earn periods, and tiers so students can see progress build over time.",
+          pageLead: "Badges help students see achievement paths, category progress, earn periods, and tiers that make recognition feel ongoing.",
+          useCases: ["Create categories for school values.", "Recognize milestones across earning periods.", "Use badge tiers to show growth over time."],
+          steps: [["Define badges", "Choose what to honor."], ["Set periods", "Build clear windows."], ["Award progress", "Celebrate milestones."]]
         }
       ];
 
       const moduleGrid = document.getElementById("module-grid");
       const schoolInput = document.getElementById("school-input");
+      const stage = document.querySelector(".stage");
+
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
 
       function activeModuleKeys() {
         return new Set(
@@ -1025,11 +1408,20 @@
         );
       }
 
+      function activePageKeys(attribute) {
+        return new Set(
+          Array.from(document.querySelectorAll("[" + attribute + "]"))
+            .filter((input) => input.checked)
+            .map((input) => input.getAttribute(attribute))
+        );
+      }
+
       function renderModules() {
         const enabled = activeModuleKeys();
+        const featurePages = activePageKeys("data-feature-page");
         moduleGrid.innerHTML = modules
           .map((feature) => {
-            const hidden = enabled.has(feature.key) ? "false" : "true";
+            const hidden = enabled.has(feature.key) && !featurePages.has(feature.key) ? "false" : "true";
             return (
               '<article class="module" data-hidden="' + hidden + '" style="--feature-color:' + feature.color + '">' +
                 '<figure><img src="' + feature.image + '" alt="' + feature.title + ' screenshot" /></figure>' +
@@ -1042,6 +1434,70 @@
             );
           })
           .join("");
+      }
+
+      function buildInsertPage(item, kind) {
+        return (
+          '<article class="flyer insert-page" aria-label="' + escapeHtml(item.title) + ' feature guide" style="--insert-color:' + escapeHtml(item.color) + '">' +
+            '<div class="flyer-inner">' +
+              '<header class="insert-topline">' +
+                '<div>' +
+                  '<span class="insert-kicker" contenteditable="true">' + escapeHtml(kind) + '</span>' +
+                  '<h2 class="insert-title" contenteditable="true">' + escapeHtml(item.pageTitle) + '</h2>' +
+                  '<p class="insert-subtitle" contenteditable="true">' + escapeHtml(item.pageSubtitle) + '</p>' +
+                '</div>' +
+                '<div class="insert-meta">' +
+                  '<strong contenteditable="true">LevelUp Additional Features</strong>' +
+                  '<span contenteditable="true">' + escapeHtml(item.title) + '</span><br />' +
+                  '<span contenteditable="true">Print-ready feature guide</span>' +
+                '</div>' +
+              '</header>' +
+              '<section class="insert-hero-grid">' +
+                '<figure class="insert-visual">' +
+                  '<img src="' + escapeHtml(item.image) + '" alt="' + escapeHtml(item.title) + ' screenshot" />' +
+                  '<figcaption contenteditable="true">' + escapeHtml(item.title) + ' screenshot and workflow preview</figcaption>' +
+                '</figure>' +
+                '<div class="insert-story">' +
+                  '<div class="insert-card">' +
+                    '<h3 contenteditable="true">Why this matters</h3>' +
+                    '<p contenteditable="true">' + escapeHtml(item.pageLead) + '</p>' +
+                  '</div>' +
+                  '<div class="insert-card">' +
+                    '<h3 contenteditable="true">Best use cases</h3>' +
+                    '<ul>' + item.useCases.map((useCase) => '<li contenteditable="true">' + escapeHtml(useCase) + '</li>').join("") + '</ul>' +
+                  '</div>' +
+                  '<div class="insert-steps">' +
+                    item.steps.map((step) => '<div class="insert-step"><strong contenteditable="true">' + escapeHtml(step[0]) + '</strong><span contenteditable="true">' + escapeHtml(step[1]) + '</span></div>').join("") +
+                  '</div>' +
+                '</div>' +
+              '</section>' +
+              '<footer class="insert-bottom">' +
+                '<span contenteditable="true">LevelUp EdTech Enterprises LLC - Explore the extras at leveluprewards.app - contact@leveluprewards.app</span>' +
+                '<div class="insert-tags">' +
+                  '<span class="pill" contenteditable="true">Feature guide</span>' +
+                  '<span class="pill" contenteditable="true">School rollout</span>' +
+                  '<span class="pill" contenteditable="true">Screenshot included</span>' +
+                '</div>' +
+              '</footer>' +
+            '</div>' +
+          '</article>'
+        );
+      }
+
+      function renderInsertPages() {
+        document.querySelectorAll(".insert-page").forEach((page) => page.remove());
+        const featurePages = activePageKeys("data-feature-page");
+        const enabled = activeModuleKeys();
+        const html = modules
+          .filter((feature) => enabled.has(feature.key) && featurePages.has(feature.key))
+          .map((feature) => buildInsertPage(feature, "Special feature"))
+          .join("");
+        if (html) stage.insertAdjacentHTML("beforeend", html);
+      }
+
+      function renderAll() {
+        renderModules();
+        renderInsertPages();
       }
 
       document.getElementById("theme-select").addEventListener("change", (event) => {
@@ -1058,10 +1514,14 @@
       });
 
       document.querySelectorAll("[data-module]").forEach((input) => {
-        input.addEventListener("change", renderModules);
+        input.addEventListener("change", renderAll);
       });
 
-      renderModules();
+      document.querySelectorAll("[data-feature-page]").forEach((input) => {
+        input.addEventListener("change", renderAll);
+      });
+
+      renderAll();
     </script>
   </body>
 </html>

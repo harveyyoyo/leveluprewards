@@ -46,6 +46,8 @@ export type StaffClassroomTabProps = {
   initialSection?: ClassroomTabSection;
   canEditRaffleSettings?: boolean;
   raffleOperatorName?: string;
+  /** Render inside the Classroom realm (no staff portal tab chrome). */
+  realmMode?: boolean;
 };
 
 export function StaffClassroomTab({
@@ -63,6 +65,7 @@ export function StaffClassroomTab({
   initialSection,
   canEditRaffleSettings = true,
   raffleOperatorName,
+  realmMode = false,
 }: StaffClassroomTabProps) {
   const deferredStudents = useDeferredValue(students ?? []);
   const { loginState } = useAppContext();
@@ -204,6 +207,7 @@ export function StaffClassroomTab({
       defaultSection={defaultSection}
       sections={sections}
       headerAction={headerAction}
+      realmMode={realmMode}
       seatingContent={classAwardsLiveContent}
       behaviorContent={behaviorContent}
       roomDisplayContent={roomDisplayContent}

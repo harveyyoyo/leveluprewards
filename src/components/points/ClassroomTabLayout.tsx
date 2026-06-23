@@ -35,9 +35,11 @@ export type ClassroomTabLayoutProps = {
   raffleContent?: React.ReactNode;
   headerAction?: React.ReactNode;
   className?: string;
+  /** Render inside the Classroom realm shell (no staff portal tab chrome). */
+  realmMode?: boolean;
 };
 
-export function ClassroomTabLayout({
+function ClassroomTabLayoutInner({
   defaultSection = 'seating',
   sections,
   seatingContent,
@@ -46,6 +48,7 @@ export function ClassroomTabLayout({
   raffleContent,
   headerAction,
   className,
+  realmMode = false,
 }: ClassroomTabLayoutProps) {
   const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
@@ -87,7 +90,80 @@ export function ClassroomTabLayout({
 
   const contentCardClassName = cn(
     'w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm [contain:layout_paint]',
+    realmMode && 'border-white/12 bg-white/[0.06] text-white shadow-none',
   );
+
+  const headerRow =
+    headerAction ? (
+      <div className="mb-4 flex shrink-0 flex-wrap items-center justify-end gap-3">{headerAction}</div>
+    ) : null;
+
+  const sectionNav = (
+    <ContentSectionTreeNav
+      items={sectionItems}
+      value={resolvedSection}
+      onValueChange={(val) => setSection(val as ClassroomTabSection)}
+      fullWidth
+      className="w-full"
+      aria-label={`${CLASSROOM_TAB_LABEL} sections`}
+    />
+  );
+
+  const sectionPanels = (
+    <div className="space-y-0">
+      {sections.map((id) => {
+        if (!mountedSections.has(id)) return null;
+        const active = id === resolvedSection;
+        return (
+          <div
+            key={id}
+            id={`classroom-section-${id}`}
+            role="tabpanel"
+            aria-labelledby={`classroom-section-tab-${id}`}
+            hidden={!active}
+            className={cn(!active && 'hidden')}
+          >
+            <motion.div
+              initial={false}
+              animate={
+                active && !reduceMotion
+                  ? { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } }
+                  : { opacity: 1, transition: { duration: 0 } }
+              }
+              className="focus-visible:outline-none"
+            >
+              {contentBySection[id]}
+            </motion.div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  if (realmMode) {
+    if (!hasMultiple) {
+      return (
+        <div className={className}>
+          {headerRow}
+          <Card className={contentCardClassName}>
+            <CardContent className="p-4 sm:p-6">{contentBySection[resolvedSection]}</CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <div className={className}>
+        {headerRow}
+        <Card className={contentCardClassName}>
+          <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
+            {sectionNav}
+            {sectionPanels}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!hasMultiple) {
     return (
@@ -119,45 +195,14 @@ export function ClassroomTabLayout({
     >
       <Card className={contentCardClassName}>
         <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-          <ContentSectionTreeNav
-            items={sectionItems}
-            value={resolvedSection}
-            onValueChange={(val) => setSection(val as ClassroomTabSection)}
-            fullWidth
-            className="w-full"
-            aria-label={`${CLASSROOM_TAB_LABEL} sections`}
-          />
-
-          <div className="space-y-0">
-            {sections.map((id) => {
-              if (!mountedSections.has(id)) return null;
-              const active = id === resolvedSection;
-              return (
-                <div
-                  key={id}
-                  id={`classroom-section-${id}`}
-                  role="tabpanel"
-                  aria-labelledby={`classroom-section-tab-${id}`}
-                  hidden={!active}
-                  className={cn(!active && 'hidden')}
-                >
-                  <motion.div
-                    initial={false}
-                    animate={
-                      active && !reduceMotion
-                        ? { opacity: 1, transition: { duration: 0.16, ease: 'easeOut' } }
-                        : { opacity: 1, transition: { duration: 0 } }
-                    }
-                    className="focus-visible:outline-none"
-                  >
-                    {contentBySection[id]}
-                  </motion.div>
-                </div>
-              );
-            })}
-          </div>
+          {sectionNav}
+          {sectionPanels}
         </CardContent>
       </Card>
     </StaffPortalTabPanel>
   );
+}
+
+export function ClassroomTabLayout(props: ClassroomTabLayoutProps) {
+  return <ClassroomTabLayoutInner {...props} />;
 }

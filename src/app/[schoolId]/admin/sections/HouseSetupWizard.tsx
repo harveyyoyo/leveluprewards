@@ -335,29 +335,60 @@ export function HouseSetupWizard({
         )}
 
         {step === 2 && (
-          <div className="rounded-xl border bg-muted/20 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Link house totals to student rewards
-                </Label>
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {draft.pointsSource === 'studentRollup'
-                    ? 'On (default): house scores follow student LevelUp points.'
-                    : 'Off: house points are entered manually on the Houses tab.'}
-                </p>
+          <div className="space-y-4">
+            <div className="rounded-xl border bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Link house totals to student rewards
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    {draft.pointsSource === 'studentRollup'
+                      ? 'On (default): house scores follow student LevelUp points.'
+                      : 'Off: house points are entered manually on the Houses tab.'}
+                  </p>
+                </div>
+                <Switch
+                  checked={draft.pointsSource === 'studentRollup'}
+                  onCheckedChange={(checked) =>
+                    setDraft((d) => ({
+                      ...d,
+                      pointsSource: checked ? 'studentRollup' : 'manual',
+                      syncTotalsFromStudents: checked ? d.syncTotalsFromStudents : false,
+                    }))
+                  }
+                  aria-label="Link house totals to student rewards"
+                />
               </div>
-              <Switch
-                checked={draft.pointsSource === 'studentRollup'}
-                onCheckedChange={(checked) =>
-                  setDraft((d) => ({
-                    ...d,
-                    pointsSource: checked ? 'studentRollup' : 'manual',
-                    syncTotalsFromStudents: checked ? d.syncTotalsFromStudents : false,
-                  }))
-                }
-                aria-label="Link house totals to student rewards"
-              />
+            </div>
+            {/* Visual illustration */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className={cn(
+                'rounded-xl border p-3 space-y-2 transition-colors',
+                draft.pointsSource === 'studentRollup'
+                  ? 'border-primary/40 bg-primary/5'
+                  : 'border-border bg-muted/10 opacity-50',
+              )}>
+                <p className="font-bold text-foreground flex items-center gap-1">
+                  <Link2 className="h-3.5 w-3.5 text-ring shrink-0" aria-hidden />
+                  Linked (recommended)
+                </p>
+                <p className="text-muted-foreground">Student earns <span className="font-semibold text-foreground">+10 pts</span></p>
+                <p className="text-muted-foreground">→ Their house auto-gains <span className="font-semibold text-foreground">+10 pts</span></p>
+              </div>
+              <div className={cn(
+                'rounded-xl border p-3 space-y-2 transition-colors',
+                draft.pointsSource === 'manual'
+                  ? 'border-primary/40 bg-primary/5'
+                  : 'border-border bg-muted/10 opacity-50',
+              )}>
+                <p className="font-bold text-foreground flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" aria-hidden />
+                  Manual
+                </p>
+                <p className="text-muted-foreground">Student earns <span className="font-semibold text-foreground">+10 pts</span></p>
+                <p className="text-muted-foreground">→ House stays <span className="font-semibold text-foreground">unchanged</span> until admin updates it</p>
+              </div>
             </div>
           </div>
         )}
