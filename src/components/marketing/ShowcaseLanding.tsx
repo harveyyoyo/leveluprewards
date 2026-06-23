@@ -10,6 +10,7 @@ import {
   BarChart3,
   Gift,
   HandHeart,
+  Printer,
   ScanLine,
   School,
   Users,
