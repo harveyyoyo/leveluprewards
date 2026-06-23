@@ -1550,6 +1550,14 @@ function ClassroomPointsPanelInner({
     [clearAutoTimer, filterClassId, onClassIdChange],
   );
 
+  const toggleEditMode = useCallback(() => {
+    setEditMode((v) => !v);
+    setBurstMode(false);
+    setBurstSelected([]);
+    setPendingAward(null);
+    clearAutoTimer();
+  }, [clearAutoTimer]);
+
   if (classes.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">Add a class and students to use the classroom view.</p>
@@ -1620,13 +1628,6 @@ function ClassroomPointsPanelInner({
         : 8;
   const frontAtBottom = prefs.frontAtBottom;
 
-  const toggleEditMode = useCallback(() => {
-    setEditMode((v) => !v);
-    setBurstMode(false);
-    setBurstSelected([]);
-    setPendingAward(null);
-    clearAutoTimer();
-  }, [clearAutoTimer]);
 
   const monitorAwardActions =
     !editMode &&

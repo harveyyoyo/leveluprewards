@@ -133,7 +133,7 @@ export function HouseSortingCeremony() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [step, index, queue.length]);
+  }, [step, index, queue.length, playSound, settings.houseSortingCelebrationEffect]);
 
   const staffOk =
     loginState === 'admin' ||
