@@ -277,7 +277,10 @@ export function AdminCurrencyDesignTab({
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
   const handleSave = async () => {
-    if (!firestore || !schoolDocRef) return;
+    if (!firestore || !schoolDocRef) {
+      toast({ title: 'Failed to save settings', description: 'School data is still loading, try again in a moment.', variant: 'destructive' });
+      return;
+    }
     setIsSaving(true);
     try {
       await updateDoc(schoolDocRef, {
