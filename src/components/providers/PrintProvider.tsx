@@ -17,6 +17,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAuth } from './AuthProvider';
 import { useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
     DEFAULT_COUPON_CORNER_STYLE,
     type CouponCornerStyle,
@@ -171,6 +172,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const playSound = useArcadeSound();
     const { schoolId } = useAuth();
     const schoolDocRef = useSchoolMetadataDocRef();
+    const couponCurrency = useCurrency();
     const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolDocRef);
     const printSchoolName = (schoolData?.name ?? '').trim() || (schoolId ? schoolId : null);
     const printSchoolLogoUrl = (schoolData?.logoUrl ?? '').trim() || null;
@@ -481,6 +483,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     couponsPerPage={couponPrintJob.couponsPerPage}
                     schoolId={couponPrintJob.schoolId}
                     cornerStyle={couponPrintJob.cornerStyle}
+                    currency={couponCurrency}
                     onReady={triggerCouponPrint}
                 />
             )}

@@ -105,7 +105,8 @@ export function CouponPrintPanel({
   teacherBudget,
   onAddCategory,
 }: CouponPrintPanelProps) {
-  const { icon, label } = useCurrency();
+  const currency = useCurrency();
+  const { icon, label } = currency;
   const { addCoupons, setCouponsToPrint, addCategory } = useAppContext();
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
@@ -977,7 +978,7 @@ export function CouponPrintPanel({
                     isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80',
                   )}
                 >
-                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} />
+                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={currency} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
                   Each cell on the printed sheet matches this layout.

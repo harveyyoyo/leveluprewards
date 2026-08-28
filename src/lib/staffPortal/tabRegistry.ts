@@ -167,7 +167,7 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   },
   {
     value: 'coupons',
-    label: 'Points',
+    label: 'Coupons',
     icon: Ticket,
     kind: 'core',
     roles: ['teacher', 'secretary'],

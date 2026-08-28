@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Coupon } from '@/lib/types';
-import { Coupon as CouponComponent } from '@/components/coupons/Coupon';
+import { Coupon as CouponComponent, type PreviewCurrency } from '@/components/coupons/Coupon';
 import {
   chunkCouponsForPrint,
   DEFAULT_COUPON_CORNER_STYLE,
@@ -20,6 +20,10 @@ interface PrintSheetProps {
   schoolId: string | null;
   couponsPerPage?: CouponPrintPageSize;
   cornerStyle?: CouponCornerStyle;
+  /** Currency settings resolved by the persistent parent — avoids a fresh `useCurrency()`
+   *  fetch inside this conditionally-mounted-right-before-print component (see
+   *  "Blank/Missing Data on Second Print" in docs/frontend-gotchas.md). */
+  currency?: PreviewCurrency;
   onReady?: () => void;
 }
 
@@ -28,6 +32,7 @@ export function PrintSheet({
   schoolId,
   couponsPerPage = 10,
   cornerStyle = DEFAULT_COUPON_CORNER_STYLE,
+  currency,
   onReady,
 }: PrintSheetProps) {
   useEffect(() => {
@@ -57,7 +62,7 @@ export function PrintSheet({
                 cornerStyle === 'rounded' && 'print-coupon-wrapper--rounded',
               )}
             >
-              <CouponComponent coupon={c} schoolId={schoolId} cornerStyle={cornerStyle} />
+              <CouponComponent coupon={c} schoolId={schoolId} cornerStyle={cornerStyle} previewCurrency={currency} />
             </div>
           ))}
         </div>
