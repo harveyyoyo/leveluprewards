@@ -139,8 +139,8 @@ export function Coupon({
 
   const style: React.CSSProperties = {
     backgroundColor: currency?.couponBgColor || '#ffffff',
-    color: currency?.couponTextColor || (isColored ? coupon.color : '#000000'),
-    borderColor: currency?.couponBorderColor || (isColored ? coupon.color : undefined),
+    color: isColored ? coupon.color : (currency?.couponTextColor || '#000000'),
+    borderColor: isColored ? coupon.color : (currency?.couponBorderColor || undefined),
     borderStyle: currency?.couponBorderStyle || 'dotted',
   };
 
