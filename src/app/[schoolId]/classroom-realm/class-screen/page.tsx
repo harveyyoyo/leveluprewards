@@ -15,7 +15,7 @@ import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import { classroomRealmHref } from '@/lib/classroomRealmUrl';
+import { classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import type { Class, Student, Teacher } from '@/lib/types';
 
 export default function ClassroomRealmClassScreenPage() {
@@ -118,7 +118,7 @@ export default function ClassroomRealmClassScreenPage() {
             asChild
             className="border-white/20 text-white hover:bg-white/10"
           >
-            <Link href={classroomRealmHref(schoolId, 'manage') + '?section=room-display'}>
+            <Link href={classroomRealmManageHref(schoolId, 'room-display')}>
               Full room display settings
             </Link>
           </Button>

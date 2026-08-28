@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { LayoutGrid, Monitor, Settings2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClassroomRealmHero, ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
-import { classroomRealmHref } from '@/lib/classroomRealmUrl';
+import { classroomRealmHref, classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { isClassroomPillarOn } from '@/lib/productPillars';
@@ -139,7 +139,11 @@ export default function ClassroomRealmHomePage() {
               transition={spring}
             >
               <Link
-                href={classroomRealmHref(schoolId, card.segment)}
+                href={
+                  card.segment === 'manage'
+                    ? classroomRealmManageHref(schoolId, 'seating')
+                    : classroomRealmHref(schoolId, card.segment)
+                }
                 className="group flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-md transition-transform hover:-translate-y-1 hover:border-white/20 hover:bg-white/8"
               >
                 <div

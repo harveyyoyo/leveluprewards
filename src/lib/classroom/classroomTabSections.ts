@@ -15,6 +15,16 @@ export const CLASS_AWARDS_STUDENT_LAUNCH_LABEL = 'Launch for class screen';
 /** User-facing label for settings + launch hub (live chart opens on monitor display). */
 export const CLASSROOM_SEATING_SECTION_LABEL = 'Class Awards Live';
 
+/** Fullscreen projector / smart-board view (distinct from the Class Awards Live settings tab). */
+export const CLASSROOM_LIVE_MONITOR_NAV_LABEL = 'Live monitor';
+
+export const CLASSROOM_SECTION_LABELS: Record<ClassroomTabSection, string> = {
+  seating: CLASSROOM_SEATING_SECTION_LABEL,
+  behavior: 'Behavior',
+  'room-display': 'Room display',
+  raffle: 'Raffle',
+};
+
 export function isClassroomRaffleSectionVisible(
   settings: Settings,
   role: 'admin' | 'teacher',

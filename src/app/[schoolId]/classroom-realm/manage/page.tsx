@@ -12,17 +12,14 @@ import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { parseClassroomRealmManageSection } from '@/lib/classroomRealmUrl';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
-
-const VALID_SECTIONS = new Set<ClassroomTabSection>(['seating', 'behavior', 'room-display', 'raffle']);
 
 export default function ClassroomRealmManagePage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const schoolId = String(params.schoolId || '');
-  const sectionParam = (searchParams?.get('section') || '').trim() as ClassroomTabSection;
-  const initialSection = VALID_SECTIONS.has(sectionParam) ? sectionParam : undefined;
+  const initialSection = parseClassroomRealmManageSection(searchParams?.get('section')) ?? 'seating';
 
   const firestore = useFirestore();
   const { settings } = useSettings();
