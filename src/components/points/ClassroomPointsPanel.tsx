@@ -129,6 +129,7 @@ import {
 } from '@/lib/classroom/classroomDeskDisplay';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
+import { useCurrency } from '@/hooks/useCurrency';
 
 type BudgetOptions = {
   isAdmin: boolean;
@@ -204,6 +205,7 @@ function ClassroomPointsPanelInner({
   onSectionHintChange,
   onClassIdChange,
 }: ClassroomPointsPanelProps) {
+  const { icon, label } = useCurrency();
   const deferredStudents = useDeferredValue(students);
   const isFullscreen = variant === 'fullscreen';
   const isStudentAudience = isFullscreen && audience === 'student';
@@ -836,8 +838,8 @@ function ClassroomPointsPanelInner({
           playClassroomSound('error');
           toast({
             variant: 'destructive',
-            title: 'Budget exceeded',
-            description: `You need ${totalCost} pts but only have ${remainingPts.toLocaleString()} remaining ${phrase}.`,
+            title: 'Insufficient Budget',
+            description: `You need ${totalCost} ${label.toLowerCase()} but only have ${remainingPts.toLocaleString()} remaining ${phrase}.`,
           });
           return false;
         }
@@ -963,24 +965,24 @@ function ClassroomPointsPanelInner({
         toast({
           title: isDeduct
             ? oneStudent
-              ? `${getStudentNickname(oneStudent)}: −${magnitude}`
+              ? `${getStudentNickname(oneStudent)}: −${magnitude} ${icon}`
               : sessionOnlyBalance
-                ? `−${magnitude} classroom pt${magnitude === 1 ? '' : 's'}`
+                ? `−${magnitude} ${label}${magnitude === 1 ? '' : 's'}`
                 : `−${magnitude} from ${count} student(s)`
             : oneStudent
               ? `${getStudentNickname(oneStudent)}: ${awardLabel}`
-              : `${awardLabel} (+${magnitude})`,
+              : `${awardLabel} (+${magnitude} ${icon})`,
           description: isDeduct
             ? sessionOnlyBalance
               ? localAwardToast
               : count > 1
-                ? `${count} students · −${magnitude} pts each`
-                : `−${magnitude} pts`
+                ? `${count} students · -${magnitude} ${icon} each`
+                : `-${magnitude} ${icon}`
             : sessionOnlyBalance
               ? localAwardToast
               : count > 1
-                ? `${count} students · +${magnitude} pts each`
-                : `+${magnitude} pts`,
+                ? `${count} students · +${magnitude} ${icon} each`
+                : `+${magnitude} ${icon}`,
         });
       };
 
@@ -1080,6 +1082,8 @@ function ClassroomPointsPanelInner({
       recordSessionAwards,
       studentById,
       deferredStudents,
+      label,
+      icon,
     ],
   );
 
@@ -2054,7 +2058,7 @@ function ClassroomPointsPanelInner({
           Last award:{' '}
           <span className="font-semibold text-foreground">
             {lastAwardSummary.label}
-            {lastAwardSummary.points > 0 ? ` (+${lastAwardSummary.points})` : ''}
+            {lastAwardSummary.points > 0 ? ` (+${lastAwardSummary.points} ${icon})` : ''}
           </span>
           {lastAwardSummary.studentLabel ? (
             <>
@@ -2101,8 +2105,8 @@ function ClassroomPointsPanelInner({
           <>Tap once = instant +{prefs.defaultPoints}.</>
           <span className="text-muted-foreground/70">
             · Shift+click behavior note
-            {classroomNoteDeduct.enabled
-              ? ` · Some behavior notes can deduct −${classroomNoteDeduct.points} pts`
+            {classroomNoteDeduct?.points
+              ? ` · Some behavior notes can deduct -${classroomNoteDeduct.points} ${icon}`
               : ''}
             {prefs.showRandomPicker ? ' · R random' : ''}
             {prefs.showBurstAward ? ' · Burst on toolbar' : ''} · Ctrl+U undo · Arrange to flip room

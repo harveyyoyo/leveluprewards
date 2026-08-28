@@ -567,6 +567,33 @@ export interface BackupInfo {
   totalDocs?: number;
 }
 
+export interface CurrencySettings {
+  mode: 'points' | 'money';
+  pointsDesign?: string;
+  moneyDesign?: string;
+  
+  // Points coupon design
+  couponBgColor?: string;
+  couponTextColor?: string;
+  couponBorderColor?: string;
+  couponBorderStyle?: 'dotted' | 'dashed' | 'solid';
+  pointsTitle?: string;
+  pointsShowSchoolName?: boolean;
+  pointsShowBarcode?: boolean;
+  pointsShowDomain?: boolean;
+
+  // Money bill design
+  moneyBgColor?: string;
+  moneyAccentColor?: string;
+  moneyTextColor?: string;
+  moneyDenominationPrefix?: string;
+  moneyBillTitle?: string;
+  moneyBorderStyle?: 'ornate' | 'classic' | 'simple';
+  moneyShowSerial?: boolean;
+  moneyShowGuilloche?: boolean;
+  moneyShowSchoolName?: boolean;
+}
+
 export interface Database {
   name: string;
   passcode: string;
@@ -584,6 +611,7 @@ export interface Database {
   goals?: Goal[];
   updatedAt: number;
   hasMigratedStudents?: boolean;
+  currencySettings?: CurrencySettings;
   hasMigratedClasses?: boolean;
   hasMigratedTeachers?: boolean;
   hasMigratedPrizes?: boolean;

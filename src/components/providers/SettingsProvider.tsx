@@ -194,6 +194,8 @@ interface Settings {
     idCardPaperId?: string;
     /** Student ID card corners: rounded (ID-1 look) or rectangular (easier to cut on plain paper). */
     idCardCornerStyle?: 'rounded' | 'rectangular';
+    /** Student ID card design layout. */
+    idCardLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
     /** When on, student/staff/prize shelf ID cards show a QR code instead of a Code 128 barcode. */
     idCardUseQrCode?: boolean;
     /** When on, printed coupons show a QR code on the left instead of a bottom barcode strip. */
@@ -718,6 +720,7 @@ const defaultSettings: Settings = {
     idCardPrinterFamily: 'browser_sheet',
     idCardPaperId: defaultPaperForFamily('browser_sheet'),
     idCardCornerStyle: 'rounded',
+    idCardLayout: 'classic',
     idCardUseQrCode: false,
     couponUseQrCode: false,
     printerReminderPrizeVouchers: '',

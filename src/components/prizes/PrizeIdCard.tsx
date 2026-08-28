@@ -33,6 +33,7 @@ export function PrizeIdCard({
 }) {
   const { settings } = useSettings();
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
+  const resolvedLayout = settings.idCardLayout ?? 'classic';
   const useQr = settings.idCardUseQrCode === true;
   const scanCode = prizeScanCodeFor(prize);
   const prizeAbbrev = (prize.name ?? 'PR').trim().slice(0, 2).toUpperCase() || 'PR';
@@ -85,6 +86,10 @@ export function PrizeIdCard({
         'print-id-card print-prize-id-card',
         isColorEnabled && 'is-colored',
         resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
+        resolvedLayout === 'credit_card' && 'print-id-card--credit-card',
+        resolvedLayout === 'modern' && 'print-id-card--modern',
+        resolvedLayout === 'minimalist' && 'print-id-card--minimalist',
+        resolvedLayout === 'high_vis' && 'print-id-card--high-vis',
         useQr && 'print-id-card--qr-scan',
         className,
       )}
@@ -100,6 +105,37 @@ export function PrizeIdCard({
           ) : null}
           <PrizeIdCardAppText appName={appName} appTagline={appTagline} textColor={mainTextColor} mutedText={mainMutedText} />
         </div>
+
+        {resolvedLayout === 'credit_card' && (
+           <>
+             <div className="credit-card-chip" aria-hidden>
+               <svg viewBox="0 0 32 24" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="32" height="24" rx="3" fill="url(#chip-grad)" stroke="rgba(120,80,0,0.3)" strokeWidth="0.5" />
+                  <path d="M10 0v24M22 0v24M0 8h10M22 8h10M0 16h10M22 16h10M10 12h12" stroke="rgba(120,80,0,0.5)" strokeWidth="0.75" />
+                  <defs>
+                    <linearGradient id="chip-grad" x1="0" y1="0" x2="32" y2="24" gradientUnits="userSpaceOnUse">
+                      <stop stopColor="#d4a843" />
+                      <stop offset="0.3" stopColor="#f0d060" />
+                      <stop offset="0.5" stopColor="#c89830" />
+                      <stop offset="0.7" stopColor="#e8c84c" />
+                      <stop offset="1" stopColor="#b88828" />
+                    </linearGradient>
+                  </defs>
+               </svg>
+             </div>
+             <div className="credit-card-contactless" aria-hidden>
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c2-2.5 5.5-2.5 7.5 0" /><path d="M7 11.5c3.5-4 9.5-4 13 0" /><path d="M9.5 6.5c5.5-6 14.5-6 20 0" /></svg>
+             </div>
+             <div className="credit-card-number" style={headerStyle}>
+               {`4000 ${scanCode.replace(/\D/g, '').padStart(12, '0').match(/.{1,4}/g)?.join(' ')}`}
+             </div>
+             <div className="credit-card-valid-thru" style={headerStyle}>
+               <span className="valid-thru-label">VALID<br/>THRU</span>
+               <span className="valid-thru-date">12/99</span>
+             </div>
+           </>
+        )}
+
         <div className="print-id-school" style={headerStyle}>
           <span className="print-id-header">{schoolName}</span>
           {schoolLogoUrl ? (

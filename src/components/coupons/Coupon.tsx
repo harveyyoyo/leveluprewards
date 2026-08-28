@@ -10,6 +10,33 @@ import { APP_NAME } from '@/lib/appBranding';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 import { useSchoolDisplayName } from '@/hooks/useSchoolDisplayName';
+import { useCurrency } from '@/hooks/useCurrency';
+import { MoneyBill, type MoneyBillDesign, MONEY_BILL_DEFAULTS } from '@/components/coupons/MoneyBill';
+
+export type PreviewCurrency = {
+  mode: 'points' | 'money';
+  icon: string;
+  label: string;
+  // Points coupon design
+  couponBgColor?: string;
+  couponTextColor?: string;
+  couponBorderColor?: string;
+  couponBorderStyle?: 'dotted' | 'dashed' | 'solid';
+  pointsTitle?: string;
+  pointsShowSchoolName?: boolean;
+  pointsShowBarcode?: boolean;
+  pointsShowDomain?: boolean;
+  // Money bill design overrides
+  moneyBgColor?: string;
+  moneyAccentColor?: string;
+  moneyTextColor?: string;
+  moneyDenominationPrefix?: string;
+  moneyBillTitle?: string;
+  moneyBorderStyle?: 'ornate' | 'classic' | 'simple';
+  moneyShowSerial?: boolean;
+  moneyShowGuilloche?: boolean;
+  moneyShowSchoolName?: boolean;
+};
 
 function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,38 +87,76 @@ export function Coupon({
   schoolId,
   isNew = false,
   cornerStyle,
+  previewCurrency,
 }: {
   coupon: Coupon;
   schoolId?: string | null;
   isNew?: boolean;
   cornerStyle?: CouponCornerStyle;
+  previewCurrency?: PreviewCurrency;
 }) {
   const { settings } = useSettings();
   const schoolDisplayName = useSchoolDisplayName(schoolId);
-  const title = schoolDisplayName ? `${APP_NAME} - ${schoolDisplayName}` : APP_NAME;
-  const useQr = settings.couponUseQrCode === true;
-
+  const realCurrency = useCurrency();
+  const currency = previewCurrency || realCurrency;
+  
   const isColored = settings.enableColorPrinting && coupon.color;
+
+  // ─── Money mode: render the dollar-bill style component ───
+  if (currency.mode === 'money') {
+    const moneyDesign: MoneyBillDesign = {
+      bgColor: currency.moneyBgColor ?? MONEY_BILL_DEFAULTS.bgColor,
+      accentColor: isColored ? coupon.color! : (currency.moneyAccentColor ?? MONEY_BILL_DEFAULTS.accentColor),
+      textColor: currency.moneyTextColor ?? MONEY_BILL_DEFAULTS.textColor,
+      denominationPrefix: currency.moneyDenominationPrefix ?? MONEY_BILL_DEFAULTS.denominationPrefix,
+      billTitle: currency.moneyBillTitle ?? MONEY_BILL_DEFAULTS.billTitle,
+      borderStyle: currency.moneyBorderStyle ?? MONEY_BILL_DEFAULTS.borderStyle,
+      showSerial: currency.moneyShowSerial ?? MONEY_BILL_DEFAULTS.showSerial,
+      showGuilloche: currency.moneyShowGuilloche ?? MONEY_BILL_DEFAULTS.showGuilloche,
+      showSchoolName: currency.moneyShowSchoolName ?? MONEY_BILL_DEFAULTS.showSchoolName,
+    };
+    return (
+      <MoneyBill
+        coupon={coupon}
+        schoolName={schoolDisplayName || undefined}
+        design={moneyDesign}
+      />
+    );
+  }
+
+  // ─── Points mode: classic coupon layout ───
+  const appNameText = currency.pointsTitle || APP_NAME;
+  const title = (schoolDisplayName && currency.pointsShowSchoolName !== false) 
+    ? `${appNameText} - ${schoolDisplayName}` 
+    : appNameText;
+    
+  const useQr = settings.couponUseQrCode === true;
+  const showBarcode = currency.pointsShowBarcode !== false;
+  const showDomain = currency.pointsShowDomain !== false;
+
   const redemptionLabel = couponRedemptionLabelForPrint(coupon);
   const hasLimitLine = Boolean(redemptionLabel);
 
-  const style = isColored ? {
-    borderColor: coupon.color,
-    color: coupon.color,
-  } : {};
+  const style: React.CSSProperties = {
+    backgroundColor: currency?.couponBgColor || '#ffffff',
+    color: currency?.couponTextColor || (isColored ? coupon.color : '#000000'),
+    borderColor: currency?.couponBorderColor || (isColored ? coupon.color : undefined),
+    borderStyle: currency?.couponBorderStyle || 'dotted',
+  };
 
   return (
     <div
       style={style}
       className={cn(
-        'coupon-scalable py-[0.22em] px-[0.45em] border border-dotted bg-white shadow-sm inline-flex flex-col items-center justify-between text-center h-[5em] w-[9.5em] relative overflow-hidden',
+        'coupon-scalable py-[0.22em] px-[0.45em] border shadow-sm inline-flex flex-col items-center justify-between text-center h-[5em] w-[9.5em] relative overflow-hidden',
         cornerStyle === 'rectangular'
           ? 'rounded-none print-coupon--rectangular'
           : cornerStyle === 'rounded'
             ? 'rounded-[0.75em] print-coupon--rounded'
             : 'rounded-[0.75em]',
         useQr && 'print-coupon--qr-scan',
-        !isColored && 'border-slate-400 text-slate-800',
+        !isColored && !style.borderColor && 'border-slate-400 text-slate-800',
+        (!style.backgroundColor || style.backgroundColor === '#ffffff') && 'bg-white'
       )}
     >
       {isNew && (
@@ -105,11 +170,11 @@ export function Coupon({
           'coupon-main w-full flex items-center shrink-0 border-y',
           useQr ? 'gap-[0.35em] py-[0.06em] px-[0.02em]' : 'justify-center gap-[0.45em] py-[0.125em]',
           hasLimitLine && !useQr && 'py-[0.08em]',
-          !isColored && 'border-slate-200',
+          !isColored && !style.borderColor && 'border-slate-200',
         )}
-        style={isColored ? { borderColor: 'color-mix(in srgb, currentColor 30%, transparent)' } : undefined}
+        style={(style.borderColor || isColored) ? { borderColor: 'color-mix(in srgb, currentColor 30%, transparent)' } : undefined}
       >
-        {useQr ? (
+        {useQr && showBarcode ? (
           <div className="coupon-qr-slot shrink-0" aria-label={`Coupon scan code ${coupon.code}`}>
             <PrintIdCardScanCode
               value={coupon.code}
@@ -121,18 +186,23 @@ export function Coupon({
             />
           </div>
         ) : null}
-        <div className={cn('flex items-center', useQr ? 'min-w-0 flex-1 justify-start gap-[0.35em]' : 'justify-center gap-[0.45em]')}>
+        <div className={cn('flex items-center', (useQr && showBarcode) ? 'min-w-0 flex-1 justify-start gap-[0.35em]' : 'justify-center gap-[0.45em] w-full min-w-0')}>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <span className="text-[1.125em] font-black text-black leading-none">{Number(coupon.value ?? 0)}</span>
+            <div className="flex items-center gap-[0.1em]">
+              <span className="text-[1.125em] font-black leading-none" style={style.color ? { color: style.color } : { color: '#000' }}>
+                {Number(coupon.value ?? 0)}
+              </span>
+              <span className="text-[0.75em]">{currency.icon}</span>
+            </div>
             <span className="text-[0.4375em] font-bold uppercase tracking-[0.2em] mt-[0.125em]">
-              Points
+              {currency.label}
             </span>
           </div>
           <div className="text-left leading-snug min-w-0">
-            <div className="font-bold italic text-[0.6em] leading-tight">
+            <div className="font-bold italic text-[0.6em] leading-tight break-words">
               {coupon.category}
             </div>
-            <div className={cn(isColored ? 'opacity-80' : 'text-slate-600', 'leading-tight text-[0.45em]')}>
+            <div className={cn((isColored || style.color !== '#000000') ? 'opacity-80' : 'text-slate-600', 'leading-tight text-[0.45em] break-words')}>
               Issued by: {coupon.teacher}
             </div>
           </div>
@@ -141,13 +211,14 @@ export function Coupon({
       <div className="coupon-barcode-zone flex flex-col items-center w-full mt-[0.06em] shrink-0 gap-[0.04em]">
         {redemptionLabel && (
           <div
-            className="coupon-redemption-label text-[0.24em] leading-tight text-black font-bold text-center w-full max-w-full px-[0.1em] overflow-hidden text-ellipsis whitespace-nowrap"
+            className="coupon-redemption-label text-[0.24em] leading-tight font-bold text-center w-full max-w-full px-[0.1em] overflow-hidden text-ellipsis whitespace-nowrap"
+            style={style.color ? { color: style.color } : { color: '#000' }}
             title={redemptionLabel}
           >
             {redemptionLabel}
           </div>
         )}
-        {!useQr ? (
+        {!useQr && showBarcode ? (
           <PrintIdCardScanCode value={coupon.code} variant="coupon" className="coupon-barcode w-full max-w-full" />
         ) : null}
         {(coupon.startsAt || coupon.expiresAt) && (
@@ -161,7 +232,9 @@ export function Coupon({
           </div>
         )}
       </div>
-      <PrintLevelUpDomain className="text-[0.26em] font-semibold uppercase tracking-[0.12em] opacity-60 leading-none mt-[0.04em]" />
+      {showDomain && (
+        <PrintLevelUpDomain className="text-[0.26em] font-semibold uppercase tracking-[0.12em] opacity-60 leading-none mt-[0.04em]" />
+      )}
     </div>
   );
 }

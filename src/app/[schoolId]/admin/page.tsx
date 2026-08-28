@@ -2063,6 +2063,9 @@ function AdminDashboardInner() {
               students={students}
               schoolId={schoolId!}
               showCouponManagement={settings.payRewards ?? true}
+              firestore={firestore}
+              schoolDocRef={schoolDocRef}
+              schoolData={schoolData as any}
               availableCoupons={availableCoupons}
               redeemedCoupons={redeemedCoupons}
               getStudentName={getStudentName}

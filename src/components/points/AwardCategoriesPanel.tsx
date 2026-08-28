@@ -5,12 +5,14 @@ import { Edit, Plus, Tag, Trash2 } from 'lucide-react';
 import { CategoryIconBadge } from '@/components/categories/CategoryIconBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useCurrency } from '@/hooks/useCurrency';
 import type { Category, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -33,10 +35,10 @@ export type AwardCategoriesPanelProps = {
 function categoryListGridColumns(showCreatedBy: boolean, showHouseToggle: boolean): string {
   if (!showCreatedBy) {
     return showHouseToggle
-      ? 'minmax(160px,1fr) 76px 3.25rem 3.25rem'
-      : 'minmax(160px,1fr) 76px 3.25rem';
+      ? 'minmax(160px,1fr) 88px 3.25rem 3.25rem'
+      : 'minmax(160px,1fr) 88px 3.25rem';
   }
-  const base = '76px minmax(160px,1fr) 76px';
+  const base = '76px minmax(160px,1fr) 88px';
   const toggles = showHouseToggle ? ' 3.25rem 3.25rem' : ' 3.25rem';
   return `${base}${toggles} minmax(120px,180px) 44px`;
 }
@@ -56,6 +58,7 @@ export function AwardCategoriesPanel({
   showWalkthrough = true,
 }: AwardCategoriesPanelProps) {
   const { settings } = useSettings();
+  const { icon, label } = useCurrency();
   const [busyId, setBusyId] = useState<string | null>(null);
   const isAdmin = mode === 'admin';
   const rowCanEdit = (c: Category) =>
@@ -92,8 +95,8 @@ export function AwardCategoriesPanel({
           <Helper
             content={
               isAdmin
-                ? 'Set incentive categories and default point values used when printing coupons or awarding points manually.'
-                : 'School and personal categories available for printing coupons and manual awards.'
+                ? `Set incentive categories and default ${label.toLowerCase()} values used when printing coupons or awarding ${label.toLowerCase()} manually.`
+                : `Create teacher-specific categories and default ${label.toLowerCase()} values for your classes.`
             }
           >
             <CardTitle className="flex items-center gap-2 text-xl font-black leading-tight sm:text-2xl">
@@ -121,7 +124,7 @@ export function AwardCategoriesPanel({
                   ? [
                       { label: 'Edit' },
                       { label: 'Category Name' },
-                      { label: 'Point Value', className: 'text-center' },
+                      { label: label, className: 'text-center' },
                       ...(showHouseToggle ? [{ label: 'House', className: 'text-center' as const }] : []),
                       { label: 'Golden', className: 'text-center' },
                       { label: 'Created By' },
@@ -129,7 +132,7 @@ export function AwardCategoriesPanel({
                     ]
                   : [
                       { label: 'Category Name' },
-                      { label: 'Point Value', className: 'text-center' },
+                      { label: label, className: 'text-center' },
                       ...(showHouseToggle ? [{ label: 'House', className: 'text-center' as const }] : []),
                       { label: 'Golden', className: 'text-center' },
                     ]
@@ -162,7 +165,9 @@ export function AwardCategoriesPanel({
                 <span className="truncate text-sm font-bold">{c.name}</span>
               </div>
               <div className="order-2 whitespace-nowrap text-right text-sm font-bold text-primary md:order-none md:text-center">
-                {c.points} pts
+                <Badge variant="secondary" className="px-2 font-bold tabular-nums">
+                  {c.points} {icon}
+                </Badge>
               </div>
               {showHouseToggle ? (
                 <div className="order-4 flex items-center justify-center md:order-none">
@@ -172,7 +177,7 @@ export function AwardCategoriesPanel({
                     onCheckedChange={(checked) =>
                       void patchCategory(c, { countsForHousePoints: checked })
                     }
-                    aria-label={`${c.name} counts toward house points`}
+                    aria-label={`${c.name} counts toward house ${label.toLowerCase()}`}
                   />
                 </div>
               ) : null}

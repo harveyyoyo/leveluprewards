@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Printer } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
+import { useCurrency } from '@/hooks/useCurrency';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,6 +80,7 @@ export type CouponPrintPanelProps = {
   isGraphic?: boolean;
   printAccentColor?: string;
   teacherBudget?: CouponPrintTeacherBudgetOptions;
+  onAddCategory?: () => void;
 };
 
 function localTodayYmd(): string {
@@ -101,9 +103,11 @@ export function CouponPrintPanel({
   isGraphic = false,
   printAccentColor,
   teacherBudget,
+  onAddCategory,
 }: CouponPrintPanelProps) {
+  const { icon, label } = useCurrency();
   const { addCoupons, setCouponsToPrint, addCategory } = useAppContext();
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const playSound = useArcadeSound();
 
@@ -180,7 +184,7 @@ export function CouponPrintPanel({
       toast({
         variant: 'destructive',
         title: 'Missing Information',
-        description: 'Please provide a name and point value for the category.',
+        description: `Please provide a name and ${label.toLowerCase()} value for the category.`,
       });
       return;
     }
@@ -189,8 +193,8 @@ export function CouponPrintPanel({
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Invalid Points',
-        description: 'Points must be a positive number.',
+        title: `Invalid ${label}`,
+        description: `${label} must be a positive number.`,
       });
       return;
     }
@@ -225,7 +229,7 @@ export function CouponPrintPanel({
       toast({
         variant: 'destructive',
         title: 'Invalid Value',
-        description: 'Coupon value must be a positive number.',
+        description: `Coupon ${label.toLowerCase()} must be a positive number.`,
       });
       return;
     }
@@ -264,8 +268,8 @@ export function CouponPrintPanel({
         playSound('error');
         toast({
           variant: 'destructive',
-          title: 'Budget Exceeded',
-          description: `Generating these coupons requires ${totalCost} pts, but you only have ${remaining.toLocaleString()} pts remaining ${phrase}.`,
+          title: 'Insufficient Budget',
+          description: `Generating these coupons requires ${totalCost} ${label.toLowerCase()}, but you only have ${remaining.toLocaleString()} ${label.toLowerCase()} remaining ${phrase}.`,
         });
         return;
       }
@@ -502,7 +506,7 @@ export function CouponPrintPanel({
     settings.enableTeacherBudgets &&
     budgetTeacher?.monthlyBudget !== undefined &&
     printValueNum > 0
-      ? ` | ${(totalCoupons * printValueNum).toLocaleString()} pts from budget`
+      ? ` | ${(totalCoupons * printValueNum).toLocaleString()} ${label.toLowerCase()} from budget`
       : null;
 
   const fieldClass = cn(
@@ -557,9 +561,9 @@ export function CouponPrintPanel({
       <CardContent className="p-4 md:p-6">
         {categoryList.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-muted-foreground/35 bg-muted/10 px-6 py-12 text-center">
-            <p className="text-sm font-bold text-foreground">No point categories yet</p>
+            <p className="text-sm font-bold text-foreground">No {label.toLowerCase()} categories yet</p>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-              Add at least one category under Admin → Point categories before printing coupons here.
+              Add at least one category under Admin → Categories before printing coupons here.
             </p>
           </div>
         ) : (
@@ -584,64 +588,76 @@ export function CouponPrintPanel({
                     </Select>
                     </div>
                     {!hideQuickAddCategory && (
-                    <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
-                      <DialogTrigger asChild>
+                      onAddCategory ? (
                         <Button
                           variant="outline"
                           size="icon"
                           className={cn('h-12 w-12 rounded-xl shrink-0', fieldClass)}
                           type="button"
+                          onClick={onAddCategory}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-white">
-                        <DialogHeader>
-                          <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
-                          <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
-                        </DialogHeader>
-                        <div className="grid gap-6 py-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="coupon-print-cat-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                              Name
-                            </Label>
-                            <Input
-                              id="coupon-print-cat-name"
-                              value={newPrintCategoryName}
-                              onChange={(e) => setNewPrintCategoryName(e.target.value)}
-                              className="h-12 rounded-xl bg-slate-50"
-                              placeholder="e.g. Extra Recess"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="coupon-print-cat-pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
-                              Default Points
-                            </Label>
-                            <Input
-                              id="coupon-print-cat-pts"
-                              type="number"
-                              value={newPrintCategoryPoints}
-                              onChange={(e) => setNewPrintCategoryPoints(e.target.value)}
-                              className="h-12 rounded-xl font-bold bg-slate-50"
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter>
-                          <Button
-                            type="button"
-                            onClick={() => void handleCreatePrintCategory()}
-                            className="rounded-2xl h-12 w-full font-black uppercase tracking-widest"
-                          >
-                            Create Category
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
+                      ) : (
+                        <Dialog open={isPrintCategoryDialogOpen} onOpenChange={setIsPrintCategoryDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className={cn('h-12 w-12 rounded-xl shrink-0', fieldClass)}
+                              type="button"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="bg-white">
+                            <DialogHeader>
+                              <DialogTitle className="text-2xl font-black">Add Category</DialogTitle>
+                              <DialogDescription>Create a new quick-selection category for rewards.</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-6 py-6">
+                              <div className="space-y-2">
+                                <Label htmlFor="coupon-print-cat-name" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
+                                  Name
+                                </Label>
+                                <Input
+                                  id="coupon-print-cat-name"
+                                  value={newPrintCategoryName}
+                                  onChange={(e) => setNewPrintCategoryName(e.target.value)}
+                                  className="h-12 rounded-xl bg-slate-50"
+                                  placeholder="e.g. Extra Recess"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="coupon-print-cat-pts" className="text-xs font-semibold text-muted-foreground uppercase tracking-wide ml-1">
+                                  Default {label}
+                                </Label>
+                                <Input
+                                  id="coupon-print-cat-pts"
+                                  type="number"
+                                  value={newPrintCategoryPoints}
+                                  onChange={(e) => setNewPrintCategoryPoints(e.target.value)}
+                                  className="h-12 rounded-xl font-bold bg-slate-50"
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                onClick={() => void handleCreatePrintCategory()}
+                                disabled={!newPrintCategoryName.trim()}
+                                className="w-full h-12 rounded-xl text-md font-bold shadow-md"
+                              >
+                                Create Category
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )
                     )}
                   </div>
                 </div>
                 <div className="space-y-2 md:col-span-1">
-                  <Label className={labelClass}>Point Value</Label>
+                  <Label className={labelClass}>{label} Value</Label>
                   <Input
                     type="number"
                     value={printValue}

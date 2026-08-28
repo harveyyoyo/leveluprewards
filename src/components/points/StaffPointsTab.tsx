@@ -69,10 +69,10 @@ export type StaffPointsTabProps = {
   /** Admin: coupon inventory management panel. */
 
   couponManagementContent?: React.ReactNode;
+  /** Admin: currency and design panel. */
+  currencyContent?: React.ReactNode;
 
 };
-
-
 
 export function StaffPointsTab({
 
@@ -120,6 +120,8 @@ export function StaffPointsTab({
 
   couponManagementContent,
 
+  currencyContent,
+
 }: StaffPointsTabProps) {
 
   const categoryList = filterCategoriesForStaffPortal(categories, {
@@ -136,25 +138,19 @@ export function StaffPointsTab({
 
   const fullCategoryAdmin = variant === 'admin' || schoolWideAccess;
 
-
-
   const sections = printOnly
-
     ? (['print'] as const)
-
     : couponManagementContent
-
-      ? (['categories', 'print', 'manual', 'manage'] as const)
-
-      : (['categories', 'print', 'manual'] as const);
-
-
+      ? (currencyContent 
+          ? (['categories', 'print', 'manual', 'manage', 'currency'] as const)
+          : (['categories', 'print', 'manual', 'manage'] as const))
+      : (currencyContent
+          ? (['categories', 'print', 'manual', 'currency'] as const)
+          : (['categories', 'print', 'manual'] as const));
 
   const redemptionUi =
 
     variant === 'admin' || schoolWideAccess || printOnly ? ('admin' as const) : ('teacher' as const);
-
-
 
   return (
 
@@ -295,10 +291,9 @@ export function StaffPointsTab({
       }
 
       manageContent={couponManagementContent}
-
+      currencyContent={currencyContent}
     />
 
   );
 
 }
-

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Class, Student } from '@/lib/types';
+import { useCurrency } from '@/hooks/useCurrency';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ export function ClassAccumulationsCard(props: {
   themeForeground?: string;
 }) {
   const { schoolId, classes, studentClassId, enabled, themed, themeForeground } = props;
+  const { icon } = useCurrency();
   const firestore = useFirestore();
 
   const studentsQuery = useMemoFirebase(() => {
@@ -137,7 +139,7 @@ export function ClassAccumulationsCard(props: {
                     ) : null}
                   </div>
                   <span className="font-black tabular-nums shrink-0" style={themed ? { color: themeForeground ?? 'var(--theme-primary)' } : undefined}>
-                    {row.points.toLocaleString()} pts
+                    {row.points.toLocaleString()} {icon}
                   </span>
                 </li>
               );

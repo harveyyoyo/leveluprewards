@@ -21,6 +21,8 @@ import {
   Monitor,
   QrCode,
   Printer,
+  CreditCard,
+  LayoutTemplate,
 } from 'lucide-react';
 import type { DocumentReference, Firestore } from 'firebase/firestore';
 import { updateDoc, setDoc } from 'firebase/firestore';
@@ -36,6 +38,7 @@ import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings, type Settings, type KioskProfile } from '@/components/providers/SettingsProvider';
 import { ThemeGeneratorModal } from '@/components/themes/ThemeGeneratorModal';
+import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
 import type { StudentTheme } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -522,6 +525,7 @@ export function AdminBrandingTab({
               />
             </div>
 
+            {/* Layout Previews using real component */}
             <div className="flex items-center justify-between rounded-2xl border bg-muted/15 p-5 shadow-sm">
               <div className="min-w-0 pr-4">
                 <div className="flex items-center gap-2">
@@ -536,6 +540,114 @@ export function AdminBrandingTab({
                 checked={settings.couponUseQrCode === true}
                 onCheckedChange={(checked) => updateSettings({ couponUseQrCode: checked })}
               />
+            </div>
+
+            <div className="rounded-3xl border bg-muted/5 p-6 md:p-8 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <LayoutTemplate className="w-4 h-4 text-ring shrink-0" aria-hidden />
+                <h4 className="text-sm font-bold text-foreground">Card Design Layout</h4>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">
+                Choose the visual arrangement for printed student, staff, and prize ID cards. The card dimensions stay ISO ID-1 (credit-card size) across all layouts.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                {([
+                  {
+                    id: 'classic' as const,
+                    label: 'Classic',
+                    desc: 'Standard horizontal layout with header, photo left, name right, barcode at bottom.',
+                  },
+                  {
+                    id: 'credit_card' as const,
+                    label: 'Credit Card',
+                    desc: 'Premium metallic look with EMV chip, embossed monospace name, photo inset at top-right.',
+                  },
+                  {
+                    id: 'modern' as const,
+                    label: 'Modern',
+                    desc: 'Clean split with accent sidebar for branding, centered photo and info in the main area.',
+                  },
+                  {
+                    id: 'minimalist' as const,
+                    label: 'Minimalist',
+                    desc: 'Clean, airy design with no borders and delicate typography.',
+                  },
+                  {
+                    id: 'high_vis' as const,
+                    label: 'High-Vis Badge',
+                    desc: 'Massive typography for max readability. Ideal for primary schools.',
+                  },
+                ] as const).map((layout) => {
+                  const isActive = (settings.idCardLayout || 'classic') === layout.id;
+                  
+                  // Dummy student for preview
+                  const dummyStudent = {
+                    id: 'preview',
+                    firstName: 'Jane',
+                    lastName: 'Doe',
+                    points: 0,
+                    nfcId: '00000000',
+                  };
+
+                  return (
+                    <button
+                      key={layout.id}
+                      type="button"
+                      onClick={() => {
+                        updateSettings({ idCardLayout: layout.id });
+                        playSound('click');
+                      }}
+                      className={cn(
+                        'group relative flex flex-col items-center gap-3 p-4 rounded-2xl border-2 transition-all duration-200 text-left',
+                        isActive
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md'
+                          : 'border-border bg-card hover:border-primary/30 hover:bg-muted/30 hover:shadow-sm',
+                      )}
+                    >
+                      {isActive && (
+                        <div className="absolute top-2 right-2 w-5 h-5 z-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                      
+                      <div className="w-full relative flex items-center justify-center bg-black/5 rounded-xl overflow-hidden aspect-[1.586/1]">
+                        <div 
+                          className="origin-center pointer-events-none"
+                          style={{
+                            /* Base ISO ID-1 is 323.3px wide. To fit nicely in a ~180px wide container, scale ~0.55 */
+                            transform: 'scale(0.5)', 
+                            width: '323.3px',
+                            height: '204.1px',
+                          }}
+                        >
+                          <StudentIdCard
+                            student={dummyStudent as any}
+                            schoolName={schoolId ?? 'Your School'}
+                            schoolLogoUrl={currentLogo}
+                            appName="LevelUp Rewards"
+                            appTagline="Level Up Your School"
+                            isColorEnabled={true}
+                            forceStudentThemePreview={true} /* ensures nice colored preview */
+                            overrideLayout={layout.id}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="w-full mt-1">
+                        <p className={cn(
+                          'text-sm font-bold',
+                          isActive ? 'text-primary' : 'text-foreground',
+                        )}>
+                          {layout.label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                          {layout.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="rounded-3xl border bg-muted/5 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
