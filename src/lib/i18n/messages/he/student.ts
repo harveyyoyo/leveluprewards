@@ -15,6 +15,7 @@ const student = {
     balance: 'יתרה',
     points: 'נקודות',
     pointsAbbr: 'נק׳',
+    money: 'כסף',
     scan: 'סריקה',
     scanCard: 'סרקו את הכרטיס',
     typeId: 'הקלדת מזהה',

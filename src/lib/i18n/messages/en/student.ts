@@ -15,6 +15,7 @@ const student = {
     balance: 'Balance',
     points: 'Points',
     pointsAbbr: 'PTS',
+    money: 'Money',
     scan: 'Scan',
     scanCard: 'Scan your card',
     typeId: 'Type ID',

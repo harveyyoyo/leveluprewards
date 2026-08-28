@@ -45,7 +45,7 @@ export function useCurrency() {
 
   const isMoney = mode === 'money';
   
-  const label = isMoney ? 'Money' : t('student.points');
+  const label = isMoney ? t('student.kiosk.money') : t('student.kiosk.points');
   const icon = isMoney ? moneyDesign : pointsDesign;
 
   return {

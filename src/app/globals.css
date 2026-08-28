@@ -694,11 +694,11 @@ html[data-office-portal] .office-content-pane {
     width: 100%;
   }
 
-  .coupon-preview-container .coupon-scalable, .money-bill-scalable {
+  .coupon-preview-container .coupon-scalable, .coupon-preview-container .money-bill-scalable {
     font-size: 10.526cqi;
   }
 
-  .print-coupon-wrapper .coupon-scalable, .money-bill-scalable {
+  .print-coupon-wrapper .coupon-scalable, .print-coupon-wrapper .money-bill-scalable {
     font-size: 24px;
   }
 
@@ -710,12 +710,12 @@ html[data-office-portal] .office-content-pane {
     padding: 1rem 1.25rem;
   }
 
-  .coupon-print-match-wrapper .coupon-scalable, .money-bill-scalable {
+  .coupon-print-match-wrapper .coupon-scalable, .coupon-print-match-wrapper .money-bill-scalable {
     /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
     font-size: 24px;
   }
 
-  .coupon-print-match-wrapper--30 .coupon-scalable, .money-bill-scalable {
+  .coupon-print-match-wrapper--30 .coupon-scalable, .coupon-print-match-wrapper--30 .money-bill-scalable {
     font-size: 19px;
     justify-content: flex-start;
     gap: 0.04em;
@@ -2916,7 +2916,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     height: 100%;
   }
 
-  .print-coupon-wrapper .coupon-scalable, .money-bill-scalable {
+  .print-coupon-wrapper .coupon-scalable, .print-coupon-wrapper .money-bill-scalable {
     font-size: 42px !important;
     width: 100% !important;
     height: 100% !important;
@@ -2924,12 +2924,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     box-shadow: none !important;
   }
 
-  .print-coupon-wrapper--rounded .coupon-scalable, .money-bill-scalable,
+  .print-coupon-wrapper--rounded .coupon-scalable, .print-coupon-wrapper--rounded .money-bill-scalable,
   .print-coupon-wrapper--rounded .print-coupon--rounded {
     border-radius: 0.75em !important;
   }
 
-  .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable, .money-bill-scalable {
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable, .coupon-print-page--30 .print-coupon-wrapper .money-bill-scalable {
     font-size: 19px !important;
     justify-content: flex-start !important;
     gap: 0.04em !important;
