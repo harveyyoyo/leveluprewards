@@ -7,17 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
-import { CLASSROOM_SEATING_SECTION_LABEL, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_SECTION_LABELS, CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import { cn } from '@/lib/utils';
 
 export type { ClassroomTabSection };
-
-const SECTION_LABELS: Record<ClassroomTabSection, string> = {
-  seating: CLASSROOM_SEATING_SECTION_LABEL,
-  behavior: 'Behavior',
-  'room-display': 'Room display',
-  raffle: 'Raffle',
-};
 
 const SECTION_ICONS: Record<ClassroomTabSection, React.ComponentType<{ className?: string }>> = {
   seating: LayoutGrid,
@@ -60,6 +53,13 @@ function ClassroomTabLayoutInner({
   const resolvedSection = sections.includes(section) ? section : sections[0];
 
   useEffect(() => {
+    if (!realmMode) return;
+    if (defaultSection && sections.includes(defaultSection)) {
+      setSection(defaultSection);
+    }
+  }, [realmMode, defaultSection, sections]);
+
+  useEffect(() => {
     if (!sections.includes(section)) {
       setSection(sections[0] ?? 'seating');
     }
@@ -84,7 +84,7 @@ function ClassroomTabLayoutInner({
   const hasMultiple = sections.length >= 2;
   const sectionItems = sections.map((id) => ({
     id,
-    label: SECTION_LABELS[id],
+    label: CLASSROOM_SECTION_LABELS[id],
     icon: SECTION_ICONS[id],
   }));
 
@@ -141,25 +141,11 @@ function ClassroomTabLayoutInner({
   );
 
   if (realmMode) {
-    if (!hasMultiple) {
-      return (
-        <div className={className}>
-          {headerRow}
-          <Card className={contentCardClassName}>
-            <CardContent className="p-4 sm:p-6">{contentBySection[resolvedSection]}</CardContent>
-          </Card>
-        </div>
-      );
-    }
-
     return (
       <div className={className}>
         {headerRow}
         <Card className={contentCardClassName}>
-          <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
-            {sectionNav}
-            {sectionPanels}
-          </CardContent>
+          <CardContent className="p-4 sm:p-6">{sectionPanels}</CardContent>
         </Card>
       </div>
     );
