@@ -8,7 +8,7 @@ const portal = {
   },
   teacherPortal: {
     title: 'פורטל צוות',
-    descriptionRewards: 'פורטל צוות עם לשוניות מורה — נקודות, כיתות, פרסים ודוחות.',
+    descriptionRewards: 'פורטל צוות עם לשוניות מורה — קופונים, כיתות, פרסים ודוחות.',
     descriptionClassroom: 'ניהול כיתה — {section}, מעקב מפגש ותצוגת חדר.',
     descriptionDefault: 'פורטל צוות לבית הספר שלכם.',
   },

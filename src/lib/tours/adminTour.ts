@@ -36,8 +36,8 @@ export const adminTourSteps: IntroStep[] = [
   },
   {
     id: 'admin-points',
-    title: 'Point Categories',
-    body: 'Define how students earn points (e.g., "Helping Others", "On Time"). Print coupons school-wide or per teacher from the Points tab.',
+    title: 'Coupons',
+    body: 'Define how students earn points (e.g., "Helping Others", "On Time"). Print coupons school-wide or per teacher from the Coupons tab.',
     onRoute: '/admin',
     target: 'staff-tab-categories',
     requireTarget: true,

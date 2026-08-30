@@ -130,11 +130,11 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
   },
   {
     value: 'categories',
-    label: 'Points',
+    label: 'Coupons',
     icon: Tag,
     kind: 'core',
     roles: ['admin'],
-    title: 'Point categories (school setup)',
+    title: 'Print coupons and set up categories',
     isEnabled: (s) => isRewardsPillarOn(s),
   },
   {

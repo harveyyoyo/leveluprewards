@@ -93,7 +93,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   categories: {
-    title: 'Points tab',
+    title: 'Coupons tab',
     subtitle: 'Categories, coupons, and manual awards',
     steps: [
       {
@@ -108,7 +108,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         checklist: [
           'Use Manually Add or Deduct Points for direct awards or deductions without printing coupons.',
           'Use Print coupons below to generate scannable sheets (10 or 30 per page).',
-          'Teachers can also print from their Points tab using the same categories.',
+          'Teachers can also print from their Coupons tab using the same categories.',
           'Students redeem codes at the kiosk to bank points.',
         ],
       },

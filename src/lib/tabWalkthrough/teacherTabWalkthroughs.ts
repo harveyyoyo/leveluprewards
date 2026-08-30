@@ -29,7 +29,7 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     ],
   },
   coupons: {
-    title: 'Points tab',
+    title: 'Coupons tab',
     subtitle: 'Print coupons and award points',
     steps: [
       {
