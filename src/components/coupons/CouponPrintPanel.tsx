@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Printer } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
@@ -120,6 +120,8 @@ export function CouponPrintPanel({
 
   const [printCategoryId, setPrintCategoryId] = useState('');
   const [printValue, setPrintValue] = useState('10');
+  const pendingSelectNewCategoryRef = useRef(false);
+  const knownCategoryIdsRef = useRef<Set<string>>(new Set());
   const [printStartsOn, setPrintStartsOn] = useState('');
   const [printExpiresOn, setPrintExpiresOn] = useState('');
   const [printSheetCount, setPrintSheetCount] = useState('1');
@@ -139,6 +141,18 @@ export function CouponPrintPanel({
       setPrintCategoryId(categoryList[0].id);
     }
   }, [categoryList, printCategoryId]);
+
+  useEffect(() => {
+    const nextIds = new Set(categoryList.map((c) => c.id));
+    if (pendingSelectNewCategoryRef.current) {
+      const added = categoryList.find((c) => c.id && !knownCategoryIdsRef.current.has(c.id));
+      if (added) {
+        setPrintCategoryId(added.id);
+        pendingSelectNewCategoryRef.current = false;
+      }
+    }
+    knownCategoryIdsRef.current = nextIds;
+  }, [categoryList]);
 
   useEffect(() => {
     const category = categoryList.find((c) => c.id === printCategoryId);
@@ -595,7 +609,10 @@ export function CouponPrintPanel({
                           size="icon"
                           className={cn('h-12 w-12 rounded-xl shrink-0', fieldClass)}
                           type="button"
-                          onClick={onAddCategory}
+                          onClick={() => {
+                            pendingSelectNewCategoryRef.current = true;
+                            onAddCategory();
+                          }}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>

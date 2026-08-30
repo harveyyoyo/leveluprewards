@@ -12,8 +12,8 @@ export const teacherTourSteps: IntroStep[] = [
   },
   {
     id: 'teacher-points-tab',
-    title: 'Give Points',
-    body: 'This is your Points hub — print scannable coupons or use Manually Add for quick digital awards.',
+    title: 'Coupons',
+    body: 'This is your Coupons tab — print scannable coupons or use Manually Add for quick digital awards.',
     onRoute: '/teacher',
     target: 'staff-tab-coupons',
     requireTarget: true,

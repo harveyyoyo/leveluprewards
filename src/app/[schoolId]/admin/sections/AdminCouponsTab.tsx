@@ -683,7 +683,7 @@ export function AdminCouponsTab({
                 <Ticket className="w-6 h-6 text-ring animate-pulse" /> Coupon Management
               </StaffPortalSectionCardTitle>
               <StaffPortalTabInfoPopover
-                sections={[staffPortalTabInfoSection('View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Points.')]}
+                sections={[staffPortalTabInfoSection('View all available and redeemed coupons for this school. Print new coupon sheets from Admin → Coupons.')]}
                 ariaLabel="About coupon management"
               />
             </div>
