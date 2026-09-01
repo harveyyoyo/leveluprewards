@@ -451,6 +451,10 @@ export default function HallOfFamePage({
     const others = topItems?.slice(clampedPodiumSize) ?? [];
     const podiumSlots = buildPodiumDisplaySlots(podium, clampedPodiumSize);
     const podiumSlotCount = podiumSlots.length;
+    // Fixed podium columns only look right when every slot is filled; with fewer
+    // entries than the configured size (or in portrait), fall back to a centered flex row.
+    const podiumGridCols =
+        !isPortrait && podiumSlotCount === 5 ? 5 : !isPortrait && podiumSlotCount === 3 ? 3 : null;
 
     const needsClasses =
         rankType === 'classes' ||
@@ -606,8 +610,13 @@ export default function HallOfFamePage({
                 className={cn(
                   'text-center min-w-0 overflow-visible',
                   podiumSlotCount === 1 && 'w-full max-w-xs',
-                  clampedPodiumSize <= 3 && clampedPodiumSize > 1 && 'w-full max-w-[11rem] sm:max-w-xs',
-                  clampedPodiumSize >= 5 && 'w-full',
+                  podiumGridCols === 5 && 'w-full',
+                  podiumGridCols === 3 && 'w-full max-w-[11rem] sm:max-w-xs',
+                  // Flex fallback (portrait, or a partially-filled landscape podium):
+                  // portrait keeps the original size-based stacking, landscape caps card width so rows stay centered.
+                  podiumGridCols === null &&
+                    podiumSlotCount > 1 &&
+                    (isPortrait && clampedPodiumSize >= 5 ? 'w-full' : 'w-full max-w-[11rem] sm:max-w-xs'),
                 )}
             >
                 <div
@@ -794,11 +803,10 @@ export default function HallOfFamePage({
                             <div className={cn(
                               'items-end gap-3 sm:gap-4 md:gap-6 mx-auto w-full overflow-visible pt-2',
                               isFullscreen ? 'mb-2' : 'mb-12 md:mb-20',
-                              // A lone winner falls back to flex so it centers (a single card in
-                              // grid-cols-5/3 would be pinned to the leftmost column).
-                              clampedPodiumSize === 5 && podiumSlotCount > 1 && !isPortrait
+                              // Fixed columns only when every landscape slot is filled; otherwise center with flex.
+                              podiumGridCols === 5
                                 ? 'grid grid-cols-5 max-w-6xl'
-                                : clampedPodiumSize === 3 && podiumSlotCount > 1 && !isPortrait
+                                : podiumGridCols === 3
                                   ? 'grid grid-cols-3 max-w-5xl'
                                   : 'flex flex-wrap justify-center',
                             )}>
