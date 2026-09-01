@@ -1,6 +1,7 @@
 'use client';
 
 import { Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   CLASSROOM_REALM_THEMES,
@@ -8,6 +9,8 @@ import {
   type ClassroomRealmTheme,
   type ClassroomRealmThemeId,
 } from '@/lib/classroom/classroomRealmThemes';
+
+const SPRING = { type: 'spring' as const, stiffness: 280, damping: 24 };
 
 export function ClassroomRealmThemePicker({
   value,
@@ -20,15 +23,22 @@ export function ClassroomRealmThemePicker({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.05 } } }}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+      >
         {CLASSROOM_REALM_THEMES.map((theme) => {
           const active = theme.id === value;
           return (
-            <button
+            <motion.button
               key={theme.id}
               type="button"
               onClick={() => onSelect(theme.id)}
               aria-pressed={active}
+              variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+              transition={SPRING}
               className={cn(
                 'group relative overflow-hidden rounded-2xl border p-3 text-left transition-all',
                 active
@@ -57,10 +67,10 @@ export function ClassroomRealmThemePicker({
               <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-white/60">
                 {theme.description}
               </p>
-            </button>
+            </motion.button>
           );
         })}
-      </div>
+      </motion.div>
 
       {activeTheme ? <ClassroomRealmThemePreview theme={activeTheme} /> : null}
     </div>

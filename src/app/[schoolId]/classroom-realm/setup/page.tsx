@@ -33,14 +33,21 @@ export default function ClassroomRealmSetupPage() {
   const { loginState } = useAppContext();
   const classroomOn = isClassroomPillarOn(settings);
   const activeTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
+  const staffOk = canAccessHallOfFameRoute(loginState);
 
   const classesQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
+    () =>
+      firestore && schoolId && staffOk
+        ? collection(firestore, 'schools', schoolId, 'classes')
+        : null,
+    [firestore, schoolId, staffOk],
   );
   const studentsQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
-    [firestore, schoolId],
+    () =>
+      firestore && schoolId && staffOk
+        ? collection(firestore, 'schools', schoolId, 'students')
+        : null,
+    [firestore, schoolId, staffOk],
   );
 
   const { data: classes } = useCollection<Class>(classesQuery);
@@ -51,7 +58,6 @@ export default function ClassroomRealmSetupPage() {
     [classes],
   );
 
-  const staffOk = canAccessHallOfFameRoute(loginState);
   const isAdmin = loginState === 'admin' || loginState === 'developer';
 
   function selectTheme(id: ClassroomRealmThemeId) {

@@ -1,9 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { collection } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { BookOpenCheck, LayoutGrid, Monitor, Palette, Sparkles, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,14 +14,13 @@ import { ClassroomRealmThemePicker } from '@/components/classroom/ClassroomRealm
 import { classroomRealmHref, classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import {
   resolveClassroomRealmTheme,
   type ClassroomRealmThemeId,
 } from '@/lib/classroom/classroomRealmThemes';
 import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
-import type { Class } from '@/lib/types';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 
@@ -66,21 +63,12 @@ const tools = [
 export default function ClassroomRealmHomePage() {
   const params = useParams();
   const schoolId = String(params.schoolId || '');
-  const firestore = useFirestore();
   const { settings, updateSettings } = useSettings();
   const { loginState } = useAppContext();
   const classroomOn = isClassroomPillarOn(settings);
   const theme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
 
-  const classesQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
-  );
-  const { data: classes } = useCollection<Class>(classesQuery);
-  const classCount = useMemo(() => classes?.length ?? 0, [classes]);
-
-  const isStaff =
-    loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
+  const isStaff = canAccessHallOfFameRoute(loginState);
 
   function selectTheme(id: ClassroomRealmThemeId) {
     updateSettings({ classroomRealmTheme: id });
@@ -155,11 +143,6 @@ export default function ClassroomRealmHomePage() {
         >
           {theme.icon} {theme.label} · Change look
         </a>
-        {classCount > 0 ? (
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-            {classCount} {classCount === 1 ? 'class' : 'classes'} ready
-          </span>
-        ) : null}
       </motion.div>
 
       <motion.div

@@ -48,7 +48,12 @@ export function ClassroomRealmPageHeader({
               <Icon className="h-5 w-5" aria-hidden />
             </div>
           ) : null}
-          <h1 className="classroom-realm-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
+          <motion.h1
+            layoutId="classroom-realm-title"
+            className="classroom-realm-display text-3xl font-bold text-white sm:text-4xl"
+          >
+            {title}
+          </motion.h1>
         </div>
         {subtitle ? <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/60">{subtitle}</p> : null}
       </div>

@@ -14,25 +14,35 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
   const firestore = useFirestore();
   const { loginState, isAdmin, teacherDocId, userId } = useAppContext();
   const includeCategories = options?.includeCategories === true;
+  const staffOk = canAccessHallOfFameRoute(loginState);
 
   const studentsQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
-    [firestore, schoolId],
+    () =>
+      firestore && schoolId && staffOk
+        ? collection(firestore, 'schools', schoolId, 'students')
+        : null,
+    [firestore, schoolId, staffOk],
   );
   const classesQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
+    () =>
+      firestore && schoolId && staffOk
+        ? collection(firestore, 'schools', schoolId, 'classes')
+        : null,
+    [firestore, schoolId, staffOk],
   );
   const teachersQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),
-    [firestore, schoolId],
+    () =>
+      firestore && schoolId && staffOk
+        ? collection(firestore, 'schools', schoolId, 'teachers')
+        : null,
+    [firestore, schoolId, staffOk],
   );
   const categoriesQuery = useMemoFirebase(
     () =>
-      includeCategories && firestore && schoolId
+      includeCategories && staffOk && firestore && schoolId
         ? collection(firestore, 'schools', schoolId, 'categories')
         : null,
-    [includeCategories, firestore, schoolId],
+    [includeCategories, staffOk, firestore, schoolId],
   );
 
   const { data: allStudents } = useCollection<Student>(studentsQuery);
@@ -70,7 +80,7 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
     schoolWide,
     seatingScope: schoolWide ? 'admin' : activeTeacherId || 'staff',
     managerTeacherId: schoolWide ? undefined : activeTeacherId,
-    staffOk: canAccessHallOfFameRoute(loginState),
+    staffOk,
     variant: (loginState === 'teacher' ? 'teacher' : 'admin') as 'teacher' | 'admin',
   };
 }
