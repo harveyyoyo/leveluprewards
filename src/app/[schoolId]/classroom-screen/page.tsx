@@ -8,6 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { ClassroomRoomDisplayView } from '@/components/points/ClassroomRoomDisplayView';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import type { Class } from '@/lib/types';
 
 export default function ClassroomScreenPage() {
@@ -22,9 +23,13 @@ export default function ClassroomScreenPage() {
   const classroomOn = isClassroomPillarOn(settings);
 
   const firestore = useFirestore();
+  const canReadRoster = useCanReadSchoolRoster();
   const classesQuery = useMemoFirebase(
-    () => (schoolId && firestore ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && firestore && canReadRoster
+        ? collection(firestore, 'schools', schoolId, 'classes')
+        : null,
+    [firestore, schoolId, canReadRoster],
   );
   const { data: classes, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
@@ -34,6 +39,16 @@ export default function ClassroomScreenPage() {
     return (
       <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950 text-white">
         <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+      </div>
+    );
+  }
+
+  if (!canReadRoster) {
+    return (
+      <div className="fixed inset-0 z-20 flex items-center justify-center bg-slate-950 p-6 text-center text-white">
+        <p className="max-w-md text-white/80">
+          Sign in as teacher or admin to open this class screen.
+        </p>
       </div>
     );
   }

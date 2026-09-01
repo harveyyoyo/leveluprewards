@@ -12,6 +12,7 @@ import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell'
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { getHallOfFameStageSizeStyle } from '@/lib/hallOfFameUrlConfig';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
@@ -52,27 +53,41 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   const classroomOn = isClassroomPillarOn(settings);
 
   const firestore = useFirestore();
+  const canReadRoster = useCanReadSchoolRoster();
+
   const studentsQuery = useMemoFirebase(
-    () => (schoolId && firestore ? collection(firestore, 'schools', schoolId, 'students') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && firestore && canReadRoster
+        ? collection(firestore, 'schools', schoolId, 'students')
+        : null,
+    [firestore, schoolId, canReadRoster],
   );
   const { data: allStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
 
   const classesQuery = useMemoFirebase(
-    () => (schoolId && firestore ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && firestore && canReadRoster
+        ? collection(firestore, 'schools', schoolId, 'classes')
+        : null,
+    [firestore, schoolId, canReadRoster],
   );
   const { data: allClasses, isLoading: classesLoading } = useCollection<Class>(classesQuery);
 
   const teachersQuery = useMemoFirebase(
-    () => (schoolId && firestore ? collection(firestore, 'schools', schoolId, 'teachers') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && firestore && canReadRoster
+        ? collection(firestore, 'schools', schoolId, 'teachers')
+        : null,
+    [firestore, schoolId, canReadRoster],
   );
   const { data: teachers } = useCollection<Teacher>(teachersQuery);
 
   const categoriesQuery = useMemoFirebase(
-    () => (schoolId && firestore ? collection(firestore, 'schools', schoolId, 'categories') : null),
-    [firestore, schoolId],
+    () =>
+      schoolId && firestore && canReadRoster
+        ? collection(firestore, 'schools', schoolId, 'categories')
+        : null,
+    [firestore, schoolId, canReadRoster],
   );
   const { data: allCategories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
@@ -174,13 +189,32 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     }
   }, [isInitialized, loginState, router, schoolId]);
 
-  if (
-    !isInitialized ||
-    !canAccessHallOfFameRoute(loginState) ||
-    studentsLoading ||
-    classesLoading ||
-    categoriesLoading
-  ) {
+  if (!isInitialized || !canAccessHallOfFameRoute(loginState)) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!canReadRoster) {
+    return (
+      <ClassroomRealmShell schoolId={schoolId} hideChrome={hideRealmChrome}>
+        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-lg font-black tracking-tight text-white">Sign in as teacher or admin</p>
+          <p className="max-w-md text-sm text-white/60">
+            This sign-in can’t open the class list. Use the teacher or admin passcode, then open Live
+            again.
+          </p>
+          <Button type="button" variant="outline" asChild className="border-white/20 text-white hover:bg-white/10">
+            <Link href={schoolId ? `/${schoolId}/portal` : '/'}>Back to portal</Link>
+          </Button>
+        </div>
+      </ClassroomRealmShell>
+    );
+  }
+
+  if (studentsLoading || classesLoading || categoriesLoading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

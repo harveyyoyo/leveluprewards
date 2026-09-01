@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import {
@@ -34,20 +35,21 @@ export default function ClassroomRealmSetupPage() {
   const classroomOn = isClassroomPillarOn(settings);
   const activeTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
   const staffOk = canAccessHallOfFameRoute(loginState);
+  const canReadRoster = useCanReadSchoolRoster();
 
   const classesQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && staffOk
+      firestore && schoolId && canReadRoster
         ? collection(firestore, 'schools', schoolId, 'classes')
         : null,
-    [firestore, schoolId, staffOk],
+    [firestore, schoolId, canReadRoster],
   );
   const studentsQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && staffOk
+      firestore && schoolId && canReadRoster
         ? collection(firestore, 'schools', schoolId, 'students')
         : null,
-    [firestore, schoolId, staffOk],
+    [firestore, schoolId, canReadRoster],
   );
 
   const { data: classes } = useCollection<Class>(classesQuery);
@@ -118,13 +120,19 @@ export default function ClassroomRealmSetupPage() {
                 The setup wizard walks through seating charts, quick awards, and classroom options.
                 {!classroomOn && isAdmin ? ' It will also turn Classroom on.' : null}
               </p>
-              <ClassroomSetupWizardTrigger
-                schoolId={schoolId}
-                classes={sortedClasses}
-                students={students ?? []}
-                updateSettings={updateSettings}
-                className="mx-auto border-white/20 bg-white/10 text-white hover:bg-white/15"
-              />
+              {canReadRoster ? (
+                <ClassroomSetupWizardTrigger
+                  schoolId={schoolId}
+                  classes={sortedClasses}
+                  students={students ?? []}
+                  updateSettings={updateSettings}
+                  className="mx-auto border-white/20 bg-white/10 text-white hover:bg-white/15"
+                />
+              ) : (
+                <p className="text-sm text-white/50">
+                  Sign in with the teacher or admin passcode to load the class list.
+                </p>
+              )}
             </ClassroomRealmPanel>
           </div>
         )}

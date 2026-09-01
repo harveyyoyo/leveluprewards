@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
@@ -15,34 +16,35 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
   const { loginState, isAdmin, teacherDocId, userId } = useAppContext();
   const includeCategories = options?.includeCategories === true;
   const staffOk = canAccessHallOfFameRoute(loginState);
+  const canReadRoster = useCanReadSchoolRoster();
 
   const studentsQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && staffOk
+      firestore && schoolId && canReadRoster
         ? collection(firestore, 'schools', schoolId, 'students')
         : null,
-    [firestore, schoolId, staffOk],
+    [firestore, schoolId, canReadRoster],
   );
   const classesQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && staffOk
+      firestore && schoolId && canReadRoster
         ? collection(firestore, 'schools', schoolId, 'classes')
         : null,
-    [firestore, schoolId, staffOk],
+    [firestore, schoolId, canReadRoster],
   );
   const teachersQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && staffOk
+      firestore && schoolId && canReadRoster
         ? collection(firestore, 'schools', schoolId, 'teachers')
         : null,
-    [firestore, schoolId, staffOk],
+    [firestore, schoolId, canReadRoster],
   );
   const categoriesQuery = useMemoFirebase(
     () =>
-      includeCategories && staffOk && firestore && schoolId
+      includeCategories && canReadRoster && firestore && schoolId
         ? collection(firestore, 'schools', schoolId, 'categories')
         : null,
-    [includeCategories, staffOk, firestore, schoolId],
+    [includeCategories, canReadRoster, firestore, schoolId],
   );
 
   const { data: allStudents } = useCollection<Student>(studentsQuery);
@@ -81,6 +83,7 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
     seatingScope: schoolWide ? 'admin' : activeTeacherId || 'staff',
     managerTeacherId: schoolWide ? undefined : activeTeacherId,
     staffOk,
+    canReadRoster,
     variant: (loginState === 'teacher' ? 'teacher' : 'admin') as 'teacher' | 'admin',
   };
 }

@@ -29,10 +29,10 @@ export default function ClassroomRealmClassScreenPage() {
     );
   }
 
-  if (!roster.staffOk) {
+  if (!roster.staffOk || !roster.canReadRoster) {
     return (
       <ClassroomRealmShell schoolId={schoolId}>
-        <p className="p-8 text-center text-white/70">Staff sign-in is required.</p>
+        <p className="p-8 text-center text-white/70">Sign in as teacher or admin to open this screen.</p>
       </ClassroomRealmShell>
     );
   }
