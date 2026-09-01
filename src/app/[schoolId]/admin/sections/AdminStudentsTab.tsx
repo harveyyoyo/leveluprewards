@@ -5,6 +5,7 @@ import {
   Award,
   Cake,
   Edit,
+  FileSpreadsheet,
   History,
   IdCard,
   LayoutDashboard,
@@ -140,6 +141,7 @@ export function AdminStudentsTab({
   onStudentCsvFileChange,
   handleStudentCsvUpload,
   csvImportBusy = false,
+  onOpenAiImport,
   selectionMode: _selectionMode,
   setSelectionMode: _setSelectionMode,
   selectedStudentIds,
@@ -180,6 +182,8 @@ export function AdminStudentsTab({
   onStudentCsvFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleStudentCsvUpload: () => void;
   csvImportBusy?: boolean;
+  /** Opens bulk roster dialog on the AI import tab. */
+  onOpenAiImport?: () => void;
   selectionMode: boolean;
   setSelectionMode: (v: boolean) => void;
   selectedStudentIds: Set<string>;
@@ -414,10 +418,22 @@ export function AdminStudentsTab({
                   {csvImportBusy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Wand2 className="mr-2 h-4 w-4" />
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
                   )}
                   Import CSV
                 </Button>
+                {onOpenAiImport ? (
+                  <Button
+                    onClick={onOpenAiImport}
+                    variant="outline"
+                    disabled={csvImportBusy}
+                    className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground"
+                    type="button"
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Import with AI
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => {
                     onOpenIdPrintSetup({

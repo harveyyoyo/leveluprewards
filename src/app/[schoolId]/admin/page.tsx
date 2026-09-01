@@ -170,7 +170,7 @@ import {
   AdminTeachersTab,
 } from './adminTabDynamics';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { BulkRosterSetupDialog } from '@/components/admin/BulkRosterSetupDialog';
+import { BulkRosterSetupDialog, type BulkRosterTab } from '@/components/admin/BulkRosterSetupDialog';
 import { StudentCsvColumnMapDialog } from '@/components/student/StudentCsvColumnMapDialog';
 import { guessStudentCsvColumnMap, parseStudentCsvToMatrix } from '@/lib/students/studentCsvColumnMap';
 import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
@@ -1114,6 +1114,12 @@ function AdminDashboardInner() {
   }, [activeMainTab, orderedMainTabs]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
+  const [bulkRosterInitialTab, setBulkRosterInitialTab] = useState<BulkRosterTab>('csv');
+
+  const openBulkRoster = (tab: BulkRosterTab = 'csv') => {
+    setBulkRosterInitialTab(tab);
+    setBulkRosterOpen(true);
+  };
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
   const [staffIdPrintJob, setStaffIdPrintJob] = useState<StaffIdCardSubject[] | null>(null);
@@ -1843,7 +1849,7 @@ function AdminDashboardInner() {
               settings={settings}
               schoolId={schoolId}
               onGoToTab={setActiveMainTab}
-              onBulkRoster={() => setBulkRosterOpen(true)}
+              onBulkRoster={() => openBulkRoster('csv')}
               schoolName={schoolData?.name?.trim() || null}
               staffName={userName}
               welcomeStats={adminWelcomeStats}
@@ -1861,6 +1867,7 @@ function AdminDashboardInner() {
               onStudentCsvFileChange={onStudentCsvFileChange}
               handleStudentCsvUpload={handleStudentCsvUpload}
               csvImportBusy={csvImportBusy}
+              onOpenAiImport={() => openBulkRoster('ai')}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
               selectedStudentIds={selectedStudentIds}
@@ -2305,6 +2312,7 @@ function AdminDashboardInner() {
         <BulkRosterSetupDialog
           open={bulkRosterOpen}
           onOpenChange={setBulkRosterOpen}
+          initialTab={bulkRosterInitialTab}
           aiClassNames={(classes || []).map((c) => c.name)}
           onClassesCsv={handleBulkClassesCsv}
           onTeachersCsv={handleBulkTeachersCsv}

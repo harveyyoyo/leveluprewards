@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>LevelUp Rewards — Staff Card Builder</title>
     <!-- Modern typography matching other high-fidelity flyers -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700;800&family=Outfit:wght@700;800;900&display=swap"
+      rel="stylesheet"
+    />
     <!-- Local QR Code generation library to bypass CSP domain block policies -->
     <script src="qrcode.min.js"></script>
     <style>
@@ -38,7 +41,11 @@
       body {
         margin: 0;
         padding: 0;
-        font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+        font-family:
+          "DM Sans",
+          system-ui,
+          -apple-system,
+          sans-serif;
         color: var(--text);
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
@@ -116,7 +123,8 @@
           font-weight: 700;
         }
 
-        .sidebar-input, .sidebar-select {
+        .sidebar-input,
+        .sidebar-select {
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.12);
           border-radius: 8px;
@@ -134,7 +142,8 @@
           color: #ffffff;
         }
 
-        .sidebar-input:focus, .sidebar-select:focus {
+        .sidebar-input:focus,
+        .sidebar-select:focus {
           border-color: var(--accent2);
           box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
         }
@@ -153,7 +162,7 @@
           align-items: center;
           justify-content: center;
           gap: 8px;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
           box-shadow: 0 4px 12px rgba(6, 182, 212, 0.15);
           width: 100%;
         }
@@ -178,15 +187,27 @@
           padding: 40px 20px;
           gap: 32px;
           box-sizing: border-box;
-          background-image: 
-            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.1) 0px, transparent 50%),
-            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.08) 0px, transparent 50%);
+          background-image:
+            radial-gradient(
+              at 0% 0%,
+              rgba(124, 58, 237, 0.1) 0px,
+              transparent 50%
+            ),
+            radial-gradient(
+              at 100% 100%,
+              rgba(6, 182, 212, 0.08) 0px,
+              transparent 50%
+            );
         }
 
         .page {
           border-radius: 0;
-          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          box-shadow:
+            0 30px 60px -15px rgba(0, 0, 0, 0.7),
+            0 0 50px rgba(99, 102, 241, 0.1);
+          transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease;
         }
       }
 
@@ -227,7 +248,7 @@
       .bcard-container {
         width: 3.5in;
         height: 2in;
-        outline: 1px dashed rgba(0,0,0,0.1); /* Cut lines for screen preview */
+        outline: 1px dashed rgba(0, 0, 0, 0.1); /* Cut lines for screen preview */
         position: relative;
         overflow: hidden;
       }
@@ -255,9 +276,21 @@
         padding: 12px 15px 10px;
         border-radius: 16px;
         background:
-          linear-gradient(115deg, rgba(255, 255, 255, 0.12) 0 18%, transparent 18% 100%),
-          radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--accent2) 30%, transparent), transparent 44%),
-          linear-gradient(135deg, color-mix(in srgb, var(--bg) 88%, var(--accent) 12%), var(--bg));
+          linear-gradient(
+            115deg,
+            rgba(255, 255, 255, 0.12) 0 18%,
+            transparent 18% 100%
+          ),
+          radial-gradient(
+            circle at 82% 18%,
+            color-mix(in srgb, var(--accent2) 30%, transparent),
+            transparent 44%
+          ),
+          linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--bg) 88%, var(--accent) 12%),
+            var(--bg)
+          );
       }
 
       .print-id-card.design-premium::before {
@@ -269,7 +302,12 @@
         height: 22px;
         border-radius: 5px;
         background:
-          linear-gradient(90deg, transparent 45%, rgba(15, 23, 42, 0.22) 45% 55%, transparent 55%),
+          linear-gradient(
+            90deg,
+            transparent 45%,
+            rgba(15, 23, 42, 0.22) 45% 55%,
+            transparent 55%
+          ),
           linear-gradient(180deg, #fde68a, #d97706);
         box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.24);
         opacity: 0.9;
@@ -282,8 +320,16 @@
       .print-id-card.design-diagonal {
         border-radius: 4px;
         background:
-          linear-gradient(130deg, color-mix(in srgb, var(--accent) 28%, transparent) 0 38%, transparent 38% 100%),
-          linear-gradient(130deg, transparent 0 66%, color-mix(in srgb, var(--accent2) 34%, transparent) 66% 100%),
+          linear-gradient(
+            130deg,
+            color-mix(in srgb, var(--accent) 28%, transparent) 0 38%,
+            transparent 38% 100%
+          ),
+          linear-gradient(
+            130deg,
+            transparent 0 66%,
+            color-mix(in srgb, var(--accent2) 34%, transparent) 66% 100%
+          ),
           var(--bg);
       }
 
@@ -298,7 +344,11 @@
       .print-id-card.design-clean {
         border-radius: 10px;
         background:
-          linear-gradient(90deg, color-mix(in srgb, var(--accent2) 26%, transparent) 0 4px, transparent 4px),
+          linear-gradient(
+            90deg,
+            color-mix(in srgb, var(--accent2) 26%, transparent) 0 4px,
+            transparent 4px
+          ),
           var(--bg);
       }
 
@@ -320,12 +370,33 @@
       .print-id-card.design-arcade {
         border-radius: 14px;
         background:
-          linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          linear-gradient(180deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-          radial-gradient(circle at 18% 20%, color-mix(in srgb, var(--accent) 36%, transparent), transparent 35%),
-          radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--accent2) 35%, transparent), transparent 40%),
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.04) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.04) 1px,
+            transparent 1px
+          ),
+          radial-gradient(
+            circle at 18% 20%,
+            color-mix(in srgb, var(--accent) 36%, transparent),
+            transparent 35%
+          ),
+          radial-gradient(
+            circle at 90% 80%,
+            color-mix(in srgb, var(--accent2) 35%, transparent),
+            transparent 40%
+          ),
           var(--bg);
-        background-size: 14px 14px, 14px 14px, auto, auto, auto;
+        background-size:
+          14px 14px,
+          14px 14px,
+          auto,
+          auto,
+          auto;
       }
 
       .print-id-card.design-arcade .print-id-header {
@@ -464,7 +535,7 @@
         opacity: 0.15;
         pointer-events: none;
       }
-      
+
       .bc-decor2 {
         position: absolute;
         top: -15px;
@@ -516,7 +587,7 @@
       }
 
       .print-id-app-name {
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-size: 9px;
         font-weight: 800;
         line-height: 1.1;
@@ -532,7 +603,7 @@
       }
 
       .print-id-school .print-id-header {
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-size: 8px;
         font-weight: 800;
         color: var(--strong);
@@ -567,7 +638,11 @@
         border-radius: 12px;
         border: 1px solid var(--hair);
         background:
-          radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent2) 25%, transparent), transparent 55%),
+          radial-gradient(
+            circle at 30% 20%,
+            color-mix(in srgb, var(--accent2) 25%, transparent),
+            transparent 55%
+          ),
           var(--panel);
         overflow: hidden;
         display: flex;
@@ -591,13 +666,17 @@
         display: none;
         align-items: center;
         justify-content: center;
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-size: 11px;
         font-weight: 800;
         color: #ffffff;
-        background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent2) 100%
+        );
         opacity: 0.95;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
       }
 
       .print-id-text {
@@ -609,7 +688,7 @@
       }
 
       .print-id-name {
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-weight: 800;
         font-size: 13px;
         line-height: 1.1;
@@ -644,8 +723,16 @@
         margin: 8px;
         padding: 9px 12px;
         background:
-          linear-gradient(90deg, rgba(14, 165, 233, 0.08) 0 18%, transparent 18% 100%),
-          repeating-linear-gradient(135deg, rgba(15, 23, 42, 0.035) 0 5px, transparent 5px 10px),
+          linear-gradient(
+            90deg,
+            rgba(14, 165, 233, 0.08) 0 18%,
+            transparent 18% 100%
+          ),
+          repeating-linear-gradient(
+            135deg,
+            rgba(15, 23, 42, 0.035) 0 5px,
+            transparent 5px 10px
+          ),
           #ffffff !important;
         color: #1e293b !important; /* Dark text for high contrast print */
         display: flex;
@@ -660,7 +747,7 @@
           0 0 0 1px rgba(15, 23, 42, 0.08),
           inset 0 0 0 3px #ffffff,
           inset 0 0 0 4px rgba(15, 23, 42, 0.1);
-        font-family: 'DM Sans', sans-serif;
+        font-family: "DM Sans", sans-serif;
       }
 
       .coupon-scalable::before,
@@ -686,7 +773,7 @@
       }
 
       .coupon-title {
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-size: 8px;
         font-weight: 800;
         text-transform: uppercase;
@@ -743,7 +830,7 @@
       }
 
       .coupon-name {
-        font-family: 'Outfit', sans-serif;
+        font-family: "Outfit", sans-serif;
         font-size: 12.5px;
         font-weight: 800;
         color: #0f172a !important;
@@ -821,7 +908,11 @@
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(3, 6, 15, 0.86);
         color: #eaf0ff;
-        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        font:
+          800 12px/1.1 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
         letter-spacing: 0.01em;
         text-decoration: none;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
@@ -845,11 +936,17 @@
     </style>
     <script>
       try {
-        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+        if (new URLSearchParams(location.search).has("embed"))
+          document.documentElement.classList.add("embed");
       } catch (_) {}
-    </script>  </head>
+    </script>
+  </head>
   <body>
-    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
+    <a class="back-link no-print" href="/marketing/index.html" style="position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; background: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; color: #0f172a; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: all 0.2s;">&larr; Back to marketing flyers</a>
+
+    <a class="interactive-list-link" href="interactive.html"
+      >&larr; Interactive flyer list</a
+    >
     <h1 class="sr-only">LevelUp Rewards staff card builder</h1>
     <!-- CONTROL SIDEBAR -->
     <div class="control-sidebar no-print" role="complementary">
@@ -862,16 +959,28 @@
       </div>
 
       <div class="sidebar-section">
-        <label class="sidebar-label" for="style-select">Card Design Template</label>
-        <select id="style-select" class="sidebar-select" onchange="updateCardStyle()">
+        <label class="sidebar-label" for="style-select"
+          >Card Design Template</label
+        >
+        <select
+          id="style-select"
+          class="sidebar-select"
+          onchange="updateCardStyle()"
+        >
           <option value="id-card" selected>ID Card Style</option>
           <option value="coupon">Coupon Style</option>
         </select>
       </div>
 
       <div class="sidebar-section">
-        <label class="sidebar-label" for="card-design-select">Credit Card Design Theme</label>
-        <select id="card-design-select" class="sidebar-select" onchange="updateCardStyle()">
+        <label class="sidebar-label" for="card-design-select"
+          >Credit Card Design Theme</label
+        >
+        <select
+          id="card-design-select"
+          class="sidebar-select"
+          onchange="updateCardStyle()"
+        >
           <option value="design-premium" selected>Premium Chip Card</option>
           <option value="design-diagonal">Diagonal Pass</option>
           <option value="design-clean">Clean Contact Card</option>
@@ -882,7 +991,11 @@
 
       <div class="sidebar-section">
         <label class="sidebar-label" for="theme-select">Visual Theme</label>
-        <select id="theme-select" class="sidebar-select" onchange="updateTheme()">
+        <select
+          id="theme-select"
+          class="sidebar-select"
+          onchange="updateTheme()"
+        >
           <option value="navy">Bold Navy</option>
           <option value="green">Emerald Forest</option>
           <option value="sunset">Purple Sunset</option>
@@ -903,32 +1016,88 @@
 
       <div class="sidebar-section">
         <label class="sidebar-label">Personal Details</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="name-input" value="Dovid Teitelbaum" class="sidebar-input" placeholder="Full Name" oninput="syncFields()" />
-          <input type="text" id="title-input" value="Lead Developer" class="sidebar-input" placeholder="Job Title" oninput="syncFields()" />
-          <input type="text" id="badge-input" value="Developer" class="sidebar-input" placeholder="Badge/Role Label" oninput="syncFields()" />
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <input
+            type="text"
+            id="name-input"
+            value="Dovid Teitelbaum"
+            class="sidebar-input"
+            placeholder="Full Name"
+            oninput="syncFields()"
+          />
+          <input
+            type="text"
+            id="title-input"
+            value="Lead Developer"
+            class="sidebar-input"
+            placeholder="Job Title"
+            oninput="syncFields()"
+          />
+          <input
+            type="text"
+            id="badge-input"
+            value="Developer"
+            class="sidebar-input"
+            placeholder="Badge/Role Label"
+            oninput="syncFields()"
+          />
           <input type="hidden" id="photo-input" value="/logo.png" />
         </div>
       </div>
 
       <div class="sidebar-section">
         <label class="sidebar-label">Contact Details</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="email-input" value="contact@leveluprewards.app" class="sidebar-input" placeholder="Email Address" oninput="syncFields()" />
-          <input type="text" id="phone-input" value="" class="sidebar-input" placeholder="Phone Number" oninput="syncFields()" />
-          <input type="text" id="web-input" value="leveluprewards.app" class="sidebar-input" placeholder="Website" oninput="syncFields()" />
-        </div>
-      </div>
-      
-      <div class="sidebar-section">
-        <label class="sidebar-label">Branding</label>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="company-input" value="LevelUp Rewards" class="sidebar-input" placeholder="Company/App Name" oninput="syncFields()" />
-          <input type="text" id="tagline-input" value="PBIS & Climate" class="sidebar-input" placeholder="Tagline" oninput="syncFields()" />
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <input
+            type="text"
+            id="email-input"
+            value="contact@leveluprewards.app"
+            class="sidebar-input"
+            placeholder="Email Address"
+            oninput="syncFields()"
+          />
+          <input
+            type="text"
+            id="phone-input"
+            value=""
+            class="sidebar-input"
+            placeholder="Phone Number"
+            oninput="syncFields()"
+          />
+          <input
+            type="text"
+            id="web-input"
+            value="leveluprewards.app"
+            class="sidebar-input"
+            placeholder="Website"
+            oninput="syncFields()"
+          />
         </div>
       </div>
 
-      <div style="margin-top: auto; padding-top: 10px;">
+      <div class="sidebar-section">
+        <label class="sidebar-label">Branding</label>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <input
+            type="text"
+            id="company-input"
+            value="LevelUp Rewards"
+            class="sidebar-input"
+            placeholder="Company/App Name"
+            oninput="syncFields()"
+          />
+          <input
+            type="text"
+            id="tagline-input"
+            value="PBIS & Climate"
+            class="sidebar-input"
+            placeholder="Tagline"
+            oninput="syncFields()"
+          />
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 10px">
         <button class="sidebar-btn" onclick="window.print()">
           🖨️ Print / Save PDF
         </button>
@@ -945,121 +1114,211 @@
     <script>
       const THEMES = {
         navy: {
-          '--bg': '#0b1220', '--accent': '#7c3aed', '--accent2': '#06b6d4',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#eaf0ff',
-          '--muted': 'rgba(234, 240, 255, 0.78)', '--hair': 'rgba(234, 240, 255, 0.15)',
-          '--success': '#22c55e', '--black': '#0a0a0a', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#0b1220",
+          "--accent": "#7c3aed",
+          "--accent2": "#06b6d4",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#eaf0ff",
+          "--muted": "rgba(234, 240, 255, 0.78)",
+          "--hair": "rgba(234, 240, 255, 0.15)",
+          "--success": "#22c55e",
+          "--black": "#0a0a0a",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         green: {
-          '--bg': '#041d1a', '--accent': '#059669', '--accent2': '#10b981',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#ecfdf5',
-          '--muted': 'rgba(236, 253, 245, 0.78)', '--hair': 'rgba(236, 253, 245, 0.15)',
-          '--success': '#34d399', '--black': '#020d0c', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#041d1a",
+          "--accent": "#059669",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#ecfdf5",
+          "--muted": "rgba(236, 253, 245, 0.78)",
+          "--hair": "rgba(236, 253, 245, 0.15)",
+          "--success": "#34d399",
+          "--black": "#020d0c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         sunset: {
-          '--bg': '#1a0b18', '--accent': '#db2777', '--accent2': '#f97316',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fdf2f8',
-          '--muted': 'rgba(253, 242, 248, 0.78)', '--hair': 'rgba(253, 242, 248, 0.15)',
-          '--success': '#22c55e', '--black': '#090208', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#1a0b18",
+          "--accent": "#db2777",
+          "--accent2": "#f97316",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#fdf2f8",
+          "--muted": "rgba(253, 242, 248, 0.78)",
+          "--hair": "rgba(253, 242, 248, 0.15)",
+          "--success": "#22c55e",
+          "--black": "#090208",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         cyber: {
-          '--bg': '#08070d', '--accent': '#d946ef', '--accent2': '#f43f5e',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fae8ff',
-          '--muted': 'rgba(250, 232, 255, 0.78)', '--hair': 'rgba(250, 232, 255, 0.15)',
-          '--success': '#10b981', '--black': '#030205', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#08070d",
+          "--accent": "#d946ef",
+          "--accent2": "#f43f5e",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#fae8ff",
+          "--muted": "rgba(250, 232, 255, 0.78)",
+          "--hair": "rgba(250, 232, 255, 0.15)",
+          "--success": "#10b981",
+          "--black": "#030205",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         crimson: {
-          '--bg': '#1e050b', '--accent': '#e11d48', '--accent2': '#fb7185',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fff1f2',
-          '--muted': 'rgba(255, 241, 242, 0.78)', '--hair': 'rgba(255, 241, 242, 0.15)',
-          '--success': '#10b981', '--black': '#0a0103', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#1e050b",
+          "--accent": "#e11d48",
+          "--accent2": "#fb7185",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#fff1f2",
+          "--muted": "rgba(255, 241, 242, 0.78)",
+          "--hair": "rgba(255, 241, 242, 0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0103",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         gold: {
-          '--bg': '#1a1206', '--accent': '#d97706', '--accent2': '#fbbf24',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fef3c7',
-          '--muted': 'rgba(254, 243, 199, 0.78)', '--hair': 'rgba(254, 243, 199, 0.15)',
-          '--success': '#10b981', '--black': '#0a0702', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#1a1206",
+          "--accent": "#d97706",
+          "--accent2": "#fbbf24",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#fef3c7",
+          "--muted": "rgba(254, 243, 199, 0.78)",
+          "--hair": "rgba(254, 243, 199, 0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0702",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         aurora: {
-          '--bg': '#061318', '--accent': '#06b6d4', '--accent2': '#10b981',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#ecfeff',
-          '--muted': 'rgba(236, 254, 255, 0.78)', '--hair': 'rgba(236, 254, 255, 0.15)',
-          '--success': '#34d399', '--black': '#020709', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#061318",
+          "--accent": "#06b6d4",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#ecfeff",
+          "--muted": "rgba(236, 254, 255, 0.78)",
+          "--hair": "rgba(236, 254, 255, 0.15)",
+          "--success": "#34d399",
+          "--black": "#020709",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         sapphire: {
-          '--bg': '#0a0e1c', '--accent': '#3b82f6', '--accent2': '#6366f1',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#eff6ff',
-          '--muted': 'rgba(239, 246, 255, 0.78)', '--hair': 'rgba(239, 246, 255, 0.15)',
-          '--success': '#10b981', '--black': '#04060c', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#0a0e1c",
+          "--accent": "#3b82f6",
+          "--accent2": "#6366f1",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#eff6ff",
+          "--muted": "rgba(239, 246, 255, 0.78)",
+          "--hair": "rgba(239, 246, 255, 0.15)",
+          "--success": "#10b981",
+          "--black": "#04060c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         obsidian: {
-          '--bg': '#0d0d0e', '--accent': '#f3f4f6', '--accent2': '#9ca3af',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#f9fafb',
-          '--muted': 'rgba(249, 250, 251, 0.78)', '--hair': 'rgba(249, 250, 251, 0.15)',
-          '--success': '#10b981', '--black': '#050506', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#0d0d0e",
+          "--accent": "#f3f4f6",
+          "--accent2": "#9ca3af",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#f9fafb",
+          "--muted": "rgba(249, 250, 251, 0.78)",
+          "--hair": "rgba(249, 250, 251, 0.15)",
+          "--success": "#10b981",
+          "--black": "#050506",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         sand: {
-          '--bg': '#1a0f0a', '--accent': '#ea580c', '--accent2': '#f59e0b',
-          '--panel': 'rgba(255, 255, 255, 0.05)', '--text': '#fff7ed',
-          '--muted': 'rgba(255, 247, 237, 0.78)', '--hair': 'rgba(255, 247, 237, 0.15)',
-          '--success': '#10b981', '--black': '#0a0604', '--strong': '#ffffff',
-          '--heading-color': 'var(--accent2)'
+          "--bg": "#1a0f0a",
+          "--accent": "#ea580c",
+          "--accent2": "#f59e0b",
+          "--panel": "rgba(255, 255, 255, 0.05)",
+          "--text": "#fff7ed",
+          "--muted": "rgba(255, 247, 237, 0.78)",
+          "--hair": "rgba(255, 247, 237, 0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0604",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
         },
         light: {
-          '--bg': '#ffffff', '--accent': '#4f46e5', '--accent2': '#0ea5e9',
-          '--panel': 'rgba(15, 23, 42, 0.04)', '--text': '#0f172a',
-          '--muted': '#475569', '--hair': 'rgba(15, 23, 42, 0.12)',
-          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#090d16',
-          '--heading-color': 'var(--accent)'
+          "--bg": "#ffffff",
+          "--accent": "#4f46e5",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(15, 23, 42, 0.04)",
+          "--text": "#0f172a",
+          "--muted": "#475569",
+          "--hair": "rgba(15, 23, 42, 0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#090d16",
+          "--heading-color": "var(--accent)",
         },
-        'light-sky': {
-          '--bg': '#f0f9ff', '--accent': '#0284c7', '--accent2': '#0ea5e9',
-          '--panel': 'rgba(2, 132, 199, 0.04)', '--text': '#0f172a',
-          '--muted': '#334155', '--hair': 'rgba(2, 132, 199, 0.12)',
-          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#031b2b',
-          '--heading-color': 'var(--accent)'
+        "light-sky": {
+          "--bg": "#f0f9ff",
+          "--accent": "#0284c7",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(2, 132, 199, 0.04)",
+          "--text": "#0f172a",
+          "--muted": "#334155",
+          "--hair": "rgba(2, 132, 199, 0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#031b2b",
+          "--heading-color": "var(--accent)",
         },
-        'light-mint': {
-          '--bg': '#f0fdf4', '--accent': '#16a34a', '--accent2': '#10b981',
-          '--panel': 'rgba(22, 163, 74, 0.04)', '--text': '#052e16',
-          '--muted': '#14532d', '--hair': 'rgba(22, 163, 74, 0.12)',
-          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#022310',
-          '--heading-color': 'var(--accent)'
+        "light-mint": {
+          "--bg": "#f0fdf4",
+          "--accent": "#16a34a",
+          "--accent2": "#10b981",
+          "--panel": "rgba(22, 163, 74, 0.04)",
+          "--text": "#052e16",
+          "--muted": "#14532d",
+          "--hair": "rgba(22, 163, 74, 0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#022310",
+          "--heading-color": "var(--accent)",
         },
-        'light-amber': {
-          '--bg': '#fffbeb', '--accent': '#b45309', '--accent2': '#d97706',
-          '--panel': 'rgba(180, 83, 9, 0.04)', '--text': '#451a03',
-          '--muted': '#78350f', '--hair': 'rgba(180, 83, 9, 0.12)',
-          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#270f02',
-          '--heading-color': 'var(--accent)'
+        "light-amber": {
+          "--bg": "#fffbeb",
+          "--accent": "#b45309",
+          "--accent2": "#d97706",
+          "--panel": "rgba(180, 83, 9, 0.04)",
+          "--text": "#451a03",
+          "--muted": "#78350f",
+          "--hair": "rgba(180, 83, 9, 0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#270f02",
+          "--heading-color": "var(--accent)",
         },
-        'light-rose': {
-          '--bg': '#fff1f2', '--accent': '#be123c', '--accent2': '#e11d48',
-          '--panel': 'rgba(190, 18, 60, 0.04)', '--text': '#4c0519',
-          '--muted': '#9f1239', '--hair': 'rgba(190, 18, 60, 0.12)',
-          '--success': '#16a34a', '--black': '#ffffff', '--strong': '#27020a',
-          '--heading-color': 'var(--accent)'
-        }
+        "light-rose": {
+          "--bg": "#fff1f2",
+          "--accent": "#be123c",
+          "--accent2": "#e11d48",
+          "--panel": "rgba(190, 18, 60, 0.04)",
+          "--text": "#4c0519",
+          "--muted": "#9f1239",
+          "--hair": "rgba(190, 18, 60, 0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#27020a",
+          "--heading-color": "var(--accent)",
+        },
       };
 
-      let currentStyle = 'id-card';
-      let currentCardDesign = 'design-premium';
+      let currentStyle = "id-card";
+      let currentCardDesign = "design-premium";
 
       function generateCards() {
-        const sheet = document.getElementById('sheet-1');
-        sheet.innerHTML = '';
-        
-        let cardTemplate = '';
-        if (currentStyle === 'coupon') {
+        const sheet = document.getElementById("sheet-1");
+        sheet.innerHTML = "";
+
+        let cardTemplate = "";
+        if (currentStyle === "coupon") {
           cardTemplate = `
             <div class="bcard-container">
               <div class="coupon-scalable">
@@ -1148,17 +1407,17 @@
       }
 
       function handleImageError(img) {
-        img.style.display = 'none';
+        img.style.display = "none";
         const fallback = img.nextElementSibling;
         if (fallback) {
-          fallback.style.display = 'flex';
+          fallback.style.display = "flex";
         }
       }
 
       function updateCardStyle() {
-        currentStyle = document.getElementById('style-select').value;
-        currentCardDesign = document.getElementById('card-design-select').value;
-        
+        currentStyle = document.getElementById("style-select").value;
+        currentCardDesign = document.getElementById("card-design-select").value;
+
         // Regenerate card DOM templates
         generateCards();
         // Re-apply theme visual variables
@@ -1168,116 +1427,127 @@
       }
 
       function updateTheme() {
-        const themeKey = document.getElementById('theme-select').value;
+        const themeKey = document.getElementById("theme-select").value;
         const theme = THEMES[themeKey] || THEMES.navy;
         const root = document.documentElement;
-        
+
         for (const [key, value] of Object.entries(theme)) {
           root.style.setProperty(key, value);
         }
 
-        const isLight = themeKey.startsWith('light');
-        const cards = document.querySelectorAll('.bcard, .print-id-card, .coupon-scalable');
-        
-        cards.forEach(card => {
+        const isLight = themeKey.startsWith("light");
+        const cards = document.querySelectorAll(
+          ".bcard, .print-id-card, .coupon-scalable",
+        );
+
+        cards.forEach((card) => {
           if (isLight) {
-            card.style.border = '1px solid var(--hair)';
+            card.style.border = "1px solid var(--hair)";
           } else {
             // Keep dashed borders on coupon style intact
-            if (!card.classList.contains('coupon-scalable')) {
-              card.style.border = 'none';
+            if (!card.classList.contains("coupon-scalable")) {
+              card.style.border = "none";
             }
           }
         });
       }
 
       function syncFields() {
-        const name = document.getElementById('name-input').value;
-        const title = document.getElementById('title-input').value;
-        const badge = document.getElementById('badge-input').value;
-        const email = document.getElementById('email-input').value;
-        const phone = document.getElementById('phone-input').value;
-        const web = document.getElementById('web-input').value;
-        const company = document.getElementById('company-input').value;
-        const tagline = document.getElementById('tagline-input').value;
-        const photo = '/logo.png';
+        const name = document.getElementById("name-input").value;
+        const title = document.getElementById("title-input").value;
+        const badge = document.getElementById("badge-input").value;
+        const email = document.getElementById("email-input").value;
+        const phone = document.getElementById("phone-input").value;
+        const web = document.getElementById("web-input").value;
+        const company = document.getElementById("company-input").value;
+        const tagline = document.getElementById("tagline-input").value;
+        const photo = "/logo.png";
 
-        updateElements('.sync-name', name);
-        updateElements('.sync-title', title);
-        updateElements('.sync-badge', badge);
-        updateElements('.sync-email', email);
-        updateElements('.sync-phone', phone);
-        updateElements('.sync-web', web);
-        updateElements('.sync-company', company);
-        updateElements('.sync-tagline', tagline);
+        updateElements(".sync-name", name);
+        updateElements(".sync-title", title);
+        updateElements(".sync-badge", badge);
+        updateElements(".sync-email", email);
+        updateElements(".sync-phone", phone);
+        updateElements(".sync-web", web);
+        updateElements(".sync-company", company);
+        updateElements(".sync-tagline", tagline);
 
         // Header sync for coupon style
         const companyTaglineText = `${company} - ${tagline}`;
-        updateElements('.sync-company-tagline', companyTaglineText);
+        updateElements(".sync-company-tagline", companyTaglineText);
 
-        document.querySelectorAll('.bc-avatar-fallback').forEach(el => {
-          el.textContent = 'LU';
+        document.querySelectorAll(".bc-avatar-fallback").forEach((el) => {
+          el.textContent = "LU";
         });
 
         // Use the LevelUp logo in the business card image slot.
-        document.querySelectorAll('.sync-avatar').forEach(img => {
+        document.querySelectorAll(".sync-avatar").forEach((img) => {
           const fallback = img.nextElementSibling;
-          if (currentStyle !== 'coupon') {
+          if (currentStyle !== "coupon") {
             img.src = photo;
-            img.style.display = 'block';
-            fallback.style.display = 'none';
+            img.style.display = "block";
+            fallback.style.display = "none";
           } else {
-            img.src = '';
-            img.style.display = 'none';
-            fallback.style.display = 'flex';
+            img.src = "";
+            img.style.display = "none";
+            fallback.style.display = "flex";
           }
         });
 
         // Sync QR code source linking directly to the site URL using local QRCode.js
-        document.querySelectorAll('.sync-qrcode-container').forEach(container => {
-          container.innerHTML = '';
-          if (web && web.trim()) {
-            const url = web.startsWith('http') ? web : 'https://' + web;
-            if (typeof QRCode !== 'undefined') {
-              new QRCode(container, {
-                text: url,
-                width: currentStyle === 'coupon' ? 36 : 38,
-                height: currentStyle === 'coupon' ? 36 : 38,
-                colorDark: '#000000',
-                colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
-              });
-              container.style.display = 'flex';
+        document
+          .querySelectorAll(".sync-qrcode-container")
+          .forEach((container) => {
+            container.innerHTML = "";
+            if (web && web.trim()) {
+              const url = web.startsWith("http") ? web : "https://" + web;
+              if (typeof QRCode !== "undefined") {
+                new QRCode(container, {
+                  text: url,
+                  width: currentStyle === "coupon" ? 36 : 38,
+                  height: currentStyle === "coupon" ? 36 : 38,
+                  colorDark: "#000000",
+                  colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.H,
+                });
+                container.style.display = "flex";
+              } else {
+                container.innerHTML =
+                  '<span style="font-size: 8px; color: #000; text-align: center;">QR</span>';
+                container.style.display = "flex";
+              }
             } else {
-              container.innerHTML = '<span style="font-size: 8px; color: #000; text-align: center;">QR</span>';
-              container.style.display = 'flex';
+              container.style.display = "none";
             }
-          } else {
-            container.style.display = 'none';
-          }
-        });
+          });
 
         // Hide empty rows/badges/containers if empty
-        document.querySelectorAll('.sync-email-row').forEach(el => el.style.display = email ? 'flex' : 'none');
-        document.querySelectorAll('.sync-phone-row').forEach(el => el.style.display = phone ? 'flex' : 'none');
-        document.querySelectorAll('.sync-web-row').forEach(el => el.style.display = web ? 'flex' : 'none');
-        
+        document
+          .querySelectorAll(".sync-email-row")
+          .forEach((el) => (el.style.display = email ? "flex" : "none"));
+        document
+          .querySelectorAll(".sync-phone-row")
+          .forEach((el) => (el.style.display = phone ? "flex" : "none"));
+        document
+          .querySelectorAll(".sync-web-row")
+          .forEach((el) => (el.style.display = web ? "flex" : "none"));
+
         // Hide separator dot in coupon style if email or web is empty
-        document.querySelectorAll('.sync-separator').forEach(el => {
-          el.style.display = (email && web) ? 'inline' : 'none';
+        document.querySelectorAll(".sync-separator").forEach((el) => {
+          el.style.display = email && web ? "inline" : "none";
         });
       }
 
       function updateElements(selector, value) {
-        document.querySelectorAll(selector).forEach(el => {
+        document.querySelectorAll(selector).forEach((el) => {
           el.textContent = value;
         });
       }
 
       // Check if URL has ?embed=1 and hide sidebar accordingly
-      if (new URLSearchParams(window.location.search).has('embed')) {
-        document.querySelector('.control-sidebar').style.display = 'none';
-        document.querySelector('.proposal-main').style.padding = '0';
+      if (new URLSearchParams(window.location.search).has("embed")) {
+        document.querySelector(".control-sidebar").style.display = "none";
+        document.querySelector(".proposal-main").style.padding = "0";
       }
 
       // Initialize
