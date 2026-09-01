@@ -47,6 +47,7 @@ import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
+import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 
 type ColorScheme =
     | 'default'
@@ -98,6 +99,8 @@ interface Settings {
     enableHouses: boolean;
     /** Visual theme for the dedicated Houses realm (background, glow, accents). School-wide. */
     housesRealmTheme?: HousesRealmThemeId;
+    /** Visual theme for the dedicated Classroom realm (background, glow, accents). School-wide. */
+    classroomRealmTheme?: ClassroomRealmThemeId;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
     /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
@@ -671,6 +674,7 @@ const defaultSettings: Settings = {
     recessMaxMinutes: 10,
     enableHouses: false,
     housesRealmTheme: 'cosmic',
+    classroomRealmTheme: 'chalkboard',
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,

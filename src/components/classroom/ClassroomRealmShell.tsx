@@ -11,13 +11,16 @@ import {
   Home,
   LayoutGrid,
   Monitor,
-  Settings2,
+  Palette,
   Tv,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { classroomRealmHref, classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
-import { classroomRealmThemeVars } from '@/lib/classroom/classroomRealmThemes';
+import {
+  classroomRealmThemeVars,
+  resolveClassroomRealmTheme,
+} from '@/lib/classroom/classroomRealmThemes';
 import {
   buildClassroomSections,
   CLASSROOM_LIVE_MONITOR_NAV_LABEL,
@@ -37,21 +40,35 @@ const MANAGE_SECTION_ICONS: Record<ClassroomTabSection, typeof LayoutGrid> = {
   raffle: Dices,
 };
 
+function schoolLabel(schoolId: string) {
+  const raw = schoolId.trim();
+  if (!raw) return 'LevelUp';
+  return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/[-_]/g, ' ');
+}
+
 export function useClassroomRealmTheme(active: boolean) {
+  const { settings } = useSettings();
+  const themeId = resolveClassroomRealmTheme(settings.classroomRealmTheme).id;
+
   useEffect(() => {
-    if (!active) return;
     const el = document.documentElement;
-    const vars = classroomRealmThemeVars();
+    el.setAttribute('data-classroom-realm', '');
+    if (!active) {
+      return () => el.removeAttribute('data-classroom-realm');
+    }
+    const vars = classroomRealmThemeVars(resolveClassroomRealmTheme(themeId));
     for (const [key, value] of Object.entries(vars)) el.style.setProperty(key, value);
     return () => {
+      el.removeAttribute('data-classroom-realm');
       for (const key of Object.keys(vars)) el.style.removeProperty(key);
     };
-  }, [active]);
+  }, [active, themeId]);
 }
 
 type NavItem = {
   id: string;
   label: string;
+  shortLabel?: string;
   href: string;
   icon: typeof Home;
   active: boolean;
@@ -62,7 +79,7 @@ function ClassroomRealmNav({
   variant,
 }: {
   schoolId: string;
-  variant: 'sidebar' | 'mobile';
+  variant: 'sidebar' | 'dock';
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -79,9 +96,24 @@ function ClassroomRealmNav({
     return Boolean(pathname?.startsWith(`${base}/${segment}`));
   };
 
-  const topItems: NavItem[] = [
+  const teachItems: NavItem[] = [
     { id: 'home', label: 'Home', href: classroomRealmHref(schoolId, ''), icon: Home, active: pathActive('') },
-    { id: 'setup', label: 'Set up', href: classroomRealmHref(schoolId, 'setup'), icon: Settings2, active: pathActive('setup') },
+    {
+      id: 'live',
+      label: CLASSROOM_LIVE_MONITOR_NAV_LABEL,
+      shortLabel: 'Live',
+      href: classroomRealmHref(schoolId, 'live'),
+      icon: LayoutGrid,
+      active: pathActive('live'),
+    },
+    {
+      id: 'screen',
+      label: 'Class screen',
+      shortLabel: 'Screen',
+      href: classroomRealmHref(schoolId, 'class-screen'),
+      icon: Tv,
+      active: pathActive('class-screen'),
+    },
   ];
 
   const manageItems: NavItem[] = manageSections.map((section) => ({
@@ -92,49 +124,33 @@ function ClassroomRealmNav({
     active: onManage && (manageSection === section || (!searchParams.get('section') && section === 'seating')),
   }));
 
-  const displayItems: NavItem[] = [
+  const lookItems: NavItem[] = [
     {
-      id: 'live',
-      label: CLASSROOM_LIVE_MONITOR_NAV_LABEL,
-      href: classroomRealmHref(schoolId, 'live'),
-      icon: LayoutGrid,
-      active: pathActive('live'),
-    },
-    {
-      id: 'screen',
-      label: 'Class screen',
-      href: classroomRealmHref(schoolId, 'class-screen'),
-      icon: Tv,
-      active: pathActive('class-screen'),
+      id: 'setup',
+      label: 'Change look',
+      shortLabel: 'Look',
+      href: classroomRealmHref(schoolId, 'setup'),
+      icon: Palette,
+      active: pathActive('setup'),
     },
   ];
 
-  const renderLink = (item: NavItem) => {
-    const Icon = item.icon;
-    if (variant === 'mobile') {
-      return (
-        <Link
-          key={item.id}
-          href={item.href}
-          className={cn(
-            'relative shrink-0 rounded-lg p-2',
-            item.active ? 'text-white' : 'text-white/60 hover:bg-white/10 hover:text-white',
-          )}
-          aria-label={item.label}
-          aria-current={item.active ? 'page' : undefined}
-        >
-          {item.active ? (
-            <motion.span
-              layoutId="classroom-realm-nav-active-mobile"
-              className="absolute inset-0 rounded-lg bg-white/12"
-              transition={NAV_SPRING}
-            />
-          ) : null}
-          <Icon className="relative z-10 h-4 w-4" />
-        </Link>
-      );
-    }
+  const dockItems: NavItem[] = [
+    teachItems[0],
+    teachItems[1],
+    teachItems[2],
+    {
+      id: 'manage',
+      label: 'Manage',
+      href: classroomRealmManageHref(schoolId, 'seating'),
+      icon: BookOpenCheck,
+      active: onManage,
+    },
+    lookItems[0],
+  ];
 
+  const renderSidebarLink = (item: NavItem) => {
+    const Icon = item.icon;
     return (
       <Link
         key={item.id}
@@ -158,27 +174,63 @@ function ClassroomRealmNav({
     );
   };
 
-  if (variant === 'mobile') {
+  if (variant === 'dock') {
     return (
-      <div className="flex gap-1 overflow-x-auto">
-        {topItems.map(renderLink)}
-        {manageItems.map(renderLink)}
-        {displayItems.map(renderLink)}
-      </div>
+      <nav
+        className="fixed inset-x-0 bottom-0 z-30 flex items-stretch border-t border-white/10 bg-black/60 backdrop-blur-xl lg:hidden"
+        aria-label="Classroom navigation"
+      >
+        {dockItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 py-2.5 text-center"
+              aria-label={item.label}
+              aria-current={item.active ? 'page' : undefined}
+            >
+              {item.active ? (
+                <motion.span
+                  layoutId="classroom-realm-nav-active-mobile"
+                  className="absolute inset-x-2 inset-y-1 rounded-xl bg-white/10"
+                  transition={NAV_SPRING}
+                />
+              ) : null}
+              <Icon
+                className="relative z-10 h-5 w-5 shrink-0"
+                style={{ color: item.active ? 'var(--cr-accent-text)' : undefined }}
+                aria-hidden
+              />
+              <span
+                className="relative z-10 text-[9px] font-bold uppercase tracking-wider leading-none"
+                style={{
+                  color: item.active ? 'var(--cr-accent-text)' : 'rgba(255,255,255,0.45)',
+                }}
+              >
+                {item.shortLabel ?? item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     );
   }
 
   return (
     <nav className="flex flex-1 flex-col gap-1">
-      {topItems.map(renderLink)}
+      <p className="mb-1 px-3 text-[10px] font-black uppercase tracking-[0.28em] text-white/35">
+        Teach
+      </p>
+      {teachItems.map(renderSidebarLink)}
       <p className="mb-1 mt-4 px-3 text-[10px] font-black uppercase tracking-[0.28em] text-white/35">
         Manage
       </p>
-      {manageItems.map(renderLink)}
+      {manageItems.map(renderSidebarLink)}
       <p className="mb-1 mt-4 px-3 text-[10px] font-black uppercase tracking-[0.28em] text-white/35">
-        Display
+        Change look
       </p>
-      {displayItems.map(renderLink)}
+      {lookItems.map(renderSidebarLink)}
     </nav>
   );
 }
@@ -202,9 +254,11 @@ export function ClassroomRealmShell({
   return (
     <div className="classroom-realm-root relative flex min-h-dvh overflow-hidden">
       <div className="classroom-realm-bg pointer-events-none absolute inset-0" aria-hidden />
-      <div className="classroom-realm-grid pointer-events-none absolute inset-0 opacity-50" aria-hidden />
+      <div className="classroom-realm-grid pointer-events-none absolute inset-0 opacity-40" aria-hidden />
+      <div className="classroom-realm-grain pointer-events-none absolute inset-0" aria-hidden />
+      <div className="classroom-realm-dust pointer-events-none absolute inset-0" aria-hidden />
 
-      <aside className="relative z-20 hidden w-56 shrink-0 flex-col border-r border-white/10 bg-black/25 p-4 backdrop-blur-md lg:flex">
+      <aside className="relative z-20 hidden w-60 shrink-0 flex-col border-r border-white/10 bg-black/25 p-4 backdrop-blur-md lg:flex">
         <div className="mb-8 flex items-center gap-3 px-2">
           <div
             className="flex h-11 w-11 items-center justify-center rounded-2xl shadow-lg shadow-black/40"
@@ -217,7 +271,7 @@ export function ClassroomRealmShell({
               className="text-[10px] font-black uppercase tracking-[0.35em]"
               style={{ color: 'var(--cr-accent-text)' }}
             >
-              LevelUp
+              {schoolLabel(schoolId)}
             </p>
             <p className="font-serif text-lg font-bold text-white">Classroom</p>
           </div>
@@ -238,12 +292,20 @@ export function ClassroomRealmShell({
 
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md lg:hidden">
-          <p className="shrink-0 font-serif text-lg font-bold text-white">Classroom</p>
-          <Suspense fallback={null}>
-            <ClassroomRealmNav schoolId={schoolId} variant="mobile" />
-          </Suspense>
+          <p className="font-serif text-lg font-bold text-white">Classroom</p>
+          <Link
+            href={classroomRealmHref(schoolId, 'setup')}
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-bold"
+            style={{ color: 'var(--cr-accent-text)' }}
+          >
+            <Palette className="h-3.5 w-3.5" aria-hidden />
+            Change look
+          </Link>
         </header>
-        <main className="flex-1 overflow-auto">{children}</main>
+        <main className="flex-1 overflow-auto pb-20 lg:pb-0">{children}</main>
+        <Suspense fallback={null}>
+          <ClassroomRealmNav schoolId={schoolId} variant="dock" />
+        </Suspense>
       </div>
     </div>
   );
@@ -263,7 +325,7 @@ export function ClassroomRealmHero({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 260, damping: 24 }}
-      className="mx-auto flex max-w-4xl flex-col items-center px-6 py-16 text-center sm:py-24"
+      className="mx-auto flex max-w-4xl flex-col items-center px-6 py-14 text-center sm:py-20"
     >
       <p
         className="mb-4 text-[10px] font-black uppercase tracking-[0.5em]"

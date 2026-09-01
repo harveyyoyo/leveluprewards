@@ -29,7 +29,7 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-        className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-600 to-teal-500 shadow-2xl shadow-indigo-900/25"
+        className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-lime-600 to-amber-500 shadow-2xl shadow-emerald-900/20"
       >
         <LayoutGrid className="h-10 w-10 text-white" aria-hidden />
       </motion.div>
@@ -39,15 +39,15 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
           {CLASSROOM_TAB_LABEL}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Classroom runs in its own fullscreen experience — seating charts, quick awards, behavior
-          notes, and the live class screen with a dedicated look built for teaching.
+          Classroom opens in its own teaching space — live awards, a student class screen, seating,
+          and behavior notes, with a look you can pick for your school.
         </p>
       </div>
 
       <Button
         asChild
         size="lg"
-        className="min-w-[14rem] rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 px-8 text-base font-bold shadow-lg hover:from-indigo-500 hover:to-indigo-400"
+        className="min-w-[14rem] rounded-full bg-gradient-to-r from-lime-700 to-amber-600 px-8 text-base font-bold shadow-lg hover:from-lime-600 hover:to-amber-500"
       >
         <a href={classroomUrl} target="_blank" rel="noopener noreferrer">
           <ExternalLink className="mr-2 h-5 w-5" aria-hidden />

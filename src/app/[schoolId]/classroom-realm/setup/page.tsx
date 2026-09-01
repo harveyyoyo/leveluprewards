@@ -1,16 +1,27 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
-import { Sparkles } from 'lucide-react';
+import { Palette, Sparkles } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
+import {
+  CLASSROOM_REALM_ACCENT_BUTTON,
+  ClassroomRealmPageHeader,
+  ClassroomRealmPanel,
+} from '@/components/classroom/ClassroomRealmChrome';
+import { ClassroomRealmThemePicker } from '@/components/classroom/ClassroomRealmThemePicker';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
+import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import {
+  resolveClassroomRealmTheme,
+  type ClassroomRealmThemeId,
+} from '@/lib/classroom/classroomRealmThemes';
 import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import type { Class, Student } from '@/lib/types';
 
@@ -21,6 +32,7 @@ export default function ClassroomRealmSetupPage() {
   const { settings, updateSettings } = useSettings();
   const { loginState } = useAppContext();
   const classroomOn = isClassroomPillarOn(settings);
+  const activeTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
 
   const classesQuery = useMemoFirebase(
     () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
@@ -39,51 +51,77 @@ export default function ClassroomRealmSetupPage() {
     [classes],
   );
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-classroom-realm', '');
-    return () => document.documentElement.removeAttribute('data-classroom-realm');
-  }, []);
-
   const staffOk = canAccessHallOfFameRoute(loginState);
   const isAdmin = loginState === 'admin' || loginState === 'developer';
 
+  function selectTheme(id: ClassroomRealmThemeId) {
+    updateSettings({ classroomRealmTheme: id });
+  }
+
   return (
     <ClassroomRealmShell schoolId={schoolId}>
-      <div className="classroom-realm-manage mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center backdrop-blur-md">
-          <div
-            className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg"
-            style={{
-              backgroundImage: 'linear-gradient(135deg, var(--cr-accent-from), var(--cr-accent-to))',
-            }}
-          >
-            <Sparkles className="h-8 w-8" style={{ color: 'var(--cr-on-accent)' }} aria-hidden />
-          </div>
-          <h1 className="classroom-realm-display mb-3 text-3xl font-bold text-white">
-            Set up {CLASSROOM_TAB_LABEL}
-          </h1>
-          <p className="mb-8 text-sm leading-relaxed text-white/60">
-            Turn on seating charts, pick a visual style, and configure quick awards for your classes.
-          </p>
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
+        <ClassroomRealmPageHeader
+          eyebrow="Change look"
+          title="Change the classroom look"
+          subtitle="Tap a color card to restyle this space. The setup wizard below is only if you still need seating and awards."
+          icon={Palette}
+        />
 
-          {!classroomOn && isAdmin ? (
+        {!classroomOn ? (
+          <ClassroomRealmPanel className="mb-6 text-center">
             <p className="mb-4 text-sm text-white/70">
-              {CLASSROOM_TAB_LABEL} is off — the wizard will turn it on as part of setup.
+              {CLASSROOM_TAB_LABEL} is off for this school.
+              {isAdmin ? ' Turn it on to use seating charts and live awards.' : ' Ask an admin to turn it on.'}
             </p>
-          ) : null}
+            {isAdmin ? (
+              <Button
+                type="button"
+                size="lg"
+                onClick={() => updateSettings({ payClassroom: true })}
+                className="rounded-full border-0 px-8 font-bold shadow-lg shadow-black/30"
+                style={CLASSROOM_REALM_ACCENT_BUTTON}
+              >
+                <Sparkles className="mr-2 h-5 w-5" aria-hidden />
+                Enable Classroom
+              </Button>
+            ) : null}
+          </ClassroomRealmPanel>
+        ) : null}
 
-          {!staffOk ? (
-            <p className="text-sm text-white/50">Staff sign-in is required to run setup.</p>
-          ) : (
-            <ClassroomSetupWizardTrigger
-              schoolId={schoolId}
-              classes={sortedClasses}
-              students={students ?? []}
-              updateSettings={updateSettings}
-              className="mx-auto border-white/20 bg-white/10 text-white hover:bg-white/15"
-            />
-          )}
-        </div>
+        {!staffOk ? (
+          <p className="text-sm text-white/50">Staff sign-in is required to change the look.</p>
+        ) : (
+          <div className="space-y-6">
+            <ClassroomRealmPanel>
+              <div className="mb-5">
+                <h2 className="font-serif text-xl font-bold text-white">Classroom look</h2>
+                <p className="mt-1 text-sm text-white/55">
+                  This changes the background and colors for every teacher in Classroom. Current look:{' '}
+                  <span style={{ color: 'var(--cr-accent-text)' }}>
+                    {activeTheme.icon} {activeTheme.label}
+                  </span>
+                </p>
+              </div>
+              <ClassroomRealmThemePicker value={activeTheme.id} onSelect={selectTheme} />
+            </ClassroomRealmPanel>
+
+            <ClassroomRealmPanel className="text-center">
+              <h2 className="mb-2 font-serif text-xl font-bold text-white">Finish seating & awards</h2>
+              <p className="mb-6 text-sm leading-relaxed text-white/55">
+                The setup wizard walks through seating charts, quick awards, and classroom options.
+                {!classroomOn && isAdmin ? ' It will also turn Classroom on.' : null}
+              </p>
+              <ClassroomSetupWizardTrigger
+                schoolId={schoolId}
+                classes={sortedClasses}
+                students={students ?? []}
+                updateSettings={updateSettings}
+                className="mx-auto border-white/20 bg-white/10 text-white hover:bg-white/15"
+              />
+            </ClassroomRealmPanel>
+          </div>
+        )}
       </div>
     </ClassroomRealmShell>
   );

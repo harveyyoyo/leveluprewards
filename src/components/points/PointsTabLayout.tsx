@@ -28,7 +28,7 @@ const SECTION_ICONS: Record<PointsTabSection, React.ComponentType<{ className?: 
 };
 
 export type PointsTabLayoutProps = {
-  /** Staff portal tab value — admin uses `categories`, teacher uses `coupons` (both labeled Points). */
+  /** Staff portal tab value — admin uses `categories`, teacher uses `coupons` (both labeled Coupons). */
   tabValue?: 'categories' | 'coupons';
   defaultSection?: PointsTabSection;
   sections?: PointsTabSection[];
@@ -91,12 +91,12 @@ export function PointsTabLayout({
         <Card className="w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
           <CardContent className="space-y-5 p-4 sm:space-y-6 sm:p-6">
             <ContentSectionTreeNav
-              branchLabel="Points"
+              branchLabel="Coupons"
               items={sectionItems}
               value={resolvedSection}
               onValueChange={(val) => setSection(val as PointsTabSection)}
               className="rounded-2xl border bg-muted/30 p-1.5"
-              aria-label="Points sections"
+              aria-label="Coupons sections"
             />
 
             <AnimatePresence mode="wait" initial={false}>

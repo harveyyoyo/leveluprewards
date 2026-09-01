@@ -1,82 +1,25 @@
 'use client';
 
-import { useDeferredValue, useEffect, useMemo } from 'react';
+import { useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { collection } from 'firebase/firestore';
-import { Monitor } from 'lucide-react';
+import { Tv } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
+import { ClassroomRealmPageHeader } from '@/components/classroom/ClassroomRealmChrome';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
 import { Button } from '@/components/ui/button';
-import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
+import { useClassroomRealmRoster } from '@/hooks/useClassroomRealmRoster';
 import { isClassroomPillarOn } from '@/lib/productPillars';
-import { studentsInTeacherScope } from '@/lib/reportsScope';
-import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
 import { classroomRealmManageHref } from '@/lib/classroomRealmUrl';
-import type { Class, Student, Teacher } from '@/lib/types';
 
 export default function ClassroomRealmClassScreenPage() {
   const params = useParams();
   const schoolId = String(params.schoolId || '');
-  const firestore = useFirestore();
   const { settings } = useSettings();
-  const { loginState, isAdmin, teacherDocId, userId } = useAppContext();
   const classroomOn = isClassroomPillarOn(settings);
-
-  const studentsQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null),
-    [firestore, schoolId],
-  );
-  const classesQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
-    [firestore, schoolId],
-  );
-  const teachersQuery = useMemoFirebase(
-    () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),
-    [firestore, schoolId],
-  );
-
-  const { data: allStudents } = useCollection<Student>(studentsQuery);
-  const { data: allClasses } = useCollection<Class>(classesQuery);
-  const { data: teachers } = useCollection<Teacher>(teachersQuery);
-
-  const activeTeacherId = teacherDocId || userId || '';
-  const currentTeacher = teachers?.find((t) => t.id === activeTeacherId) ?? null;
-  const schoolWide =
-    isAdmin ||
-    loginState === 'developer' ||
-    isLeadershipPersonnel(currentTeacher);
-
-  const students = useMemo(() => {
-    const list = allStudents ?? [];
-    if (schoolWide) return list;
-    if (!activeTeacherId) return list;
-    return studentsInTeacherScope(activeTeacherId, list, allClasses ?? []);
-  }, [allStudents, allClasses, schoolWide, activeTeacherId]);
-
-  const classes = useMemo(() => {
-    const list = (allClasses ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-    if (schoolWide) return list;
-    const fromStudents = new Set(
-      students.map((s) => s.classId).filter((id): id is string => Boolean(id)),
-    );
-    return list
-      .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === activeTeacherId)
-      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-  }, [allClasses, schoolWide, students, activeTeacherId]);
-
-  const deferredStudents = useDeferredValue(students);
-  const seatingScope = schoolWide ? 'admin' : activeTeacherId || 'staff';
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-classroom-realm', '');
-    return () => document.documentElement.removeAttribute('data-classroom-realm');
-  }, []);
-
-  const staffOk = canAccessHallOfFameRoute(loginState);
+  const roster = useClassroomRealmRoster(schoolId);
+  const deferredStudents = useDeferredValue(roster.students);
 
   if (!classroomOn) {
     return (
@@ -86,7 +29,7 @@ export default function ClassroomRealmClassScreenPage() {
     );
   }
 
-  if (!staffOk) {
+  if (!roster.staffOk) {
     return (
       <ClassroomRealmShell schoolId={schoolId}>
         <p className="p-8 text-center text-white/70">Staff sign-in is required.</p>
@@ -97,21 +40,12 @@ export default function ClassroomRealmClassScreenPage() {
   return (
     <ClassroomRealmShell schoolId={schoolId}>
       <div className="classroom-realm-manage mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-xl"
-              style={{
-                backgroundImage: 'linear-gradient(135deg, var(--cr-accent-from), var(--cr-accent-to))',
-              }}
-            >
-              <Monitor className="h-5 w-5" style={{ color: 'var(--cr-on-accent)' }} aria-hidden />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-white">Class screen</h1>
-              <p className="text-sm text-white/55">Student-facing mirror — no behavior notes.</p>
-            </div>
-          </div>
+        <ClassroomRealmPageHeader
+          eyebrow="Display"
+          title="Class screen"
+          subtitle="Student-facing mirror of the live chart — no behavior notes on this view."
+          icon={Tv}
+        >
           <Button
             type="button"
             variant="outline"
@@ -122,12 +56,12 @@ export default function ClassroomRealmClassScreenPage() {
               Full room display settings
             </Link>
           </Button>
-        </div>
+        </ClassroomRealmPageHeader>
 
         <ClassroomRoomDisplaySection
           schoolId={schoolId}
-          scope={seatingScope}
-          classes={classes}
+          scope={roster.seatingScope}
+          classes={roster.classes}
           students={deferredStudents}
         />
       </div>

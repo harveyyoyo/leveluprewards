@@ -242,6 +242,8 @@ export function StaffPointsTab({
 
           teacherBudget={teacherBudget}
 
+          onAddCategory={onAddCategory}
+
         />
 
       }

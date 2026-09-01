@@ -633,8 +633,8 @@ html[data-office-portal] .office-content-pane {
   /* Classroom realm — standalone fullscreen experience.
      Colors are driven by `--cr-*` custom properties (see classroomRealmThemes.ts). */
   html[data-classroom-realm] body {
-    background-color: var(--cr-base, #0c1222) !important;
-    color: #f0f4ff !important;
+    background-color: var(--cr-base, #102016) !important;
+    color: #f4f7f0 !important;
   }
 
   html[data-classroom-realm] :where(
@@ -648,23 +648,41 @@ html[data-office-portal] .office-content-pane {
   }
 
   .classroom-realm-root {
-    color: #f0f4ff;
-    background: var(--cr-base, #0c1222);
+    color: #f4f7f0;
+    background: var(--cr-base, #102016);
   }
 
   .classroom-realm-bg {
     background:
-      radial-gradient(ellipse 80% 55% at 50% -10%, var(--cr-glow-top, rgba(99, 102, 241, 0.35)), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 100% 100%, var(--cr-glow-bottom, rgba(20, 184, 166, 0.14)), transparent 55%),
-      linear-gradient(180deg, var(--cr-grad-from, #131a2e) 0%, var(--cr-grad-mid, #0c1222) 45%, var(--cr-grad-to, #060a14) 100%);
+      radial-gradient(ellipse 80% 55% at 50% -10%, var(--cr-glow-top, rgba(163, 230, 53, 0.22)), transparent 60%),
+      radial-gradient(ellipse 55% 38% at 8% 88%, var(--cr-glow-bottom, rgba(251, 191, 36, 0.14)), transparent 58%),
+      radial-gradient(ellipse 50% 36% at 96% 18%, var(--cr-glow-top, rgba(163, 230, 53, 0.14)), transparent 62%),
+      linear-gradient(180deg, var(--cr-grad-from, #173022) 0%, var(--cr-grad-mid, #102016) 45%, var(--cr-grad-to, #08110c) 100%);
     transition: background 600ms ease;
   }
 
   .classroom-realm-grid {
     background-image:
-      linear-gradient(var(--cr-grid, rgba(99, 102, 241, 0.08)) 1px, transparent 1px),
-      linear-gradient(90deg, var(--cr-grid, rgba(99, 102, 241, 0.08)) 1px, transparent 1px);
+      linear-gradient(var(--cr-grid, rgba(190, 242, 100, 0.08)) 1px, transparent 1px),
+      linear-gradient(90deg, var(--cr-grid, rgba(190, 242, 100, 0.08)) 1px, transparent 1px);
     background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, #000 35%, transparent 80%);
+  }
+
+  .classroom-realm-grain {
+    opacity: 0.18;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+
+  .classroom-realm-dust {
+    background-image:
+      radial-gradient(1.5px 1.5px at 12% 22%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent),
+      radial-gradient(1px 1px at 28% 68%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent),
+      radial-gradient(1.5px 1.5px at 63% 18%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent),
+      radial-gradient(1px 1px at 81% 46%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent),
+      radial-gradient(1.5px 1.5px at 47% 82%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent),
+      radial-gradient(1px 1px at 91% 78%, var(--cr-dust, rgba(253, 230, 138, 0.28)), transparent);
   }
 
   .classroom-realm-display {
@@ -674,19 +692,23 @@ html[data-office-portal] .office-content-pane {
 
   html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background) {
     background-color: rgba(255, 255, 255, 0.06) !important;
-    color: #f0f4ff;
+    color: #f4f7f0;
   }
 
   html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground) {
-    color: #f0f4ff !important;
+    color: #f4f7f0 !important;
   }
 
   html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground) {
-    color: rgba(240, 244, 255, 0.55) !important;
+    color: rgba(244, 247, 240, 0.58) !important;
   }
 
   html[data-classroom-realm] .classroom-realm-manage :where(.border-border) {
     border-color: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select) {
+    color: #f4f7f0;
   }
   
   .coupon-preview-container {

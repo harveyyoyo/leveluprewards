@@ -40,10 +40,10 @@ export function StaffPortalChrome({
 
   const defaultSubtitle =
     role === 'teacher'
-      ? 'Points, classes, prizes, and reports.'
+      ? 'Coupons, classes, prizes, and reports.'
       : role === 'secretary'
         ? 'Print coupon sheets for teachers.'
-        : 'Students, classes, points, prizes, and school settings.';
+        : 'Students, classes, coupons, prizes, and school settings.';
 
   const helperContent =
     role === 'teacher'

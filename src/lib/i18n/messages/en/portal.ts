@@ -8,7 +8,7 @@ const portal = {
   },
   teacherPortal: {
     title: 'Teacher Portal',
-    descriptionRewards: 'Staff portal with teacher tabs — points, classes, prizes, and reports.',
+    descriptionRewards: 'Staff portal with teacher tabs — coupons, classes, prizes, and reports.',
     descriptionClassroom: 'Classroom Management — {section}, session tracking, and room display.',
     descriptionDefault: 'Staff portal for your school.',
   },
