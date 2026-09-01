@@ -166,7 +166,7 @@ export function AwardCategoriesPanel({
               </div>
               <div className="order-2 whitespace-nowrap text-right text-sm font-bold text-primary md:order-none md:text-center">
                 <Badge variant="secondary" className="px-2 font-bold tabular-nums">
-                  {c.points} {icon}
+                  {Number(c.points ?? 0)} {icon}
                 </Badge>
               </div>
               {showHouseToggle ? (

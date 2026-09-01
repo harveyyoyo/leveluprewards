@@ -100,15 +100,18 @@ export function ManualPointsAwardDialog({
   const categoryList = useMemo(() => categories ?? [], [categories]);
 
   useEffect(() => {
-    if (categoryList.length > 0 && !awardCategoryId) {
-      setAwardCategoryId(categoryList[0].id);
+    // Also resets a stale id when the selected category was deleted.
+    if (awardCategoryId && categoryList.some((c) => c.id === awardCategoryId)) return;
+    const fallbackId = categoryList[0]?.id ?? '';
+    if (fallbackId !== awardCategoryId) {
+      setAwardCategoryId(fallbackId);
     }
   }, [categoryList, awardCategoryId]);
 
   useEffect(() => {
     const category = categoryList.find((c) => c.id === awardCategoryId);
     if (category) {
-      setAwardValue(category.points.toString());
+      setAwardValue(String(category.points ?? 0));
     }
   }, [awardCategoryId, categoryList]);
 
@@ -161,7 +164,7 @@ export function ManualPointsAwardDialog({
           (s.nfcId && s.nfcId.toLowerCase().includes(normalizedSearch))
         );
       })
-      .sort((a, b) => a.lastName.localeCompare(b.lastName));
+      .sort((a, b) => (a.lastName ?? '').localeCompare(b.lastName ?? ''));
   }, [students, studentSearch, filterClassId, minPoints, maxPoints, badgeFilter]);
 
   useEffect(() => {
@@ -275,7 +278,7 @@ export function ManualPointsAwardDialog({
           });
           setSelectedStudentIds([]);
           if (categoryList.length > 0) {
-            setAwardValue(categoryList[0].points.toString());
+            setAwardValue(String(categoryList[0].points ?? 0));
           }
         }
       } else {
@@ -405,7 +408,7 @@ export function ManualPointsAwardDialog({
 
   const formContent = (
     <div className={cn('space-y-6', variant === 'inline' ? 'p-0' : 'flex-1 min-h-0 overflow-y-auto px-6 pb-6')}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="grid w-full max-w-[260px] grid-cols-2 rounded-xl border bg-muted/20 p-1">
                 <Button
                   type="button"
@@ -527,11 +530,17 @@ export function ManualPointsAwardDialog({
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryList.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                  {categoryList.length === 0 ? (
+                    <SelectItem value="__none__" disabled>
+                      No categories yet
                     </SelectItem>
-                  ))}
+                  ) : (
+                    categoryList.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <div className="space-y-1">

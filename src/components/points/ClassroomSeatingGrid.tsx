@@ -338,7 +338,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         {bathroomEnabled && bathroomStartedAt != null ? (
           <span
             className={cn(
-              'pointer-events-none absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[10px] font-bold font-mono tabular-nums ring-2 ring-background',
+              'pointer-events-none absolute bottom-1 left-1 z-[2] flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[10px] font-bold font-mono tabular-nums ring-2 ring-background',
               bathroomOver
                 ? 'bg-red-500 text-white'
                 : 'bg-violet-600 text-white',
