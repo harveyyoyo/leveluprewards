@@ -83,11 +83,14 @@ export function useDoc<T = any>(
         const contextualError = new FirestorePermissionError({
           operation: 'get',
           path: memoizedDocRef.path,
-        })
+        });
+        contextualError.cause = error;
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+        // Keep the real Firestore code (`permission-denied`, `unavailable`, …)
+        // so kiosks and shops can recover or show the right hint.
+        setError(error);
+        setData(null);
+        setIsLoading(false);
 
         if (reportPermissionErrors) {
           errorEmitter.emit('permission-error', contextualError);

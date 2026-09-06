@@ -15,7 +15,7 @@ import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, getDocFromServer, onSnapshot, type DocumentReference, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
-import { getReadableErrorMessage } from '@/lib/errorMessage';
+import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { loginErr, loginOk, type LoginResult } from '@/lib/loginResult';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { normalizeSchoolId } from '@/lib/schoolId';
@@ -37,7 +37,7 @@ import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
 import { establishStudentKioskSessionClient } from '@/lib/auth/enterKioskSessionClient';
 import { studentKioskLoginCredentials } from '@/lib/schoolId';
-import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
+import { isSchoolPortalChooser, isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 import { verifyAdminPasscodeLogin } from '@/lib/adminPasscodeLogin';
 import { officePublicHref } from '@/lib/officePublicUrl';
@@ -136,6 +136,8 @@ interface AuthContextType {
     studentKioskSessionEstablished: boolean;
     /** Student kiosk: last error from `enterSchoolKioskSession` (null when none or not applicable). */
     studentKioskSessionError: string | null;
+    /** Re-register kiosk membership without tearing down the current student screen. */
+    refreshStudentKioskSession: () => Promise<LoginResult>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -278,6 +280,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             getEntryCodeFromUrl,
         });
     }, [auth, functions, getEntryCodeFromUrl]);
+
+    const refreshStudentKioskSession = useCallback(async (): Promise<LoginResult> => {
+        const sid = normalizeSchoolId(schoolId);
+        if (!sid) {
+            return loginErr(
+                'This kiosk could not confirm its school connection. Go back to the school portal and open Student Check-in again.',
+            );
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return loginErr(OFFLINE_USER_MESSAGE);
+        }
+        if (!auth?.currentUser || !functions) {
+            return loginErr('No Firebase session yet. Refresh the page and try again.');
+        }
+        try {
+            await auth.currentUser.getIdToken(true);
+            await establishStudentKioskSession(sid, studentKioskLoginCredentials(sid).passcode);
+            setStudentKioskSessionEstablished(true);
+            setStudentKioskSessionError(null);
+            return loginOk();
+        } catch (err) {
+            return loginErr(
+                getReadableErrorMessage(err, 'Could not reconnect this kiosk. Check your connection and try again.'),
+            );
+        }
+    }, [auth, establishStudentKioskSession, functions, schoolId]);
 
     const logout = useCallback((options?: LogoutOptions) => {
         setIsAdmin(false);
@@ -777,7 +805,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             typeof window !== 'undefined' &&
             isStudentKioskRoute(window.location.pathname, schoolId);
 
-        if (loginState !== 'school' || !onKioskRoute) {
+        if (!isSchoolPortalChooser(loginState) || !onKioskRoute) {
             setStudentKioskSessionEstablished(true);
             setStudentKioskSessionError(null);
             return;
@@ -1326,6 +1354,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsKioskLocked,
             studentKioskSessionEstablished,
             studentKioskSessionError,
+            refreshStudentKioskSession,
             login,
             startDeveloperSupportSession,
             clearSchoolChooserSession,
@@ -1353,6 +1382,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsKioskLocked,
             studentKioskSessionEstablished,
             studentKioskSessionError,
+            refreshStudentKioskSession,
             login,
             startDeveloperSupportSession,
             clearSchoolChooserSession,
