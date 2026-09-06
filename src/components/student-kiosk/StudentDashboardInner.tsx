@@ -21,6 +21,7 @@ import { isCompactDisplayMode } from '@/lib/displayMode';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { PrinterReminderCallout } from '@/components/coupons/PrinterReminderCallout';
 import { useAppContext } from '@/components/AppProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useFirestore, useFirebase, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit, doc, where, getDocs, updateDoc, addDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -91,7 +92,7 @@ import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { useFirestoreSyncAlert } from '@/hooks/useFirestoreSyncAlert';
 import { lookupStudentId } from '@/lib/db/lookup';
-import { studentKioskLoginCredentials } from '@/lib/schoolId';
+import { kioskStudentLoadHelpText } from '@/lib/kiosk/kioskStudentLoadError';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import {
   getStudentSignInThrottleStatus,
@@ -226,7 +227,8 @@ export function StudentDashboardInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges, login } = useAppContext();
+  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
+  const { refreshStudentKioskSession } = useAuth();
   const { show: firestoreSyncAlert } = useFirestoreSyncAlert();
   const firestore = useFirestore();
   const { functions, auth } = useFirebase();
@@ -287,12 +289,14 @@ export function StudentDashboardInner({
     reportPermissionErrors: false,
   });
 
+  const reconnectInFlightRef = useRef(false);
   const reconnectKiosk = useCallback(async () => {
-    if (!schoolId || kioskReconnecting) return;
+    if (!schoolId || reconnectInFlightRef.current) return;
+    reconnectInFlightRef.current = true;
     setKioskReconnecting(true);
     setKioskReconnectError(null);
     try {
-      const result = await login('student', studentKioskLoginCredentials(schoolId));
+      const result = await refreshStudentKioskSession();
       if (!result.ok) {
         setKioskReconnectError(result.message);
         return;
@@ -303,13 +307,33 @@ export function StudentDashboardInner({
         getReadableErrorMessage(err, 'Could not reconnect this kiosk. Check your connection and try again.'),
       );
     } finally {
+      reconnectInFlightRef.current = false;
       setKioskReconnecting(false);
     }
-  }, [kioskReconnecting, login, schoolId]);
+  }, [refreshStudentKioskSession, schoolId]);
 
+  const autoReconnectedStudentRef = useRef<string | null>(null);
   useEffect(() => {
+    autoReconnectedStudentRef.current = null;
     setKioskReconnectError(null);
   }, [schoolId, studentId]);
+
+  // A scan can succeed (Cloud Function / local cache) while the Firestore student
+  // listen fails. Reconnect once so hallway kiosks recover without a staff tap.
+  useEffect(() => {
+    if (!studentError || studentLoading || !schoolId) return;
+    if (autoReconnectedStudentRef.current === studentId) return;
+    autoReconnectedStudentRef.current = studentId;
+    void reconnectKiosk();
+  }, [reconnectKiosk, schoolId, studentError, studentId, studentLoading]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      if (studentError) void reconnectKiosk();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [reconnectKiosk, studentError]);
 
   const houseDocRef = useMemoFirebase(
     () =>
@@ -1450,7 +1474,11 @@ export function StudentDashboardInner({
     [rewardPrizes, student, kioskAiFunInShop, categories],
   );
 
-  if ((studentError || kioskReconnecting) && !studentLoading) {
+  const awaitingAutoReconnect =
+    Boolean(studentError && !studentLoading && autoReconnectedStudentRef.current !== studentId);
+  const showKioskReconnectUi = kioskReconnecting || awaitingAutoReconnect;
+
+  if ((studentError || showKioskReconnectUi) && !studentLoading) {
     return (
       <div
         className={cn(
@@ -1458,21 +1486,20 @@ export function StudentDashboardInner({
           animBackdrop ? 'bg-transparent' : 'bg-background',
         )}
       >
-        {kioskReconnecting ? (
+        {showKioskReconnectUi ? (
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
         ) : null}
         <p className="text-sm font-semibold text-destructive">
-          {kioskReconnecting ? 'Reconnecting kiosk' : 'Could not load this student'}
+          {showKioskReconnectUi ? 'Reconnecting kiosk' : 'Could not load this student'}
         </p>
         <p className="max-w-md text-sm text-muted-foreground">
-          {kioskReconnectError ||
-            'This kiosk could not confirm its school connection. Try reconnecting, or go back to the school portal and open Student Check-in again.'}
+          {kioskStudentLoadHelpText(studentError, kioskReconnectError)}
         </p>
         <Button type="button" variant="outline" onClick={onDone}>
           Back to scanner
         </Button>
-        <Button type="button" variant="secondary" onClick={reconnectKiosk} disabled={kioskReconnecting}>
-          {kioskReconnecting ? 'Reconnecting...' : 'Reconnect kiosk'}
+        <Button type="button" variant="secondary" onClick={reconnectKiosk} disabled={showKioskReconnectUi}>
+          {showKioskReconnectUi ? 'Reconnecting...' : 'Reconnect kiosk'}
         </Button>
       </div>
     );
