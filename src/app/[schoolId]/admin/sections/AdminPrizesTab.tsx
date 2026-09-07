@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckSquare, Cog, Edit3, Gift, Plus, Printer, Trash2, GraduationCap, ShoppingBag, Wand2, UserMinus, X } from 'lucide-react';
+import { CheckSquare, Edit3, Gift, Plus, Printer, Trash2, GraduationCap, ShoppingBag, SlidersHorizontal, Wand2, UserMinus, X } from 'lucide-react';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -83,32 +83,34 @@ export function AdminPrizesTab({
   const { setPrizeIdCardsToPrint } = usePrint();
   const { toast } = useToast();
   const vendingEnabled = settings.enableVendingMachine === true;
+  const showMotorSettings = vendingEnabled && mode === 'admin';
   const cardColorBackfillStarted = useRef(false);
   const [prizeIdPrintJob, setPrizeIdPrintJob] = useState<Prize[] | null>(null);
   const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<string>>(new Set());
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
 
-  const prizeListGridStyle = useMemo(
-    () => adminRecordListGridStyle(prizesListGridColumns({ vendingEnabled })),
-    [vendingEnabled],
-  );
+  const prizeListGridStyle = useMemo(() => adminRecordListGridStyle(prizesListGridColumns()), []);
 
-  const prizeListHeaderColumns = useMemo(() => {
-    const columns = [
-      { label: 'Act', className: 'text-center' },
+  const prizeListHeaderColumns = useMemo(
+    () => [
+      { label: 'Act', hint: 'Edit and print', className: 'text-center' },
       { label: 'Item', className: 'text-left' },
-      { label: 'Pts', className: 'text-center' },
-      { label: 'Qty', className: 'text-center' },
-      { label: 'Stk', className: 'text-center' },
-      { label: 'Vch', className: 'text-center' },
-      { label: 'Tch', className: 'text-center' },
-      { label: 'Cls', className: 'text-center' },
-    ];
-    if (vendingEnabled) columns.push({ label: 'Mtr', className: 'text-center' });
-    columns.push({ label: 'Del', className: 'text-center' });
-    return columns;
-  }, [vendingEnabled]);
+      { label: 'Pts', hint: 'Points cost', className: 'text-center' },
+      { label: 'Qty', hint: 'Stock quantity on hand', className: 'text-center' },
+      { label: 'Stk', hint: 'In stock', className: 'text-center' },
+      { label: 'Vch', hint: 'Print voucher on redeem', className: 'text-center' },
+      {
+        label: 'Acc',
+        hint: showMotorSettings
+          ? 'Teacher access, class restriction & vending motor'
+          : 'Teacher access & class restriction',
+        className: 'text-center',
+      },
+      { label: 'Del', hint: 'Delete', className: 'text-center' },
+    ],
+    [showMotorSettings],
+  );
 
   const tablePrizes = useMemo(
     () => (prizes || []).filter((p) => !isAiSurpriseHiddenFromAdminGrid(p)),
@@ -347,7 +349,7 @@ export function AdminPrizesTab({
         <AdminRecordListScroll>
         <ul className="flex w-full min-w-0 flex-col gap-1.5">
           <AdminRecordListHeader
-            gridColumns={prizesListGridColumns({ vendingEnabled })}
+            gridColumns={prizesListGridColumns()}
             columns={prizeListHeaderColumns}
           />
           {prizeListItems.map((item) =>
@@ -401,11 +403,16 @@ export function AdminPrizesTab({
                   onUpdatePrize({ ...p, vendingMotor: next });
                 };
 
+                const accessHasNonDefaultSettings =
+                  (mode === 'teacher' ? !schoolWideT : restrictionIds.length > 0) ||
+                  !!p.classId ||
+                  (showMotorSettings && motorEnabled);
+
                 return (
                   <li
                     key={p.id}
                     className={cn(
-                      'items-center rounded-xl border bg-secondary/30 px-1 py-0.5 transition-all hover:bg-background group cursor-pointer',
+                      'items-center rounded-xl border bg-secondary/30 px-1.5 py-1 transition-all hover:bg-background group cursor-pointer',
                       adminRecordListGridCompactGapClassName,
                       adminRecordListGridClassName,
                       selectedPrizeIds.has(p.id) && 'border-ring/45 bg-secondary',
@@ -419,31 +426,31 @@ export function AdminPrizesTab({
                     }
                   >
                     {/* Edit + print */}
-                    <div className="flex items-center justify-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                       {onEditPrize ? (
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
-                          className="h-7 w-7 shrink-0 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
+                          className="h-8 w-8 shrink-0 rounded-md border-primary/20 bg-background hover:bg-primary/5 text-primary"
                           disabled={!canEditFull}
                           title="Edit"
                           aria-label="Edit"
                           onClick={() => onEditPrize(p)}
                         >
-                          <Edit3 className="h-3.5 w-3.5" />
+                          <Edit3 className="h-4 w-4" />
                         </Button>
                       ) : null}
                       <Button
                         type="button"
                         variant="outline"
                         size="icon"
-                        className="h-7 w-7 shrink-0 rounded-md"
+                        className="h-8 w-8 shrink-0 rounded-md"
                         title="Print card"
                         aria-label={`Print card for ${p.name}`}
                         onClick={() => handlePrintOnePrizeCard(p)}
                       >
-                        <Printer className="h-3.5 w-3.5 shrink-0" />
+                        <Printer className="h-4 w-4 shrink-0" />
                       </Button>
                     </div>
 
@@ -451,7 +458,7 @@ export function AdminPrizesTab({
                     <div className={cn('flex items-center gap-2', adminRecordListGridNameCellClassName)}>
                       <div
                         className={cn(
-                          'size-7 shrink-0 rounded-md flex items-center justify-center bg-background border relative overflow-hidden',
+                          'size-8 shrink-0 rounded-md flex items-center justify-center bg-background border relative overflow-hidden',
                           !p.inStock && 'opacity-40 grayscale',
                         )}
                         style={p.cardColor ? { borderColor: p.cardColor, backgroundColor: `${p.cardColor}22` } : undefined}
@@ -472,7 +479,7 @@ export function AdminPrizesTab({
                       <div className="relative min-w-0 flex-1 flex items-center gap-1.5">
                         <Input
                           aria-label="Prize name"
-                          className={cn("h-7 text-[10px] px-1.5 w-full min-w-0 border-none bg-transparent shadow-none focus-visible:ring-1", vendingEnabled && p.vendingMotor?.enabled && "pr-10", !p.inStock && "opacity-70")}
+                          className={cn("h-8 text-[11px] px-1.5 w-full min-w-0 border-none bg-transparent shadow-none focus-visible:ring-1", showMotorSettings && p.vendingMotor?.enabled && "pr-10", !p.inStock && "opacity-70")}
                           disabled={!canEditFull}
                           defaultValue={p.name}
                           key={`name-${p.id}-${p.name}`}
@@ -504,7 +511,7 @@ export function AdminPrizesTab({
                         disabled={!canEditFull}
                         aria-label="Points"
                         title="Point cost"
-                        className="h-7 w-full min-w-0 text-[10px] px-1 tabular-nums"
+                        className="h-8 w-full min-w-0 text-[11px] px-1 tabular-nums"
                         defaultValue={String(p.points ?? 0)}
                         key={`points-${p.id}-${p.points}`}
                         onBlur={(e) => {
@@ -521,7 +528,7 @@ export function AdminPrizesTab({
                         disabled={!canEditFull}
                         aria-label="Stock on hand"
                         title="Stock quantity"
-                        className="h-7 w-full min-w-0 text-[10px] px-1 tabular-nums"
+                        className="h-8 w-full min-w-0 text-[11px] px-1 tabular-nums"
                         placeholder="∞"
                         defaultValue={p.stockCount === undefined ? '' : String(p.stockCount)}
                         key={`stock-${p.id}-${p.stockCount ?? 'x'}`}
@@ -540,141 +547,123 @@ export function AdminPrizesTab({
                       ]}
                       wrap={false}
                       containerClassName="contents"
-                      toggleButtonClassName="h-7 w-7 text-[8px] justify-self-center"
+                      toggleButtonClassName="h-8 w-8 text-[9px] justify-self-center"
                       onToggle={(key, val) => {
                         onUpdatePrize({ ...p, [key]: val });
                       }}
                     />
                     <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                      {mode === 'teacher' ? (
-                        <div
-                          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background"
-                          title="School-wide teachers"
-                        >
-                          <Switch
-                            checked={schoolWideT}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className={cn(
+                              'h-8 w-8 shrink-0 rounded-md',
+                              accessHasNonDefaultSettings ? 'text-primary border-primary/40' : 'text-muted-foreground',
+                            )}
                             disabled={!canEditFull}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
-                              } else if (teacherId) {
-                                onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
-                              }
-                            }}
-                            className="data-[state=checked]:bg-primary scale-50"
-                          />
-                        </div>
-                      ) : (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className="h-7 w-7 shrink-0 rounded-md"
-                              disabled={!canEditFull}
-                              title={
-                                restrictionIds.length === 0
-                                  ? 'All teachers'
-                                  : `${restrictionIds.length} teacher(s)`
-                              }
-                              aria-label="Teacher access"
-                            >
-                              <GraduationCap className="h-3.5 w-3.5" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-64 p-3 z-[250]" align="end">
-                            <div className="space-y-3">
-                              <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-                                <Checkbox
-                                  checked={restrictionIds.length === 0}
-                                  onCheckedChange={(c) => {
-                                    if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                            title={
+                              showMotorSettings
+                                ? 'Teacher access, class restriction & vending motor'
+                                : 'Teacher access & class restriction'
+                            }
+                            aria-label="Access settings"
+                          >
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-3 z-[250] space-y-4" align="end">
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Teacher access</p>
+                            {mode === 'teacher' ? (
+                              <label className="flex items-center justify-between gap-2 text-sm cursor-pointer">
+                                <span>School-wide (all teachers)</span>
+                                <Switch
+                                  checked={schoolWideT}
+                                  disabled={!canEditFull}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                                    } else if (teacherId) {
+                                      onUpdatePrize({ ...p, teacherIds: [teacherId], teacherId: undefined });
+                                    }
                                   }}
                                 />
-                                School-wide (all teachers)
                               </label>
-                              <div className="border-t pt-2 max-h-52 overflow-y-auto space-y-2">
-                                {(teachers || []).map((t) => {
-                                  const checked = restrictionIds.includes(t.id);
-                                  return (
-                                    <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                                      <Checkbox
-                                        checked={checked}
-                                        disabled={!canEditFull}
-                                        onCheckedChange={(c) => {
-                                          const next =
-                                            c === true
-                                              ? [...new Set([...restrictionIds, t.id])]
-                                              : restrictionIds.filter((id) => id !== t.id);
-                                          onUpdatePrize({
-                                            ...p,
-                                            teacherIds: next.length ? next : undefined,
-                                            teacherId: undefined,
-                                          });
-                                        }}
-                                      />
-                                      <span className="truncate">{t.name}</span>
-                                    </label>
-                                  );
-                                })}
+                            ) : (
+                              <div className="space-y-2">
+                                <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                                  <Checkbox
+                                    checked={restrictionIds.length === 0}
+                                    onCheckedChange={(c) => {
+                                      if (c === true) onUpdatePrize({ ...p, teacherIds: undefined, teacherId: undefined });
+                                    }}
+                                  />
+                                  School-wide (all teachers)
+                                </label>
+                                <div className="border-t pt-2 max-h-40 overflow-y-auto space-y-2">
+                                  {(teachers || []).map((t) => {
+                                    const checked = restrictionIds.includes(t.id);
+                                    return (
+                                      <label key={t.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <Checkbox
+                                          checked={checked}
+                                          disabled={!canEditFull}
+                                          onCheckedChange={(c) => {
+                                            const next =
+                                              c === true
+                                                ? [...new Set([...restrictionIds, t.id])]
+                                                : restrictionIds.filter((id) => id !== t.id);
+                                            onUpdatePrize({
+                                              ...p,
+                                              teacherIds: next.length ? next : undefined,
+                                              teacherId: undefined,
+                                            });
+                                          }}
+                                        />
+                                        <span className="truncate">{t.name}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      )}
-                    </div>
-                    <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                      <Select
-                        value={p.classId || 'all'}
-                        disabled={!canEditFull}
-                        onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
-                      >
-                        <SelectTrigger
-                          className="h-7 w-full min-w-0 px-1 text-[9px] [&>span]:truncate"
-                          title="Class restriction"
-                        >
-                          <SelectValue placeholder="All" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All</SelectItem>
-                          {(classes || []).map((c) => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                          {classes &&
-                          p.classId &&
-                          !classes.some((c) => c.id === p.classId) ? (
-                            <SelectItem value={p.classId}>
-                              Unknown class (deleted)
-                            </SelectItem>
-                          ) : null}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {vendingEnabled ? (
-                      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              className={cn(
-                                'h-7 w-7 shrink-0 rounded-md',
-                                motorEnabled ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground',
-                              )}
+                            )}
+                          </div>
+
+                          <div className="space-y-2 border-t pt-3">
+                            <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Class restriction</Label>
+                            <Select
+                              value={p.classId || 'all'}
                               disabled={!canEditFull}
-                              title="Prize vending motor"
+                              onValueChange={(v) => onUpdatePrize({ ...p, classId: v === 'all' ? undefined : v })}
                             >
-                              <Cog className="h-3.5 w-3.5" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72 p-3 z-[250]" align="end">
-                            <div className="space-y-3">
+                              <SelectTrigger className="h-8 text-xs px-2">
+                                <SelectValue placeholder="All classes" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">All classes</SelectItem>
+                                {(classes || []).map((c) => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                                {classes &&
+                                p.classId &&
+                                !classes.some((c) => c.id === p.classId) ? (
+                                  <SelectItem value={p.classId}>
+                                    Unknown class (deleted)
+                                  </SelectItem>
+                                ) : null}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {showMotorSettings ? (
+                            <div className="space-y-2 border-t pt-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-bold leading-tight">Prize motor</p>
-                                  <p className="text-xs text-muted-foreground leading-snug">
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Vending motor</p>
+                                  <p className="text-xs text-muted-foreground leading-snug mt-0.5">
                                     Controls the motor triggered after redeem on the kiosk.
                                   </p>
                                 </div>
@@ -704,10 +693,10 @@ export function AdminPrizesTab({
                                 </div>
                               </div>
                             </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    ) : null}
+                          ) : null}
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                     <div
                       className="flex items-center justify-end gap-0.5"
                       onClick={(e) => e.stopPropagation()}
@@ -717,11 +706,11 @@ export function AdminPrizesTab({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                          className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
                           title="Remove from my prizes (others keep access)"
                           onClick={() => onUpdatePrize(removeTeacherFromPrize(p, teacherId))}
                         >
-                          <UserMinus className="h-3.5 w-3.5" />
+                          <UserMinus className="h-4 w-4" />
                         </Button>
                       ) : null}
                       {mode === 'admin' || canDelete ? (
@@ -730,14 +719,14 @@ export function AdminPrizesTab({
                           variant="ghost"
                           size="icon"
                           className={cn(
-                            'h-7 w-7 shrink-0 rounded-full',
+                            'h-8 w-8 shrink-0 rounded-full',
                             p.aiFunReward ? 'text-muted-foreground hover:bg-muted hover:text-foreground' : 'text-destructive hover:bg-destructive/10',
                           )}
                           disabled={mode === 'teacher' && !canDelete}
                           title={p.aiFunReward ? 'Remove AI surprise prize' : mode === 'teacher' ? 'Delete item you created' : 'Delete item'}
                           onClick={() => onDeletePrize(p.id)}
                         >
-                          {p.aiFunReward ? <X className="h-3.5 w-3.5" /> : <Trash2 className="h-3.5 w-3.5" />}
+                          {p.aiFunReward ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
                         </Button>
                       ) : null}
                     </div>

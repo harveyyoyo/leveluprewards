@@ -363,11 +363,22 @@ export function AdminStudentsTab({
     "Sign in",
     "Theme",
     "ID",
-    "Activity",
+    "Act",
     ...(settings.enableBadges ? (["Badges"] as const) : []),
     "Purge",
     "Delete",
   ];
+  const studentActionHeaderHints: Record<string, string> = {
+    Pts: "Total points balance",
+    ID: "Preview student ID card",
+    Act: "Activity history",
+    ...Object.fromEntries(
+      studentKioskWelcomeToggleDefs.map((def) => [
+        kioskToggleHeaderLabel(def),
+        def.label,
+      ]),
+    ),
+  };
   const studentsListGridCols = studentsListGridColumns(
     studentActionHeaderLabels.length,
   );
@@ -585,6 +596,7 @@ export function AdminStudentsTab({
                     {
                       id: "hdr-select",
                       label: "Sel",
+                      hint: "Select for bulk actions",
                       className: "hidden sm:block text-center",
                     },
                     {
@@ -600,6 +612,7 @@ export function AdminStudentsTab({
                     ...studentActionHeaderLabels.map((label, i) => ({
                       id: `hdr-act-${i}-${label}`,
                       label,
+                      hint: studentActionHeaderHints[label],
                       className:
                         "hidden sm:block truncate text-center whitespace-nowrap",
                     })),
