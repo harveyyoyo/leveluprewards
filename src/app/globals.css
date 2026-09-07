@@ -690,16 +690,23 @@ html[data-office-portal] .office-content-pane {
     letter-spacing: -0.02em;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background) {
+  /* Attribute-substring match so opacity-suffixed Tailwind variants (bg-card/60,
+     bg-background/80, bg-muted/15, ...) are caught too — an exact class match like
+     `.bg-card` only matches literal `bg-card`, not `bg-card/60`, since Tailwind
+     compiles each opacity value to its own distinct class. */
+  html[data-classroom-realm] .classroom-realm-manage :where([class*="bg-card"], [class*="bg-background"], [class*="bg-muted"]) {
     background-color: rgba(255, 255, 255, 0.06) !important;
-    color: #f4f7f0;
-  }
-
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground) {
     color: #f4f7f0 !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground) {
+  /* [role=alert] callouts (shadcn Alert) already pair their own on-brand background
+     and text color per variant (e.g. bg-sky-50/text-sky-950) — excluded so the
+     blanket override below doesn't force white text onto their light surface. */
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not([role="alert"] *) {
+    color: #f4f7f0 !important;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not([role="alert"] *) {
     color: rgba(244, 247, 240, 0.58) !important;
   }
 

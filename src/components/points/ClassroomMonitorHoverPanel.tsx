@@ -16,7 +16,7 @@ function PanelChrome({
 }) {
   return (
     <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border/30 pb-1.5">
-      <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground sm:text-[11px]">
+      <span className="text-[10px] font-black uppercase tracking-wider !text-muted-foreground sm:text-[11px]">
         {label}
       </span>
       <button
