@@ -96,17 +96,17 @@ export function AdminPrizesTab({
 
   const prizeListHeaderColumns = useMemo(() => {
     const columns = [
-      { label: 'Act', className: 'text-center' },
+      { label: 'Actions', className: 'text-center' },
       { label: 'Item', className: 'text-left' },
-      { label: 'Pts', className: 'text-center' },
-      { label: 'Qty', className: 'text-center' },
-      { label: 'Stk', className: 'text-center' },
-      { label: 'Vch', className: 'text-center' },
-      { label: 'Tch', className: 'text-center' },
-      { label: 'Cls', className: 'text-center' },
+      { label: 'Points', className: 'text-center' },
+      { label: 'Quantity', className: 'text-center' },
+      { label: 'Stock', className: 'text-center' },
+      { label: 'Voucher', className: 'text-center' },
+      { label: 'Teachers', className: 'text-center' },
+      { label: 'Classes', className: 'text-center' },
     ];
     if (vendingEnabled) columns.push({ label: 'Mtr', className: 'text-center' });
-    columns.push({ label: 'Del', className: 'text-center' });
+    columns.push({ label: 'Delete', className: 'text-center' });
     return columns;
   }, [vendingEnabled]);
 
@@ -533,15 +533,18 @@ export function AdminPrizesTab({
                       />
                     </div>
                     <AutoCircularToggles
+                      restrictToDefs
+                      disabled={!canEditFull}
                       record={p}
                       defs={[
-                        { key: 'inStock', label: 'In Stock', shortLabel: 'Stk' },
-                        { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
+                        { key: 'inStock', label: 'In Stock', shortLabel: 'Stock' },
+                        { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Voucher' },
                       ]}
                       wrap={false}
                       containerClassName="contents"
-                      toggleButtonClassName="h-7 w-7 text-[8px] justify-self-center"
+                      toggleButtonClassName="h-8 w-full text-[10px] justify-self-center"
                       onToggle={(key, val) => {
+                        if (!canEditFull) return;
                         onUpdatePrize({ ...p, [key]: val });
                       }}
                     />

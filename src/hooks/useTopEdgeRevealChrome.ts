@@ -41,7 +41,7 @@ export type UseTopEdgeRevealChromeOptions = {
 
 /**
  * Keeps chrome hidden until the pointer enters the top edge (or moves over the revealed header).
- * Touch screens also reveal chrome on tap; it lingers briefly so kiosk header controls stay reachable.
+ * Touch screens reveal chrome at the top edge (anywhere on sign-in); controls linger briefly.
  * Used on student kiosk where inner panels scroll instead of the document.
  */
 export function useTopEdgeRevealChrome(
@@ -53,11 +53,11 @@ export function useTopEdgeRevealChrome(
   const touchLingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!active) {
-      visibleRef.current = false;
-      setVisible(false);
-      return;
-    }
+    // A successful kiosk sign-in changes the reveal policy. Close chrome left
+    // open by the login click before it can obscure the student's balance.
+    visibleRef.current = false;
+    setVisible(false);
+    if (!active) return;
 
     const setVisibleIfChanged = (next: boolean) => {
       if (next === visibleRef.current) return;
@@ -90,7 +90,9 @@ export function useTopEdgeRevealChrome(
 
     const onMouseLeave = () => setVisibleIfChanged(false);
 
-    const onTouchStart = () => {
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch || (!revealOnAnyPointerMove && touch.clientY > TOP_EDGE_REVEAL_PX)) return;
       setVisibleIfChanged(true);
       scheduleTouchLingerHide();
     };

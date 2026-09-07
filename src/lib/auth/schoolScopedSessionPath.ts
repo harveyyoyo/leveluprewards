@@ -15,6 +15,7 @@ const RESERVED_FIRST = new Set([
   'icon.png',
   'robots.txt',
   'manifest.json',
+  '__',
 ]);
 
 /** School hub routes that require a Firebase session cookie when edge enforcement is on. */

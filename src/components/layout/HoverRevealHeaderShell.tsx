@@ -12,7 +12,7 @@ export const HEADER_PEEK_PX = 20;
 /** Fallback until ResizeObserver measures the live header. */
 const HEADER_RESERVE_FALLBACK_PX = 80;
 
-/** Measured global header height — used for overlay scroll-hide layout on staff portals. */
+/** Measured global header height — used for layout and pointer reveal boundaries. */
 export const GLOBAL_HEADER_HEIGHT_CSS_VAR = '--global-header-height';
 
 type HoverRevealHeaderShellProps = {
@@ -54,12 +54,11 @@ export function HoverRevealHeaderShell({
   }, []);
 
   useEffect(() => {
-    if (layout !== 'overlay') return;
     document.documentElement.style.setProperty(GLOBAL_HEADER_HEIGHT_CSS_VAR, `${headerHeight}px`);
     return () => {
       document.documentElement.style.removeProperty(GLOBAL_HEADER_HEIGHT_CSS_VAR);
     };
-  }, [headerHeight, layout]);
+  }, [headerHeight]);
 
   const reservedHeight = visible
     ? headerHeight

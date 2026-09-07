@@ -16,11 +16,16 @@ import {
   RotateCcw,
   Sparkles,
   Undo2,
+  Users,
   Volume2,
   VolumeX,
   Zap,
 } from 'lucide-react';
-import { CLASS_AWARDS_STUDENT_LAUNCH_LABEL } from '@/lib/classroom/classroomTabSections';
+import {
+  CLASS_AWARDS_STUDENT_LAUNCH_LABEL,
+  CLASSROOM_ALL_STUDENTS_FILTER_ID,
+  CLASSROOM_ALL_STUDENTS_LABEL,
+} from '@/lib/classroom/classroomTabSections';
 import {
   CLASSROOM_DESIGNS,
   type ClassroomDesign,
@@ -93,7 +98,7 @@ const MonitorCategoryMenuTrigger = forwardRef<
     {...props}
   >
     <Icon className="h-4 w-4 shrink-0" aria-hidden />
-    <span>{label}</span>
+    <span className="max-w-[9rem] truncate">{label}</span>
     <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
   </button>
 ));
@@ -274,20 +279,35 @@ function ClassroomMonitorClassMenu({
   isFullscreen: boolean;
   onChange: (classId: string) => void;
 }) {
-  if (classes.length <= 1) return null;
+  if (classes.length === 0) return null;
 
   const sorted = classes.slice().sort((a, b) => a.name.localeCompare(b.name));
+  const viewingAll = classId === CLASSROOM_ALL_STUDENTS_FILTER_ID;
+  const selectedLabel = viewingAll
+    ? CLASSROOM_ALL_STUDENTS_LABEL
+    : sorted.find((c) => c.id === classId)?.name ?? 'Class';
 
   return (
     <MonitorCategoryPopover
       design={design}
       isFullscreen={isFullscreen}
-      icon={GraduationCap}
-      label="Class"
+      icon={viewingAll ? Users : GraduationCap}
+      label={selectedLabel}
       contentClassName="w-56"
     >
       <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Class</p>
       <div className="space-y-1">
+        <button
+          type="button"
+          className={cn(
+            'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
+            viewingAll && 'bg-primary/10 ring-1 ring-primary/30',
+          )}
+          onClick={() => onChange(CLASSROOM_ALL_STUDENTS_FILTER_ID)}
+        >
+          <span className="font-semibold">{CLASSROOM_ALL_STUDENTS_LABEL}</span>
+          <span className="block text-xs text-muted-foreground">Every student you can see</span>
+        </button>
         {sorted.map((c) => (
           <button
             key={c.id}

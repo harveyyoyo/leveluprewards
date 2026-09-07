@@ -5,6 +5,7 @@ export type DemoRosterStudentSeed = Pick<
   'id' | 'firstName' | 'lastName' | 'nfcId' | 'points' | 'classId'
 > & {
   categoryPoints?: Record<string, number>;
+  teacherIds?: string[];
 };
 
 /** Deterministic integer in [min, max] from a numeric seed (stable across runs). */
@@ -24,7 +25,7 @@ export function padDemoStudentId(numericId: number): string {
 }
 
 export type BuildBalancedDemoRosterInput = {
-  classes: readonly Pick<Class, 'id' | 'name'>[];
+  classes: readonly Pick<Class, 'id' | 'name' | 'primaryTeacherId'>[];
   minStudentsPerClass: number;
   maxStudentsPerClass: number;
   startStudentId?: number;
@@ -106,6 +107,7 @@ export function buildBalancedDemoRoster(input: BuildBalancedDemoRosterInput): De
         nfcId: id,
         points,
         classId: cls.id,
+        ...(cls.primaryTeacherId && { teacherIds: [cls.primaryTeacherId] }),
         ...(categoryPoints && { categoryPoints }),
       });
     }

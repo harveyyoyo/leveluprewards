@@ -4,6 +4,9 @@ const path = require('path');
 
 const projectRoot = __dirname;
 
+/** Must match `src/firebase/config.ts` `projectId`. */
+const FIREBASE_PROJECT_ID = 'studio-1273073612-71183';
+
 /** Footer build stamp — always US Eastern (EST/EDT via America/New_York). */
 function formatBuildTimeEastern() {
   return new Date().toLocaleString('en-US', {
@@ -29,8 +32,16 @@ const nextConfig = {
     '*.trycloudflare.com',
   ],
   async rewrites() {
-    // Browsers and tools often request /favicon.ico; serve the same asset as app/icon.png.
-    return [{ source: '/favicon.ico', destination: '/icon.png' }];
+    return [
+      {
+        // Keep Google sign-in on this origin. Without this, localhost opens the
+        // live `/__/auth` page and the popup never returns.
+        source: '/__/auth/:path*',
+        destination: `https://${FIREBASE_PROJECT_ID}.firebaseapp.com/__/auth/:path*`,
+      },
+      // Browsers and tools often request /favicon.ico; serve the same asset as app/icon.png.
+      { source: '/favicon.ico', destination: '/icon.png' },
+    ];
   },
   async redirects() {
     return [

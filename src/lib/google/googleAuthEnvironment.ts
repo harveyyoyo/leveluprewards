@@ -1,3 +1,6 @@
+import { firebaseConfig } from '@/firebase/config';
+import { isGoogleAuthCrossOrigin } from '@/lib/google/resolveFirebaseAuthDomain';
+
 const GOOGLE_REDIRECT_FAILED_NOTICE_KEY = 'levelup:googleRedirectFailedNotice';
 
 /** Firebase Auth error when redirect OAuth state was lost (common on mobile / in-app browsers). */
@@ -34,9 +37,13 @@ export function isInAppBrowser(): boolean {
   );
 }
 
-/** Redirect OAuth is unreliable when storage is blocked or the page runs inside an in-app webview. */
+/** Redirect OAuth is unreliable when storage is blocked, the page is embedded, or auth is on another host. */
 export function canUseGoogleRedirectSignIn(): boolean {
-  return isSessionStorageAvailable() && !isInAppBrowser();
+  return (
+    isSessionStorageAvailable() &&
+    !isInAppBrowser() &&
+    !isGoogleAuthCrossOrigin(firebaseConfig.authDomain)
+  );
 }
 
 export function googleRedirectRecoveryHint(): string {
@@ -45,6 +52,9 @@ export function googleRedirectRecoveryHint(): string {
   }
   if (!isSessionStorageAvailable()) {
     return 'This browser blocked temporary sign-in storage. Turn off private browsing or try Safari/Chrome, then sign in again.';
+  }
+  if (isGoogleAuthCrossOrigin(firebaseConfig.authDomain)) {
+    return 'This computer uses a small Google popup. Allow popups for this site, then try again. If a tiny _auth window appears, finish signing in there and wait for it to close.';
   }
   return 'Google sign-in was interrupted. Close extra tabs for this site, wait a moment, and try again.';
 }

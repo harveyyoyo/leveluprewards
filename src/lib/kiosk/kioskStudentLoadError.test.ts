@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import {
   KIOSK_SCHOOL_CONNECTION_MESSAGE,

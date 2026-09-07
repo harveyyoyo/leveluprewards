@@ -2,6 +2,9 @@ import type { DocumentData, DocumentReference, Firestore, Transaction } from 'fi
 import { classroomAwardCategoryKey } from '@/lib/classroom/classroomRewardCategories';
 import { applyCategoryPointsByPeriod, applyPointsByPeriod } from '@/lib/db/helpers';
 
+// At most 3 writes per student and 1 per house: 120 students stay below 500 writes.
+export const MAX_CLASSROOM_AWARD_STUDENTS = 120;
+
 export type ClassroomAwardMeta = {
   classId?: string;
   className?: string;
@@ -123,61 +126,56 @@ export async function applyClassroomPointsAdmin(
   if (uniqueIds.length === 0) {
     return { success: false, message: 'No valid students selected.', count: 0 };
   }
+  if (uniqueIds.length > MAX_CLASSROOM_AWARD_STUDENTS) {
+    return { success: false, message: 'Select at most 120 students per award.', count: 0 };
+  }
 
   const desc = classroomActivityDescription(description);
   const now = Date.now();
-  let processedCount = 0;
-  const chunkSize = 80;
+  const processedCount = await db.runTransaction(async (tx) => {
+    let committedCount = 0;
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
 
-  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-    const chunkIds = uniqueIds.slice(i, i + chunkSize);
-    // Count inside the transaction resets on retry; only commit the final value.
-    const chunkCount = await db.runTransaction(async (tx) => {
-      let committedCount = 0;
-      const schoolRef = db.collection('schools').doc(schoolId);
-      const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
-
-      for (const id of chunkIds) {
-        const ref = schoolRef.collection('students').doc(id);
-        const snap = await tx.get(ref);
-        if (snap.exists) {
-          reads.push({ id, ref, data: snap.data()! });
-        }
+    for (const id of uniqueIds) {
+      const ref = schoolRef.collection('students').doc(id);
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        reads.push({ id, ref, data: snap.data()! });
       }
+    }
 
-      for (const { id, ref, data } of reads) {
-        const current = Number(data.classroomPoints ?? 0);
-        const next = Math.max(0, current + signedDelta);
-        // Use the clamped delta so period totals stay in sync with the balance.
-        const appliedDelta = next - current;
-        const periodUpdate = applyPointsByPeriod(
-          data.classroomPointsByPeriod as Record<string, number> | undefined,
-          appliedDelta,
-          now,
-        );
+    for (const { id, ref, data } of reads) {
+      const current = Number(data.classroomPoints ?? 0);
+      const next = Math.max(0, current + signedDelta);
+      // Use the clamped delta so period totals stay in sync with the balance.
+      const appliedDelta = next - current;
+      const periodUpdate = applyPointsByPeriod(
+        data.classroomPointsByPeriod as Record<string, number> | undefined,
+        appliedDelta,
+        now,
+      );
 
-        tx.update(ref, {
-          classroomPoints: next,
-          classroomPointsByPeriod: periodUpdate,
-          updatedAt: now,
-        });
+      tx.update(ref, {
+        classroomPoints: next,
+        classroomPointsByPeriod: periodUpdate,
+        updatedAt: now,
+      });
 
-        const activityRef = ref.collection('activities').doc();
-        tx.set(activityRef, {
-          desc,
-          amount: signedDelta,
-          date: now,
-          classroomOnly: true,
-        });
+      const activityRef = ref.collection('activities').doc();
+      tx.set(activityRef, {
+        desc,
+        amount: appliedDelta,
+        date: now,
+        classroomOnly: true,
+      });
 
-        writeClassroomAwardLog(tx, schoolRef, meta, id, data, signedDelta, desc, now);
+      writeClassroomAwardLog(tx, schoolRef, meta, id, data, appliedDelta, desc, now);
 
-        committedCount += 1;
-      }
-      return committedCount;
-    });
-    processedCount += chunkCount;
-  }
+      committedCount += 1;
+    }
+    return committedCount;
+  });
 
   return {
     success: processedCount > 0,
@@ -211,6 +209,9 @@ export async function applyRewardsPointsAdmin(
   if (uniqueIds.length === 0) {
     return { success: false, message: 'No valid students selected.', count: 0 };
   }
+  if (uniqueIds.length > MAX_CLASSROOM_AWARD_STUDENTS) {
+    return { success: false, message: 'Select at most 120 students per award.', count: 0 };
+  }
 
   const desc = description.trim();
   if (!desc) {
@@ -219,102 +220,95 @@ export async function applyRewardsPointsAdmin(
 
   const logDesc = classroomActivityDescription(desc);
   const now = Date.now();
-  let processedCount = 0;
-  const chunkSize = signedDelta > 0 ? 80 : 200;
   const rollupHousePoints = options?.rollupHousePoints === true;
 
-  for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-    const chunkIds = uniqueIds.slice(i, i + chunkSize);
-    // Count inside the transaction resets on retry; only commit the final value.
-    const chunkCount = await db.runTransaction(async (tx) => {
-      let committedCount = 0;
-      const schoolRef = db.collection('schools').doc(schoolId);
-      const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
-      const houseDeltas = new Map<string, number>();
+  const processedCount = await db.runTransaction(async (tx) => {
+    let committedCount = 0;
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const reads: { id: string; ref: DocumentReference; data: DocumentData }[] = [];
+    const houseDeltas = new Map<string, number>();
 
-      for (const id of chunkIds) {
-        const ref = schoolRef.collection('students').doc(id);
-        const snap = await tx.get(ref);
-        if (snap.exists) {
-          reads.push({ id, ref, data: snap.data()! });
-        }
+    for (const id of uniqueIds) {
+      const ref = schoolRef.collection('students').doc(id);
+      const snap = await tx.get(ref);
+      if (snap.exists) {
+        reads.push({ id, ref, data: snap.data()! });
       }
+    }
 
-      const houseSnaps = rollupHousePoints
-        ? await readHouseRollupSnapsAdmin(
-            tx,
-            db,
-            schoolId,
-            reads.map((r) => r.data.houseId).filter((id): id is string => Boolean(id)),
-          )
-        : new Map();
+    const houseSnaps = rollupHousePoints
+      ? await readHouseRollupSnapsAdmin(
+          tx,
+          db,
+          schoolId,
+          reads.map((r) => r.data.houseId).filter((id): id is string => Boolean(id)),
+        )
+      : new Map();
 
-      for (const { id, ref, data } of reads) {
-        if (signedDelta > 0) {
-          const currentPoints = Number(data.points ?? 0);
-          const newPoints = currentPoints + signedDelta;
-          const newLifetime = Number(data.lifetimePoints ?? 0) + signedDelta;
-          const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
-          const categoryPoints = {
-            ...((data.categoryPoints as Record<string, number> | undefined) ?? {}),
-          };
-          categoryPoints[categoryKey] = (categoryPoints[categoryKey] || 0) + signedDelta;
-          const pointsByPeriodUpdate = applyPointsByPeriod(
-            data.pointsByPeriod as Record<string, number> | undefined,
-            signedDelta,
-            now,
-          );
-          const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
-            data.categoryPointsByPeriod as Record<string, Record<string, number>> | undefined,
-            categoryKey,
-            signedDelta,
-            now,
-          );
+    for (const { id, ref, data } of reads) {
+      const currentPoints = Number(data.points ?? 0);
+      const appliedDelta = Math.max(0, currentPoints + signedDelta) - currentPoints;
+      if (signedDelta > 0) {
+        const newPoints = currentPoints + signedDelta;
+        const newLifetime = Number(data.lifetimePoints ?? 0) + signedDelta;
+        const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
+        const categoryPoints = {
+          ...((data.categoryPoints as Record<string, number> | undefined) ?? {}),
+        };
+        categoryPoints[categoryKey] = (categoryPoints[categoryKey] || 0) + signedDelta;
+        const pointsByPeriodUpdate = applyPointsByPeriod(
+          data.pointsByPeriod as Record<string, number> | undefined,
+          signedDelta,
+          now,
+        );
+        const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
+          data.categoryPointsByPeriod as Record<string, Record<string, number>> | undefined,
+          categoryKey,
+          signedDelta,
+          now,
+        );
 
-          tx.update(ref, {
-            points: newPoints,
-            lifetimePoints: newLifetime,
-            categoryPoints,
-            pointsByPeriod: pointsByPeriodUpdate,
-            categoryPointsByPeriod: categoryPointsByPeriodUpdate,
-            updatedAt: now,
-          });
-
-          if (rollupHousePoints && data.houseId) {
-            houseDeltas.set(
-              String(data.houseId),
-              (houseDeltas.get(String(data.houseId)) ?? 0) + signedDelta,
-            );
-          }
-        } else {
-          const magnitude = Math.abs(signedDelta);
-          const newPoints = Math.max(0, Number(data.points ?? 0) - magnitude);
-          tx.update(ref, { points: newPoints, updatedAt: now });
-
-          if (rollupHousePoints && data.houseId) {
-            houseDeltas.set(
-              String(data.houseId),
-              (houseDeltas.get(String(data.houseId)) ?? 0) - magnitude,
-            );
-          }
-        }
-
-        const activityRef = ref.collection('activities').doc();
-        tx.set(activityRef, {
-          desc,
-          amount: signedDelta,
-          date: now,
+        tx.update(ref, {
+          points: newPoints,
+          lifetimePoints: newLifetime,
+          categoryPoints,
+          pointsByPeriod: pointsByPeriodUpdate,
+          categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+          updatedAt: now,
         });
 
-        writeClassroomAwardLog(tx, schoolRef, meta, id, data, signedDelta, logDesc, now);
-        committedCount += 1;
+        if (rollupHousePoints && data.houseId) {
+          houseDeltas.set(
+            String(data.houseId),
+            (houseDeltas.get(String(data.houseId)) ?? 0) + signedDelta,
+          );
+        }
+      } else {
+        const newPoints = currentPoints + appliedDelta;
+        tx.update(ref, { points: newPoints, updatedAt: now });
+
+        if (rollupHousePoints && data.houseId) {
+          houseDeltas.set(
+            String(data.houseId),
+            (houseDeltas.get(String(data.houseId)) ?? 0) + appliedDelta,
+          );
+        }
       }
 
-      writeHouseRollupsFromDeltasAdmin(tx, houseSnaps, houseDeltas);
-      return committedCount;
-    });
-    processedCount += chunkCount;
-  }
+      const activityRef = ref.collection('activities').doc();
+      tx.set(activityRef, {
+        desc,
+        amount: appliedDelta,
+        date: now,
+      });
+
+      writeClassroomAwardLog(tx, schoolRef, meta, id, data, appliedDelta, logDesc, now);
+      committedCount += 1;
+    }
+
+    writeHouseRollupsFromDeltasAdmin(tx, houseSnaps, houseDeltas);
+    return committedCount;
+  });
 
   return {
     success: processedCount > 0,

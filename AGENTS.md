@@ -1,5 +1,11 @@
 # School Arcade Rewards — agent notes
 
+## Demo school access (all agents)
+
+- The demo school access passcode is **`1234`** (provided by the app owner).
+- At `/login`, select a school under **Try a demo school**, then enter `1234` in **Access passcode** and continue. Selecting a demo school only fills the School ID; it does not sign in automatically.
+- Use this passcode when reviewing or testing the demo school. It is the demo school access passcode, not a developer or production-school credential.
+
 ## Cursor Cloud specific instructions
 
 Cloud agents run on Ubuntu with a clean git checkout. They do **not** see your local `.env.local`.

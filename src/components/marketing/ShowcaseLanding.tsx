@@ -973,7 +973,7 @@ export function ShowcaseLanding() {
                     href="#simulator"
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#102a45] to-[#1d426d] px-6 py-4 font-bold text-white shadow-xl shadow-slate-900/10 hover:brightness-110 hover:shadow-2xl hover:scale-[1.03] transition-all duration-300"
                   >
-                    Try Classroom Tools
+                    Try Points Simulator
                     <ArrowUpRight className="h-5 w-5" />
                   </a>
                 </div>

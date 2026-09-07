@@ -29,7 +29,7 @@ export const DESK_STAFF_LIST_GRID_COLS_LEGACY =
 /** Prizes shop — act, name, then one column per inline setting. */
 export function prizesListGridColumns(options: { vendingEnabled: boolean }) {
   const base =
-    '4.25rem minmax(0, 1fr) 3rem 3rem 1.75rem 1.75rem 1.75rem 4.25rem';
+    '4.25rem minmax(0, 1fr) 5rem 3rem 4rem 4.5rem 3rem 4.25rem';
   const motor = options.vendingEnabled ? ' 1.75rem' : '';
   return `${base}${motor} minmax(2.5rem, 3.5rem)`;
 }

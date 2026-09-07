@@ -66,6 +66,7 @@ import {
   buildInitialLayout,
   clearClassroomSession,
   findNewSessionAwards,
+  initialLayoutColumnCount,
   loadClassroomLayout,
   loadClassroomPrefs,
   loadClassroomSession,
@@ -127,6 +128,7 @@ import {
   classroomDeskCatalogSignature,
   type ClassroomDeskDisplay,
 } from '@/lib/classroom/classroomDeskDisplay';
+import { CLASSROOM_ALL_STUDENTS_FILTER_ID, CLASSROOM_ALL_STUDENTS_LABEL } from '@/lib/classroom/classroomTabSections';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -246,29 +248,38 @@ function ClassroomPointsPanelInner({
   const [classroomBalances, setClassroomBalances] = useState<Record<string, number>>({});
 
   const [filterClassId, setFilterClassId] = useState(() => {
+    if (initialClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID && isFullscreen) {
+      return CLASSROOM_ALL_STUDENTS_FILTER_ID;
+    }
     if (initialClassId && classes.some((c) => c.id === initialClassId)) {
       return initialClassId;
     }
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('defaultClassId');
-      if (stored && stored !== 'all' && classes.some((c) => c.id === stored)) return stored;
+      if (stored === CLASSROOM_ALL_STUDENTS_FILTER_ID && isFullscreen) {
+        return CLASSROOM_ALL_STUDENTS_FILTER_ID;
+      }
+      if (
+        stored &&
+        stored !== CLASSROOM_ALL_STUDENTS_FILTER_ID &&
+        classes.some((c) => c.id === stored)
+      ) {
+        return stored;
+      }
     }
-    return isFullscreen ? classes[0]?.id ?? 'all' : classes[0]?.id ?? 'all';
+    return classes[0]?.id ?? CLASSROOM_ALL_STUDENTS_FILTER_ID;
   });
 
   useEffect(() => {
+    if (initialClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID && isFullscreen) {
+      setFilterClassId((current) =>
+        current === CLASSROOM_ALL_STUDENTS_FILTER_ID ? current : CLASSROOM_ALL_STUDENTS_FILTER_ID,
+      );
+      return;
+    }
     if (!initialClassId || !classes.some((c) => c.id === initialClassId)) return;
     setFilterClassId((current) => (current === initialClassId ? current : initialClassId));
-  }, [initialClassId, classes]);
-
-  useEffect(() => {
-    if (!isFullscreen || filterClassId !== 'all') return;
-    const fallback =
-      initialClassId && classes.some((c) => c.id === initialClassId)
-        ? initialClassId
-        : classes[0]?.id;
-    if (fallback) setFilterClassId(fallback);
-  }, [isFullscreen, filterClassId, initialClassId, classes]);
+  }, [initialClassId, classes, isFullscreen]);
   const [layout, setLayout] = useState<ClassroomSeatingLayout | null>(null);
   const [prefs, setPrefs] = useState<ClassroomSeatingPrefs>(DEFAULT_CLASSROOM_PREFS);
   const sessionOnlyBalance =
@@ -390,10 +401,26 @@ function ClassroomPointsPanelInner({
   const { playEffectAtCell, activeCelebration } = useClassroomCelebrationEffect();
   const design = prefs.design;
 
+  const classNameById = useMemo(
+    () => new Map(classes.map((c) => [c.id, c.name ?? ''])),
+    [classes],
+  );
+  const viewingAllStudents = filterClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID;
+
   const classStudents = useMemo(() => {
-    if (filterClassId === 'all') return deferredStudents;
-    return deferredStudents.filter((s) => s.classId === filterClassId);
-  }, [deferredStudents, filterClassId]);
+    if (!viewingAllStudents) {
+      return deferredStudents.filter((s) => s.classId === filterClassId);
+    }
+    return deferredStudents.slice().sort((a, b) => {
+      const classCmp = (classNameById.get(a.classId ?? '') ?? '').localeCompare(
+        classNameById.get(b.classId ?? '') ?? '',
+      );
+      if (classCmp !== 0) return classCmp;
+      const last = (a.lastName ?? '').localeCompare(b.lastName ?? '');
+      if (last !== 0) return last;
+      return (a.firstName ?? '').localeCompare(b.firstName ?? '');
+    });
+  }, [classNameById, deferredStudents, filterClassId, viewingAllStudents]);
 
   const bathroomEnabled = bathroomTimerOn && !editMode;
   const bathroomByStudent = useMemo(() => {
@@ -421,16 +448,16 @@ function ClassroomPointsPanelInner({
     return map;
   }, [classStudents]);
 
-  const effectiveClassId = filterClassId === 'all' ? classes[0]?.id : filterClassId;
+  const effectiveClassId = filterClassId;
   const effectiveClassName = useMemo(() => {
-    const id = effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : null;
-    return id ? classes.find((c) => c.id === id)?.name : undefined;
-  }, [classes, effectiveClassId]);
+    if (viewingAllStudents) return CLASSROOM_ALL_STUDENTS_LABEL;
+    return effectiveClassId ? classes.find((c) => c.id === effectiveClassId)?.name : undefined;
+  }, [classes, effectiveClassId, viewingAllStudents]);
 
   const classScreenUrl = useMemo(() => {
     if (!isFullscreen || isStudentAudience) return null;
     if (settings.classroomStudentDisplayEnabled === false) return null;
-    if (!effectiveClassId || effectiveClassId === 'all') return null;
+    if (viewingAllStudents) return null;
     return buildClassroomFullscreenUrl({
       schoolId,
       classId: effectiveClassId,
@@ -444,20 +471,28 @@ function ClassroomPointsPanelInner({
     schoolId,
     settings.classroomStudentDisplayEnabled,
     storageScope,
+    viewingAllStudents,
   ]);
 
   const computedLayout = useMemo((): ClassroomSeatingLayout | null => {
-    if (!effectiveClassId || effectiveClassId === 'all') return null;
+    if (!effectiveClassId) return null;
+    if (viewingAllStudents && !isFullscreen) return null;
     const ids = classStudents.map((s) => s.id);
     const saved = loadClassroomLayout(schoolId, storageScope, effectiveClassId);
     if (saved) {
       const allowed = new Set(ids);
       const cells = saved.cells.map((id) => (id && allowed.has(id) ? id : null));
-      return { ...saved, cells };
+      const placed = cells.some(Boolean);
+      if (placed || ids.length === 0 || !viewingAllStudents) {
+        return { ...saved, cells };
+      }
     }
-    return buildInitialLayout(ids);
+    return buildInitialLayout(
+      ids,
+      viewingAllStudents ? initialLayoutColumnCount(ids.length) : 5,
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps -- roster layout only when class membership changes
-  }, [schoolId, storageScope, effectiveClassId, classStudentIdsKey]);
+  }, [schoolId, storageScope, effectiveClassId, classStudentIdsKey, viewingAllStudents, isFullscreen]);
 
   const activeLayout = layout ?? computedLayout;
 
@@ -502,12 +537,12 @@ function ClassroomPointsPanelInner({
 
   const classroomMeta = useMemo(
     () => ({
-      classId: effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : undefined,
-      className: classes.find((c) => c.id === effectiveClassId)?.name,
+      classId: viewingAllStudents ? undefined : effectiveClassId || undefined,
+      className: viewingAllStudents ? undefined : classes.find((c) => c.id === effectiveClassId)?.name,
       teacherId: operatorId,
       teacherName: operatorName,
     }),
-    [classes, effectiveClassId, operatorId, operatorName],
+    [classes, effectiveClassId, operatorId, operatorName, viewingAllStudents],
   );
 
   const deskDisplayOptions = useMemo(
@@ -587,7 +622,7 @@ function ClassroomPointsPanelInner({
 
   const layoutSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!activeLayout || !effectiveClassId || effectiveClassId === 'all') return;
+    if (!activeLayout || !effectiveClassId) return;
     if (layoutSaveTimerRef.current) clearTimeout(layoutSaveTimerRef.current);
     layoutSaveTimerRef.current = setTimeout(() => {
       saveClassroomLayout(schoolId, storageScope, effectiveClassId, activeLayout);
@@ -599,13 +634,13 @@ function ClassroomPointsPanelInner({
   }, [activeLayout, schoolId, storageScope, effectiveClassId]);
 
   const reloadSessionData = useCallback(() => {
-    if (!effectiveClassId || effectiveClassId === 'all') return;
+    if (!effectiveClassId) return;
     const loaded = loadClassroomSession(schoolId, storageScope, effectiveClassId);
     setSessionData(isStudentAudience ? sanitizeSessionForStudentDisplay(loaded) : loaded);
   }, [effectiveClassId, isStudentAudience, schoolId, storageScope]);
 
   const resetSessionDisplay = useCallback(() => {
-    if (!effectiveClassId || effectiveClassId === 'all') return;
+    if (!effectiveClassId) return;
     const cleared = clearClassroomSession(schoolId, storageScope, effectiveClassId);
     setSessionData(isStudentAudience ? sanitizeSessionForStudentDisplay(cleared) : cleared);
     setLastAwardSummary(null);
@@ -618,7 +653,7 @@ function ClassroomPointsPanelInner({
   }, [effectiveClassId, isStudentAudience, schoolId, storageScope, toast]);
 
   useEffect(() => {
-    if (!effectiveClassId || effectiveClassId === 'all') return;
+    if (!effectiveClassId) return;
     reloadSessionData();
     setLastAwardSummary(null);
     setBurstSelected([]);
@@ -627,7 +662,7 @@ function ClassroomPointsPanelInner({
   }, [effectiveClassId, reloadSessionData]);
 
   useEffect(() => {
-    if (!isStudentAudience || !effectiveClassId || effectiveClassId === 'all') return;
+    if (!isStudentAudience || !effectiveClassId) return;
     const sessionKey = classroomSessionStorageKey(schoolId, storageScope, effectiveClassId);
     const unsubscribe = subscribeClassroomSessionUpdates((key, data) => {
       if (key !== sessionKey) return;
@@ -753,7 +788,7 @@ function ClassroomPointsPanelInner({
 
   const recordSessionAwards = useCallback(
     (studentIds: string[], pointsDelta: number, description: string) => {
-      if (!effectiveClassId || effectiveClassId === 'all') return;
+      if (!effectiveClassId) return;
       const label = classroomAwardDisplayLabel(description, awardLabelContextRef.current);
       const names = studentIds
         .map((id) => {
@@ -880,7 +915,7 @@ function ClassroomPointsPanelInner({
               description: result.message,
             });
           }
-          if (effectiveClassId && effectiveClassId !== 'all') {
+          if (effectiveClassId) {
             startTransition(() => {
               recordSessionAwards(studentIds, magnitude, description);
               setRedoAction(null);
@@ -915,7 +950,7 @@ function ClassroomPointsPanelInner({
             }
             return next;
           });
-          if (effectiveClassId && effectiveClassId !== 'all') {
+          if (effectiveClassId) {
             recordSessionAwards(studentIds, delta, description);
           }
         });
@@ -938,7 +973,7 @@ function ClassroomPointsPanelInner({
         addAwardingStudents(studentIds);
       }
 
-      const canTrackSession = effectiveClassId && effectiveClassId !== 'all';
+      const canTrackSession = Boolean(effectiveClassId);
       const sessionDelta = isDeduct ? -magnitude : magnitude;
       let optimisticSessionApplied = false;
       const rollbackOptimisticSession = () => {
@@ -1229,7 +1264,7 @@ function ClassroomPointsPanelInner({
       ) {
         await budgetOptions.onBudgetSpend(-actionToUndo.budgetSpent);
       }
-      if (effectiveClassId && effectiveClassId !== 'all') {
+      if (effectiveClassId) {
         recordSessionAwards(actionToUndo.studentIds, signedDelta, undoLabel);
       }
       playClassroomSound(CLASSROOM_UNDO_SOUND);
@@ -1426,7 +1461,7 @@ function ClassroomPointsPanelInner({
           await startBathroomPass(firestore, schoolId, student, {
             teacherId: operatorId,
             teacherName: operatorName,
-            classId: effectiveClassId && effectiveClassId !== 'all' ? effectiveClassId : student.classId,
+            classId: viewingAllStudents ? student.classId : effectiveClassId || student.classId,
           });
           toast({
             title: 'Bathroom pass started',
@@ -1447,6 +1482,7 @@ function ClassroomPointsPanelInner({
       bathroomEnabled,
       bathroomMaxMinutes,
       effectiveClassId,
+      viewingAllStudents,
       firestore,
       operatorId,
       operatorName,
@@ -1501,7 +1537,12 @@ function ClassroomPointsPanelInner({
       if (!window.confirm(prompt)) return;
     }
     const ids = classStudents.map((s) => s.id);
-    setLayout(buildInitialLayout(ids));
+    setLayout(
+      buildInitialLayout(
+        ids,
+        viewingAllStudents ? initialLayoutColumnCount(ids.length) : 5,
+      ),
+    );
     setPendingAward(null);
     clearAutoTimer();
   };
@@ -1568,14 +1609,14 @@ function ClassroomPointsPanelInner({
     );
   }
 
-  if ((!effectiveClassId || filterClassId === 'all') && !isFullscreen) {
+  if ((!effectiveClassId || viewingAllStudents) && !isFullscreen) {
     return (
       <div className="space-y-4">
         <Helper content="Pick one class so the seating chart matches your room. Layout is saved per class on this device.">
           <p className="text-sm font-medium text-foreground">Choose a class for your seating chart</p>
         </Helper>
         <Select
-          value={filterClassId === 'all' ? '' : filterClassId}
+          value={viewingAllStudents ? '' : filterClassId}
           onValueChange={(val) => {
             setFilterClassId(val);
             localStorage.setItem('defaultClassId', val);
@@ -1615,7 +1656,12 @@ function ClassroomPointsPanelInner({
   const noStudentsInClass = !editMode && classStudents.length === 0;
   const fillChartFromRoster = () => {
     const ids = classStudents.map((s) => s.id);
-    setLayout(buildInitialLayout(ids));
+    setLayout(
+      buildInitialLayout(
+        ids,
+        viewingAllStudents ? initialLayoutColumnCount(ids.length) : 5,
+      ),
+    );
   };
   const cellCount = activeLayout.rows * activeLayout.cols;
   const density = deskDensity(cellCount, isFullscreen);
@@ -1660,7 +1706,7 @@ function ClassroomPointsPanelInner({
             iconOnly
             tone="class"
             icon={Users}
-            label={`Class +${prefs.defaultPoints}`}
+            label={viewingAllStudents ? `All +${prefs.defaultPoints}` : `Class +${prefs.defaultPoints}`}
             title={`Award +${prefs.defaultPoints} to everyone on the chart`}
             onClick={awardWholeClass}
             disabled={!placedStudentIds.length}
@@ -1727,7 +1773,7 @@ function ClassroomPointsPanelInner({
   );
 
   const openFullscreen = () => {
-    if (!effectiveClassId || effectiveClassId === 'all') {
+    if (!effectiveClassId || viewingAllStudents) {
       toast({
         variant: 'destructive',
         title: 'Select a class first',
@@ -1776,7 +1822,7 @@ function ClassroomPointsPanelInner({
       className={cn(
         classroomDesignShellClass(design, isFullscreen),
         isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
-        !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-col',
+        !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-1 flex-col',
       )}
     >
       {isStudentAudience ? (
@@ -1823,16 +1869,14 @@ function ClassroomPointsPanelInner({
                 design={design}
                 prefs={prefs}
                 classes={classes}
-                classId={effectiveClassId ?? ''}
+                classId={filterClassId}
                 isFullscreen={isFullscreen}
                 editMode={editMode}
                 rewardsPillarOn={rewardsPillarOn}
                 onChange={patchPrefs}
                 onResetSessionDisplay={resetSessionDisplay}
                 classScreenUrl={classScreenUrl}
-                onClassChange={
-                  classes.length > 1 && !editMode ? handleMonitorClassChange : undefined
-                }
+                onClassChange={!editMode ? handleMonitorClassChange : undefined}
                 onToggleEditMode={toggleEditMode}
                 onUndo={() => void handleUndo()}
                 onRedo={() => void handleRedo()}
@@ -1904,7 +1948,7 @@ function ClassroomPointsPanelInner({
       >
         <div
           className={cn(
-            'flex min-h-0 min-w-0 flex-col gap-3 overflow-hidden',
+            'flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden',
             !editMode && 'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3',
           )}
         >
@@ -1998,15 +2042,14 @@ function ClassroomPointsPanelInner({
         <BathroomPassesBar
           passes={activeBathroomList}
           maxMinutes={bathroomMaxMinutes}
-          classStudentIds={filterClassId !== 'all' ? classStudentIdSet : undefined}
+          classStudentIds={classStudentIdSet}
           onReturn={(studentId) => void handleBathroomToggle(studentId)}
         />
       ) : null}
 
       <div
         className={cn(
-          'flex min-h-0 min-w-0 flex-col',
-          isFullscreen ? 'flex-1 overflow-hidden' : 'min-h-[200px] flex-1 overflow-visible',
+          'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
           isStudentAudience && 'pointer-events-none select-none',
         )}
       >
@@ -2132,9 +2175,9 @@ function ClassroomPointsPanelInner({
           schoolId={schoolId}
           student={behaviorNoteStudent}
           classId={
-            effectiveClassId && effectiveClassId !== 'all'
-              ? effectiveClassId
-              : behaviorNoteStudent.classId
+            viewingAllStudents
+              ? behaviorNoteStudent.classId
+              : effectiveClassId || behaviorNoteStudent.classId
           }
           className={
             effectiveClassName ??

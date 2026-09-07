@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
-import { getHallOfFameStageSizeStyle } from '@/lib/hallOfFameUrlConfig';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
@@ -239,11 +238,8 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   }
 
   const monitorContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
-      <div
-        className="relative z-10 flex flex-col overflow-hidden bg-background"
-        style={getHallOfFameStageSizeStyle(false)}
-      >
+    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden bg-background">
+      <div className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
         <div className="flex h-full min-h-0 w-full flex-col pl-3 pt-2 pb-2 pr-0">
           <ClassroomPointsPanel
             variant="fullscreen"

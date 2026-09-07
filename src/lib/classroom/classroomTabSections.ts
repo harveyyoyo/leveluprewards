@@ -18,6 +18,12 @@ export const CLASSROOM_SEATING_SECTION_LABEL = 'Class Awards Live';
 /** Fullscreen projector / smart-board view (distinct from the Class Awards Live settings tab). */
 export const CLASSROOM_LIVE_MONITOR_NAV_LABEL = 'Live monitor';
 
+/** Class-menu value for every student in the current staff scope (not a Firestore class id). */
+export const CLASSROOM_ALL_STUDENTS_FILTER_ID = 'all';
+
+/** Label for the live-monitor class menu option that shows every student you can see. */
+export const CLASSROOM_ALL_STUDENTS_LABEL = 'All students';
+
 export const CLASSROOM_SECTION_LABELS: Record<ClassroomTabSection, string> = {
   seating: CLASSROOM_SEATING_SECTION_LABEL,
   behavior: 'Behavior',
