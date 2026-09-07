@@ -29,6 +29,7 @@ import {
 } from '@/lib/classroom/classroomTabSections';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useClassroomPrefsCloudSync } from '@/hooks/useClassroomPrefsCloudSync';
 
 const ACCENT_GRADIENT = 'linear-gradient(135deg, var(--cr-accent-from), var(--cr-accent-to))';
 const NAV_SPRING = { type: 'spring' as const, stiffness: 380, damping: 32 };
@@ -246,6 +247,8 @@ export function ClassroomRealmShell({
   hideChrome?: boolean;
 }) {
   useClassroomRealmTheme(!hideChrome);
+  const { teacherDocId } = useAppContext();
+  useClassroomPrefsCloudSync(schoolId, teacherDocId || undefined);
 
   if (hideChrome) {
     return <div className="classroom-realm-root min-h-dvh">{children}</div>;
