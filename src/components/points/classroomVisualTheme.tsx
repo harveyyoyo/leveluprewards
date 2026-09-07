@@ -274,7 +274,7 @@ function DeskInner({
 
 /** Same motion + glow as student kiosk `animate-fly-up`. */
 const STUDENT_FLY_UP_TEXT =
-  'animate-fly-up font-black tracking-widest text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]';
+  'animate-fly-up font-black tracking-widest !text-emerald-400 drop-shadow-[0_0_14px_rgba(52,211,153,0.75)]';
 
 const CLASSROOM_FLY_UP_SIZE_TEXT = {
   small: 'text-2xl',

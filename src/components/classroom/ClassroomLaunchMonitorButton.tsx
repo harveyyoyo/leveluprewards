@@ -51,7 +51,7 @@ export function ClassroomLaunchMonitorButton({
       variant={isStudentAudience ? 'outline' : 'default'}
       className={cn(
         isStudentAudience
-          ? 'gap-2 rounded-xl border-violet-500/40 font-bold text-violet-700 hover:bg-violet-500/10 dark:text-violet-300'
+          ? 'gap-2 rounded-xl border-violet-500/40 font-bold !text-violet-700 hover:bg-violet-500/10 dark:!text-violet-300'
           : 'gap-2 rounded-xl border-0 bg-gradient-to-r from-violet-500 to-violet-600 font-bold text-white shadow-md shadow-violet-500/25 transition-all hover:scale-[1.02] hover:from-violet-600 hover:to-violet-700 active:scale-[0.98]',
         className,
       )}
