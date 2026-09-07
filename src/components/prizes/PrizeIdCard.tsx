@@ -6,6 +6,13 @@ import { APP_NAME, APP_TAGLINE } from '@/lib/appBranding';
 import DynamicIcon from '@/components/DynamicIcon';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
+import {
+  CreditCardBrand,
+  CreditCardChip,
+  CreditCardContactless,
+  CreditCardValidThru,
+  formatCreditCardPan,
+} from '@/components/print/CreditCardChrome';
 import { prizeScanCodeFor } from '@/lib/prizes/prizeScanCode';
 import { prizeCardColorForId } from '@/lib/prizes/prizeCardColor';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -95,88 +102,108 @@ export function PrizeIdCard({
       )}
       style={cardStyle}
     >
-      <div className="print-id-header-container" style={{ borderBottomColor: barcodeDivider }}>
-        <div className="print-id-app" style={headerStyle}>
-          {appLogoUrl ? (
-            <div className="print-id-app-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appLogoUrl} alt="" className="object-contain" />
-            </div>
-          ) : null}
-          <PrizeIdCardAppText appName={appName} appTagline={appTagline} textColor={mainTextColor} mutedText={mainMutedText} />
-        </div>
-
-        {resolvedLayout === 'credit_card' && (
-           <>
-             <div className="credit-card-chip" aria-hidden>
-               <svg viewBox="0 0 32 24" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="32" height="24" rx="3" fill="url(#chip-grad)" stroke="rgba(120,80,0,0.3)" strokeWidth="0.5" />
-                  <path d="M10 0v24M22 0v24M0 8h10M22 8h10M0 16h10M22 16h10M10 12h12" stroke="rgba(120,80,0,0.5)" strokeWidth="0.75" />
-                  <defs>
-                    <linearGradient id="chip-grad" x1="0" y1="0" x2="32" y2="24" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#d4a843" />
-                      <stop offset="0.3" stopColor="#f0d060" />
-                      <stop offset="0.5" stopColor="#c89830" />
-                      <stop offset="0.7" stopColor="#e8c84c" />
-                      <stop offset="1" stopColor="#b88828" />
-                    </linearGradient>
-                  </defs>
-               </svg>
-             </div>
-             <div className="credit-card-contactless" aria-hidden>
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c2-2.5 5.5-2.5 7.5 0" /><path d="M7 11.5c3.5-4 9.5-4 13 0" /><path d="M9.5 6.5c5.5-6 14.5-6 20 0" /></svg>
-             </div>
-             <div className="credit-card-number" style={headerStyle}>
-               {`4000 ${scanCode.replace(/\D/g, '').padStart(12, '0').match(/.{1,4}/g)?.join(' ')}`}
-             </div>
-             <div className="credit-card-valid-thru" style={headerStyle}>
-               <span className="valid-thru-label">VALID<br/>THRU</span>
-               <span className="valid-thru-date">12/99</span>
-             </div>
-           </>
-        )}
-
-        <div className="print-id-school" style={headerStyle}>
-          <span className="print-id-header">{schoolName}</span>
-          {schoolLogoUrl ? (
-            <div className="print-id-school-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={schoolLogoUrl} alt="" className="object-contain" />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="print-id-main flex items-center justify-center gap-3 px-2 min-h-0 flex-1">
-        {useQr ? (
-          <div className="print-id-qr-slot" aria-label={`Prize scan code ${scanCode}`}>
-            <PrintIdCardScanCode
-              value={scanCode}
-              useQr
-              variant="prize-id"
-              centerLabel={prizeAbbrev}
-              placement="inline"
+      {resolvedLayout === 'credit_card' ? (
+        <>
+          <div className="credit-card-top">
+            <CreditCardBrand
+              schoolName={schoolName}
+              schoolLogoUrl={schoolLogoUrl}
+              appLogoUrl={appLogoUrl}
+              appName={appName}
+              style={headerStyle}
+              nameColor={mainTextColor}
             />
+            {useQr ? (
+              <div className="print-id-qr-slot" aria-label={`Prize scan code ${scanCode}`}>
+                <PrintIdCardScanCode
+                  value={scanCode}
+                  useQr
+                  variant="prize-id"
+                  centerLabel={prizeAbbrev}
+                  placement="inline"
+                />
+              </div>
+            ) : (
+              <div
+                className="print-id-avatar flex items-center justify-center"
+                style={iconBoxStyle}
+                aria-hidden
+              >
+                <DynamicIcon name={prize.icon || 'Gift'} className="h-6 w-6" />
+              </div>
+            )}
           </div>
-        ) : (
-          <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2"
-            style={iconBoxStyle}
-            aria-hidden
-          >
-            <DynamicIcon name={prize.icon || 'Gift'} className="h-8 w-8" />
+          <div className="credit-card-mid" style={headerStyle}>
+            <div className="credit-card-chip-row">
+              <CreditCardChip />
+              <CreditCardContactless />
+            </div>
+            <div className="credit-card-number">{formatCreditCardPan(scanCode)}</div>
+            <div className="credit-card-identity">
+              <div className="print-id-text">
+                <div className="print-id-name">{prize.name}</div>
+                <p className="print-id-nickname" style={{ color: mainMutedText }}>
+                  {Number(prize.points ?? 0)} pts
+                </p>
+              </div>
+              <CreditCardValidThru date="12/99" />
+            </div>
           </div>
-        )}
-        <div className="min-w-0 flex-1 text-left" style={{ color: mainTextColor }}>
-          <div className="print-id-name text-left">{prize.name}</div>
-          <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mainMutedText }}>
-            Reward
-          </p>
-          <p className="text-[11pt] font-black leading-tight" style={{ color: mainTextColor }}>
-            {Number(prize.points ?? 0)} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
-          </p>
-        </div>
-      </div>
+        </>
+      ) : (
+        <>
+          <div className="print-id-header-container" style={{ borderBottomColor: barcodeDivider }}>
+            <div className="print-id-app" style={headerStyle}>
+              {appLogoUrl ? (
+                <div className="print-id-app-logo">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={appLogoUrl} alt="" className="object-contain" />
+                </div>
+              ) : null}
+              <PrizeIdCardAppText appName={appName} appTagline={appTagline} textColor={mainTextColor} mutedText={mainMutedText} />
+            </div>
+            <div className="print-id-school" style={headerStyle}>
+              <span className="print-id-header">{schoolName}</span>
+              {schoolLogoUrl ? (
+                <div className="print-id-school-logo">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={schoolLogoUrl} alt="" className="object-contain" />
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="print-id-main flex items-center justify-center gap-3 px-2 min-h-0 flex-1">
+            {useQr ? (
+              <div className="print-id-qr-slot" aria-label={`Prize scan code ${scanCode}`}>
+                <PrintIdCardScanCode
+                  value={scanCode}
+                  useQr
+                  variant="prize-id"
+                  centerLabel={prizeAbbrev}
+                  placement="inline"
+                />
+              </div>
+            ) : (
+              <div
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border-2"
+                style={iconBoxStyle}
+                aria-hidden
+              >
+                <DynamicIcon name={prize.icon || 'Gift'} className="h-8 w-8" />
+              </div>
+            )}
+            <div className="min-w-0 flex-1 text-left" style={{ color: mainTextColor }}>
+              <div className="print-id-name text-left">{prize.name}</div>
+              <p className="text-[8pt] font-semibold uppercase tracking-wide mt-0.5" style={{ color: mainMutedText }}>
+                Reward
+              </p>
+              <p className="text-[11pt] font-black leading-tight" style={{ color: mainTextColor }}>
+                {Number(prize.points ?? 0)} <span className="text-[8pt] font-bold uppercase tracking-wider opacity-80">pts</span>
+              </p>
+            </div>
+          </div>
+        </>
+      )}
 
       {!useQr ? (
         <div

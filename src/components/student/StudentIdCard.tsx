@@ -24,6 +24,13 @@ import { GoogleFontLoader } from '@/components/themes/GoogleFontLoader';
 
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
+import {
+  CreditCardBrand,
+  CreditCardChip,
+  CreditCardContactless,
+  CreditCardValidThru,
+  formatCreditCardPan,
+} from '@/components/print/CreditCardChrome';
 
 
 
@@ -198,7 +205,45 @@ export function StudentIdCard({
 
   const resolvedCardStyle = cardStyle ? { ...cardStyle, ...fitStyle } : fitStyle;
 
+  const photoOrQr = useQr ? (
+    <div className="print-id-qr-slot" aria-label={`Student scan code ${student.nfcId}`}>
+      <PrintIdCardScanCode
+        value={student.nfcId}
+        useQr
+        centerLabel={studentInitials}
+        placement="inline"
+      />
+    </div>
+  ) : (
+    <div className={cn(
+      "print-id-avatar transition-all duration-300",
+      settings.photoBorderRadius === 'sm' && 'rounded-sm',
+      settings.photoBorderRadius === 'md' && 'rounded-md',
+      settings.photoBorderRadius === 'lg' && 'rounded-2xl',
+      settings.photoBorderRadius === 'full' && 'rounded-full',
+      settings.photoBorderRadius === 'none' && 'rounded-none',
+      settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
+      settings.photoDropShadow === 'md' && 'drop-shadow-md',
+      settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
+      settings.photoDropShadow === 'none' && 'drop-shadow-none',
+    )} style={avatarStyle}>
+      {student.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={student.photoUrl} alt="" className={cn(
+          "h-full w-full transition-all duration-300",
+          settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
+        )} />
+      ) : (
+        <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{studentInitials}</span>
+      )}
+    </div>
+  );
 
+  const barcodeFooter = !useQr ? (
+    <div className="print-id-barcode-container" style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid #e5e7eb` }}>
+      <PrintIdCardScanCode value={student.nfcId} placement="footer" />
+    </div>
+  ) : null;
 
   return (
 
@@ -221,187 +266,87 @@ export function StudentIdCard({
 
       {themeFontFamily && <GoogleFontLoader fontFamily={themeFontFamily} />}
 
-      <div className="print-id-header-container">
-        <div className="print-id-app" style={headerStyle}>
-          {appLogoUrl && (
-            <div className="print-id-app-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={appLogoUrl} alt="" className="object-contain" />
-            </div>
-          )}
-          <div className="print-id-app-text">
-            <span className="print-id-app-name">{appName || APP_NAME}</span>
-            <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>
-            <PrintLevelUpDomain />
+      {resolvedLayout === 'credit_card' ? (
+        <>
+          <div className="credit-card-top">
+            <CreditCardBrand
+              schoolName={schoolName}
+              schoolLogoUrl={schoolLogoUrl}
+              appLogoUrl={appLogoUrl}
+              appName={appName}
+              style={headerStyle}
+            />
+            {photoOrQr}
           </div>
-        </div>
-        
-        {resolvedLayout === 'credit_card' && (
-           <>
-             <div className="credit-card-chip" aria-hidden>
-               <svg viewBox="0 0 32 24" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect width="32" height="24" rx="3" fill="url(#chip-grad)" stroke="rgba(120,80,0,0.3)" strokeWidth="0.5" />
-                  <path d="M10 0v24M22 0v24M0 8h10M22 8h10M0 16h10M22 16h10M10 12h12" stroke="rgba(120,80,0,0.5)" strokeWidth="0.75" />
-                  <defs>
-                    <linearGradient id="chip-grad" x1="0" y1="0" x2="32" y2="24" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#d4a843" />
-                      <stop offset="0.3" stopColor="#f0d060" />
-                      <stop offset="0.5" stopColor="#c89830" />
-                      <stop offset="0.7" stopColor="#e8c84c" />
-                      <stop offset="1" stopColor="#b88828" />
-                    </linearGradient>
-                  </defs>
-               </svg>
-             </div>
-             <div className="credit-card-contactless" aria-hidden>
-               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c2-2.5 5.5-2.5 7.5 0" /><path d="M7 11.5c3.5-4 9.5-4 13 0" /><path d="M9.5 6.5c5.5-6 14.5-6 20 0" /></svg>
-             </div>
-             <div className="credit-card-number" style={headerStyle}>
-               {`4000 ${student.nfcId.padStart(12, '0').match(/.{1,4}/g)?.join(' ')}`}
-             </div>
-             <div className="credit-card-valid-thru" style={headerStyle}>
-               <span className="valid-thru-label">VALID<br/>THRU</span>
-               <span className="valid-thru-date">06/27</span>
-             </div>
-           </>
-        )}
-
-        <div className="print-id-school" style={headerStyle}>
-          <span className="print-id-header">{schoolName}</span>
-          {schoolLogoUrl && (
-            <div className="print-id-school-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={schoolLogoUrl} alt="" className="object-contain" />
+          <div className="credit-card-mid" style={headerStyle}>
+            <div className="credit-card-chip-row">
+              <CreditCardChip />
+              <CreditCardContactless />
             </div>
-          )}
-        </div>
-      </div>
-
-      
-
-      <div className="print-id-main" style={mainStyle}>
-
-        <div className="print-id-left flex items-center" style={{ marginLeft: '0.1in', gap: useQr ? '0.1in' : '0.12in' }}>
-
-          {useQr ? (
-
-            <div className="print-id-qr-slot" aria-label={`Student scan code ${student.nfcId}`}>
-
-              <PrintIdCardScanCode
-
-                value={student.nfcId}
-
-                useQr
-
-                centerLabel={studentInitials}
-
-                placement="inline"
-
-              />
-
+            <div className="credit-card-number">{formatCreditCardPan(student.nfcId)}</div>
+            <div className="credit-card-identity">
+              <div className="print-id-text">
+                <div className="print-id-name" style={nameStyle}>{fullName}</div>
+                {displayNickname ? (
+                  <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
+                ) : null}
+              </div>
+              <CreditCardValidThru date="06/27" />
             </div>
-
-          ) : (
-
-            <div className={cn(
-
-              "print-id-avatar transition-all duration-300",
-
-              settings.photoBorderRadius === 'sm' && 'rounded-sm',
-
-              settings.photoBorderRadius === 'md' && 'rounded-md',
-
-              settings.photoBorderRadius === 'lg' && 'rounded-2xl',
-
-              settings.photoBorderRadius === 'full' && 'rounded-full',
-
-              settings.photoBorderRadius === 'none' && 'rounded-none',
-
-              settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
-
-              settings.photoDropShadow === 'md' && 'drop-shadow-md',
-
-              settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
-
-              settings.photoDropShadow === 'none' && 'drop-shadow-none',
-
-            )} style={avatarStyle}>
-
-              {student.photoUrl ? (
-
-                // eslint-disable-next-line @next/next/no-img-element
-
-                <img src={student.photoUrl} alt="" className={cn(
-
-                  "h-full w-full transition-all duration-300",
-
-                  settings.photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain'
-
-                )} />
-
-              ) : (
-
-                <span style={{...nameStyle, fontSize: '20pt', fontWeight: 800 }}>{studentInitials}</span>
-
+          </div>
+          {barcodeFooter}
+        </>
+      ) : (
+        <>
+          <div className="print-id-header-container">
+            <div className="print-id-app" style={headerStyle}>
+              {appLogoUrl && (
+                <div className="print-id-app-logo">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={appLogoUrl} alt="" className="object-contain" />
+                </div>
               )}
-
+              <div className="print-id-app-text">
+                <span className="print-id-app-name">{appName || APP_NAME}</span>
+                <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>
+                <PrintLevelUpDomain />
+              </div>
             </div>
-
-          )}
-
-          
-
-          <div className="print-id-text">
-
-            <div className="print-id-name" style={nameStyle}>{fullName}</div>
-
-            {displayNickname ? (
-
-              <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
-
-            ) : null}
-
-            <div className="print-id-class" style={classStyle}>Class: {className}</div>
-
+            <div className="print-id-school" style={headerStyle}>
+              <span className="print-id-header">{schoolName}</span>
+              {schoolLogoUrl && (
+                <div className="print-id-school-logo">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={schoolLogoUrl} alt="" className="object-contain" />
+                </div>
+              )}
+            </div>
           </div>
-
-        </div>
-
-
-
-        {(customEmojiUrl || themeEmoji) && (
-
-          <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowStyle}>
-
-            {customEmojiUrl ? (
-
-              // eslint-disable-next-line @next/next/no-img-element
-
-              <img src={customEmojiUrl} alt="" className="print-id-custom-emoji-img" />
-
-            ) : (
-
-              themeEmoji
-
+          <div className="print-id-main" style={mainStyle}>
+            <div className="print-id-left flex items-center" style={{ marginLeft: '0.1in', gap: useQr ? '0.1in' : '0.12in' }}>
+              {photoOrQr}
+              <div className="print-id-text">
+                <div className="print-id-name" style={nameStyle}>{fullName}</div>
+                {displayNickname ? (
+                  <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
+                ) : null}
+                <div className="print-id-class" style={classStyle}>Class: {className}</div>
+              </div>
+            </div>
+            {(customEmojiUrl || themeEmoji) && (
+              <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowStyle}>
+                {customEmojiUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={customEmojiUrl} alt="" className="print-id-custom-emoji-img" />
+                ) : (
+                  themeEmoji
+                )}
+              </div>
             )}
-
           </div>
-
-        )}
-
-      </div>
-
-      
-
-      {!useQr ? (
-
-        <div className="print-id-barcode-container" style={{ background: '#ffffff', color: '#000000', borderTop: `1px solid #e5e7eb` }}>
-
-          <PrintIdCardScanCode value={student.nfcId} placement="footer" />
-
-        </div>
-
-      ) : null}
+          {barcodeFooter}
+        </>
+      )}
 
     </div>
 

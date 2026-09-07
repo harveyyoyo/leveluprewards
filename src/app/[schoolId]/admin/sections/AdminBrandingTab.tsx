@@ -560,7 +560,7 @@ export function AdminBrandingTab({
                   {
                     id: 'credit_card' as const,
                     label: 'Credit Card',
-                    desc: 'Premium metallic look with EMV chip, embossed monospace name, photo inset at top-right.',
+                    desc: 'Looks like a bank card: school name and photo up top, chip and number in the middle, name on the left, and a full-width barcode along the bottom.',
                   },
                   {
                     id: 'modern' as const,
