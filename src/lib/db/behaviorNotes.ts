@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
+import { addDoc, collection, doc, getDocs, limit, orderBy, query, updateDoc } from 'firebase/firestore';
 import type { Firestore } from 'firebase/firestore';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
@@ -65,6 +65,7 @@ function mapBehaviorNoteDoc(id: string, row: Record<string, unknown>): BehaviorN
     notifyPrincipal: row.notifyPrincipal === true,
     pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
     pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
+    deletedAt: row.deletedAt != null ? Number(row.deletedAt) : undefined,
   };
 }
 
@@ -80,5 +81,17 @@ export async function listBehaviorNotes(
     limit(max),
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => mapBehaviorNoteDoc(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => mapBehaviorNoteDoc(d.id, d.data() as Record<string, unknown>))
+    .filter((n) => !n.deletedAt);
+}
+
+/** Staff removal of a mistaken note (browser rules — admin/developer only) when the Admin API is unavailable. */
+export async function softDeleteBehaviorNote(
+  firestore: Firestore,
+  schoolId: string,
+  noteId: string,
+): Promise<void> {
+  const ref = doc(firestore, 'schools', schoolId, 'behaviorNotes', noteId);
+  await updateDoc(ref, { deletedAt: Date.now() });
 }

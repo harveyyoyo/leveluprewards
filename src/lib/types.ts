@@ -694,4 +694,6 @@ export interface BehaviorNote {
   notifyPrincipal?: boolean;
   pointsAmount?: number;
   pointsLabel?: string;
+  /** Soft-delete marker — set when a staff member removes a mistaken note. Filtered from listings. */
+  deletedAt?: number;
 }
