@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from 'react';
 import { ExternalLink, Monitor } from 'lucide-react';
+import { useAppContext } from '@/components/AppProvider';
+import { useFirestore } from '@/firebase';
+import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -42,6 +45,8 @@ export function ClassroomRoomDisplaySection({
 }: ClassroomRoomDisplaySectionProps) {
   const [classId, setClassId] = useState(() => classes[0]?.id ?? '');
   const [prefsVersion, setPrefsVersion] = useState(0);
+  const firestore = useFirestore();
+  const { teacherDocId } = useAppContext();
 
   const effectiveClassId = classes.some((c) => c.id === classId) ? classId : (classes[0]?.id ?? '');
   const classLabel = classes.find((c) => c.id === effectiveClassId)?.name;
@@ -50,12 +55,21 @@ export function ClassroomRoomDisplaySection({
     [students, effectiveClassId],
   );
 
-  const prefs = loadClassroomScreenPrefs(schoolId, scope, effectiveClassId);
+  const prefs = useMemo(
+    () => loadClassroomScreenPrefs(schoolId, scope, effectiveClassId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [schoolId, scope, effectiveClassId, prefsVersion],
+  );
 
   const update = (patch: Partial<ClassroomScreenPrefs>) => {
     if (!effectiveClassId) return;
     const next = { ...loadClassroomScreenPrefs(schoolId, scope, effectiveClassId), ...patch };
     saveClassroomScreenPrefs(schoolId, scope, effectiveClassId, next);
+    if (firestore && teacherDocId && teacherDocId === scope) {
+      queueClassroomPrefsFirestoreSync(firestore, schoolId, teacherDocId, {
+        screenPrefsByClass: { [effectiveClassId]: next },
+      });
+    }
     setPrefsVersion((v) => v + 1);
   };
 

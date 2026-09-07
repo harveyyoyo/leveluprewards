@@ -83,6 +83,7 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
+import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
 import { resolveEffectiveDeskDisplayPrefs } from '@/lib/classroom/classroomMonitorDisplaySettings';
 import {
   isNoteDeductType,
@@ -591,12 +592,17 @@ function ClassroomPointsPanelInner({
     if (layoutSaveTimerRef.current) clearTimeout(layoutSaveTimerRef.current);
     layoutSaveTimerRef.current = setTimeout(() => {
       saveClassroomLayout(schoolId, storageScope, effectiveClassId, activeLayout);
+      if (firestore && teacherDocId && teacherDocId === storageScope) {
+        queueClassroomPrefsFirestoreSync(firestore, schoolId, teacherDocId, {
+          layoutsByClass: { [effectiveClassId]: activeLayout },
+        });
+      }
       layoutSaveTimerRef.current = null;
     }, 450);
     return () => {
       if (layoutSaveTimerRef.current) clearTimeout(layoutSaveTimerRef.current);
     };
-  }, [activeLayout, schoolId, storageScope, effectiveClassId]);
+  }, [activeLayout, schoolId, storageScope, effectiveClassId, firestore, teacherDocId]);
 
   const reloadSessionData = useCallback(() => {
     if (!effectiveClassId || effectiveClassId === 'all') return;
@@ -1513,7 +1519,12 @@ function ClassroomPointsPanelInner({
     };
     setPrefs(normalized);
     saveClassroomPrefs(schoolId, storageScope, normalized);
-  }, [schoolId, storageScope]);
+    if (firestore && teacherDocId && teacherDocId === storageScope) {
+      queueClassroomPrefsFirestoreSync(firestore, schoolId, teacherDocId, {
+        seatingPrefsByScope: { [storageScope]: normalized },
+      });
+    }
+  }, [schoolId, storageScope, firestore, teacherDocId]);
 
   const patchPrefs = useCallback(
     (patch: Partial<ClassroomSeatingPrefs>) => {
