@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { BookOpenCheck, Dices, LayoutGrid, Monitor } from 'lucide-react';
+import { BookOpenCheck, Dices, LayoutGrid, Loader2, Monitor } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
 import { ClassroomRealmPageHeader } from '@/components/classroom/ClassroomRealmChrome';
 import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
@@ -50,6 +50,16 @@ export default function ClassroomRealmManagePage() {
         <p className="p-8 text-center text-white/70">
           Sign in as teacher or admin to manage classroom.
         </p>
+      </ClassroomRealmShell>
+    );
+  }
+
+  if (roster.studentsLoading || roster.classesLoading) {
+    return (
+      <ClassroomRealmShell schoolId={schoolId}>
+        <div className="flex items-center justify-center p-16">
+          <Loader2 className="h-6 w-6 animate-spin text-white/60" aria-hidden />
+        </div>
       </ClassroomRealmShell>
     );
   }

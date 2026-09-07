@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 
 type UseClassroomIdleExitOptions = {
   enabled: boolean;
@@ -22,7 +23,7 @@ export function useClassroomIdleExit({ enabled, idleMs, onExit }: UseClassroomId
     const safeIdleMs =
       typeof idleMs === 'number' && Number.isFinite(idleMs) && idleMs > 0
         ? Math.min(idleMs, 24 * 60 * 60 * 1000)
-        : 15 * 60 * 1000;
+        : DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
     let sessionEndAt = 0;
