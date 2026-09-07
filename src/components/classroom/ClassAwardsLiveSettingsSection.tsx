@@ -149,9 +149,9 @@ export function ClassAwardsLiveSettingsSection({
             />
           ) : null}
         </div>
-        <p className="mt-3 max-w-2xl text-[11px] leading-relaxed text-muted-foreground">
+        <p className="mt-3 max-w-2xl text-[11px] leading-relaxed !text-muted-foreground">
           Open the teacher monitor for quick awards during the lesson. Use{' '}
-          <span className="font-semibold text-foreground">Launch for class screen</span> on your projector
+          <span className="font-semibold !text-foreground">Launch for class screen</span> on your projector
           — it mirrors the chart live but hides behavior comments and notes.
         </p>
       </div>
