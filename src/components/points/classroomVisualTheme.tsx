@@ -462,8 +462,8 @@ export function ClassroomTeacherDesk({
       <div className="flex items-center justify-center gap-3 border-2 border-foreground bg-yellow-300 px-4 py-2 shadow-[4px_4px_0_0_hsl(var(--foreground))]">
         <Monitor className="h-6 w-6 text-foreground" strokeWidth={2.5} />
         <div className="text-center">
-          <p className="text-sm font-black uppercase tracking-wider text-foreground">Teacher desk</p>
-          <p className="text-[10px] font-bold uppercase text-foreground/70">{frontHint}</p>
+          <p className="text-sm font-black uppercase tracking-wider !text-foreground">Teacher desk</p>
+          <p className="text-[10px] font-bold uppercase !text-foreground/70">{frontHint}</p>
         </div>
       </div>,
     );
@@ -475,7 +475,7 @@ export function ClassroomTeacherDesk({
           <Monitor className="h-5 w-5" />
         </div>
         <div className="text-center">
-          <p className="text-sm font-bold text-foreground">Teacher desk</p>
+          <p className="text-sm font-bold !text-foreground">Teacher desk</p>
           <p className="text-[10px] text-muted-foreground">{frontHint}</p>
         </div>
       </div>,
@@ -498,7 +498,7 @@ export function ClassroomTeacherDesk({
         <Monitor className="h-5 w-5" />
       </div>
       <div className="text-center">
-        <p className="text-sm font-bold text-foreground">Teacher desk</p>
+        <p className="text-sm font-bold !text-foreground">Teacher desk</p>
         <p className="text-[10px] text-muted-foreground">{frontHint}</p>
       </div>
     </div>,
