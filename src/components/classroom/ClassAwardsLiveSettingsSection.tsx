@@ -132,7 +132,7 @@ export function ClassAwardsLiveSettingsSection({
     <div className="relative space-y-6">
       <div className="pointer-events-none absolute top-0 right-0 -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-violet-500/10 to-amber-500/10 blur-3xl" />
 
-      <div className="rounded-3xl border border-violet-500/25 bg-gradient-to-br from-violet-500/10 via-background to-amber-500/5 p-5 md:p-6">
+      <div className="rounded-3xl border border-violet-500/25 bg-muted/15 p-5 md:p-6">
         <div className="flex flex-wrap items-center gap-3">
           <ClassroomLaunchMonitorButton
             schoolId={schoolId}
