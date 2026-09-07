@@ -88,25 +88,28 @@ export async function GET(req: NextRequest) {
       .limit(LIST_LIMIT)
       .get();
 
-    const notes = snap.docs.map((d) => {
-      const row = d.data() as Record<string, unknown>;
-      return {
-        id: d.id,
-        studentId: String(row.studentId || ''),
-        studentName: String(row.studentName || ''),
-        classId: row.classId ? String(row.classId) : undefined,
-        className: row.className ? String(row.className) : undefined,
-        teacherId: String(row.teacherId || ''),
-        teacherName: String(row.teacherName || ''),
-        kind: NOTE_KINDS.has(row.kind as BehaviorNoteKind) ? row.kind : 'concern',
-        note: String(row.note || ''),
-        createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
-        visibleToParent: row.visibleToParent !== false,
-        notifyPrincipal: row.notifyPrincipal === true,
-        pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
-        pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
-      };
-    });
+    const notes = snap.docs
+      .map((d) => {
+        const row = d.data() as Record<string, unknown>;
+        return {
+          id: d.id,
+          studentId: String(row.studentId || ''),
+          studentName: String(row.studentName || ''),
+          classId: row.classId ? String(row.classId) : undefined,
+          className: row.className ? String(row.className) : undefined,
+          teacherId: String(row.teacherId || ''),
+          teacherName: String(row.teacherName || ''),
+          kind: NOTE_KINDS.has(row.kind as BehaviorNoteKind) ? row.kind : 'concern',
+          note: String(row.note || ''),
+          createdAt: parseBehaviorNoteCreatedAt(row.createdAt),
+          visibleToParent: row.visibleToParent !== false,
+          notifyPrincipal: row.notifyPrincipal === true,
+          pointsAmount: row.pointsAmount != null ? Number(row.pointsAmount) : undefined,
+          pointsLabel: row.pointsLabel ? String(row.pointsLabel) : undefined,
+          deletedAt: row.deletedAt != null ? Number(row.deletedAt) : undefined,
+        };
+      })
+      .filter((n) => !n.deletedAt);
 
     return NextResponse.json(
       { notes },
@@ -249,5 +252,58 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error('[api/classroom/behavior-notes] POST failed:', e);
     return jsonError(503, 'Could not save behavior note.');
+  }
+}
+
+/** DELETE: soft-delete a behavior note (admin/developer only — teachers ask an admin to remove a mistaken note). */
+export async function DELETE(req: NextRequest) {
+  try {
+    if (!sameOrigin(req)) return jsonError(403, 'Forbidden');
+    if (!rateLimit(`classroom:behavior-notes:delete:${clientIp(req)}`, 30)) {
+      return jsonError(429, 'Too many requests');
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const idToken = typeof body?.idToken === 'string' ? body.idToken.trim() : '';
+    const schoolId =
+      typeof body?.schoolId === 'string' ? body.schoolId.trim().toLowerCase() : '';
+    const noteId = typeof body?.noteId === 'string' ? body.noteId.trim() : '';
+
+    if (!schoolId || !SCHOOL_ID_RE.test(schoolId) || !noteId) {
+      return jsonError(400, 'schoolId and noteId are required.');
+    }
+
+    const session = await staffSession(req, schoolId, idToken);
+    if (!session) {
+      return jsonError(403, 'Staff access required for this school.');
+    }
+    if (!session.scopes.has('admin') && !session.scopes.has('dev')) {
+      return jsonError(403, 'Only admins can delete a behavior note.');
+    }
+
+    if (!hasFirebaseAdminCredentials()) {
+      return jsonError(
+        503,
+        'Server Firebase Admin is not configured. Add FIREBASE_SERVICE_ACCOUNT_KEY to .env.local.',
+      );
+    }
+    const credentialMismatch = firebaseAdminCredentialProjectMismatch();
+    if (credentialMismatch) {
+      return jsonError(503, credentialMismatch);
+    }
+
+    const db = await getDb();
+    const noteRef = db.collection('schools').doc(schoolId).collection('behaviorNotes').doc(noteId);
+    const noteSnap = await noteRef.get();
+    if (!noteSnap.exists) {
+      return jsonError(404, 'Note not found.');
+    }
+
+    await noteRef.update({ deletedAt: Date.now() });
+
+    return NextResponse.json({ ok: true, id: noteId });
+  } catch (e) {
+    console.error('[api/classroom/behavior-notes] DELETE failed:', e);
+    return jsonError(503, 'Could not delete behavior note.');
   }
 }
