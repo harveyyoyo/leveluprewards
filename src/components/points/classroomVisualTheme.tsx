@@ -204,7 +204,7 @@ function DeskInner({
         {avatar}
         <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="text-xs font-bold tabular-nums text-muted-foreground sm:text-sm">
+          <div className="text-xs font-bold tabular-nums !text-muted-foreground sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         )}
@@ -220,7 +220,7 @@ function DeskInner({
           {avatar}
           <div className="line-clamp-2 text-center text-[10px] font-semibold text-white sm:text-xs">{name}</div>
           {showBalance && (
-            <div className="text-xs font-bold tabular-nums text-indigo-200 sm:text-sm">
+            <div className="text-xs font-bold tabular-nums !text-indigo-200 sm:text-sm">
               {points.toLocaleString()} pts
             </div>
           )}
@@ -233,9 +233,9 @@ function DeskInner({
     return (
       <>
         {avatar}
-        <div className="line-clamp-2 text-center text-[10px] font-bold sm:text-xs">{name}</div>
+        <div className="line-clamp-2 text-center text-[10px] font-bold !text-foreground sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums sm:text-sm">
+          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums !text-foreground sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         )}
@@ -247,9 +247,9 @@ function DeskInner({
     return (
       <>
         {avatar}
-        <div className="line-clamp-2 text-center text-[10px] font-black uppercase sm:text-xs">{name}</div>
+        <div className="line-clamp-2 text-center text-[10px] font-black uppercase !text-foreground sm:text-xs">{name}</div>
         {showBalance && (
-          <div className="text-xs font-black tabular-nums sm:text-sm">{points.toLocaleString()} PTS</div>
+          <div className="text-xs font-black tabular-nums !text-foreground sm:text-sm">{points.toLocaleString()} PTS</div>
         )}
       </>
     );
@@ -262,7 +262,7 @@ function DeskInner({
       <div className="line-clamp-2 text-center text-[10px] font-semibold sm:text-xs">{name}</div>
       {showBalance && (
         <div className="flex items-baseline gap-0.5">
-          <span className="text-sm font-black tabular-nums text-primary sm:text-base">
+          <span className="text-sm font-black tabular-nums !text-primary sm:text-base">
             {points.toLocaleString()}
           </span>
           <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">pts</span>
