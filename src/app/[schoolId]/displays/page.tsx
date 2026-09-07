@@ -4,9 +4,8 @@ import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
-import { useSettings } from '@/components/providers/SettingsProvider';
 import { DisplayViewSwitcher } from '@/components/displays/DisplayViewSwitcher';
-import { parseDisplayView, type DisplayView } from '@/lib/displays/displayRoutes';
+import { parseDisplayView } from '@/lib/displays/displayRoutes';
 
 const SmartScreenView = dynamic(() => import('@/components/displays/SmartScreenRouteView'), {
   ssr: false,
@@ -41,47 +40,19 @@ const HallOfFameView = dynamic(() => import('@/components/displays/HallOfFameRou
 export default function DisplaysPage() {
   const searchParams = useSearchParams();
   const { schoolId } = useAppContext();
-  const { settings } = useSettings();
-  const view = parseDisplayView(searchParams.get('view'));
-  const bulletinEnabled = settings.bulletinEnabled !== false;
-  const smartScreenEnabled = !!settings.smartScreenEnabled;
-  const hallOfFameEnabled = !!settings.enableClassLeaderboard;
-
-  const firstEnabledView: DisplayView = smartScreenEnabled
-    ? 'smart'
-    : bulletinEnabled
-      ? 'bulletin'
-      : hallOfFameEnabled
-        ? 'hall-of-fame'
-        : 'smart';
-
-  const resolvedView: DisplayView =
-    view === 'bulletin' && bulletinEnabled
-      ? 'bulletin'
-      : view === 'smart' && smartScreenEnabled
-        ? 'smart'
-        : view === 'hall-of-fame' && hallOfFameEnabled
-          ? 'hall-of-fame'
-          : firstEnabledView;
+  // Merged Displays feature: one on/off switch, three templates (Hall of Fame is the default/first).
+  const resolvedView = parseDisplayView(searchParams.get('view'));
 
   return (
     <>
       {resolvedView === 'bulletin' ? (
         <BulletinBoardView />
-      ) : resolvedView === 'hall-of-fame' ? (
-        <HallOfFameView />
-      ) : (
+      ) : resolvedView === 'smart' ? (
         <SmartScreenView />
+      ) : (
+        <HallOfFameView />
       )}
-      {schoolId ? (
-        <DisplayViewSwitcher
-          schoolId={schoolId}
-          activeView={resolvedView}
-          bulletinEnabled={bulletinEnabled}
-          smartScreenEnabled={smartScreenEnabled}
-          hallOfFameEnabled={hallOfFameEnabled}
-        />
-      ) : null}
+      {schoolId ? <DisplayViewSwitcher schoolId={schoolId} activeView={resolvedView} /> : null}
     </>
   );
 }

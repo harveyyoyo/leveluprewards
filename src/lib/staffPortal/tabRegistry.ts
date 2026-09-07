@@ -516,7 +516,7 @@ export function staffPortalTeacherPinSideEffects(
     case 'bulletinboard':
     case 'smart-screen':
     case 'halloffame':
-      return { bulletinEnabled: true, smartScreenEnabled: true, enableClassLeaderboard: true };
+      return { displaysEnabled: true };
     case 'incentives':
       return { enableIncentives: true };
     case 'library':

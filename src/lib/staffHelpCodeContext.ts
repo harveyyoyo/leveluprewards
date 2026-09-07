@@ -108,10 +108,12 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['bulletin', 'bulletin board', 'announcement'],
+    keys: ['display', 'displays', 'hallway display', 'smart screen', 'smartscreen', 'bulletin', 'bulletin board', 'announcement'],
     paths: [
+      'src/app/[schoolId]/displays-realm/page.tsx',
+      'src/components/displays/DisplaysTabLauncher.tsx',
+      'src/app/[schoolId]/displays/page.tsx',
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
-      'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },
   {

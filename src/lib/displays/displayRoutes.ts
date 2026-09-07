@@ -1,5 +1,8 @@
 export type DisplayView = 'smart' | 'bulletin' | 'hall-of-fame';
 
+/** Template order for the merged Displays feature ??? Hall of Fame is the default/first template. */
+export const DISPLAY_TEMPLATE_ORDER: readonly DisplayView[] = ['hall-of-fame', 'smart', 'bulletin'];
+
 export const LEGACY_DISPLAY_TAB_VALUES = ['bulletinboard', 'smart-screen'] as const;
 
 /** Map legacy admin/teacher tab ids to the unified Displays / Classroom tabs. */
@@ -22,10 +25,13 @@ export function normalizeStaffPortalTabValues(tabValues: readonly string[]): str
 }
 
 export function displaysFeatureEnabled(settings: {
+  displaysEnabled?: boolean;
   bulletinEnabled?: boolean;
   smartScreenEnabled?: boolean;
   enableClassLeaderboard?: boolean;
 }): boolean {
+  if (typeof settings.displaysEnabled === 'boolean') return settings.displaysEnabled;
+  // Back-compat for settings docs saved before the merge into one `displaysEnabled` flag.
   return (
     settings.bulletinEnabled !== false ||
     !!settings.smartScreenEnabled ||
@@ -47,7 +53,11 @@ export function parseDisplayView(value: string | null | undefined): DisplayView 
   ) {
     return 'hall-of-fame';
   }
-  return 'smart';
+  if (normalized === 'smart' || normalized === 'smart-screen') {
+    return 'smart';
+  }
+  // Hall of Fame is the default/first template when nothing else matches.
+  return 'hall-of-fame';
 }
 
 type SmartScreenHrefOptions = {
@@ -93,4 +103,18 @@ export function buildDisplayHref(
     return buildHallOfFameDisplayHref(schoolId, { fullscreen: options.fullscreen });
   }
   return buildSmartScreenDisplayHref(schoolId, options);
+}
+
+/** Path to the standalone Displays experience (settings + fullscreen launch, no app chrome). */
+export function displaysRealmHref(schoolId: string): string {
+  return `/${schoolId.trim().toLowerCase()}/displays-realm`;
+}
+
+/** Opens in a new tab ??? absolute URL when possible. */
+export function displaysRealmOpenHref(schoolId: string): string {
+  const href = displaysRealmHref(schoolId);
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${href}`;
+  }
+  return href;
 }

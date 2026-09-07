@@ -45,6 +45,7 @@ import {
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
+import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
@@ -409,6 +410,14 @@ interface Settings {
         position?: 'top' | 'bottom';
         icon?: string;
     }[];
+
+    /**
+     * Single on/off switch for the merged Displays feature (Hall of Fame, Smart Screen, Bulletin
+     * board ??? one hallway-TV feature with three templates). Replaces independently toggling
+     * `smartScreenEnabled` / `bulletinEnabled` / `enableClassLeaderboard`, which are kept only for
+     * back-compat reads of settings docs saved before the merge.
+     */
+    displaysEnabled?: boolean;
 
     // Bulletin Board
     bulletinEnabled?: boolean;
@@ -826,6 +835,8 @@ const defaultSettings: Settings = {
     kioskSponsorBannerStyle: 'primary',
     kioskSponsorIcon: 'ðŸŽ‰',
     kioskSponsorSchedules: [],
+
+    displaysEnabled: true,
 
     bulletinEnabled: true,
     bulletinTitle: 'School Bulletin Board',
@@ -1367,7 +1378,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 delete (parsed as Partial<Settings>).activeTourId;
-                const nextSettings = applyEntitlements({ 
+                // Back-compat: settings docs saved before the merge into one `displaysEnabled` switch
+                // don't have the field yet ??? derive it once from whichever of the three legacy flags was on.
+                if (typeof parsed.displaysEnabled !== 'boolean') {
+                    parsed.displaysEnabled = displaysFeatureEnabled({
+                        bulletinEnabled: parsed.bulletinEnabled ?? defaultSettings.bulletinEnabled,
+                        smartScreenEnabled: parsed.smartScreenEnabled ?? defaultSettings.smartScreenEnabled,
+                        enableClassLeaderboard: parsed.enableClassLeaderboard ?? defaultSettings.enableClassLeaderboard,
+                    });
+                }
+                const nextSettings = applyEntitlements({
                     ...defaultSettings, 
                     ...featureDefaultsFromRemote,
                     ...parsed,
@@ -1411,6 +1431,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isLoaded || !schoolId || !stableRemoteAppSettingsJson || !isDisplaySettingsRoute(pathname)) return;
         try {
             const remote = JSON.parse(stableRemoteAppSettingsJson) as Partial<Settings>;
+            if (typeof remote.displaysEnabled !== 'boolean') {
+                remote.displaysEnabled = displaysFeatureEnabled({
+                    bulletinEnabled: remote.bulletinEnabled ?? defaultSettings.bulletinEnabled,
+                    smartScreenEnabled: remote.smartScreenEnabled ?? defaultSettings.smartScreenEnabled,
+                    enableClassLeaderboard: remote.enableClassLeaderboard ?? defaultSettings.enableClassLeaderboard,
+                });
+            }
             const next = applyEntitlements({ ...defaultSettings, ...remote });
             setSettings(next);
             const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState, pathname);

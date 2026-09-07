@@ -48,9 +48,7 @@ export const GENERAL_SECTION_NAV = [
 export const IMPLEMENTED_FEATURE_TOGGLE_KEYS = [
     'enableTeacherBudgets',
     'enableClassAccumulations',
-    'smartScreenEnabled',
-    'bulletinEnabled',
-    'enableClassLeaderboard',
+    'displaysEnabled',
     'enablePrizeAiSurprise',
     'enableVendingMachine',
     'enableStudentEmojiOnPrizeTickets',

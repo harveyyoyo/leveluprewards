@@ -242,7 +242,8 @@ export function SmartScreenDisplay({
   const showHebrewDate = isJewishOrthodox && readScreenSetting('smartScreenShowHebrewDate', schoolSettings, screenSettings) === true;
   const showJewishHolidays =
     isJewishOrthodox && readScreenSetting('smartScreenShowJewishHolidays', schoolSettings, screenSettings) === true;
-  const enabled = !!readScreenSetting('smartScreenEnabled', schoolSettings, screenSettings);
+  // Smart Screen is a template of the merged Displays feature ??? gate on the one `displaysEnabled` switch.
+  const enabled = schoolSettings.displaysEnabled !== false;
   const hebrewDateLabel = formatTodayHebrewDate(now);
   const upcomingHolidays = showJewishHolidays
     ? getUpcomingJewishHolidays({ from: now, limit: compact ? 2 : 4 })
@@ -695,7 +696,7 @@ export function SmartScreenDisplay({
             isPreview ? 'absolute inset-x-3 bottom-3' : 'fixed inset-x-4 bottom-4 mx-auto max-w-xl',
           )}
         >
-          Smart Screen is currently off. Turn it on from Settings → Features → Displays.
+          Displays is currently off. Turn it on from Settings → Features → Displays.
         </div>
       ) : null}
 
