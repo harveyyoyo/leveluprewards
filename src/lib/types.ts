@@ -303,6 +303,20 @@ export interface Coupon {
   redemptionPrintNote?: string;
   /** When true, coupon can be redeemed repeatedly (demo sample coupon from kiosk settings). */
   reusableSample?: boolean;
+  /** Entry kind. Omitted/`redeemable` = today's scannable, code-based coupon. `incentive` = a
+   * display-only "ways to earn points" catalog card with no code and no redemption transaction. */
+  kind?: 'redeemable' | 'incentive';
+  /** Headline for incentive-kind display cards (distinct from `category`). */
+  title?: string;
+  /** Emoji/icon for incentive-kind display cards. */
+  icon?: string;
+  /** Which surfaces show this incentive-kind entry. Ignored for redeemable coupons. */
+  displaySurfaces?: {
+    bulletinBoard?: boolean;
+    smartScreen?: boolean;
+    studentKiosk?: boolean;
+    studentPortal?: boolean;
+  };
 }
 
 /**
@@ -617,6 +631,7 @@ export interface Database {
   hasMigratedPrizes?: boolean;
   hasMigratedCoupons?: boolean;
   hasMigratedCategories?: boolean;
+  hasMigratedIncentivesToCoupons?: boolean;
 }
 
 export type GoalType = 'personal' | 'prize_savings' | 'class';

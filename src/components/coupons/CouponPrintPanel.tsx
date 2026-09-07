@@ -118,6 +118,13 @@ export function CouponPrintPanel({
   const classList = useMemo(() => classFilterList ?? classes ?? [], [classFilterList, classes]);
   const teacherList = useMemo(() => teachers ?? [], [teachers]);
 
+  const [entryKind, setEntryKind] = useState<'redeemable' | 'incentive'>('redeemable');
+  const [incentiveTitle, setIncentiveTitle] = useState('');
+  const [incentiveDescription, setIncentiveDescription] = useState('');
+  const [incentivePoints, setIncentivePoints] = useState('50');
+  const [incentiveIcon, setIncentiveIcon] = useState('🎉');
+  const [incentiveCategory, setIncentiveCategory] = useState('');
+
   const [printCategoryId, setPrintCategoryId] = useState('');
   const [printValue, setPrintValue] = useState('10');
   const pendingSelectNewCategoryRef = useRef(false);
@@ -229,6 +236,46 @@ export function CouponPrintPanel({
     setIsPrintCategoryDialogOpen(false);
     playSound('success');
     toast({ title: 'Category Added' });
+  };
+
+  const handleCreateIncentive = async () => {
+    if (!incentiveTitle.trim()) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Missing title', description: 'Give the incentive a title.' });
+      return;
+    }
+    const points = parseInt(incentivePoints, 10);
+    if (!points || points <= 0) {
+      playSound('error');
+      toast({ variant: 'destructive', title: 'Invalid points', description: 'Points must be a positive number.' });
+      return;
+    }
+    const incentiveCoupon: Coupon = {
+      id: crypto.randomUUID(),
+      kind: 'incentive',
+      code: '',
+      title: incentiveTitle.trim(),
+      description: incentiveDescription.trim(),
+      value: points,
+      icon: incentiveIcon.trim() || '🎉',
+      category: incentiveCategory.trim() || 'Incentive',
+      displaySurfaces: {},
+      teacher: teacherName,
+      ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
+      used: false,
+      createdAt: Date.now(),
+    };
+    await addCoupons([incentiveCoupon]);
+    playSound('success');
+    toast({
+      title: 'Incentive created',
+      description: 'Assign it to displays under the Incentives section.',
+    });
+    setIncentiveTitle('');
+    setIncentiveDescription('');
+    setIncentivePoints('50');
+    setIncentiveIcon('🎉');
+    setIncentiveCategory('');
   };
 
   const handlePrintSheet = async () => {
@@ -556,25 +603,103 @@ export function CouponPrintPanel({
             >
               <Printer className="w-6 h-6" />
             </div>
-            Print coupons
+            {entryKind === 'redeemable' ? 'Print coupons' : 'Create incentive'}
           </CardTitle>
           <StaffPortalTabInfoPopover
             sections={[
               staffPortalTabInfoSection(
-                'Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.',
+                'Generate printable coupons for student kiosk redemption, or create a point-earning incentive card shown on displays — no code or printing required.',
               ),
             ]}
             ariaLabel="About print coupons"
           />
         </div>
-        <PrinterReminderCallout
-          title="Coupon / slip printer"
-          message={settings.printerReminderPrizeVouchers}
-          className="mt-4 max-w-3xl"
-        />
+        <RadioGroup
+          value={entryKind}
+          onValueChange={(v) => setEntryKind(v as 'redeemable' | 'incentive')}
+          className="mt-4 flex flex-wrap gap-4"
+        >
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <RadioGroupItem value="redeemable" id="entry-kind-redeemable" />
+            Redeemable coupon
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <RadioGroupItem value="incentive" id="entry-kind-incentive" />
+            Point-earning incentive
+          </label>
+        </RadioGroup>
+        {entryKind === 'redeemable' ? (
+          <PrinterReminderCallout
+            title="Coupon / slip printer"
+            message={settings.printerReminderPrizeVouchers}
+            className="mt-4 max-w-3xl"
+          />
+        ) : null}
       </CardHeader>
       <CardContent className="p-4 md:p-6">
-        {categoryList.length === 0 ? (
+        {entryKind === 'incentive' ? (
+          <div className="max-w-xl space-y-4">
+            <div className="space-y-2">
+              <Label className={labelClass}>Title</Label>
+              <Input
+                value={incentiveTitle}
+                onChange={(e) => setIncentiveTitle(e.target.value)}
+                placeholder="e.g., Clean Classroom"
+                className={fieldClass}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className={labelClass}>Description</Label>
+              <Input
+                value={incentiveDescription}
+                onChange={(e) => setIncentiveDescription(e.target.value)}
+                placeholder="How to earn these points..."
+                className={fieldClass}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className={labelClass}>Points</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={incentivePoints}
+                  onChange={(e) => setIncentivePoints(e.target.value)}
+                  className={fieldClass}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className={labelClass}>Category</Label>
+                <Input
+                  value={incentiveCategory}
+                  onChange={(e) => setIncentiveCategory(e.target.value)}
+                  placeholder="e.g., Attendance"
+                  className={fieldClass}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className={labelClass}>Emoji / Icon</Label>
+              <Input
+                value={incentiveIcon}
+                onChange={(e) => setIncentiveIcon(e.target.value)}
+                placeholder="e.g., 🎉"
+                className={fieldClass}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={() => void handleCreateIncentive()}
+              className="w-full font-black text-lg uppercase tracking-widest h-16 rounded-2xl shadow-xl transition-all active:scale-95"
+            >
+              <Plus className="w-6 h-6 mr-3" />
+              Create incentive
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Assign it to displays afterward in the Incentives section.
+            </p>
+          </div>
+        ) : categoryList.length === 0 ? (
           <div className="rounded-2xl border-2 border-dashed border-muted-foreground/35 bg-muted/10 px-6 py-12 text-center">
             <p className="text-sm font-bold text-foreground">No {label.toLowerCase()} categories yet</p>
             <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">

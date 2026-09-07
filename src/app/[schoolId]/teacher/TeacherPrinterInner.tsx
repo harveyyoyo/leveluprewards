@@ -115,6 +115,7 @@ import {
   teacherPortalTabContentClassName,
 } from '@/components/staff/teacherPortalLayout';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
+import { CouponIncentivesPanel, couponIncentivesEnabled } from '@/components/points/CouponIncentivesPanel';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
@@ -1298,6 +1299,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
     const myCoupons = useMemo(() => {
       if (!coupons) return [];
       return coupons
+        .filter((c) => c.kind !== 'incentive')
         .filter((c) => (c.createdByTeacherId ? c.createdByTeacherId === teacherId : c.teacher === teacherName))
         .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
     }, [coupons, teacherId, teacherName]);
@@ -2177,6 +2179,15 @@ function TeacherPrinterInnerBody({
                                                   },
                                               }
                                             : undefined
+                                    }
+                                    incentivesContent={
+                                        !secretaryMode && couponIncentivesEnabled(settings) ? (
+                                            <CouponIncentivesPanel
+                                                schoolId={schoolId!}
+                                                settings={settings}
+                                                updateSettings={updateSettings}
+                                            />
+                                        ) : undefined
                                     }
                                 />
                             </TeacherPortalTabPane>

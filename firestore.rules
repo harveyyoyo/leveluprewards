@@ -400,7 +400,12 @@ service cloud.firestore {
       }
 
       match /coupons/{couponId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isReports(schoolId) || isDeveloper();
+        // Incentive-kind entries are a display-only "ways to earn points" catalog (bulletin
+        // board / Smart Screen / kiosk / student portal) and are intentionally readable broadly,
+        // same stance as the legacy bulletinBoardIncentives collection they replace. Redeemable
+        // coupons (kind omitted or 'redeemable') keep the original staff-only read.
+        allow read: if (resource.data.kind == 'incentive' && isAuth())
+          || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isReports(schoolId) || isDeveloper();
         allow create, update: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isDeveloper();
         allow delete: if isAdmin(schoolId) || isDeveloper();
       }

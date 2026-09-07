@@ -8,7 +8,7 @@ import { AwardCategoriesPanel } from '@/components/points/AwardCategoriesPanel';
 
 import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 
-import { PointsTabLayout } from '@/components/points/PointsTabLayout';
+import { PointsTabLayout, type PointsTabSection } from '@/components/points/PointsTabLayout';
 
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 
@@ -69,6 +69,8 @@ export type StaffPointsTabProps = {
   /** Admin: coupon inventory management panel. */
 
   couponManagementContent?: React.ReactNode;
+  /** Admin/teacher: point-earning incentive cards panel (create/manage + where to show). */
+  incentivesContent?: React.ReactNode;
   /** Admin: currency and design panel. */
   currencyContent?: React.ReactNode;
 
@@ -120,6 +122,8 @@ export function StaffPointsTab({
 
   couponManagementContent,
 
+  incentivesContent,
+
   currencyContent,
 
 }: StaffPointsTabProps) {
@@ -138,15 +142,16 @@ export function StaffPointsTab({
 
   const fullCategoryAdmin = variant === 'admin' || schoolWideAccess;
 
-  const sections = printOnly
-    ? (['print'] as const)
-    : couponManagementContent
-      ? (currencyContent 
-          ? (['categories', 'print', 'manual', 'manage', 'currency'] as const)
-          : (['categories', 'print', 'manual', 'manage'] as const))
-      : (currencyContent
-          ? (['categories', 'print', 'manual', 'currency'] as const)
-          : (['categories', 'print', 'manual'] as const));
+  const sections: PointsTabSection[] = printOnly
+    ? ['print']
+    : [
+        'categories',
+        'print',
+        'manual',
+        ...(couponManagementContent ? (['manage'] as const) : []),
+        ...(incentivesContent ? (['incentives'] as const) : []),
+        ...(currencyContent ? (['currency'] as const) : []),
+      ];
 
   const redemptionUi =
 
@@ -293,6 +298,7 @@ export function StaffPointsTab({
       }
 
       manageContent={couponManagementContent}
+      incentivesContent={incentivesContent}
       currencyContent={currencyContent}
     />
 

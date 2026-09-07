@@ -1,20 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, limit, where } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import type { Class, House, Prize, Student } from '@/lib/types';
-
-export type BulletinIncentive = {
-  id: string;
-  title: string;
-  description?: string;
-  points?: number;
-  icon?: string;
-  active?: boolean;
-  createdAt?: number;
-};
+import type { Class, Coupon, House, Prize, Student } from '@/lib/types';
 
 export type SmartScreenLocationInfo = {
   ok: boolean;
@@ -60,11 +50,15 @@ export function useSmartScreenDisplayData(schoolId: string | null | undefined, c
   const bulletinQuery = useMemoFirebase(
     () =>
       schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives'), limit(40))
+        ? query(
+            collection(firestore, 'schools', schoolId, 'coupons'),
+            where('kind', '==', 'incentive'),
+            limit(40),
+          )
         : null,
     [firestore, schoolId],
   );
-  const { data: bulletinItems } = useCollection<BulletinIncentive>(bulletinQuery);
+  const { data: bulletinItems } = useCollection<Coupon>(bulletinQuery);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);

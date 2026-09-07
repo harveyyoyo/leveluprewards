@@ -1,8 +1,10 @@
 'use client';
 
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
+import { CouponIncentivesPanel, couponIncentivesEnabled } from '@/components/points/CouponIncentivesPanel';
 import { AdminCouponsTab } from '@/app/[schoolId]/admin/sections/AdminCouponsTab';
 import { AdminCurrencyDesignTab } from '@/app/[schoolId]/admin/sections/AdminCurrencyDesignTab';
+import type { Settings } from '@/components/providers/SettingsProvider';
 import type { Category, Class, Coupon, Student, Teacher, Database } from '@/lib/types';
 import { type Firestore, type DocumentReference } from 'firebase/firestore';
 
@@ -25,6 +27,8 @@ export function AdminCategoriesTab({
   firestore,
   schoolDocRef,
   schoolData,
+  settings,
+  updateSettings,
 }: {
   categories: Category[] | null | undefined;
   teachers: Teacher[] | null | undefined;
@@ -44,6 +48,8 @@ export function AdminCategoriesTab({
   firestore?: Firestore | null;
   schoolDocRef?: DocumentReference | null;
   schoolData?: Database | null | undefined;
+  settings: Settings;
+  updateSettings: (updates: Partial<Settings>) => void;
 }) {
   const couponManagementContent =
     showCouponManagement && availableCoupons && redeemedCoupons && getStudentName ? (
@@ -57,6 +63,10 @@ export function AdminCategoriesTab({
         onPurgeRedeemed={onPurgeRedeemed}
       />
     ) : undefined;
+
+  const incentivesContent = couponIncentivesEnabled(settings) ? (
+    <CouponIncentivesPanel schoolId={schoolId} settings={settings} updateSettings={updateSettings} />
+  ) : undefined;
 
   const currencyContent = (
     <AdminCurrencyDesignTab 
@@ -80,6 +90,7 @@ export function AdminCategoriesTab({
       onDeleteCategory={onDeleteCategory}
       onUpdateCategory={onUpdateCategory}
       couponManagementContent={couponManagementContent}
+      incentivesContent={incentivesContent}
       currencyContent={currencyContent}
     />
   );

@@ -1,17 +1,13 @@
 import type { Settings } from '@/components/providers/SettingsProvider';
 
-import type { BulletinBoardIncentiveSurfaces } from '@/lib/bulletinBoard';
+import type { Coupon } from '@/lib/types';
 
-export type IncentiveListItem = {
-  id: string;
-  title: string;
-  description?: string;
-  points?: number;
-  icon?: string;
-  /** @deprecated Use `surfaces` for per-display assignment. */
+export type IncentiveListItem = Pick<
+  Coupon,
+  'id' | 'title' | 'description' | 'value' | 'icon' | 'displaySurfaces' | 'createdAt'
+> & {
+  /** @deprecated Use `displaySurfaces` for per-display assignment. */
   active?: boolean;
-  surfaces?: BulletinBoardIncentiveSurfaces;
-  createdAt?: number;
 };
 
 export const INCENTIVE_SURFACE_KEYS = [
@@ -90,8 +86,8 @@ export function incentiveAssignedToSurface(
   incentive: IncentiveListItem,
   surface: IncentiveSurfaceKey,
 ): boolean {
-  if (incentive.surfaces != null) {
-    return incentive.surfaces[surface] === true;
+  if (incentive.displaySurfaces != null) {
+    return incentive.displaySurfaces[surface] === true;
   }
   if (incentive.active === false) return false;
   return surface === 'bulletinBoard' || surface === 'smartScreen';

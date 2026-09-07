@@ -43,7 +43,6 @@ function adminAddonHidden(settings: Settings, tabValue: string): boolean {
 export const STAFF_PORTAL_SCHOOLWIDE_TEACHER_TAB_VALUES = [
   'insights',
   'displays',
-  'incentives',
   'library',
   'bonuspoints',
   'category-badges',
@@ -223,18 +222,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     },
   },
   {
-    value: 'incentives',
-    label: 'Incentives',
-    icon: Tag,
-    kind: 'addon',
-    roles: ['admin', 'teacher'],
-    isEnabled: (s, role) => {
-      if (!isRewardsPillarOn(s) || s.enableIncentives === false) return false;
-      if (role === 'teacher') return teacherAddonEnabled(s, 'incentives', () => true);
-      return !adminAddonHidden(s, 'incentives');
-    },
-  },
-  {
     value: 'library',
     label: 'Library',
     icon: BookOpen,
@@ -398,7 +385,6 @@ export const STAFF_PORTAL_CANONICAL_TAB_ORDER: readonly string[] = [
   'insights',
   'attendance',
   'displays',
-  'incentives',
   'library',
   'bonuspoints',
   'category-badges',
@@ -517,8 +503,6 @@ export function staffPortalTeacherPinSideEffects(
     case 'smart-screen':
     case 'halloffame':
       return { bulletinEnabled: true, smartScreenEnabled: true, enableClassLeaderboard: true };
-    case 'incentives':
-      return { enableIncentives: true };
     case 'library':
       return { payLibrary: true };
     case 'bonuspoints':
@@ -594,8 +578,6 @@ const STAFF_PORTAL_TAB_DESCRIPTIONS: Record<string, string> = {
   insights: 'View school-wide analytics and engagement trends.',
   attendance: 'Configure sign-in rules, period slots, room passes, and attendance reporting.',
   displays: 'Set up Smart Screen, bulletin board, and Hall of Fame displays for TVs and monitors.',
-  incentives:
-    'Create point-earning opportunities and choose where students see them — bulletin, Smart Screen, kiosk, or portal.',
   library: 'Catalog books, print labels, and manage checkouts and returns.',
   bonuspoints: 'Create bonus point milestones and achievement rewards.',
   'category-badges':

@@ -3,19 +3,20 @@
 import { useCallback, useState } from 'react';
 import { useIntroTourSectionListener } from '@/lib/introTourSection';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Award, Ticket, Coins, ClipboardList, Palette } from 'lucide-react';
+import { Award, Ticket, Coins, ClipboardList, Palette, Tag } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { cn } from '@/lib/utils';
 
-export type PointsTabSection = 'categories' | 'print' | 'manual' | 'manage' | 'currency';
+export type PointsTabSection = 'categories' | 'print' | 'manual' | 'manage' | 'incentives' | 'currency';
 
 const SECTION_LABELS: Record<PointsTabSection, string> = {
   categories: 'Categories',
   print: 'Print coupons',
   manual: 'Adjust points',
   manage: 'Inventory',
+  incentives: 'Incentives',
   currency: 'Currency & Design',
 };
 
@@ -24,6 +25,7 @@ const SECTION_ICONS: Record<PointsTabSection, React.ComponentType<{ className?: 
   print: Ticket,
   manual: Coins,
   manage: ClipboardList,
+  incentives: Tag,
   currency: Palette,
 };
 
@@ -36,6 +38,7 @@ export type PointsTabLayoutProps = {
   printContent: React.ReactNode;
   manualContent: React.ReactNode;
   manageContent?: React.ReactNode;
+  incentivesContent?: React.ReactNode;
   currencyContent?: React.ReactNode;
   className?: string;
   /** @deprecated Tree nav no longer uses pill triggers; kept for call-site compatibility. */
@@ -52,6 +55,7 @@ export function PointsTabLayout({
   printContent,
   manualContent,
   manageContent,
+  incentivesContent,
   currencyContent,
   className,
 }: PointsTabLayoutProps) {
@@ -74,6 +78,7 @@ export function PointsTabLayout({
     print: printContent,
     manual: manualContent,
     manage: manageContent,
+    incentives: incentivesContent,
     currency: currencyContent,
   };
 
