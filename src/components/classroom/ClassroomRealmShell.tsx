@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   BookOpenCheck,
   Dices,
-  ExternalLink,
   Home,
   LayoutGrid,
   Monitor,
@@ -283,27 +283,28 @@ export function ClassroomRealmShell({
         <Suspense fallback={<div className="flex-1" />}>
           <ClassroomRealmNav schoolId={schoolId} variant="sidebar" />
         </Suspense>
-
-        <Link
-          href={schoolPortalHref(schoolId)}
-          className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-white/50 transition-colors hover:border-white/20 hover:text-white/80"
-        >
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-          Back to LevelUp portal
-        </Link>
       </aside>
 
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md lg:hidden">
-          <p className="font-serif text-lg font-bold text-white">Classroom</p>
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md">
           <Link
-            href={classroomRealmHref(schoolId, 'setup')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-bold"
-            style={{ color: 'var(--cr-accent-text)' }}
+            href={schoolPortalHref(schoolId)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            <Palette className="h-3.5 w-3.5" aria-hidden />
-            Change look
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            Back to LevelUp
           </Link>
+          <div className="flex w-full items-center justify-between gap-3 sm:w-auto lg:hidden">
+            <p className="font-serif text-lg font-bold text-white">Classroom</p>
+            <Link
+              href={classroomRealmHref(schoolId, 'setup')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-bold"
+              style={{ color: 'var(--cr-accent-text)' }}
+            >
+              <Palette className="h-3.5 w-3.5" aria-hidden />
+              Change look
+            </Link>
+          </div>
         </header>
         <main className="flex-1 overflow-auto pb-20 lg:pb-0">{children}</main>
         <Suspense fallback={null}>

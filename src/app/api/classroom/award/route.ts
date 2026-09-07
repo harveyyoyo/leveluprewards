@@ -131,23 +131,29 @@ export async function POST(req: NextRequest) {
     }
 
     if (!rewardsMode && result.count > 0) {
-      const nameEntries: [string, string][] = [];
-      for (const id of studentIds) {
-        const snap = await db.collection('schools').doc(schoolId).collection('students').doc(id).get();
-        if (!snap.exists) continue;
-        const data = snap.data()!;
-        const name =
-          [data.nickname || data.firstName, data.lastName].filter(Boolean).join(' ').trim() || id;
-        nameEntries.push([id, name]);
+      // Points are already committed. Optional alert failures must not turn this
+      // response into a save failure and cause the client to award them again.
+      try {
+        const nameEntries: [string, string][] = [];
+        for (const id of studentIds) {
+          const snap = await db.collection('schools').doc(schoolId).collection('students').doc(id).get();
+          if (!snap.exists) continue;
+          const data = snap.data()!;
+          const name =
+            [data.nickname || data.firstName, data.lastName].filter(Boolean).join(' ').trim() || id;
+          nameEntries.push([id, name]);
+        }
+        void evaluateClassroomAlertRulesAfterAward(
+          db,
+          schoolId,
+          appSettings,
+          studentIds,
+          Object.fromEntries(nameEntries),
+          meta,
+        ).catch((e) => console.error('[api/classroom/award] alert rules:', e));
+      } catch (e) {
+        console.error('[api/classroom/award] alert preparation:', e);
       }
-      void evaluateClassroomAlertRulesAfterAward(
-        db,
-        schoolId,
-        appSettings,
-        studentIds,
-        Object.fromEntries(nameEntries),
-        meta,
-      ).catch((e) => console.error('[api/classroom/award] alert rules:', e));
     }
 
     return NextResponse.json(result);

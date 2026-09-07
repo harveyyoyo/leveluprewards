@@ -1653,7 +1653,7 @@ export function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "student-dashboard-shell w-full h-dvh min-h-dvh relative overflow-x-hidden overflow-y-hidden flex flex-col",
+          "student-dashboard-shell w-full flex-1 min-h-0 relative overflow-x-hidden overflow-y-hidden flex flex-col",
           !effectiveTheme && 'student-kiosk-warm-shell',
           firestoreSyncAlert
             ? birthdayToday

@@ -262,7 +262,7 @@ async function reseedSchool(db, schoolId, sampleData, helpers) {
   }
 
   const existingAppSettings = schoolSnap.data()?.appSettings ?? {};
-  const appSettings = { ...existingAppSettings, payOffice: true };
+  const appSettings = { ...existingAppSettings, payOffice: true, kioskSessionTimeoutSec: 60 };
   const now = Date.now();
   await schoolRef.set({ appSettings, updatedAt: now }, { merge: true });
   await db.collection('schoolPublic').doc(schoolId).set(

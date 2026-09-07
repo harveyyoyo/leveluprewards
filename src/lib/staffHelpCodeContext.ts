@@ -164,6 +164,14 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
+    keys: ['classroom', 'class awards', 'live monitor', 'seating chart', 'all students'],
+    paths: [
+      'src/components/classroom/ClassroomLiveMonitor.tsx',
+      'src/components/points/ClassroomPointsPanel.tsx',
+      'src/lib/classroom/classroomTabSections.ts',
+    ],
+  },
+  {
     keys: ['setting', 'settings', 'gear', 'theme', 'tooltip', 'walkthrough', 'tour'],
     paths: ['src/components/providers/SettingsProvider.tsx'],
   },
@@ -196,6 +204,8 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/office\/billing/i, paths: ['src/app/[schoolId]/office/billing/page.tsx'] },
   { pattern: /\/office\/reports/i, paths: ['src/app/[schoolId]/office/reports/page.tsx'] },
   { pattern: /\/office(?:\/|$)/i, paths: ['src/app/[schoolId]/office/page.tsx'] },
+  { pattern: /\/classroom-realm/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
+  { pattern: /\/classroom(?:\/|$)/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/librarian/i, paths: ['src/app/[schoolId]/librarian/page.tsx'] },
   { pattern: /\/secretary/i, paths: ['src/app/[schoolId]/secretary/page.tsx'] },
   { pattern: /\/prize-clerk/i, paths: ['src/app/[schoolId]/prize-clerk/page.tsx'] },

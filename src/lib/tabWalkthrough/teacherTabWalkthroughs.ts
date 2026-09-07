@@ -58,7 +58,7 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
           'Launch for class screen on your projector — mirrors the chart without behavior comments.',
           'Chart defaults, access, labels, alerts, and monitor options live under Settings in Class Awards Live.',
           'Monitor points display controls whether desks show balances, session totals, both, or hidden.',
-          'Chart style, Layout, Desk display, and Toolbar options on the monitor. Choose Class there when you have more than one.',
+          'Chart style, Layout, Desk display, and Toolbar options on the monitor. Use the Class menu to pick one class or All students.',
         ],
       },
       {

@@ -213,7 +213,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         const schoolRef = doc(firestore, 'schools', cleanId);
         const schoolSnap = await getDoc(schoolRef);
         const existingAppSettings = (schoolSnap.data()?.appSettings as Record<string, unknown> | undefined) ?? {};
-        const nextAppSettings = { ...existingAppSettings, payOffice: true };
+        const nextAppSettings = { ...existingAppSettings, payOffice: true, kioskSessionTimeoutSec: 60 };
         await updateDoc(schoolRef, {
             appSettings: nextAppSettings,
         });

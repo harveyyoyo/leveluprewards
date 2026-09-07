@@ -131,6 +131,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
           'Launch Class Awards Live for the live seating chart and quick awards.',
+          'On the live chart, use the Class menu to pick one class or All students.',
           'Launch for class screen hides behavior comments on the projector view.',
           'Set chart defaults, school access, award labels, if/then alerts, and monitor options under Settings.',
           'On the monitor: Style, Layout, Desk display, and tap mode / fly-up / celebration next to Arrange seats.',
