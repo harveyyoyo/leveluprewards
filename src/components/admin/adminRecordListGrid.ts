@@ -26,16 +26,14 @@ export const DESK_STAFF_LIST_GRID_COLS = deskStaffListGridColumns(false);
 export const DESK_STAFF_LIST_GRID_COLS_LEGACY =
   '2.25rem minmax(0, 0.85fr) minmax(0, 1fr) minmax(3.5rem, 0.7fr)';
 
-/** Prizes shop — act, name, then one column per inline setting. */
-export function prizesListGridColumns(options: { vendingEnabled: boolean }) {
-  const base =
-    '4.25rem minmax(0, 1fr) 3rem 3rem 1.75rem 1.75rem 1.75rem 4.25rem';
-  const motor = options.vendingEnabled ? ' 1.75rem' : '';
-  return `${base}${motor} minmax(2.5rem, 3.5rem)`;
+/**
+ * Prizes shop — act, name, points, quantity, the two frequently-toggled
+ * settings (stock/voucher), one consolidated access popover (teacher/class/motor),
+ * then delete. Kept to 8 columns (down from up to 10) so each one has more room.
+ */
+export function prizesListGridColumns() {
+  return '4.75rem minmax(0, 1fr) 3.25rem 3.25rem 2.25rem 2.25rem 2.25rem minmax(2.75rem, 4rem)';
 }
-
-/** @deprecated Prefer `prizesListGridColumns({ vendingEnabled })`. */
-export const PRIZES_LIST_GRID_COLS = prizesListGridColumns({ vendingEnabled: false });
 
 export const adminRecordListGridClassName =
   'grid w-full min-w-0 [&>*]:min-w-0 [&_button]:min-h-0 [&_button]:min-w-0';
@@ -51,7 +49,7 @@ export const adminRecordListGridNameCellClassName = 'min-w-0 overflow-hidden';
 export const adminRecordListGridActionsCellClassName =
   'min-w-0 max-w-full flex flex-wrap items-center justify-end gap-0.5 justify-self-end';
 
-export const adminRecordListGridCompactGapClassName = 'gap-1.5';
+export const adminRecordListGridCompactGapClassName = 'gap-2';
 
 export function adminRecordListGridStyle(columns: string): CSSProperties {
   return {
@@ -62,5 +60,5 @@ export function adminRecordListGridStyle(columns: string): CSSProperties {
 
 /** Students roster — select, edit, name, then compact action columns. */
 export function studentsListGridColumns(actionColumnCount: number) {
-  return `1.5rem 1.75rem minmax(0, 1fr) repeat(${actionColumnCount}, 2.35rem)`;
+  return `1.5rem 1.75rem minmax(0, 1fr) repeat(${actionColumnCount}, 2.5rem)`;
 }

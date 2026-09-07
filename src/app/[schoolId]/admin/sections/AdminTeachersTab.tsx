@@ -330,10 +330,10 @@ export function AdminTeachersTab({
                   { label: 'Edit' },
                   { label: 'Name' },
                   { label: 'Login' },
-                  { label: 'Cls', className: 'text-center' },
-                  { label: 'Std', className: 'text-center' },
+                  { label: 'Class', hint: 'Classes managed', className: 'text-center' },
+                  { label: 'Students', hint: 'Students linked', className: 'text-center' },
                   ...(settings.enableHouses ? [{ label: 'Houses', className: 'text-center' as const }] : []),
-                  { label: 'Act', className: 'text-right' },
+                  { label: 'Actions', className: 'text-right' },
                 ]}
               />
             ) : null}
@@ -684,7 +684,7 @@ export function AdminTeachersTab({
                   { label: 'Name' },
                   { label: 'Login' },
                   ...(settings.enableHouses ? [{ label: 'Houses', className: 'text-center' as const }] : []),
-                  { label: 'Act', className: 'text-right' },
+                  { label: 'Actions', className: 'text-right' },
                 ]}
               />
             ) : null}
@@ -799,7 +799,7 @@ export function AdminTeachersTab({
                   { label: 'Edit' },
                   { label: 'Name' },
                   { label: 'Login' },
-                  { label: 'Act', className: 'text-right' },
+                  { label: 'Actions', className: 'text-right' },
                 ]}
               />
             ) : null}
