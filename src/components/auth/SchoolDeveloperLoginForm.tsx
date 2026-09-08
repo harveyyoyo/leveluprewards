@@ -545,6 +545,15 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         return;
       }
       setLoginPhase('session');
+      try {
+        const prefix = `lvlup:login-next:${sid}`;
+        for (let i = sessionStorage.length - 1; i >= 0; i -= 1) {
+          const key = sessionStorage.key(i);
+          if (key?.startsWith(prefix)) sessionStorage.removeItem(key);
+        }
+      } catch {
+        // ignore
+      }
       const navigated = await navigateAfterSchoolLogin(auth, sid);
       if (!navigated) {
         playSound('error');

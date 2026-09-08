@@ -56,6 +56,9 @@ jobs:
               printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
             fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
+            # Required until /api/auth/session cookies verify in middleware.
+            # Without this, /{school}/portal 307s to /login?next= and login auto-returns → loop.
+            printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
             if [ -n "$AUTH_GATE_SIGNING_SECRET" ]; then
               printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
             fi
