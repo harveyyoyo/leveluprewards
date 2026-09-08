@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Megaphone, Palette } from 'lucide-react';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { BulletinBoardScaledPreview, type BulletinBoardPreviewLayout } from '@/components/displays/BulletinBoardScaledPreview';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,8 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { buildBulletinDisplayHref } from '@/lib/displays/displayRoutes';
-import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES, type BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
-import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES } from '@/lib/bulletinBoard';
+import { incentiveCategoriesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import type { Category } from '@/lib/types';
 
 type BulletinSettingsPanelProps = {
   schoolId: string;
@@ -37,12 +38,15 @@ export function BulletinSettingsPanel({
   const [layout, setLayout] = useState<BulletinBoardPreviewLayout>('landscape');
 
   const incentivesQuery = useMemoFirebase(
-    () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'bulletinBoardIncentives')) : null),
+    () =>
+      schoolId
+        ? query(collection(firestore, 'schools', schoolId, 'categories'), where('showAsIncentive', '==', true))
+        : null,
     [firestore, schoolId],
   );
-  const { data: incentives } = useCollection<BulletinBoardIncentiveRecord>(incentivesQuery);
+  const { data: incentives } = useCollection<Category>(incentivesQuery);
   const activeIncentives = useMemo(
-    () => incentivesForSurface(incentives, 'bulletinBoard'),
+    () => incentiveCategoriesForSurface(incentives, 'bulletinBoard'),
     [incentives],
   );
   const showIncentivesOnBoard = incentivesVisibleOnSurface(settings, 'bulletinBoard');

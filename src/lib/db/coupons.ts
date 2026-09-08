@@ -85,6 +85,7 @@ export const redeemCoupon = async (
       if (!couponDoc.exists()) throw new Error('Coupon code not found.');
 
       const coupon = couponDoc.data() as Coupon;
+      if (coupon.kind === 'incentive') throw new Error('Not redeemable.');
       const nowTs = Date.now();
       if (coupon.startsAt && nowTs < coupon.startsAt) {
         throw new Error('This coupon is not valid yet.');

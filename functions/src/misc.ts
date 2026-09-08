@@ -546,6 +546,9 @@ async function redeemCouponForStudent(
     } else {
       coupon = couponSnap.data() as any;
     }
+    if (coupon.kind === "incentive") {
+      throw new functions.https.HttpsError("failed-precondition", "Not redeemable.");
+    }
     if (coupon.startsAt && typeof coupon.startsAt === "number" && now < coupon.startsAt) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon is not valid yet.");
     }
@@ -1330,6 +1333,7 @@ exports.getCouponSnapshot = functions.https.onCall(
     const coupons: any[] = [];
     for (const d of snap.docs) {
       const c = d.data() as any;
+      if (c.kind === "incentive") continue;
       const code = String(c.code || d.id).toUpperCase();
       const isReusableSample =
         reusableSampleCfg.enabled && code === reusableSampleCfg.code;

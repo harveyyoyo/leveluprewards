@@ -1298,6 +1298,7 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
     const myCoupons = useMemo(() => {
       if (!coupons) return [];
       return coupons
+        .filter((c) => c.kind !== 'incentive')
         .filter((c) => (c.createdByTeacherId ? c.createdByTeacherId === teacherId : c.teacher === teacherName))
         .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
     }, [coupons, teacherId, teacherName]);

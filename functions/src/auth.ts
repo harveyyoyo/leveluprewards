@@ -645,6 +645,8 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       hasMigratedPrizes: true,
       hasMigratedCoupons: true,
       hasMigratedCategories: true,
+      hasMigratedIncentivesToCoupons: true,
+      hasMigratedIncentivesToCategories: true,
     };
 
     const seedStudent = {
@@ -767,6 +769,8 @@ exports.createSchoolByDeveloper = functions.https.onCall(
       hasMigratedPrizes: true,
       hasMigratedCoupons: true,
       hasMigratedCategories: true,
+      hasMigratedIncentivesToCoupons: true,
+      hasMigratedIncentivesToCategories: true,
     };
 
     const batch = db.batch();
@@ -1166,6 +1170,169 @@ for (const [fnName, { collection: col, flag }] of Object.entries(MIGRATION_MAP))
     return migrateCollectionToSubcollection(data.schoolId, col, flag, context);
   });
 }
+
+// ========================================================================
+// Migration: fold legacy `bulletinBoardIncentives` docs into `coupons` as
+// `kind: 'incentive'` entries. Field-remapping (title/points/surfaces ->
+// title/value/displaySurfaces), not a verbatim copy, so it doesn't fit the
+// generic helper above. Idempotent via `hasMigratedIncentivesToCoupons`.
+// ========================================================================
+exports.migrateIncentivesToCoupons = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    const schoolId = data.schoolId;
+    await requireSchoolAdmin(schoolId, context);
+
+    const db = admin.firestore();
+    const schoolDocRef = db.collection("schools").doc(schoolId);
+
+    try {
+      const schoolSnap = await schoolDocRef.get();
+      if (!schoolSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+      }
+
+      if (schoolSnap.data()?.hasMigratedIncentivesToCoupons) {
+        return { success: true, message: "Incentives have already been migrated." };
+      }
+
+      const incentivesSnap = await schoolDocRef.collection("bulletinBoardIncentives").get();
+      const docs = incentivesSnap.docs;
+
+      if (docs.length === 0) {
+        await schoolDocRef.update({ hasMigratedIncentivesToCoupons: true });
+        return { success: true, message: "No incentives to migrate." };
+      }
+
+      const BATCH_LIMIT = 499;
+      for (let i = 0; i < docs.length; i += BATCH_LIMIT) {
+        const batch = db.batch();
+        const chunk = docs.slice(i, i + BATCH_LIMIT);
+        const couponsRef = schoolDocRef.collection("coupons");
+
+        chunk.forEach((d) => {
+          const it = d.data();
+          const newRef = couponsRef.doc();
+          batch.set(newRef, {
+            id: newRef.id,
+            kind: "incentive",
+            code: "",
+            title: it.title || "",
+            description: it.description || "",
+            value: Number(it.points) || 0,
+            icon: it.icon || "🎉",
+            category: it.category || "Incentive",
+            displaySurfaces: it.surfaces || {},
+            teacher: "",
+            used: false,
+            createdAt: it.createdAt || Date.now(),
+          });
+          batch.delete(d.ref);
+        });
+
+        if (i + BATCH_LIMIT >= docs.length) {
+          batch.update(schoolDocRef, { hasMigratedIncentivesToCoupons: true });
+        }
+
+        await batch.commit();
+      }
+
+      return { success: true, message: `Migrated ${docs.length} incentives.` };
+    } catch (error) {
+      console.error("Migration of incentives to coupons failed:", error);
+      if (error instanceof functions.https.HttpsError) throw error;
+      throw new functions.https.HttpsError(
+        "internal",
+        "An unexpected error occurred during migration."
+      );
+    }
+  }
+);
+
+// ========================================================================
+// Migration: fold display-only incentives into categories.
+// Sources: leftover `kind: 'incentive'` coupon docs and any remaining
+// `bulletinBoardIncentives` docs. Printed / redeemable coupons (no `kind`,
+// or kind != 'incentive') are never read, written, or deleted.
+// ========================================================================
+exports.migrateIncentivesToCategories = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    const schoolId = data.schoolId;
+    await requireSchoolAdmin(schoolId, context);
+
+    const db = admin.firestore();
+    const schoolDocRef = db.collection("schools").doc(schoolId);
+
+    try {
+      const schoolSnap = await schoolDocRef.get();
+      if (!schoolSnap.exists) {
+        throw new functions.https.HttpsError("not-found", "School not found.");
+      }
+      if (schoolSnap.data()?.hasMigratedIncentivesToCategories) {
+        return { success: true, message: "Incentives have already been migrated to categories." };
+      }
+
+      const [categoriesSnap, incentiveCouponsSnap, legacySnap] = await Promise.all([
+        schoolDocRef.collection("categories").get(),
+        schoolDocRef.collection("coupons").where("kind", "==", "incentive").get(),
+        schoolDocRef.collection("bulletinBoardIncentives").get(),
+      ]);
+
+      const byName = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+      categoriesSnap.docs.forEach((d) => {
+        const name = String(d.data().name || "").trim().toLowerCase();
+        if (name) byName.set(name, d);
+      });
+
+      const sources = [...incentiveCouponsSnap.docs, ...legacySnap.docs];
+      const BATCH_LIMIT = 400;
+      for (let i = 0; i < sources.length; i += BATCH_LIMIT) {
+        const batch = db.batch();
+        const chunk = sources.slice(i, i + BATCH_LIMIT);
+        chunk.forEach((d) => {
+          const it = d.data();
+          const title = String(it.title || it.name || "").trim() || "Incentive";
+          const key = title.toLowerCase();
+          const existing = byName.get(key);
+          const surfaces = it.displaySurfaces || it.surfaces || {};
+          const fields = {
+            description: it.description || existing?.data()?.description || "",
+            icon: it.icon || existing?.data()?.icon || "🎉",
+            showAsIncentive: true,
+            displaySurfaces: surfaces,
+          };
+          if (existing) {
+            batch.update(existing.ref, fields);
+          } else {
+            const newRef = schoolDocRef.collection("categories").doc();
+            batch.set(newRef, {
+              id: newRef.id,
+              name: title,
+              points: Number(it.value ?? it.points) || 0,
+              ...fields,
+            });
+            byName.set(key, { id: newRef.id, ref: newRef, data: () => fields } as FirebaseFirestore.QueryDocumentSnapshot);
+          }
+          batch.delete(d.ref);
+        });
+        await batch.commit();
+      }
+
+      await schoolDocRef.update({
+        hasMigratedIncentivesToCategories: true,
+        hasMigratedIncentivesToCoupons: true,
+      });
+
+      return { success: true, message: `Migrated ${sources.length} incentives to categories.` };
+    } catch (error) {
+      console.error("Migration of incentives to categories failed:", error);
+      if (error instanceof functions.https.HttpsError) throw error;
+      throw new functions.https.HttpsError(
+        "internal",
+        "An unexpected error occurred during migration."
+      );
+    }
+  }
+);
 
 // ========================================================================
 // Face login (convenience-grade): enroll + match descriptors

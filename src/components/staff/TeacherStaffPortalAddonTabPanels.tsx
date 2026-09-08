@@ -24,7 +24,6 @@ import { teacherPortalTabContentClassName } from '@/components/staff/teacherPort
 import { AdminHousesTab } from '@/app/[schoolId]/admin/sections/AdminHousesTab';
 import { AdminStatsTab } from '@/app/[schoolId]/admin/sections/AdminStatsTab';
 import { AdminDisplaysTab } from '@/app/[schoolId]/admin/sections/AdminDisplaysTab';
-import { AdminIncentivesTab } from '@/app/[schoolId]/admin/sections/AdminIncentivesTab';
 import { AdminLibraryTab } from '@/app/[schoolId]/admin/sections/AdminLibraryTab';
 import { AdminBonusPointsTab } from '@/app/[schoolId]/admin/sections/AdminBonusPointsTab';
 import { AdminBadgesTab } from '@/app/[schoolId]/admin/sections/AdminBadgesTab';
@@ -294,16 +293,6 @@ export function TeacherStaffPortalAddonTabPanels({
           <AdminDisplaysTab
             schoolId={schoolId}
             schoolLogoUrl={schoolLogoUrl ?? null}
-            settings={settings}
-            updateSettings={updateSettings}
-          />
-        </AddonPane>
-      )}
-
-      {teacherTabEnabled('incentives') && (
-        <AddonPane tabId="incentives" activeTab={activeTab}>
-          <AdminIncentivesTab
-            schoolId={schoolId}
             settings={settings}
             updateSettings={updateSettings}
           />

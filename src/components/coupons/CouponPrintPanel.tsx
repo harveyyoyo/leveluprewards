@@ -52,6 +52,7 @@ import {
   teacherBudgetRemainingPhrase,
 } from '@/lib/teacherBudget';
 import type { Category, Class, Coupon, CouponRedemptionScope, Teacher } from '@/lib/types';
+import { resolveCategoryCurrency } from '@/lib/currency/resolveCategoryCurrency';
 import { cn } from '@/lib/utils';
 
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -105,8 +106,8 @@ export function CouponPrintPanel({
   teacherBudget,
   onAddCategory,
 }: CouponPrintPanelProps) {
-  const currency = useCurrency();
-  const { icon, label } = currency;
+  const schoolCurrency = useCurrency();
+  const { icon, label } = schoolCurrency;
   const { addCoupons, setCouponsToPrint, addCategory } = useAppContext();
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
@@ -413,6 +414,7 @@ export function CouponPrintPanel({
       ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
       ...(startsAt !== undefined ? { startsAt } : {}),
       ...(expiresAt ? { expiresAt } : {}),
+      ...(selectedCategory.currencyOverride ? { currencyOverride: selectedCategory.currencyOverride } : {}),
     }));
 
     await addCoupons(couponsToCreate);
@@ -437,6 +439,10 @@ export function CouponPrintPanel({
   };
 
   const selectedCategoryForPreview = categoryList.find((c) => c.id === printCategoryId);
+  const printCurrency = useMemo(
+    () => resolveCategoryCurrency(schoolCurrency, selectedCategoryForPreview?.currencyOverride),
+    [schoolCurrency, selectedCategoryForPreview],
+  );
   const redemptionPreviewScope: CouponRedemptionScope = isTeacherRedemption
     ? printRedemptionScope === 'classes' ||
         printRedemptionScope === 'creator' ||
@@ -561,7 +567,7 @@ export function CouponPrintPanel({
           <StaffPortalTabInfoPopover
             sections={[
               staffPortalTabInfoSection(
-                'Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.',
+                'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category.',
               ),
             ]}
             ariaLabel="About print coupons"
@@ -995,7 +1001,7 @@ export function CouponPrintPanel({
                     isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80',
                   )}
                 >
-                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={currency} />
+                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={printCurrency} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
                   Each cell on the printed sheet matches this layout.

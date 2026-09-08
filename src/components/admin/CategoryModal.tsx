@@ -16,15 +16,27 @@ import { Switch } from '@/components/ui/switch';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { Category, CategoryRubricLevel } from '@/lib/types';
+import type { Category, CategoryCurrencyOverride, CategoryRubricLevel } from '@/lib/types';
+import { useCurrency } from '@/hooks/useCurrency';
+import { defaultCategoryCurrencyOverride } from '@/lib/currency/resolveCategoryCurrency';
+import { CategoryCurrencyDesignFields } from '@/components/categories/CategoryCurrencyDesignFields';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { pickDistinctCategoryColor } from '@/lib/utils';
+import { cn, pickDistinctCategoryColor } from '@/lib/utils';
 import { uploadCategoryImage } from '@/lib/categories/categoryImageUpload';
 import { validatePrizeImageFile } from '@/lib/prizes/prizeImageUpload';
 import { CategoryIconBadge } from '@/components/categories/CategoryIconBadge';
 import { useFirestore, useStorage } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
+import { motion } from 'framer-motion';
 import { ImagePlus, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  DEFAULT_INCENTIVE_DISPLAY_SURFACES,
+  INCENTIVE_SURFACE_KEYS,
+  INCENTIVE_SURFACE_META,
+  couponIncentivesEnabled,
+  type IncentiveSurfaceKey,
+} from '@/lib/incentives/incentiveSurfaces';
 
 interface CategoryModalProps {
     isOpen: boolean;
@@ -37,6 +49,7 @@ interface CategoryModalProps {
 export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }: CategoryModalProps) {
     const { addCategory, updateCategory, categories, schoolId } = useAppContext();
     const { settings } = useSettings();
+    const schoolCurrency = useCurrency();
     const firestore = useFirestore();
     const storage = useStorage();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +61,13 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const [countsForHousePoints, setCountsForHousePoints] = useState(true);
     const [isGoldenTicket, setIsGoldenTicket] = useState(false);
+    const [description, setDescription] = useState('');
+    const [showAsIncentive, setShowAsIncentive] = useState(false);
+    const [displaySurfaces, setDisplaySurfaces] = useState<NonNullable<Category['displaySurfaces']>>({});
     const [rubricLevels, setRubricLevels] = useState<CategoryRubricLevel[]>([]);
+    const [currencyOverrideEnabled, setCurrencyOverrideEnabled] = useState(false);
+    const [currencyOverride, setCurrencyOverride] = useState<CategoryCurrencyOverride>({ mode: 'points' });
+    const showIncentiveExtras = couponIncentivesEnabled(settings);
     const [uploading, setUploading] = useState(false);
     const { toast } = useToast();
     const playSound = useArcadeSound();
@@ -59,10 +78,14 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
         name: name || 'Category',
         points: parseInt(points, 10) || 0,
         color,
-        icon: icon.trim() || undefined,
+        icon: icon.trim() || '⭐',
         imageUrl: pendingFile ? undefined : imageUrl,
         countsForHousePoints,
         isGoldenTicket,
+        description: description.trim() || undefined,
+        showAsIncentive: showAsIncentive || undefined,
+        displaySurfaces: showAsIncentive ? displaySurfaces : undefined,
+        currencyOverride: currencyOverrideEnabled ? currencyOverride : null,
     };
 
     useEffect(() => {
@@ -76,7 +99,12 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 setPendingFile(null);
                 setCountsForHousePoints(category.countsForHousePoints !== false);
                 setIsGoldenTicket(category.isGoldenTicket === true);
+                setDescription(category.description || '');
+                setShowAsIncentive(category.showAsIncentive === true);
+                setDisplaySurfaces(category.displaySurfaces ?? {});
                 setRubricLevels(Array.isArray(category.rubricLevels) ? category.rubricLevels : []);
+                setCurrencyOverrideEnabled(Boolean(category.currencyOverride));
+                setCurrencyOverride(category.currencyOverride || defaultCategoryCurrencyOverride(schoolCurrency));
             } else {
                 setName('');
                 setPoints('10');
@@ -86,7 +114,12 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 setPendingFile(null);
                 setCountsForHousePoints(true);
                 setIsGoldenTicket(false);
+                setDescription('');
+                setShowAsIncentive(false);
+                setDisplaySurfaces({});
                 setRubricLevels([]);
+                setCurrencyOverrideEnabled(false);
+                setCurrencyOverride(defaultCategoryCurrencyOverride(schoolCurrency));
             }
         }
     }, [category, isOpen, categories]);
@@ -122,9 +155,13 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 name,
                 points: pointsValue,
                 color,
-                icon: icon.trim() || undefined,
+                icon: icon.trim() || '⭐',
                 countsForHousePoints,
                 isGoldenTicket: isGoldenTicket || undefined,
+                description: description.trim() || undefined,
+                showAsIncentive,
+                displaySurfaces: showAsIncentive ? displaySurfaces : {},
+                currencyOverride: currencyOverrideEnabled ? currencyOverride : null,
                 rubricLevels: rubricLevels.length > 0 ? rubricLevels : undefined,
             };
 
@@ -192,7 +229,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <Label htmlFor="cat-points">Default Points</Label>
+                                <Label htmlFor="cat-points">Default amount</Label>
                                 <Input id="cat-points" type="number" value={points} onChange={e => setPoints(e.target.value)} />
                             </div>
                             <div className="space-y-1">
@@ -205,12 +242,33 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
-                                <Label htmlFor="cat-icon">Icon (emoji)</Label>
+                                <Label htmlFor="cat-icon">Icon</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Every category uses a color and an icon together.
+                                </p>
+                                <div className="flex flex-wrap gap-1.5 pb-1">
+                                    {['⭐', '🏆', '📚', '🎨', '🍎', '🧹', '🤝', '⏰', '🎵', '⚽', '🧠', '💛'].map((emoji) => (
+                                        <button
+                                            key={emoji}
+                                            type="button"
+                                            title={emoji}
+                                            onClick={() => setIcon(emoji)}
+                                            className={cn(
+                                                'flex h-8 w-8 items-center justify-center rounded-lg border text-base transition-transform hover:scale-110',
+                                                icon === emoji
+                                                    ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                                                    : 'border-border/60',
+                                            )}
+                                        >
+                                            {emoji}
+                                        </button>
+                                    ))}
+                                </div>
                                 <Input
                                     id="cat-icon"
                                     value={icon}
                                     onChange={(e) => setIcon(e.target.value)}
-                                    placeholder="e.g. ⭐ or 🏆"
+                                    placeholder="⭐"
                                     maxLength={4}
                                 />
                             </div>
@@ -251,21 +309,98 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                                 </div>
                             </div>
                         ) : null}
-                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <Label htmlFor="cat-golden-ticket" className="text-sm font-bold">Golden ticket</Label>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        Highlights this category as a special golden-ticket award.
-                                    </p>
+                        {showIncentiveExtras ? (
+                            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div>
+                                        <Label htmlFor="cat-show-incentive" className="text-sm font-bold">
+                                            Show as a way to earn
+                                        </Label>
+                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                            Puts this category on hallway and student displays. Printed coupons still work the same.
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="cat-show-incentive"
+                                        checked={showAsIncentive}
+                                        onCheckedChange={(checked) => {
+                                            setShowAsIncentive(checked);
+                                            if (checked && !Object.values(displaySurfaces).some(Boolean)) {
+                                                setDisplaySurfaces({ ...DEFAULT_INCENTIVE_DISPLAY_SURFACES });
+                                            }
+                                        }}
+                                    />
                                 </div>
-                                <Switch
-                                    id="cat-golden-ticket"
-                                    checked={isGoldenTicket}
-                                    onCheckedChange={setIsGoldenTicket}
-                                />
+                                <div className="space-y-1">
+                                    <Label htmlFor="cat-description">How to earn (optional)</Label>
+                                    <p className="text-xs text-muted-foreground">
+                                        Type one short sentence for students — what they should do. Leave it blank if you do not need a tip.
+                                    </p>
+                                    <Textarea
+                                        id="cat-description"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Hold the door for a classmate"
+                                        rows={3}
+                                    />
+                                </div>
+                                {showAsIncentive ? (
+                                    <motion.div
+                                        layout
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{
+                                            opacity: 1,
+                                            y: 0,
+                                            transition: { type: 'spring', stiffness: 420, damping: 34, staggerChildren: 0.04 },
+                                        }}
+                                        className="grid gap-2 sm:grid-cols-2"
+                                    >
+                                        {INCENTIVE_SURFACE_KEYS.map((surface: IncentiveSurfaceKey) => (
+                                            <label
+                                                key={surface}
+                                                className="flex items-start justify-between gap-2 rounded-lg border bg-background/80 px-3 py-2"
+                                            >
+                                                <span>
+                                                    <span className="block text-xs font-bold">
+                                                        {INCENTIVE_SURFACE_META[surface].label}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                                                        {INCENTIVE_SURFACE_META[surface].description}
+                                                    </span>
+                                                </span>
+                                                <Switch
+                                                    checked={displaySurfaces[surface] === true}
+                                                    onCheckedChange={(checked) =>
+                                                        setDisplaySurfaces((prev) => ({ ...prev, [surface]: checked }))
+                                                    }
+                                                    aria-label={`Show on ${INCENTIVE_SURFACE_META[surface].label}`}
+                                                />
+                                            </label>
+                                        ))}
+                                    </motion.div>
+                                ) : null}
                             </div>
-                        </div>
+                        ) : null}
+                        <CategoryCurrencyDesignFields
+                            enabled={currencyOverrideEnabled}
+                            onEnabledChange={(next) => {
+                                setCurrencyOverrideEnabled(next);
+                                if (next) {
+                                    setCurrencyOverride((prev) =>
+                                        prev.couponBgColor || prev.moneyBgColor || prev.pointsDesign || prev.moneyDesign
+                                            ? prev
+                                            : defaultCategoryCurrencyOverride(schoolCurrency),
+                                    );
+                                }
+                            }}
+                            value={currencyOverride}
+                            onChange={setCurrencyOverride}
+                            schoolCurrency={schoolCurrency}
+                            schoolId={schoolId}
+                            categoryName={name}
+                            points={parseInt(points, 10) || 0}
+                            color={color}
+                        />
                         <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
                             <div className="flex items-center justify-between gap-2">
                                 <Label className="text-sm font-bold">Rubric quick-awards (optional)</Label>
@@ -334,6 +469,21 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <Label htmlFor="cat-golden-ticket" className="text-sm font-medium">
+                                    Golden ticket (optional)
+                                </Label>
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                    A small highlight on this category. Most categories can leave this off.
+                                </p>
+                            </div>
+                            <Switch
+                                id="cat-golden-ticket"
+                                checked={isGoldenTicket}
+                                onCheckedChange={setIsGoldenTicket}
+                            />
                         </div>
                     </div>
                 </div>

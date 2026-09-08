@@ -8,7 +8,7 @@ import { AwardCategoriesPanel } from '@/components/points/AwardCategoriesPanel';
 
 import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 
-import { PointsTabLayout } from '@/components/points/PointsTabLayout';
+import { PointsTabLayout, type PointsTabSection } from '@/components/points/PointsTabLayout';
 
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 
@@ -138,15 +138,15 @@ export function StaffPointsTab({
 
   const fullCategoryAdmin = variant === 'admin' || schoolWideAccess;
 
-  const sections = printOnly
-    ? (['print'] as const)
-    : couponManagementContent
-      ? (currencyContent 
-          ? (['categories', 'print', 'manual', 'manage', 'currency'] as const)
-          : (['categories', 'print', 'manual', 'manage'] as const))
-      : (currencyContent
-          ? (['categories', 'print', 'manual', 'currency'] as const)
-          : (['categories', 'print', 'manual'] as const));
+  const sections: PointsTabSection[] = printOnly
+    ? ['print']
+    : [
+        'categories',
+        'print',
+        'manual',
+        ...(couponManagementContent ? (['manage'] as const) : []),
+        ...(currencyContent ? (['currency'] as const) : []),
+      ];
 
   const redemptionUi =
 

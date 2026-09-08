@@ -180,6 +180,8 @@ async function reseedSchool(db, schoolId, sampleData, helpers) {
     hasMigratedPrizes: true,
     hasMigratedCoupons: true,
     hasMigratedCategories: true,
+    hasMigratedIncentivesToCoupons: true,
+    hasMigratedIncentivesToCategories: true,
     updatedAt: Date.now(),
   };
 
