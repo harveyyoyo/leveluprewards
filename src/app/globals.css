@@ -735,21 +735,20 @@ html[data-office-portal] .office-content-pane {
     font-size: 24px;
   }
 
-  /* Teacher "Print preview" (same em-based coupon as the sheet) — was inheriting ~16px; scale to match print. */
+  /* On-screen print preview only. Paper print still uses .print-coupon-wrapper (24px). */
   .coupon-print-preview-shell {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
   }
 
   .coupon-print-match-wrapper .coupon-scalable, .coupon-print-match-wrapper .money-bill-scalable {
-    /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
-    font-size: 24px;
+    font-size: 36px;
   }
 
   .coupon-print-match-wrapper--30 .coupon-scalable, .coupon-print-match-wrapper--30 .money-bill-scalable {
-    font-size: 19px;
+    font-size: 28px;
     justify-content: flex-start;
     gap: 0.04em;
     padding-top: 0.16em;

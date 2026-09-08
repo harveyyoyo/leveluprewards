@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Printer } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertTriangle, Plus, Printer } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -136,6 +137,8 @@ export function CouponPrintPanel({
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
   const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
+  const [makeReusable, setMakeReusable] = useState(false);
+  const isReusablePrint = makeReusable;
 
   useEffect(() => {
     if (categoryList.length > 0 && !printCategoryId) {
@@ -249,7 +252,7 @@ export function CouponPrintPanel({
       });
       return;
     }
-    if (Number.isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS) {
+    if (!isReusablePrint && (Number.isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS)) {
       playSound('error');
       toast({
         variant: 'destructive',
@@ -258,7 +261,7 @@ export function CouponPrintPanel({
       });
       return;
     }
-    const couponCount = sheets * printCouponsPerPage;
+    const couponCount = isReusablePrint ? 1 : sheets * printCouponsPerPage;
     const selectedCategory = categoryList.find((c) => c.id === printCategoryId);
     if (!selectedCategory) {
       playSound('error');
@@ -398,6 +401,7 @@ export function CouponPrintPanel({
         .filter((t) => printScopeTeacherIds.includes(t.id))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((t) => t.name),
+      reusable: isReusablePrint,
     });
 
     const couponsToCreate: Coupon[] = codes.map((code) => ({
@@ -411,6 +415,7 @@ export function CouponPrintPanel({
       color: selectedCategory.color,
       ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...scopeExtra,
+      ...(isReusablePrint ? { reusable: true } : {}),
       ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
       ...(startsAt !== undefined ? { startsAt } : {}),
       ...(expiresAt ? { expiresAt } : {}),
@@ -433,8 +438,10 @@ export function CouponPrintPanel({
     });
     playSound('success');
     toast({
-      title: 'Coupons ready to print',
-      description: `${couponCount} coupon${couponCount === 1 ? '' : 's'} generated.`,
+      title: isReusablePrint ? 'Reusable coupon ready' : 'Coupons ready to print',
+      description: isReusablePrint
+        ? 'Print this one slip and keep it. Students can scan the same code many times.'
+        : `${couponCount} coupon${couponCount === 1 ? '' : 's'} generated.`,
     });
   };
 
@@ -463,6 +470,7 @@ export function CouponPrintPanel({
       .filter((t) => printScopeTeacherIds.includes(t.id))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((t) => t.name),
+    reusable: isReusablePrint,
   });
   const previewScopeFields = useMemo<
     Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds' | 'createdByTeacherId'>>
@@ -497,6 +505,7 @@ export function CouponPrintPanel({
       color: selectedCategoryForPreview?.color,
       ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...previewScopeFields,
+      ...(isReusablePrint ? { reusable: true } : {}),
       ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
       ...(previewStartsAt !== undefined ? { startsAt: previewStartsAt } : {}),
       expiresAt: previewExpiresAt,
@@ -511,6 +520,7 @@ export function CouponPrintPanel({
       previewExpiresAt,
       isTeacherRedemption,
       creatorTeacherId,
+      isReusablePrint,
     ],
   );
 
@@ -519,7 +529,9 @@ export function CouponPrintPanel({
     [teacherList],
   );
 
-  const totalCoupons = (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
+  const totalCoupons = isReusablePrint
+    ? 1
+    : (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
   const budgetTeacher = teacherBudget?.currentTeacher ?? null;
   const printValueNum = parseInt(printValue, 10) || 0;
   const budgetHint =
@@ -551,28 +563,72 @@ export function CouponPrintPanel({
       )}
     >
       <CardHeader className="p-4 md:p-6">
-        <div className="flex items-center gap-1.5">
-          <CardTitle className="flex items-center gap-3">
-            <div
-              className={cn(
-                'p-2 rounded-xl',
-                isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
-              )}
-              aria-hidden
-            >
-              <Printer className="w-6 h-6" />
-            </div>
-            Print coupons
-          </CardTitle>
-          <StaffPortalTabInfoPopover
-            sections={[
-              staffPortalTabInfoSection(
-                'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category.',
-              ),
-            ]}
-            ariaLabel="About print coupons"
-          />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'p-2 rounded-xl',
+                  isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
+                )}
+                aria-hidden
+              >
+                <Printer className="w-6 h-6" />
+              </div>
+              Print coupons
+            </CardTitle>
+            <StaffPortalTabInfoPopover
+              sections={[
+                staffPortalTabInfoSection(
+                  'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout. Check “Make this reusable” at the top right to print one staff slip that can be scanned many times.',
+                ),
+              ]}
+              ariaLabel="About print coupons"
+            />
+          </div>
+          <label
+            htmlFor="make-coupon-reusable"
+            className={cn(
+              'flex items-center gap-2 shrink-0 rounded-xl border px-3 py-2 cursor-pointer',
+              isReusablePrint
+                ? 'border-amber-500/70 bg-amber-50 dark:bg-amber-950/40'
+                : isGraphic
+                  ? 'border-white/10 bg-foreground/5'
+                  : 'border-border/60 bg-muted/10',
+            )}
+          >
+            <Checkbox
+              id="make-coupon-reusable"
+              checked={makeReusable}
+              onCheckedChange={(checked) => setMakeReusable(checked === true)}
+            />
+            <span className="text-sm font-black whitespace-nowrap">Make this reusable</span>
+          </label>
         </div>
+        <AnimatePresence>
+          {isReusablePrint ? (
+            <motion.div
+              key="reusable-coupon-warning"
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+              className="mt-4 flex items-start gap-3 rounded-xl border-2 border-amber-500 bg-amber-100 px-4 py-3 text-amber-950 dark:bg-amber-900/70 dark:text-amber-50 dark:border-amber-400"
+              role="alert"
+            >
+              <AlertTriangle className="h-7 w-7 shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-1">
+                <p className="text-sm font-black uppercase tracking-wide">Warning — keep this slip</p>
+                <p className="text-sm font-medium leading-snug">
+                  This is for a staff member to keep. Students can scan the same code over and over, and
+                  each scan gives points. Do not hand this out like a normal coupon. Do not throw it away.
+                  The printed ticket will also show this warning.
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <PrinterReminderCallout
           title="Coupon / slip printer"
           message={settings.printerReminderPrizeVouchers}
@@ -589,7 +645,7 @@ export function CouponPrintPanel({
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div className="flex-1 w-full space-y-6">
+            <div className="flex-1 w-full min-w-0 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 <div className="space-y-2 md:col-span-2 xl:col-span-2">
                   <Label className={labelClass}>Incentive Category</Label>
@@ -689,6 +745,7 @@ export function CouponPrintPanel({
                     className={cn('text-lg font-black', fieldClass)}
                   />
                 </div>
+                {!isReusablePrint && (
                 <div className="space-y-2 md:col-span-1">
                   <Label className={labelClass}>Coupons per page</Label>
                   <Select
@@ -707,6 +764,7 @@ export function CouponPrintPanel({
                     </SelectContent>
                   </Select>
                 </div>
+                )}
                 <div className="space-y-2 md:col-span-1">
                   <Label htmlFor="coupon-print-corners" className={labelClass}>
                     Coupon corners
@@ -726,6 +784,7 @@ export function CouponPrintPanel({
                     </SelectContent>
                   </Select>
                 </div>
+                {!isReusablePrint && (
                 <div className="space-y-2 md:col-span-1">
                   <Label className={labelClass}>Sheets</Label>
                   <Input
@@ -740,6 +799,7 @@ export function CouponPrintPanel({
                     Total: {totalCoupons} coupons{budgetHint}
                   </p>
                 </div>
+                )}
                 <div className="space-y-2">
                   <Label className={labelClass}>Valid from (optional)</Label>
                   <Input
@@ -980,11 +1040,11 @@ export function CouponPrintPanel({
                 style={printAccentColor ? { backgroundColor: printAccentColor } : undefined}
               >
                 <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                Generate &amp; print
+                {isReusablePrint ? 'Print reusable coupon' : 'Generate & print'}
               </Button>
             </div>
 
-            <div className="w-full lg:w-80 lg:sticky lg:top-8 shrink-0">
+            <div className="w-full lg:w-[28rem] xl:w-[32rem] lg:sticky lg:top-8 shrink-0">
               <div
                 className={cn(
                   'rounded-2xl border p-6 flex flex-col items-center shadow-sm',
@@ -1004,7 +1064,9 @@ export function CouponPrintPanel({
                   <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={printCurrency} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
-                  Each cell on the printed sheet matches this layout.
+                  {isReusablePrint
+                    ? 'This is the one slip you keep and scan again.'
+                    : 'Each cell on the printed sheet matches this layout.'}
                 </p>
               </div>
             </div>

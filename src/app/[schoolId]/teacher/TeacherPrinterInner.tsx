@@ -99,11 +99,13 @@ const ThemeGeneratorModal = dynamic(
 import {
     COUPONS_PER_PRINT_PAGE,
     COUPON_PRINT_PAGE_SIZE_OPTIONS,
+    DEFAULT_COUPON_CORNER_STYLE,
     generateUniqueCouponCodes,
     normalizeCouponPrintPageSize,
     type CouponPrintPageSize,
 } from '@/lib/coupons/couponPrint';
 import { buildRedemptionPrintNote, couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
+import { isReusableCoupon } from '@/lib/coupons/reusableCoupon';
 import { SchoolReportsPanel } from '@/components/reports/SchoolReportsPanel';
 import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
@@ -1286,6 +1288,7 @@ function TeacherPrizeManager({
 
 function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: string; teacherId: string; teacherName: string; students: Student[] }) {
     const firestore = useFirestore();
+    const { setCouponsToPrint } = usePrint();
     const couponsQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'coupons') : null, [firestore, schoolId]);
     const { data: coupons, isLoading } = useCollection<Coupon>(couponsQuery);
   
@@ -1303,8 +1306,8 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
         .sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
     }, [coupons, teacherId, teacherName]);
   
-    const available = myCoupons.filter(c => !c.used);
-    const redeemed = myCoupons.filter(c => c.used);
+    const available = myCoupons.filter((c) => !c.used || isReusableCoupon(c));
+    const redeemed = myCoupons.filter((c) => c.used && !isReusableCoupon(c));
   
     return (
       <StaffPortalTabPanel
@@ -1320,11 +1323,19 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
                 <ul className="p-3 space-y-2">
                   {available.map((coupon) => {
                     const scopeLine = couponRedemptionLabelForPrint(coupon);
+                    const reusable = isReusableCoupon(coupon);
                     return (
                     <li key={coupon.id} className="p-4 bg-card rounded-xl border border-border/40 shadow-sm transition-all hover:shadow-md hover:border-primary/20 group">
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center gap-2">
                         <span className="font-mono text-xs font-black bg-primary/10 text-primary px-2.5 py-1 rounded-md tracking-wider group-hover:bg-primary/20 transition-colors uppercase">{coupon.code}</span>
-                        <span className="font-bold text-foreground">{(Number(coupon.value) || 0)} pts</span>
+                        <div className="flex items-center gap-2">
+                          {reusable ? (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                              Reusable
+                            </span>
+                          ) : null}
+                          <span className="font-bold text-foreground">{(Number(coupon.value) || 0)} pts</span>
+                        </div>
                       </div>
                       <div className="text-[11px] font-medium text-muted-foreground mt-3 flex items-center justify-between">
                         <p className="bg-muted px-2 py-0.5 rounded-sm">{coupon.category}</p>
@@ -1342,6 +1353,23 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
                           {scopeLine}
                         </p>
                       )}
+                      {reusable ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 h-8 rounded-lg text-[10px] font-bold uppercase"
+                          onClick={() =>
+                            setCouponsToPrint([coupon], {
+                              couponsPerPage: 10,
+                              schoolId,
+                              cornerStyle: DEFAULT_COUPON_CORNER_STYLE,
+                            })
+                          }
+                        >
+                          Reprint
+                        </Button>
+                      ) : null}
                     </li>
                   );})}
                 </ul>

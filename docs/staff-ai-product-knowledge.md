@@ -41,6 +41,13 @@ Display mode, themes, optional helper “?” tooltips, welcome tour, printing o
   - `Sci-Fi Synth` (futuristic synthesizer soundscapes)
   These custom sound definitions govern success, error, login, hover, and alert audio cues dynamically to elevate user engagement.
 
+## Coupons (print and redeem)
+
+- **Where to print:** **Admin → Coupons → Print coupons**, **Teacher → Coupons → Print coupons**, or a secretary coupon desk. Regular print jobs create one-time codes (each slip works once at the student kiosk).
+- **Reusable coupon:** On **Print coupons**, check **Make this reusable** at the top. A warning explains that the slip is for staff to keep and can be scanned many times. The printed ticket also shows that warning. This prints one keep-and-scan slip.
+- **Reprint:** Staff can reprint from **Teacher → Generated coupons** or by searching the code under **Admin → Coupons → Inventory**.
+- **Do not confuse with the demo coupon:** Settings → kiosk has an optional **Reusable demo coupon** (default code `000`) for training only. That is not the staff keep-and-scan coupon.
+
 ## Notifications (automated alerts)
 
 - **Where to configure:** **Admin** → **Notifications** tab. School `appSettings` include a master **enable notifications** flag plus per-event and per-recipient options.

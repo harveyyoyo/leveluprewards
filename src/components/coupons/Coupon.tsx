@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { CouponCornerStyle } from '@/lib/coupons/couponPrint';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
+import { isReusableCoupon } from '@/lib/coupons/reusableCoupon';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn } from '@/lib/utils';
 import { APP_NAME } from '@/lib/appBranding';
@@ -135,7 +136,8 @@ export function Coupon({
   const showDomain = currency.pointsShowDomain !== false;
 
   const redemptionLabel = couponRedemptionLabelForPrint(coupon);
-  const hasLimitLine = Boolean(redemptionLabel);
+  const reusable = isReusableCoupon(coupon);
+  const hasLimitLine = Boolean(redemptionLabel) || reusable;
 
   const style: React.CSSProperties = {
     backgroundColor: currency?.couponBgColor || '#ffffff',
@@ -162,6 +164,14 @@ export function Coupon({
       {isNew && (
         <div className="absolute top-[0.25em] right-[0.25em] bg-primary/80 text-white text-[0.5625em] px-[0.375em] py-[0.125em] rounded-full font-bold leading-none">
           NEW
+        </div>
+      )}
+      {reusable && (
+        <div
+          className="w-full shrink-0 rounded-[0.12em] bg-amber-400 px-[0.2em] py-[0.08em] text-center text-[0.22em] font-black uppercase leading-tight tracking-wide text-black"
+          title="WARNING: Staff keep. Do not throw away."
+        >
+          Warning: staff keep — do not throw away
         </div>
       )}
       <CouponTitle text={title} compact={hasLimitLine || useQr} />

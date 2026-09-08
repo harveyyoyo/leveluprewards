@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 import type { Student, Coupon, Achievement, Category, Badge, Class } from '../types';
 import { studentMayRedeemCoupon } from '../coupons/couponRedemptionRules';
+import { isReusableCoupon } from '../coupons/reusableCoupon';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
 import { removeUndefined, applyPointsByPeriod, applyCategoryPointsByPeriod, applyAchievementsAndBadges } from './helpers';
@@ -93,8 +94,8 @@ export const redeemCoupon = async (
       if (coupon.expiresAt && nowTs > coupon.expiresAt) {
         throw new Error('This coupon has expired.');
       }
-      const isReusableSample = coupon.reusableSample === true;
-      if (coupon.used && !isReusableSample) throw new Error('This coupon has already been used.');
+      const reusable = isReusableCoupon(coupon);
+      if (coupon.used && !reusable) throw new Error('This coupon has already been used.');
 
       const studentDoc = await transaction.get(studentRef);
       if (!studentDoc.exists()) throw new Error("Student not found.");
@@ -162,7 +163,7 @@ export const redeemCoupon = async (
         date: Date.now(),
       });
 
-      if (!isReusableSample) {
+      if (!reusable) {
         transaction.update(couponRef, {
           used: true,
           usedAt: Date.now(),
@@ -170,9 +171,15 @@ export const redeemCoupon = async (
         });
       }
 
-      return { baseValue: addedValue, bonusTotal: evalResult.bonusTotal };
+      return { baseValue: addedValue, bonusTotal: evalResult.bonusTotal, reusable };
     });
-    return { success: true, message: "Redeemed successfully", value: result.baseValue, bonusTotal: result.bonusTotal };
+    return {
+      success: true,
+      message: "Redeemed successfully",
+      value: result.baseValue,
+      bonusTotal: result.bonusTotal,
+      reusable: result.reusable,
+    };
   } catch (error: unknown) {
     reportFirestorePermissionError(error, {
       path: couponRef.path,

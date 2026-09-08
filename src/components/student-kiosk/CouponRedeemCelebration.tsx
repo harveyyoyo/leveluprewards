@@ -1,6 +1,6 @@
 'use client';
 
-import { Sparkles, Ticket, Trash2 } from 'lucide-react';
+import { Repeat, Sparkles, Ticket, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type CouponRedeemCelebrationProps = {
@@ -8,6 +8,7 @@ export type CouponRedeemCelebrationProps = {
   category: string;
   compliment?: string | null;
   animationKey: number;
+  reusable?: boolean;
 };
 
 /** Redeem message card — sits directly above the scan panel in the center column. */
@@ -16,6 +17,7 @@ export function CouponRedeemCelebration({
   category,
   compliment,
   animationKey,
+  reusable = false,
 }: CouponRedeemCelebrationProps) {
   const trimmedCompliment = compliment?.trim();
 
@@ -58,9 +60,15 @@ export function CouponRedeemCelebration({
       ) : null}
 
       <div className="mt-2 flex items-center justify-center gap-2 text-center sm:mt-2.5">
-        <Trash2 className="h-4 w-4 shrink-0 text-white/80" aria-hidden />
+        {reusable ? (
+          <Repeat className="h-4 w-4 shrink-0 text-white/80" aria-hidden />
+        ) : (
+          <Trash2 className="h-4 w-4 shrink-0 text-white/80" aria-hidden />
+        )}
         <p className="text-xs font-semibold leading-snug text-white/90 sm:text-sm">
-          Toss your coupon in the trash — thanks!
+          {reusable
+            ? 'Keep this staff coupon — it can be scanned again.'
+            : 'Toss your coupon in the trash — thanks!'}
         </p>
       </div>
     </div>
