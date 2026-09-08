@@ -110,7 +110,7 @@ export function SssStudentDatabaseView({
               <th className="px-4 py-3">Last</th>
               <th className="px-4 py-3">First</th>
               <th className="px-4 py-3 hidden sm:table-cell">School</th>
-              <th className="px-4 py-3 hidden md:table-cell">DOB</th>
+              <th className="px-4 py-3 hidden md:table-cell">Birthday</th>
               <th className="px-4 py-3 hidden lg:table-cell">Parent</th>
             </tr>
           </thead>
