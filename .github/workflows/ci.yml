@@ -57,8 +57,11 @@ jobs:
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
           NODE_ENV: production
 
+      # Login-page smoke only. Full school login (e2e/auth.spec.ts) needs a Firestore-capable
+      # Admin key; the Hosting deploy SA gets PERMISSION_DENIED. Live login is covered by
+      # Deploy → test:live-auth against production.
       - name: Playwright smoke tests
-        run: npx playwright test e2e/auth.spec.ts
+        run: npx playwright test e2e/login_typing.spec.ts
         env:
           CI: 'true'
           BASE_URL: 'http://127.0.0.1:3000'
