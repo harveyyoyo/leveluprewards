@@ -50,6 +50,8 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
     const { addCategory, updateCategory, categories, schoolId } = useAppContext();
     const { settings } = useSettings();
     const schoolCurrency = useCurrency();
+    const schoolCurrencyRef = useRef(schoolCurrency);
+    schoolCurrencyRef.current = schoolCurrency;
     const firestore = useFirestore();
     const storage = useStorage();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
 
     useEffect(() => {
         if (isOpen) {
+            const currencyDefaults = defaultCategoryCurrencyOverride(schoolCurrencyRef.current);
             if (category) {
                 setName(category.name);
                 setPoints(String(category.points ?? 0));
@@ -104,7 +107,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 setDisplaySurfaces(category.displaySurfaces ?? {});
                 setRubricLevels(Array.isArray(category.rubricLevels) ? category.rubricLevels : []);
                 setCurrencyOverrideEnabled(Boolean(category.currencyOverride));
-                setCurrencyOverride(category.currencyOverride || defaultCategoryCurrencyOverride(schoolCurrency));
+                setCurrencyOverride(category.currencyOverride || currencyDefaults);
             } else {
                 setName('');
                 setPoints('10');
@@ -119,7 +122,7 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 setDisplaySurfaces({});
                 setRubricLevels([]);
                 setCurrencyOverrideEnabled(false);
-                setCurrencyOverride(defaultCategoryCurrencyOverride(schoolCurrency));
+                setCurrencyOverride(currencyDefaults);
             }
         }
     }, [category, isOpen, categories]);
