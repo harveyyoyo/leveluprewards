@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft,
@@ -13,12 +13,16 @@ import {
   Heart,
   Layers,
   LayoutGrid,
+  Lock,
   Megaphone,
   Monitor,
   MonitorPlay,
   Palette,
+  Pause,
+  Play,
   Plus,
   RotateCcw,
+  Scroll,
   Smartphone,
   Sliders,
   Sparkles,
@@ -86,13 +90,9 @@ export default function DisplaysRealmPage() {
     const list: ModularScreenConfig[] = [];
     const savedScreens = settings.modularDisplayScreens || {};
 
-    // 1. Ready-Made Presets (using custom overrides if saved, else default)
+    // 1. Ready-Made Presets (ALWAYS pristine factory presets, strictly read-only)
     for (const key of ['hall-of-fame', 'smart-screen', 'bulletin-board'] as const) {
-      if (savedScreens[key]) {
-        list.push(savedScreens[key]);
-      } else {
-        list.push(READY_MADE_PRESET_SCREENS[key]);
-      }
+      list.push(READY_MADE_PRESET_SCREENS[key]);
     }
 
     // 2. Custom User-Created Screens
@@ -105,9 +105,26 @@ export default function DisplaysRealmPage() {
     return list;
   }, [settings.modularDisplayScreens]);
 
+  // Clean up any legacy override keys in settings for the 3 factory presets
+  useEffect(() => {
+    const saved = settings.modularDisplayScreens;
+    if (saved && (saved['hall-of-fame'] || saved['smart-screen'] || saved['bulletin-board'])) {
+      const cleaned = { ...saved };
+      delete cleaned['hall-of-fame'];
+      delete cleaned['smart-screen'];
+      delete cleaned['bulletin-board'];
+      updateSettings({ modularDisplayScreens: cleaned });
+    }
+  }, [settings.modularDisplayScreens, updateSettings]);
+
   const activeScreen: ModularScreenConfig = useMemo(() => {
     return allScreens.find((s) => s.id === activeScreenId) || allScreens[0];
   }, [allScreens, activeScreenId]);
+
+  // Read-only guard: default system presets cannot be directly modified
+  const isScreenReadOnly = Boolean(
+    activeScreen.isReadyMade || ['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(activeScreen.id),
+  );
 
   // Separate ready-made presets from custom user screens for the top navigation bar
   const readyMadeScreens = useMemo(() => {
@@ -122,15 +139,44 @@ export default function DisplaysRealmPage() {
     );
   }, [allScreens]);
 
-  // Check whether the active screen is a preset that has custom modifications
-  const isPresetModified = useMemo(() => {
-    const key = (activeScreen.presetKey || activeScreen.id) as PresetKey;
-    if (!['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(key)) return false;
-    return Boolean(settings.modularDisplayScreens?.[key]);
-  }, [activeScreen, settings.modularDisplayScreens]);
+  // Duplicate a preset or active screen into a new customizable copy
+  const handleDuplicatePreset = (source?: ModularScreenConfig) => {
+    const target = source || activeScreen;
+    const newId = `screen-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newScreen: ModularScreenConfig = {
+      ...target,
+      id: newId,
+      name: `${target.name} (Custom)`,
+      isReadyMade: false,
+      presetKey: (target.presetKey || target.id) as PresetKey,
+      updatedAt: Date.now(),
+      createdAt: Date.now(),
+    };
+
+    const nextSaved = {
+      ...(settings.modularDisplayScreens || {}),
+      [newId]: newScreen,
+    };
+
+    updateSettings({ modularDisplayScreens: nextSaved });
+    setActiveScreenId(newId);
+
+    toast({
+      title: 'Preset Duplicated!',
+      description: `Created "${newScreen.name}". You can now customize all modules, theme, and settings.`,
+    });
+  };
 
   // Update active screen configuration
   const handleUpdateActiveScreen = (updates: Partial<ModularScreenConfig>) => {
+    if (isScreenReadOnly) {
+      toast({
+        title: 'Default Preset is Read-Only',
+        description: 'Default presets cannot be modified directly. Click "Duplicate to Customize" to create your own editable copy.',
+      });
+      return;
+    }
+
     const nextScreen: ModularScreenConfig = {
       ...activeScreen,
       ...updates,
@@ -147,6 +193,14 @@ export default function DisplaysRealmPage() {
 
   // Apply an entire preset layout, modules, and theme to the active screen
   const handleApplyPresetToActive = (presetKey: PresetKey) => {
+    if (isScreenReadOnly) {
+      toast({
+        title: 'Default Preset is Read-Only',
+        description: 'Cannot modify a default preset. Create or duplicate a custom screen first.',
+      });
+      return;
+    }
+
     const preset = READY_MADE_PRESET_SCREENS[presetKey];
     if (!preset) return;
 
@@ -157,6 +211,7 @@ export default function DisplaysRealmPage() {
       heroModule: preset.heroModule,
       customTitle: preset.customTitle,
       customMessage: preset.customMessage,
+      autoScroll: preset.autoScroll,
     });
 
     toast({
@@ -167,6 +222,14 @@ export default function DisplaysRealmPage() {
 
   // Apply a curated recipe mix to the active screen
   const handleApplyRecipe = (recipe: CuratedMixRecipe) => {
+    if (isScreenReadOnly) {
+      toast({
+        title: 'Default Preset is Read-Only',
+        description: 'Duplicate this preset into a custom screen to apply recipes.',
+      });
+      return;
+    }
+
     handleUpdateActiveScreen({
       theme: recipe.theme,
       enabledModules: [...recipe.modules],
@@ -181,6 +244,14 @@ export default function DisplaysRealmPage() {
 
   // Toggle a single module on or off
   const handleToggleModule = (key: DisplayModuleKey, checked: boolean) => {
+    if (isScreenReadOnly) {
+      toast({
+        title: 'Default Preset is Read-Only',
+        description: 'Duplicate this preset to customize its modules.',
+      });
+      return;
+    }
+
     const current = new Set(activeScreen.enabledModules || []);
     if (checked) {
       current.add(key);
@@ -483,6 +554,28 @@ export default function DisplaysRealmPage() {
             </button>
           </div>
 
+          {/* Read-Only Preset Warning & Quick Duplicate Banner */}
+          {isScreenReadOnly && (
+            <div className="mx-3 mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-950 dark:text-amber-200 shrink-0">
+              <div className="flex items-center gap-2 font-black text-xs mb-1">
+                <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Default Factory Preset (Read-Only)</span>
+              </div>
+              <p className="text-[11px] font-medium text-amber-900/80 dark:text-amber-300/80 leading-relaxed mb-2.5">
+                Default presets are locked to protect official displays. Duplicate this screen to customize its modules, themes, or school titles!
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleDuplicatePreset(activeScreen)}
+                className="w-full h-8 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs gap-1.5 shadow-sm"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Duplicate to Customize
+              </Button>
+            </div>
+          )}
+
           {/* Drawer Tab Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {/* TAB 0: PRESETS SHOWCASE & MIXER */}
@@ -494,7 +587,7 @@ export default function DisplaysRealmPage() {
                     Ready-Made Screen Presets
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                    3 engineered display layouts. Open a preset directly, or apply its layout and modules to your active screen.
+                    3 official display layouts. Open any preset directly, or duplicate it to create your own custom variation.
                   </p>
                 </div>
 
@@ -504,9 +597,10 @@ export default function DisplaysRealmPage() {
                     <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
                       Active Screen
                     </span>
-                    {activeScreen.isReadyMade ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">
-                        ✓ Preset Screen
+                    {isScreenReadOnly ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">
+                        <Lock className="h-3 w-3" />
+                        Default Preset (Read-Only)
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5 text-[10px] font-black text-primary uppercase">
@@ -520,19 +614,17 @@ export default function DisplaysRealmPage() {
                       {activeScreen.enabledModules?.length || 0} modules active
                     </span>
                   </div>
-                  {isPresetModified && (
-                    <div className="flex items-center justify-between pt-2 border-t border-border/60">
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-bold">
-                        Modified from default
-                      </span>
-                      <button
+                  {isScreenReadOnly && (
+                    <div className="pt-2 border-t border-border/60">
+                      <Button
                         type="button"
-                        onClick={() => handleResetPreset(activeScreen.id)}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground underline underline-offset-2"
+                        size="sm"
+                        onClick={() => handleDuplicatePreset(activeScreen)}
+                        className="w-full h-7 text-xs font-black gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
                       >
-                        <RotateCcw className="h-3 w-3" />
-                        Reset to default
-                      </button>
+                        <Copy className="h-3.5 w-3.5" />
+                        Duplicate to Customize
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -548,7 +640,6 @@ export default function DisplaysRealmPage() {
                   {DISPLAY_PRESET_CATALOG.map((preset) => {
                     const Icon = preset.icon;
                     const isViewing = activeScreen.id === preset.key;
-                    const isModified = Boolean(settings.modularDisplayScreens?.[preset.key]);
 
                     return (
                       <div
@@ -625,7 +716,7 @@ export default function DisplaysRealmPage() {
                           {isViewing ? (
                             <div className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black text-primary">
                               <CheckCircle2 className="h-4 w-4" />
-                              Currently Active
+                              Active Screen
                             </div>
                           ) : (
                             <Button
@@ -643,26 +734,13 @@ export default function DisplaysRealmPage() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => handleApplyPresetToActive(preset.key)}
+                            onClick={() => handleDuplicatePreset(READY_MADE_PRESET_SCREENS[preset.key])}
                             className="flex-1 h-8 rounded-xl text-xs font-bold shadow-2xs"
-                            title={`Copy ${preset.name} modules & layout into ${activeScreen.name}`}
+                            title={`Create a customizable duplicate copy of ${preset.name}`}
                           >
-                            <Wand2 className="h-3.5 w-3.5 mr-1 text-primary" />
-                            Apply Layout
+                            <Copy className="h-3.5 w-3.5 mr-1 text-primary" />
+                            Duplicate
                           </Button>
-
-                          {isModified && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResetPreset(preset.key)}
-                              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                              title="Reset to factory original"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
                         </div>
                       </div>
                     );
@@ -710,6 +788,7 @@ export default function DisplaysRealmPage() {
                             type="button"
                             size="sm"
                             variant="secondary"
+                            disabled={isScreenReadOnly}
                             onClick={() => handleApplyRecipe(recipe)}
                             className="h-7 shrink-0 rounded-lg px-2.5 text-xs font-bold"
                           >
@@ -762,6 +841,7 @@ export default function DisplaysRealmPage() {
                           </div>
                           <Switch
                             checked={isEnabled}
+                            disabled={isScreenReadOnly}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
                             className="shrink-0"
@@ -801,6 +881,7 @@ export default function DisplaysRealmPage() {
                           </div>
                           <Switch
                             checked={isEnabled}
+                            disabled={isScreenReadOnly}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
                             className="shrink-0"
@@ -840,6 +921,7 @@ export default function DisplaysRealmPage() {
                           </div>
                           <Switch
                             checked={isEnabled}
+                            disabled={isScreenReadOnly}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
                             className="shrink-0"
@@ -898,12 +980,22 @@ export default function DisplaysRealmPage() {
                       <button
                         key={theme.id}
                         type="button"
-                        onClick={() => handleUpdateActiveScreen({ theme: theme.id as ModularThemeId })}
+                        onClick={() => {
+                          if (isScreenReadOnly) {
+                            toast({
+                              title: 'Default Preset is Read-Only',
+                              description: 'Click "Duplicate to Customize" to create an editable copy with custom themes.',
+                            });
+                            return;
+                          }
+                          handleUpdateActiveScreen({ theme: theme.id as ModularThemeId });
+                        }}
                         className={cn(
                           'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-4 text-left transition-all',
                           isSelected
                             ? 'border-primary ring-2 ring-primary/50 shadow-lg'
                             : 'border-border/80 hover:border-primary/50 hover:shadow-md',
+                          isScreenReadOnly && 'cursor-not-allowed opacity-85',
                         )}
                         style={{ backgroundColor: theme.previewBg }}
                       >
@@ -965,12 +1057,14 @@ export default function DisplaysRealmPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
+                      disabled={isScreenReadOnly}
                       onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
                       className={cn(
                         'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
                         activeScreen.orientation === 'landscape'
                           ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
                           : 'border-border hover:border-primary/40 text-muted-foreground',
+                        isScreenReadOnly && 'opacity-60 cursor-not-allowed',
                       )}
                     >
                       <Monitor className="h-4 w-4" />
@@ -978,12 +1072,14 @@ export default function DisplaysRealmPage() {
                     </button>
                     <button
                       type="button"
+                      disabled={isScreenReadOnly}
                       onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
                       className={cn(
                         'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
                         activeScreen.orientation === 'portrait'
                           ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
                           : 'border-border hover:border-primary/40 text-muted-foreground',
+                        isScreenReadOnly && 'opacity-60 cursor-not-allowed',
                       )}
                     >
                       <Smartphone className="h-4 w-4" />
@@ -992,12 +1088,35 @@ export default function DisplaysRealmPage() {
                   </div>
                 </div>
 
+                {/* Auto-Scroll Display Setting */}
+                <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-border/80 bg-muted/40 p-3.5">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <Scroll className="h-4 w-4 text-primary shrink-0" />
+                      <label className="text-xs font-bold text-foreground">Auto-Scroll Display</label>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-tight">
+                      Continuously scroll student leaderboards, classes, and statistics on hallway TV monitors.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={Boolean(
+                      activeScreen.autoScroll ??
+                        (activeScreen.id === 'hall-of-fame' || activeScreen.presetKey === 'hall-of-fame'),
+                    )}
+                    disabled={isScreenReadOnly}
+                    onCheckedChange={(checked) => handleUpdateActiveScreen({ autoScroll: checked })}
+                    className="shrink-0"
+                  />
+                </div>
+
                 {/* Custom Screen Title & Message */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold">Screen Title</label>
                     <Input
                       value={activeScreen.customTitle || ''}
+                      disabled={isScreenReadOnly}
                       onChange={(e) => handleUpdateActiveScreen({ customTitle: e.target.value })}
                       placeholder="e.g. Hall of Fame, Main Lobby Screen"
                       className="h-9 text-xs"
@@ -1007,6 +1126,7 @@ export default function DisplaysRealmPage() {
                     <label className="text-xs font-bold">Subtitle / Banner Message</label>
                     <Input
                       value={activeScreen.customMessage || ''}
+                      disabled={isScreenReadOnly}
                       onChange={(e) => handleUpdateActiveScreen({ customMessage: e.target.value })}
                       placeholder="e.g. Learn, level up, and lead today!"
                       className="h-9 text-xs"
@@ -1021,8 +1141,9 @@ export default function DisplaysRealmPage() {
                       Preset Template
                     </span>
                     {activeScreen.isReadyMade ? (
-                      <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">
-                        Official Preset
+                      <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        Factory Preset
                       </span>
                     ) : (
                       <span className="rounded-full bg-primary/15 border border-primary/30 px-2.5 py-0.5 text-[10px] font-black text-primary uppercase">
@@ -1033,23 +1154,20 @@ export default function DisplaysRealmPage() {
 
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {activeScreen.isReadyMade
-                      ? isPresetModified
-                        ? `This preset has custom overrides saved. You can revert it to the original defaults at any time.`
-                        : `This preset is running on standard factory defaults.`
+                      ? 'This official factory preset is protected from edits to ensure standard hallway consistency. To change its modules, themes, or titles, duplicate it into an editable screen.'
                       : `Created from "${activeScreen.presetKey || 'hall-of-fame'}" starter template.`}
                   </p>
 
                   {activeScreen.isReadyMade ? (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="default"
                       size="sm"
-                      onClick={() => handleResetPreset(activeScreen.id)}
-                      disabled={!isPresetModified}
-                      className="w-full gap-2 rounded-xl text-xs font-bold shadow-2xs"
+                      onClick={() => handleDuplicatePreset(activeScreen)}
+                      className="w-full gap-2 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
                     >
-                      <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
-                      {isPresetModified ? 'Reset to Default Preset' : 'Already at Factory Default'}
+                      <Copy className="h-3.5 w-3.5" />
+                      Duplicate to Customize
                     </Button>
                   ) : (
                     <div className="space-y-2">
@@ -1085,14 +1203,44 @@ export default function DisplaysRealmPage() {
         <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-950/25 overflow-hidden relative">
           {/* Canvas Floating Top Bar */}
           <div className="absolute top-4 right-6 flex items-center gap-2 z-10 bg-background/80 backdrop-blur-md rounded-2xl border p-1.5 shadow-md">
+            {isScreenReadOnly ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 rounded-xl border border-amber-500/30">
+                <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Read-Only Preset</span>
+              </div>
+            ) : null}
+
+            {isScreenReadOnly ? (
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleDuplicatePreset(activeScreen)}
+                className="h-7 px-2.5 text-xs font-black gap-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Duplicate to Edit
+              </Button>
+            ) : null}
+
+            {(activeScreen.autoScroll ?? (activeScreen.id === 'hall-of-fame' || activeScreen.presetKey === 'hall-of-fame')) ? (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Auto-Scroll Active</span>
+              </div>
+            ) : null}
+
+            <div className="h-4 w-px bg-border mx-0.5" />
+
             <button
               type="button"
+              disabled={isScreenReadOnly}
               onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
               className={cn(
                 'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
                 activeScreen.orientation === 'landscape'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
+                isScreenReadOnly && 'opacity-60 cursor-not-allowed',
               )}
             >
               <Monitor className="h-3.5 w-3.5" />
@@ -1100,12 +1248,14 @@ export default function DisplaysRealmPage() {
             </button>
             <button
               type="button"
+              disabled={isScreenReadOnly}
               onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
               className={cn(
                 'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
                 activeScreen.orientation === 'portrait'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground',
+                isScreenReadOnly && 'opacity-60 cursor-not-allowed',
               )}
             >
               <Smartphone className="h-3.5 w-3.5" />
@@ -1126,7 +1276,7 @@ export default function DisplaysRealmPage() {
               config={activeScreen}
               feed={liveFeed}
               variant="preview"
-              className="h-full w-full overflow-y-auto"
+              className="h-full w-full"
             />
           </div>
         </main>

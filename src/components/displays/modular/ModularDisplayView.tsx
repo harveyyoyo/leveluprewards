@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   Cake,
   CalendarDays,
@@ -12,7 +12,10 @@ import {
   Heart,
   Lightbulb,
   Megaphone,
+  Pause,
+  Play,
   School,
+  Scroll,
   Sparkles,
   Star,
   Target,
@@ -46,6 +49,8 @@ export interface ModularDisplayViewProps {
   config: ModularScreenConfig;
   feed: DisplaysLiveFeed;
   variant?: ModularDisplayVariant;
+  autoScroll?: boolean;
+  onToggleAutoScroll?: () => void;
   className?: string;
   style?: CSSProperties;
 }
@@ -54,6 +59,8 @@ export function ModularDisplayView({
   config,
   feed,
   variant = 'fullscreen',
+  autoScroll: autoScrollProp,
+  onToggleAutoScroll,
   className,
   style,
 }: ModularDisplayViewProps) {
@@ -90,7 +97,7 @@ export function ModularDisplayView({
   const topStudents = useMemo(() => {
     return [...students]
       .sort((a, b) => (b.lifetimePoints ?? b.points ?? 0) - (a.lifetimePoints ?? a.points ?? 0))
-      .slice(0, 10);
+      .slice(0, 30);
   }, [students]);
 
   const topHouses = useMemo(() => {
@@ -120,6 +127,101 @@ export function ModularDisplayView({
   const compliment = SCHOOL_COMPLIMENTS[dayIndex(now, SCHOOL_COMPLIMENTS.length)];
   const focusSkill = FOCUS_SKILLS[dayIndex(now, FOCUS_SKILLS.length)];
   const quote = LEARNING_QUOTES[dayIndex(now, LEARNING_QUOTES.length)];
+
+  // Auto-scroll loop state & refs
+  const contentScrollRef = useRef<HTMLDivElement>(null);
+  const [autoScrollPaused, setAutoScrollPaused] = useState(false);
+  const userInteractingRef = useRef(false);
+  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const shouldAutoScroll =
+    autoScrollProp !== undefined
+      ? autoScrollProp
+      : (config.autoScroll ?? (config.id === 'hall-of-fame' || config.presetKey === 'hall-of-fame'));
+
+  const handleUserInteraction = () => {
+    userInteractingRef.current = true;
+    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = setTimeout(() => {
+      userInteractingRef.current = false;
+    }, 4500);
+  };
+
+  useEffect(() => {
+    if (!shouldAutoScroll || autoScrollPaused) return;
+
+    const el = contentScrollRef.current;
+    if (!el) return;
+
+    let cancelled = false;
+    let animationId = 0;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+
+    const startScrollLoop = () => {
+      const speed = 0.55;
+      let lastTime = 0;
+
+      const step = (time: number) => {
+        if (cancelled || !el) return;
+
+        if (userInteractingRef.current) {
+          animationId = requestAnimationFrame(step);
+          return;
+        }
+
+        if (!lastTime) lastTime = time;
+        const delta = Math.min(time - lastTime, 50);
+        lastTime = time;
+
+        const distance = (speed * delta) / 16;
+        el.scrollTop += distance;
+
+        const isBottom = Math.ceil(el.clientHeight + el.scrollTop) >= el.scrollHeight - 8;
+
+        if (isBottom) {
+          // Reached bottom: pause to read bottom stats, then smoothly glide back to top
+          timerId = setTimeout(() => {
+            if (cancelled || !el) return;
+            el.scrollTo({ top: 0, behavior: 'smooth' });
+
+            // Hold at top for 4.5s so viewers can see podium champions before scrolling again
+            timerId = setTimeout(() => {
+              if (cancelled) return;
+              lastTime = 0;
+              animationId = requestAnimationFrame(step);
+            }, 4500);
+          }, 3500);
+          return;
+        }
+
+        animationId = requestAnimationFrame(step);
+      };
+
+      // Initial pause at top before scrolling down
+      timerId = setTimeout(() => {
+        if (cancelled) return;
+        animationId = requestAnimationFrame(step);
+      }, 3500);
+    };
+
+    const checkReady = () => {
+      if (cancelled) return;
+      if (el.scrollHeight > el.clientHeight + 10) {
+        startScrollLoop();
+      } else {
+        timerId = setTimeout(checkReady, 1200);
+      }
+    };
+
+    checkReady();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animationId);
+      if (timerId) clearTimeout(timerId);
+      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
+    };
+  }, [shouldAutoScroll, autoScrollPaused, config]);
 
   // Podium slots
   const podiumTop3 = topStudents.slice(0, 3);
@@ -165,7 +267,7 @@ export function ModularDisplayView({
       style={style}
       className={cn(
         'relative flex w-full flex-col font-sans select-none overflow-hidden',
-        isPreview ? 'h-full' : 'min-h-screen',
+        isPreview ? 'h-full' : 'h-screen max-h-screen',
         isPortrait ? 'p-3 sm:p-5' : 'p-4 sm:p-6 lg:p-8',
         theme.pageClass,
         className,
@@ -191,8 +293,41 @@ export function ModularDisplayView({
           </div>
         </div>
 
-        {/* Integrated Weather & Clock Pill if enabled */}
+        {/* Integrated Controls & Weather/Clock Pill */}
         <div className="flex items-center gap-3">
+          {/* Auto-scroll toggle pill */}
+          {shouldAutoScroll && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onToggleAutoScroll) {
+                  onToggleAutoScroll();
+                } else {
+                  setAutoScrollPaused((p) => !p);
+                }
+              }}
+              className={cn(
+                'flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-black shadow-lg transition-all',
+                autoScrollPaused
+                  ? 'border-amber-400/50 bg-amber-950/70 text-amber-200'
+                  : 'border-emerald-400/50 bg-emerald-950/70 text-emerald-200',
+              )}
+              title={autoScrollPaused ? 'Click to resume auto-scroll' : 'Click to pause auto-scroll'}
+            >
+              {autoScrollPaused ? (
+                <>
+                  <Play className="h-3.5 w-3.5 fill-current" />
+                  <span>Scroll: Paused</span>
+                </>
+              ) : (
+                <>
+                  <Pause className="h-3.5 w-3.5 fill-current" />
+                  <span>Auto-Scroll: ON</span>
+                </>
+              )}
+            </button>
+          )}
+
           {enabledSet.has('weather') && (
             <div className={cn('flex items-center gap-2.5 rounded-2xl border-2 px-4 py-2.5 shadow-lg', theme.cardClass)}>
               <CloudSun className={cn('h-6 w-6', theme.accentClass)} />
@@ -219,36 +354,47 @@ export function ModularDisplayView({
         </div>
       </header>
 
-      {/* School-wide Goal Progress Bar (if enabled) */}
-      {enabledSet.has('schoolGoal') && activeGoal && (
-        <div className={cn('mb-5 rounded-3xl border-2 p-4 sm:p-5 shadow-xl', theme.cardClass)}>
-          <div className="flex items-center justify-between text-sm sm:text-base font-black mb-2">
-            <span className={cn('flex items-center gap-2', theme.textClass)}>
-              <Target className={cn('h-5 w-5', theme.accentClass)} />
-              School Milestone: {activeGoal.title || 'Community Goal'}
-            </span>
-            <span className={cn('text-base font-black', theme.accentClass)}>
-              {totalPoints.toLocaleString()} / {(activeGoal.targetPoints || 50000).toLocaleString()} pts
-            </span>
-          </div>
-          <div className="h-4 w-full rounded-full bg-black/40 border border-white/20 overflow-hidden shadow-inner">
-            <div
-              className={cn('h-full transition-all duration-1000', theme.meterFillClass)}
-              style={{
-                width: `${Math.min(100, Math.round((totalPoints / (activeGoal.targetPoints || 50000)) * 100))}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Grid of Modules */}
+      {/* Scrollable Content Container (With Auto-Scroll Loop & Touch/Wheel Support) */}
       <div
-        className={cn(
-          'grid gap-4 sm:gap-5 flex-1 min-h-0 overflow-hidden',
-          isPortrait ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
-        )}
+        ref={contentScrollRef}
+        tabIndex={0}
+        role="region"
+        aria-label="Display screen content"
+        onWheel={handleUserInteraction}
+        onTouchStart={handleUserInteraction}
+        onPointerDown={handleUserInteraction}
+        className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent space-y-5 focus:outline-none"
       >
+        {/* School-wide Goal Progress Bar (if enabled) */}
+        {enabledSet.has('schoolGoal') && activeGoal && (
+          <div className={cn('rounded-3xl border-2 p-4 sm:p-5 shadow-xl', theme.cardClass)}>
+            <div className="flex items-center justify-between text-sm sm:text-base font-black mb-2">
+              <span className={cn('flex items-center gap-2', theme.textClass)}>
+                <Target className={cn('h-5 w-5', theme.accentClass)} />
+                School Milestone: {activeGoal.title || 'Community Goal'}
+              </span>
+              <span className={cn('text-base font-black', theme.accentClass)}>
+                {totalPoints.toLocaleString()} / {(activeGoal.targetPoints || 50000).toLocaleString()} pts
+              </span>
+            </div>
+            <div className="h-4 w-full rounded-full bg-black/40 border border-white/20 overflow-hidden shadow-inner">
+              <div
+                className={cn('h-full transition-all duration-1000', theme.meterFillClass)}
+                style={{
+                  width: `${Math.min(100, Math.round((totalPoints / (activeGoal.targetPoints || 50000)) * 100))}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Main Grid of Modules */}
+        <div
+          className={cn(
+            'grid gap-4 sm:gap-5 pb-28 sm:pb-32',
+            isPortrait ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+          )}
+        >
         {/* Hall of Fame: Podium */}
         {enabledSet.has('podium') && (
           <ModuleCard title="Podium Leaders" icon={Crown} className="md:col-span-2 lg:col-span-2">
@@ -312,7 +458,7 @@ export function ModularDisplayView({
         {enabledSet.has('studentLeaders') && (
           <ModuleCard title="Top Students" icon={Trophy}>
             <div className="space-y-2">
-              {topStudents.slice(0, 5).map((student, idx) => (
+              {topStudents.slice(0, 15).map((student, idx) => (
                 <div
                   key={student.id}
                   className="flex items-center justify-between gap-3 rounded-2xl border border-current/15 bg-black/15 dark:bg-white/10 px-3.5 py-2.5 text-sm font-bold shadow-sm"
@@ -568,6 +714,7 @@ export function ModularDisplayView({
             </div>
           </ModuleCard>
         )}
+      </div>
       </div>
     </div>
   );

@@ -485,6 +485,7 @@ export interface ModularScreenConfig {
   customTitle?: string;
   customMessage?: string;
   isReadyMade?: boolean;
+  autoScroll?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -499,6 +500,7 @@ export const READY_MADE_PRESET_SCREENS: Record<string, ModularScreenConfig> = {
     theme: 'midnight',
     orientation: 'landscape',
     layout: 'mirror',
+    autoScroll: true,
     enabledModules: [
       'podium',
       'studentLeaders',
