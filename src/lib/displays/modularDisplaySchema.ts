@@ -10,6 +10,7 @@ import {
   Heart,
   Lightbulb,
   Megaphone,
+  Monitor,
   Sparkles,
   Star,
   Target,
@@ -585,3 +586,133 @@ export function buildDefaultScreenConfig(
     updatedAt: Date.now(),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/*                          PRESET METADATA & RECIPES                         */
+/* -------------------------------------------------------------------------- */
+
+export type PresetKey = 'hall-of-fame' | 'smart-screen' | 'bulletin-board';
+
+export interface DisplayPresetMeta {
+  key: PresetKey;
+  name: string;
+  tagline: string;
+  description: string;
+  accentColor: 'amber' | 'sky' | 'purple';
+  accentHex: string;
+  badgeLabel: string;
+  icon: LucideIcon;
+  defaultTheme: ModularThemeId;
+  defaultModulesCount: number;
+  highlightModules: string[];
+}
+
+export const DISPLAY_PRESET_CATALOG: readonly DisplayPresetMeta[] = [
+  {
+    key: 'hall-of-fame',
+    name: 'Hall of Fame',
+    tagline: 'Podium & Leaderboards',
+    description: 'Gold podium for top scholars, live student point rankings, class standings, house points, and school milestone.',
+    accentColor: 'amber',
+    accentHex: '#f59e0b',
+    badgeLabel: 'Recognition',
+    icon: Crown,
+    defaultTheme: 'midnight',
+    defaultModulesCount: 6,
+    highlightModules: ['Podium', 'Top Students', 'House Standings', 'School Goal'],
+  },
+  {
+    key: 'smart-screen',
+    name: 'Smart Screen',
+    tagline: 'Daily Routine & Info Hub',
+    description: 'Dynamic morning lobby dashboard with digital clock, local weather, daily schedule, focus skill, and birthday spotlight.',
+    accentColor: 'sky',
+    accentHex: '#0ea5e9',
+    badgeLabel: 'Daily Hub',
+    icon: Monitor,
+    defaultTheme: 'daylight',
+    defaultModulesCount: 9,
+    highlightModules: ['Clock & Date', 'Live Weather', 'Daily Schedule', 'Birthdays'],
+  },
+  {
+    key: 'bulletin-board',
+    name: 'Bulletin Board',
+    tagline: 'Community & Rewards',
+    description: 'Live celebration shoutouts ticker, active point-earning challenges (incentives), and arcade reward catalog showcase.',
+    accentColor: 'purple',
+    accentHex: '#a855f7',
+    badgeLabel: 'Rewards & Praise',
+    icon: Megaphone,
+    defaultTheme: 'studio',
+    defaultModulesCount: 5,
+    highlightModules: ['Celebration Posts', 'Point Incentives', 'Rewards Showcase'],
+  },
+];
+
+export interface CuratedMixRecipe {
+  id: string;
+  name: string;
+  subtitle: string;
+  description: string;
+  icon: LucideIcon;
+  theme: ModularThemeId;
+  modules: DisplayModuleKey[];
+  badge: string;
+}
+
+export const CURATED_MIX_RECIPES: readonly CuratedMixRecipe[] = [
+  {
+    id: 'mega-hub',
+    name: 'All-in-One Mega Hub',
+    subtitle: 'The Ultimate Hallway TV',
+    description: 'Blends the best of all 3: Podium, Clock & Weather, Top Students, Celebrations, and Reward Shop.',
+    icon: Sparkles,
+    theme: 'midnight',
+    badge: 'Popular Remix',
+    modules: [
+      'clockDate',
+      'weather',
+      'podium',
+      'studentLeaders',
+      'celebrationPosts',
+      'rewardsShowcase',
+      'schoolGoal',
+    ],
+  },
+  {
+    id: 'morning-routine',
+    name: 'Morning Arrival & Culture',
+    subtitle: 'Warm Welcoming Info Hub',
+    description: 'Starts the day strong with Clock, Weather, Schedule, Today’s Compliment, Focus Skill, and Birthdays.',
+    icon: Heart,
+    theme: 'daylight',
+    badge: 'Culture & Daily',
+    modules: [
+      'clockDate',
+      'weather',
+      'daySchedule',
+      'compliment',
+      'focusSkill',
+      'birthdays',
+      'quote',
+    ],
+  },
+  {
+    id: 'arcade-arena',
+    name: 'Arcade & Quests Arena',
+    subtitle: 'Gamified Motivation',
+    description: 'Puts point-earning front and center: Podium, House Standings, Active Challenges, and Prizes to chase.',
+    icon: Trophy,
+    theme: 'electric',
+    badge: 'Arcade Rewards',
+    modules: [
+      'podium',
+      'studentLeaders',
+      'houseStandings',
+      'incentiveTasks',
+      'rewardsShowcase',
+      'schoolGoal',
+    ],
+  },
+];
+

@@ -7,9 +7,13 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  CheckCircle2,
   Copy,
   Crown,
+  Heart,
+  Layers,
   LayoutGrid,
+  Megaphone,
   Monitor,
   MonitorPlay,
   Palette,
@@ -17,8 +21,11 @@ import {
   RotateCcw,
   Smartphone,
   Sliders,
+  Sparkles,
   Trash2,
+  Trophy,
   Tv,
+  Wand2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -37,20 +44,24 @@ import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { useToast } from '@/hooks/use-toast';
 import {
+  CURATED_MIX_RECIPES,
   DARK_THEMES,
   DISPLAY_MODULE_CATALOG,
+  DISPLAY_PRESET_CATALOG,
   LIGHT_THEMES,
   READY_MADE_PRESET_SCREENS,
   buildDefaultScreenConfig,
+  type CuratedMixRecipe,
   type DisplayModuleKey,
   type ModularScreenConfig,
   type ModularThemeId,
+  type PresetKey,
   type ScreenOrientation,
 } from '@/lib/displays/modularDisplaySchema';
 import { useDisplaysLiveFeed } from '@/hooks/useDisplaysLiveFeed';
 import { ModularDisplayView } from '@/components/displays/modular/ModularDisplayView';
 
-type WorkbenchTab = 'modules' | 'themes' | 'layout';
+type WorkbenchTab = 'presets' | 'modules' | 'themes' | 'layout';
 
 export default function DisplaysRealmPage() {
   const params = useParams();
@@ -63,13 +74,11 @@ export default function DisplaysRealmPage() {
 
   // Active screen state
   const [activeScreenId, setActiveScreenId] = useState<string>('hall-of-fame');
-  const [workbenchTab, setWorkbenchTab] = useState<WorkbenchTab>('modules');
+  const [workbenchTab, setWorkbenchTab] = useState<WorkbenchTab>('presets');
   const [themeToneTab, setThemeToneTab] = useState<'dark' | 'light'>('dark');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newScreenName, setNewScreenName] = useState('');
-  const [newScreenPreset, setNewScreenPreset] = useState<'hall-of-fame' | 'smart-screen' | 'bulletin-board'>(
-    'hall-of-fame',
-  );
+  const [newScreenPreset, setNewScreenPreset] = useState<PresetKey>('hall-of-fame');
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Resolved list of all available screens (3 ready-made + custom screens stored in settings)
@@ -100,6 +109,26 @@ export default function DisplaysRealmPage() {
     return allScreens.find((s) => s.id === activeScreenId) || allScreens[0];
   }, [allScreens, activeScreenId]);
 
+  // Separate ready-made presets from custom user screens for the top navigation bar
+  const readyMadeScreens = useMemo(() => {
+    return allScreens.filter(
+      (s) => s.isReadyMade || ['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(s.id),
+    );
+  }, [allScreens]);
+
+  const customScreens = useMemo(() => {
+    return allScreens.filter(
+      (s) => !s.isReadyMade && !['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(s.id),
+    );
+  }, [allScreens]);
+
+  // Check whether the active screen is a preset that has custom modifications
+  const isPresetModified = useMemo(() => {
+    const key = (activeScreen.presetKey || activeScreen.id) as PresetKey;
+    if (!['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(key)) return false;
+    return Boolean(settings.modularDisplayScreens?.[key]);
+  }, [activeScreen, settings.modularDisplayScreens]);
+
   // Update active screen configuration
   const handleUpdateActiveScreen = (updates: Partial<ModularScreenConfig>) => {
     const nextScreen: ModularScreenConfig = {
@@ -114,6 +143,40 @@ export default function DisplaysRealmPage() {
     };
 
     updateSettings({ modularDisplayScreens: nextSaved });
+  };
+
+  // Apply an entire preset layout, modules, and theme to the active screen
+  const handleApplyPresetToActive = (presetKey: PresetKey) => {
+    const preset = READY_MADE_PRESET_SCREENS[presetKey];
+    if (!preset) return;
+
+    handleUpdateActiveScreen({
+      theme: preset.theme,
+      layout: preset.layout,
+      enabledModules: [...preset.enabledModules],
+      heroModule: preset.heroModule,
+      customTitle: preset.customTitle,
+      customMessage: preset.customMessage,
+    });
+
+    toast({
+      title: 'Preset Applied',
+      description: `Loaded "${preset.name}" modules & styling into "${activeScreen.name}".`,
+    });
+  };
+
+  // Apply a curated recipe mix to the active screen
+  const handleApplyRecipe = (recipe: CuratedMixRecipe) => {
+    handleUpdateActiveScreen({
+      theme: recipe.theme,
+      enabledModules: [...recipe.modules],
+      heroModule: recipe.modules[0],
+    });
+
+    toast({
+      title: 'Mix Applied!',
+      description: `Loaded "${recipe.name}" with ${recipe.modules.length} modules into "${activeScreen.name}".`,
+    });
   };
 
   // Toggle a single module on or off
@@ -185,9 +248,10 @@ export default function DisplaysRealmPage() {
     const nextSaved = { ...(settings.modularDisplayScreens || {}) };
     delete nextSaved[presetKey];
     updateSettings({ modularDisplayScreens: nextSaved });
+    const targetName = READY_MADE_PRESET_SCREENS[presetKey]?.name || presetKey;
     toast({
       title: 'Preset Reset',
-      description: `Restored default configuration for "${activeScreen.name}".`,
+      description: `Restored default factory configuration for "${targetName}".`,
     });
   };
 
@@ -253,47 +317,76 @@ export default function DisplaysRealmPage() {
         </div>
 
         {/* Center: Screen Selector Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto py-1 px-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {allScreens.map((screen) => {
-            const isActive = screen.id === activeScreenId;
-            return (
-              <button
-                key={screen.id}
-                type="button"
-                onClick={() => setActiveScreenId(screen.id)}
-                className={cn(
-                  'flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all shadow-sm',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/40'
-                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50',
-                )}
-              >
-                <Tv className="h-4 w-4 shrink-0" />
-                <span className="whitespace-nowrap">{screen.name}</span>
-                {screen.isReadyMade && (
-                  <span
-                    className={cn(
-                      'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider',
-                      isActive ? 'bg-black/30 text-white' : 'bg-background text-muted-foreground border border-border/60',
-                    )}
-                  >
-                    Preset
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        {/* Center: Screen Selector Tabs (Presets Segment + Custom Screens) */}
+        <div className="flex items-center gap-2.5 overflow-x-auto py-1 px-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {/* Segment 1: Ready-Made Presets */}
+          <div className="flex items-center gap-1.5 rounded-2xl bg-muted/60 p-1 border border-border/80 shadow-inner">
+            <span className="hidden xl:flex items-center gap-1 px-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+              <Layers className="h-3 w-3" />
+              Presets
+            </span>
+            {DISPLAY_PRESET_CATALOG.map((preset) => {
+              const isActive = activeScreenId === preset.key;
+              const Icon = preset.icon;
+              return (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => setActiveScreenId(preset.key)}
+                  className={cn(
+                    'flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-black transition-all',
+                    isActive
+                      ? preset.accentColor === 'amber'
+                        ? 'bg-amber-500 text-amber-950 shadow-md ring-2 ring-amber-400/50'
+                        : preset.accentColor === 'sky'
+                        ? 'bg-sky-500 text-sky-950 shadow-md ring-2 ring-sky-400/50'
+                        : 'bg-purple-600 text-white shadow-md ring-2 ring-purple-400/50'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/80',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">{preset.name}</span>
+                </button>
+              );
+            })}
+          </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="h-9 shrink-0 gap-1.5 rounded-xl border-dashed border-primary/50 bg-primary/5 px-3 text-xs sm:text-sm font-bold text-primary hover:bg-primary/10 shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            <span>New Screen</span>
-          </Button>
+          {/* Subtle separator */}
+          <div className="h-6 w-px bg-border/80 shrink-0" />
+
+          {/* Segment 2: Custom Screens & New Screen Button */}
+          <div className="flex items-center gap-2">
+            {customScreens.map((screen) => {
+              const isActive = screen.id === activeScreenId;
+              return (
+                <button
+                  key={screen.id}
+                  type="button"
+                  onClick={() => setActiveScreenId(screen.id)}
+                  className={cn(
+                    'flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all shadow-sm',
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/40'
+                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50',
+                  )}
+                >
+                  <Tv className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">{screen.name}</span>
+                </button>
+              );
+            })}
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="h-9 shrink-0 gap-1.5 rounded-xl border-dashed border-primary/50 bg-primary/5 px-3 text-xs sm:text-sm font-bold text-primary hover:bg-primary/10 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span>New Screen</span>
+            </Button>
+          </div>
         </div>
 
         {/* Right: Quick Actions */}
@@ -331,51 +424,305 @@ export default function DisplaysRealmPage() {
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT STUDIO DRAWER */}
         <aside className="flex w-[380px] sm:w-[440px] shrink-0 flex-col border-r border-border/80 bg-card/50 backdrop-blur-sm overflow-hidden">
-          {/* Drawer Navigation Tabs */}
-          <div className="flex border-b border-border/80 bg-muted/30 p-2.5 gap-2 shrink-0">
+          {/* Drawer Navigation Tabs: Presets, Modules, Themes, Settings */}
+          <div className="grid grid-cols-4 border-b border-border/80 bg-muted/30 p-2 gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => setWorkbenchTab('presets')}
+              className={cn(
+                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
+                workbenchTab === 'presets'
+                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+              <span>Presets</span>
+            </button>
             <button
               type="button"
               onClick={() => setWorkbenchTab('modules')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
+                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
                 workbenchTab === 'modules'
                   ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <LayoutGrid className="h-4 w-4" />
-              Modules ({activeScreen.enabledModules?.length || 0})
+              <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
+              <span>Modules</span>
+              <span className="rounded-full bg-primary/15 px-1 py-0.2 text-[9px] font-black text-primary">
+                {activeScreen.enabledModules?.length || 0}
+              </span>
             </button>
             <button
               type="button"
               onClick={() => setWorkbenchTab('themes')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
+                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
                 workbenchTab === 'themes'
                   ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Palette className="h-4 w-4" />
-              Themes
+              <Palette className="h-3.5 w-3.5 shrink-0" />
+              <span>Themes</span>
             </button>
             <button
               type="button"
               onClick={() => setWorkbenchTab('layout')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
+                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
                 workbenchTab === 'layout'
                   ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Sliders className="h-4 w-4" />
-              Settings
+              <Sliders className="h-3.5 w-3.5 shrink-0" />
+              <span>Settings</span>
             </button>
           </div>
 
           {/* Drawer Tab Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* TAB 0: PRESETS SHOWCASE & MIXER */}
+            {workbenchTab === 'presets' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-base font-black tracking-tight flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-primary" />
+                    Ready-Made Screen Presets
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                    3 engineered display layouts. Open a preset directly, or apply its layout and modules to your active screen.
+                  </p>
+                </div>
+
+                {/* Active Screen Banner / Identity */}
+                <div className="rounded-2xl border-2 border-border/80 bg-muted/40 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      Active Screen
+                    </span>
+                    {activeScreen.isReadyMade ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">
+                        ✓ Preset Screen
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5 text-[10px] font-black text-primary uppercase">
+                        Custom Screen
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-black text-foreground truncate">{activeScreen.name}</p>
+                    <span className="text-xs font-semibold text-muted-foreground shrink-0">
+                      {activeScreen.enabledModules?.length || 0} modules active
+                    </span>
+                  </div>
+                  {isPresetModified && (
+                    <div className="flex items-center justify-between pt-2 border-t border-border/60">
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-bold">
+                        Modified from default
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleResetPreset(activeScreen.id)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground underline underline-offset-2"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset to default
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* The 3 Ready-Made Preset Cards */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      Available Presets (3)
+                    </h4>
+                  </div>
+
+                  {DISPLAY_PRESET_CATALOG.map((preset) => {
+                    const Icon = preset.icon;
+                    const isViewing = activeScreen.id === preset.key;
+                    const isModified = Boolean(settings.modularDisplayScreens?.[preset.key]);
+
+                    return (
+                      <div
+                        key={preset.key}
+                        className={cn(
+                          'rounded-2xl border-2 p-4 transition-all shadow-sm space-y-3',
+                          preset.accentColor === 'amber'
+                            ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60'
+                            : preset.accentColor === 'sky'
+                            ? 'border-sky-500/30 bg-sky-500/5 hover:border-sky-500/60'
+                            : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/60',
+                          isViewing && 'ring-2 ring-primary/40 shadow-md',
+                        )}
+                      >
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md',
+                                preset.accentColor === 'amber'
+                                  ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
+                                  : preset.accentColor === 'sky'
+                                  ? 'bg-sky-500 text-sky-950 shadow-sky-500/20'
+                                  : 'bg-purple-600 text-white shadow-purple-600/20',
+                              )}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="text-sm font-black leading-tight text-foreground truncate">
+                                  {preset.name}
+                                </h4>
+                                {isViewing && (
+                                  <span className="rounded-md bg-primary px-1.5 py-0.2 text-[10px] font-black text-primary-foreground uppercase">
+                                    Current
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs font-bold text-muted-foreground truncate">
+                                {preset.tagline}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span className="shrink-0 rounded-full border border-border/80 bg-background/80 px-2 py-0.5 text-[10px] font-black text-foreground">
+                            {preset.defaultModulesCount} Modules
+                          </span>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {preset.description}
+                        </p>
+
+                        {/* Module chips preview */}
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {preset.highlightModules.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-lg border border-border/70 bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground/90 shadow-2xs"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                          <span className="rounded-lg bg-muted/60 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
+                            +{preset.defaultModulesCount - preset.highlightModules.length} more
+                          </span>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                          {isViewing ? (
+                            <div className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black text-primary">
+                              <CheckCircle2 className="h-4 w-4" />
+                              Currently Active
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="default"
+                              size="sm"
+                              onClick={() => setActiveScreenId(preset.key)}
+                              className="flex-1 h-8 rounded-xl text-xs font-black"
+                            >
+                              Open Screen
+                            </Button>
+                          )}
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApplyPresetToActive(preset.key)}
+                            className="flex-1 h-8 rounded-xl text-xs font-bold shadow-2xs"
+                            title={`Copy ${preset.name} modules & layout into ${activeScreen.name}`}
+                          >
+                            <Wand2 className="h-3.5 w-3.5 mr-1 text-primary" />
+                            Apply Layout
+                          </Button>
+
+                          {isModified && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleResetPreset(preset.key)}
+                              className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              title="Reset to factory original"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Instant Curated Remix Recipes */}
+                <div className="space-y-3.5 pt-2">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      Instant Preset Mixes
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                      Need parts from multiple templates? 1-click recipes that combine them for "{activeScreen.name}".
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {CURATED_MIX_RECIPES.map((recipe) => {
+                      const Icon = recipe.icon;
+                      return (
+                        <div
+                          key={recipe.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-2xs hover:border-primary/40 transition-all"
+                        >
+                          <div className="flex items-start gap-2.5 min-w-0">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-xs font-black text-foreground truncate">{recipe.name}</p>
+                                <span className="rounded-md bg-muted px-1.5 py-0.2 text-[9px] font-black uppercase text-muted-foreground">
+                                  {recipe.badge}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1 mt-0.5">
+                                {recipe.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleApplyRecipe(recipe)}
+                            className="h-7 shrink-0 rounded-lg px-2.5 text-xs font-bold"
+                          >
+                            Apply
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* TAB 1: MODULES MIXER */}
             {workbenchTab === 'modules' && (
               <div className="space-y-6">
@@ -667,30 +1014,66 @@ export default function DisplaysRealmPage() {
                   </div>
                 </div>
 
-                {/* Screen Management Actions */}
-                <div className="pt-4 border-t border-border/80 space-y-2">
+                {/* Preset & Template Connection Card */}
+                <div className="rounded-2xl border-2 border-border/80 bg-muted/40 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                      Preset Template
+                    </span>
+                    {activeScreen.isReadyMade ? (
+                      <span className="rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase">
+                        Official Preset
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-primary/15 border border-primary/30 px-2.5 py-0.5 text-[10px] font-black text-primary uppercase">
+                        Custom Screen
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {activeScreen.isReadyMade
+                      ? isPresetModified
+                        ? `This preset has custom overrides saved. You can revert it to the original defaults at any time.`
+                        : `This preset is running on standard factory defaults.`
+                      : `Created from "${activeScreen.presetKey || 'hall-of-fame'}" starter template.`}
+                  </p>
+
                   {activeScreen.isReadyMade ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() => handleResetPreset(activeScreen.id)}
-                      className="w-full gap-2 rounded-xl text-xs font-semibold text-muted-foreground"
+                      disabled={!isPresetModified}
+                      className="w-full gap-2 rounded-xl text-xs font-bold shadow-2xs"
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Reset to Default Preset
+                      <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
+                      {isPresetModified ? 'Reset to Default Preset' : 'Already at Factory Default'}
                     </Button>
                   ) : (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteScreen(activeScreen.id, activeScreen.name)}
-                      className="w-full gap-2 rounded-xl text-xs font-bold"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete This Screen
-                    </Button>
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleApplyPresetToActive(activeScreen.presetKey || 'hall-of-fame')}
+                        className="w-full gap-2 rounded-xl text-xs font-bold shadow-2xs"
+                      >
+                        <Wand2 className="h-3.5 w-3.5 text-primary" />
+                        Re-apply Starter Layout
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteScreen(activeScreen.id, activeScreen.name)}
+                        className="w-full gap-2 rounded-xl text-xs font-bold"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete This Screen
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -774,30 +1157,60 @@ export default function DisplaysRealmPage() {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold">Starter Preset</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: 'hall-of-fame' as const, name: 'Hall of Fame', icon: Crown },
-                  { id: 'smart-screen' as const, name: 'Smart Screen', icon: Monitor },
-                  { id: 'bulletin-board' as const, name: 'Bulletin Board', icon: Tv },
-                ].map((preset) => {
-                  const isSelected = newScreenPreset === preset.id;
+            <div className="space-y-2">
+              <label className="text-xs font-bold">Starter Preset Template</label>
+              <div className="grid grid-cols-1 gap-2.5">
+                {DISPLAY_PRESET_CATALOG.map((preset) => {
+                  const isSelected = newScreenPreset === preset.key;
                   const Icon = preset.icon;
                   return (
                     <button
-                      key={preset.id}
+                      key={preset.key}
                       type="button"
-                      onClick={() => setNewScreenPreset(preset.id)}
+                      onClick={() => setNewScreenPreset(preset.key)}
                       className={cn(
-                        'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-center transition-all',
+                        'flex items-center justify-between gap-3 rounded-2xl border-2 p-3 text-left transition-all',
                         isSelected
-                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
-                          : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-md'
+                          : 'border-border/80 bg-background/60 hover:border-primary/40 hover:bg-muted/30',
                       )}
                     >
-                      <Icon className="h-5 w-5" />
-                      <span className="text-xs font-bold leading-tight">{preset.name}</span>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                            preset.accentColor === 'amber'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              : preset.accentColor === 'sky'
+                              ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400'
+                              : 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-foreground">{preset.name}</span>
+                            <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded-md bg-muted text-muted-foreground">
+                              {preset.defaultModulesCount} modules
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-tight line-clamp-1 mt-0.5">
+                            {preset.description}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div
+                        className={cn(
+                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all',
+                          isSelected
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-muted-foreground/30',
+                        )}
+                      >
+                        {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
+                      </div>
                     </button>
                   );
                 })}

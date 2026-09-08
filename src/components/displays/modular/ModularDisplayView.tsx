@@ -252,7 +252,7 @@ export function ModularDisplayView({
         {/* Hall of Fame: Podium */}
         {enabledSet.has('podium') && (
           <ModuleCard title="Podium Leaders" icon={Crown} className="md:col-span-2 lg:col-span-2">
-            <div className="flex h-full items-end justify-center gap-3 sm:gap-6 pt-4 pb-2">
+            <div className="flex h-full items-end justify-center gap-3 sm:gap-6 pt-7 pb-2">
               {/* 2nd Place */}
               <div className="flex flex-col items-center flex-1 max-w-[140px]">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-slate-100 bg-slate-200 text-slate-900 font-black text-base mb-1.5 shadow-lg">
