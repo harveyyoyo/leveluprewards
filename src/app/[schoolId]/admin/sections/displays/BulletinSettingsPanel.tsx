@@ -12,8 +12,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { buildBulletinDisplayHref } from '@/lib/displays/displayRoutes';
 import { DEFAULT_BULLETIN_SUBTITLE, PRESET_BULLETIN_THEMES } from '@/lib/bulletinBoard';
-import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
-import type { Coupon } from '@/lib/types';
+import { incentiveCategoriesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import type { Category } from '@/lib/types';
 
 type BulletinSettingsPanelProps = {
   schoolId: string;
@@ -40,13 +40,13 @@ export function BulletinSettingsPanel({
   const incentivesQuery = useMemoFirebase(
     () =>
       schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'coupons'), where('kind', '==', 'incentive'))
+        ? query(collection(firestore, 'schools', schoolId, 'categories'), where('showAsIncentive', '==', true))
         : null,
     [firestore, schoolId],
   );
-  const { data: incentives } = useCollection<Coupon>(incentivesQuery);
+  const { data: incentives } = useCollection<Category>(incentivesQuery);
   const activeIncentives = useMemo(
-    () => incentivesForSurface(incentives, 'bulletinBoard'),
+    () => incentiveCategoriesForSurface(incentives, 'bulletinBoard'),
     [incentives],
   );
   const showIncentivesOnBoard = incentivesVisibleOnSurface(settings, 'bulletinBoard');

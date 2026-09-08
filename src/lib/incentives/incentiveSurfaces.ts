@@ -1,14 +1,43 @@
 import type { Settings } from '@/components/providers/SettingsProvider';
 
-import type { Coupon } from '@/lib/types';
+import type { Category } from '@/lib/types';
+import { categoryCurrencyIcon } from '@/lib/currency/resolveCategoryCurrency';
 
-export type IncentiveListItem = Pick<
-  Coupon,
-  'id' | 'title' | 'description' | 'value' | 'icon' | 'displaySurfaces' | 'createdAt'
-> & {
+export type IncentiveListItem = {
+  id: string;
+  title?: string;
+  description?: string;
+  value?: number;
+  icon?: string;
+  currencyIcon?: string;
+  displaySurfaces?: Category['displaySurfaces'];
+  createdAt?: number;
+  showAsIncentive?: boolean;
   /** @deprecated Use `displaySurfaces` for per-display assignment. */
   active?: boolean;
 };
+
+export function couponIncentivesEnabled(settings: Pick<Settings, 'enableIncentives'> | null | undefined): boolean {
+  return settings?.enableIncentives !== false;
+}
+
+export const DEFAULT_INCENTIVE_DISPLAY_SURFACES: NonNullable<Category['displaySurfaces']> = {
+  bulletinBoard: true,
+  smartScreen: true,
+};
+
+export function categoryToIncentiveItem(category: Category): IncentiveListItem {
+  return {
+    id: category.id,
+    title: category.name,
+    description: category.description,
+    value: Number(category.points ?? 0),
+    icon: category.icon,
+    currencyIcon: categoryCurrencyIcon(category.currencyOverride, category.icon || '⭐'),
+    displaySurfaces: category.displaySurfaces,
+    showAsIncentive: category.showAsIncentive,
+  };
+}
 
 export const INCENTIVE_SURFACE_KEYS = [
   'bulletinBoard',
@@ -100,7 +129,18 @@ export function incentivesForSurface(
   if (!incentives?.length) return [];
   return [...incentives]
     .filter((item) => incentiveAssignedToSurface(item, surface))
-    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0) || (a.title || '').localeCompare(b.title || ''));
+}
+
+export function incentiveCategoriesForSurface(
+  categories: Category[] | null | undefined,
+  surface: IncentiveSurfaceKey,
+): IncentiveListItem[] {
+  if (!categories?.length) return [];
+  return incentivesForSurface(
+    categories.filter((category) => category.showAsIncentive === true).map(categoryToIncentiveItem),
+    surface,
+  );
 }
 
 /** @deprecated Use `incentivesForSurface(incentives, surface)` instead. */

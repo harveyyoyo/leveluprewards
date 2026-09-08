@@ -69,8 +69,6 @@ export type StaffPointsTabProps = {
   /** Admin: coupon inventory management panel. */
 
   couponManagementContent?: React.ReactNode;
-  /** Admin/teacher: point-earning incentive cards panel (create/manage + where to show). */
-  incentivesContent?: React.ReactNode;
   /** Admin: currency and design panel. */
   currencyContent?: React.ReactNode;
 
@@ -122,8 +120,6 @@ export function StaffPointsTab({
 
   couponManagementContent,
 
-  incentivesContent,
-
   currencyContent,
 
 }: StaffPointsTabProps) {
@@ -149,7 +145,6 @@ export function StaffPointsTab({
         'print',
         'manual',
         ...(couponManagementContent ? (['manage'] as const) : []),
-        ...(incentivesContent ? (['incentives'] as const) : []),
         ...(currencyContent ? (['currency'] as const) : []),
       ];
 
@@ -298,7 +293,6 @@ export function StaffPointsTab({
       }
 
       manageContent={couponManagementContent}
-      incentivesContent={incentivesContent}
       currencyContent={currencyContent}
     />
 

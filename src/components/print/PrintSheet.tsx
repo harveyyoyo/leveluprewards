@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Coupon } from '@/lib/types';
+import { resolveCategoryCurrency } from '@/lib/currency/resolveCategoryCurrency';
 import { Coupon as CouponComponent, type PreviewCurrency } from '@/components/coupons/Coupon';
 import {
   chunkCouponsForPrint,
@@ -62,7 +63,12 @@ export function PrintSheet({
                 cornerStyle === 'rounded' && 'print-coupon-wrapper--rounded',
               )}
             >
-              <CouponComponent coupon={c} schoolId={schoolId} cornerStyle={cornerStyle} previewCurrency={currency} />
+              <CouponComponent
+                coupon={c}
+                schoolId={schoolId}
+                cornerStyle={cornerStyle}
+                previewCurrency={currency ? resolveCategoryCurrency(currency, c.currencyOverride) : undefined}
+              />
             </div>
           ))}
         </div>

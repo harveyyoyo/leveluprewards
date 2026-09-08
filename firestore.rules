@@ -316,8 +316,9 @@ service cloud.firestore {
       }
       
       match /categories/{categoryId} {
-        // Categories are used by teachers in the UI.
-        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
+        // Categories are used by teachers in the UI. Kiosk/portal also read
+        // incentive-flagged categories as "ways to earn" display cards.
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId) || hasKioskSession(schoolId);
         allow create: if isAdmin(schoolId) || isDeveloper()
           || isTeacherOwnedCreate(schoolId);
         allow update: if isAdmin(schoolId) || isDeveloper()
@@ -400,10 +401,9 @@ service cloud.firestore {
       }
 
       match /coupons/{couponId} {
-        // Incentive-kind entries are a display-only "ways to earn points" catalog (bulletin
-        // board / Smart Screen / kiosk / student portal) and are intentionally readable broadly,
-        // same stance as the legacy bulletinBoardIncentives collection they replace. Redeemable
-        // coupons (kind omitted or 'redeemable') keep the original staff-only read.
+        // Printed / scannable coupons (no `kind`, or kind != 'incentive') stay staff-only.
+        // Leftover display-only `kind == 'incentive'` docs may still exist until they are
+        // folded into categories; they are not printed tickets and are never redeemed.
         allow read: if (resource.data.kind == 'incentive' && isAuth())
           || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isReports(schoolId) || isDeveloper();
         allow create, update: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isDeveloper();

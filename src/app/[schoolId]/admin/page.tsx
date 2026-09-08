@@ -13,7 +13,7 @@ import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+import { migrateIncentivesToCategoriesClient } from '@/lib/incentives/migrateIncentivesToCategories';
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard,
    Settings, History, Award, CheckCircle, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
@@ -424,17 +424,16 @@ function AdminDashboardInner() {
   const incentivesMigrationRef = useRef(false);
   useEffect(() => {
     if (incentivesMigrationRef.current) return;
-    if (!schoolId || !schoolData) return;
-    if (schoolData.hasMigratedIncentivesToCoupons) {
+    if (!schoolId || !schoolData || !firestore) return;
+    if (schoolData.hasMigratedIncentivesToCategories) {
       incentivesMigrationRef.current = true;
       return;
     }
     incentivesMigrationRef.current = true;
-    const migrate = httpsCallable(functions, 'migrateIncentivesToCoupons');
-    void migrate({ schoolId }).catch((err) => {
-      console.error('migrateIncentivesToCoupons failed:', err);
+    void migrateIncentivesToCategoriesClient(firestore, schoolId).catch((err) => {
+      console.error('migrateIncentivesToCategories failed:', err);
     });
-  }, [schoolId, schoolData, functions]);
+  }, [schoolId, schoolData, firestore]);
 
   // School logo state + upload/crop/remove pipeline (see hook for details).
   const {

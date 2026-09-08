@@ -44,8 +44,8 @@ import {
   validSmartScreenLayout,
 } from '@/lib/smartScreen/smartScreenSettings';
 import type { SmartScreenLocationInfo } from '@/hooks/useSmartScreenDisplayData';
-import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
-import type { Class, Coupon, House, Prize, Student } from '@/lib/types';
+import { incentiveCategoriesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import type { Category, Class, House, Prize, Student } from '@/lib/types';
 import { formatTodayHebrewDate, getUpcomingJewishHolidays } from '@/lib/hebrewCalendar';
 
 export type SmartScreenDisplayVariant = 'fullscreen' | 'preview';
@@ -66,7 +66,7 @@ export type SmartScreenDisplayProps = {
   classes?: Class[] | null;
   houses?: House[] | null;
   prizes?: Prize[] | null;
-  bulletinItems?: Coupon[] | null;
+  bulletinItems?: Category[] | null;
   isJewishOrthodox?: boolean;
   loading?: boolean;
   loadingLabel?: string;
@@ -183,7 +183,7 @@ export function SmartScreenDisplay({
   }, [prizes]);
 
   const activeBulletin = useMemo(
-    () => incentivesForSurface(bulletinItems, 'smartScreen').slice(0, 4),
+    () => incentiveCategoriesForSurface(bulletinItems, 'smartScreen').slice(0, 4),
     [bulletinItems],
   );
 
@@ -514,7 +514,7 @@ export function SmartScreenDisplay({
           {activeBulletin.length === 0 ? (
             <p className={cn('text-xs font-semibold', theme.quiet)}>
               {showBulletinModule
-                ? 'Add incentives in Admin → Coupons → Incentives, or turn on Where to show → Smart Screen.'
+                ? 'Turn on “Show as a way to earn” when editing a category, and assign it to Smart Screen.'
                 : 'Turn on the Bulletin module in Displays → Smart Screen.'}
             </p>
           ) : null}

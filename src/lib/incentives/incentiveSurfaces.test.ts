@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import type { Category } from '@/lib/types';
 import {
   activeIncentivesList,
   incentiveAssignedToSurface,
+  incentiveCategoriesForSurface,
   incentivesForSurface,
   incentivesVisibleOnSurface,
   type IncentiveListItem,
@@ -84,6 +86,35 @@ describe('incentivesForSurface', () => {
       { id: 'c', title: 'New', description: '', value: 1, displaySurfaces: { bulletinBoard: true }, createdAt: 50 },
     ];
     expect(incentivesForSurface(rows, 'bulletinBoard').map((r) => r.id)).toEqual(['c', 'a']);
+  });
+});
+
+describe('incentiveCategoriesForSurface', () => {
+  it('only includes categories flagged as incentives and assigned to that surface', () => {
+    const categories: Category[] = [
+      {
+        id: 'a',
+        name: 'Homework Hero',
+        points: 50,
+        showAsIncentive: true,
+        displaySurfaces: { bulletinBoard: true },
+      },
+      {
+        id: 'b',
+        name: 'Academics',
+        points: 10,
+        displaySurfaces: { bulletinBoard: true },
+      },
+      {
+        id: 'c',
+        name: 'Kiosk only',
+        points: 5,
+        showAsIncentive: true,
+        displaySurfaces: { studentKiosk: true },
+      },
+    ];
+    expect(incentiveCategoriesForSurface(categories, 'bulletinBoard').map((r) => r.id)).toEqual(['a']);
+    expect(incentiveCategoriesForSurface(categories, 'studentKiosk').map((r) => r.title)).toEqual(['Kiosk only']);
   });
 });
 

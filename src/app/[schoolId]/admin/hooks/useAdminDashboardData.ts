@@ -25,6 +25,7 @@ export interface SchoolDocData {
   logoUrl?: string;
   logoHistory?: { url?: string; uploadedAt?: number }[];
   hasMigratedIncentivesToCoupons?: boolean;
+  hasMigratedIncentivesToCategories?: boolean;
 }
 
 export interface AppConfigGlobalData {

@@ -134,6 +134,22 @@ export interface Category {
   isGoldenTicket?: boolean;
   /** Optional preset levels (e.g. behavior tiers); shown as quick picks in the teacher portal. */
   rubricLevels?: CategoryRubricLevel[];
+  /** How students earn this category’s points (shown on hallway / kiosk / portal cards). */
+  description?: string;
+  /** When true, this category can appear as a “ways to earn” card on chosen displays. */
+  showAsIncentive?: boolean;
+  /** Which surfaces show this category when `showAsIncentive` is true. */
+  displaySurfaces?: {
+    bulletinBoard?: boolean;
+    smartScreen?: boolean;
+    studentKiosk?: boolean;
+    studentPortal?: boolean;
+  };
+  /**
+   * When set, printed coupons and display cards for this category use this look
+   * instead of the school-wide Currency & Design settings.
+   */
+  currencyOverride?: CategoryCurrencyOverride | null;
 }
 
 export interface BonusSpinType {
@@ -303,14 +319,17 @@ export interface Coupon {
   redemptionPrintNote?: string;
   /** When true, coupon can be redeemed repeatedly (demo sample coupon from kiosk settings). */
   reusableSample?: boolean;
-  /** Entry kind. Omitted/`redeemable` = today's scannable, code-based coupon. `incentive` = a
-   * display-only "ways to earn points" catalog card with no code and no redemption transaction. */
+  /** Snapshot of the category design at print time. Omitted on older printed coupons. */
+  currencyOverride?: CategoryCurrencyOverride | null;
+  /**
+   * Omitted or `redeemable` = a real printed/scannable coupon (the default, including every
+   * coupon printed before this field existed). `incentive` is leftover display-only catalog
+   * data from an earlier merge; those docs are not printed tickets and are never redeemed.
+   */
   kind?: 'redeemable' | 'incentive';
-  /** Headline for incentive-kind display cards (distinct from `category`). */
+  /** Leftover display-only fields. Ignored for printed redeemable coupons. */
   title?: string;
-  /** Emoji/icon for incentive-kind display cards. */
   icon?: string;
-  /** Which surfaces show this incentive-kind entry. Ignored for redeemable coupons. */
   displaySurfaces?: {
     bulletinBoard?: boolean;
     smartScreen?: boolean;
@@ -581,6 +600,11 @@ export interface BackupInfo {
   totalDocs?: number;
 }
 
+/** Per-category (or per-printed-coupon) currency/design override. */
+export type CategoryCurrencyOverride = Partial<CurrencySettings> & {
+  mode: CurrencySettings['mode'];
+};
+
 export interface CurrencySettings {
   mode: 'points' | 'money';
   pointsDesign?: string;
@@ -632,6 +656,7 @@ export interface Database {
   hasMigratedCoupons?: boolean;
   hasMigratedCategories?: boolean;
   hasMigratedIncentivesToCoupons?: boolean;
+  hasMigratedIncentivesToCategories?: boolean;
 }
 
 export type GoalType = 'personal' | 'prize_savings' | 'class';

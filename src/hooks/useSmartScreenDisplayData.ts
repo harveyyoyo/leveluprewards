@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { collection, query, limit, where } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import type { Class, Coupon, House, Prize, Student } from '@/lib/types';
+import type { Category, Class, House, Prize, Student } from '@/lib/types';
 
 export type SmartScreenLocationInfo = {
   ok: boolean;
@@ -51,14 +51,14 @@ export function useSmartScreenDisplayData(schoolId: string | null | undefined, c
     () =>
       schoolId
         ? query(
-            collection(firestore, 'schools', schoolId, 'coupons'),
-            where('kind', '==', 'incentive'),
+            collection(firestore, 'schools', schoolId, 'categories'),
+            where('showAsIncentive', '==', true),
             limit(40),
           )
         : null,
     [firestore, schoolId],
   );
-  const { data: bulletinItems } = useCollection<Coupon>(bulletinQuery);
+  const { data: bulletinItems } = useCollection<Category>(bulletinQuery);
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 1000);

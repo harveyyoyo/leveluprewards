@@ -115,7 +115,6 @@ import {
   teacherPortalTabContentClassName,
 } from '@/components/staff/teacherPortalLayout';
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
-import { CouponIncentivesPanel, couponIncentivesEnabled } from '@/components/points/CouponIncentivesPanel';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 import { formatStudentPointTypes } from '@/lib/students/studentPointTypes';
 import { prizeIsListed } from '@/lib/prizes/prizeUtils';
@@ -2179,15 +2178,6 @@ function TeacherPrinterInnerBody({
                                                   },
                                               }
                                             : undefined
-                                    }
-                                    incentivesContent={
-                                        !secretaryMode && couponIncentivesEnabled(settings) ? (
-                                            <CouponIncentivesPanel
-                                                schoolId={schoolId!}
-                                                settings={settings}
-                                                updateSettings={updateSettings}
-                                            />
-                                        ) : undefined
                                     }
                                 />
                             </TeacherPortalTabPane>

@@ -7,9 +7,9 @@ import { Loader2, Sparkles, Tag } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Coupon } from '@/lib/types';
+import type { Category } from '@/lib/types';
 import {
-  incentivesForSurface,
+  incentiveCategoriesForSurface,
   incentivesVisibleOnSurface,
   type IncentiveSurfaceKey,
 } from '@/lib/incentives/incentiveSurfaces';
@@ -39,13 +39,16 @@ export function StudentIncentivesCard({
   const incentivesQuery = useMemoFirebase(
     () =>
       enabled && schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'coupons'), where('kind', '==', 'incentive'))
+        ? query(collection(firestore, 'schools', schoolId, 'categories'), where('showAsIncentive', '==', true))
         : null,
     [enabled, firestore, schoolId],
   );
-  const { data: incentives, isLoading } = useCollection<Coupon>(incentivesQuery);
+  const { data: incentives, isLoading } = useCollection<Category>(incentivesQuery);
 
-  const activeIncentives = useMemo(() => incentivesForSurface(incentives, surface), [incentives, surface]);
+  const activeIncentives = useMemo(
+    () => incentiveCategoriesForSurface(incentives, surface),
+    [incentives, surface],
+  );
   const visibleIncentives = useMemo(
     () => activeIncentives.slice(0, maxItems),
     [activeIncentives, maxItems],
@@ -129,7 +132,7 @@ export function StudentIncentivesCard({
                   </div>
                 </div>
                 <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-black text-emerald-700 dark:text-emerald-300">
-                  +{Number(item.value ?? 0)}
+                  +{Number(item.value ?? 0)} {item.currencyIcon || ''}
                 </span>
               </motion.li>
             ))}

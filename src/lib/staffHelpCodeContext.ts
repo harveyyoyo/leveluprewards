@@ -117,7 +117,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['incentive', 'incentives', 'opportunities', 'earn points'],
     paths: [
-      'src/components/points/CouponIncentivesPanel.tsx',
+      'src/components/admin/CategoryModal.tsx',
       'src/lib/incentives/incentiveSurfaces.ts',
     ],
   },

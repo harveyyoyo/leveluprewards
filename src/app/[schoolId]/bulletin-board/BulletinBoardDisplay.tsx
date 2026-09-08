@@ -14,8 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { cn } from '@/lib/utils';
 import { globalAnimatedBackdropActive } from '@/lib/animatedBackdrop';
 import { DEFAULT_BULLETIN_SUBTITLE, bulletinLogoBoxClass, getBulletinBoardCardClassName } from '@/lib/bulletinBoard';
-import { incentivesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
-import type { Coupon } from '@/lib/types';
+import { incentiveCategoriesForSurface, incentivesVisibleOnSurface } from '@/lib/incentives/incentiveSurfaces';
+import type { Category } from '@/lib/types';
 import { getLevelUpLogoHref } from '@/lib/appBranding';
 import { useToast } from '@/hooks/use-toast';
 import { motion } from 'framer-motion';
@@ -74,11 +74,11 @@ export default function BulletinBoardDisplay({
   const bulletinQuery = useMemoFirebase(
     () =>
       schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'coupons'), where('kind', '==', 'incentive'))
+        ? query(collection(firestore, 'schools', schoolId, 'categories'), where('showAsIncentive', '==', true))
         : null,
     [firestore, schoolId],
   );
-  const { data: bulletinIncentives, isLoading } = useCollection<Coupon>(bulletinQuery);
+  const { data: bulletinIncentives, isLoading } = useCollection<Category>(bulletinQuery);
 
   const postsQuery = useMemoFirebase(
     () =>
@@ -94,7 +94,7 @@ export default function BulletinBoardDisplay({
   const { data: bulletinPosts } = useCollection<BulletinPost>(postsQuery);
 
   const sortedBulletin = useMemo(
-    () => incentivesForSurface(bulletinIncentives, 'bulletinBoard'),
+    () => incentiveCategoriesForSurface(bulletinIncentives, 'bulletinBoard'),
     [bulletinIncentives],
   );
 
@@ -242,7 +242,7 @@ export default function BulletinBoardDisplay({
                     </div>
                   </div>
                   <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-800 dark:text-emerald-200">
-                    +{Number(inc.value ?? 0)} PTS
+                    +{Number(inc.value ?? 0)} {inc.currencyIcon || 'PTS'}
                   </span>
                 </div>
               ))}
