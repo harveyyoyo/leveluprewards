@@ -1277,7 +1277,10 @@ exports.migrateIncentivesToCategories = functions.https.onCall(
         schoolDocRef.collection("bulletinBoardIncentives").get(),
       ]);
 
-      const byName = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+      const byName = new Map<
+        string,
+        { id: string; ref: FirebaseFirestore.DocumentReference; data: () => FirebaseFirestore.DocumentData }
+      >();
       categoriesSnap.docs.forEach((d) => {
         const name = String(d.data().name || "").trim().toLowerCase();
         if (name) byName.set(name, d);
@@ -1310,7 +1313,7 @@ exports.migrateIncentivesToCategories = functions.https.onCall(
               points: Number(it.value ?? it.points) || 0,
               ...fields,
             });
-            byName.set(key, { id: newRef.id, ref: newRef, data: () => fields } as FirebaseFirestore.QueryDocumentSnapshot);
+            byName.set(key, { id: newRef.id, ref: newRef, data: () => fields });
           }
           batch.delete(d.ref);
         });
