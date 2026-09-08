@@ -8,18 +8,22 @@ import {
   ArrowUpRight,
   Check,
   Copy,
-  Megaphone,
+  Crown,
+  LayoutGrid,
   Monitor,
   MonitorPlay,
+  Palette,
   Plus,
+  RotateCcw,
+  Smartphone,
+  Sliders,
   Trash2,
-  Trophy,
   Tv,
-  type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -28,123 +32,109 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSettings, type SchoolDisplayProfile } from '@/components/providers/SettingsProvider';
-import {
-  buildDisplayHref,
-  displaysFeatureEnabled,
-  type DisplayView,
-} from '@/lib/displays/displayRoutes';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
-import { SmartScreenSettingsPanel } from '@/app/[schoolId]/admin/sections/displays/SmartScreenSettingsPanel';
-import { BulletinSettingsPanel } from '@/app/[schoolId]/admin/sections/displays/BulletinSettingsPanel';
-import { HallOfFameSettingsPanel } from '@/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel';
-import { useSchoolProfile } from '@/hooks/useSchoolProfile';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DARK_THEMES,
+  DISPLAY_MODULE_CATALOG,
+  LIGHT_THEMES,
+  READY_MADE_PRESET_SCREENS,
+  buildDefaultScreenConfig,
+  type DisplayModuleKey,
+  type ModularScreenConfig,
+  type ModularThemeId,
+  type ScreenOrientation,
+} from '@/lib/displays/modularDisplaySchema';
+import { useDisplaysLiveFeed } from '@/hooks/useDisplaysLiveFeed';
+import { ModularDisplayView } from '@/components/displays/modular/ModularDisplayView';
 
-type Template = {
-  view: DisplayView;
-  label: string;
-  desc: string;
-  icon: LucideIcon;
-};
-
-/** One Displays feature, three templates — Hall of Fame is the default/first. */
-const TEMPLATES: readonly Template[] = [
-  {
-    view: 'hall-of-fame',
-    label: 'Hall of Fame',
-    desc: 'Podium and rankings for students, classes, houses, or school goals.',
-    icon: Trophy,
-  },
-  {
-    view: 'smart',
-    label: 'Smart Screen',
-    desc: 'Clock, weather, leaders, houses, rewards, and bulletin in one dashboard.',
-    icon: Monitor,
-  },
-  {
-    view: 'bulletin',
-    label: 'Bulletin board',
-    desc: 'Focused board for celebrations and point-earning incentives.',
-    icon: Megaphone,
-  },
-];
+type WorkbenchTab = 'modules' | 'themes' | 'layout';
 
 export default function DisplaysRealmPage() {
   const params = useParams();
   const schoolId = String(params.schoolId || '');
   const { settings, updateSettings } = useSettings();
-  const { isJewishOrthodox } = useSchoolProfile();
   const { toast } = useToast();
 
-  const [activeDisplayId, setActiveDisplayId] = useState<string>('default');
-  const [template, setTemplate] = useState<DisplayView>('hall-of-fame');
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newDisplayName, setNewDisplayName] = useState('');
-  const [newDisplayTemplate, setNewDisplayTemplate] = useState<DisplayView>('hall-of-fame');
+  // Consolidated live feed data for preview & screens
+  const liveFeed = useDisplaysLiveFeed(schoolId);
+
+  // Active screen state
+  const [activeScreenId, setActiveScreenId] = useState<string>('hall-of-fame');
+  const [workbenchTab, setWorkbenchTab] = useState<WorkbenchTab>('modules');
+  const [themeToneTab, setThemeToneTab] = useState<'dark' | 'light'>('dark');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newScreenName, setNewScreenName] = useState('');
+  const [newScreenPreset, setNewScreenPreset] = useState<'hall-of-fame' | 'smart-screen' | 'bulletin-board'>(
+    'hall-of-fame',
+  );
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Combine custom displayProfiles with legacy smartScreenProfiles so no user data is lost
-  const allDisplays = useMemo(() => {
-    const list: { id: string; name: string; template: DisplayView; isCustom: boolean }[] = [
-      { id: 'default', name: 'Main School Display', template, isCustom: false },
-    ];
+  // Resolved list of all available screens (3 ready-made + custom screens stored in settings)
+  const allScreens = useMemo(() => {
+    const list: ModularScreenConfig[] = [];
+    const savedScreens = settings.modularDisplayScreens || {};
 
-    const customProfiles = settings.displayProfiles || {};
-    for (const [id, profile] of Object.entries(customProfiles)) {
-      if (id && profile) {
-        list.push({
-          id,
-          name: profile.name || 'Unnamed Display',
-          template: profile.template || 'hall-of-fame',
-          isCustom: true,
-        });
+    // 1. Ready-Made Presets (using custom overrides if saved, else default)
+    for (const key of ['hall-of-fame', 'smart-screen', 'bulletin-board'] as const) {
+      if (savedScreens[key]) {
+        list.push(savedScreens[key]);
+      } else {
+        list.push(READY_MADE_PRESET_SCREENS[key]);
       }
     }
 
-    const legacySmartProfiles = settings.smartScreenProfiles || {};
-    for (const [id, profile] of Object.entries(legacySmartProfiles)) {
-      if (id && profile && !customProfiles[id]) {
-        list.push({
-          id,
-          name: profile.name || 'Screen Version',
-          template: 'smart',
-          isCustom: true,
-        });
+    // 2. Custom User-Created Screens
+    for (const [id, screen] of Object.entries(savedScreens)) {
+      if (!['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(id) && screen) {
+        list.push(screen);
       }
     }
 
     return list;
-  }, [settings.displayProfiles, settings.smartScreenProfiles, template]);
+  }, [settings.modularDisplayScreens]);
 
-  const activeDisplay = useMemo(
-    () => allDisplays.find((d) => d.id === activeDisplayId) ?? allDisplays[0],
-    [allDisplays, activeDisplayId],
-  );
+  const activeScreen: ModularScreenConfig = useMemo(() => {
+    return allScreens.find((s) => s.id === activeScreenId) || allScreens[0];
+  }, [allScreens, activeScreenId]);
 
-  const activeDisplayHref = useMemo(() => {
-    const isCustom = activeDisplay?.isCustom;
-    return buildDisplayHref(schoolId, template, {
-      fullscreen: true,
-      displayId: isCustom ? activeDisplay.id : undefined,
-      screenProfileId: isCustom && template === 'smart' ? activeDisplay.id : undefined,
-    });
-  }, [activeDisplay, schoolId, template]);
+  // Update active screen configuration
+  const handleUpdateActiveScreen = (updates: Partial<ModularScreenConfig>) => {
+    const nextScreen: ModularScreenConfig = {
+      ...activeScreen,
+      ...updates,
+      updatedAt: Date.now(),
+    };
 
-  const handleSelectDisplay = (display: (typeof allDisplays)[number]) => {
-    setActiveDisplayId(display.id);
-    if (display.isCustom) {
-      setTemplate(display.template);
-    }
+    const nextSaved = {
+      ...(settings.modularDisplayScreens || {}),
+      [nextScreen.id]: nextScreen,
+    };
+
+    updateSettings({ modularDisplayScreens: nextSaved });
   };
 
-  const handleCreateDisplay = () => {
-    const trimmed = newDisplayName.trim();
+  // Toggle a single module on or off
+  const handleToggleModule = (key: DisplayModuleKey, checked: boolean) => {
+    const current = new Set(activeScreen.enabledModules || []);
+    if (checked) {
+      current.add(key);
+    } else {
+      current.delete(key);
+    }
+    handleUpdateActiveScreen({ enabledModules: Array.from(current) });
+  };
+
+  // Create a new screen
+  const handleCreateScreen = () => {
+    const trimmed = newScreenName.trim();
     if (!trimmed) {
       toast({
         variant: 'destructive',
-        title: 'Display name required',
-        description: 'Please provide a name for this display (e.g. "Main Lobby TV").',
+        title: 'Screen name required',
+        description: 'Please give this display screen a name (e.g. "Main Entrance TV").',
       });
       return;
     }
@@ -153,82 +143,89 @@ export default function DisplaysRealmPage() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
-      .slice(0, 40);
-    const newId = `${slug || 'display'}-${Date.now().toString(36)}`;
+      .slice(0, 36);
+    const newId = `${slug || 'screen'}-${Date.now().toString(36)}`;
 
-    const newProfile: SchoolDisplayProfile = {
-      id: newId,
-      name: trimmed,
-      template: newDisplayTemplate,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      settings: {},
+    const newScreen = buildDefaultScreenConfig(newId, trimmed, newScreenPreset);
+
+    const nextSaved = {
+      ...(settings.modularDisplayScreens || {}),
+      [newId]: newScreen,
     };
 
-    const nextProfiles = {
-      ...(settings.displayProfiles || {}),
-      [newId]: newProfile,
-    };
-
-    updateSettings({ displayProfiles: nextProfiles });
-    setActiveDisplayId(newId);
-    setTemplate(newDisplayTemplate);
-    setNewDisplayName('');
-    setIsCreateOpen(false);
+    updateSettings({ modularDisplayScreens: nextSaved });
+    setActiveScreenId(newId);
+    setNewScreenName('');
+    setIsCreateModalOpen(false);
 
     toast({
-      title: 'Display Created',
-      description: `"${trimmed}" is ready. Configure its template and launch URL below.`,
+      title: 'Screen Created',
+      description: `"${trimmed}" is ready. Customize its modules and layout below.`,
     });
   };
 
-  const handleDeleteDisplay = (id: string, name: string) => {
-    const nextProfiles = { ...(settings.displayProfiles || {}) };
-    delete nextProfiles[id];
-    const nextSmart = { ...(settings.smartScreenProfiles || {}) };
-    delete nextSmart[id];
+  // Delete a custom screen
+  const handleDeleteScreen = (id: string, name: string) => {
+    const nextSaved = { ...(settings.modularDisplayScreens || {}) };
+    delete nextSaved[id];
 
-    updateSettings({ displayProfiles: nextProfiles, smartScreenProfiles: nextSmart });
-    if (activeDisplayId === id) {
-      setActiveDisplayId('default');
+    updateSettings({ modularDisplayScreens: nextSaved });
+    if (activeScreenId === id) {
+      setActiveScreenId('hall-of-fame');
     }
 
     toast({
-      title: 'Display Removed',
-      description: `Deleted display "${name}".`,
+      title: 'Screen Removed',
+      description: `Deleted "${name}".`,
     });
   };
+
+  // Reset a ready-made preset back to default
+  const handleResetPreset = (presetKey: string) => {
+    const nextSaved = { ...(settings.modularDisplayScreens || {}) };
+    delete nextSaved[presetKey];
+    updateSettings({ modularDisplayScreens: nextSaved });
+    toast({
+      title: 'Preset Reset',
+      description: `Restored default configuration for "${activeScreen.name}".`,
+    });
+  };
+
+  // Fullscreen URL for live TV
+  const fullScreenHref = useMemo(() => {
+    return `/${schoolId}/displays?screen=${activeScreen.id}&fullscreen=1`;
+  }, [activeScreen.id, schoolId]);
 
   const handleCopyLink = () => {
     const fullUrl =
       typeof window !== 'undefined'
-        ? `${window.location.origin}${activeDisplayHref}`
-        : activeDisplayHref;
+        ? `${window.location.origin}${fullScreenHref}`
+        : fullScreenHref;
 
     navigator.clipboard.writeText(fullUrl).then(() => {
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2200);
       toast({
-        title: 'Display Link Copied',
-        description: 'Paste this URL on your TV browser or digital signage player.',
+        title: 'TV Link Copied',
+        description: 'Paste this link into your hallway TV browser or digital signage app.',
       });
     });
   };
 
   if (!displaysFeatureEnabled(settings)) {
     return (
-      <div className="flex h-full items-center justify-center overflow-y-auto bg-background p-8">
+      <div className="flex h-screen items-center justify-center bg-background p-8">
         <div className="max-w-md space-y-4 text-center">
-          <MonitorPlay className="mx-auto h-10 w-10 text-muted-foreground" aria-hidden />
-          <p className="text-lg font-black tracking-tight">Displays is off for this school</p>
+          <MonitorPlay className="mx-auto h-12 w-12 text-muted-foreground" aria-hidden />
+          <h2 className="text-xl font-black tracking-tight">Displays is off for this school</h2>
           <p className="text-sm text-muted-foreground">
-            Turn on Displays in Settings to configure Hall of Fame, Smart Screen, and the bulletin board.
+            Turn on Displays in Settings to build and manage your hallway displays.
           </p>
           <Link
             href={schoolPortalHref(schoolId)}
-            className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/35 hover:text-foreground"
+            className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground"
           >
-            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            <ArrowLeft className="h-4 w-4" />
             Back to LevelUp
           </Link>
         </div>
@@ -237,199 +234,532 @@ export default function DisplaysRealmPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-background">
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
-        {/* Top Header: back link, title, and + New Display */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href={schoolPortalHref(schoolId)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/35 hover:text-foreground"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-              LevelUp
-            </Link>
-            <div className="flex min-w-0 items-center gap-2">
-              <MonitorPlay className="h-6 w-6 shrink-0 text-primary" aria-hidden />
-              <h1 className="truncate text-xl font-black tracking-tight sm:text-2xl">Displays</h1>
-            </div>
+    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-background text-foreground select-none">
+      {/* TOP STUDIO APP BAR */}
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/80 px-4 bg-card/70 backdrop-blur-md z-20">
+        {/* Left: LevelUp back link & Studio Branding */}
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            href={schoolPortalHref(schoolId)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            LevelUp
+          </Link>
+          <div className="flex items-center gap-2 min-w-0">
+            <MonitorPlay className="h-5 w-5 shrink-0 text-primary" />
+            <span className="truncate text-sm font-black tracking-tight sm:text-base">Displays Studio</span>
           </div>
+        </div>
+
+        {/* Center: Screen Selector Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-2 max-w-xl">
+          {allScreens.map((screen) => {
+            const isActive = screen.id === activeScreenId;
+            return (
+              <button
+                key={screen.id}
+                type="button"
+                onClick={() => setActiveScreenId(screen.id)}
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <Tv className="h-3.5 w-3.5" />
+                <span>{screen.name}</span>
+                {screen.isReadyMade && (
+                  <span className={cn('rounded px-1 py-0.2 text-[9px] font-black uppercase', isActive ? 'bg-black/20 text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                    Preset
+                  </span>
+                )}
+              </button>
+            );
+          })}
+
           <Button
             type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="gap-2 rounded-xl bg-primary shadow-sm hover:bg-primary/90"
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-8 gap-1 rounded-xl px-2.5 text-xs font-bold text-primary hover:bg-primary/10"
           >
-            <Plus className="h-4 w-4" aria-hidden />
-            Create new display
+            <Plus className="h-3.5 w-3.5" />
+            New Screen
           </Button>
         </div>
 
-        {/* Displays Selector Card */}
-        <div className="rounded-2xl border bg-card/60 p-4 shadow-sm backdrop-blur-sm sm:p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border/60">
-            <div>
-              <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                Your Hallway Displays
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Manage multiple displays across your campus (hallways, cafeteria, lobby, gym).
-              </p>
-            </div>
-            {activeDisplay.isCustom ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 text-xs text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
-                onClick={() => handleDeleteDisplay(activeDisplay.id, activeDisplay.name)}
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                Delete display
-              </Button>
-            ) : null}
-          </div>
+        {/* Right: Quick Actions */}
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopyLink}
+            className="h-8 gap-1.5 rounded-xl text-xs font-semibold"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Copy TV Link
+              </>
+            )}
+          </Button>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {allDisplays.map((disp) => {
-              const isActive = disp.id === activeDisplayId;
-              return (
-                <button
-                  key={disp.id}
-                  type="button"
-                  onClick={() => handleSelectDisplay(disp)}
-                  className={cn(
-                    'inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all',
-                    isActive
-                      ? 'border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/40'
-                      : 'border-border bg-background/80 text-muted-foreground hover:border-primary/40 hover:text-foreground',
-                  )}
-                >
-                  <Tv className={cn('h-3.5 w-3.5', isActive ? 'text-primary' : 'text-muted-foreground')} />
-                  <span>{disp.name}</span>
-                  {disp.isCustom ? (
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-muted-foreground">
-                      {disp.template === 'hall-of-fame'
-                        ? 'Fame'
-                        : disp.template === 'smart'
-                          ? 'Smart'
-                          : 'Bulletin'}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Quick TV Launch & Copy Bar for Active Display */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 px-3.5 py-2.5">
-            <div className="min-w-0">
-              <span className="text-xs font-semibold text-muted-foreground">Active Display: </span>
-              <span className="text-xs font-black text-foreground">{activeDisplay.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCopyLink}
-                className="h-8 gap-1.5 rounded-lg text-xs font-semibold"
-              >
-                {copiedLink ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    Copy TV link
-                  </>
-                )}
-              </Button>
-              <Button asChild size="sm" variant="outline" className="h-8 gap-1.5 rounded-lg text-xs font-semibold">
-                <Link href={activeDisplayHref} target="_blank" rel="noopener noreferrer">
-                  <MonitorPlay className="h-3.5 w-3.5" />
-                  Launch full screen
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </Link>
-              </Button>
-            </div>
-          </div>
+          <Button asChild size="sm" className="h-8 gap-1.5 rounded-xl text-xs font-bold shadow-sm">
+            <Link href={fullScreenHref} target="_blank" rel="noopener noreferrer">
+              Launch Fullscreen
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
         </div>
+      </header>
 
-        {/* Templates Selection */}
-        <div className="space-y-3">
-          <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-            Display Templates
-          </p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {TEMPLATES.map(({ view, label, desc, icon: Icon }) => {
-              const active = template === view;
-              return (
-                <button
-                  key={view}
-                  type="button"
-                  onClick={() => setTemplate(view)}
-                  aria-pressed={active}
-                  className={cn(
-                    'group rounded-2xl border p-4 text-left transition-all',
-                    active
-                      ? 'border-primary bg-primary/5 shadow-md ring-1 ring-primary/30'
-                      : 'bg-card/50 hover:border-primary/40 hover:shadow-md',
-                  )}
-                >
-                  <div className="mb-2 flex items-center gap-2 text-sm font-black">
-                    <Icon className={cn('h-5 w-5', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
-                    {label}
-                    {view === 'hall-of-fame' ? (
-                      <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
-                        Default
-                      </span>
-                    ) : null}
+      {/* MAIN WORKBENCH: LEFT CONTROLS + RIGHT TV CANVAS */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* LEFT STUDIO DRAWER */}
+        <aside className="flex w-[380px] sm:w-[420px] shrink-0 flex-col border-r border-border/80 bg-card/40 backdrop-blur-sm overflow-hidden">
+          {/* Drawer Navigation Tabs */}
+          <div className="flex border-b border-border/80 bg-muted/20 p-2 gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setWorkbenchTab('modules')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                workbenchTab === 'modules'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Modules ({activeScreen.enabledModules?.length || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkbenchTab('themes')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                workbenchTab === 'themes'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Palette className="h-3.5 w-3.5" />
+              Themes
+            </button>
+            <button
+              type="button"
+              onClick={() => setWorkbenchTab('layout')}
+              className={cn(
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                workbenchTab === 'layout'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              Settings
+            </button>
+          </div>
+
+          {/* Drawer Tab Content */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* TAB 1: MODULES MIXER */}
+            {workbenchTab === 'modules' && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-black tracking-tight">Mix & Match Modules</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Toggle any components across Hall of Fame, Smart Screen, and Bulletin for this screen.
+                  </p>
+                </div>
+
+                {/* Group 1: Hall of Fame */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Crown className="h-3.5 w-3.5 text-amber-500" />
+                    Hall of Fame Leaderboards
+                  </p>
+                  <div className="space-y-1.5">
+                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'hall-of-fame').map((mod) => {
+                      const Icon = mod.icon;
+                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
+                      return (
+                        <div
+                          key={mod.key}
+                          className={cn(
+                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            isEnabled
+                              ? 'border-primary/40 bg-primary/5 shadow-sm'
+                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
+                            aria-label={mod.label}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="text-xs leading-relaxed text-muted-foreground">{desc}</p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+                </div>
 
-        {/* Live Settings Panel for Selected Template */}
-        {template === 'hall-of-fame' ? (
-          <HallOfFameSettingsPanel schoolId={schoolId} settings={settings} updateSettings={updateSettings} />
-        ) : template === 'smart' ? (
-          <SmartScreenSettingsPanel
-            schoolId={schoolId}
-            settings={settings}
-            updateSettings={updateSettings}
-            isJewishOrthodoxSchool={isJewishOrthodox}
-            activeProfileId={activeDisplay.id}
-            hideInternalProfileSelector={true}
-          />
-        ) : (
-          <BulletinSettingsPanel schoolId={schoolId} settings={settings} updateSettings={updateSettings} />
-        )}
+                {/* Group 2: Clock & Daily Info */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Monitor className="h-3.5 w-3.5 text-sky-500" />
+                    Smart Screen & Daily Info
+                  </p>
+                  <div className="space-y-1.5">
+                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'smart-screen').map((mod) => {
+                      const Icon = mod.icon;
+                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
+                      return (
+                        <div
+                          key={mod.key}
+                          className={cn(
+                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            isEnabled
+                              ? 'border-primary/40 bg-primary/5 shadow-sm'
+                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
+                            aria-label={mod.label}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Group 3: Bulletin & Rewards */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Tv className="h-3.5 w-3.5 text-purple-500" />
+                    Bulletin Board & Rewards
+                  </p>
+                  <div className="space-y-1.5">
+                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'bulletin').map((mod) => {
+                      const Icon = mod.icon;
+                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
+                      return (
+                        <div
+                          key={mod.key}
+                          className={cn(
+                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            isEnabled
+                              ? 'border-primary/40 bg-primary/5 shadow-sm'
+                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
+                            aria-label={mod.label}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: THEMES (DIVIDED BY DARK & LIGHT) */}
+            {workbenchTab === 'themes' && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-black tracking-tight">Display Themes</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Organized by Dark and Light styles with verified WCAG AA contrast.
+                  </p>
+                </div>
+
+                {/* Dark vs Light Segmented Selector */}
+                <div className="flex rounded-xl border border-border bg-muted/30 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setThemeToneTab('dark')}
+                    className={cn(
+                      'flex-1 rounded-lg py-1.5 text-xs font-black transition-all',
+                      themeToneTab === 'dark'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    🌙 Dark Themes ({DARK_THEMES.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setThemeToneTab('light')}
+                    className={cn(
+                      'flex-1 rounded-lg py-1.5 text-xs font-black transition-all',
+                      themeToneTab === 'light'
+                        ? 'bg-white text-slate-950 shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    ☀️ Light Themes ({LIGHT_THEMES.length})
+                  </button>
+                </div>
+
+                {/* Theme Cards Grid */}
+                <div className="grid grid-cols-1 gap-2.5">
+                  {(themeToneTab === 'dark' ? DARK_THEMES : LIGHT_THEMES).map((theme) => {
+                    const isSelected = activeScreen.theme === theme.id;
+                    return (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => handleUpdateActiveScreen({ theme: theme.id as ModularThemeId })}
+                        className={cn(
+                          'flex items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition-all',
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary/40 shadow-md'
+                            : 'border-border/70 hover:border-primary/40 hover:shadow-sm',
+                        )}
+                        style={{ backgroundColor: theme.previewBg }}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-xs font-black leading-tight"
+                              style={{ color: theme.tone === 'dark' ? '#ffffff' : '#0f172a' }}
+                            >
+                              {theme.name}
+                            </span>
+                            {isSelected && (
+                              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-black text-primary-foreground uppercase">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <p
+                            className="text-[10px] mt-0.5 truncate"
+                            style={{ color: theme.tone === 'dark' ? '#cbd5e1' : '#475569' }}
+                          >
+                            {theme.description}
+                          </p>
+                        </div>
+
+                        {/* Swatch dots */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className="h-4 w-4 rounded-full border border-white/20 shadow-sm"
+                            style={{ backgroundColor: theme.previewCard }}
+                          />
+                          <span
+                            className="h-4 w-4 rounded-full border border-white/20 shadow-sm"
+                            style={{ backgroundColor: theme.previewAccent }}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: LAYOUT & SCREEN SETTINGS */}
+            {workbenchTab === 'layout' && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="text-sm font-black tracking-tight">Screen Settings</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Adjust screen orientation, titles, and layout options.
+                  </p>
+                </div>
+
+                {/* Screen Orientation */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                    Monitor Orientation
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
+                      className={cn(
+                        'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
+                        activeScreen.orientation === 'landscape'
+                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
+                          : 'border-border hover:border-primary/40 text-muted-foreground',
+                      )}
+                    >
+                      <Monitor className="h-4 w-4" />
+                      Wide (16:9 Landscape)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
+                      className={cn(
+                        'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
+                        activeScreen.orientation === 'portrait'
+                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
+                          : 'border-border hover:border-primary/40 text-muted-foreground',
+                      )}
+                    >
+                      <Smartphone className="h-4 w-4" />
+                      Tall (9:16 Portrait)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Screen Title & Message */}
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold">Screen Title</label>
+                    <Input
+                      value={activeScreen.customTitle || ''}
+                      onChange={(e) => handleUpdateActiveScreen({ customTitle: e.target.value })}
+                      placeholder="e.g. Hall of Fame, Main Lobby Screen"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold">Subtitle / Banner Message</label>
+                    <Input
+                      value={activeScreen.customMessage || ''}
+                      onChange={(e) => handleUpdateActiveScreen({ customMessage: e.target.value })}
+                      placeholder="e.g. Learn, level up, and lead today!"
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Screen Management Actions */}
+                <div className="pt-4 border-t border-border/80 space-y-2">
+                  {activeScreen.isReadyMade ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleResetPreset(activeScreen.id)}
+                      className="w-full gap-2 rounded-xl text-xs font-semibold text-muted-foreground"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      Reset to Default Preset
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteScreen(activeScreen.id, activeScreen.name)}
+                      className="w-full gap-2 rounded-xl text-xs font-bold"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete This Screen
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* RIGHT CANVAS: RESPONSIVE SCALED TV PREVIEW */}
+        <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-950/25 overflow-hidden relative">
+          {/* Canvas Floating Top Bar */}
+          <div className="absolute top-4 right-6 flex items-center gap-2 z-10 bg-background/80 backdrop-blur-md rounded-2xl border p-1.5 shadow-md">
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
+              className={cn(
+                'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
+                activeScreen.orientation === 'landscape'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              Wide TV
+            </button>
+            <button
+              type="button"
+              onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
+              className={cn(
+                'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
+                activeScreen.orientation === 'portrait'
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+              Tall Kiosk
+            </button>
+          </div>
+
+          {/* Scaled TV Monitor Bezel */}
+          <div
+            className={cn(
+              'relative flex flex-col overflow-hidden rounded-[2rem] border-8 border-slate-800 shadow-2xl transition-all duration-300',
+              activeScreen.orientation === 'landscape'
+                ? 'w-full max-w-[1080px] aspect-[16/9]'
+                : 'h-full max-h-[720px] aspect-[9/16]',
+            )}
+          >
+            <ModularDisplayView
+              config={activeScreen}
+              feed={liveFeed}
+              variant="preview"
+              className="h-full w-full overflow-y-auto"
+            />
+          </div>
+        </main>
       </div>
 
-      {/* Create New Display Dialog */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+      {/* CREATE NEW SCREEN MODAL */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black tracking-tight">Create New Display</DialogTitle>
+            <DialogTitle className="text-lg font-black tracking-tight">Create New Screen</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Add a dedicated display configuration for a hallway TV, cafeteria screen, or lobby kiosk.
+              Add a custom hallway TV display. Choose a starter layout or start fresh.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-3">
             <div className="space-y-1.5">
-              <label htmlFor="display-name" className="text-xs font-bold">
-                Display Name
+              <label htmlFor="screen-name" className="text-xs font-bold">
+                Screen Name
               </label>
               <Input
-                id="display-name"
-                value={newDisplayName}
-                onChange={(e) => setNewDisplayName(e.target.value)}
+                id="screen-name"
+                value={newScreenName}
+                onChange={(e) => setNewScreenName(e.target.value)}
                 placeholder="e.g. Front Entrance TV, Cafeteria Monitor, Gym Leaderboard"
                 className="h-10 text-sm"
                 autoFocus
@@ -437,24 +767,29 @@ export default function DisplaysRealmPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold">Starting Template</label>
+              <label className="text-xs font-bold">Starter Preset</label>
               <div className="grid grid-cols-3 gap-2">
-                {TEMPLATES.map(({ view, label, icon: Icon }) => {
-                  const isSelected = newDisplayTemplate === view;
+                {[
+                  { id: 'hall-of-fame' as const, name: 'Hall of Fame', icon: Crown },
+                  { id: 'smart-screen' as const, name: 'Smart Screen', icon: Monitor },
+                  { id: 'bulletin-board' as const, name: 'Bulletin Board', icon: Tv },
+                ].map((preset) => {
+                  const isSelected = newScreenPreset === preset.id;
+                  const Icon = preset.icon;
                   return (
                     <button
-                      key={view}
+                      key={preset.id}
                       type="button"
-                      onClick={() => setNewDisplayTemplate(view)}
+                      onClick={() => setNewScreenPreset(preset.id)}
                       className={cn(
                         'flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 text-center transition-all',
                         isSelected
-                          ? 'border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/40'
+                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
                           : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="text-xs font-bold leading-tight">{label}</span>
+                      <span className="text-xs font-bold leading-tight">{preset.name}</span>
                     </button>
                   );
                 })}
@@ -463,11 +798,11 @@ export default function DisplaysRealmPage() {
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="button" onClick={handleCreateDisplay}>
-              Create Display
+            <Button type="button" onClick={handleCreateScreen}>
+              Create Screen
             </Button>
           </DialogFooter>
         </DialogContent>

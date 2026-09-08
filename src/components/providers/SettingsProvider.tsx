@@ -49,6 +49,7 @@ import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
+import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
     | 'default'
@@ -467,6 +468,8 @@ interface Settings {
     smartScreenProfiles?: Record<string, SmartScreenProfile>;
     /** Multiple named school displays; open with `?displayId=<id>`. */
     displayProfiles?: Record<string, SchoolDisplayProfile>;
+    /** Unified modular display screens configuring widgets across all pillars. */
+    modularDisplayScreens?: Record<string, ModularScreenConfig>;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -888,6 +891,7 @@ const defaultSettings: Settings = {
     smartScreenShowJewishHolidays: false,
     smartScreenProfiles: {},
     displayProfiles: {},
+    modularDisplayScreens: {},
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     payRewards: true,
