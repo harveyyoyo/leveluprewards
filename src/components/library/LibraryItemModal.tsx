@@ -44,6 +44,7 @@ export function LibraryItemModal({
   const [shelfLocation, setShelfLocation] = useState('');
   const [copyNumber, setCopyNumber] = useState('');
   const [notes, setNotes] = useState('');
+  const [copies, setCopies] = useState(1);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
@@ -53,6 +54,7 @@ export function LibraryItemModal({
 
   useEffect(() => {
     if (!isOpen) return;
+    setCopies(1);
     if (item) {
       setName(item.name);
       setUpc(item.upc);
@@ -119,8 +121,9 @@ export function LibraryItemModal({
       toast({ variant: 'destructive', title: 'Cannot print labels', description: 'Missing schoolId.' });
       return;
     }
-    const printItem: LibraryItem = item ?? {
-      id: 'draft-label',
+    const printItem: LibraryItem = {
+      ...item,
+      id: item?.id ?? 'draft-label',
       name: trimmedName,
       upc: normalizedUpc,
       status: 'available',
@@ -161,6 +164,7 @@ export function LibraryItemModal({
     }
 
     const payload: LibraryItemInput = {
+      copies,
       name: trimmedName,
       upc: normalizedUpc,
       author: trimOptional(author),
@@ -248,6 +252,11 @@ export function LibraryItemModal({
                 <p className="text-[11px] text-muted-foreground">LIB sticker barcode — print a label after saving.</p>
               ) : null}
             </div>
+            {!isEditing && <div className="space-y-1">
+              <Label htmlFor="lib-quantity">Number of copies</Label>
+              <Input id="lib-quantity" type="number" min={1} max={25} value={copies} onChange={e => setCopies(Math.max(1, Math.min(25, Number(e.target.value) || 1)))} />
+              <p className="text-xs text-muted-foreground">Extra copies get unique labels to print after saving.</p>
+            </div>}
             <div className="space-y-1">
               <Label htmlFor="lib-copy">Copy # (optional)</Label>
               <Input id="lib-copy" value={copyNumber} onChange={(e) => setCopyNumber(e.target.value)} placeholder="1, A, etc." />
@@ -269,7 +278,7 @@ export function LibraryItemModal({
               <Input id="lib-shelf" value={shelfLocation} onChange={(e) => setShelfLocation(e.target.value)} placeholder="A-12, Room 204" />
             </div>
             <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="lib-notes">Notes (staff only)</Label>
+              <Label htmlFor="lib-notes">Catalog notes</Label>
               <Textarea id="lib-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
             </div>
             {isEditing && item ? (

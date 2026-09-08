@@ -57,14 +57,23 @@ export function RandomStudentPickerModal({
   const [awardReason, setAwardReason] = useState<string>(defaultReason);
   const [isAwarding, setIsAwarding] = useState(false);
   const [awardedSuccess, setAwardedSuccess] = useState(false);
+  const [awardError, setAwardError] = useState<string | null>(null);
 
   const spinTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const studentsRef = useRef(students);
+  studentsRef.current = students;
+  const soundRef = useRef(playSound);
+  soundRef.current = playSound;
+  const rosterKey = students.map((student) => student.id).join('|');
 
   const startSpin = useCallback(() => {
+    const students = studentsRef.current;
     if (!students.length) return;
+    if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     setIsSpinning(true);
     setSelectedWinner(null);
     setAwardedSuccess(false);
+    setAwardError(null);
 
     let currentIdx = Math.floor(Math.random() * students.length);
     let delay = 60;
@@ -74,15 +83,15 @@ export function RandomStudentPickerModal({
     const stepTick = () => {
       currentIdx = (currentIdx + 1) % students.length;
       setHighlightedStudent(students[currentIdx]);
-      playSound(CLASSROOM_TAP_SOUND);
+      soundRef.current(CLASSROOM_TAP_SOUND);
       step++;
 
       if (step < totalSteps) {
         // Decelerate as we approach the winner
-        if (step > totalSteps - 10) {
-          delay += 35;
-        } else if (step > totalSteps - 5) {
+        if (step > totalSteps - 5) {
           delay += 70;
+        } else if (step > totalSteps - 10) {
+          delay += 35;
         }
         spinTimeoutRef.current = setTimeout(stepTick, delay);
       } else {
@@ -90,30 +99,38 @@ export function RandomStudentPickerModal({
         setIsSpinning(false);
         const winner = students[currentIdx];
         setSelectedWinner(winner);
-        playSound(CLASSROOM_PICK_SOUND);
+        soundRef.current(CLASSROOM_PICK_SOUND);
       }
     };
 
     spinTimeoutRef.current = setTimeout(stepTick, delay);
-  }, [students, playSound]);
+  }, []);
 
   useEffect(() => {
-    if (isOpen && students.length > 0 && !selectedWinner && !isSpinning) {
+    if (isOpen) {
       startSpin();
+    } else {
+      setIsSpinning(false);
+      setSelectedWinner(null);
+      setHighlightedStudent(null);
+      setAwardedSuccess(false);
     }
     return () => {
       if (spinTimeoutRef.current) clearTimeout(spinTimeoutRef.current);
     };
-  }, [isOpen, students.length, startSpin, isSpinning, selectedWinner]);
+  }, [isOpen, startSpin, rosterKey]);
 
   const handleGiveAward = async (pts: number) => {
     if (!selectedWinner || isAwarding) return;
     setIsAwarding(true);
+    setAwardError(null);
     try {
-      await onAward(selectedWinner.id, pts, awardReason || 'Random student spotlight');
+      const result = await onAward(selectedWinner.id, pts, awardReason || 'Random student spotlight');
+      if (result === false) throw new Error('Could not save points. Please try again.');
       setAwardedSuccess(true);
       playSound('classroom_award');
-    } catch {
+    } catch (error) {
+      setAwardError(error instanceof Error ? error.message : 'Could not save points. Please try again.');
       playSound('error');
     } finally {
       setIsAwarding(false);
@@ -124,7 +141,7 @@ export function RandomStudentPickerModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md rounded-3xl p-6 sm:p-8 overflow-hidden text-center">
+      <DialogContent className="classroom-native-colors max-w-md grid-cols-1 rounded-3xl p-6 sm:p-8 overflow-x-hidden text-center text-foreground">
         <DialogHeader className="space-y-1">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 mb-1">
             <Shuffle className="h-6 w-6" />
@@ -200,6 +217,7 @@ export function RandomStudentPickerModal({
             )}
           </div>
 
+          {awardError && <p role="alert" className="text-sm text-destructive">{awardError}</p>}
           {/* Action Area */}
           {selectedWinner && !awardedSuccess ? (
             <motion.div

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen, CheckCircle2, Loader2, Lock, ScanBarcode, User, X } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
@@ -8,12 +8,14 @@ import { useFirestore, useFunctions } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useLibraryIdleReset } from '@/hooks/useLibraryIdleReset';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { lookupStudentId } from '@/lib/db/lookup';
 import { performLibraryCheckoutOrReturn, findLibraryItemByUpc, getStudentLibraryCheckouts } from '@/lib/library/libraryOperations';
 import { getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
+import { resolveLibraryTheme } from '@/lib/library/libraryThemes';
 import type { Category, LibraryItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -68,6 +70,9 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [busy, setBusy] = useState(false);
+  const scanLock = useRef(false);
+  const [mode, setMode] = useState<'checkout' | 'return'>('checkout');
+  const [scanError, setScanError] = useState<string | null>(null);
   const [exitOpenInternal, setExitOpenInternal] = useState(false);
   const exitOpen = exitOpenProp ?? exitOpenInternal;
   const setExitOpen = onExitOpenChange ?? setExitOpenInternal;
@@ -77,11 +82,12 @@ export function LibraryStudentSelfCheckoutPortal({
     () => getLibraryPolicyFromSettings(settings, categories),
     [settings, categories],
   );
+  const libraryTheme = useMemo(() => resolveLibraryTheme(settings.libraryTheme), [settings.libraryTheme]);
+  const matchKioskTheme = settings.libraryThemeMatchKiosk !== false;
   const shouldAcceptScan = useMemo(() => createScanDeduper(1500), []);
   const studentLabel = studentId ? getStudentName(studentId) : null;
 
-  const staffCanDismissWithoutPasscode =
-    embedded && (loginState === 'librarian' || loginState === 'admin');
+  const staffCanDismissWithoutPasscode = false;
 
   useEffect(() => {
     if (!isInitialized || !schoolId) return;
@@ -116,7 +122,10 @@ export function LibraryStudentSelfCheckoutPortal({
     setLastBookTitle(null);
     setLastAction(null);
     setStep('student');
+    setMode('checkout');
+    setScanError(null);
   }, []);
+  const idleRemaining = useLibraryIdleReset(!!studentId && !busy && !exitOpen, resetForNextStudent);
 
   const handleBack = useCallback(() => {
     if (step !== 'student') {
@@ -158,6 +167,7 @@ export function LibraryStudentSelfCheckoutPortal({
         const result = await performLibraryCheckoutOrReturn(firestore, schoolId, studentId, code, {
           policy: libraryPolicy,
           functions,
+          action: mode,
         });
         if (result.action === 'checkout') {
           playSound('success');
@@ -171,6 +181,8 @@ export function LibraryStudentSelfCheckoutPortal({
           setLastAction('return');
           setStep('success');
           await refreshStudentLoans(studentId);
+        } else if (result.action === 'already_done') {
+          toast({ title: 'Already scanned', description: mode === 'checkout' ? 'This book is already checked out to you.' : 'This book is already returned.' });
         } else if (result.action === 'limit_reached') {
           playSound('error');
           toast({
@@ -197,7 +209,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, playSound, toast, refreshStudentLoans],
+    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans],
   );
 
   const processStudent = useCallback(
@@ -228,52 +240,35 @@ export function LibraryStudentSelfCheckoutPortal({
 
   const handleScan = useCallback(
     (code: string) => {
-      if (!shouldAcceptScan(code)) return;
-      const trimmed = code.trim();
-      if (!trimmed || !firestore || !schoolId) return;
-
+      if (scanLock.current || !shouldAcceptScan(code) || !firestore || !schoolId) return;
+      scanLock.current = true;
+      setBusy(true); setScanError(null);
       void (async () => {
-        const found = await findLibraryItemByUpc(firestore, schoolId, trimmed);
-
-        if (step === 'student') {
-          if (found) {
-            toast({
-              variant: 'destructive',
-              title: 'Scan your ID card first',
-              description: 'Use your student ID card, then scan the book.',
-            });
-            return;
+        try {
+          const found = await findLibraryItemByUpc(firestore, schoolId, code);
+          if (step === 'student') {
+            if (found) throw new Error('Scan your student ID card first, then the book.');
+            await processStudent(code);
+          } else if (found) {
+            await processBook(code);
+          } else if (!isRetailIsbnBarcode(code)) {
+            // Scanning the next student's card explicitly starts their session.
+            const id = await lookupStudentId(firestore, schoolId, code);
+            if (!id) throw new Error('Book or student not found. Ask library staff for help.');
+            setLastBookTitle(null); setLastAction(null); setMode('checkout');
+            await processStudent(code);
+          } else {
+            throw new Error('Book not in the catalog. Ask library staff for help.');
           }
-          void processStudent(trimmed);
-          return;
-        }
-
-        if (step === 'book' || step === 'success') {
-          if (!found) {
-            if (isRetailIsbnBarcode(trimmed)) {
-              toast({
-                variant: 'destructive',
-                title: 'Book not in catalog',
-                description: 'This ISBN is not registered. Ask library staff for help.',
-              });
-            } else if (step === 'book') {
-              toast({
-                variant: 'destructive',
-                title: 'Book not found',
-                description: 'Scan the barcode on the book cover (ISBN or LIB sticker).',
-              });
-            }
-            return;
-          }
-          if (step === 'success') {
-            setStep('book');
-            setLastAction(null);
-          }
-          void processBook(trimmed);
+        } catch (e) {
+          setScanError((e as Error).message || 'Could not save the scan. Please try again.');
+          playSound('error');
+        } finally {
+          scanLock.current = false; setBusy(false);
         }
       })();
     },
-    [step, processBook, processStudent, shouldAcceptScan, toast, firestore, schoolId],
+    [step, processBook, processStudent, shouldAcceptScan, firestore, schoolId, playSound],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
@@ -294,7 +289,7 @@ export function LibraryStudentSelfCheckoutPortal({
       ? 'Scan your student ID card.'
       : step === 'book'
         ? `Scan each book barcode for ${studentLabel ?? 'this student'}.`
-        : 'Scan another book or tap Next student.';
+        : 'Scan another book or tap Done.';
 
   if (!sessionReady) {
     return (
@@ -312,15 +307,23 @@ export function LibraryStudentSelfCheckoutPortal({
   return (
     <div
       className={cn(
-        'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden',
+        'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden transition-colors',
+        matchKioskTheme && libraryTheme.tone === 'dark' ? 'dark' : '',
         'bg-gradient-to-b from-primary/10 via-background to-background',
       )}
+      style={matchKioskTheme ? { backgroundColor: libraryTheme.swatches.bg } : undefined}
     >
-      <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-background px-3 py-2.5 shadow-sm supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <header
+        className={cn(
+          'sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-border/80 bg-background/90 px-3 py-2.5 shadow-sm backdrop-blur-md supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top))]',
+          matchKioskTheme ? libraryTheme.classes.header : ''
+        )}
+      >
         <Button
           type="button"
           variant="outline"
           className="h-11 shrink-0 gap-2 rounded-xl border-2 border-foreground/20 bg-background px-3 font-bold shadow-sm hover:bg-muted"
+          disabled={busy}
           onClick={handleBack}
           aria-label={step !== 'student' ? 'Back to scan student card' : 'Close self checkout'}
         >
@@ -328,8 +331,13 @@ export function LibraryStudentSelfCheckoutPortal({
           <span className="text-sm">{step !== 'student' ? 'Back' : 'Close'}</span>
         </Button>
         <div className="min-w-0 flex-1 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Library</p>
-          <h1 className="truncate text-base font-black tracking-tight sm:text-lg">Check out books</h1>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-center gap-1.5">
+            <span>Library</span>
+            {matchKioskTheme && (
+              <span className="opacity-75 font-normal">· {libraryTheme.icon} {libraryTheme.label}</span>
+            )}
+          </p>
+          <h1 className="truncate text-base font-black tracking-tight sm:text-lg">Borrow &amp; return</h1>
         </div>
         {step !== 'student' ? (
           <Button
@@ -337,6 +345,7 @@ export function LibraryStudentSelfCheckoutPortal({
             variant="outline"
             size="sm"
             className="h-11 shrink-0 rounded-xl border-2 font-bold"
+            disabled={busy}
             onClick={handleExit}
           >
             <Lock className="mr-1.5 h-4 w-4 shrink-0" aria-hidden />
@@ -397,6 +406,12 @@ export function LibraryStudentSelfCheckoutPortal({
           />
         ) : null}
 
+        {studentId && <div className="flex gap-2" role="group" aria-label="Choose library action">
+          <Button disabled={busy} variant={mode === 'checkout' ? 'default' : 'outline'} aria-pressed={mode === 'checkout'} onClick={() => { setMode('checkout'); setStep('book'); }}>Check out</Button>
+          <Button disabled={busy} variant={mode === 'return' ? 'default' : 'outline'} aria-pressed={mode === 'return'} onClick={() => { setMode('return'); setStep('book'); }}>Return</Button>
+        </div>}
+        {scanError && <p role="alert" className="w-full rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-destructive">{scanError}</p>}
+        {studentId && idleRemaining <= 15 && <p role="status" className="text-sm">Returning to the start in {idleRemaining}s. Tap anywhere to keep going.</p>}
         <div className="w-full space-y-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
             <ScanBarcode className="h-4 w-4" />
@@ -419,15 +434,15 @@ export function LibraryStudentSelfCheckoutPortal({
 
         {step === 'success' ? (
           <div className="flex flex-col gap-2 w-full">
-            <Button type="button" className="rounded-xl w-full" onClick={() => setStep('book')}>
+            <Button type="button" className="rounded-xl w-full" disabled={busy} onClick={() => setStep('book')}>
               Scan another book
             </Button>
-            <Button type="button" variant="outline" className="rounded-xl w-full" onClick={resetForNextStudent}>
-              Next student
+            <Button type="button" variant="outline" className="rounded-xl w-full" disabled={busy} onClick={resetForNextStudent}>
+              Done · Next student
             </Button>
           </div>
         ) : step === 'book' ? (
-          <Button type="button" variant="ghost" className="rounded-xl text-muted-foreground" onClick={resetForNextStudent}>
+          <Button type="button" variant="ghost" className="rounded-xl text-muted-foreground" disabled={busy} onClick={resetForNextStudent}>
             Wrong student? Start over
           </Button>
         ) : null}

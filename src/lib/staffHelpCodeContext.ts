@@ -75,8 +75,11 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['library', 'book', 'checkout', 'barcode', 'upc'],
+    keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme'],
     paths: [
+      'src/app/[schoolId]/library/page.tsx',
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryThemeSettingsCard.tsx',
       'src/app/[schoolId]/admin/sections/AdminLibraryTab.tsx',
       'src/app/[schoolId]/librarian/page.tsx',
       'src/app/[schoolId]/library/self-checkout/page.tsx',

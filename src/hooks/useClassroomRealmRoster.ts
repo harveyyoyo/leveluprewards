@@ -78,6 +78,7 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
     loginState,
     students,
     classes,
+    teachers,
     categories: includeCategories ? categories : undefined,
     schoolWide,
     seatingScope: schoolWide ? 'admin' : activeTeacherId || 'staff',

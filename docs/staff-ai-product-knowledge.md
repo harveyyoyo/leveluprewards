@@ -15,7 +15,7 @@ Your job is to answer questions **only** about how to use this product: navigati
 - **Login screen** — school landing/sign-in page. Features built-in onscreen virtual keyboards (alphanumeric QWERTY layout for the School ID input and a numeric keypad for the Access Passcode input) for seamless touch-only kiosk interaction.
 - **Portal** — home hub for the school.
 - **Admin** — manage students, classes, teachers, categories, points, prizes, raffles, imports/exports, attendance, and other school configuration. The administration panel features state-of-the-art interactive dashboards and a stunning **Admin Welcome Hero** with real-time stat tiles (total students, class count, active staff, and listed prize count).
-  - **Library** — RedESIGNED! Stunning manual addition modal, scannable item cards, and direct status toggles.
+  - **Library** — RedESIGNED! Dedicated Library Workspace (`/{schoolId}/library`) featuring a live Circulation Desk with barcode scanner wedge, full Book Catalog with ISBN scanner intake and label printing, Loans & Returns with overdue tracking, and a comprehensive **Theme & Atmosphere** setting with 7 WCAG AA accessible library themes (Classic Oak, Modern Sapphire, Emerald Study, Clean Daylight, Midnight Archive, Sunset Terrace, Lavender Reading) plus self-checkout kiosk synchronization.
   - **Points** — RedESIGNED! Highly polished visual selector cards with smooth micro-interactions instead of plain inputs.
   - **Notifications** — RedESIGNED! Premium multi-step setup wizard with dynamic toggles.
   - **Hall of Fame** — RedESIGNED! Beautiful action grids to configure leaderboards (Students, Class, House, Goals) with custom podiums and scrolls.

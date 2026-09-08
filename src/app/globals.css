@@ -650,7 +650,7 @@ html[data-office-portal] .office-content-pane {
       .font-bold,
       .font-black,
       .font-extrabold
-    ) {
+    ):not(.classroom-native-colors, .classroom-native-colors *) {
     color: inherit;
   }
 
@@ -697,24 +697,24 @@ html[data-office-portal] .office-content-pane {
     letter-spacing: -0.02em;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background):not(.classroom-native-colors, .classroom-native-colors *) {
     background-color: rgba(255, 255, 255, 0.06) !important;
     color: #f4f7f0;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not(.classroom-native-colors, .classroom-native-colors *) {
     color: #f4f7f0 !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not(.classroom-native-colors, .classroom-native-colors *) {
     color: rgba(244, 247, 240, 0.58) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.border-border) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.border-border):not(.classroom-native-colors, .classroom-native-colors *) {
     border-color: rgba(255, 255, 255, 0.12) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select) {
+  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select):not(.classroom-native-colors, .classroom-native-colors *) {
     color: #f4f7f0;
   }
   

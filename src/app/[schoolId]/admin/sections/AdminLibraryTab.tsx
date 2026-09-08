@@ -1,6 +1,9 @@
 'use client';
 
-import { LibraryManagementPanel } from '@/components/library/LibraryManagementPanel';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useAppContext } from '@/components/AppProvider';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Category, LibraryItem, LibraryItemInput, Student } from '@/lib/types';
 
@@ -29,20 +32,10 @@ export function AdminLibraryTab({
   onRegisterFromScan?: (data: LibraryItemInput) => Promise<void>;
   upcTaken?: (upc: string) => Promise<boolean>;
 }) {
-  return (
-    <LibraryManagementPanel
-      libraryItems={libraryItems}
-      getStudentName={getStudentName}
-      schoolId={schoolId}
-      showIntakeScanner={!!onRegisterFromScan && !!upcTaken}
-      onAddLibraryItem={onAddLibraryItem}
-      onEditLibraryItem={onEditLibraryItem}
-      onDeleteLibraryItem={onDeleteLibraryItem}
-      onReturnLibraryItem={onReturnLibraryItem}
-      onRegisterFromScan={onRegisterFromScan}
-      upcTaken={upcTaken}
-      categories={categories}
-      students={students}
-    />
-  );
+  const router = useRouter();
+  const { schoolId: contextSchoolId } = useAppContext();
+  const resolvedSchoolId = schoolId || contextSchoolId;
+  const href = resolvedSchoolId ? `/${resolvedSchoolId}/library` : '';
+  useEffect(() => { if (href) router.push(href); }, [href, router]);
+  return href ? <p className="p-6">Opening Library… <Link className="underline" href={href}>Open library</Link></p> : null;
 }

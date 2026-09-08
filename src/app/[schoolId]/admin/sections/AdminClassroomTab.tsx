@@ -21,7 +21,7 @@ export function AdminClassroomTab({
     seating: 'seating',
     behavior: 'behavior',
     'room-display': 'display',
-    raffle: 'seating',
+    raffle: 'raffle',
   };
 
   const initialTab = initialSection ? mapSectionToTab[initialSection] : 'seating';

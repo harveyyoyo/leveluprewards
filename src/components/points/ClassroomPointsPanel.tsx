@@ -825,6 +825,11 @@ function ClassroomPointsPanelInner({
       const skipBudget = !budgetOptions || budgetOptions.isAdmin;
       const totalCost = magnitude * studentIds.length;
 
+      if (!isDeduct && !skipBudget && settings.enableTeacherBudgets && !teacher) {
+        toast({ variant: 'destructive', title: 'Teacher budget is loading', description: 'Please wait for your teacher account to load, then try again.' });
+        return false;
+      }
+
       if (
         !isDeduct &&
         !skipBudget &&
@@ -1774,6 +1779,8 @@ function ClassroomPointsPanelInner({
   return (
     <div
       className={cn(
+        'classroom-native-colors',
+        design !== 'midnight' && 'text-foreground',
         classroomDesignShellClass(design, isFullscreen),
         isFullscreen && 'h-full min-h-0 w-full gap-0 p-0',
         !isFullscreen && 'flex min-h-[min(62vh,600px)] flex-col',
@@ -1845,7 +1852,7 @@ function ClassroomPointsPanelInner({
                 onBehaviorNotesTipsChange={setBehaviorNotesTipsOn}
               />
             ) : (
-              <div className="ml-auto flex shrink-0 flex-wrap items-center gap-2">
+              <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
                 {!editMode ? (
                   <>
                     <ClassroomToolButton

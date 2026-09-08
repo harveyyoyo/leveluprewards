@@ -7,6 +7,7 @@ import {
   BookOpenCheck,
   Check,
   Clock,
+  Dices,
   ExternalLink,
   Laptop,
   LayoutGrid,
@@ -43,7 +44,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useSettings, type Settings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
-import { isClassroomPillarOn, isParentPortalOn, isPillarOn } from '@/lib/productPillars';
+import { isClassroomPillarOn, isParentPortalOn, isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { studentsInTeacherScope } from '@/lib/reportsScope';
+import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
+import { remainingTeacherBudgetPoints, teacherWithBudgetAfterSpend } from '@/lib/teacherBudget';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
 import { endBathroomPass } from '@/lib/db/bathroom';
@@ -57,6 +61,8 @@ import {
 } from '@/lib/classroom/classroomRealmThemes';
 import {
   loadClassroomSession,
+  classroomSessionStorageKey,
+  applyClassroomSessionAward,
   subscribeClassroomSessionUpdates,
   type ClassroomSessionData,
 } from '@/lib/classroomSeatingChart';
@@ -68,9 +74,11 @@ import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePa
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
 import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
 import { useToast } from '@/hooks/use-toast';
+import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
+import { isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
 import type { Category, Class, Student, Teacher } from '@/lib/types';
 
-export type ClassroomWorkbenchTab = 'seating' | 'behavior' | 'display' | 'settings';
+export type ClassroomWorkbenchTab = 'seating' | 'behavior' | 'display' | 'settings' | 'raffle';
 
 export interface ClassroomCommandCenterProps {
   schoolId: string;
@@ -80,6 +88,10 @@ export interface ClassroomCommandCenterProps {
   teachers?: Teacher[] | null;
   variant?: 'admin' | 'teacher';
   activeTeacherId?: string;
+  schoolWideAccess?: boolean;
+  budgetOptions?: React.ComponentProps<typeof ClassroomPointsPanel>['budgetOptions'];
+  canEditRaffleSettings?: boolean;
+  raffleOperatorName?: string;
   initialClassId?: string;
   initialTab?: ClassroomWorkbenchTab;
   className?: string;
@@ -90,9 +102,13 @@ export function ClassroomCommandCenter({
   classes: propClasses,
   students: propStudents,
   categories: propCategories,
-  teachers: _teachers,
+  teachers,
   variant = 'admin',
   activeTeacherId,
+  schoolWideAccess = false,
+  budgetOptions: propBudgetOptions,
+  canEditRaffleSettings,
+  raffleOperatorName,
   initialClassId,
   initialTab = 'seating',
   className,
@@ -100,33 +116,58 @@ export function ClassroomCommandCenter({
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { loginState, teacherDocId, userId } = useAppContext();
+  const { loginState, teacherDocId, userId, userName, updateTeacher } = useAppContext();
 
   const effectiveTeacherId = activeTeacherId || teacherDocId || userId || '';
+  const currentTeacher = teachers?.find((teacher) => teacher.id === effectiveTeacherId);
+  const schoolWide = variant === 'admin' || schoolWideAccess || isLeadershipPersonnel(currentTeacher);
+  const budgetOptions = useMemo(() => {
+    if (propBudgetOptions) return propBudgetOptions;
+    if (schoolWide) return undefined;
+    return {
+      isAdmin: false,
+      currentTeacher: currentTeacher ?? null,
+      onBudgetSpend: async (cost: number) => {
+        if (currentTeacher) await updateTeacher(teacherWithBudgetAfterSpend(currentTeacher, cost));
+      },
+    };
+  }, [propBudgetOptions, schoolWide, currentTeacher, updateTeacher]);
+  const rewardsMode = isRewardsPillarOn(settings);
   const classroomOn = isClassroomPillarOn(settings);
   const attendanceOn = isPillarOn(settings, 'payAttendance');
   const parentPortalOn = isParentPortalOn(settings);
   const principalTimelineOn = settings.enablePrincipalBehaviorTimeline === true;
+  const raffleVisible = isClassroomRaffleSectionVisible(settings, variant);
 
   // Real-time school attendance & bathroom passes
   const attendanceMap = useTodayAttendanceMap(schoolId, attendanceOn);
-  const activePasses = useActiveBathroomPasses(schoolId, true);
+  const activePasses = useActiveBathroomPasses(schoolId, attendanceOn && !!settings.enableClassSignIn && settings.enableBathroomTimer !== false);
 
   // Active view & modals
   const [activeTab, setActiveTab] = useState<ClassroomWorkbenchTab>(initialTab);
+  useEffect(() => {
+    setActiveTab(initialTab === 'raffle' && !raffleVisible ? 'seating' : initialTab);
+  }, [initialTab, raffleVisible]);
   const [isPairModalOpen, setIsPairModalOpen] = useState(false);
   const [isRandomModalOpen, setIsRandomModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [sessionPoints, setSessionPoints] = useState<number>(0);
 
   // Scope & Class Resolution
-  const seatingScope = variant === 'admin' ? 'admin' : effectiveTeacherId || 'staff';
+  const seatingScope = schoolWide ? 'admin' : effectiveTeacherId || 'staff';
+
+  const scopedStudents = useMemo(() => {
+    const list = propStudents ?? [];
+    if (schoolWide) return list;
+    return studentsInTeacherScope(effectiveTeacherId, list, propClasses ?? []);
+  }, [propStudents, propClasses, schoolWide, effectiveTeacherId]);
 
   const availableClasses = useMemo(() => {
     const list = (propClasses ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
-    if (variant === 'admin' || !effectiveTeacherId) return list;
-    return list.filter((c) => c.primaryTeacherId === effectiveTeacherId);
-  }, [propClasses, variant, effectiveTeacherId]);
+    if (schoolWide) return list;
+    const rosterClassIds = new Set(scopedStudents.map((s) => s.classId));
+    return list.filter((c) => c.primaryTeacherId === effectiveTeacherId || rosterClassIds.has(c.id));
+  }, [propClasses, schoolWide, effectiveTeacherId, scopedStudents]);
 
   const [selectedClassId, setSelectedClassId] = useState<string>(() => {
     if (initialClassId && availableClasses.some((c) => c.id === initialClassId)) {
@@ -137,10 +178,10 @@ export function ClassroomCommandCenter({
 
   // Ensure selectedClassId stays valid when classes load
   useEffect(() => {
-    if (!selectedClassId && availableClasses.length > 0) {
-      setSelectedClassId(availableClasses[0].id);
+    if (!availableClasses.some((c) => c.id === selectedClassId)) {
+      setSelectedClassId(availableClasses.find((c) => c.id === initialClassId)?.id ?? availableClasses[0]?.id ?? '');
     }
-  }, [availableClasses, selectedClassId]);
+  }, [availableClasses, selectedClassId, initialClassId]);
 
   const activeClass = useMemo(() => {
     return availableClasses.find((c) => c.id === selectedClassId) || availableClasses[0] || null;
@@ -148,10 +189,9 @@ export function ClassroomCommandCenter({
 
   // Students in active class
   const classStudents = useMemo(() => {
-    const all = propStudents ?? [];
-    if (!activeClass) return all;
-    return all.filter((s) => s.classId === activeClass.id);
-  }, [propStudents, activeClass]);
+    if (!activeClass) return [];
+    return scopedStudents.filter((s) => s.classId === activeClass.id);
+  }, [scopedStudents, activeClass]);
 
   // Active session subscription
   useEffect(() => {
@@ -160,7 +200,8 @@ export function ClassroomCommandCenter({
     const sum = Object.values(initialSession.totals || {}).reduce((a, b) => a + b, 0);
     setSessionPoints(sum);
 
-    const unsubscribe = subscribeClassroomSessionUpdates((_key, data: ClassroomSessionData) => {
+    const unsubscribe = subscribeClassroomSessionUpdates((key, data: ClassroomSessionData) => {
+      if (key !== classroomSessionStorageKey(schoolId, seatingScope, selectedClassId)) return;
       const total = Object.values(data.totals || {}).reduce((a, b) => a + b, 0);
       setSessionPoints(total);
     });
@@ -218,20 +259,31 @@ export function ClassroomCommandCenter({
 
   // Handle awarding a random student
   const handleRandomAward = async (studentId: string, pts: number, reason: string) => {
+    if (!classStudents.some((student) => student.id === studentId)) throw new Error('Select a student in the current class.');
+    if (settings.enableTeacherBudgets && budgetOptions && !budgetOptions.isAdmin) {
+      const teacher = budgetOptions.currentTeacher;
+      if (!teacher) throw new Error('Teacher budget is still loading. Please try again.');
+      const remaining = remainingTeacherBudgetPoints(teacher);
+      if (remaining !== null && pts > remaining) throw new Error('Insufficient teacher budget.');
+    }
     const result = await awardClassroomPoints(firestore, {
       schoolId,
       studentIds: [studentId],
       signedDelta: pts,
       description: reason,
-      rewardsMode: true,
+      rewardsMode,
       classId: selectedClassId,
       className: activeClass?.name,
       teacherId: effectiveTeacherId,
-      teacherName: variant === 'admin' ? 'Administrator' : 'Teacher',
+      teacherName: userName || (schoolWide ? 'Administrator' : 'Teacher'),
     });
     if (!result.success) {
       throw new Error(result.message);
     }
+    if (rewardsMode && settings.enableTeacherBudgets && budgetOptions && !budgetOptions.isAdmin) {
+      await budgetOptions.onBudgetSpend(pts);
+    }
+    applyClassroomSessionAward(schoolId, seatingScope, selectedClassId, [studentId], pts, reason);
     toast({
       title: 'Spotlight Awarded!',
       description: `Awarded +${pts} points to student.`,
@@ -246,7 +298,7 @@ export function ClassroomCommandCenter({
     audience: 'teacher',
   });
 
-  const studentMirrorUrl = `/${schoolId}/classroom-screen?classId=${encodeURIComponent(selectedClassId)}`;
+  const studentMirrorUrl = `/${schoolId}/classroom-screen?classId=${encodeURIComponent(selectedClassId)}&scope=${encodeURIComponent(seatingScope)}`;
 
   const currentTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
 
@@ -266,19 +318,19 @@ export function ClassroomCommandCenter({
           </p>
         </div>
         <div className="pt-2">
-          <ClassroomSetupWizardTrigger
+          {schoolWide ? <ClassroomSetupWizardTrigger
             schoolId={schoolId}
             classes={availableClasses}
             students={propStudents ?? []}
             updateSettings={updateSettings}
-          />
+          /> : <p className="text-sm text-muted-foreground">Ask a school administrator to enable Classroom Management.</p>}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('space-y-5', className)}>
+    <div className={cn('classroom-native-colors space-y-5 text-foreground', className)}>
       {/* Top Classroom Control & Class Bar */}
       <div className="rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -454,7 +506,7 @@ export function ClassroomCommandCenter({
         onValueChange={(val) => setActiveTab(val as ClassroomWorkbenchTab)}
         className="space-y-4"
       >
-        <TabsList className="grid w-full grid-cols-4 rounded-2xl p-1 bg-muted/50 border border-border/60">
+        <TabsList className={cn('grid h-auto w-full grid-cols-2 gap-1 rounded-2xl p-1 bg-muted border border-border/60', raffleVisible ? 'sm:grid-cols-3 xl:grid-cols-5' : 'sm:grid-cols-4')}>
           <TabsTrigger
             value="seating"
             className="rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm"
@@ -483,6 +535,9 @@ export function ClassroomCommandCenter({
             <SettingsIcon className="mr-1.5 h-4 w-4 text-amber-500" />
             Rules &amp; Presets
           </TabsTrigger>
+          {raffleVisible && <TabsTrigger value="raffle" className="rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+            <Dices className="mr-1.5 h-4 w-4 text-purple-500" />Raffle
+          </TabsTrigger>}
         </TabsList>
 
         {/* 1. SEATING & LIVE AWARDS TAB */}
@@ -505,6 +560,8 @@ export function ClassroomCommandCenter({
                 categories={propCategories ?? []}
                 storageScope={seatingScope}
                 initialClassId={selectedClassId}
+                onClassIdChange={setSelectedClassId}
+                budgetOptions={budgetOptions}
               />
             )}
           </div>
@@ -529,10 +586,15 @@ export function ClassroomCommandCenter({
               schoolId={schoolId}
               scope={seatingScope}
               classes={availableClasses}
-              students={propStudents ?? []}
+              students={scopedStudents}
             />
           </div>
         </TabsContent>
+
+        {raffleVisible && <TabsContent value="raffle" className="mt-0 focus-visible:outline-none">
+          <AdminRaffleTab schoolId={schoolId} embedded students={scopedStudents} classes={availableClasses}
+            canEditSettings={canEditRaffleSettings ?? variant === 'admin'} operatorName={raffleOperatorName || userName || undefined} />
+        </TabsContent>}
 
         {/* 4. CLASSROOM RULES & PRESETS SETTINGS TAB */}
         <TabsContent value="settings" className="focus-visible:outline-none space-y-4 mt-0">
@@ -558,10 +620,12 @@ export function ClassroomCommandCenter({
         schoolId={schoolId}
         classId={selectedClassId}
         classNameLabel={activeClass?.name || 'Classroom'}
+        scope={seatingScope}
       />
 
       {/* RANDOM STUDENT SPOTLIGHT MODAL */}
       <RandomStudentPickerModal
+        key={selectedClassId}
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}
         students={classStudents}
@@ -572,7 +636,7 @@ export function ClassroomCommandCenter({
 
       {/* THEME PICKER MODAL */}
       <Dialog open={isThemeModalOpen} onOpenChange={setIsThemeModalOpen}>
-        <DialogContent className="max-w-lg rounded-3xl p-6 sm:p-8">
+        <DialogContent className="classroom-native-colors max-w-lg rounded-3xl p-6 text-foreground sm:p-8">
           <DialogHeader className="text-left space-y-1">
             <div className="flex items-center gap-2">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">

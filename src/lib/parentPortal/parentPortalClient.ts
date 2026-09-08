@@ -39,8 +39,10 @@ export async function verifyParentPortal(args: {
   schoolId: string;
   studentLookup: string;
   parentEmail: string;
+  code?: string;
+  challengeId?: string;
 }) {
-  return postJson<{ ok: boolean }>('/api/parent-portal/verify', args);
+  return postJson<{ ok: boolean; requiresCode?: boolean; challengeId?: string }>('/api/parent-portal/verify', args);
 }
 
 export async function fetchParentPortalDashboard(schoolId: string) {

@@ -43,6 +43,7 @@ type IntakeRow = {
   category: string;
   status: IntakeRowStatus;
   error?: string;
+  copies?: number;
 };
 
 function newRowId() {
@@ -51,7 +52,7 @@ function newRowId() {
 
 function lookupFailureMessage(scannedCode: string, meta: Awaited<ReturnType<typeof fetchCatalogHitByIsbn>>['meta']) {
   if (!meta.aiConfigured) {
-    return `No catalog record for ${scannedCode}. AI lookup is not configured — add OPENAI_API_KEY or GEMINI_API_KEY to .env.local.`;
+    return `No catalog record for ${scannedCode}. Type the title below to continue.`;
   }
   if (meta.aiStatus === 'error') {
     return meta.aiError
@@ -109,33 +110,6 @@ export function LibraryBookIntakeScanner({
       const isIsbn = isRetailIsbnBarcode(trimmed);
       const scannedCode = isIsbn ? primaryIsbnVariant(trimmed) : trimmed;
       const codeKey = scannedCode.toUpperCase();
-
-      if (isIsbn && catalogIsbns.has(scannedCode)) {
-        setScanFeedback({
-          code: scannedCode,
-          status: 'duplicate',
-          message: 'This ISBN is already registered in your library.',
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Already in catalog',
-          description: `ISBN ${scannedCode} is already registered.`,
-        });
-        return;
-      }
-      if (!isIsbn && catalogScannedCodes.has(codeKey)) {
-        setScanFeedback({
-          code: scannedCode,
-          status: 'duplicate',
-          message: 'This barcode is already registered in your library.',
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Already in catalog',
-          description: `Barcode ${scannedCode} is already registered.`,
-        });
-        return;
-      }
 
       const id = newRowId();
       let duplicateInQueue = false;
@@ -228,7 +202,7 @@ export function LibraryBookIntakeScanner({
         });
       }
     },
-    [catalogIsbns, catalogScannedCodes, toast, upsertRow],
+    [toast, upsertRow],
   );
 
   const handleScan = useCallback(
@@ -253,7 +227,7 @@ export function LibraryBookIntakeScanner({
   const aiReviewCount = rows.filter((r) => r.status === 'ai_review').length;
 
   const handleRegisterAll = async () => {
-    const toSave = rows.filter((r) => r.status === 'ready' || (r.status === 'needs_title' && r.title.trim()));
+    const toSave = rows.filter((r) => r.status === 'ready' || ((r.status === 'needs_title' || r.status === 'error') && r.title.trim()));
     const missingTitle = rows.filter((r) => r.status === 'needs_title' && !r.title.trim());
     if (missingTitle.length > 0) {
       toast({
@@ -284,19 +258,12 @@ export function LibraryBookIntakeScanner({
     let saved = 0;
     for (const row of toSave) {
       upsertRow({ id: row.id, status: 'lookup' });
-      const upc = await resolveIntakeCheckoutUpc(row.isbn, upcTaken);
-      if (!upc) {
-        upsertRow({
-          id: row.id,
-          status: 'error',
-          error: row.isbn.trim() ? 'Barcode already in catalog' : 'Could not generate checkout barcode',
-        });
-        continue;
-      }
+      const upc = row.isbn;
       try {
         await onRegister({
           name: row.title.trim(),
           upc,
+          copies: row.copies ?? 1,
           author: row.author.trim() || undefined,
           isbn: row.isbn,
           category: row.category.trim() || undefined,
@@ -340,7 +307,7 @@ export function LibraryBookIntakeScanner({
           </h3>
           <p className="text-xs text-muted-foreground">
             Scan one or many barcodes with your reader. ISBNs are looked up online; other codes need a title in the
-            queue. Each book&apos;s own barcode is used for checkout.
+            queue. Extra copies receive unique LIB labels. Print and attach those labels before lending.
           </p>
         </div>
         <Button
@@ -421,6 +388,11 @@ export function LibraryBookIntakeScanner({
                   disabled={row.status === 'saved' || row.status === 'lookup'}
                   className="h-8 text-sm sm:col-span-2 rounded-lg"
                 />
+                <label className="text-xs font-medium">Copies
+                  <Input aria-label={`Copies of ${row.title || row.isbn}`} type="number" min={1} max={25} value={row.copies ?? 1}
+                    disabled={row.status === 'saved' || registering}
+                    onChange={(event) => upsertRow({ id: row.id, copies: Math.min(25, Math.max(1, Number(event.target.value) || 1)) })} className="w-20" />
+                </label>
                 <Input
                   value={row.author}
                   onChange={(e) => upsertRow({ id: row.id, author: e.target.value })}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
+import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import { deobfuscateField } from '@/lib/crypto';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
@@ -9,21 +9,20 @@ import {
   signParentPortalSession,
 } from '@/lib/parentPortal/parentPortalSession';
 import { isParentPortalOn } from '@/lib/productPillars';
+import { consumeParentPortalCode, requestParentPortalCode } from '@/lib/server/parentPortalChallenge';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
 
 async function getDb() {
-  await getFirebaseAdminAuth();
-  const admin = (await import('firebase-admin')).default;
-  return admin.firestore();
+  return getFirebaseAdminFirestore();
 }
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
-/** POST: verify parent email on file and mint parent portal session cookie. */
+/** POST: request an emailed code, or consume it before issuing a parent session. */
 export async function POST(req: NextRequest) {
   try {
     if (!sameOrigin(req)) return jsonError(403, 'Forbidden');
@@ -41,8 +40,14 @@ export async function POST(req: NextRequest) {
       typeof body?.studentLookup === 'string' ? body.studentLookup.trim() : '';
     const parentEmail =
       typeof body?.parentEmail === 'string' ? body.parentEmail.trim() : '';
+    const code = typeof body?.code === 'string' ? body.code.trim() : '';
+    const challengeId = typeof body?.challengeId === 'string' ? body.challengeId.trim() : '';
     if (!schoolId || !studentLookup || !parentEmail || !SCHOOL_ID_RE.test(schoolId)) {
       return jsonError(400, 'schoolId, studentLookup, and parentEmail are required.');
+    }
+    if (studentLookup.includes('/') || studentLookup.length > 128 || parentEmail.length > 254 ||
+        ((code || challengeId) && (!/^\d{6}$/.test(code) || !/^[\w-]{36}$/.test(challengeId)))) {
+      return jsonError(400, 'Check your student ID, email, and six-digit code.');
     }
 
     const db = await getDb();
@@ -76,9 +81,18 @@ export async function POST(req: NextRequest) {
       return jsonError(403, 'Parent email does not match our records. Contact the school office.');
     }
 
-    const token = await signParentPortalSession({ schoolId, studentId });
+    if (!code) {
+      const challenge = await requestParentPortalCode(db, schoolId, studentId, onFile);
+      if (challenge.error) return jsonError(429, challenge.error);
+      return NextResponse.json({ ok: true, requiresCode: true, challengeId: challenge.challengeId });
+    }
+
+    const token = await signParentPortalSession({ schoolId, studentId, email: onFile });
     if (!token) {
       return jsonError(503, 'Parent portal sessions are not configured on this server.');
+    }
+    if (!(await consumeParentPortalCode(db, schoolId, studentId, onFile, challengeId, code))) {
+      return jsonError(403, 'Code is incorrect or expired. Request a new code if needed.');
     }
 
     const res = NextResponse.json({ ok: true, studentId });

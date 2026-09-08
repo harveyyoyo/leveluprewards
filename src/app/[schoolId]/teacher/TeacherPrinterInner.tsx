@@ -2192,6 +2192,7 @@ function TeacherPrinterInnerBody({
                                     teachers={teachers}
                                     variant="teacher"
                                     activeTeacherId={teacherId}
+                                    schoolWideAccess={schoolWideTeacherScope && !secretaryMode}
                                 />
                             </TeacherPortalTabPane>
                             )}

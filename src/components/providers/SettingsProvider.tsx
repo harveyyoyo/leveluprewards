@@ -49,6 +49,7 @@ import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
+import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
@@ -103,6 +104,10 @@ interface Settings {
     housesRealmTheme?: HousesRealmThemeId;
     /** Visual theme for the dedicated Classroom realm (background, glow, accents). School-wide. */
     classroomRealmTheme?: ClassroomRealmThemeId;
+    /** Visual theme for the dedicated Library workspace and self-checkout portal. School-wide. */
+    libraryTheme?: LibraryThemeId;
+    /** When on, student self-checkout kiosk matches the selected library theme. */
+    libraryThemeMatchKiosk?: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
     /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
@@ -699,6 +704,8 @@ const defaultSettings: Settings = {
     enableHouses: false,
     housesRealmTheme: 'cosmic',
     classroomRealmTheme: 'chalkboard',
+    libraryTheme: 'classic_oak',
+    libraryThemeMatchKiosk: true,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,

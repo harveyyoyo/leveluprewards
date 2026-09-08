@@ -25,6 +25,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BrandedQrCode } from '@/components/qr/BrandedQrCode';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { buildClassroomFullscreenUrl } from '@/lib/classroomPointsUrl';
 
 export interface ClassroomScreenPairModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export interface ClassroomScreenPairModalProps {
   schoolId: string;
   classId: string;
   classNameLabel: string;
+  scope?: string;
 }
 
 export function ClassroomScreenPairModal({
@@ -40,6 +42,7 @@ export function ClassroomScreenPairModal({
   schoolId,
   classId,
   classNameLabel,
+  scope = 'admin',
 }: ClassroomScreenPairModalProps) {
   const { toast } = useToast();
   const [targetScreen, setTargetScreen] = useState<'mirror' | 'live'>('mirror');
@@ -50,8 +53,8 @@ export function ClassroomScreenPairModal({
   const cleanClassId = encodeURIComponent(classId || '');
   const path =
     targetScreen === 'mirror'
-      ? `/${schoolId}/classroom-screen?classId=${cleanClassId}`
-      : `/${schoolId}/classroom?classId=${cleanClassId}`;
+      ? `/${schoolId}/classroom-screen?classId=${cleanClassId}&scope=${encodeURIComponent(scope)}`
+      : buildClassroomFullscreenUrl({ schoolId, classId, scope });
   const fullUrl = `${origin}${path}`;
 
   const handleCopy = () => {
@@ -70,13 +73,13 @@ export function ClassroomScreenPairModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl rounded-3xl p-6 sm:p-8">
+      <DialogContent className="classroom-native-colors max-w-xl grid-cols-1 rounded-3xl p-6 sm:p-8 text-foreground [&>*]:min-w-0">
         <DialogHeader className="space-y-2 text-left">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Projector className="h-5 w-5" />
             </div>
-            <div>
+            <div className="min-w-0 pr-3">
               <DialogTitle className="text-xl font-black tracking-tight sm:text-2xl">
                 Pair Classroom Screen
               </DialogTitle>
@@ -98,17 +101,17 @@ export function ClassroomScreenPairModal({
               onValueChange={(val) => setTargetScreen(val as 'mirror' | 'live')}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1 bg-muted">
+              <TabsList className="grid h-auto w-full grid-cols-2 rounded-2xl p-1 bg-muted">
                 <TabsTrigger
                   value="mirror"
-                  className="rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="min-h-12 whitespace-normal rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
                   <Projector className="mr-2 h-4 w-4" />
                   Student Mirror (Clean)
                 </TabsTrigger>
                 <TabsTrigger
                   value="live"
-                  className="rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                  className="min-h-12 whitespace-normal rounded-xl font-bold text-xs sm:text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
                 >
                   <Laptop className="mr-2 h-4 w-4" />
                   Interactive Board (Teacher)
@@ -135,7 +138,7 @@ export function ClassroomScreenPairModal({
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                   {targetScreen === 'mirror'
-                    ? 'Clean view displaying student seating, live points, and celebration effects without teacher notes.'
+                    ? 'Class messages and today’s session leaderboard without teacher notes.'
                     : 'Full interactive teaching board allowing one-tap awards directly on touch displays.'}
                 </p>
               </div>
@@ -184,6 +187,9 @@ export function ClassroomScreenPairModal({
 
           {/* Quick Setup Instructions Tabs */}
           <div className="space-y-2.5">
+            <p className="text-xs text-muted-foreground">
+              For matching session totals and display settings, open the mirror in another tab on your teaching computer and share it with HDMI or AirPlay. Separate devices need staff sign-in and their own display setup.
+            </p>
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Classroom Hardware Setup Guides
             </p>

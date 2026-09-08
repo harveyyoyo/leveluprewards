@@ -1,11 +1,8 @@
 import {
-  addDoc,
   collection,
-  doc,
   getDocs,
   limit,
   query,
-  updateDoc,
   where,
   type Firestore,
 } from 'firebase/firestore';
@@ -13,14 +10,15 @@ import { httpsCallable, type Functions } from 'firebase/functions';
 import type { LibraryItem } from '@/lib/types';
 import { getIsbnLookupVariants } from '@/lib/library/libraryCatalogLookup';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
-import { computeDueAt, libraryReturnUsesServer, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
+import { type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 
 export type LibraryCheckoutResult =
   | { action: 'checkout'; item: LibraryItem; itemId: string; dueAt?: number | null }
   | { action: 'return'; item: LibraryItem; itemId: string; pointsDelta?: number; pointsMessage?: string }
   | { action: 'wrong_borrower'; item: LibraryItem; borrowerName?: string }
   | { action: 'limit_reached'; currentCount: number; max: number }
-  | { action: 'not_found' };
+  | { action: 'not_found' }
+  | { action: 'already_done' };
 
 export type LibraryReturnServerResult = {
   success: boolean;
@@ -81,149 +79,49 @@ export async function countStudentLibraryCheckouts(
   return items.length;
 }
 
-function shouldUseServerReturn(policy?: LibraryPolicySettings): boolean {
-  return libraryReturnUsesServer(policy);
-}
-
-async function clientCheckout(
-  firestore: Firestore,
-  schoolId: string,
-  studentId: string,
-  item: LibraryItem,
-  itemId: string,
-  policy?: LibraryPolicySettings,
-): Promise<LibraryCheckoutResult> {
-  const checkedOutAt = Date.now();
-  const dueAt =
-    policy && policy.loanPeriodDays > 0 ? computeDueAt(checkedOutAt, policy.loanPeriodDays) : null;
-
-  await updateDoc(doc(firestore, 'schools', schoolId, 'library', itemId), {
-    status: 'checked_out',
-    checkedOutTo: studentId,
-    checkedOutAt,
-    dueAt,
-  });
-  await addDoc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'), {
-    desc: `Checked out library item: ${item.name}`,
-    amount: 0,
-    date: checkedOutAt,
-  });
-  return {
-    action: 'checkout',
-    item: { ...item, status: 'checked_out', checkedOutTo: studentId, checkedOutAt, dueAt },
-    itemId,
-    dueAt,
-  };
-}
-
-async function clientReturn(
-  firestore: Firestore,
-  schoolId: string,
-  studentId: string,
-  item: LibraryItem,
-  itemId: string,
-): Promise<LibraryCheckoutResult> {
-  await updateDoc(doc(firestore, 'schools', schoolId, 'library', itemId), {
-    status: 'available',
-    checkedOutTo: null,
-    checkedOutAt: null,
-    dueAt: null,
-  });
-  await addDoc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'), {
-    desc: `Returned library item: ${item.name}`,
-    amount: 0,
-    date: Date.now(),
-  });
-  return { action: 'return', item: { ...item, status: 'available' }, itemId };
+// Keep a request ID after uncertain failures so a user retry cannot duplicate a write.
+const pendingRequests = new Map<string, string>();
+export async function callLibrary<T>(functions: Functions | null | undefined, endpoint: string, payload: Record<string, unknown>): Promise<T> {
+  if (!functions) throw new Error('Library connection is not ready. Please try again.');
+  const key = endpoint + JSON.stringify(payload);
+  const requestId = pendingRequests.get(key) ?? crypto.randomUUID();
+  pendingRequests.set(key, requestId);
+  try {
+    const result = await httpsCallable<Record<string, unknown>, T>(functions, endpoint)({ ...payload, requestId });
+    pendingRequests.delete(key);
+    return result.data;
+  } catch (error) {
+    const code = (error as { code?: string }).code ?? '';
+    if (!['functions/unavailable', 'functions/deadline-exceeded', 'functions/internal', 'functions/unknown'].includes(code)) pendingRequests.delete(key);
+    throw error;
+  }
 }
 
 export async function performLibraryCheckoutOrReturn(
-  firestore: Firestore,
-  schoolId: string,
-  studentId: string,
-  rawCode: string,
-  options?: {
-    policy?: LibraryPolicySettings;
-    functions?: Functions | null;
-  },
+  firestore: Firestore, schoolId: string, studentId: string, rawCode: string,
+  options?: { policy?: LibraryPolicySettings; functions?: Functions | null; action?: 'checkout' | 'return' },
 ): Promise<LibraryCheckoutResult> {
   const found = await findLibraryItemByUpc(firestore, schoolId, rawCode);
-  if (!found) return { action: 'not_found' };
+  if (!found || found.item.archived) return { action: 'not_found' };
   const { item, itemId } = found;
-  const policy = options?.policy;
-
-  if (item.status === 'available') {
-    const max = policy?.maxCheckoutsPerStudent ?? 0;
-    if (max > 0) {
-      const currentCount = await countStudentLibraryCheckouts(firestore, schoolId, studentId);
-      if (currentCount >= max) {
-        return { action: 'limit_reached', currentCount, max };
-      }
-    }
-    return clientCheckout(firestore, schoolId, studentId, item, itemId, policy);
-  }
-
-  if (item.status === 'checked_out') {
-    if (item.checkedOutTo !== studentId) {
-      return { action: 'wrong_borrower', item };
-    }
-    if (shouldUseServerReturn(policy) && options?.functions) {
-      const fn = httpsCallable<
-        { schoolId: string; studentId: string; upc: string },
-        LibraryReturnServerResult
-      >(options.functions, 'libraryReturnServer');
-      const upc = normalizeLibraryUpc(rawCode);
-      const res = await fn({ schoolId, studentId, upc });
-      const data = res.data;
-      if (!data?.success) {
-        return { action: 'not_found' };
-      }
-      return {
-        action: 'return',
-        item: { ...item, status: 'available', checkedOutTo: null, checkedOutAt: null, dueAt: null },
-        itemId,
-        pointsDelta: data.pointsDelta,
-        pointsMessage: data.message,
-      };
-    }
-    return clientReturn(firestore, schoolId, studentId, item, itemId);
-  }
-
-  return { action: 'not_found' };
+  // Default to checkout: a repeated scan must never silently return a book.
+  const action = options?.action ?? 'checkout';
+  return callLibrary<LibraryCheckoutResult>(options?.functions, 'libraryCirculation', {
+    schoolId, studentId, itemId, action,
+    expectedLoanId: item.activeLoanId ?? null,
+    expectedCheckedOutAt: item.checkedOutAt ?? null,
+  });
 }
 
-/** Staff force-return (applies late/on-time points when configured). */
 export async function forceReturnLibraryItem(
-  firestore: Firestore,
-  schoolId: string,
-  item: LibraryItem,
+  _firestore: Firestore, schoolId: string, item: LibraryItem,
   options?: { policy?: LibraryPolicySettings; functions?: Functions | null },
-): Promise<LibraryReturnServerResult | { success: true; pointsDelta?: number; message?: string }> {
-  const studentId = item.checkedOutTo;
-  if (!studentId || item.status !== 'checked_out') {
-    await updateDoc(doc(firestore, 'schools', schoolId, 'library', item.id), {
-      status: 'available',
-      checkedOutTo: null,
-      checkedOutAt: null,
-      dueAt: null,
-    });
-    return { success: true, message: 'Item returned.' };
-  }
-
-  if (shouldUseServerReturn(options?.policy) && options?.functions) {
-    const fn = httpsCallable<
-      { schoolId: string; studentId: string; upc: string },
-      LibraryReturnServerResult
-    >(options.functions, 'libraryReturnServer');
-    const res = await fn({ schoolId, studentId, upc: item.upc });
-    return res.data ?? { success: false, message: 'Return failed.' };
-  }
-
-  await updateDoc(doc(firestore, 'schools', schoolId, 'library', item.id), {
-    status: 'available',
-    checkedOutTo: null,
-    checkedOutAt: null,
-    dueAt: null,
+): Promise<LibraryReturnServerResult> {
+  if (!item.checkedOutTo || item.status !== 'checked_out') return { success: true, message: 'Already returned.' };
+  const result = await callLibrary<LibraryReturnServerResult & { action?: string }>(options?.functions, 'libraryCirculation', {
+    schoolId, action: 'return', itemId: item.id, studentId: item.checkedOutTo,
+    expectedLoanId: item.activeLoanId ?? null, expectedCheckedOutAt: item.checkedOutAt ?? null,
   });
-  return { success: true, message: 'Item returned.' };
+  if (result.action === 'wrong_borrower') throw new Error('The borrower changed. Refresh this copy and try again.');
+  return result;
 }

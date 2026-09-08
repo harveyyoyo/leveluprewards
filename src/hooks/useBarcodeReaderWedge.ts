@@ -53,6 +53,7 @@ export function useBarcodeReaderWedge({
 
       const focused = document.activeElement;
       const isScanField = focused === inputRef.current;
+      if (!bufferRef.current && focused?.closest('button, a, [role=tab], [role=checkbox]') && (e.key === 'Enter' || e.key === ' ')) return;
       if (
         focused &&
         !isScanField &&

@@ -27,6 +27,9 @@ export interface LibraryItem {
   shelfLocation?: string;
   copyNumber?: string;
   notes?: string;
+  activeLoanId?: string | null;
+  condition?: 'good' | 'lost' | 'damaged';
+  archived?: boolean;
   /** Due date for overdue tracking (optional). */
   dueAt?: number | null;
 }
@@ -34,7 +37,7 @@ export interface LibraryItem {
 export type LibraryItemInput = Pick<
   LibraryItem,
   'name' | 'upc' | 'author' | 'isbn' | 'category' | 'shelfLocation' | 'copyNumber' | 'notes'
->;
+> & { copies?: number };
 
 export interface Class {
   id: string;

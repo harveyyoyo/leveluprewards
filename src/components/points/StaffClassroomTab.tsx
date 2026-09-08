@@ -2,7 +2,7 @@
 
 import { ClassroomCommandCenter, type ClassroomWorkbenchTab } from '@/components/classroom/ClassroomCommandCenter';
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
-import type { Category, Class, Student } from '@/lib/types';
+import type { Category, Class, Student, Teacher } from '@/lib/types';
 import type { StaffPointsTabVariant } from '@/components/points/StaffPointsTab';
 import type { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 
@@ -12,6 +12,7 @@ export type StaffClassroomTabProps = {
   categories: Category[] | null | undefined;
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
+  teachers?: Teacher[] | null;
   managerTeacherId?: string;
   schoolWideAccess?: boolean;
   isGraphic?: boolean;
@@ -31,7 +32,12 @@ export function StaffClassroomTab({
   categories,
   classes,
   students,
+  teachers,
   managerTeacherId,
+  schoolWideAccess,
+  manualBudgetOptions,
+  canEditRaffleSettings,
+  raffleOperatorName,
   initialSection,
   className,
 }: StaffClassroomTabProps) {
@@ -39,7 +45,7 @@ export function StaffClassroomTab({
     seating: 'seating',
     behavior: 'behavior',
     'room-display': 'display',
-    raffle: 'seating',
+    raffle: 'raffle',
   };
 
   const initialTab = initialSection ? mapSectionToTab[initialSection] : 'seating';
@@ -50,6 +56,11 @@ export function StaffClassroomTab({
       categories={categories}
       classes={classes}
       students={students}
+      teachers={teachers}
+      schoolWideAccess={schoolWideAccess}
+      budgetOptions={manualBudgetOptions}
+      canEditRaffleSettings={canEditRaffleSettings}
+      raffleOperatorName={raffleOperatorName}
       variant={variant === 'admin' ? 'admin' : 'teacher'}
       activeTeacherId={managerTeacherId}
       initialTab={initialTab}

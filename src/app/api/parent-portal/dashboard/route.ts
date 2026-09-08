@@ -8,6 +8,7 @@ import {
 import type { ParentPortalDashboard } from '@/lib/parentPortal/parentPortalClient';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 import { isParentPortalOn, isRewardsPillarOn } from '@/lib/productPillars';
+import { deobfuscateField } from '@/lib/crypto';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -61,6 +62,8 @@ export async function GET(req: NextRequest) {
     if (!studentSnap.exists) return jsonError(404, 'Student not found.');
 
     const student = studentSnap.data() as {
+      parentEmail?: string;
+      notificationPrefs?: { parentEnabled?: boolean };
       firstName?: string;
       lastName?: string;
       nickname?: string;
@@ -68,6 +71,10 @@ export async function GET(req: NextRequest) {
       classroomPoints?: number;
       classId?: string;
     };
+    if (student.notificationPrefs?.parentEnabled === false ||
+        (deobfuscateField(student.parentEmail) || '').trim().toLowerCase() !== session.email) {
+      return jsonError(401, 'Parent access has changed. Sign in again.');
+    }
     const displayName =
       [student.nickname || student.firstName || 'Student', student.lastName || ''].filter(Boolean).join(' ').trim() ||
       session.studentId;
