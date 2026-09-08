@@ -300,6 +300,11 @@ service cloud.firestore {
         allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
       }
 
+      // Per-teacher Classroom Realm prefs (seating layouts, quick awards, room-display prefs).
+      match /teachers/{teacherId}/classroomPrefs/{docId} {
+        allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
+      }
+
       match /homework/{assignmentId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
         allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
@@ -316,8 +321,9 @@ service cloud.firestore {
       }
       
       match /categories/{categoryId} {
-        // Categories are used by teachers in the UI.
-        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
+        // Categories are used by teachers in the UI. Kiosk/portal also read
+        // incentive-flagged categories as "ways to earn" display cards.
+        allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId) || hasKioskSession(schoolId);
         allow create: if isAdmin(schoolId) || isDeveloper()
           || isTeacherOwnedCreate(schoolId);
         allow update: if isAdmin(schoolId) || isDeveloper()
@@ -400,7 +406,11 @@ service cloud.firestore {
       }
 
       match /coupons/{couponId} {
-        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isReports(schoolId) || isDeveloper();
+        // Printed / scannable coupons (no `kind`, or kind != 'incentive') stay staff-only.
+        // Leftover display-only `kind == 'incentive'` docs may still exist until they are
+        // folded into categories; they are not printed tickets and are never redeemed.
+        allow read: if (resource.data.kind == 'incentive' && isAuth())
+          || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isReports(schoolId) || isDeveloper();
         allow create, update: if isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isDeveloper();
         allow delete: if isAdmin(schoolId) || isDeveloper();
       }

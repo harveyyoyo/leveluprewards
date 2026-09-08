@@ -95,7 +95,7 @@ export function PointsTabLayout({
               items={sectionItems}
               value={resolvedSection}
               onValueChange={(val) => setSection(val as PointsTabSection)}
-              className="rounded-2xl border bg-muted/30 p-1.5"
+              fullWidth
               aria-label="Coupons sections"
             />
 

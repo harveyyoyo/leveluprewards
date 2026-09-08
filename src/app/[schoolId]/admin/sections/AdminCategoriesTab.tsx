@@ -3,6 +3,7 @@
 import { StaffPointsTab } from '@/components/points/StaffPointsTab';
 import { AdminCouponsTab } from '@/app/[schoolId]/admin/sections/AdminCouponsTab';
 import { AdminCurrencyDesignTab } from '@/app/[schoolId]/admin/sections/AdminCurrencyDesignTab';
+import type { Settings } from '@/components/providers/SettingsProvider';
 import type { Category, Class, Coupon, Student, Teacher, Database } from '@/lib/types';
 import { type Firestore, type DocumentReference } from 'firebase/firestore';
 
@@ -25,6 +26,8 @@ export function AdminCategoriesTab({
   firestore,
   schoolDocRef,
   schoolData,
+  settings: _settings,
+  updateSettings: _updateSettings,
 }: {
   categories: Category[] | null | undefined;
   teachers: Teacher[] | null | undefined;
@@ -44,6 +47,8 @@ export function AdminCategoriesTab({
   firestore?: Firestore | null;
   schoolDocRef?: DocumentReference | null;
   schoolData?: Database | null | undefined;
+  settings: Settings;
+  updateSettings: (updates: Partial<Settings>) => void;
 }) {
   const couponManagementContent =
     showCouponManagement && availableCoupons && redeemedCoupons && getStudentName ? (

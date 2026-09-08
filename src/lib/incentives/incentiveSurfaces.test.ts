@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import type { Category } from '@/lib/types';
 import {
   activeIncentivesList,
   incentiveAssignedToSurface,
+  incentiveCategoriesForSurface,
   incentivesForSurface,
   incentivesVisibleOnSurface,
+  type IncentiveListItem,
 } from '@/lib/incentives/incentiveSurfaces';
-import type { BulletinBoardIncentiveRecord } from '@/lib/bulletinBoard';
 
 describe('incentivesVisibleOnSurface', () => {
   it('defaults hallway surfaces on and student surfaces off', () => {
@@ -26,43 +28,47 @@ describe('incentivesVisibleOnSurface', () => {
 });
 
 describe('incentiveAssignedToSurface', () => {
-  it('uses explicit surfaces when present', () => {
-    const row: BulletinBoardIncentiveRecord = {
+  it('uses explicit displaySurfaces when present', () => {
+    const row: IncentiveListItem = {
       id: 'a',
       title: 'Test',
       description: '',
-      points: 1,
-      surfaces: { bulletinBoard: true, studentKiosk: false },
+      value: 1,
+      createdAt: 0,
+      displaySurfaces: { bulletinBoard: true, studentKiosk: false },
     };
     expect(incentiveAssignedToSurface(row, 'bulletinBoard')).toBe(true);
     expect(incentiveAssignedToSurface(row, 'studentKiosk')).toBe(false);
     expect(incentiveAssignedToSurface(row, 'smartScreen')).toBe(false);
   });
 
-  it('treats empty surfaces as unassigned', () => {
-    const row: BulletinBoardIncentiveRecord = {
+  it('treats empty displaySurfaces as unassigned', () => {
+    const row: IncentiveListItem = {
       id: 'a',
       title: 'Test',
       description: '',
-      points: 1,
-      surfaces: {},
+      value: 1,
+      createdAt: 0,
+      displaySurfaces: {},
     };
     expect(incentiveAssignedToSurface(row, 'bulletinBoard')).toBe(false);
   });
 
   it('falls back to legacy active flag for old rows', () => {
-    const active: BulletinBoardIncentiveRecord = {
+    const active: IncentiveListItem = {
       id: 'a',
       title: 'Test',
       description: '',
-      points: 1,
+      value: 1,
+      createdAt: 0,
       active: true,
     };
-    const inactive: BulletinBoardIncentiveRecord = {
+    const inactive: IncentiveListItem = {
       id: 'b',
       title: 'Hidden',
       description: '',
-      points: 1,
+      value: 1,
+      createdAt: 0,
       active: false,
     };
     expect(incentiveAssignedToSurface(active, 'bulletinBoard')).toBe(true);
@@ -74,20 +80,49 @@ describe('incentiveAssignedToSurface', () => {
 
 describe('incentivesForSurface', () => {
   it('filters and sorts newest first', () => {
-    const rows: BulletinBoardIncentiveRecord[] = [
-      { id: 'a', title: 'Old', description: '', points: 1, surfaces: { bulletinBoard: true }, createdAt: 1 },
-      { id: 'b', title: 'Hidden', description: '', points: 1, surfaces: {}, createdAt: 99 },
-      { id: 'c', title: 'New', description: '', points: 1, surfaces: { bulletinBoard: true }, createdAt: 50 },
+    const rows: IncentiveListItem[] = [
+      { id: 'a', title: 'Old', description: '', value: 1, displaySurfaces: { bulletinBoard: true }, createdAt: 1 },
+      { id: 'b', title: 'Hidden', description: '', value: 1, displaySurfaces: {}, createdAt: 99 },
+      { id: 'c', title: 'New', description: '', value: 1, displaySurfaces: { bulletinBoard: true }, createdAt: 50 },
     ];
     expect(incentivesForSurface(rows, 'bulletinBoard').map((r) => r.id)).toEqual(['c', 'a']);
   });
 });
 
+describe('incentiveCategoriesForSurface', () => {
+  it('only includes categories flagged as incentives and assigned to that surface', () => {
+    const categories: Category[] = [
+      {
+        id: 'a',
+        name: 'Homework Hero',
+        points: 50,
+        showAsIncentive: true,
+        displaySurfaces: { bulletinBoard: true },
+      },
+      {
+        id: 'b',
+        name: 'Academics',
+        points: 10,
+        displaySurfaces: { bulletinBoard: true },
+      },
+      {
+        id: 'c',
+        name: 'Kiosk only',
+        points: 5,
+        showAsIncentive: true,
+        displaySurfaces: { studentKiosk: true },
+      },
+    ];
+    expect(incentiveCategoriesForSurface(categories, 'bulletinBoard').map((r) => r.id)).toEqual(['a']);
+    expect(incentiveCategoriesForSurface(categories, 'studentKiosk').map((r) => r.title)).toEqual(['Kiosk only']);
+  });
+});
+
 describe('activeIncentivesList', () => {
   it('delegates to bulletin board surface filtering', () => {
-    const rows: BulletinBoardIncentiveRecord[] = [
-      { id: 'a', title: 'Board', description: '', points: 1, surfaces: { bulletinBoard: true } },
-      { id: 'b', title: 'Kiosk only', description: '', points: 1, surfaces: { studentKiosk: true } },
+    const rows: IncentiveListItem[] = [
+      { id: 'a', title: 'Board', description: '', value: 1, createdAt: 0, displaySurfaces: { bulletinBoard: true } },
+      { id: 'b', title: 'Kiosk only', description: '', value: 1, createdAt: 0, displaySurfaces: { studentKiosk: true } },
     ];
     expect(activeIncentivesList(rows).map((r) => r.id)).toEqual(['a']);
   });

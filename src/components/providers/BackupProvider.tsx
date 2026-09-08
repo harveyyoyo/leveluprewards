@@ -405,6 +405,8 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
                 hasMigratedPrizes: true,
                 hasMigratedCoupons: true,
                 hasMigratedCategories: true,
+                hasMigratedIncentivesToCoupons: true,
+                hasMigratedIncentivesToCategories: true,
             };
 
             const allOps: Array<{ ref: any; data: any }> = [];

@@ -29,3 +29,11 @@ export function prependBehaviorNoteCache(schoolId: string, note: BehaviorNote) {
     [note, ...rest].sort((a, b) => b.createdAt - a.createdAt),
   );
 }
+
+export function removeBehaviorNoteFromCache(schoolId: string, noteId: string) {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid || !noteId) return;
+  const existing = cache.get(sid)?.notes;
+  if (!existing) return;
+  writeBehaviorNotesCache(sid, existing.filter((r) => r.id !== noteId));
+}

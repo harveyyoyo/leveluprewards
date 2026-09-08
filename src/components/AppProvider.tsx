@@ -94,6 +94,10 @@ interface AppContextType {
     imageUrl?: string;
     countsForHousePoints?: boolean;
     isGoldenTicket?: boolean;
+    description?: string;
+    showAsIncentive?: boolean;
+    displaySurfaces?: Category['displaySurfaces'];
+    currencyOverride?: Category['currencyOverride'];
   }) => Promise<Category | undefined>;
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
@@ -517,6 +521,10 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     imageUrl?: string;
     countsForHousePoints?: boolean;
     isGoldenTicket?: boolean;
+    description?: string;
+    showAsIncentive?: boolean;
+    displaySurfaces?: Category['displaySurfaces'];
+    currencyOverride?: Category['currencyOverride'];
   }) => {
     if (!firestore || !schoolId) return undefined;
     return getDb().then((db) => db.addCategory(firestore, schoolId, data));

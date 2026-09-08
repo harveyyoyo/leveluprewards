@@ -1,18 +1,19 @@
 'use client';
 
-import { useState } from 'react';
-import { Edit, Plus, Tag, Trash2 } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Edit, Plus, Search, Tag, Trash2 } from 'lucide-react';
 import { CategoryIconBadge } from '@/components/categories/CategoryIconBadge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Helper } from '@/components/ui/helper';
 import { EmptyState } from '@/components/ui/empty-state';
-import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { Switch } from '@/components/ui/switch';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useCurrency } from '@/hooks/useCurrency';
+import { categoryCurrencyIcon } from '@/lib/currency/resolveCategoryCurrency';
 import type { Category, Teacher } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -32,16 +33,8 @@ export type AwardCategoriesPanelProps = {
   showWalkthrough?: boolean;
 };
 
-function categoryListGridColumns(showCreatedBy: boolean, showHouseToggle: boolean): string {
-  if (!showCreatedBy) {
-    return showHouseToggle
-      ? 'minmax(160px,1fr) 88px 3.25rem 3.25rem'
-      : 'minmax(160px,1fr) 88px 3.25rem';
-  }
-  const base = '76px minmax(160px,1fr) 88px';
-  const toggles = showHouseToggle ? ' 3.25rem 3.25rem' : ' 3.25rem';
-  return `${base}${toggles} minmax(120px,180px) 44px`;
-}
+const categoryRowClassName =
+  'flex w-full min-w-0 items-center gap-3 px-3';
 
 export function AwardCategoriesPanel({
   categories,
@@ -59,6 +52,7 @@ export function AwardCategoriesPanel({
 }: AwardCategoriesPanelProps) {
   const { settings } = useSettings();
   const { icon, label } = useCurrency();
+  const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const isAdmin = mode === 'admin';
   const rowCanEdit = (c: Category) =>
@@ -68,7 +62,7 @@ export function AwardCategoriesPanel({
   const canToggleRow = Boolean(onUpdateCategory) && isAdmin;
   const showCreatedBy = isAdmin;
   const showHouseToggle = settings.enableHouses && canToggleRow;
-  const listGrid = categoryListGridColumns(showCreatedBy, showHouseToggle);
+  const showActions = Boolean(onEditCategory || onDeleteCategory);
 
   const patchCategory = async (category: Category, patch: Partial<Category>) => {
     if (!onUpdateCategory) return;
@@ -81,6 +75,22 @@ export function AwardCategoriesPanel({
   };
 
   const canAdd = Boolean(onAddCategory);
+  const filteredCategories = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const list = categories || [];
+    if (!query) return list;
+    return list.filter((c) => {
+      const createdBy = c.teacherId
+        ? teachers?.find((t) => t.id === c.teacherId)?.name || ''
+        : 'Admin';
+      return (
+        c.name.toLowerCase().includes(query) ||
+        createdBy.toLowerCase().includes(query) ||
+        String(c.points ?? '').includes(query)
+      );
+    });
+  }, [categories, search, teachers]);
+  const hasAnyCategories = Boolean(categories && categories.length > 0);
 
   return (
     <Card
@@ -113,64 +123,58 @@ export function AwardCategoriesPanel({
           ) : null}
         </div>
       </CardHeader>
-      <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-        <ul className="space-y-2 pr-0 sm:pr-1">
-          {categories && categories.length > 0 ? (
-            <AdminRecordListHeader
-              className={showCreatedBy ? 'hidden md:block' : undefined}
-              gridClassName={listGrid}
-              columns={
-                showCreatedBy
-                  ? [
-                      { label: 'Edit' },
-                      { label: 'Category Name' },
-                      { label: label, className: 'text-center' },
-                      ...(showHouseToggle ? [{ label: 'House', className: 'text-center' as const }] : []),
-                      { label: 'Golden', className: 'text-center' },
-                      { label: 'Created By' },
-                      { label: 'Delete', className: 'text-right' },
-                    ]
-                  : [
-                      { label: 'Category Name' },
-                      { label: label, className: 'text-center' },
-                      ...(showHouseToggle ? [{ label: 'House', className: 'text-center' as const }] : []),
-                      { label: 'Golden', className: 'text-center' },
-                    ]
-              }
+      <CardContent className="space-y-3 px-4 pb-4 sm:px-6 sm:pb-6">
+        {hasAnyCategories ? (
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search categories…"
+              className="h-10 rounded-xl pl-9"
+              aria-label="Search categories"
             />
+          </div>
+        ) : null}
+        <ul className="space-y-2 pr-0 sm:pr-1">
+          {filteredCategories.length > 0 ? (
+            <li
+              className={cn(
+                categoryRowClassName,
+                'hidden py-1.5 text-[9px] font-black uppercase tracking-wide text-secondary-foreground/80 md:flex',
+              )}
+            >
+              <span className="w-72 min-w-0 shrink-0">Category</span>
+              <span className="w-[5.5rem] shrink-0">Amount</span>
+              {showHouseToggle ? <span className="w-12 shrink-0 text-center">House</span> : null}
+              {showCreatedBy ? <span className="ml-auto w-24 shrink-0">Created by</span> : null}
+              {showActions ? <span className="w-[6.75rem] shrink-0 text-right"> </span> : null}
+            </li>
           ) : null}
-          {categories?.map((c) => (
+          {filteredCategories.map((c) => (
             <li
               key={c.id}
               className={cn(
-                'grid items-center gap-2 rounded-xl border bg-secondary/20 px-3 py-3 transition-colors hover:border-primary/20 hover:bg-background sm:gap-3 sm:py-2',
+                categoryRowClassName,
+                'rounded-xl border bg-secondary/20 py-3 transition-colors hover:border-primary/20 hover:bg-background sm:py-2',
               )}
-              style={{ gridTemplateColumns: listGrid }}
             >
-              {rowCanEdit(c) ? (
-                <div className="order-3 flex items-center md:order-none">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
-                    onClick={() => onEditCategory?.(c)}
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                </div>
-              ) : null}
-              <div className="order-1 flex min-w-0 items-center gap-3 md:order-none">
+              <div className="flex w-72 min-w-0 shrink-0 items-center gap-3">
                 <CategoryIconBadge category={c} size="sm" />
                 <span className="truncate text-sm font-bold">{c.name}</span>
+                {c.showAsIncentive ? (
+                  <Badge variant="outline" className="shrink-0 text-[10px] font-bold uppercase tracking-wide">
+                    On displays
+                  </Badge>
+                ) : null}
               </div>
-              <div className="order-2 whitespace-nowrap text-right text-sm font-bold text-primary md:order-none md:text-center">
+              <div className="w-[5.5rem] shrink-0 text-left text-sm font-bold text-primary">
                 <Badge variant="secondary" className="px-2 font-bold tabular-nums">
-                  {Number(c.points ?? 0)} {icon}
+                  {Number(c.points ?? 0)} {categoryCurrencyIcon(c.currencyOverride, icon)}
                 </Badge>
               </div>
               {showHouseToggle ? (
-                <div className="order-4 flex items-center justify-center md:order-none">
+                <div className="flex w-12 shrink-0 items-center justify-center">
                   <Switch
                     checked={c.countsForHousePoints !== false}
                     disabled={busyId === c.id}
@@ -181,38 +185,44 @@ export function AwardCategoriesPanel({
                   />
                 </div>
               ) : null}
-              {canToggleRow ? (
-                <div className="order-5 flex items-center justify-center md:order-none">
-                  <Switch
-                    checked={c.isGoldenTicket === true}
-                    disabled={busyId === c.id}
-                    onCheckedChange={(checked) =>
-                      void patchCategory(c, { isGoldenTicket: checked || undefined })
-                    }
-                    aria-label={`${c.name} golden ticket`}
-                  />
-                </div>
-              ) : null}
               {showCreatedBy ? (
-                <div className="order-6 col-span-2 min-w-0 truncate text-xs font-medium text-muted-foreground md:order-none md:col-span-1 md:text-sm">
+                <div className="ml-auto w-24 shrink-0 truncate text-xs font-medium text-muted-foreground md:text-sm">
                   {c.teacherId ? teachers?.find((t) => t.id === c.teacherId)?.name || 'Unknown' : 'Admin'}
                 </div>
               ) : null}
-              {rowCanDelete(c) ? (
-                <div className="order-3 flex items-center justify-end md:order-none">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                    onClick={() => onDeleteCategory?.(c.id)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
+              {showActions ? (
+                <div className="flex w-[6.75rem] shrink-0 items-center justify-end gap-1">
+                  {rowCanEdit(c) ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
+                      onClick={() => onEditCategory?.(c)}
+                    >
+                      <Edit className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  ) : null}
+                  {rowCanDelete(c) ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                      onClick={() => onDeleteCategory?.(c.id)}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
             </li>
           ))}
-          {(!categories || categories.length === 0) && (
+          {hasAnyCategories && filteredCategories.length === 0 ? (
+            <li className="py-8 text-center text-sm text-muted-foreground">
+              No categories match “{search.trim()}”.
+            </li>
+          ) : null}
+          {!hasAnyCategories && (
             <EmptyState
               icon={Tag}
               title="No categories yet"
