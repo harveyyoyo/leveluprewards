@@ -28,7 +28,7 @@ export async function migrateIncentivesToCategoriesClient(
 
   const byName = new Map<string, { id: string; data: Category }>();
   categoriesSnap.forEach((snap) => {
-    const data = { id: snap.id, ...(snap.data() as Category) };
+    const data = { ...(snap.data() as Category), id: snap.id };
     const name = String(data.name || '').trim().toLowerCase();
     if (name) byName.set(name, { id: snap.id, data });
   });
