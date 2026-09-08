@@ -12,22 +12,19 @@ describe('portalHub', () => {
     expect(resolveMainPortalCards(undefined)).toEqual([...DEFAULT_MAIN_PORTAL_CARDS]);
     expect(resolveMainPortalCards([])).toEqual([...DEFAULT_MAIN_PORTAL_CARDS]);
     expect(resolveMainPortalCards(['parent', 'invalid'])).toEqual(['parent']);
-    // Legacy 3-card settings automatically include library-kiosk
     expect(resolveMainPortalCards(['admin', 'print', 'redeem'])).toEqual([
       'admin',
       'print',
       'redeem',
-      'library-kiosk',
     ]);
   });
 
   it('preserves canonical card order', () => {
-    expect(resolveMainPortalCards(['library-kiosk', 'parent', 'admin', 'redeem', 'print'])).toEqual([
+    expect(resolveMainPortalCards(['parent', 'admin', 'redeem', 'print'])).toEqual([
       'admin',
       'print',
       'redeem',
       'parent',
-      'library-kiosk',
     ]);
   });
 

@@ -1,7 +1,7 @@
 import { portalChooseTitleClass } from '@/lib/kioskPortraitLayout';
 
 /** Portal hub card ids on the main `/{schoolId}/portal` chooser screen. */
-export type MainPortalCardId = 'admin' | 'print' | 'redeem' | 'student-home' | 'parent' | 'library-kiosk';
+export type MainPortalCardId = 'admin' | 'print' | 'redeem' | 'student-home' | 'parent';
 
 export const MAIN_PORTAL_CARD_ORDER: readonly MainPortalCardId[] = [
   'admin',
@@ -9,16 +9,10 @@ export const MAIN_PORTAL_CARD_ORDER: readonly MainPortalCardId[] = [
   'redeem',
   'student-home',
   'parent',
-  'library-kiosk',
 ];
 
-/** Default hub cards: admin, teacher, student kiosk, and library kiosk. */
-export const DEFAULT_MAIN_PORTAL_CARDS: readonly MainPortalCardId[] = [
-  'admin',
-  'print',
-  'redeem',
-  'library-kiosk',
-];
+/** Default hub cards: admin, teacher, and student kiosk only. */
+export const DEFAULT_MAIN_PORTAL_CARDS: readonly MainPortalCardId[] = ['admin', 'print', 'redeem'];
 
 const MAIN_PORTAL_CARD_ID_SET = new Set<string>(MAIN_PORTAL_CARD_ORDER);
 
@@ -26,7 +20,7 @@ export function isMainPortalCardId(value: unknown): value is MainPortalCardId {
   return typeof value === 'string' && MAIN_PORTAL_CARD_ID_SET.has(value);
 }
 
-/** Normalize stored settings; falls back to default portals. */
+/** Normalize stored settings; falls back to the three core portals. */
 export function resolveMainPortalCards(value: unknown): MainPortalCardId[] {
   if (!Array.isArray(value) || value.length === 0) {
     return [...DEFAULT_MAIN_PORTAL_CARDS];
@@ -34,10 +28,6 @@ export function resolveMainPortalCards(value: unknown): MainPortalCardId[] {
   const seen = new Set<MainPortalCardId>();
   for (const entry of value) {
     if (isMainPortalCardId(entry)) seen.add(entry);
-  }
-  // If stored cards was the legacy 3-card default without the new library kiosk, include library-kiosk
-  if (seen.size === 3 && seen.has('admin') && seen.has('print') && seen.has('redeem') && !seen.has('library-kiosk')) {
-    seen.add('library-kiosk');
   }
   const resolved = MAIN_PORTAL_CARD_ORDER.filter((id) => seen.has(id));
   return resolved.length > 0 ? [...resolved] : [...DEFAULT_MAIN_PORTAL_CARDS];
@@ -125,7 +115,6 @@ export const PORTAL_HUB_PREFETCH_SEGMENTS = [
   'prize',
   'student-home',
   'parent',
-  'library/kiosk',
 ] as const;
 
 export function portalHubPrefetchRoutes(schoolId: string): string[] {

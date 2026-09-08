@@ -241,7 +241,7 @@ export function rainbowByIndexUniformLightness(index: number, scheme?: NavColorS
 }
 
 /** Order used to map portal `area.id` to a theme slot (independent of visible list order). */
-const PORTAL_COLOR_ORDER = ['admin', 'print', 'redeem', 'student-home', 'prize', 'fame', 'library-kiosk'] as const;
+const PORTAL_COLOR_ORDER = ['admin', 'print', 'redeem', 'student-home', 'prize', 'fame'] as const;
 
 export function rainbowForPortalId(id: string, scheme?: NavColorScheme) {
   const idx = PORTAL_COLOR_ORDER.indexOf(id as (typeof PORTAL_COLOR_ORDER)[number]);

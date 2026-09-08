@@ -14,6 +14,16 @@ export type LibraryPolicySettings = {
   onTimeReturnPoints: number;
   pointsCategoryId?: string;
   pointsCategoryName?: string;
+  autoDetectCirculation: boolean;
+  gracePeriodDays: number;
+  maxRenewals: number;
+  renewalDays: number;
+  allowRenewIfOverdue: boolean;
+  allowMultipleCopiesOfSameTitle: boolean;
+  maxFineCap: number;
+  cameraScanEnabled: boolean;
+  kioskAllowDropBoxReturn: boolean;
+  kioskAllowSelfReturn: boolean;
 };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -44,28 +54,29 @@ export function getLibraryPolicyFromSettings(
     libraryLatePointsPerDay?: number;
     libraryOnTimeReturnPoints?: number;
     libraryPointsCategoryId?: string;
+    libraryAutoDetectCirculation?: boolean;
+    libraryGracePeriodDays?: number;
+    libraryMaxRenewals?: number;
+    libraryRenewalDays?: number;
+    libraryAllowRenewIfOverdue?: boolean;
+    libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    libraryMaxFineCap?: number;
+    libraryCameraScanEnabled?: boolean;
+    libraryKioskAllowDropBoxReturn?: boolean;
+    libraryKioskAllowSelfReturn?: boolean;
   },
   categories?: Category[] | null,
 ): LibraryPolicySettings {
   const rewardMode = resolveLibraryRewardMode(settings);
-  const loanPeriodDays =
-    typeof settings.libraryLoanPeriodDays === 'number' && settings.libraryLoanPeriodDays > 0
-      ? settings.libraryLoanPeriodDays
-      : 14;
-  const latePointsPerDay =
-    typeof settings.libraryLatePointsPerDay === 'number' && settings.libraryLatePointsPerDay >= 0
-      ? settings.libraryLatePointsPerDay
-      : 2;
-  const onTimeReturnPoints =
-    typeof settings.libraryOnTimeReturnPoints === 'number' && settings.libraryOnTimeReturnPoints > 0
-      ? settings.libraryOnTimeReturnPoints
-      : 0;
-  const categoryId = settings.libraryPointsCategoryId?.trim() || undefined;
-  const category = categoryId ? categories?.find((c) => c.id === categoryId) : undefined;
+  const loanPeriodDays = Math.max(1, settings.libraryLoanPeriodDays ?? 14);
   const maxCheckoutsPerStudent =
-    typeof settings.libraryMaxCheckoutsPerStudent === 'number' && settings.libraryMaxCheckoutsPerStudent >= 0
-      ? settings.libraryMaxCheckoutsPerStudent
+    settings.libraryMaxCheckoutsPerStudent !== undefined
+      ? Math.max(0, settings.libraryMaxCheckoutsPerStudent)
       : 3;
+  const latePointsPerDay = Math.max(0, settings.libraryLatePointsPerDay ?? 2);
+  const onTimeReturnPoints = Math.max(0, settings.libraryOnTimeReturnPoints ?? 0);
+  const categoryId = settings.libraryPointsCategoryId?.trim();
+  const category = categoryId && categories ? categories.find((c) => c.id === categoryId) : undefined;
 
   return {
     rewardMode,
@@ -76,6 +87,16 @@ export function getLibraryPolicyFromSettings(
     onTimeReturnPoints,
     pointsCategoryId: categoryId,
     pointsCategoryName: category?.name,
+    autoDetectCirculation: settings.libraryAutoDetectCirculation !== false,
+    gracePeriodDays: Math.max(0, settings.libraryGracePeriodDays ?? 0),
+    maxRenewals: Math.max(0, settings.libraryMaxRenewals ?? 2),
+    renewalDays: Math.max(1, settings.libraryRenewalDays ?? loanPeriodDays),
+    allowRenewIfOverdue: settings.libraryAllowRenewIfOverdue === true,
+    allowMultipleCopiesOfSameTitle: settings.libraryAllowMultipleCopiesOfSameTitle === true,
+    maxFineCap: Math.max(0, settings.libraryMaxFineCap ?? 20),
+    cameraScanEnabled: settings.libraryCameraScanEnabled === true,
+    kioskAllowDropBoxReturn: settings.libraryKioskAllowDropBoxReturn !== false,
+    kioskAllowSelfReturn: settings.libraryKioskAllowSelfReturn !== false,
   };
 }
 

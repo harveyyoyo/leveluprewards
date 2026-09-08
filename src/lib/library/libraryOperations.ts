@@ -99,15 +99,45 @@ export async function callLibrary<T>(functions: Functions | null | undefined, en
 
 export async function performLibraryCheckoutOrReturn(
   firestore: Firestore, schoolId: string, studentId: string, rawCode: string,
-  options?: { policy?: LibraryPolicySettings; functions?: Functions | null; action?: 'checkout' | 'return' },
+  options?: {
+    policy?: LibraryPolicySettings;
+    functions?: Functions | null;
+    action?: 'checkout' | 'return' | 'auto';
+    allowCrossReturn?: boolean;
+  },
 ): Promise<LibraryCheckoutResult> {
   const found = await findLibraryItemByUpc(firestore, schoolId, rawCode);
   if (!found || found.item.archived) return { action: 'not_found' };
   const { item, itemId } = found;
-  // Default to checkout: a repeated scan must never silently return a book.
-  const action = options?.action ?? 'checkout';
+
+  let action = options?.action ?? 'auto';
+
+  // Smart Auto-Detect: Determine borrow vs return based on item status and borrower
+  if (action === 'auto') {
+    if (item.status === 'checked_out') {
+      if (item.checkedOutTo === studentId) {
+        // The student has this book borrowed -> return it
+        action = 'return';
+      } else if (options?.allowCrossReturn) {
+        // Drop box / cross return: return on behalf of whoever has it
+        action = 'return';
+      } else {
+        // Checked out to someone else: send checkout to let server report wrong_borrower
+        action = 'checkout';
+      }
+    } else {
+      // Book is available in library -> check out (borrow)
+      action = 'checkout';
+    }
+  }
+
+  const effectiveStudentId =
+    action === 'return' && item.checkedOutTo && options?.allowCrossReturn
+      ? item.checkedOutTo
+      : studentId;
+
   return callLibrary<LibraryCheckoutResult>(options?.functions, 'libraryCirculation', {
-    schoolId, studentId, itemId, action,
+    schoolId, studentId: effectiveStudentId, itemId, action,
     expectedLoanId: item.activeLoanId ?? null,
     expectedCheckedOutAt: item.checkedOutAt ?? null,
   });

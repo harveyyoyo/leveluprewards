@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { ArrowLeft, BookOpen, Check, Download, Loader2, MoreHorizontal, Plus, Printer, Search } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Download, ExternalLink, Loader2, Monitor, MoreHorizontal, Plus, Printer, Search, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
@@ -29,6 +29,7 @@ import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryThemeSwitcher } from './LibraryThemeSwitcher';
 import { LibrarySelfCheckoutLaunchButton } from './LibrarySelfCheckoutOverlay';
+import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { cn } from '@/lib/utils';
 
@@ -144,6 +145,13 @@ export function LibraryWorkspace() {
         <div className={cn('rounded-xl p-3 border shadow-sm transition-colors', currentTheme.classes.card)}><BookOpen className={cn('h-7 w-7 transition-colors', currentTheme.classes.accent)} /></div><div><div className="flex items-center gap-2"><h1 className="text-2xl font-bold">Library</h1><Badge variant="outline" className={cn('hidden sm:inline-flex text-[11px] font-normal border transition-colors', currentTheme.classes.badge)}>{currentTheme.icon} {currentTheme.label}</Badge></div><p className="text-sm opacity-80">Books, borrowing, and returns{userName ? ` · ${userName}` : ''}</p></div></div>
       <div className="flex items-center gap-2.5">
         <LibraryThemeSwitcher />
+        <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
+          <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+            <Monitor className="h-4 w-4 text-primary" />
+            <span className="hidden sm:inline">Kiosk Station</span>
+            <ExternalLink className="h-3 w-3 opacity-60" />
+          </Link>
+        </Button>
         <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
       </div>
     </div></header>
@@ -151,14 +159,126 @@ export function LibraryWorkspace() {
       {error ? <p role="alert" className="rounded-xl border border-destructive p-4">The library could not load: {error.message}</p> : null}
       {catalogLoading || studentsLoading ? <p role="status" className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading books and students…</p> : null}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid h-auto w-full grid-cols-4 rounded-xl p-1 sm:max-w-xl">
-          <TabsTrigger value="desk" className="min-h-11 rounded-lg">Desk</TabsTrigger><TabsTrigger value="catalog" className="min-h-11 rounded-lg">Catalog</TabsTrigger>
-          <TabsTrigger value="loans" className="min-h-11 rounded-lg">Loans{overdue.length > 0 ? ` (${overdue.length})` : ''}</TabsTrigger><TabsTrigger value="settings" className="min-h-11 rounded-lg">Settings</TabsTrigger>
+        <TabsList className="grid h-auto w-full grid-cols-5 rounded-xl p-1 sm:max-w-2xl">
+          <TabsTrigger value="desk" className="min-h-11 rounded-lg">Desk</TabsTrigger>
+          <TabsTrigger value="kiosk" className="min-h-11 rounded-lg">Kiosk Station</TabsTrigger>
+          <TabsTrigger value="catalog" className="min-h-11 rounded-lg">Catalog</TabsTrigger>
+          <TabsTrigger value="loans" className="min-h-11 rounded-lg">Loans{overdue.length > 0 ? ` (${overdue.length})` : ''}</TabsTrigger>
+          <TabsTrigger value="settings" className="min-h-11 rounded-lg">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="desk" className="mt-6 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-primary/5 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                <Monitor className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Student Self-Checkout &amp; Return Kiosk</p>
+                <p className="text-xs text-muted-foreground">
+                  Switch this station or open another tab for students to independently borrow and return books.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-xl font-bold text-xs"
+                onClick={() => setTab('kiosk')}
+              >
+                Open Kiosk Tab
+              </Button>
+              <Button
+                size="sm"
+                className="rounded-xl font-bold text-xs gap-1 shadow-sm"
+                asChild
+              >
+                <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                  Launch Fullscreen
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </Button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-3">{[['catalog', 'Copies', (items ?? []).filter(i => !i.archived).length], ['loans', 'On loan', activeLoans.length], ['overdue', 'Overdue', overdue.length]].map(([key, label, count]) =>
             <button key={key} className="rounded-xl border bg-background p-4 text-left hover:border-primary focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setTab(key === 'catalog' ? 'catalog' : 'loans'); setHistory(false); setOverdueOnly(key === 'overdue'); }}><span className="block text-sm text-muted-foreground">{label}</span><span className="text-2xl font-bold">{count}</span></button>)}</div>
           <LibraryCheckoutDesk getStudentName={getName} categories={categories} students={students} />
+        </TabsContent>
+        <TabsContent value="kiosk" className="mt-6 space-y-6">
+          <div className="rounded-2xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Monitor className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl sm:text-2xl font-black">Student Self-Checkout Station</h2>
+                  <Badge variant="outline" className="text-xs font-semibold">
+                    {settings.libraryCameraScanEnabled ? 'Camera Scanning On' : 'Scanner Gun Mode'}
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs font-semibold">
+                    Smart Auto-Detect
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+                  Students scan their ID card to borrow, or drop off books into the returns box. The smart circulation engine auto-detects whether the copy is being borrowed or returned.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl font-bold"
+                  onClick={() => setTab('settings')}
+                >
+                  Station Settings
+                </Button>
+                <Button
+                  size="sm"
+                  className="rounded-xl font-bold shadow-md gap-1.5"
+                  asChild
+                >
+                  <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                    <Monitor className="h-4 w-4" />
+                    Launch Fullscreen Kiosk
+                    <ExternalLink className="h-3 w-3 opacity-70" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Circulation Rule</p>
+                <p className="text-sm font-bold text-foreground">Auto-Detect Active</p>
+                <p className="text-xs text-muted-foreground">Borrowed books return; available books borrow.</p>
+              </div>
+              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Barcode Scanner</p>
+                <p className="text-sm font-bold text-foreground">{settings.libraryCameraScanEnabled ? 'Camera + Scanner Gun' : 'Barcode Scanner Gun'}</p>
+                <p className="text-xs text-muted-foreground">{settings.libraryCameraScanEnabled ? 'Device camera active for badges and ISBNs' : 'Standard USB/Bluetooth reader wedge'}</p>
+              </div>
+              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Drop Box Returns</p>
+                <p className="text-sm font-bold text-foreground">{settings.libraryKioskAllowDropBoxReturn !== false ? 'Drop Box Enabled' : 'ID Card Required'}</p>
+                <p className="text-xs text-muted-foreground">{settings.libraryKioskAllowDropBoxReturn !== false ? 'Books returned without scanning student card' : 'Students must swipe card first'}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Interactive Station Live Preview</h3>
+              <span className="text-xs text-muted-foreground">Works with barcode scanners, camera, and keypad</span>
+            </div>
+            <div className="overflow-hidden rounded-2xl border bg-background shadow-lg min-h-[620px]">
+              <LibraryStudentSelfCheckoutPortal
+                schoolId={schoolId}
+                categories={categories}
+                getStudentName={getName}
+                embedded
+              />
+            </div>
+          </div>
         </TabsContent>
         <TabsContent value="catalog" className="mt-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Book catalog</h2><p className="text-sm text-muted-foreground">Find a copy, print labels, or add books.</p></div><Button onClick={() => setIntakeOpen(true)}><Plus className="mr-2 h-4 w-4" />Add books</Button></div>

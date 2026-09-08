@@ -6,6 +6,8 @@ import {
   AlertTriangle,
   BookOpen,
   Calendar,
+  Camera,
+  CameraOff,
   CheckCircle2,
   CornerDownLeft,
   Loader2,
@@ -26,6 +28,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useLibraryIdleReset } from '@/hooks/useLibraryIdleReset';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { lookupStudentId } from '@/lib/db/lookup';
 import {
   performLibraryCheckoutOrReturn,
@@ -98,7 +102,7 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastReturnBorrower, setLastReturnBorrower] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const scanLock = useRef(false);
-  const [mode, setMode] = useState<'checkout' | 'return'>('checkout');
+  const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>('auto');
   const [scanError, setScanError] = useState<string | null>(null);
   const [exitOpenInternal, setExitOpenInternal] = useState(false);
   const exitOpen = exitOpenProp ?? exitOpenInternal;
@@ -192,7 +196,7 @@ export function LibraryStudentSelfCheckoutPortal({
     setLastAction(null);
     setLastReturnBorrower(null);
     setStep('student');
-    setMode('checkout');
+    setMode('auto');
     setScanError(null);
   }, []);
 
@@ -399,6 +403,16 @@ export function LibraryStudentSelfCheckoutPortal({
     disabled: busy,
   });
 
+  const cameraSettingEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [cameraActive, setCameraActive] = useState(cameraSettingEnabled);
+
+  const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
+    cameraSettingEnabled && cameraActive && sessionReady && !exitOpen && !busy,
+    (code) => handleScan(code),
+    () => {},
+    { cameraEnabled: cameraSettingEnabled && cameraActive, keepCameraWarm: true },
+  );
+
   useEffect(() => {
     if (sessionReady) {
       const t = setTimeout(() => focusReader(), 100);
@@ -505,19 +519,19 @@ export function LibraryStudentSelfCheckoutPortal({
       </header>
 
       <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-start gap-4 overflow-y-auto p-4 sm:p-6 md:p-8">
-        {/* Step 1: Mode Picker (Borrow vs Drop Box Return) on Idle */}
+        {/* Step 1: Mode Picker (Borrow/Return vs Drop Box Return) on Idle */}
         {step === 'student' && (
           <div className="grid w-full grid-cols-2 gap-3 pb-2 pt-1">
             <button
               type="button"
               disabled={busy}
               onClick={() => {
-                setMode('checkout');
+                setMode('auto');
                 playSound('click');
               }}
               className={cn(
                 'flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 text-center transition-all',
-                mode === 'checkout'
+                mode !== 'return'
                   ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
                   : 'border-border/80 bg-card hover:border-primary/40',
               )}
@@ -525,16 +539,16 @@ export function LibraryStudentSelfCheckoutPortal({
               <div
                 className={cn(
                   'flex h-12 w-12 items-center justify-center rounded-xl font-bold',
-                  mode === 'checkout'
+                  mode !== 'return'
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-muted-foreground',
                 )}
               >
                 <BookOpen className="h-6 w-6" />
               </div>
-              <span className="text-base font-black text-foreground">Borrow Books</span>
+              <span className="text-base font-black text-foreground">Borrow &amp; Return</span>
               <span className="text-xs text-muted-foreground leading-tight">
-                Scan ID badge to start
+                Scan ID badge to start (auto-detect)
               </span>
             </button>
 
@@ -575,19 +589,19 @@ export function LibraryStudentSelfCheckoutPortal({
           className={cn(
             'flex h-16 w-16 items-center justify-center rounded-2xl border-2 shadow-sm shrink-0',
             step === 'student' &&
-              (mode === 'checkout'
-                ? 'border-primary bg-ring/10 text-ring'
-                : 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'),
+              (mode === 'return'
+                ? 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                : 'border-primary bg-ring/10 text-ring'),
             step === 'book' && 'border-amber-400 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
             step === 'success' &&
               'border-emerald-400 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
           )}
         >
           {step === 'student' ? (
-            mode === 'checkout' ? (
-              <User className="h-8 w-8" />
-            ) : (
+            mode === 'return' ? (
               <RotateCcw className="h-8 w-8" />
+            ) : (
+              <User className="h-8 w-8" />
             )
           ) : step === 'book' ? (
             <BookOpen className="h-8 w-8" />
@@ -609,9 +623,9 @@ export function LibraryStudentSelfCheckoutPortal({
 
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             {step === 'student'
-              ? mode === 'checkout'
-                ? 'Step 1 of 2'
-                : 'Drop Box Mode'
+              ? mode === 'return'
+                ? 'Drop Box Mode'
+                : 'Step 1 of 2'
               : step === 'book'
                 ? 'Step 2 of 2'
                 : 'Complete'}
@@ -619,17 +633,26 @@ export function LibraryStudentSelfCheckoutPortal({
 
           <h2 className="text-xl font-black text-foreground sm:text-2xl">
             {step === 'student'
-              ? mode === 'checkout'
-                ? 'Scan your student ID card'
-                : 'Scan book barcode to return'
+              ? mode === 'return'
+                ? 'Scan book barcode to return'
+                : 'Scan your student ID card'
               : step === 'book'
                 ? mode === 'checkout'
                   ? 'Scan book barcode to borrow'
-                  : 'Scan book barcode to return'
+                  : mode === 'return'
+                    ? 'Scan book barcode to return'
+                    : 'Scan book to borrow or return'
                 : lastAction === 'return'
                   ? 'Book returned successfully!'
                   : 'Book checked out!'}
           </h2>
+
+          {step === 'book' && mode === 'auto' && (
+            <p className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span>Smart auto-detect: borrowed books return; available books are borrowed</span>
+            </p>
+          )}
 
           {lastBookTitle && step === 'success' ? (
             <div className="space-y-0.5 pt-1">
@@ -674,10 +697,24 @@ export function LibraryStudentSelfCheckoutPortal({
         {/* Action Toggle During Student Session */}
         {studentId && step === 'book' && (
           <div
-            className="flex w-full max-w-xs gap-2 rounded-xl bg-muted/60 p-1"
+            className="flex w-full max-w-xs gap-1.5 rounded-xl bg-muted/60 p-1"
             role="group"
             aria-label="Choose library action"
           >
+            <Button
+              type="button"
+              disabled={busy}
+              variant={mode === 'auto' ? 'default' : 'ghost'}
+              className="flex-1 rounded-lg font-bold text-xs sm:text-sm h-9 gap-1"
+              aria-pressed={mode === 'auto'}
+              onClick={() => {
+                setMode('auto');
+                playSound('click');
+              }}
+            >
+              <Sparkles className="h-3 w-3 text-amber-500" />
+              Auto
+            </Button>
             <Button
               type="button"
               disabled={busy}
@@ -707,11 +744,48 @@ export function LibraryStudentSelfCheckoutPortal({
           </div>
         )}
 
+        {/* Camera Scanner Viewfinder (Enabled via Library Settings) */}
+        {cameraSettingEnabled && (
+          <div className="w-full space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+                <Camera className="h-3.5 w-3.5 text-primary" />
+                <span>Camera Scanner</span>
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs font-semibold"
+                onClick={() => setCameraActive((v) => !v)}
+              >
+                {cameraActive ? 'Hide Camera' : 'Show Camera'}
+              </Button>
+            </div>
+            {cameraActive && (
+              <div className="overflow-hidden rounded-2xl border-2 border-primary/20 bg-muted/30 p-2 shadow-inner">
+                <BarcodeScannerCameraView
+                  videoRef={videoRef}
+                  hasCameraPermission={hasCameraPermission}
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                  viewportClassName="aspect-video max-h-48 sm:max-h-56 rounded-xl overflow-hidden shadow-inner"
+                  hintText={
+                    step === 'student'
+                      ? 'Align student card barcode in frame'
+                      : 'Align book ISBN or LIB barcode in frame'
+                  }
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Scanner Barcode Input Field */}
         <div className="w-full space-y-2">
           <div className="flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground">
             <ScanBarcode className="h-4 w-4 text-primary" />
-            <span>Scanner Ready</span>
+            <span>Barcode Reader Ready</span>
           </div>
           <LibraryBarcodeReaderField
             inputId="library-self-checkout-reader"

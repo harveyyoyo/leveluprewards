@@ -56,4 +56,11 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/student`, sid, new Set(['studentPortal']))).toBe(false);
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['studentPortal']))).toBe(false);
   });
+
+  it('librarian, secretary, and prize-clerk root routes allow portal scope', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/secretary`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/prize-clerk`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['librarian']))).toBe(true);
+  });
 });

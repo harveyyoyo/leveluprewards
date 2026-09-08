@@ -511,6 +511,62 @@ interface Settings {
     /** Category used for library late fees and on-time bonuses (app_points mode). */
     libraryPointsCategoryId?: string;
 
+    // Advanced Library Circulation & Policy Settings
+    /** When true, scanning automatically detects whether to borrow or return based on book status. */
+    libraryAutoDetectCirculation?: boolean;
+    /** Grace period in days before a book is flagged as overdue or incurs late fees. */
+    libraryGracePeriodDays?: number;
+    /** Maximum number of times a student can renew a book (0 = no renewals). */
+    libraryMaxRenewals?: number;
+    /** Additional days granted on renewal (defaults to loan period). */
+    libraryRenewalDays?: number;
+    /** Allow renewing a loan even if it has already passed its due date. */
+    libraryAllowRenewIfOverdue?: boolean;
+    /** Allow a student to borrow multiple copies of the same book title. */
+    libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Maximum fine or deduction cap per book (0 = no limit). */
+    libraryMaxFineCap?: number;
+    /** Require staff to record an audit reason when waiving a library fine. */
+    libraryRequireWaiverReason?: boolean;
+
+    // Library Kiosk & Hardware Scanning Settings
+    /** When true, enable camera / webcam barcode scanning on library stations, desk, and intake. */
+    libraryCameraScanEnabled?: boolean;
+    /** Allow students to self-return books at the library kiosk station. */
+    libraryKioskAllowSelfReturn?: boolean;
+    /** Enable Quick Return / Drop Box mode (return books without student ID card). */
+    libraryKioskAllowDropBoxReturn?: boolean;
+    /** Auto-reset countdown seconds for kiosk session after scan (0 = manual). */
+    libraryKioskAutoResetSeconds?: number;
+    /** Play sound effects and audio chimes on scan / checkout / return. */
+    libraryKioskSoundEffects?: boolean;
+    /** Show book recommendations after checkout or return. */
+    libraryKioskShowRecommendations?: boolean;
+    /** Show active loans summary on student kiosk screen. */
+    libraryKioskShowActiveLoans?: boolean;
+    /** Show book cover image thumbnail when available. */
+    libraryKioskShowBookCover?: boolean;
+
+    // Library Cataloging & Printing Defaults
+    /** Default shelf location for newly added copies. */
+    libraryDefaultShelf?: string;
+    /** Default genre / category for new books. */
+    libraryDefaultCategory?: string;
+    /** Default print format for copy barcode labels. */
+    libraryLabelFormat?: 'sticker' | 'spine' | 'pocket';
+    /** Barcode standard on printed labels: CODE128 or QR. */
+    libraryBarcodeFormat?: 'CODE128' | 'QR';
+    /** Automatically lookup book details from Google Books / OpenLibrary on ISBN scan. */
+    libraryAutoLookupGoogleBooks?: boolean;
+
+    // Library Behavior & Overdue Alerts
+    /** Days before due date to display upcoming due warning. */
+    libraryOverdueWarningDays?: number;
+    /** Surface overdue book notices on teacher classroom rosters. */
+    libraryNotifyTeacherOnOverdue?: boolean;
+    /** Enable reading milestone streaks and badges. */
+    libraryReadingMilestonesEnabled?: boolean;
+
     // Student Portal Interface overrides (set by admin)
     studentDisplayMode?: DisplayModePreference;
     studentColorScheme?: ColorScheme;
@@ -706,6 +762,32 @@ const defaultSettings: Settings = {
     classroomRealmTheme: 'chalkboard',
     libraryTheme: 'classic_oak',
     libraryThemeMatchKiosk: true,
+    libraryAutoDetectCirculation: true,
+    libraryLoanPeriodDays: 14,
+    libraryGracePeriodDays: 0,
+    libraryMaxCheckoutsPerStudent: 3,
+    libraryMaxRenewals: 2,
+    libraryRenewalDays: 14,
+    libraryAllowRenewIfOverdue: false,
+    libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryMaxFineCap: 20,
+    libraryRequireWaiverReason: true,
+    libraryCameraScanEnabled: false,
+    libraryKioskAllowSelfReturn: true,
+    libraryKioskAllowDropBoxReturn: true,
+    libraryKioskAutoResetSeconds: 8,
+    libraryKioskSoundEffects: true,
+    libraryKioskShowRecommendations: true,
+    libraryKioskShowActiveLoans: true,
+    libraryKioskShowBookCover: true,
+    libraryDefaultShelf: '',
+    libraryDefaultCategory: 'General',
+    libraryLabelFormat: 'sticker',
+    libraryBarcodeFormat: 'CODE128',
+    libraryAutoLookupGoogleBooks: true,
+    libraryOverdueWarningDays: 3,
+    libraryNotifyTeacherOnOverdue: true,
+    libraryReadingMilestonesEnabled: true,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,
@@ -908,8 +990,6 @@ const defaultSettings: Settings = {
     payLibrary: true,
     payOffice: false,
     paySss: false,
-    libraryLoanPeriodDays: 14,
-    libraryMaxCheckoutsPerStudent: 3,
     libraryStudentKioskCheckoutEnabled: true,
     libraryAutoStudentPortalEnabled: true,
     libraryLateFeesEnabled: true,

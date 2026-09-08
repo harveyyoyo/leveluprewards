@@ -1,12 +1,15 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Barcode, Check, Loader2, ScanLine, Sparkles, Trash2 } from 'lucide-react';
+import { Barcode, Camera, CameraOff, Check, Loader2, ScanLine, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import {
   catalogIsbnSet,
   isRetailIsbnBarcode,
@@ -213,11 +216,22 @@ export function LibraryBookIntakeScanner({
     [addScanToQueue, shouldAcceptScan],
   );
 
+  const { settings } = useSettings();
+  const cameraEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [cameraActive, setCameraActive] = useState(false);
+
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
     active: scanning,
     onScan: handleScan,
     disabled: registering,
   });
+
+  const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
+    cameraEnabled && cameraActive && scanning && !registering,
+    (code) => handleScan(code),
+    () => {},
+    { cameraEnabled: cameraEnabled && cameraActive, keepCameraWarm: true },
+  );
 
   const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
   const clearSaved = () => setRows((prev) => prev.filter((r) => r.status !== 'saved'));
@@ -310,27 +324,60 @@ export function LibraryBookIntakeScanner({
             queue. Extra copies receive unique LIB labels. Print and attach those labels before lending.
           </p>
         </div>
-        <Button
-          type="button"
-          variant={scanning ? 'secondary' : 'default'}
-          size="sm"
-          className="rounded-xl"
-          disabled={registering}
-          onClick={() => {
-            setScanning((on) => {
-              const next = !on;
-              if (next) {
-                setScanFeedback(null);
-                setTimeout(() => focusReader(), 0);
-              }
-              return next;
-            });
-          }}
-        >
-          <Barcode className="mr-2 h-4 w-4" />
-          {scanning ? 'Stop scanning' : 'Start scanning'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {cameraEnabled && (
+            <Button
+              type="button"
+              variant={cameraActive ? 'default' : 'outline'}
+              size="sm"
+              className="gap-1.5 rounded-xl text-xs font-semibold"
+              disabled={registering}
+              onClick={() => {
+                if (!scanning) setScanning(true);
+                setCameraActive((v) => !v);
+              }}
+            >
+              {cameraActive ? <CameraOff className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+              <span>{cameraActive ? 'Close Camera' : 'Camera Scan'}</span>
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant={scanning ? 'secondary' : 'default'}
+            size="sm"
+            className="rounded-xl"
+            disabled={registering}
+            onClick={() => {
+              setScanning((on) => {
+                const next = !on;
+                if (next) {
+                  setScanFeedback(null);
+                  setTimeout(() => focusReader(), 0);
+                } else {
+                  setCameraActive(false);
+                }
+                return next;
+              });
+            }}
+          >
+            <Barcode className="mr-2 h-4 w-4" />
+            {scanning ? 'Stop scanning' : 'Start scanning'}
+          </Button>
+        </div>
       </div>
+
+      {cameraEnabled && cameraActive && scanning && (
+        <div className="overflow-hidden rounded-2xl border bg-muted/30 p-2 shadow-inner">
+          <BarcodeScannerCameraView
+            videoRef={videoRef}
+            hasCameraPermission={hasCameraPermission}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            viewportClassName="aspect-video max-h-48 rounded-xl overflow-hidden shadow-inner"
+            hintText="Align book ISBN barcode in the camera frame"
+          />
+        </div>
+      )}
 
       {scanning ? (
         <LibraryBarcodeReaderField
@@ -345,7 +392,7 @@ export function LibraryBookIntakeScanner({
         />
       ) : (
         <p className="text-sm text-muted-foreground rounded-xl border border-dashed bg-background/60 px-4 py-5 text-center">
-          Press <strong className="text-foreground">Start scanning</strong> to register books with the barcode reader.
+          Press <strong className="text-foreground">Start scanning</strong> {cameraEnabled ? 'or Camera Scan ' : ''}to register books.
         </p>
       )}
 
