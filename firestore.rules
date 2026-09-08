@@ -512,6 +512,12 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      // Append-only School Office change log. Clients create rows; they never edit or delete them.
+      match /officeAuditLog/{entryId} {
+        allow read, create: if canAccessOffice(schoolId);
+        allow update, delete: if false;
+      }
+
       match /anonymousPortalSessions/{uid} {
         allow read, write: if false;
       }
