@@ -69,7 +69,7 @@ export const redeemCoupon = async (
   allAchievements: Achievement[] = [],
   allCategories: Category[] = [],
   allBadges: Badge[] = []
-): Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number }> => {
+): Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number; reusable?: boolean }> => {
   const couponRef = doc(firestore, 'schools', schoolId, 'coupons', couponCode.toUpperCase());
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
 
