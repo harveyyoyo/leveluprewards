@@ -54,13 +54,13 @@ export function LibraryThemeSettingsCard() {
             </div>
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
-                Library Theme &amp; Atmosphere
+                Ambiance &amp; Reading Themes
                 <Badge variant="outline" className="font-normal text-xs">
                   {currentTheme.label}
                 </Badge>
               </CardTitle>
               <CardDescription>
-                Customize colors and reading ambiance across the library workspace and self-checkout kiosks.
+                Customize colors, high-contrast reading ambiance, and atmosphere across the library workspace and self-checkout kiosks.
               </CardDescription>
             </div>
           </div>

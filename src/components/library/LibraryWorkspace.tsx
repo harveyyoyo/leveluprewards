@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import type { LibraryItem, LibraryItemInput, Student, Class } from '@/lib/types';
+import type { LibraryItem, LibraryItemInput, Student, Class, Category } from '@/lib/types';
 import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib/library/libraryOperations';
 import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
 import { filterLibraryCatalog, downloadLibraryCsv, printLibraryLoans, type LibraryLoan } from '@/lib/library/libraryWorkspace';
@@ -27,7 +27,6 @@ import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { LibraryItemModal } from './LibraryItemModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
-import { LibraryThemeSwitcher } from './LibraryThemeSwitcher';
 import { LibrarySelfCheckoutLaunchButton } from './LibrarySelfCheckoutOverlay';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -36,9 +35,23 @@ import { cn } from '@/lib/utils';
 const PAGE_SIZE = 30;
 const nativeSelect = 'h-10 rounded-lg border bg-background px-3 text-sm';
 
-export function LibraryWorkspace() {
-  const { schoolId, isInitialized, loginState, login, categories, userName } = useAppContext();
-  const { settings } = useSettings();
+export interface LibraryWorkspaceProps {
+  embedded?: boolean;
+  schoolId?: string | null;
+  categories?: Category[] | null;
+  className?: string;
+}
+
+export function LibraryWorkspace({
+  embedded = false,
+  schoolId: propSchoolId,
+  categories: propCategories,
+  className,
+}: LibraryWorkspaceProps = {}) {
+  const { schoolId: contextSchoolId, isInitialized, loginState, login, categories: contextCategories, userName } = useAppContext();
+  const schoolId = propSchoolId || contextSchoolId;
+  const categories = propCategories ?? contextCategories;
+  const { settings, updateSettings } = useSettings();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
   const currentTheme = resolveLibraryTheme(currentThemeId);
   const firestore = useFirestore();
@@ -137,25 +150,42 @@ export function LibraryWorkspace() {
       <div><Label htmlFor="library-pass">Passcode</Label><Input id="library-pass" type="password" autoComplete="current-password" value={passcode} onChange={e => setPasscode(e.target.value)} /></div>
       <Button disabled={busy} className="w-full">{busy ? 'Signing in…' : 'Sign in'}</Button>
     </form><Link className="text-sm underline" href={`/${schoolId}/portal`}>Back to school</Link></main>;
-  if (settings.payLibrary === false) return <main className="p-10 space-y-4"><h1 className="text-2xl font-bold">Library is not enabled</h1><Link href={`/${schoolId}/portal`}>Back to school</Link></main>;
+  if (settings.payLibrary === false) {
+    if (embedded) {
+      return (
+        <div className={cn('rounded-3xl border border-border/80 bg-card p-8 sm:p-12 text-center space-y-5 shadow-sm', className)}>
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 text-primary">
+            <BookOpen className="h-10 w-10" />
+          </div>
+          <div className="max-w-md mx-auto space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Library Management</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Catalog books, manage lending and returns, and provide self-checkout kiosk stations for students.
+            </p>
+          </div>
+          <div className="pt-2">
+            {loginState === 'admin' || loginState === 'developer' ? (
+              <Button
+                onClick={() => {
+                  updateSettings({ payLibrary: true });
+                  toast({ title: 'Library enabled' });
+                }}
+                className="rounded-xl font-bold"
+              >
+                Turn on Library
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">Ask a school administrator to enable the Library in Settings.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+    return <main className="p-10 space-y-4"><h1 className="text-2xl font-bold">Library is not enabled</h1><Link href={`/${schoolId}/portal`}>Back to school</Link></main>;
+  }
 
-  return <div className={cn('min-h-dvh transition-colors duration-300', currentTheme.classes.wrapper)}>
-    <header className={cn('border-b transition-colors duration-300', currentTheme.classes.header)}><div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
-      <div className="flex items-center gap-4"><Button asChild variant="ghost" size="icon"><Link href={`/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`} aria-label="Back to school"><ArrowLeft /></Link></Button>
-        <div className={cn('rounded-xl p-3 border shadow-sm transition-colors', currentTheme.classes.card)}><BookOpen className={cn('h-7 w-7 transition-colors', currentTheme.classes.accent)} /></div><div><div className="flex items-center gap-2"><h1 className="text-2xl font-bold">Library</h1><Badge variant="outline" className={cn('hidden sm:inline-flex text-[11px] font-normal border transition-colors', currentTheme.classes.badge)}>{currentTheme.icon} {currentTheme.label}</Badge></div><p className="text-sm opacity-80">Books, borrowing, and returns{userName ? ` · ${userName}` : ''}</p></div></div>
-      <div className="flex items-center gap-2.5">
-        <LibraryThemeSwitcher />
-        <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
-          <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
-            <Monitor className="h-4 w-4 text-primary" />
-            <span className="hidden sm:inline">Kiosk Station</span>
-            <ExternalLink className="h-3 w-3 opacity-60" />
-          </Link>
-        </Button>
-        <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
-      </div>
-    </div></header>
-    <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
+  const content = (
+    <div className={cn('space-y-6', embedded ? '' : 'mx-auto max-w-7xl p-4 sm:p-8')}>
       {error ? <p role="alert" className="rounded-xl border border-destructive p-4">The library could not load: {error.message}</p> : null}
       {catalogLoading || studentsLoading ? <p role="status" className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading books and students…</p> : null}
       <Tabs value={tab} onValueChange={setTab}>
@@ -320,10 +350,189 @@ export function LibraryWorkspace() {
           <LibraryPolicySettingsCard categories={categories} />
         </TabsContent>
       </Tabs>
-    </main>
-    <Dialog open={intakeOpen} onOpenChange={setIntakeOpen}><DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto"><DialogHeader><DialogTitle>Add books</DialogTitle><DialogDescription>Scan the book ISBN and choose how many copies to add. Extra copies get unique school labels.</DialogDescription></DialogHeader><Button variant="outline" className="w-fit" onClick={() => { setEditing(null); setEditOpen(true); }}>Enter a book manually</Button><LibraryBookIntakeScanner onRegister={save} libraryItems={items} upcTaken={async code => !!(firestore && await findLibraryItemByUpc(firestore, schoolId, code))} /></DialogContent></Dialog>
-    <LibraryItemModal isOpen={editOpen} setIsOpen={setEditOpen} item={editing} onSave={save} schoolId={schoolId} upcTaken={async (code, excludeId) => { if (!firestore) return false; const found = await findLibraryItemByUpc(firestore, schoolId, code); return !!found && found.itemId !== excludeId; }} />
-    <Dialog open={bulkOpen} onOpenChange={setBulkOpen}><DialogContent><DialogHeader><DialogTitle>Edit {selectedItems.length} copies</DialogTitle><DialogDescription>Fill the fields you want to change. Blank fields keep their current values. Up to 100 copies per update.</DialogDescription></DialogHeader><Label htmlFor="library-bulk-shelf">Shelf</Label><Input id="library-bulk-shelf" value={shelf} onChange={e => setShelf(e.target.value)} /><Label htmlFor="library-bulk-category">Category</Label><Input id="library-bulk-category" value={category} onChange={e => setCategory(e.target.value)} /><Button disabled={busy || (!shelf.trim() && !category.trim()) || selectedItems.length > 100} onClick={() => void run(async () => { await callLibrary(functions, 'libraryCatalogSave', { schoolId, itemIds: selectedItems.map(i => i.id), patch: { ...(shelf.trim() ? { shelfLocation: shelf } : {}), ...(category.trim() ? { category } : {}) } }); setBulkOpen(false); setShelf(''); setCategory(''); toast({ title: 'Copies updated' }); })}>Save changes</Button></DialogContent></Dialog>
-    <Dialog open={!!waiverStudent} onOpenChange={open => { if (!open) setWaiverStudent(null); }}><DialogContent><DialogHeader><DialogTitle>Waive fine for {waiverStudent ? getName(waiverStudent.id) : ''}</DialogTitle><DialogDescription>The amount and your reason will be recorded in the library audit log.</DialogDescription></DialogHeader><Label htmlFor="waiver-amount">Amount</Label><Input id="waiver-amount" type="number" min={1} max={waiverStudent?.libraryFineBalance ?? 0} value={waiverAmount} onChange={e => setWaiverAmount(e.target.value)} /><Label htmlFor="waiver-reason">Reason</Label><Input id="waiver-reason" value={waiverReason} onChange={e => setWaiverReason(e.target.value)} /><Button disabled={busy || !waiverReason.trim() || Number(waiverAmount) <= 0} onClick={() => void run(async () => { await callLibrary(functions, 'libraryCirculation', { schoolId, action: 'waive', studentId: waiverStudent!.id, amount: Number(waiverAmount), reason: waiverReason }); setWaiverStudent(null); toast({ title: 'Fine waived' }); })}>Record waiver</Button></DialogContent></Dialog>
-  </div>;
+    </div>
+  );
+
+  const modals = (
+    <>
+      <Dialog open={intakeOpen} onOpenChange={setIntakeOpen}>
+        <DialogContent className="max-h-[90dvh] max-w-3xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add books</DialogTitle>
+            <DialogDescription>
+              Scan the book ISBN and choose how many copies to add. Extra copies get unique school labels.
+            </DialogDescription>
+          </DialogHeader>
+          <Button variant="outline" className="w-fit" onClick={() => { setEditing(null); setEditOpen(true); }}>
+            Enter a book manually
+          </Button>
+          <LibraryBookIntakeScanner
+            onRegister={save}
+            libraryItems={items}
+            upcTaken={async code => !!(firestore && await findLibraryItemByUpc(firestore, schoolId, code))}
+          />
+        </DialogContent>
+      </Dialog>
+      <LibraryItemModal
+        isOpen={editOpen}
+        setIsOpen={setEditOpen}
+        item={editing}
+        onSave={save}
+        schoolId={schoolId}
+        upcTaken={async (code, excludeId) => {
+          if (!firestore) return false;
+          const found = await findLibraryItemByUpc(firestore, schoolId, code);
+          return !!found && found.itemId !== excludeId;
+        }}
+      />
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {selectedItems.length} copies</DialogTitle>
+            <DialogDescription>
+              Fill the fields you want to change. Blank fields keep their current values. Up to 100 copies per update.
+            </DialogDescription>
+          </DialogHeader>
+          <Label htmlFor="library-bulk-shelf">Shelf</Label>
+          <Input id="library-bulk-shelf" value={shelf} onChange={e => setShelf(e.target.value)} />
+          <Label htmlFor="library-bulk-category">Category</Label>
+          <Input id="library-bulk-category" value={category} onChange={e => setCategory(e.target.value)} />
+          <Button
+            disabled={busy || (!shelf.trim() && !category.trim()) || selectedItems.length > 100}
+            onClick={() => void run(async () => {
+              await callLibrary(functions, 'libraryCatalogSave', {
+                schoolId,
+                itemIds: selectedItems.map(i => i.id),
+                patch: { ...(shelf.trim() ? { shelfLocation: shelf } : {}), ...(category.trim() ? { category } : {}) },
+              });
+              setBulkOpen(false);
+              setShelf('');
+              setCategory('');
+              toast({ title: 'Copies updated' });
+            })}
+          >
+            Save changes
+          </Button>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!waiverStudent} onOpenChange={open => { if (!open) setWaiverStudent(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Waive fine for {waiverStudent ? getName(waiverStudent.id) : ''}</DialogTitle>
+            <DialogDescription>The amount and your reason will be recorded in the library audit log.</DialogDescription>
+          </DialogHeader>
+          <Label htmlFor="waiver-amount">Amount</Label>
+          <Input
+            id="waiver-amount"
+            type="number"
+            min={1}
+            max={waiverStudent?.libraryFineBalance ?? 0}
+            value={waiverAmount}
+            onChange={e => setWaiverAmount(e.target.value)}
+          />
+          <Label htmlFor="waiver-reason">Reason</Label>
+          <Input id="waiver-reason" value={waiverReason} onChange={e => setWaiverReason(e.target.value)} />
+          <Button
+            disabled={busy || !waiverReason.trim() || Number(waiverAmount) <= 0}
+            onClick={() => void run(async () => {
+              await callLibrary(functions, 'libraryCirculation', {
+                schoolId,
+                action: 'waive',
+                studentId: waiverStudent!.id,
+                amount: Number(waiverAmount),
+                reason: waiverReason,
+              });
+              setWaiverStudent(null);
+              toast({ title: 'Fine waived' });
+            })}
+          >
+            Record waiver
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className={cn('space-y-5 text-foreground transition-colors duration-300', className)}>
+        {/* Embedded Top Control Bar - matches ClassroomCommandCenter styling */}
+        <div className="rounded-3xl border border-border/80 bg-card p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={cn('rounded-2xl p-2.5 sm:p-3 border shadow-sm transition-colors', currentTheme.classes.card)}>
+                <BookOpen className={cn('h-6 w-6 transition-colors', currentTheme.classes.accent)} />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Library Management</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground">
+                  Circulation desk, catalog, loans, and student self-checkout kiosk
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
+                <Link href={`/${schoolId}/library`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                  <span>Fullscreen</span>
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
+                <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                  <Monitor className="h-4 w-4 text-primary" />
+                  <span className="hidden sm:inline">Kiosk Station</span>
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </Link>
+              </Button>
+              <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
+            </div>
+          </div>
+        </div>
+        {content}
+        {modals}
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn('min-h-dvh transition-colors duration-300', currentTheme.classes.wrapper)}>
+      <header className={cn('border-b transition-colors duration-300', currentTheme.classes.header)}>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost" size="icon">
+              <Link
+                href={`/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`}
+                aria-label="Back to school"
+              >
+                <ArrowLeft />
+              </Link>
+            </Button>
+            <div className={cn('rounded-xl p-3 border shadow-sm transition-colors', currentTheme.classes.card)}>
+              <BookOpen className={cn('h-7 w-7 transition-colors', currentTheme.classes.accent)} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold">Library</h1>
+              </div>
+              <p className="text-sm opacity-80">Books, borrowing, and returns{userName ? ` · ${userName}` : ''}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5">
+            <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
+              <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                <Monitor className="h-4 w-4 text-primary" />
+                <span className="hidden sm:inline">Kiosk Station</span>
+                <ExternalLink className="h-3 w-3 opacity-60" />
+              </Link>
+            </Button>
+            <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-8">
+        {content}
+      </main>
+      {modals}
+    </div>
+  );
 }

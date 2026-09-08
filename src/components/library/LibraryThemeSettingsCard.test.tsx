@@ -25,7 +25,7 @@ describe('LibraryThemeSettingsCard', () => {
   it('renders themes and current selection', () => {
     render(<LibraryThemeSettingsCard />);
 
-    expect(screen.getByText('Library Theme & Atmosphere')).toBeInTheDocument();
+    expect(screen.getByText('Ambiance & Reading Themes')).toBeInTheDocument();
     expect(screen.getAllByText('Classic Oak').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Modern Sapphire')).toBeInTheDocument();
     expect(screen.getByText('Midnight Archive')).toBeInTheDocument();
