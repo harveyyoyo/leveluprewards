@@ -791,6 +791,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const hasNext = Boolean(params.get('next'));
             if (!hasNext && !hasUrlSchoolLoginOfficeIntent(params)) return;
             const target = resolveSchoolLoginNextUrl(schoolParam);
+            // If edge middleware rejects the session cookie, it sends us back to
+            // `/login?next=`. Trying that jump again would loop forever.
+            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}`;
+            try {
+                if (sessionStorage.getItem(bounceKey) === '1') return;
+                sessionStorage.setItem(bounceKey, '1');
+            } catch {
+                // ignore
+            }
             window.location.assign(target);
         })();
         return () => {
