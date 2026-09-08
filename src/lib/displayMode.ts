@@ -10,8 +10,8 @@ export type DisplayModeViewport = {
   isTabletOrMobile: boolean;
 };
 
-/** Portal hub cards kept in mobile display (on-the-go staff + student kiosk). */
-export const MOBILE_PORTAL_IDS = new Set(['print', 'redeem']);
+/** Portal hub cards kept in mobile display (on-the-go staff + student kiosk + library kiosk). */
+export const MOBILE_PORTAL_IDS = new Set(['print', 'redeem', 'library-kiosk']);
 
 /** Bottom dock destinations kept in mobile display. */
 export const MOBILE_DOCK_IDS = new Set(['print', 'redeem']);

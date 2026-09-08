@@ -12,12 +12,14 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { lookupStudentId } from '@/lib/db/lookup';
 import { performLibraryCheckoutOrReturn, findLibraryItemByUpc, getStudentLibraryCheckouts } from '@/lib/library/libraryOperations';
 import { formatDueDate, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
+import { computeStudentLibraryStanding } from '@/lib/library/libraryBehavior';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { isSchoolLibraryBarcode } from '@/lib/library/libraryScanCode';
 import type { Category, LibraryItem, Student } from '@/lib/types';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { LibraryStudentNamePicker } from './LibraryStudentNamePicker';
+import { LibraryStudentBehaviorBadge } from './LibraryStudentBehaviorBadge';
 
 export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
   getStudentName: (id?: string) => string; categories?: Category[] | null; students?: Student[] | null;
@@ -81,7 +83,7 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
   const student = students?.find(s => s.id === studentId);
   return <section className="rounded-2xl border bg-background p-4 sm:p-6 space-y-5" aria-label="Library checkout desk">
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-bold">Library desk</h2><div className="flex gap-2" role="group" aria-label="Scan action"><Button disabled={busy} variant={mode === 'checkout' ? 'default' : 'outline'} aria-pressed={mode === 'checkout'} onClick={() => { setMode('checkout'); setMessage('Choose a student, then scan books.'); }}>Check out</Button><Button disabled={busy} variant={mode === 'return' ? 'default' : 'outline'} aria-pressed={mode === 'return'} onClick={() => { setMode('return'); setMessage('Scan books to return. No student card needed.'); }}>Return</Button></div></div>
-    {mode === 'checkout' ? <><div className="flex items-center gap-3 rounded-xl bg-primary/5 p-4"><User className="h-7 w-7 shrink-0" /><div className="flex-1"><p className="text-xs text-muted-foreground">Current student</p><p className="text-xl font-bold">{studentId ? getStudentName(studentId) : 'Choose a student'}</p></div>{studentId && <Button variant="outline" disabled={busy} onClick={() => { setStudentId(null); setStudentLoans([]); setRecent([]); setMessage('Scan the next student card.'); }}>Next student</Button>}</div>
+    {mode === 'checkout' ? <><div className="flex items-center gap-3 rounded-xl bg-primary/5 p-4"><User className="h-7 w-7 shrink-0" /><div className="flex-1 space-y-1"><p className="text-xs text-muted-foreground">Current student</p><div className="flex flex-wrap items-center gap-2"><p className="text-xl font-bold">{studentId ? getStudentName(studentId) : 'Choose a student'}</p>{studentId && <LibraryStudentBehaviorBadge standing={computeStudentLibraryStanding(studentLoans, { fineBalance: student?.libraryFineBalance })} compact />}</div></div>{studentId && <Button variant="outline" disabled={busy} onClick={() => { setStudentId(null); setStudentLoans([]); setRecent([]); setMessage('Scan the next student card.'); }}>Next student</Button>}</div>
       {!studentId && <LibraryStudentNamePicker students={students} disabled={busy} onSelect={s => void selectStudent(s.id)} />}</> : <p className="text-sm text-muted-foreground">Scan each returned book. The correct borrower is found automatically.</p>}
     <LibraryBarcodeReaderField inputId="library-desk-reader" inputRef={reader.inputRef} scanBuffer={reader.scanBuffer} onScanBufferChange={reader.setScanBuffer} onSubmit={reader.submitScan} active={!busy} hint={mode === 'return' ? 'Return mode — scan the copy barcode.' : studentId ? `Check out books for ${getStudentName(studentId)}.` : 'Scan a student ID card first.'} />
     <div role={error ? 'alert' : 'status'} aria-live="polite" className={`rounded-xl border p-4 text-base font-semibold ${error ? 'border-destructive/40 bg-destructive/5 text-destructive' : 'border-primary/20 bg-primary/5'}`}>{busy ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Saving scan…</span> : message}</div>

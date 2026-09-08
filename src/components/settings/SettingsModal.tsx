@@ -1335,13 +1335,17 @@ export function SettingsModal() {
                                                          cardId === 'student-home' && local.enableStudentPortal !== true;
                                                      const requiresParentPortal =
                                                          cardId === 'parent' && !isParentPortalOn(local);
+                                                     const requiresLibrary =
+                                                         cardId === 'library-kiosk' && local.payLibrary === false;
                                                      const unavailableHint = requiresRewards
                                                          ? t('settings.interface.mainPortalCardRequiresRewards')
                                                          : requiresStudentPortal
                                                            ? t('settings.interface.mainPortalCardRequiresStudentPortal')
                                                            : requiresParentPortal
                                                              ? t('settings.interface.mainPortalCardRequiresParentPortal')
-                                                             : null;
+                                                             : requiresLibrary
+                                                               ? t('settings.interface.mainPortalCardRequiresLibrary')
+                                                               : null;
                                                      return (
                                                          <div
                                                              key={cardId}
@@ -1364,7 +1368,8 @@ export function SettingsModal() {
                                                                      !enabled &&
                                                                      (requiresRewards ||
                                                                          requiresStudentPortal ||
-                                                                         requiresParentPortal)
+                                                                         requiresParentPortal ||
+                                                                         requiresLibrary)
                                                                  }
                                                                  onCheckedChange={(checked) =>
                                                                      handleToggle(

@@ -77,12 +77,14 @@ const settings = {
     mainPortalCardRequiresRewards: 'Requires the Rewards pillar to be enabled.',
     mainPortalCardRequiresStudentPortal: 'Turn on Student home portal in school settings first.',
     mainPortalCardRequiresParentPortal: 'Requires the Parent portal feature to be enabled.',
+    mainPortalCardRequiresLibrary: 'Requires the Library module to be enabled.',
     mainPortalCard: {
       admin: 'Admin portal',
       print: 'Teacher portal',
       redeem: 'Student kiosk',
       'student-home': 'Student home portal',
       parent: 'Parent portal',
+      'library-kiosk': 'Library kiosk',
     },
     mainPortalCardDesc: {
       admin: 'School admin dashboard for students, classes, prizes, and settings.',
@@ -90,6 +92,7 @@ const settings = {
       redeem: 'On-site student sign-in, points, and prize shop.',
       'student-home': 'Students sign in from home to view progress.',
       parent: 'Families view points, notes, and attendance.',
+      'library-kiosk': 'Dedicated self-checkout and book return station for students.',
     },
   },
   general: {

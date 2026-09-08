@@ -97,6 +97,14 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     paths: ['src/app/[schoolId]/admin/sections/AdminBrandingTab.tsx'],
   },
   {
+    keys: ['library', 'catalog', 'book', 'books', 'borrow', 'return', 'kiosk', 'self-checkout', 'circulation', 'isbn'],
+    paths: [
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryStudentSelfCheckoutPortal.tsx',
+      'src/app/[schoolId]/library/kiosk/page.tsx',
+    ],
+  },
+  {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',

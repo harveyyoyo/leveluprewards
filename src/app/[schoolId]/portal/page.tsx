@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -350,6 +350,17 @@ export default function PortalPage() {
                   title: t('portal.parentPortal.title'),
                   description: t('portal.parentPortal.description'),
                   icon: Users,
+              },
+            ]
+          : []),
+        ...(settings.payLibrary !== false
+          ? [
+              {
+                  id: 'library-kiosk',
+                  href: `/${schoolId}/library/kiosk`,
+                  title: t('portal.libraryKiosk.title'),
+                  description: t('portal.libraryKiosk.description'),
+                  icon: BookOpen,
               },
             ]
           : []),
