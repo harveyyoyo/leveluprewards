@@ -300,6 +300,11 @@ service cloud.firestore {
         allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
       }
 
+      // Per-teacher Classroom Realm prefs (seating layouts, quick awards, room-display prefs).
+      match /teachers/{teacherId}/classroomPrefs/{docId} {
+        allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
+      }
+
       match /homework/{assignmentId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
         allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();

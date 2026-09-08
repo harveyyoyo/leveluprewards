@@ -3,11 +3,12 @@ import type { Firestore } from 'firebase/firestore';
 import {
   createBehaviorNote,
   listBehaviorNotes,
+  softDeleteBehaviorNote,
   type CreateBehaviorNoteInput,
 } from '@/lib/db/behaviorNotes';
 import type { BehaviorNote } from '@/lib/types';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
-import { writeBehaviorNotesCache } from '@/lib/classroom/behaviorNotesCache';
+import { removeBehaviorNoteFromCache, writeBehaviorNotesCache } from '@/lib/classroom/behaviorNotesCache';
 
 type BehaviorNotesFetchResult = {
   notes: BehaviorNote[];
@@ -224,4 +225,47 @@ export async function saveBehaviorNote(
   }
 
   return { success: false, message, status: res.status };
+}
+
+export type DeleteBehaviorNoteResult = {
+  success: boolean;
+  message: string;
+};
+
+/** Admin/developer only — soft-deletes a mistaken note (server route first, client Firestore fallback). */
+export async function deleteBehaviorNote(
+  firestore: Firestore | null,
+  schoolId: string,
+  noteId: string,
+): Promise<DeleteBehaviorNoteResult> {
+  const sid = schoolId.trim().toLowerCase();
+  const headers = await authHeaders();
+  headers.set('Content-Type', 'application/json');
+  const res = await fetch('/api/classroom/behavior-notes', {
+    method: 'DELETE',
+    headers,
+    credentials: 'same-origin',
+    body: JSON.stringify({ schoolId: sid, noteId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+
+  if (res.ok && data.ok) {
+    removeBehaviorNoteFromCache(sid, noteId);
+    return { success: true, message: 'Note deleted.' };
+  }
+
+  const message = typeof data.error === 'string' ? data.error : `Request failed (${res.status})`;
+
+  if (firestore && shouldTryClientFallback(res.status, message)) {
+    try {
+      await softDeleteBehaviorNote(firestore, sid, noteId);
+      removeBehaviorNoteFromCache(sid, noteId);
+      return { success: true, message: 'Note deleted.' };
+    } catch (e) {
+      const formatted = formatBehaviorNotesError(message, res.status, (e as Error).message);
+      return { success: false, message: formatted.error };
+    }
+  }
+
+  return { success: false, message };
 }

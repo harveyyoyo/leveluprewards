@@ -3,7 +3,7 @@
 import { useDeferredValue } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Tv } from 'lucide-react';
+import { Loader2, Tv } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
 import { ClassroomRealmPageHeader } from '@/components/classroom/ClassroomRealmChrome';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
@@ -33,6 +33,16 @@ export default function ClassroomRealmClassScreenPage() {
     return (
       <ClassroomRealmShell schoolId={schoolId}>
         <p className="p-8 text-center text-white/70">Sign in as teacher or admin to open this screen.</p>
+      </ClassroomRealmShell>
+    );
+  }
+
+  if (roster.studentsLoading || roster.classesLoading) {
+    return (
+      <ClassroomRealmShell schoolId={schoolId}>
+        <div className="flex items-center justify-center p-16">
+          <Loader2 className="h-6 w-6 animate-spin text-white/60" aria-hidden />
+        </div>
       </ClassroomRealmShell>
     );
   }
