@@ -548,6 +548,13 @@ html[data-office-portal] .office-content-pane {
       .font-bold,
       .font-black,
       .font-extrabold
+    ),
+  [data-modular-display-root] :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
     ) {
     color: inherit;
   }

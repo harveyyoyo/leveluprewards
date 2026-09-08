@@ -253,7 +253,7 @@ export default function DisplaysRealmPage() {
         </div>
 
         {/* Center: Screen Selector Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-2 max-w-xl">
+        <div className="flex items-center gap-2 overflow-x-auto py-1 px-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {allScreens.map((screen) => {
             const isActive = screen.id === activeScreenId;
             return (
@@ -262,16 +262,21 @@ export default function DisplaysRealmPage() {
                 type="button"
                 onClick={() => setActiveScreenId(screen.id)}
                 className={cn(
-                  'flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all',
+                  'flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all shadow-sm',
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted/40 text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/40'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50',
                 )}
               >
-                <Tv className="h-3.5 w-3.5" />
-                <span>{screen.name}</span>
+                <Tv className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">{screen.name}</span>
                 {screen.isReadyMade && (
-                  <span className={cn('rounded px-1 py-0.2 text-[9px] font-black uppercase', isActive ? 'bg-black/20 text-primary-foreground' : 'bg-muted text-muted-foreground')}>
+                  <span
+                    className={cn(
+                      'rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider',
+                      isActive ? 'bg-black/30 text-white' : 'bg-background text-muted-foreground border border-border/60',
+                    )}
+                  >
                     Preset
                   </span>
                 )}
@@ -281,13 +286,13 @@ export default function DisplaysRealmPage() {
 
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setIsCreateModalOpen(true)}
-            className="h-8 gap-1 rounded-xl px-2.5 text-xs font-bold text-primary hover:bg-primary/10"
+            className="h-9 shrink-0 gap-1.5 rounded-xl border-dashed border-primary/50 bg-primary/5 px-3 text-xs sm:text-sm font-bold text-primary hover:bg-primary/10 shadow-sm"
           >
-            <Plus className="h-3.5 w-3.5" />
-            New Screen
+            <Plus className="h-4 w-4" />
+            <span>New Screen</span>
           </Button>
         </div>
 
@@ -298,25 +303,25 @@ export default function DisplaysRealmPage() {
             variant="outline"
             size="sm"
             onClick={handleCopyLink}
-            className="h-8 gap-1.5 rounded-xl text-xs font-semibold"
+            className="h-9 gap-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm"
           >
             {copiedLink ? (
               <>
-                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                <Check className="h-4 w-4 text-emerald-500" />
                 Copied!
               </>
             ) : (
               <>
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-4 w-4" />
                 Copy TV Link
               </>
             )}
           </Button>
 
-          <Button asChild size="sm" className="h-8 gap-1.5 rounded-xl text-xs font-bold shadow-sm">
+          <Button asChild size="sm" className="h-9 gap-2 rounded-xl text-xs sm:text-sm font-black shadow-md">
             <Link href={fullScreenHref} target="_blank" rel="noopener noreferrer">
               Launch Fullscreen
-              <ArrowUpRight className="h-3.5 w-3.5" />
+              <ArrowUpRight className="h-4 w-4" />
             </Link>
           </Button>
         </div>
@@ -325,46 +330,46 @@ export default function DisplaysRealmPage() {
       {/* MAIN WORKBENCH: LEFT CONTROLS + RIGHT TV CANVAS */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT STUDIO DRAWER */}
-        <aside className="flex w-[380px] sm:w-[420px] shrink-0 flex-col border-r border-border/80 bg-card/40 backdrop-blur-sm overflow-hidden">
+        <aside className="flex w-[380px] sm:w-[440px] shrink-0 flex-col border-r border-border/80 bg-card/50 backdrop-blur-sm overflow-hidden">
           {/* Drawer Navigation Tabs */}
-          <div className="flex border-b border-border/80 bg-muted/20 p-2 gap-1.5 shrink-0">
+          <div className="flex border-b border-border/80 bg-muted/30 p-2.5 gap-2 shrink-0">
             <button
               type="button"
               onClick={() => setWorkbenchTab('modules')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
                 workbenchTab === 'modules'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <LayoutGrid className="h-3.5 w-3.5" />
+              <LayoutGrid className="h-4 w-4" />
               Modules ({activeScreen.enabledModules?.length || 0})
             </button>
             <button
               type="button"
               onClick={() => setWorkbenchTab('themes')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
                 workbenchTab === 'themes'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Palette className="h-3.5 w-3.5" />
+              <Palette className="h-4 w-4" />
               Themes
             </button>
             <button
               type="button"
               onClick={() => setWorkbenchTab('layout')}
               className={cn(
-                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black transition-all',
+                'flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
                 workbenchTab === 'layout'
-                  ? 'bg-background text-foreground shadow-sm'
+                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
                   : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              <Sliders className="h-3.5 w-3.5" />
+              <Sliders className="h-4 w-4" />
               Settings
             </button>
           </div>
@@ -375,19 +380,19 @@ export default function DisplaysRealmPage() {
             {workbenchTab === 'modules' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-black tracking-tight">Mix & Match Modules</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <h3 className="text-base font-black tracking-tight">Mix & Match Modules</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
                     Toggle any components across Hall of Fame, Smart Screen, and Bulletin for this screen.
                   </p>
                 </div>
 
                 {/* Group 1: Hall of Fame */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Crown className="h-3.5 w-3.5 text-amber-500" />
-                    Hall of Fame Leaderboards
-                  </p>
-                  <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                  <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                    <Crown className="h-4 w-4 shrink-0 text-amber-500" />
+                    <span>Hall of Fame Leaderboards</span>
+                  </div>
+                  <div className="space-y-2">
                     {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'hall-of-fame').map((mod) => {
                       const Icon = mod.icon;
                       const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
@@ -395,23 +400,24 @@ export default function DisplaysRealmPage() {
                         <div
                           key={mod.key}
                           className={cn(
-                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
                             isEnabled
-                              ? 'border-primary/40 bg-primary/5 shadow-sm'
-                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
+                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
                           )}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
                             <div className="min-w-0">
-                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
+                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
                             </div>
                           </div>
                           <Switch
                             checked={isEnabled}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
+                            className="shrink-0"
                           />
                         </div>
                       );
@@ -420,12 +426,12 @@ export default function DisplaysRealmPage() {
                 </div>
 
                 {/* Group 2: Clock & Daily Info */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Monitor className="h-3.5 w-3.5 text-sky-500" />
-                    Smart Screen & Daily Info
-                  </p>
-                  <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                  <div className="px-3 py-1.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                    <Monitor className="h-4 w-4 shrink-0 text-sky-500" />
+                    <span>Smart Screen & Daily Info</span>
+                  </div>
+                  <div className="space-y-2">
                     {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'smart-screen').map((mod) => {
                       const Icon = mod.icon;
                       const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
@@ -433,23 +439,24 @@ export default function DisplaysRealmPage() {
                         <div
                           key={mod.key}
                           className={cn(
-                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
                             isEnabled
-                              ? 'border-primary/40 bg-primary/5 shadow-sm'
-                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
+                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
                           )}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
                             <div className="min-w-0">
-                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
+                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
                             </div>
                           </div>
                           <Switch
                             checked={isEnabled}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
+                            className="shrink-0"
                           />
                         </div>
                       );
@@ -458,12 +465,12 @@ export default function DisplaysRealmPage() {
                 </div>
 
                 {/* Group 3: Bulletin & Rewards */}
-                <div className="space-y-2">
-                  <p className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Tv className="h-3.5 w-3.5 text-purple-500" />
-                    Bulletin Board & Rewards
-                  </p>
-                  <div className="space-y-1.5">
+                <div className="space-y-2.5">
+                  <div className="px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
+                    <Tv className="h-4 w-4 shrink-0 text-purple-500" />
+                    <span>Bulletin Board & Rewards</span>
+                  </div>
+                  <div className="space-y-2">
                     {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'bulletin').map((mod) => {
                       const Icon = mod.icon;
                       const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
@@ -471,23 +478,24 @@ export default function DisplaysRealmPage() {
                         <div
                           key={mod.key}
                           className={cn(
-                            'flex items-center justify-between gap-3 rounded-2xl border p-3 transition-all',
+                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
                             isEnabled
-                              ? 'border-primary/40 bg-primary/5 shadow-sm'
-                              : 'border-border/60 bg-background/50 opacity-75 hover:opacity-100',
+                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
+                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
                           )}
                         >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon className={cn('h-4 w-4 shrink-0', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
+                          <div className="flex items-start gap-3 min-w-0">
+                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
                             <div className="min-w-0">
-                              <p className="text-xs font-bold leading-tight truncate">{mod.label}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
+                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
+                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
                             </div>
                           </div>
                           <Switch
                             checked={isEnabled}
                             onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
                             aria-label={mod.label}
+                            className="shrink-0"
                           />
                         </div>
                       );
@@ -501,21 +509,21 @@ export default function DisplaysRealmPage() {
             {workbenchTab === 'themes' && (
               <div className="space-y-5">
                 <div>
-                  <h3 className="text-sm font-black tracking-tight">Display Themes</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Organized by Dark and Light styles with verified WCAG AA contrast.
+                  <h3 className="text-base font-black tracking-tight">Select Theme</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
+                    Themes are engineered for high contrast and readability on hallway TV monitors.
                   </p>
                 </div>
 
-                {/* Dark vs Light Segmented Selector */}
-                <div className="flex rounded-xl border border-border bg-muted/30 p-1">
+                {/* Dark vs Light Tone Selector */}
+                <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/60 p-1.5 border border-border/80">
                   <button
                     type="button"
                     onClick={() => setThemeToneTab('dark')}
                     className={cn(
-                      'flex-1 rounded-lg py-1.5 text-xs font-black transition-all',
+                      'flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
                       themeToneTab === 'dark'
-                        ? 'bg-slate-900 text-white shadow-sm'
+                        ? 'bg-slate-900 text-white shadow-md'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
@@ -525,9 +533,9 @@ export default function DisplaysRealmPage() {
                     type="button"
                     onClick={() => setThemeToneTab('light')}
                     className={cn(
-                      'flex-1 rounded-lg py-1.5 text-xs font-black transition-all',
+                      'flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
                       themeToneTab === 'light'
-                        ? 'bg-white text-slate-950 shadow-sm'
+                        ? 'bg-white text-slate-950 shadow-md ring-1 ring-slate-300'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
@@ -536,7 +544,7 @@ export default function DisplaysRealmPage() {
                 </div>
 
                 {/* Theme Cards Grid */}
-                <div className="grid grid-cols-1 gap-2.5">
+                <div className="grid grid-cols-1 gap-3">
                   {(themeToneTab === 'dark' ? DARK_THEMES : LIGHT_THEMES).map((theme) => {
                     const isSelected = activeScreen.theme === theme.id;
                     return (
@@ -545,43 +553,43 @@ export default function DisplaysRealmPage() {
                         type="button"
                         onClick={() => handleUpdateActiveScreen({ theme: theme.id as ModularThemeId })}
                         className={cn(
-                          'flex items-center justify-between gap-3 rounded-2xl border p-3.5 text-left transition-all',
+                          'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-4 text-left transition-all',
                           isSelected
-                            ? 'border-primary ring-2 ring-primary/40 shadow-md'
-                            : 'border-border/70 hover:border-primary/40 hover:shadow-sm',
+                            ? 'border-primary ring-2 ring-primary/50 shadow-lg'
+                            : 'border-border/80 hover:border-primary/50 hover:shadow-md',
                         )}
                         style={{ backgroundColor: theme.previewBg }}
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
                             <span
-                              className="text-xs font-black leading-tight"
+                              className="text-sm font-black leading-tight"
                               style={{ color: theme.tone === 'dark' ? '#ffffff' : '#0f172a' }}
                             >
                               {theme.name}
                             </span>
                             {isSelected && (
-                              <span className="rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-black text-primary-foreground uppercase">
+                              <span className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-black text-primary-foreground uppercase shadow-sm">
                                 Active
                               </span>
                             )}
                           </div>
                           <p
-                            className="text-[10px] mt-0.5 truncate"
-                            style={{ color: theme.tone === 'dark' ? '#cbd5e1' : '#475569' }}
+                            className="text-xs mt-1 leading-relaxed line-clamp-2"
+                            style={{ color: theme.tone === 'dark' ? '#cbd5e1' : '#334155' }}
                           >
                             {theme.description}
                           </p>
                         </div>
 
                         {/* Swatch dots */}
-                        <div className="flex items-center gap-1.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           <span
-                            className="h-4 w-4 rounded-full border border-white/20 shadow-sm"
+                            className="h-5 w-5 rounded-full border-2 border-white/30 shadow-md"
                             style={{ backgroundColor: theme.previewCard }}
                           />
                           <span
-                            className="h-4 w-4 rounded-full border border-white/20 shadow-sm"
+                            className="h-5 w-5 rounded-full border-2 border-white/30 shadow-md"
                             style={{ backgroundColor: theme.previewAccent }}
                           />
                         </div>
@@ -725,10 +733,10 @@ export default function DisplaysRealmPage() {
           {/* Scaled TV Monitor Bezel */}
           <div
             className={cn(
-              'relative flex flex-col overflow-hidden rounded-[2rem] border-8 border-slate-800 shadow-2xl transition-all duration-300',
+              'relative flex flex-col overflow-hidden rounded-[2.5rem] border-[12px] border-slate-900 bg-slate-950 shadow-2xl ring-1 ring-white/10 transition-all duration-300',
               activeScreen.orientation === 'landscape'
-                ? 'w-full max-w-[1080px] aspect-[16/9]'
-                : 'h-full max-h-[720px] aspect-[9/16]',
+                ? 'w-full max-w-[1140px] aspect-[16/9]'
+                : 'h-full max-h-[760px] aspect-[9/16]',
             )}
           >
             <ModularDisplayView
