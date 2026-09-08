@@ -101,7 +101,6 @@ export default function ClassroomRealmManagePage() {
           categories={roster.categories}
           classes={roster.classes}
           students={roster.students}
-          teachers={roster.teachers}
           managerTeacherId={roster.managerTeacherId}
           schoolWideAccess={roster.schoolWide}
           initialSection={initialSection}

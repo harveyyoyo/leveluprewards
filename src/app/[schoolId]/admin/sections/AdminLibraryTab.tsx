@@ -1,12 +1,12 @@
 'use client';
 
 import { useAppContext } from '@/components/AppProvider';
-import { LibraryWorkspace } from '@/components/library/LibraryWorkspace';
+import { LibraryTabLauncher } from '@/components/library/LibraryTabLauncher';
 import type { Category, LibraryItem, LibraryItemInput, Student } from '@/lib/types';
 
+/** Rewards admin tab — launcher only. Full library UI lives in /librarian (new tab). */
 export function AdminLibraryTab({
   schoolId,
-  categories,
 }: {
   schoolId?: string | null;
   categories?: Category[] | null;
@@ -23,11 +23,7 @@ export function AdminLibraryTab({
   const { schoolId: contextSchoolId } = useAppContext();
   const resolvedSchoolId = schoolId || contextSchoolId;
 
-  return (
-    <LibraryWorkspace
-      embedded
-      schoolId={resolvedSchoolId}
-      categories={categories}
-    />
-  );
+  if (!resolvedSchoolId) return null;
+
+  return <LibraryTabLauncher schoolId={resolvedSchoolId} />;
 }

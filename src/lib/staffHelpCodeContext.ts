@@ -77,10 +77,10 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme'],
     paths: [
-      'src/app/[schoolId]/library/page.tsx',
-      'src/components/library/LibraryWorkspace.tsx',
-      'src/components/library/LibraryThemeSettingsCard.tsx',
       'src/app/[schoolId]/admin/sections/AdminLibraryTab.tsx',
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryTabLauncher.tsx',
+      'src/components/library/LibraryThemeSettingsCard.tsx',
       'src/app/[schoolId]/librarian/page.tsx',
       'src/app/[schoolId]/library/self-checkout/page.tsx',
     ],
@@ -107,7 +107,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
-      'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel.tsx',
       'src/app/[schoolId]/displays/page.tsx',
     ],
   },
@@ -119,12 +119,10 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['display', 'displays', 'hallway display', 'smart screen', 'smartscreen', 'bulletin', 'bulletin board', 'announcement'],
+    keys: ['bulletin', 'bulletin board', 'announcement'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
-      'src/components/displays/DisplayTvPairModal.tsx',
-      'src/app/[schoolId]/displays/page.tsx',
-      'src/app/[schoolId]/displays-realm/page.tsx',
+      'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },
   {
