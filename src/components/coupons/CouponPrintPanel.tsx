@@ -90,6 +90,48 @@ function localTodayYmd(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
+function redemptionChoiceClass(isGraphic: boolean, selected: boolean) {
+  return cn(
+    'flex items-start gap-3 rounded-xl border p-3.5 min-w-0 cursor-pointer',
+    isGraphic ? 'border-white/10 bg-card/40' : 'border-border/70 bg-background',
+    selected &&
+      (isGraphic
+        ? 'border-chart-1 ring-2 ring-chart-1/25'
+        : 'border-primary ring-2 ring-primary/20'),
+  );
+}
+
+function RedemptionChoice({
+  id,
+  value,
+  title,
+  description,
+  selected,
+  isGraphic,
+}: {
+  id: string;
+  value: string;
+  title: string;
+  description: string;
+  selected: boolean;
+  isGraphic: boolean;
+}) {
+  return (
+    <motion.label
+      htmlFor={id}
+      layout
+      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+      className={redemptionChoiceClass(isGraphic, selected)}
+    >
+      <RadioGroupItem value={value} id={id} className="mt-0.5 shrink-0" />
+      <span className="min-w-0 text-sm leading-snug">
+        <span className="font-bold">{title}</span>
+        <span className="block text-xs mt-0.5 text-muted-foreground">{description}</span>
+      </span>
+    </motion.label>
+  );
+}
+
 export function CouponPrintPanel({
   schoolId,
   categories,
@@ -646,8 +688,8 @@ export function CouponPrintPanel({
         ) : (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1 w-full min-w-0 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="space-y-2 md:col-span-2 xl:col-span-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2 min-w-0">
                   <Label className={labelClass}>Incentive Category</Label>
                   <div className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
@@ -736,7 +778,7 @@ export function CouponPrintPanel({
                     )}
                   </div>
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>{label} Value</Label>
                   <Input
                     type="number"
@@ -746,13 +788,13 @@ export function CouponPrintPanel({
                   />
                 </div>
                 {!isReusablePrint && (
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Coupons per page</Label>
                   <Select
                     value={String(printCouponsPerPage)}
                     onValueChange={(value) => setPrintCouponsPerPage(normalizeCouponPrintPageSize(Number(value)))}
                   >
-                    <SelectTrigger className={cn('text-lg font-black', fieldClass)}>
+                    <SelectTrigger className={cn('text-sm font-bold min-w-0 [&>span]:min-w-0', fieldClass)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -765,7 +807,7 @@ export function CouponPrintPanel({
                   </Select>
                 </div>
                 )}
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 min-w-0">
                   <Label htmlFor="coupon-print-corners" className={labelClass}>
                     Coupon corners
                   </Label>
@@ -775,17 +817,17 @@ export function CouponPrintPanel({
                       setPrintCornerStyle(value === 'rounded' ? 'rounded' : 'rectangular')
                     }
                   >
-                    <SelectTrigger id="coupon-print-corners" className={cn('text-lg font-black', fieldClass)}>
+                    <SelectTrigger id="coupon-print-corners" className={cn('text-sm font-bold min-w-0 [&>span]:min-w-0', fieldClass)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="rectangular">Rectangular (default)</SelectItem>
-                      <SelectItem value="rounded">Rounded (ID card look)</SelectItem>
+                      <SelectItem value="rectangular">Rectangular</SelectItem>
+                      <SelectItem value="rounded">Rounded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 {!isReusablePrint && (
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Sheets</Label>
                   <Input
                     type="number"
@@ -800,23 +842,23 @@ export function CouponPrintPanel({
                   </p>
                 </div>
                 )}
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Valid from (optional)</Label>
                   <Input
                     type="date"
                     value={printStartsOn}
                     onChange={(e) => setPrintStartsOn(e.target.value)}
-                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
+                    className={cn('text-sm font-bold', fieldClass)}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Expiration (optional)</Label>
                   <Input
                     type="date"
                     min={localTodayYmd()}
                     value={printExpiresOn}
                     onChange={(e) => setPrintExpiresOn(e.target.value)}
-                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
+                    className={cn('text-sm font-bold', fieldClass)}
                   />
                 </div>
               </div>
@@ -837,50 +879,32 @@ export function CouponPrintPanel({
                 <RadioGroup
                   value={printRedemptionScope}
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                  className="grid gap-3 sm:grid-cols-3"
+                  className="grid grid-cols-1 gap-2"
                 >
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="school" id="admin-crs-school" className="mt-1" />
-                    <label htmlFor="admin-crs-school" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Schoolwide</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Any enrolled student may redeem.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="classes" id="admin-crs-classes" className="mt-1" />
-                    <label htmlFor="admin-crs-classes" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Class(es)</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Only students in the classes you select.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="teachers" id="admin-crs-teachers" className="mt-1" />
-                    <label htmlFor="admin-crs-teachers" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Teacher(s)</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Students linked to selected teachers (roster or primary class).
-                      </span>
-                    </label>
-                  </div>
+                  <RedemptionChoice
+                    id="admin-crs-school"
+                    value="school"
+                    title="Schoolwide"
+                    description="Any enrolled student may redeem."
+                    selected={printRedemptionScope === 'school'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="admin-crs-classes"
+                    value="classes"
+                    title="Class(es)"
+                    description="Only students in the classes you select."
+                    selected={printRedemptionScope === 'classes'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="admin-crs-teachers"
+                    value="teachers"
+                    title="Teacher(s)"
+                    description="Students linked to selected teachers (roster or primary class)."
+                    selected={printRedemptionScope === 'teachers'}
+                    isGraphic={isGraphic}
+                  />
                 </RadioGroup>
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
@@ -952,50 +976,32 @@ export function CouponPrintPanel({
                 <RadioGroup
                   value={printRedemptionScope}
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                  className="grid gap-3 sm:grid-cols-3"
+                  className="grid grid-cols-1 gap-2"
                 >
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
-                    <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Only my students</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Students on your roster (by class primary teacher or explicit assignment) can redeem.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
-                    <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Selected classes</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Only students in the classes you pick below (your classes and roster).
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="school" id="crs-school" className="mt-1" />
-                    <label htmlFor="crs-school" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Schoolwide</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Any enrolled student at the school may redeem.
-                      </span>
-                    </label>
-                  </div>
+                  <RedemptionChoice
+                    id="crs-creator"
+                    value="creator"
+                    title="Only my students"
+                    description="Students on your roster (by class primary teacher or explicit assignment) can redeem."
+                    selected={printRedemptionScope === 'creator'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="crs-classes"
+                    value="classes"
+                    title="Selected classes"
+                    description="Only students in the classes you pick below (your classes and roster)."
+                    selected={printRedemptionScope === 'classes'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="crs-school"
+                    value="school"
+                    title="Schoolwide"
+                    description="Any enrolled student at the school may redeem."
+                    selected={printRedemptionScope === 'school'}
+                    isGraphic={isGraphic}
+                  />
                 </RadioGroup>
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
