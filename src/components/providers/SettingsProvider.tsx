@@ -567,6 +567,20 @@ interface Settings {
     /** Enable reading milestone streaks and badges. */
     libraryReadingMilestonesEnabled?: boolean;
 
+    // Library Return Sounds & Feedback Responses
+    /** Sound played when a book is returned on time. */
+    libraryReturnSoundOnTime?: 'chime_bright' | 'arcade_success' | 'gentle_bell' | 'synth_sparkle' | 'cheerful_pop' | 'none';
+    /** Sound played when a book is returned late/overdue. */
+    libraryReturnSoundLate?: 'gentle_warning' | 'buzzer_retro' | 'reminder_tone' | 'clock_tick' | 'subtle_thud' | 'none';
+    /** Feedback response message template when returned on time. */
+    libraryReturnResponseOnTimeMode?: 'cheerful' | 'academic' | 'arcade' | 'minimal' | 'custom';
+    /** Custom return on-time response template (supports {title}). */
+    libraryReturnResponseOnTimeCustom?: string;
+    /** Feedback response message template when returned late. */
+    libraryReturnResponseLateMode?: 'gentle' | 'informative' | 'firm' | 'motivational' | 'custom';
+    /** Custom return late response template (supports {title}, {days}). */
+    libraryReturnResponseLateCustom?: string;
+
     // Student Portal Interface overrides (set by admin)
     studentDisplayMode?: DisplayModePreference;
     studentColorScheme?: ColorScheme;

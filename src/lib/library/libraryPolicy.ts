@@ -1,4 +1,10 @@
 import type { Category } from '@/lib/types';
+import type {
+  LibraryReturnSoundOnTimeId,
+  LibraryReturnSoundLateId,
+  LibraryReturnResponseOnTimeMode,
+  LibraryReturnResponseLateMode,
+} from './libraryAudio';
 
 /** How library returns affect student balances. */
 export type LibraryRewardMode = 'none' | 'fines' | 'app_points' | 'isolated_points';
@@ -24,6 +30,12 @@ export type LibraryPolicySettings = {
   cameraScanEnabled: boolean;
   kioskAllowDropBoxReturn: boolean;
   kioskAllowSelfReturn: boolean;
+  returnSoundOnTime: LibraryReturnSoundOnTimeId;
+  returnSoundLate: LibraryReturnSoundLateId;
+  returnResponseOnTimeMode: LibraryReturnResponseOnTimeMode;
+  returnResponseOnTimeCustom?: string;
+  returnResponseLateMode: LibraryReturnResponseLateMode;
+  returnResponseLateCustom?: string;
 };
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -64,6 +76,12 @@ export function getLibraryPolicyFromSettings(
     libraryCameraScanEnabled?: boolean;
     libraryKioskAllowDropBoxReturn?: boolean;
     libraryKioskAllowSelfReturn?: boolean;
+    libraryReturnSoundOnTime?: LibraryReturnSoundOnTimeId;
+    libraryReturnSoundLate?: LibraryReturnSoundLateId;
+    libraryReturnResponseOnTimeMode?: LibraryReturnResponseOnTimeMode;
+    libraryReturnResponseOnTimeCustom?: string;
+    libraryReturnResponseLateMode?: LibraryReturnResponseLateMode;
+    libraryReturnResponseLateCustom?: string;
   },
   categories?: Category[] | null,
 ): LibraryPolicySettings {
@@ -97,6 +115,12 @@ export function getLibraryPolicyFromSettings(
     cameraScanEnabled: settings.libraryCameraScanEnabled === true,
     kioskAllowDropBoxReturn: settings.libraryKioskAllowDropBoxReturn !== false,
     kioskAllowSelfReturn: settings.libraryKioskAllowSelfReturn !== false,
+    returnSoundOnTime: settings.libraryReturnSoundOnTime || 'chime_bright',
+    returnSoundLate: settings.libraryReturnSoundLate || 'gentle_warning',
+    returnResponseOnTimeMode: settings.libraryReturnResponseOnTimeMode || 'cheerful',
+    returnResponseOnTimeCustom: settings.libraryReturnResponseOnTimeCustom,
+    returnResponseLateMode: settings.libraryReturnResponseLateMode || 'gentle',
+    returnResponseLateCustom: settings.libraryReturnResponseLateCustom,
   };
 }
 

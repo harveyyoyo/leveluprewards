@@ -14,6 +14,10 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { lookupStudentId } from '@/lib/db/lookup';
 import { performLibraryCheckoutOrReturn, findLibraryItemByUpc, getStudentLibraryCheckouts } from '@/lib/library/libraryOperations';
 import { formatDueDate, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
+import {
+  playLibraryReturnAudio,
+  resolveLibraryReturnFeedback,
+} from '@/lib/library/libraryAudio';
 import { computeStudentLibraryStanding } from '@/lib/library/libraryBehavior';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { isSchoolLibraryBarcode } from '@/lib/library/libraryScanCode';
@@ -118,12 +122,32 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
           return;
         }
 
-        const text = result.action === 'checkout'
-          ? `Checked out: ${result.item.name} · Due ${formatDueDate(result.dueAt)}`
-          : `Returned: ${result.item.name} · ${getStudentName(target)}`;
-        setMessage(text);
-        setRecent(prev => [text, ...prev].slice(0, 8));
-        playSound('success');
+        if (result.action === 'checkout') {
+          const text = `Checked out: ${result.item.name} · Due ${formatDueDate(result.dueAt)}`;
+          setMessage(text);
+          setRecent(prev => [text, ...prev].slice(0, 8));
+          playSound('success');
+        } else {
+          const isOverdue = (result.daysOverdue ?? 0) > 0;
+          const daysOverdue = result.daysOverdue ?? 0;
+          const feedback = resolveLibraryReturnFeedback(
+            {
+              isOverdue,
+              daysOverdue,
+              bookTitle: result.item.name,
+              studentName: getStudentName(target),
+            },
+            settings,
+          );
+          if (settings.libraryKioskSoundEffects !== false) {
+            playLibraryReturnAudio(feedback.soundId);
+          } else {
+            playSound('success');
+          }
+          const text = `Returned: ${result.item.name} · ${getStudentName(target)} [${feedback.badgeText}] — "${feedback.message}"`;
+          setMessage(text);
+          setRecent(prev => [text, ...prev].slice(0, 8));
+        }
 
         if (studentId) {
           try {
@@ -141,7 +165,7 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
         setBusy(false);
       }
     })();
-  }, [firestore, schoolId, studentId, mode, policy, functions, getStudentName, playSound, toast]);
+  }, [firestore, schoolId, studentId, mode, policy, functions, getStudentName, playSound, toast, settings]);
 
   const reader = useBarcodeReaderWedge({ active: true, disabled: busy, onScan: handleScan });
 

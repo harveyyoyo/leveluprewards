@@ -38,6 +38,11 @@ import {
   forceReturnLibraryItem,
 } from '@/lib/library/libraryOperations';
 import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
+import {
+  playLibraryReturnAudio,
+  resolveLibraryReturnFeedback,
+  type LibraryReturnFeedback,
+} from '@/lib/library/libraryAudio';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
 import { resolveLibraryTheme } from '@/lib/library/libraryThemes';
@@ -100,6 +105,7 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [lastReturnBorrower, setLastReturnBorrower] = useState<string | null>(null);
+  const [lastReturnFeedback, setLastReturnFeedback] = useState<LibraryReturnFeedback | null>(null);
   const [busy, setBusy] = useState(false);
   const scanLock = useRef(false);
   const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>('auto');
@@ -195,6 +201,7 @@ export function LibraryStudentSelfCheckoutPortal({
     setLastBookTitle(null);
     setLastAction(null);
     setLastReturnBorrower(null);
+    setLastReturnFeedback(null);
     setStep('student');
     setMode('auto');
     setScanError(null);
@@ -240,10 +247,29 @@ export function LibraryStudentSelfCheckoutPortal({
           playSound('success');
           setLastBookTitle(result.item.name);
           setLastAction('checkout');
+          setLastReturnFeedback(null);
           setStep('success');
           await refreshStudentLoans(studentId);
         } else if (result.action === 'return') {
-          playSound('success');
+          const isOverdue = (result.daysOverdue ?? 0) > 0;
+          const daysOverdue = result.daysOverdue ?? 0;
+          const feedback = resolveLibraryReturnFeedback(
+            {
+              isOverdue,
+              daysOverdue,
+              bookTitle: result.item.name,
+              studentName: studentLabel || undefined,
+            },
+            settings,
+          );
+          setLastReturnFeedback(feedback);
+
+          if (settings.libraryKioskSoundEffects !== false) {
+            playLibraryReturnAudio(feedback.soundId);
+          } else {
+            playSound('success');
+          }
+
           setLastBookTitle(result.item.name);
           setLastAction('return');
           setStep('success');
@@ -303,7 +329,29 @@ export function LibraryStudentSelfCheckoutPortal({
           policy: libraryPolicy,
           functions,
         });
-        playSound('success');
+        const computedOverdue =
+          bookItem.dueAt && Date.now() > bookItem.dueAt
+            ? Math.ceil((Date.now() - bookItem.dueAt) / (1000 * 60 * 60 * 24))
+            : 0;
+        const daysOverdue = res.daysOverdue ?? computedOverdue;
+        const isOverdue = daysOverdue > 0;
+        const feedback = resolveLibraryReturnFeedback(
+          {
+            isOverdue,
+            daysOverdue,
+            bookTitle: bookItem.name,
+            studentName: bookItem.checkedOutTo ? getStudentName(bookItem.checkedOutTo) : undefined,
+          },
+          settings,
+        );
+        setLastReturnFeedback(feedback);
+
+        if (settings.libraryKioskSoundEffects !== false) {
+          playLibraryReturnAudio(feedback.soundId);
+        } else {
+          playSound('success');
+        }
+
         setLastBookTitle(bookItem.name);
         setLastAction('return');
         setLastReturnBorrower(bookItem.checkedOutTo ? getStudentName(bookItem.checkedOutTo) : null);
@@ -664,6 +712,39 @@ export function LibraryStudentSelfCheckoutPortal({
               ) : null}
             </div>
           ) : null}
+
+          {step === 'success' && lastAction === 'return' && lastReturnFeedback && (
+            <div
+              className={cn(
+                'mt-2.5 w-full rounded-2xl border-2 p-3.5 text-center space-y-1.5 shadow-sm transition-all animate-in fade-in zoom-in-95 duration-200',
+                lastReturnFeedback.tone === 'warning'
+                  ? 'border-amber-400/80 bg-amber-50 text-amber-950 dark:border-amber-700/80 dark:bg-amber-950/40 dark:text-amber-200'
+                  : 'border-emerald-400/80 bg-emerald-50 text-emerald-950 dark:border-emerald-700/80 dark:bg-emerald-950/40 dark:text-emerald-200',
+              )}
+            >
+              <div className="flex items-center justify-center gap-2">
+                {lastReturnFeedback.tone === 'warning' ? (
+                  <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                )}
+                <span className="font-bold text-sm sm:text-base">{lastReturnFeedback.title}</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border',
+                    lastReturnFeedback.tone === 'warning'
+                      ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/60 dark:text-amber-300 dark:border-amber-700'
+                      : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-900/60 dark:text-emerald-300 dark:border-emerald-700',
+                  )}
+                >
+                  {lastReturnFeedback.badgeText}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm leading-relaxed max-w-md mx-auto font-medium">
+                &ldquo;{lastReturnFeedback.message}&rdquo;
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Student Overdue & Due Soon Alerts (Notification Banner) */}

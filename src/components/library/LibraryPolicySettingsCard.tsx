@@ -1,16 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import {
+  AlertTriangle,
   Bell,
   BookMarked,
   Camera,
+  CheckCircle2,
   Coins,
+  MessageSquare,
+  Play,
   Printer,
   ScanBarcode,
   Sparkles,
   Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -20,18 +27,59 @@ import {
   staffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useToast } from '@/hooks/use-toast';
 import {
   LIBRARY_REWARD_MODE_LABELS,
   resolveLibraryRewardMode,
   type LibraryRewardMode,
 } from '@/lib/library/libraryPolicy';
+import {
+  LIBRARY_LATE_RESPONSES,
+  LIBRARY_LATE_SOUNDS,
+  LIBRARY_ON_TIME_RESPONSES,
+  LIBRARY_ON_TIME_SOUNDS,
+  playLibraryReturnAudio,
+  resolveLibraryReturnFeedback,
+  type LibraryReturnResponseLateMode,
+  type LibraryReturnResponseOnTimeMode,
+  type LibraryReturnSoundLateId,
+  type LibraryReturnSoundOnTimeId,
+} from '@/lib/library/libraryAudio';
 import type { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {
   const { settings, updateSettings } = useSettings();
+  const [testingSound, setTestingSound] = useState<string | null>(null);
   const categoryList = categories ?? [];
   const rewardMode = resolveLibraryRewardMode(settings);
+
+  const handleTestSound = (soundId: LibraryReturnSoundOnTimeId | LibraryReturnSoundLateId) => {
+    setTestingSound(soundId);
+    playLibraryReturnAudio(soundId, { volume: 0.18 });
+    setTimeout(() => {
+      setTestingSound((curr) => (curr === soundId ? null : curr));
+    }, 900);
+  };
+
+  const onTimeSound: LibraryReturnSoundOnTimeId =
+    settings.libraryReturnSoundOnTime || 'chime_bright';
+  const lateSound: LibraryReturnSoundLateId =
+    settings.libraryReturnSoundLate || 'gentle_warning';
+  const onTimeMode: LibraryReturnResponseOnTimeMode =
+    settings.libraryReturnResponseOnTimeMode || 'cheerful';
+  const lateMode: LibraryReturnResponseLateMode =
+    settings.libraryReturnResponseLateMode || 'gentle';
+
+  const onTimeFeedback = resolveLibraryReturnFeedback(
+    { isOverdue: false, daysOverdue: 0, bookTitle: 'The Phantom Tollbooth' },
+    settings,
+  );
+
+  const lateFeedback = resolveLibraryReturnFeedback(
+    { isOverdue: true, daysOverdue: 3, bookTitle: "Charlotte's Web" },
+    settings,
+  );
 
   const setRewardMode = (mode: LibraryRewardMode) => {
     const updates: Parameters<typeof updateSettings>[0] = { libraryRewardMode: mode };
@@ -385,7 +433,300 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
         </CardContent>
       </Card>
 
-      {/* 3. Fines, Rewards & Point Balances */}
+      {/* 3. Return Audio Sounds & Student Responses */}
+      <Card className="border-dashed shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                <Volume2 className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Return Audio Sounds &amp; Student Responses
+                  <Badge variant="outline" className="font-normal text-xs bg-emerald-500/10 text-emerald-600 border-emerald-300 dark:border-emerald-800">
+                    On-Time &amp; Overdue
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  Configure audio chimes and personalized on-screen messages for on-time and late/overdue returns.
+                </CardDescription>
+              </div>
+            </div>
+            <StaffPortalTabInfoPopover
+              sections={[
+                staffPortalTabInfoSection(
+                  'Select sound effects and feedback text for when students return books. You can test each tone right from this screen or write custom feedback using {title} and {days}.',
+                ),
+              ]}
+              ariaLabel="About return sounds and responses"
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* On-Time Returns Column */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.03] p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-md bg-emerald-500/15 p-1.5 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">On-Time Returns</h4>
+                    <p className="text-[11px] text-muted-foreground">Played when books are returned by their due date</p>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-[10px]">
+                  Positive Reinforcement
+                </Badge>
+              </div>
+
+              {/* Sound Selector with Preview Button */}
+              <div className="space-y-1.5">
+                <Label htmlFor="ontime-sound-select" className="text-xs font-semibold flex items-center justify-between">
+                  <span>Audio Chime</span>
+                  <span className="text-[11px] font-normal text-muted-foreground">Web Audio synthesized</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={onTimeSound}
+                    onValueChange={(val) =>
+                      updateSettings({ libraryReturnSoundOnTime: val as LibraryReturnSoundOnTimeId })
+                    }
+                  >
+                    <SelectTrigger id="ontime-sound-select" className="flex-1 h-9 text-xs rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LIBRARY_ON_TIME_SOUNDS.map((s) => (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">
+                          <span className="mr-1.5">{s.icon}</span>
+                          <span className="font-medium">{s.label}</span>
+                          <span className="ml-2 text-muted-foreground text-[10px]">({s.tagline})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 text-xs gap-1.5 shrink-0 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
+                    onClick={() => handleTestSound(onTimeSound)}
+                    disabled={onTimeSound === 'none'}
+                    title="Play and test this chime"
+                  >
+                    <Play className={`h-3.5 w-3.5 ${testingSound === onTimeSound ? 'animate-spin' : ''}`} />
+                    <span>Preview</span>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {LIBRARY_ON_TIME_SOUNDS.find((s) => s.id === onTimeSound)?.description}
+                </p>
+              </div>
+
+              {/* Response Message Mode */}
+              <div className="space-y-1.5">
+                <Label htmlFor="ontime-response-mode" className="text-xs font-semibold">
+                  Student Feedback Message Preset
+                </Label>
+                <Select
+                  value={onTimeMode}
+                  onValueChange={(val) =>
+                    updateSettings({ libraryReturnResponseOnTimeMode: val as LibraryReturnResponseOnTimeMode })
+                  }
+                >
+                  <SelectTrigger id="ontime-response-mode" className="h-9 text-xs rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LIBRARY_ON_TIME_RESPONSES.map((r) => (
+                      <SelectItem key={r.id} value={r.id} className="text-xs">
+                        <span className="font-medium">{r.label}</span>
+                        <span className="ml-2 text-muted-foreground text-[10px]">({r.tagline})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom message input if custom mode */}
+              {onTimeMode === 'custom' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="ontime-custom-msg" className="text-xs font-semibold">
+                    Custom On-Time Message Text
+                  </Label>
+                  <Input
+                    id="ontime-custom-msg"
+                    placeholder='Thank you for returning "{title}" on time!'
+                    value={settings.libraryReturnResponseOnTimeCustom ?? ''}
+                    onChange={(e) => updateSettings({ libraryReturnResponseOnTimeCustom: e.target.value })}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Supported tags: <code className="bg-muted px-1 rounded font-mono">{"{title}"}</code> for book title, <code className="bg-muted px-1 rounded font-mono">{"{days}"}</code> for days.
+                  </p>
+                </div>
+              )}
+
+              {/* Live Banner Preview */}
+              <div className="space-y-1 pt-1">
+                <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-emerald-500" />
+                  <span>Station Screen Preview</span>
+                </p>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4" />
+                      {onTimeFeedback.title}
+                    </span>
+                    <Badge variant="outline" className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 text-[10px]">
+                      {onTimeFeedback.badgeText}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                    &ldquo;{onTimeFeedback.message}&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Late / Overdue Returns Column */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.03] p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="rounded-md bg-amber-500/15 p-1.5 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">Late &amp; Overdue Returns</h4>
+                    <p className="text-[11px] text-muted-foreground">Played when books are returned after their due date</p>
+                  </div>
+                </div>
+                <Badge className="bg-amber-500/20 text-amber-800 dark:text-amber-300 hover:bg-amber-500/30 text-[10px] border border-amber-500/30">
+                  Reminder &amp; Notice
+                </Badge>
+              </div>
+
+              {/* Sound Selector with Preview Button */}
+              <div className="space-y-1.5">
+                <Label htmlFor="late-sound-select" className="text-xs font-semibold flex items-center justify-between">
+                  <span>Audio Alert Tone</span>
+                  <span className="text-[11px] font-normal text-muted-foreground">Web Audio synthesized</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={lateSound}
+                    onValueChange={(val) =>
+                      updateSettings({ libraryReturnSoundLate: val as LibraryReturnSoundLateId })
+                    }
+                  >
+                    <SelectTrigger id="late-sound-select" className="flex-1 h-9 text-xs rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LIBRARY_LATE_SOUNDS.map((s) => (
+                        <SelectItem key={s.id} value={s.id} className="text-xs">
+                          <span className="mr-1.5">{s.icon}</span>
+                          <span className="font-medium">{s.label}</span>
+                          <span className="ml-2 text-muted-foreground text-[10px]">({s.tagline})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-3 text-xs gap-1.5 shrink-0 border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
+                    onClick={() => handleTestSound(lateSound)}
+                    disabled={lateSound === 'none'}
+                    title="Play and test this tone"
+                  >
+                    <Play className={`h-3.5 w-3.5 ${testingSound === lateSound ? 'animate-spin' : ''}`} />
+                    <span>Preview</span>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {LIBRARY_LATE_SOUNDS.find((s) => s.id === lateSound)?.description}
+                </p>
+              </div>
+
+              {/* Response Message Mode */}
+              <div className="space-y-1.5">
+                <Label htmlFor="late-response-mode" className="text-xs font-semibold">
+                  Student Feedback Message Preset
+                </Label>
+                <Select
+                  value={lateMode}
+                  onValueChange={(val) =>
+                    updateSettings({ libraryReturnResponseLateMode: val as LibraryReturnResponseLateMode })
+                  }
+                >
+                  <SelectTrigger id="late-response-mode" className="h-9 text-xs rounded-lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LIBRARY_LATE_RESPONSES.map((r) => (
+                      <SelectItem key={r.id} value={r.id} className="text-xs">
+                        <span className="font-medium">{r.label}</span>
+                        <span className="ml-2 text-muted-foreground text-[10px]">({r.tagline})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Custom message input if custom mode */}
+              {lateMode === 'custom' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="late-custom-msg" className="text-xs font-semibold">
+                    Custom Overdue Message Text
+                  </Label>
+                  <Input
+                    id="late-custom-msg"
+                    placeholder='"{title}" was returned {days} day(s) late. Please return books on time!'
+                    value={settings.libraryReturnResponseLateCustom ?? ''}
+                    onChange={(e) => updateSettings({ libraryReturnResponseLateCustom: e.target.value })}
+                    className="h-9 text-xs rounded-lg"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Supported tags: <code className="bg-muted px-1 rounded font-mono">{"{title}"}</code> for book title, <code className="bg-muted px-1 rounded font-mono">{"{days}"}</code> for days late.
+                  </p>
+                </div>
+              )}
+
+              {/* Live Banner Preview */}
+              <div className="space-y-1 pt-1">
+                <p className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-500" />
+                  <span>Station Screen Preview</span>
+                </p>
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs space-y-1 shadow-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                      <AlertTriangle className="h-4 w-4" />
+                      {lateFeedback.title}
+                    </span>
+                    <Badge variant="outline" className="bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30 text-[10px]">
+                      {lateFeedback.badgeText}
+                    </Badge>
+                  </div>
+                  <p className="text-muted-foreground text-[11px] leading-relaxed">
+                    &ldquo;{lateFeedback.message}&rdquo;
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. Fines, Rewards & Point Balances */}
       <Card className="border-dashed shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

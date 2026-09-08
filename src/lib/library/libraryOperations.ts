@@ -14,7 +14,15 @@ import { type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 
 export type LibraryCheckoutResult =
   | { action: 'checkout'; item: LibraryItem; itemId: string; dueAt?: number | null }
-  | { action: 'return'; item: LibraryItem; itemId: string; pointsDelta?: number; pointsMessage?: string }
+  | {
+      action: 'return';
+      item: LibraryItem;
+      itemId: string;
+      pointsDelta?: number;
+      pointsMessage?: string;
+      daysOverdue?: number;
+      message?: string;
+    }
   | { action: 'wrong_borrower'; item: LibraryItem; borrowerName?: string }
   | { action: 'limit_reached'; currentCount: number; max: number }
   | { action: 'not_found' }
