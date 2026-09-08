@@ -98,7 +98,7 @@ interface AppContextType {
   updateCategory: (category: Category) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
   addCoupons: (coupons: Coupon[]) => Promise<void>;
-  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number; category?: string }>;
+  redeemCoupon: (studentId: string, couponCode: string) => Promise<{ success: boolean; message: string; value?: number; bonusTotal?: number; category?: string; reusable?: boolean }>;
   deleteCoupon: (couponId: string) => Promise<void>;
   deleteCoupons: (couponIds: string[]) => Promise<void>;
   awardPoints: (studentId: string, points: number, description: string) => Promise<{ success: boolean; message: string; bonusTotal?: number; queued?: boolean }>;
@@ -362,6 +362,8 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
             createdByTeacherId: typeof c?.createdByTeacherId === 'string' ? c.createdByTeacherId : undefined,
             allowedClassIds: Array.isArray(c?.allowedClassIds) ? c.allowedClassIds : undefined,
             allowedTeacherIds: Array.isArray(c?.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
+            reusable: c?.reusable === true,
+            reusableSample: c?.reusableSample === true,
           };
         }
         saveCouponSnapshot(schoolId, { updatedAt, couponsByCode });
@@ -543,13 +545,15 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
       const ok = couponIsKnownAndValidOffline(schoolId, couponCode);
       if (!ok.ok) return { success: false, message: ok.reason || 'Coupon not valid offline.' };
-      addPendingCouponRedemption({ schoolId, studentId, couponCode, createdAt: Date.now() });
       const cached = loadCouponSnapshot(schoolId)?.couponsByCode[couponCode];
+      const reusable = cached?.reusable === true || cached?.reusableSample === true;
+      addPendingCouponRedemption({ schoolId, studentId, couponCode, createdAt: Date.now(), reusable });
       return {
         success: true,
         message: 'Saved offline (pending sync).',
         value: cached?.value,
         category: cached?.category,
+        reusable,
       };
     }
 
@@ -564,6 +568,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
         value: data?.value,
         bonusTotal: data?.bonusTotal,
         category: typeof data?.category === 'string' ? data.category : undefined,
+        reusable: data?.reusable === true,
       };
     } catch (e: any) {
       return { success: false, message: e?.message || 'Could not redeem this coupon.' };

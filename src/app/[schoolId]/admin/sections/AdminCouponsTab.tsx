@@ -18,6 +18,9 @@ import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader'
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Coupon } from '@/lib/types';
 import { couponRedemptionLabelForPrint } from '@/lib/coupons/couponRedemptionRules';
+import { isReusableCoupon } from '@/lib/coupons/reusableCoupon';
+import { useAppContext } from '@/components/AppProvider';
+import { DEFAULT_COUPON_CORNER_STYLE } from '@/lib/coupons/couponPrint';
 
 type CouponGroup = {
   key: string;
@@ -25,6 +28,7 @@ type CouponGroup = {
   teacher: string;
   value: number;
   scopeLine: string;
+  reusable: boolean;
   count: number;
   latestAt: number;
   codesSample: string[];
@@ -60,6 +64,7 @@ export function AdminCouponsTab({
   const [section, setSection] = useState<'available' | 'redeemed'>('available');
   const [expandedAvailableGroupKey, setExpandedAvailableGroupKey] = useState<string | null>(null);
   const [expandedRedeemedGroupKey, setExpandedRedeemedGroupKey] = useState<string | null>(null);
+  const { setCouponsToPrint } = useAppContext();
 
   const categories = useMemo(() => {
     const cats = new Set<string>();
@@ -105,7 +110,8 @@ export function AdminCouponsTab({
       const scopeLine = couponRedemptionLabelForPrint(c) || '';
       const gCategory = c.category || 'Uncategorized';
       const gTeacher = c.teacher || 'Unknown';
-      const key = `${gCategory}__${gTeacher}__${c.value}__${scopeLine}`;
+      const reusable = isReusableCoupon(c);
+      const key = `${gCategory}__${gTeacher}__${c.value}__${scopeLine}__${reusable ? 'reusable' : 'once'}`;
       const createdAt = typeof c.createdAt === 'number' ? c.createdAt : new Date(c.createdAt).getTime();
 
       const existing = groups.get(key);
@@ -116,6 +122,7 @@ export function AdminCouponsTab({
           teacher: gTeacher,
           value: Number(c.value ?? 0),
           scopeLine,
+          reusable,
           count: 1,
           latestAt: Number.isFinite(createdAt) ? createdAt : 0,
           codesSample: [c.code].filter(Boolean).slice(0, CODES_SAMPLE_SIZE),
@@ -143,7 +150,8 @@ export function AdminCouponsTab({
       const scopeLine = couponRedemptionLabelForPrint(c) || '';
       const gCategory = c.category || 'Uncategorized';
       const gTeacher = c.teacher || 'Unknown';
-      const key = `${gCategory}__${gTeacher}__${c.value}__${scopeLine}`;
+      const reusable = isReusableCoupon(c);
+      const key = `${gCategory}__${gTeacher}__${c.value}__${scopeLine}__${reusable ? 'reusable' : 'once'}`;
       const usedAtRaw = c.usedAt ?? c.createdAt;
       const usedAt = typeof usedAtRaw === 'number' ? usedAtRaw : new Date(usedAtRaw).getTime();
 
@@ -155,6 +163,7 @@ export function AdminCouponsTab({
           teacher: gTeacher,
           value: Number(c.value ?? 0),
           scopeLine,
+          reusable,
           count: 1,
           latestAt: Number.isFinite(usedAt) ? usedAt : 0,
           codesSample: [c.code].filter(Boolean).slice(0, CODES_SAMPLE_SIZE),
@@ -327,6 +336,11 @@ export function AdminCouponsTab({
                               <span className="text-[11px] font-medium text-muted-foreground truncate border px-2 py-0.5 rounded-lg bg-background">
                                 {coupon.category} <span className="text-muted-foreground/60">by</span> {coupon.teacher}
                               </span>
+                              {isReusableCoupon(coupon) && (
+                                <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-lg">
+                                  Reusable
+                                </span>
+                              )}
                               {scopeLine && (
                                 <span
                                   className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg truncate max-w-[120px]"
@@ -334,6 +348,23 @@ export function AdminCouponsTab({
                                 >
                                   {scopeLine}
                                 </span>
+                              )}
+                              {isReusableCoupon(coupon) && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 rounded-lg text-[10px] font-bold uppercase"
+                                  onClick={() =>
+                                    setCouponsToPrint([coupon], {
+                                      couponsPerPage: 10,
+                                      schoolId,
+                                      cornerStyle: DEFAULT_COUPON_CORNER_STYLE,
+                                    })
+                                  }
+                                >
+                                  Reprint
+                                </Button>
                               )}
                               <span className="text-[10px] text-muted-foreground/60 hidden sm:inline">
                                 {new Date(coupon.createdAt).toLocaleDateString()}
@@ -379,7 +410,11 @@ export function AdminCouponsTab({
                               <div className="min-w-0 flex-1 grid grid-cols-[minmax(140px,1fr)_minmax(120px,160px)_minmax(90px,120px)_minmax(80px,110px)_minmax(90px,120px)] gap-3 items-center">
                                 <div className="min-w-0">
                                   <div className="font-bold text-sm truncate">{g.category}</div>
-                                  {g.scopeLine ? (
+                                  {g.reusable ? (
+                                    <div className="text-[10px] font-black uppercase tracking-wider text-primary truncate">
+                                      Reusable staff coupon
+                                    </div>
+                                  ) : g.scopeLine ? (
                                     <div
                                       className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 truncate"
                                       title={g.scopeLine}

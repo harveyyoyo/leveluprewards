@@ -10,6 +10,7 @@ import {
   isReusableSampleCouponRedemption,
   resolveReusableSampleCouponConfig,
 } from "./shared/reusableSampleCoupon";
+import { isReusableCouponDoc } from "./shared/reusableCoupon";
 
 import "./init";
 
@@ -512,7 +513,7 @@ async function redeemCouponForStudent(
   schoolId: string,
   studentId: string,
   couponCode: string
-): Promise<{ value: number; bonusTotal: number; category: string }> {
+): Promise<{ value: number; bonusTotal: number; category: string; reusable: boolean }> {
   const schoolRef = db.collection("schools").doc(schoolId);
   const couponRef = schoolRef.collection("coupons").doc(couponCode);
   const studentRef = schoolRef.collection("students").doc(studentId);
@@ -552,7 +553,8 @@ async function redeemCouponForStudent(
     if (coupon.expiresAt && typeof coupon.expiresAt === "number" && now > coupon.expiresAt) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon has expired.");
     }
-    if (coupon.used === true && !isReusableSample) {
+    const isReusable = isReusableSample || isReusableCouponDoc(coupon);
+    if (coupon.used === true && !isReusable) {
       throw new functions.https.HttpsError("failed-precondition", "This coupon has already been used.");
     }
 
@@ -637,10 +639,10 @@ async function redeemCouponForStudent(
     const cat = String(coupon.category || "Coupon");
     const code = String(coupon.code || couponCode);
     tx.set(studentRef.collection("activities").doc(), { desc: `Redeemed coupon: ${code} (${cat})`, amount: value, date: now });
-    if (!isReusableSample) {
+    if (!isReusable) {
       tx.update(couponRef, { used: true, usedAt: now, usedBy: studentId });
     }
-    return { value, bonusTotal, category: categoryName };
+    return { value, bonusTotal, category: categoryName, reusable: isReusable };
   });
 }
 
@@ -679,6 +681,7 @@ exports.redeemCouponServer = functions
       value: result.value,
       bonusTotal: result.bonusTotal,
       category: result.category,
+      reusable: result.reusable === true,
     };
   }
 );
@@ -1333,7 +1336,8 @@ exports.getCouponSnapshot = functions.https.onCall(
       const code = String(c.code || d.id).toUpperCase();
       const isReusableSample =
         reusableSampleCfg.enabled && code === reusableSampleCfg.code;
-      if (c.used === true && !isReusableSample) continue;
+      const reusable = isReusableSample || isReusableCouponDoc(c);
+      if (c.used === true && !reusable) continue;
       if (c.expiresAt && typeof c.expiresAt === "number" && now > c.expiresAt) continue;
       coupons.push({
         code: String(c.code || d.id).toUpperCase(),
@@ -1345,6 +1349,8 @@ exports.getCouponSnapshot = functions.https.onCall(
         createdByTeacherId: typeof c.createdByTeacherId === "string" ? c.createdByTeacherId : undefined,
         allowedClassIds: Array.isArray(c.allowedClassIds) ? c.allowedClassIds : undefined,
         allowedTeacherIds: Array.isArray(c.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
+        reusable,
+        reusableSample: c.reusableSample === true || isReusableSample,
       });
     }
     if (reusableSampleCfg.enabled && !coupons.some((c) => c.code === reusableSampleCfg.code)) {
@@ -1353,6 +1359,8 @@ exports.getCouponSnapshot = functions.https.onCall(
         value: reusableSampleCfg.value,
         category: reusableSampleCfg.category,
         redemptionScope: "school",
+        reusable: true,
+        reusableSample: true,
       });
     }
     return { updatedAt: now, coupons };

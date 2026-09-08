@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COUPON_KEEP_REMINDER,
   COUPON_TRASH_REMINDER,
   couponRedeemStudentMessage,
   fallbackCouponRedeemCompliment,
@@ -14,6 +15,16 @@ describe('couponRedeemCompliment', () => {
         includeTrashReminder: true,
       }),
     ).toBe(`You gained 20 points. Keep up the good behavior! ${COUPON_TRASH_REMINDER}`);
+  });
+
+  it('tells students to keep a reusable staff coupon', () => {
+    expect(
+      couponRedeemStudentMessage({
+        points: 10,
+        compliment: 'Nice work!',
+        reusable: true,
+      }),
+    ).toBe(`You gained 10 points. Nice work! ${COUPON_KEEP_REMINDER}`);
   });
 
   it('uses category-aware fallback compliments', () => {

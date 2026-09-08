@@ -453,6 +453,7 @@ export function StudentDashboardInner({
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
   const [flyPointsReason, setFlyPointsReason] = useState<string | null>(null);
+  const [flyReusableCoupon, setFlyReusableCoupon] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -634,6 +635,7 @@ export function StudentDashboardInner({
         if (result.pointsAwarded > 0) {
           playSound('success');
           animationKey.current += 1;
+          setFlyReusableCoupon(false);
           setFlyPointsValue(result.pointsAwarded);
           setTimeout(() => { setFlyPointsValue(null); }, 1500);
         }
@@ -682,6 +684,7 @@ export function StudentDashboardInner({
                 }
                 playSound('success');
                 animationKey.current += 1;
+                setFlyReusableCoupon(false);
                 setFlyPointsValue(awarded);
                 setTimeout(() => { setFlyPointsValue(null); }, 2000);
             } catch (err) {
@@ -1044,6 +1047,7 @@ export function StudentDashboardInner({
         animationKey.current += 1;
         setFlyPointsValue(points);
         setFlyPointsReason(category);
+        setFlyReusableCoupon(result.reusable === true);
         setFlyCompliment(complimentsOn ? fallbackCouponRedeemCompliment(category) : null);
 
         if (complimentsOn && schoolId) {
@@ -1705,7 +1709,8 @@ export function StudentDashboardInner({
               ? couponRedeemStudentMessage({
                   points: flyPointsValue,
                   compliment: flyCompliment,
-                  includeTrashReminder: true,
+                  includeTrashReminder: !flyReusableCoupon,
+                  reusable: flyReusableCoupon,
                 })
               : '')}
         </div>
@@ -1873,6 +1878,7 @@ export function StudentDashboardInner({
                       points={flyPointsValue}
                       category={flyPointsReason}
                       compliment={flyCompliment}
+                      reusable={flyReusableCoupon}
                     />
                   </div>
                 ) : null}

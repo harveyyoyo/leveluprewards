@@ -126,11 +126,13 @@ export async function requestCouponRedeemCompliment(
 }
 
 export const COUPON_TRASH_REMINDER = '🗑️ Toss your coupon in the trash — thanks!';
+export const COUPON_KEEP_REMINDER = 'Keep this staff coupon — it can be scanned again.';
 
 export function couponRedeemStudentMessage(opts: {
   points?: number;
   compliment?: string | null;
   includeTrashReminder?: boolean;
+  reusable?: boolean;
 }): string {
   const parts: string[] = [];
   if (typeof opts.points === 'number' && opts.points > 0) {
@@ -138,6 +140,10 @@ export function couponRedeemStudentMessage(opts: {
   }
   const compliment = opts.compliment?.trim();
   if (compliment) parts.push(compliment);
-  if (opts.includeTrashReminder !== false) parts.push(COUPON_TRASH_REMINDER);
+  if (opts.reusable) {
+    parts.push(COUPON_KEEP_REMINDER);
+  } else if (opts.includeTrashReminder !== false) {
+    parts.push(COUPON_TRASH_REMINDER);
+  }
   return parts.join(' ');
 }

@@ -301,6 +301,8 @@ export interface Coupon {
   allowedTeacherIds?: string[];
   /** Human-readable redemption limits for printing on the coupon (set when generated). */
   redemptionPrintNote?: string;
+  /** When true, staff-printed coupon can be redeemed repeatedly (keep the slip). */
+  reusable?: boolean;
   /** When true, coupon can be redeemed repeatedly (demo sample coupon from kiosk settings). */
   reusableSample?: boolean;
 }

@@ -53,10 +53,11 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['point', 'points', 'category', 'categories', 'coupon', 'coupons', 'print'],
+    keys: ['point', 'points', 'category', 'categories', 'coupon', 'coupons', 'print', 'reusable'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminCategoriesTab.tsx',
       'src/app/[schoolId]/admin/sections/AdminCouponsTab.tsx',
+      'src/components/coupons/CouponPrintPanel.tsx',
       'src/app/[schoolId]/teacher/page.tsx',
     ],
   },

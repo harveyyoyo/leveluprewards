@@ -12,6 +12,8 @@ export type CachedCoupon = {
   createdByTeacherId?: string;
   allowedClassIds?: string[];
   allowedTeacherIds?: string[];
+  reusable?: boolean;
+  reusableSample?: boolean;
 };
 
 export type CouponSnapshot = {
