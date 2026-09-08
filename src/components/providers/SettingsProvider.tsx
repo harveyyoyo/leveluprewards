@@ -465,6 +465,8 @@ interface Settings {
     smartScreenShowJewishHolidays?: boolean;
     /** Multiple named Smart Screen versions; open with `?screenProfileId=<id>`. */
     smartScreenProfiles?: Record<string, SmartScreenProfile>;
+    /** Multiple named school displays; open with `?displayId=<id>`. */
+    displayProfiles?: Record<string, SchoolDisplayProfile>;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -596,6 +598,16 @@ export interface SmartScreenProfile {
     updatedAt: number;
     /** Smart-screen-specific overrides for this profile. */
     settings: Partial<Settings>;
+}
+
+export interface SchoolDisplayProfile {
+    id: string;
+    name: string;
+    template: 'hall-of-fame' | 'smart' | 'bulletin';
+    createdAt: number;
+    updatedAt: number;
+    /** Display-specific settings overrides for this display. */
+    settings?: Partial<Settings>;
 }
 
 /** Settings with display mode resolved for rendering (`web` | `app` | `mobile`). */
@@ -875,6 +887,7 @@ const defaultSettings: Settings = {
     smartScreenShowHebrewDate: false,
     smartScreenShowJewishHolidays: false,
     smartScreenProfiles: {},
+    displayProfiles: {},
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     payRewards: true,

@@ -1,4 +1,4 @@
-﻿import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   buildBulletinDisplayHref,
   buildDisplayHref,
@@ -107,6 +107,9 @@ describe('displayRoutes', () => {
       expect(buildDisplayHref(schoolId, 'hall-of-fame')).toBe(
         '/pine-crest/displays?view=hall-of-fame',
       );
+      expect(
+        buildDisplayHref(schoolId, 'smart', { displayId: 'lobby-tv', fullscreen: true }),
+      ).toBe('/pine-crest/displays?view=smart&fullscreen=1&displayId=lobby-tv');
     });
 
     it('builds displays realm hrefs', () => {

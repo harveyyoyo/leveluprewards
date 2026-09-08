@@ -60,47 +60,52 @@ export function parseDisplayView(value: string | null | undefined): DisplayView 
   return 'hall-of-fame';
 }
 
-type SmartScreenHrefOptions = {
+export type DisplayHrefOptions = {
   fullscreen?: boolean;
   /** Named screen version — layout, theme, and modules come from saved app settings live. */
   screenProfileId?: string;
+  /** Custom named display id. */
+  displayId?: string;
 };
 
-export function buildSmartScreenDisplayHref(schoolId: string, options: SmartScreenHrefOptions = {}): string {
+export function buildSmartScreenDisplayHref(schoolId: string, options: DisplayHrefOptions = {}): string {
   const params = new URLSearchParams();
   params.set('view', 'smart');
   if (options.fullscreen) params.set('fullscreen', '1');
   if (options.screenProfileId) params.set('screenProfileId', options.screenProfileId);
+  if (options.displayId) params.set('displayId', options.displayId);
   return `/${schoolId}/displays?${params.toString()}`;
 }
 
-export function buildBulletinDisplayHref(schoolId: string, options: { fullscreen?: boolean } = {}): string {
+export function buildBulletinDisplayHref(schoolId: string, options: DisplayHrefOptions = {}): string {
   const params = new URLSearchParams();
   params.set('view', 'bulletin');
   if (options.fullscreen) params.set('fullscreen', '1');
+  if (options.displayId) params.set('displayId', options.displayId);
   return `/${schoolId}/displays?${params.toString()}`;
 }
 
 export function buildHallOfFameDisplayHref(
   schoolId: string,
-  options: { fullscreen?: boolean } = {},
+  options: DisplayHrefOptions = {},
 ): string {
   const params = new URLSearchParams();
   params.set('view', 'hall-of-fame');
   if (options.fullscreen) params.set('fullscreen', '1');
+  if (options.displayId) params.set('displayId', options.displayId);
   return `/${schoolId}/displays?${params.toString()}`;
 }
 
 export function buildDisplayHref(
   schoolId: string,
   view: DisplayView,
-  options: SmartScreenHrefOptions = {},
+  options: DisplayHrefOptions = {},
 ): string {
   if (view === 'bulletin') {
-    return buildBulletinDisplayHref(schoolId, { fullscreen: options.fullscreen });
+    return buildBulletinDisplayHref(schoolId, options);
   }
   if (view === 'hall-of-fame') {
-    return buildHallOfFameDisplayHref(schoolId, { fullscreen: options.fullscreen });
+    return buildHallOfFameDisplayHref(schoolId, options);
   }
   return buildSmartScreenDisplayHref(schoolId, options);
 }

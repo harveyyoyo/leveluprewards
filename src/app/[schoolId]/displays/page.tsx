@@ -37,11 +37,35 @@ const HallOfFameView = dynamic(() => import('@/components/displays/HallOfFameRou
   ),
 });
 
+import { useSettings } from '@/components/providers/SettingsProvider';
+
 export default function DisplaysPage() {
   const searchParams = useSearchParams();
   const { schoolId } = useAppContext();
+  const { settings } = useSettings();
+
+  const displayId = searchParams.get('displayId') || searchParams.get('screenProfileId') || '';
+  const displayProfile = displayId
+    ? settings.displayProfiles?.[displayId] ||
+      (settings.smartScreenProfiles?.[displayId]
+        ? {
+            id: displayId,
+            name: settings.smartScreenProfiles[displayId].name,
+            template: 'smart' as const,
+            createdAt: settings.smartScreenProfiles[displayId].createdAt,
+            updatedAt: settings.smartScreenProfiles[displayId].updatedAt,
+            settings: settings.smartScreenProfiles[displayId].settings,
+          }
+        : null)
+    : null;
+
   // Merged Displays feature: one on/off switch, three templates (Hall of Fame is the default/first).
-  const resolvedView = parseDisplayView(searchParams.get('view'));
+  const rawView = searchParams.get('view');
+  const resolvedView = rawView
+    ? parseDisplayView(rawView)
+    : displayProfile?.template
+      ? parseDisplayView(displayProfile.template)
+      : parseDisplayView(null);
 
   return (
     <>

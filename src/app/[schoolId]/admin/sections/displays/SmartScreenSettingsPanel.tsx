@@ -79,6 +79,8 @@ type SmartScreenSettingsPanelProps = {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
   isJewishOrthodoxSchool?: boolean;
+  activeProfileId?: string;
+  hideInternalProfileSelector?: boolean;
 };
 
 export function SmartScreenSettingsPanel({
@@ -86,8 +88,12 @@ export function SmartScreenSettingsPanel({
   settings,
   updateSettings,
   isJewishOrthodoxSchool = false,
+  activeProfileId: controlledProfileId,
+  hideInternalProfileSelector = false,
 }: SmartScreenSettingsPanelProps) {
-  const [activeProfileId, setActiveProfileId] = useState<string>('default');
+  const [internalProfileId, setInternalProfileId] = useState<string>('default');
+  const activeProfileId = controlledProfileId ?? internalProfileId;
+  const setActiveProfileId = setInternalProfileId;
   const [newProfileName, setNewProfileName] = useState('');
   const [draft, setDraft] = useState<SmartScreenSettingsSnapshot>({});
   const savedSnapshotRef = useRef('');
@@ -203,45 +209,47 @@ export function SmartScreenSettingsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
-          <Select value={activeProfileId} onValueChange={setActiveProfileId}>
-            <SelectTrigger className="h-9 rounded-lg bg-background text-sm">
-              <SelectValue placeholder={activeProfile ? activeProfile.name : 'School default'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">School default</SelectItem>
-              {Object.values(smartScreenProfiles).map((profile) => (
-                <SelectItem key={profile.id} value={profile.id}>
-                  {profile.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {activeProfile ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-lg text-rose-600"
-              onClick={() => deleteProfile(activeProfile.id)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
+      {!hideInternalProfileSelector ? (
+        <div className="rounded-xl border bg-muted/10 px-3 py-3 sm:px-4">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+            <Select value={activeProfileId} onValueChange={setActiveProfileId}>
+              <SelectTrigger className="h-9 rounded-lg bg-background text-sm">
+                <SelectValue placeholder={activeProfile ? activeProfile.name : 'School default'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">School default</SelectItem>
+                {Object.values(smartScreenProfiles).map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {activeProfile ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg text-rose-600"
+                onClick={() => deleteProfile(activeProfile.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Input
+              value={newProfileName}
+              onChange={(event) => setNewProfileName(event.target.value)}
+              placeholder="New version name"
+              className="h-9 rounded-lg bg-background text-sm"
+            />
+            <Button type="button" size="sm" className="h-9 shrink-0 rounded-lg px-3 text-xs" onClick={createProfile}>
+              Add
             </Button>
-          ) : null}
+          </div>
         </div>
-        <div className="mt-2 flex gap-2">
-          <Input
-            value={newProfileName}
-            onChange={(event) => setNewProfileName(event.target.value)}
-            placeholder="New version name"
-            className="h-9 rounded-lg bg-background text-sm"
-          />
-          <Button type="button" size="sm" className="h-9 shrink-0 rounded-lg px-3 text-xs" onClick={createProfile}>
-            Add
-          </Button>
-        </div>
-      </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-xl border bg-muted/10">
         <div className="flex h-[min(80dvh,860px)] min-h-[26rem] flex-col lg:flex-row">
