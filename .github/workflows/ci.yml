@@ -57,9 +57,23 @@ jobs:
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
           NODE_ENV: production
 
+      # Playwright starts `npm run start`. School login needs Firebase Admin
+      # (same JSON secret as hosting deploy) or /api/auth/* returns 503.
+      - name: Write Firebase Admin credentials for Playwright
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+        run: |
+          if [ -z "$FIREBASE_SA_JSON" ]; then
+            echo '::error::FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 secret missing — Playwright school login will 503.'
+            exit 1
+          fi
+          node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.writeFileSync('.env','SSR_SERVICE_ACCOUNT_JSON='+JSON.stringify(sa)+'\n');}"
+
       - name: Playwright smoke tests
         run: npx playwright test e2e/auth.spec.ts
         env:
           CI: 'true'
           BASE_URL: 'http://127.0.0.1:3000'
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
+          SSR_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_1273073612_71183 }}
