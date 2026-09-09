@@ -55,6 +55,7 @@ import {
   LOGO_UPLOAD_MAX_BYTES,
   resolveLogoContentType,
 } from '@/lib/logoUpload';
+import { makeLogoBackgroundTransparent } from '@/lib/logoTransparency';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -352,6 +353,13 @@ export default function DeveloperPage() {
       setIsAppLogoUploading(true);
       toast({ title: 'Uploading app logo…', description: 'Please wait.' });
 
+      // SVGs are already vector/scalable — only raster logos need their
+      // white background cleared (and only PNG can carry the result's
+      // transparency).
+      const processedBlob = isSvgLogoFile(blob, pendingLogoFile?.name)
+        ? blob
+        : await makeLogoBackgroundTransparent(blob);
+
       const imageBase64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
@@ -360,13 +368,13 @@ export default function DeveloperPage() {
           resolve(base64 || '');
         };
         reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(blob);
+        reader.readAsDataURL(processedBlob);
       });
 
       const uploadLogo = httpsCallable<{ imageBase64: string; contentType: string }, { logoUrl: string }>(functions, 'uploadAppLogo');
       const res = await uploadLogo({
         imageBase64,
-        contentType: resolveLogoContentType(blob, pendingLogoFile?.name),
+        contentType: resolveLogoContentType(processedBlob, pendingLogoFile?.name),
       });
 
       const data = res.data;

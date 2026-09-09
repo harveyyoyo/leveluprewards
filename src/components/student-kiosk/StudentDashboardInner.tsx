@@ -1558,8 +1558,8 @@ export function StudentDashboardInner({
   const themeBg = effectiveTheme?.background || '#020617';
   const themeCard = effectiveTheme?.cardBackground || themeBg;
   const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
-  const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
-  const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
+  const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg) : computedThemeText;
+  const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard) : computedThemeText;
   const primaryForeground = effectiveTheme ? primaryForegroundFor(effectiveTheme) : '#ffffff';
   const portalRaffleFooter = portalRaffleTickets ? (
     <div
