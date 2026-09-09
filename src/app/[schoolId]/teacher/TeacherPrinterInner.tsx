@@ -1925,7 +1925,7 @@ function TeacherPrinterInnerBody({
 
     const handleIntroTourStaffTab = useCallback((tabValue: string) => {
         setActiveTeacherTab(tabValue);
-    }, []);
+    }, [setActiveTeacherTab]);
     useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
     const toggleTeacherPinnedAddOn = (tabValue: string, pinned: boolean) => {
