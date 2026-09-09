@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, Palette, Sparkles, Monitor } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -45,25 +45,27 @@ export function LibraryThemeSettingsCard() {
   };
 
   return (
-    <Card className="border-dashed">
-      <CardHeader className="pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="rounded-lg bg-primary/10 p-2 text-primary">
-              <Palette className="h-5 w-5" />
+    <Accordion type="single" collapsible className="space-y-3">
+      <AccordionItem value="theme" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
+                <Palette className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-medium flex items-center gap-2">
+                  Ambiance &amp; Reading Themes
+                  <Badge variant="outline" className="font-normal text-xs">
+                    {currentTheme.label}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
+                  Customize colors, high-contrast reading ambiance, and atmosphere across the library workspace and self-checkout kiosks.
+                </p>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                Ambiance &amp; Reading Themes
-                <Badge variant="outline" className="font-normal text-xs">
-                  {currentTheme.label}
-                </Badge>
-              </CardTitle>
-              <CardDescription>
-                Customize colors, high-contrast reading ambiance, and atmosphere across the library workspace and self-checkout kiosks.
-              </CardDescription>
-            </div>
-          </div>
+          </AccordionTrigger>
           <StaffPortalTabInfoPopover
             sections={[
               staffPortalTabInfoSection(
@@ -76,8 +78,7 @@ export function LibraryThemeSettingsCard() {
             ariaLabel="About library themes"
           />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
+        <AccordionContent className="px-4 space-y-6">
         {/* Theme Grid */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {LIBRARY_THEME_IDS.map((id) => {
@@ -206,7 +207,8 @@ export function LibraryThemeSettingsCard() {
           </div>
           <Switch checked={matchKiosk} onCheckedChange={handleToggleKioskMatch} />
         </div>
-      </CardContent>
-    </Card>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }

@@ -31,14 +31,14 @@ export function useBarcodeReaderWedge({
       const code = (raw ?? bufferRef.current).trim();
       clearBuffer();
       if (code) onScanRef.current(code);
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
     },
     [clearBuffer],
   );
 
   useEffect(() => {
     if (!active || disabled) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 80);
+    const t = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 80);
     return () => clearTimeout(t);
   }, [active, disabled]);
 
@@ -88,6 +88,6 @@ export function useBarcodeReaderWedge({
     },
     submitScan,
     clearBuffer,
-    focusReader: () => inputRef.current?.focus(),
+    focusReader: () => inputRef.current?.focus({ preventScroll: true }),
   };
 }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
@@ -80,7 +81,8 @@ export function LibraryBookIntakeScanner({
   libraryItems?: LibraryItem[] | null;
 }) {
   const { toast } = useToast();
-  const [scanning, setScanning] = useState(false);
+  const confirm = useConfirm();
+  const [scanning, setScanning] = useState(true);
   const [rows, setRows] = useState<IntakeRow[]>([]);
   const [registering, setRegistering] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<LibraryScanFeedback | null>(null);
@@ -117,34 +119,63 @@ export function LibraryBookIntakeScanner({
       const codeKey = scannedCode.toUpperCase();
 
       const id = newRowId();
-      let duplicateInQueue = false;
+      let duplicateRow: IntakeRow | undefined;
       setRows((prev) => {
-        if (prev.some((r) => r.isbn.toUpperCase() === codeKey)) {
-          duplicateInQueue = true;
-          return prev;
-        }
-        return [
-          {
-            id,
-            isbn: scannedCode,
-            title: '',
-            author: '',
-            category: '',
-            status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
-          },
-          ...prev,
-        ];
+        const existing = prev.find((r) => r.isbn.toUpperCase() === codeKey);
+        if (existing) duplicateRow = existing;
+        return prev;
       });
 
-      if (duplicateInQueue) {
+      if (duplicateRow) {
+        const row = duplicateRow;
+        const label = row.title.trim() || scannedCode;
         setScanFeedback({
           code: scannedCode,
           status: 'duplicate',
-          message: 'This barcode is already in the queue.',
+          message: 'This barcode is already in the queue — confirm to add another copy.',
         });
-        toast({ title: 'Already in queue', description: `${scannedCode} was scanned already.` });
+        const isAnotherCopy = await confirm({
+          title: 'Scanned again',
+          description: `"${label}" is already in the queue. Is this another physical copy, or did you scan it by mistake?`,
+          confirmLabel: 'Add another copy',
+          cancelLabel: 'It was a mistake',
+        });
+        if (isAnotherCopy) {
+          const nextCopies = (row.copies ?? 1) + 1;
+          upsertRow({ id: row.id, copies: nextCopies });
+          toast({ title: 'Copy added', description: `"${label}" is now set to ${nextCopies} copies.` });
+        }
         return;
       }
+
+      // Not in the current queue — but it may already be a saved copy from a previous session.
+      const alreadyInCatalog = isIsbn ? catalogIsbns.has(scannedCode) : catalogScannedCodes.has(codeKey);
+      if (alreadyInCatalog) {
+        setScanFeedback({
+          code: scannedCode,
+          status: 'duplicate',
+          message: 'This barcode is already in your catalog — confirm to add another copy.',
+        });
+        const isAnotherCopy = await confirm({
+          title: 'Already in your catalog',
+          description: `A copy with barcode ${scannedCode} is already registered. Is this another physical copy, or did you scan it by mistake?`,
+          confirmLabel: 'Add another copy',
+          cancelLabel: 'It was a mistake',
+        });
+        if (!isAnotherCopy) return;
+      }
+
+      setRows((prev) => [
+        {
+          id,
+          isbn: scannedCode,
+          title: '',
+          author: '',
+          category: '',
+          status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
+        },
+        ...prev,
+      ]);
 
       setScanFeedback({ code: scannedCode, status: 'looking_up' });
 
@@ -209,7 +240,7 @@ export function LibraryBookIntakeScanner({
         });
       }
     },
-    [toast, upsertRow],
+    [toast, confirm, upsertRow, catalogIsbns, catalogScannedCodes],
   );
 
   const handleScan = useCallback(

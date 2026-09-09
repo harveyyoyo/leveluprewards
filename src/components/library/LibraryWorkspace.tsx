@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { ArrowLeft, BookOpen, Check, Download, ExternalLink, Loader2, MapPin, Monitor, MoreHorizontal, Plus, Printer, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Clock, Download, ExternalLink, LayoutGrid, Loader2, MapPin, Monitor, MoreHorizontal, Plus, Printer, Search, Settings, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { usePrint } from '@/components/providers/PrintProvider';
@@ -28,8 +29,6 @@ import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { LibraryItemModal } from './LibraryItemModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
-import { LibrarySelfCheckoutLaunchButton } from './LibrarySelfCheckoutOverlay';
-import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { cn } from '@/lib/utils';
 
@@ -52,6 +51,9 @@ export function LibraryWorkspace({
   const { schoolId: contextSchoolId, isInitialized, loginState, login, categories: contextCategories, userName } = useAppContext();
   const schoolId = propSchoolId || contextSchoolId;
   const categories = propCategories ?? contextCategories;
+  const schoolDocRef = useSchoolMetadataDocRef();
+  const { data: schoolData } = useDoc<{ name?: string }>(schoolDocRef);
+  const schoolName = schoolData?.name?.trim();
   const { settings, updateSettings } = useSettings();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
   const currentTheme = resolveLibraryTheme(currentThemeId);
@@ -129,6 +131,7 @@ export function LibraryWorkspace({
   };
   const itemAction = (item: LibraryItem, action: string, extra: Record<string, unknown> = {}) => run(async () => {
     if (action === 'archive' && !await confirm({ title: `Archive ${item.name}?`, description: 'This copy will leave the active catalog. Its loan history will be kept.', confirmLabel: 'Archive' })) return;
+    if (action === 'delete' && !await confirm({ title: `Permanently delete "${item.name}"?`, description: 'This cannot be undone — the copy and its barcode are removed completely. Use Archive instead if you want to keep it out of the catalog but preserve loan history.', confirmLabel: 'Delete permanently', destructive: true })) return;
     const result = action === 'return' ? await forceReturnLibraryItem(firestore!, schoolId!, item, { functions }) :
       await callLibrary<{ message: string }>(functions, 'libraryCirculation', { schoolId, action, itemId: item.id,
         studentId: item.checkedOutTo ?? null, expectedLoanId: item.activeLoanId ?? null, expectedCheckedOutAt: item.checkedOutAt ?? null, ...extra });
@@ -189,15 +192,34 @@ export function LibraryWorkspace({
     <div className={cn('space-y-6', embedded ? '' : 'mx-auto max-w-7xl p-4 sm:p-8')}>
       {error ? <p role="alert" className="rounded-xl border border-destructive p-4">The library could not load: {error.message}</p> : null}
       {catalogLoading || studentsLoading ? <p role="status" className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Loading books and students…</p> : null}
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid h-auto w-full grid-cols-5 rounded-xl p-1 sm:max-w-2xl">
-          <TabsTrigger value="desk" className="min-h-11 rounded-lg">Desk</TabsTrigger>
-          <TabsTrigger value="kiosk" className="min-h-11 rounded-lg">Kiosk Station</TabsTrigger>
-          <TabsTrigger value="catalog" className="min-h-11 rounded-lg">Catalog</TabsTrigger>
-          <TabsTrigger value="loans" className="min-h-11 rounded-lg">Loans{overdue.length > 0 ? ` (${overdue.length})` : ''}</TabsTrigger>
-          <TabsTrigger value="settings" className="min-h-11 rounded-lg">Settings</TabsTrigger>
+      <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
+        <TabsList
+          aria-label="Library sections"
+          className="grid h-auto w-full grid-cols-4 gap-1 sm:flex sm:w-56 sm:shrink-0 sm:flex-col sm:grid-cols-1"
+        >
+          {[
+            { id: 'desk', label: 'Desk', icon: LayoutGrid },
+            { id: 'catalog', label: 'Catalog', icon: BookOpen },
+            { id: 'loans', label: 'Loans', icon: Clock, badge: overdue.length > 0 ? overdue.length : undefined },
+            { id: 'settings', label: 'Settings', icon: Settings },
+          ].map(({ id, label, icon: Icon, badge }) => (
+            <TabsTrigger
+              key={id}
+              value={id}
+              className="relative flex min-h-11 w-full min-w-0 items-center justify-start gap-3 whitespace-normal rounded-xl px-3 py-2.5 text-left text-xs font-semibold leading-tight text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-inner sm:text-sm"
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="min-w-0">{label}</span>
+              {badge !== undefined ? (
+                <span className="ml-auto shrink-0 rounded-lg bg-background px-1.5 py-0.5 text-[9px] font-black text-muted-foreground">
+                  {badge}
+                </span>
+              ) : null}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="desk" className="mt-6 space-y-5">
+        <div className="min-w-0 flex-1">
+        <TabsContent value="desk" className="mt-0 space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-primary/5 p-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -206,112 +228,26 @@ export function LibraryWorkspace({
               <div>
                 <p className="text-sm font-bold text-foreground">Student Self-Checkout &amp; Return Kiosk</p>
                 <p className="text-xs text-muted-foreground">
-                  Switch this station or open another tab for students to independently borrow and return books.
+                  Open this on a shared device for students to independently borrow and return books.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="rounded-xl font-bold text-xs"
-                onClick={() => setTab('kiosk')}
-              >
-                Open Kiosk Tab
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-xl font-bold text-xs gap-1 shadow-sm"
-                asChild
-              >
-                <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
-                  Launch Fullscreen
-                  <ExternalLink className="h-3 w-3" />
-                </Link>
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              className="rounded-xl font-bold text-xs gap-1 shadow-sm"
+              asChild
+            >
+              <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                Open Kiosk
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </Button>
           </div>
           <div className="grid grid-cols-3 gap-3">{[['catalog', 'Copies', (items ?? []).filter(i => !i.archived).length], ['loans', 'On loan', activeLoans.length], ['overdue', 'Overdue', overdue.length]].map(([key, label, count]) =>
             <button key={key} className="rounded-xl border bg-background p-4 text-left hover:border-primary focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setTab(key === 'catalog' ? 'catalog' : 'loans'); setHistory(false); setOverdueOnly(key === 'overdue'); }}><span className="block text-sm text-muted-foreground">{label}</span><span className="text-2xl font-bold">{count}</span></button>)}</div>
           <LibraryCheckoutDesk getStudentName={getName} categories={categories} students={students} />
         </TabsContent>
-        <TabsContent value="kiosk" className="mt-6 space-y-6">
-          <div className="rounded-2xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Monitor className="h-6 w-6 text-primary" />
-                  <h2 className="text-xl sm:text-2xl font-black">Student Self-Checkout Station</h2>
-                  <Badge variant="outline" className="text-xs font-semibold">
-                    {settings.libraryCameraScanEnabled ? 'Camera Scanning On' : 'Scanner Gun Mode'}
-                  </Badge>
-                  <Badge variant="secondary" className="text-xs font-semibold">
-                    Smart Auto-Detect
-                  </Badge>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
-                  Students scan their ID card to borrow, or drop off books into the returns box. The smart circulation engine auto-detects whether the copy is being borrowed or returned.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-xl font-bold"
-                  onClick={() => setTab('settings')}
-                >
-                  Station Settings
-                </Button>
-                <Button
-                  size="sm"
-                  className="rounded-xl font-bold shadow-md gap-1.5"
-                  asChild
-                >
-                  <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
-                    <Monitor className="h-4 w-4" />
-                    Launch Fullscreen Kiosk
-                    <ExternalLink className="h-3 w-3 opacity-70" />
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Circulation Rule</p>
-                <p className="text-sm font-bold text-foreground">Auto-Detect Active</p>
-                <p className="text-xs text-muted-foreground">Borrowed books return; available books borrow.</p>
-              </div>
-              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Barcode Scanner</p>
-                <p className="text-sm font-bold text-foreground">{settings.libraryCameraScanEnabled ? 'Camera + Scanner Gun' : 'Barcode Scanner Gun'}</p>
-                <p className="text-xs text-muted-foreground">{settings.libraryCameraScanEnabled ? 'Device camera active for badges and ISBNs' : 'Standard USB/Bluetooth reader wedge'}</p>
-              </div>
-              <div className="rounded-xl border bg-background/60 p-3.5 space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Drop Box Returns</p>
-                <p className="text-sm font-bold text-foreground">{settings.libraryKioskAllowDropBoxReturn !== false ? 'Drop Box Enabled' : 'ID Card Required'}</p>
-                <p className="text-xs text-muted-foreground">{settings.libraryKioskAllowDropBoxReturn !== false ? 'Books returned without scanning student card' : 'Students must swipe card first'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Interactive Station Live Preview</h3>
-              <span className="text-xs text-muted-foreground">Works with barcode scanners, camera, and keypad</span>
-            </div>
-            <div className="overflow-hidden rounded-2xl border bg-background shadow-lg min-h-[620px]">
-              <LibraryStudentSelfCheckoutPortal
-                schoolId={schoolId}
-                categories={categories}
-                getStudentName={getName}
-                embedded
-              />
-            </div>
-          </div>
-        </TabsContent>
-        <TabsContent value="catalog" className="mt-6 space-y-4">
+        <TabsContent value="catalog" className="mt-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Book catalog</h2><p className="text-sm text-muted-foreground">Find a copy, print labels, or add books.</p></div><Button onClick={() => setIntakeOpen(true)}><Plus className="mr-2 h-4 w-4" />Add books</Button></div>
           {addedCopies.length > 0 && <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"><Check className="h-5 w-5" /><span>{addedCopies.length} new copies ready for labels.</span><Button size="sm" onClick={() => print(addedCopies)}>Print new labels</Button><Button size="sm" variant="ghost" onClick={() => setAddedCopies([])}>Dismiss</Button></div>}
           <div className="flex flex-wrap gap-3"><div className="relative min-w-48 flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" aria-label="Search catalog" placeholder="Title, author, barcode, shelf, or borrower" value={search} onChange={e => setSearch(e.target.value)} /></div>
@@ -359,14 +295,14 @@ export function LibraryWorkspace({
                 </div>
                 <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={busy} aria-label={`Actions for ${item.name}`}><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
                   <DropdownMenuItem onSelect={() => { setEditing(item); setEditOpen(true); }}>Edit copy</DropdownMenuItem><DropdownMenuItem onSelect={() => void run(async () => { await save({ name: item.name, upc: '', author: item.author, isbn: item.isbn, category: item.category, shelfLocation: item.shelfLocation }); })}>Add another copy</DropdownMenuItem><DropdownMenuItem onSelect={() => print([item])}>Print label</DropdownMenuItem>
-                  {item.status === 'checked_out' ? <><DropdownMenuItem onSelect={() => void itemAction(item, 'return')}>Return book</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'renew')}>Renew loan</DropdownMenuItem></> : <><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'lost' })}>Mark lost</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'damaged' })}>Mark damaged</DropdownMenuItem>{item.condition && item.condition !== 'good' && <DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'good' })}>Mark available</DropdownMenuItem>}<DropdownMenuItem onSelect={() => void itemAction(item, 'archive')}>Archive copy</DropdownMenuItem></>}
+                  {item.status === 'checked_out' ? <><DropdownMenuItem onSelect={() => void itemAction(item, 'return')}>Return book</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'renew')}>Renew loan</DropdownMenuItem></> : <><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'lost' })}>Mark lost</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'damaged' })}>Mark damaged</DropdownMenuItem>{item.condition && item.condition !== 'good' && <DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'good' })}>Mark available</DropdownMenuItem>}<DropdownMenuItem onSelect={() => void itemAction(item, 'archive')}>Archive copy</DropdownMenuItem><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => void itemAction(item, 'delete')}>Delete permanently</DropdownMenuItem></>}
                 </DropdownMenuContent></DropdownMenu>
               </li>
             );
           })}</ul>
           {pagination(Math.min(page, pageCount), pageCount, setPage)}
         </TabsContent>
-        <TabsContent value="loans" className="mt-6 space-y-4">
+        <TabsContent value="loans" className="mt-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Loans &amp; returns</h2><p className="text-sm text-muted-foreground">Renew books and follow up with students.</p></div><div className="flex gap-2"><Button variant={!history ? 'default' : 'outline'} onClick={() => setHistory(false)}>Current loans</Button><Button variant={history ? 'default' : 'outline'} onClick={() => setHistory(true)}>History</Button></div></div>
           <div className="flex flex-wrap gap-3"><Input className="min-w-48 flex-1" aria-label="Search loans" placeholder="Student, book, or class" value={loanSearch} onChange={e => setLoanSearch(e.target.value)} /><select aria-label="Filter loans by class" className={nativeSelect} value={classFilter} onChange={e => setClassFilter(e.target.value)}><option value="all">All classes</option>{classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
             {!history && <><Button variant={overdueOnly ? 'default' : 'outline'} aria-pressed={overdueOnly} onClick={() => setOverdueOnly(v => !v)}>Overdue only</Button><Button variant="outline" onClick={() => { try { printLibraryLoans(filteredLoans, getName, getClass); } catch (e) { toast({ variant: 'destructive', title: (e as Error).message }); } }}><Printer className="mr-2 h-4 w-4" />Print list</Button></>}
@@ -379,10 +315,11 @@ export function LibraryWorkspace({
           {pagination(Math.min(loanPage, loanPages), loanPages, setLoanPage)}
           {!history && (students ?? []).some(s => (s.libraryFineBalance ?? 0) > 0) && <details className="rounded-xl border bg-background p-4"><summary className="cursor-pointer font-semibold">Library fine balances</summary><p className="my-3 text-sm text-muted-foreground">Record a reason when waiving a fine.</p>{(students ?? []).filter(s => (s.libraryFineBalance ?? 0) > 0 && (classFilter === 'all' || s.classId === classFilter) && getName(s.id).toLowerCase().includes(loanSearch.toLowerCase())).map(s => <div key={s.id} className="flex items-center justify-between border-t py-3"><span>{getName(s.id)} · {s.libraryFineBalance} fine units</span><Button variant="outline" size="sm" onClick={() => { setWaiverStudent(s); setWaiverAmount(String(s.libraryFineBalance)); setWaiverReason(''); }}>Waive fine</Button></div>)}</details>}
         </TabsContent>
-        <TabsContent value="settings" className="mt-6 space-y-6">
-          <LibraryThemeSettingsCard />
+        <TabsContent value="settings" className="mt-0 space-y-6">
           <LibraryPolicySettingsCard categories={categories} />
+          <LibraryThemeSettingsCard />
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
@@ -518,7 +455,6 @@ export function LibraryWorkspace({
                   <ExternalLink className="h-3 w-3 opacity-60" />
                 </Link>
               </Button>
-              <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
             </div>
           </div>
         </div>
@@ -546,9 +482,11 @@ export function LibraryWorkspace({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">Library</h1>
+                <h1 className="text-2xl font-bold">{schoolName || 'Library'}</h1>
               </div>
-              <p className="text-sm opacity-80">Books, borrowing, and returns{userName ? ` · ${userName}` : ''}</p>
+              <p className="text-sm opacity-80">
+                {schoolName ? 'Library · ' : ''}Books, borrowing, and returns{userName ? ` · ${userName}` : ''}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
@@ -559,7 +497,6 @@ export function LibraryWorkspace({
                 <ExternalLink className="h-3 w-3 opacity-60" />
               </Link>
             </Button>
-            <LibrarySelfCheckoutLaunchButton schoolId={schoolId} categories={categories} getStudentName={getName} />
           </div>
         </div>
       </header>

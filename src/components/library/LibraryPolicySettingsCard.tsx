@@ -22,7 +22,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -187,38 +187,38 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   };
 
   return (
-    <div className="space-y-6">
+    <Accordion type="multiple" defaultValue={['circulation']} className="space-y-3">
       {/* 1. Circulation & Loan Policies */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="circulation" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <BookMarked className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium flex items-center gap-2">
                   Circulation &amp; Loan Policies
                   <Badge variant="outline" className="font-normal text-xs">
                     {settings.libraryLoanPeriodDays ?? 14} days
                   </Badge>
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Configure borrowing limits, renewal rules, and loan duration for students.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Set loan lengths, checkout quotas per student, and allow smart auto-detection of borrows and returns.',
-                ),
-              ]}
-              ariaLabel="About circulation policies"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Set loan lengths, checkout quotas per student, and allow smart auto-detection of borrows and returns.',
+              ),
+            ]}
+            ariaLabel="About circulation policies"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-4">
           {/* Smart Auto-Detect Borrow/Return Toggle */}
           <div className="flex items-center justify-between gap-3 rounded-xl border bg-primary/5 p-3.5 border-primary/20">
             <div className="space-y-0.5">
@@ -342,37 +342,37 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 2. Self-Checkout Station & Hardware Scanning */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="hardware" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <ScanBarcode className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium">
                   Station &amp; Hardware Scanning
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Configure camera scanning, station modes, sound effects, and kiosk screen behaviors.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Control camera barcode scanning and manage how student kiosks and dedicated library stations behave.',
-                ),
-              ]}
-              ariaLabel="About station and scanning settings"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Control camera barcode scanning and manage how student kiosks and dedicated library stations behave.',
+              ),
+            ]}
+            ariaLabel="About station and scanning settings"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-3">
           {/* Camera Scanning Switch */}
           <div className="flex items-center justify-between gap-3 rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5">
             <div className="space-y-0.5">
@@ -510,41 +510,54 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Require passcode to leave kiosk</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Off by default — a plain tap exits the station. Turn on to require an admin or librarian passcode.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryKioskExitRequiresPasscode ?? false}
+                onCheckedChange={(v) => updateSettings({ libraryKioskExitRequiresPasscode: v })}
+              />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 3. Return Audio Sounds & Student Responses */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="audio" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <Volume2 className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium flex items-center gap-2">
                   Return Audio Sounds &amp; Student Responses
                   <Badge variant="outline" className="font-normal text-xs bg-emerald-500/10 text-emerald-600 border-emerald-300 dark:border-emerald-800">
                     On-Time &amp; Overdue
                   </Badge>
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Configure audio chimes and personalized on-screen messages for on-time and late/overdue returns.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Select sound effects and feedback text for when students return books. You can test each tone right from this screen or write custom feedback using {title} and {days}.',
-                ),
-              ]}
-              ariaLabel="About return sounds and responses"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Select sound effects and feedback text for when students return books. You can test each tone right from this screen or write custom feedback using {title} and {days}.',
+              ),
+            ]}
+            ariaLabel="About return sounds and responses"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             {/* On-Time Returns Column */}
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.03] p-4 space-y-4">
@@ -804,37 +817,37 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 4. Fines, Rewards & Point Balances */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="fines" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <Coins className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium">
                   Fines, Rewards &amp; Point Balances
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Choose how returns affect student balances, reward on-time returns, and control fine caps.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.',
-                ),
-              ]}
-              ariaLabel="About loans and returns"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Choose whether late or on-time returns affect fines, school reward points, a separate library balance, or nothing at all.',
+              ),
+            ]}
+            ariaLabel="About loans and returns"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-4">
           <div className="space-y-2">
             <Label className="text-xs font-bold">When books are returned</Label>
             <Select value={rewardMode} onValueChange={(v) => setRewardMode(v as LibraryRewardMode)}>
@@ -968,37 +981,37 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </div>
             </>
           ) : null}
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 4. Cataloging & Label Printing Defaults */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="cataloging" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <Printer className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium">
                   Cataloging &amp; Spine Label Printing
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Set default book shelves, genres, barcode formats, and automatic catalog lookup.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Streamline book intake by pre-populating shelf locations and choosing how stickers and spine labels are printed.',
-                ),
-              ]}
-              ariaLabel="About cataloging defaults"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Streamline book intake by pre-populating shelf locations and choosing how stickers and spine labels are printed.',
+              ),
+            ]}
+            ariaLabel="About cataloging defaults"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-4">
           <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
             <div>
               <p className="text-xs font-bold">Automatic book info lookup</p>
@@ -1078,41 +1091,39 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 5. Genre Classification, Barcode Colors & Shelving Placement */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="genre" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <Palette className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium">
                   Genre Color Barcodes &amp; Library Shelf Placement
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Color-code barcodes by genre, format numbers logically (e.g. FIC-823-001), and designate where books belong in the library.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-xs rounded-xl"
-                onClick={handleResetGenres}
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                Reset Standards
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
+          </AccordionTrigger>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs rounded-xl shrink-0"
+            onClick={handleResetGenres}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset Standards
+          </Button>
+        </div>
 
-        <CardContent className="space-y-6 pt-1">
+        <AccordionContent className="px-4 space-y-6 pt-1">
           {/* Barcode Numbering Scheme */}
           <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1393,37 +1404,37 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               })}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </AccordionContent>
+      </AccordionItem>
 
       {/* 6. Alerts & Behavior Feedback */}
-      <Card className="border-dashed shadow-sm">
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+      <AccordionItem value="alerts" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
                 <Bell className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-base flex items-center gap-2">
+                <div className="text-base font-medium">
                   Alerts &amp; Reading Feedback
-                </CardTitle>
-                <CardDescription>
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
                   Send overdue warnings, sync with classroom rosters, and celebrate reading habits.
-                </CardDescription>
+                </p>
               </div>
             </div>
-            <StaffPortalTabInfoPopover
-              sections={[
-                staffPortalTabInfoSection(
-                  'Keep students and homeroom teachers informed about overdue books and encourage positive reading habits.',
-                ),
-              ]}
-              ariaLabel="About alerts and feedback"
-            />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Keep students and homeroom teachers informed about overdue books and encourage positive reading habits.',
+              ),
+            ]}
+            ariaLabel="About alerts and feedback"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div>
@@ -1472,9 +1483,9 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </Select>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }
 

@@ -21,9 +21,15 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
+/** The theme picker now lives behind a collapsed accordion trigger; open it first. */
+function openThemeAccordion() {
+  fireEvent.click(screen.getByText('Ambiance & Reading Themes'));
+}
+
 describe('LibraryThemeSettingsCard', () => {
   it('renders themes and current selection', () => {
     render(<LibraryThemeSettingsCard />);
+    openThemeAccordion();
 
     expect(screen.getByText('Ambiance & Reading Themes')).toBeInTheDocument();
     expect(screen.getAllByText('Classic Oak').length).toBeGreaterThanOrEqual(1);
@@ -33,6 +39,7 @@ describe('LibraryThemeSettingsCard', () => {
 
   it('updates setting when a theme is clicked', () => {
     render(<LibraryThemeSettingsCard />);
+    openThemeAccordion();
 
     const sapphireBtn = screen.getByRole('button', { name: /Modern Sapphire/i });
     fireEvent.click(sapphireBtn);
@@ -47,6 +54,7 @@ describe('LibraryThemeSettingsCard', () => {
 
   it('toggles kiosk sync switch', () => {
     render(<LibraryThemeSettingsCard />);
+    openThemeAccordion();
 
     const switchBtn = screen.getByRole('switch');
     fireEvent.click(switchBtn);

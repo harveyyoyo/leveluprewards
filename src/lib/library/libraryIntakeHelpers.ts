@@ -86,7 +86,12 @@ export async function generateUniqueLibraryUpc(
   return null;
 }
 
-/** Use the book's own barcode for checkout when scanned; otherwise generate a LIB code. */
+/**
+ * Use the book's own barcode for checkout when scanned; otherwise generate a LIB code.
+ * Another catalog copy (or a manually-added item) can already occupy that exact
+ * barcode as its checkout UPC — fall back to a generated LIB code for this copy
+ * instead of failing the whole registration.
+ */
 export async function resolveIntakeCheckoutUpc(
   scannedBarcode: string | undefined,
   upcTaken: (upc: string) => Promise<boolean>,
@@ -96,8 +101,8 @@ export async function resolveIntakeCheckoutUpc(
     const upc = isRetailIsbnBarcode(trimmed)
       ? normalizeLibraryUpc(primaryIsbnVariant(trimmed))
       : normalizeLibraryUpc(trimmed);
-    if (await upcTaken(upc)) return null;
-    return upc;
+    if (!(await upcTaken(upc))) return upc;
+    return generateUniqueLibraryUpc(upcTaken);
   }
   return generateUniqueLibraryUpc(upcTaken);
 }

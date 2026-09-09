@@ -19,7 +19,7 @@ const numeric = (value: unknown, fallback: number) =>
  * Request receipts make a retry after an uncertain network response safe. */
 export async function runLibraryOperation(db: Firestore, schoolId: string, data: Data, actor: LibraryActor) {
   const action = data.action;
-  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'waive'].includes(action)) {
+  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive'].includes(action)) {
     throw new HttpsError('invalid-argument', 'Unknown library action.');
   }
   if (!['checkout', 'return'].includes(action) && !actor.staff) {
@@ -70,8 +70,15 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const itemSnap = await tx.get(itemRef);
     if (!itemSnap.exists) fail('Book not found.');
     const item = itemSnap.data()!;
-    if (action === 'condition' || action === 'archive') {
-      if (item.status === 'checked_out') fail('Return this copy before changing its condition or archiving it.');
+    if (action === 'condition' || action === 'archive' || action === 'delete') {
+      if (item.status === 'checked_out') fail('Return this copy before changing its condition, archiving, or deleting it.');
+      if (action === 'delete') {
+        tx.delete(itemRef);
+        tx.set(school.collection('libraryEvents').doc(), {
+          itemId, title: item.name, action, actorUid: actor.uid, date: now,
+        });
+        return finish({ success: true, message: 'Copy permanently deleted.' });
+      }
       const condition = data.condition;
       if (action === 'condition' && !['good', 'lost', 'damaged'].includes(condition)) fail('Choose a valid condition.');
       tx.update(itemRef, action === 'archive' ? { archived: true, archivedAt: now } : { condition });

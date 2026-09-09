@@ -24,7 +24,8 @@ import {
 import { resolveBookClassification, type LibraryGenreConfig } from '@/lib/library/libraryClassification';
 import { collection, query, limit } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
+import { useDoc, useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
+import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -100,6 +101,9 @@ export function LibraryStudentSelfCheckoutPortal({
   const { login, loginState, isInitialized } = useAppContext();
   const { toast } = useToast();
   const playSound = useArcadeSound();
+  const schoolDocRef = useSchoolMetadataDocRef();
+  const { data: schoolData } = useDoc<{ name?: string }>(schoolDocRef);
+  const schoolName = schoolData?.name?.trim();
 
   const [step, setStep] = useState<PortalStep>('student');
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -215,19 +219,43 @@ export function LibraryStudentSelfCheckoutPortal({
     setScanError(null);
   }, []);
 
-  const idleRemaining = useLibraryIdleReset(!!studentId && !busy && !exitOpen, resetForNextStudent);
+  // 0 means "disabled (manual tap only)" — the Library → Settings station auto-reset option.
+  const autoResetSeconds = settings.libraryKioskAutoResetSeconds ?? 8;
+  const idleRemaining = useLibraryIdleReset(
+    autoResetSeconds > 0 && !!studentId && !busy && !exitOpen,
+    resetForNextStudent,
+    autoResetSeconds,
+  );
+
+  /** No passcode was required, so this tab was never authenticated as staff —
+   *  land somewhere that doesn't need a staff session instead of a login wall. */
+  const exitToNeutral = useCallback(() => {
+    if (onExit) {
+      onExit();
+      return;
+    }
+    router.push(`/${schoolId}/portal`);
+  }, [onExit, router, schoolId]);
+
+  const requestExit = useCallback(() => {
+    if (settings.libraryKioskExitRequiresPasscode) {
+      setExitOpen(true);
+    } else {
+      exitToNeutral();
+    }
+  }, [settings.libraryKioskExitRequiresPasscode, setExitOpen, exitToNeutral]);
 
   const handleBack = useCallback(() => {
     if (step !== 'student') {
       resetForNextStudent();
       return;
     }
-    setExitOpen(true);
-  }, [step, resetForNextStudent, setExitOpen]);
+    requestExit();
+  }, [step, resetForNextStudent, requestExit]);
 
   const handleExit = useCallback(() => {
-    setExitOpen(true);
-  }, [setExitOpen]);
+    requestExit();
+  }, [requestExit]);
 
   const refreshStudentLoans = useCallback(
     async (id: string) => {
@@ -565,10 +593,10 @@ export function LibraryStudentSelfCheckoutPortal({
         </div>
 
         <div className="min-w-0 flex-1 text-center">
-          <p className="flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            <span>Library Station</span>
+          <p className="flex items-center justify-center gap-1.5 truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <span className="truncate">{schoolName || 'Library Station'}</span>
             {matchKioskTheme && (
-              <span className="font-normal opacity-75">
+              <span className="shrink-0 font-normal opacity-75">
                 · {libraryTheme.icon} {libraryTheme.label}
               </span>
             )}
@@ -1008,16 +1036,12 @@ export function LibraryStudentSelfCheckoutPortal({
       <LibraryStaffExitDialog
         open={exitOpen}
         onOpenChange={setExitOpen}
-        onUnlocked={() => {
+        onUnlocked={(role) => {
           if (onExit) {
             onExit();
             return;
           }
-          if (loginState === 'admin') {
-            router.push(`/${schoolId}/admin`);
-          } else {
-            router.push(`/${schoolId}/librarian`);
-          }
+          router.push(`/${schoolId}/${role === 'admin' ? 'admin' : 'library'}`);
         }}
       />
     </div>

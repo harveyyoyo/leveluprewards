@@ -533,6 +533,8 @@ interface Settings {
     libraryKioskAllowDropBoxReturn?: boolean;
     /** Auto-reset countdown seconds for kiosk session after scan (0 = manual). */
     libraryKioskAutoResetSeconds?: number;
+    /** Require an admin/librarian passcode to leave the kiosk (off by default — a plain tap exits). */
+    libraryKioskExitRequiresPasscode?: boolean;
     /** Play sound effects and audio chimes on scan / checkout / return. */
     libraryKioskSoundEffects?: boolean;
     /** Show book recommendations after checkout or return. */
@@ -782,6 +784,7 @@ const defaultSettings: Settings = {
     libraryKioskAllowSelfReturn: true,
     libraryKioskAllowDropBoxReturn: true,
     libraryKioskAutoResetSeconds: 8,
+    libraryKioskExitRequiresPasscode: false,
     libraryKioskSoundEffects: true,
     libraryKioskShowRecommendations: true,
     libraryKioskShowActiveLoans: true,

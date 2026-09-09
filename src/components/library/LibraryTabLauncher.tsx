@@ -9,7 +9,7 @@ import { isPillarOn } from '@/lib/productPillars';
 export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
   const { settings } = useSettings();
   const libraryOn = isPillarOn(settings, 'payLibrary');
-  const libraryUrl = `/${schoolId}/librarian`;
+  const libraryUrl = `/${schoolId}/library`;
   const kioskUrl = `/${schoolId}/library/kiosk`;
 
   if (!libraryOn) {
