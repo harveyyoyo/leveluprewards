@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, Fragment, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -1861,6 +1861,7 @@ function TeacherPrinterInnerBody({
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings, updateSettings } = useSettings();
+    const searchParams = useSearchParams();
 
     const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
     const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
@@ -1889,6 +1890,15 @@ function TeacherPrinterInnerBody({
 
     const [activeTeacherTab, setActiveTeacherTab] = useState(defaultTab);
     const [pendingTeacherAwardCount, setPendingTeacherAwardCount] = useState(0);
+
+    useEffect(() => {
+        if (secretaryMode) return;
+        const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
+        const tab = normalizeStaffPortalTabValue(rawTab);
+        if (tab && staffPortalTabIsValid(tab, allTabValues)) {
+            setActiveTeacherTab(tab);
+        }
+    }, [allTabValues, searchParams, secretaryMode]);
 
     const handleIntroTourStaffTab = useCallback((tabValue: string) => {
         setActiveTeacherTab(tabValue);

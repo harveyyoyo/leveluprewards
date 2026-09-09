@@ -17,6 +17,7 @@ const header = {
     error: 'שגיאת סנכרון Firestore; בדקו את קונסולת הדפדפן.',
   },
   products: {
+    nav: 'מוצרי בית הספר',
     rewards: 'פרסים',
     classroom: 'כיתה',
     attendance: 'נוכחות',
