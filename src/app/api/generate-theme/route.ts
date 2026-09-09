@@ -8,7 +8,9 @@ import {
     geminiModelAttemptOrder,
     isLlmProviderFailure,
     userFacingLlmError,
+    type LlmProvider,
 } from '@/lib/server/llmProviderErrors';
+import { assertStudentThemeGenerationAllowedForSchool } from '@/lib/server/studentThemeGate';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -155,14 +157,25 @@ async function generateThemeWithGemini(
 }
 
 export async function POST(req: NextRequest) {
+    // Tracked outside the try block so the catch can attribute errors to whichever
+    // provider actually made the failing call (Gemini may fall back to OpenAI mid-request).
+    let usedProvider: LlmProvider = 'gemini';
     try {
-        const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 12 });
+        // Staff use this to set a school's default theme; kiosk students use it to theme
+        // their own portal/ID card. Kiosk sessions are anonymous, so this only requires
+        // sign-in — access is gated on the school's `enableStudentThemes` setting instead.
+        const guarded = await guardAiRoute(req, { requireSchoolStaff: false, maxRequests: 12 });
         if (!guarded.ok) return guarded.response;
-        const { prompt, model = 'gpt-4o-mini' } = guarded.value.body;
+        const { prompt, model = 'gpt-4o-mini', schoolId: rawSchoolId } = guarded.value.body;
 
         if (typeof prompt !== 'string' || !prompt.trim()) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
+        if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
+            return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
+        }
+        const gateResponse = await assertStudentThemeGenerationAllowedForSchool(rawSchoolId);
+        if (gateResponse) return gateResponse;
         const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
 
         const systemInstruction = `You are an expert UI/UX designer with a bold, creative vision. Your task is to generate a distinctive, memorable theme (color palette + typography + background) for a student web portal based on the user's prompt.
@@ -190,8 +203,10 @@ Required schema:
         let responseText = '';
 
         if (selectedModel.startsWith('gpt')) {
+            usedProvider = 'openai';
             responseText = await generateThemeWithOpenAi(prompt, systemInstruction, selectedModel);
         } else {
+            usedProvider = 'gemini';
             try {
                 responseText = await generateThemeWithGemini(prompt, systemInstruction, selectedModel);
             } catch (geminiError) {
@@ -199,6 +214,7 @@ Required schema:
                     console.warn(
                         'generate-theme: all Gemini models failed; falling back to gpt-4o-mini.',
                     );
+                    usedProvider = 'openai';
                     responseText = await generateThemeWithOpenAi(
                         prompt,
                         systemInstruction,
@@ -233,7 +249,7 @@ Required schema:
     } catch (error) {
         console.error('Error in /api/generate-theme:', error);
         return NextResponse.json(
-            { error: userFacingLlmError(error) },
+            { error: userFacingLlmError(error, undefined, usedProvider) },
             { status: 500 },
         );
     }
