@@ -1116,8 +1116,8 @@ export function PrizeDashboard({
     const themeCard = activeTheme?.cardBackground || themeBg;
     const computedThemeText =
         activeTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
-    const computedThemePageText = activeTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
-    const computedThemeCardText = activeTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
+    const computedThemePageText = activeTheme ? ensureContrast(computedThemeText, themeBg) : computedThemeText;
+    const computedThemeCardText = activeTheme ? ensureContrast(computedThemeText, themeCard) : computedThemeText;
     const primaryForeground = activeTheme ? primaryForegroundFor(activeTheme) : '#ffffff';
     const themedFieldStyle: CSSProperties | undefined = activeTheme
         ? { backgroundColor: 'var(--theme-bg)', borderColor: 'var(--theme-primary)', color: 'var(--theme-text)' }

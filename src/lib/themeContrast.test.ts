@@ -134,12 +134,14 @@ describe('normalizeStudentTheme', () => {
   });
 
   it('leaves a well-formed theme essentially unchanged', () => {
+    // Colors chosen to clear the AAA (7:1) floor against both the page and
+    // card backgrounds, so normalization has nothing to adjust.
     const input = {
       background: '#0f172a',
       text: '#f8fafc',
-      primary: '#38bdf8',
+      primary: '#7dd3fc',
       cardBackground: '#1e293b',
-      accent: '#22c55e',
+      accent: '#4ade80',
     };
     const out = normalizeStudentTheme(input)!;
     expect(out.text).toBe(input.text);
@@ -149,10 +151,12 @@ describe('normalizeStudentTheme', () => {
 });
 
 describe('resolveStudentThemeWithSchoolDefault', () => {
+  // primary chosen to clear the AAA (7:1) floor against both surfaces below,
+  // so "falls back to school default" can assert it passes through untouched.
   const school = {
     background: '#0f172a',
     text: '#f8fafc',
-    primary: '#38bdf8',
+    primary: '#7dd3fc',
     cardBackground: '#1e293b',
     accent: '#a78bfa',
   };
