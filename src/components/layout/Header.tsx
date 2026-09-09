@@ -268,25 +268,6 @@ export default function Header() {
       </nav>
     ) : null;
 
-  const host = typeof window !== 'undefined' ? window.location.host : '';
-  if (shouldHideGlobalAppChrome(pathname, host)) {
-    return null;
-  }
-
-  if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
-    return null;
-  }
-
-  const centerLabel = schoolName.trim();
-  /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
-  const centerHref = schoolId ? `/${schoolId}/portal` : '/';
-  const logoLink = getLevelUpLogoHref();
-  const webHomeHref = schoolId ? centerHref : '/';
-  const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
-  const isSchoolGateSession = loginState === 'school' && !!schoolId;
-  const canLogout =
-    loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
-
   const paidProducts = useMemo(() => {
     if (!schoolId) return [];
     const items: Array<{ id: HeaderProductId; label: string; href: string }> = [];
@@ -327,6 +308,25 @@ export default function Header() {
     }
     return items.filter((item) => item.href);
   }, [loginState, pillarAccess, schoolId, settings, t]);
+
+  const host = typeof window !== 'undefined' ? window.location.host : '';
+  if (shouldHideGlobalAppChrome(pathname, host)) {
+    return null;
+  }
+
+  if (isLoginPage || !isInitialized || isDeveloperMode || isFullscreenSpecialPage) {
+    return null;
+  }
+
+  const centerLabel = schoolName.trim();
+  /** Portal lives only under `/{schoolId}/portal`; there is no app root `/portal` page. */
+  const centerHref = schoolId ? `/${schoolId}/portal` : '/';
+  const logoLink = getLevelUpLogoHref();
+  const webHomeHref = schoolId ? centerHref : '/';
+  const isDeveloperSupportSession = loginState === 'developer' && !!schoolId;
+  const isSchoolGateSession = loginState === 'school' && !!schoolId;
+  const canLogout =
+    loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
   const paidProductsNav =
     paidProducts.length > 0 ? (
