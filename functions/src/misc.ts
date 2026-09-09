@@ -11,6 +11,8 @@ import {
   resolveReusableSampleCouponConfig,
 } from "./shared/reusableSampleCoupon";
 import { isReusableCouponDoc } from "./shared/reusableCoupon";
+import { libraryId, runLibraryOperation } from "./libraryService";
+import { saveLibraryCatalog } from "./libraryCatalogService";
 
 import "./init";
 
@@ -689,209 +691,49 @@ exports.redeemCouponServer = functions
   }
 );
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function libraryDaysOverdue(dueAt: unknown, now: number): number {
-  const due = typeof dueAt === "number" ? dueAt : 0;
-  if (!due || now <= due) return 0;
-  return Math.ceil((now - due) / MS_PER_DAY);
+/** Trusted circulation endpoint; clients cannot write loan state directly. */
+async function libraryActor(schoolId: string, context: functions.https.CallableContext) {
+  requireAuth(context);
+  const staff = await hasSchoolRole(schoolId, context.auth!.uid, ["admin", "teacher", "librarian"]) || await isDeveloper(context);
+  if (staff) return { uid: context.auth!.uid, staff: true };
+  const school = admin.firestore().collection("schools").doc(schoolId);
+  const [kiosk, student] = await Promise.all([
+    school.collection("kioskMembers").doc(context.auth!.uid).get(),
+    school.collection("studentPortalSessions").doc(context.auth!.uid).get(),
+  ]);
+  if (student.exists) return { uid: context.auth!.uid, staff: false, studentId: context.auth!.uid };
+  if (kiosk.exists) return { uid: context.auth!.uid, staff: false, kiosk: true };
+  throw new functions.https.HttpsError("permission-denied", "School library access required.");
 }
 
-/** Callable: return library book + optional category point adjustments (kiosk-safe). */
-exports.libraryReturnServer = functions
-  .runWith(HOT_KIOSK_FUNCTION_OPTIONS)
-  .https.onCall(async (data: any, context: functions.https.CallableContext) => {
-    requireAuth(context);
-    requireString(data.schoolId, "schoolId");
-    requireString(data.studentId, "studentId");
-    requireString(data.upc, "upc");
+exports.libraryCirculation = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https.onCall(async (data: any, context) => {
+  const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
+  const actor = await libraryActor(schoolId, context);
+  return runLibraryOperation(admin.firestore(), schoolId, data, actor);
+});
 
-    const schoolId = String(data.schoolId).trim().toLowerCase();
-    const studentId = String(data.studentId).trim();
-    const upc = String(data.upc).trim().toUpperCase();
+exports.libraryCatalogSave = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https.onCall(async (data: any, context) => {
+  const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
+  const actor = await libraryActor(schoolId, context);
+  if (!actor.staff) throw new functions.https.HttpsError("permission-denied", "Library staff access required.");
+  return saveLibraryCatalog(admin.firestore(), schoolId, data, actor.uid);
+});
 
-    if (
-      !(await hasKioskMembershipOrStaff(schoolId, context, [
-        "admin",
-        "teacher",
-        "secretary",
-        "prizeClerk",
-        "librarian",
-      ]))
-    ) {
-      throw new functions.https.HttpsError("permission-denied", "School entry required.");
-    }
-
-    const db = admin.firestore();
-    const schoolRef = db.collection("schools").doc(schoolId);
-    const libSnap = await schoolRef.collection("library").where("upc", "==", upc).limit(1).get();
-    if (libSnap.empty) {
-      throw new functions.https.HttpsError("not-found", "Library item not found.");
-    }
-    const itemDoc = libSnap.docs[0];
-    const itemData = itemDoc.data() as {
-      name?: string;
-      status?: string;
-      checkedOutTo?: string;
-      dueAt?: number;
-    };
-
-    if (itemData.status !== "checked_out" || itemData.checkedOutTo !== studentId) {
-      throw new functions.https.HttpsError(
-        "failed-precondition",
-        "This book is not checked out to this student."
-      );
-    }
-
-    const schoolSnap = await schoolRef.get();
-    const appSettings = (schoolSnap.data()?.appSettings ?? {}) as Record<string, unknown>;
-    const loanPeriodDays =
-      typeof appSettings.libraryLoanPeriodDays === "number" && appSettings.libraryLoanPeriodDays > 0
-        ? appSettings.libraryLoanPeriodDays
-        : 14;
-    void loanPeriodDays;
-    const lateFeesEnabled = appSettings.libraryLateFeesEnabled !== false;
-    const latePointsPerDay =
-      typeof appSettings.libraryLatePointsPerDay === "number" && appSettings.libraryLatePointsPerDay >= 0
-        ? appSettings.libraryLatePointsPerDay
-        : 2;
-    const onTimeReturnPoints =
-      typeof appSettings.libraryOnTimeReturnPoints === "number" && appSettings.libraryOnTimeReturnPoints > 0
-        ? appSettings.libraryOnTimeReturnPoints
-        : 0;
-    const categoryId =
-      typeof appSettings.libraryPointsCategoryId === "string"
-        ? appSettings.libraryPointsCategoryId.trim()
-        : "";
-
-    let categoryName = "";
-    if (categoryId) {
-      const catSnap = await schoolRef.collection("categories").doc(categoryId).get();
-      if (catSnap.exists && typeof catSnap.data()?.name === "string") {
-        categoryName = catSnap.data()!.name.trim();
-      }
-    }
-
-    const rawRewardMode =
-      typeof appSettings.libraryRewardMode === "string" ? appSettings.libraryRewardMode.trim() : "";
-    let rewardMode: "none" | "fines" | "app_points" | "isolated_points" = "none";
-    if (
-      rawRewardMode === "none" ||
-      rawRewardMode === "fines" ||
-      rawRewardMode === "app_points" ||
-      rawRewardMode === "isolated_points"
-    ) {
-      rewardMode = rawRewardMode;
-    } else if (categoryName && (lateFeesEnabled || onTimeReturnPoints > 0)) {
-      rewardMode = "app_points";
-    }
-
-    const itemName = typeof itemData.name === "string" ? itemData.name.trim() : "Book";
-    const now = Date.now();
-    const daysOverdue = libraryDaysOverdue(itemData.dueAt, now);
-
-    let pointsDelta = 0;
-    let pointsMessage = "";
-
-    if (rewardMode === "fines" && daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
-      pointsDelta = daysOverdue * latePointsPerDay;
-      pointsMessage = `Late return: ${pointsDelta} library fine${pointsDelta === 1 ? "" : "s"} added.`;
-    } else if (rewardMode === "app_points" && categoryName) {
-      if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
-        pointsDelta = -(daysOverdue * latePointsPerDay);
-        pointsMessage = `Late return: ${Math.abs(pointsDelta)} point(s) deducted (${categoryName}).`;
-      } else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
-        pointsDelta = onTimeReturnPoints;
-        pointsMessage = `On-time return: +${pointsDelta} point(s) (${categoryName}).`;
-      }
-    } else if (rewardMode === "isolated_points") {
-      if (daysOverdue > 0 && lateFeesEnabled && latePointsPerDay > 0) {
-        pointsDelta = -(daysOverdue * latePointsPerDay);
-        pointsMessage = `Late return: ${Math.abs(pointsDelta)} library point(s) deducted.`;
-      } else if (daysOverdue === 0 && onTimeReturnPoints > 0) {
-        pointsDelta = onTimeReturnPoints;
-        pointsMessage = `On-time return: +${pointsDelta} library point(s).`;
-      }
-    }
-
-    await db.runTransaction(async (tx) => {
-      const studentRef = schoolRef.collection("students").doc(studentId);
-      const studentSnap = await tx.get(studentRef);
-
-      tx.update(itemDoc.ref, {
-        status: "available",
-        checkedOutTo: null,
-        checkedOutAt: null,
-        dueAt: null,
-      });
-
-      if (studentSnap.exists) {
-        const studentData = studentSnap.data() as {
-          points?: number;
-          categoryPoints?: Record<string, number>;
-          libraryPoints?: number;
-          libraryFineBalance?: number;
-        };
-
-        const studentUpdates: Record<string, unknown> = { updatedAt: now };
-
-        if (rewardMode === "fines" && pointsDelta > 0) {
-          const currentFines =
-            typeof studentData.libraryFineBalance === "number" ? studentData.libraryFineBalance : 0;
-          studentUpdates.libraryFineBalance = currentFines + pointsDelta;
-        } else if (rewardMode === "isolated_points" && pointsDelta !== 0) {
-          const currentLib =
-            typeof studentData.libraryPoints === "number" ? studentData.libraryPoints : 0;
-          studentUpdates.libraryPoints = Math.max(0, currentLib + pointsDelta);
-        } else if (rewardMode === "app_points" && pointsDelta !== 0 && categoryName) {
-          const currentPoints = typeof studentData.points === "number" ? studentData.points : 0;
-          const newPoints = Math.max(0, currentPoints + pointsDelta);
-          const categoryPoints = { ...(studentData.categoryPoints ?? {}) };
-          categoryPoints[categoryName] = (categoryPoints[categoryName] || 0) + pointsDelta;
-          studentUpdates.points = newPoints;
-          studentUpdates.categoryPoints = categoryPoints;
-        }
-
-        if (Object.keys(studentUpdates).length > 1) {
-          tx.update(studentRef, studentUpdates);
-        }
-
-        if (pointsDelta !== 0 && rewardMode !== "none") {
-          const activityRef = studentRef.collection("activities").doc();
-          const amountForActivity =
-            rewardMode === "fines" ? 0 : rewardMode === "app_points" ? pointsDelta : pointsDelta;
-          tx.set(activityRef, {
-            desc:
-              rewardMode === "fines"
-                ? `Library late fine (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
-                : pointsDelta < 0
-                  ? `Library late fee (${daysOverdue} day${daysOverdue === 1 ? "" : "s"}): ${itemName}`
-                  : `Library on-time bonus: ${itemName}`,
-            amount: amountForActivity,
-            date: now,
-          });
-        }
-      }
-
-      const returnActivityRef = studentRef.collection("activities").doc();
-      tx.set(returnActivityRef, {
-        desc: `Returned library item: ${itemName}`,
-        amount: 0,
-        date: now,
-      });
-    });
-
-    return {
-      success: true,
-      pointsDelta,
-      daysOverdue,
-      message:
-        pointsMessage ||
-        (daysOverdue > 0
-          ? `Returned "${itemName}" (${daysOverdue} day${daysOverdue === 1 ? "" : "s"} late).`
-          : `Returned "${itemName}".`),
-    };
-  });
+/** Compatibility for already-open clients. Loan identity prevents double returns. */
+exports.libraryReturnServer = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https.onCall(async (data: any, context) => {
+  const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
+  const actor = await libraryActor(schoolId, context);
+  const upc = libraryId(data?.upc, "barcode").toUpperCase();
+  const snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("upc", "==", upc).limit(1).get();
+  if (snap.empty) throw new functions.https.HttpsError("not-found", "Library item not found.");
+  const item = snap.docs[0];
+  if (item.data().status !== "checked_out") return { success: true, message: "This copy is already returned." };
+  return runLibraryOperation(admin.firestore(), schoolId, {
+    action: "return", itemId: item.id, studentId: data.studentId,
+    expectedLoanId: item.data().activeLoanId, expectedCheckedOutAt: item.data().checkedOutAt,
+    requestId: `return_${item.id}_${item.data().checkedOutAt || 0}`,
+  }, actor);
+});
 
 /** Callable: kiosk-safe prize redemption with trusted balance + stock updates. */
 

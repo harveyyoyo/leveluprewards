@@ -171,29 +171,9 @@ function LayoutClientWrapperInner({
     const hideHeaderEnabled = settings.hideSiteHeaderOutsidePortal === true;
     const isStaffPortalRoute =
       typeof pathname === 'string' &&
-      /\/(?:admin|teacher|secretary|reports|prize-clerk|librarian)(?:\/|$)/.test(pathname);
+      /\/(?:admin|teacher|secretary|reports|prize-clerk)(?:\/|$)/.test(pathname);
     const { isWide: staffPortalWide } = useStaffPortalLayoutMode();
     const canShowGlobalHeader = !hideAppChrome;
-    const { kioskSignedIn } = useStudentLayoutChrome();
-    /** Student kiosk: hidden until pointer reveal. Sign-in screen reveals on any mouse move. */
-    const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
-    const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader, {
-      revealOnAnyPointerMove: useStudentKioskTopEdgeHeader && !kioskSignedIn,
-    });
-    /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
-    const usePortalScrollRevealHeader =
-      hideHeaderEnabled && canShowGlobalHeader && !isStudentKioskPage && !isPortalChoosePage;
-    const useScrollRevealHeader = usePortalScrollRevealHeader;
-    const scrollRevealHeaderVisible = useScrollTopRevealChrome(useScrollRevealHeader);
-    /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
-    const isStaffPortalShellRoot =
-      typeof pathname === 'string' &&
-      /\/(?:admin|teacher|secretary|reports)\/?$/.test(pathname);
-    const appShellNoPageScroll =
-      typeof pathname === 'string' &&
-      !isStaffPortalShellRoot &&
-      /\/(?:admin|teacher|prize-clerk|secretary|reports)(?:\/|$)/.test(pathname);
-
     const fullscreen = searchParams?.get('fullscreen') === '1';
     const isClassroomScreenPage =
       typeof pathname === 'string' && pathname.includes('/classroom-screen');
@@ -206,17 +186,45 @@ function LayoutClientWrapperInner({
     const isClassroomRealmPage =
       typeof pathname === 'string' &&
       (pathname.includes('/classroom-realm') || pathname.includes('/classroom'));
+    const isLibraryPage =
+      typeof pathname === 'string' &&
+      (pathname.includes('/library') || pathname.includes('/librarian'));
     const isPresentationPage = isPresentationRoute(pathname);
     const isFullscreenSpecialPage =
       isClassroomScreenPage ||
       isSmartScreenPage ||
       isHouseSortingPage ||
       isClassroomRealmPage ||
+      isLibraryPage ||
       isPresentationPage ||
       (fullscreen &&
         (pathname?.includes('/hall-of-fame') ||
           pathname?.includes('/bulletin-board') ||
           pathname?.includes('/displays')));
+
+    const { kioskSignedIn } = useStudentLayoutChrome();
+    /** Student kiosk: hidden until pointer reveal. Sign-in screen reveals on any mouse move. */
+    const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
+    const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader, {
+      revealOnAnyPointerMove: useStudentKioskTopEdgeHeader && !kioskSignedIn,
+    });
+    /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
+    const usePortalScrollRevealHeader =
+      hideHeaderEnabled &&
+      canShowGlobalHeader &&
+      !isFullscreenSpecialPage &&
+      !isStudentKioskPage &&
+      !isPortalChoosePage;
+    const useScrollRevealHeader = usePortalScrollRevealHeader;
+    const scrollRevealHeaderVisible = useScrollTopRevealChrome(useScrollRevealHeader);
+    /** Staff portal “home” routes: same shell as admin (full-width `<main>`, inner pages use `max-w-7xl`). */
+    const isStaffPortalShellRoot =
+      typeof pathname === 'string' &&
+      /\/(?:admin|teacher|secretary|reports)\/?$/.test(pathname);
+    const appShellNoPageScroll =
+      typeof pathname === 'string' &&
+      !isStaffPortalShellRoot &&
+      /\/(?:admin|teacher|prize-clerk|secretary|reports)(?:\/|$)/.test(pathname);
 
     const schoolPathMatch =
       typeof pathname === 'string'
@@ -529,7 +537,7 @@ function LayoutClientWrapperInner({
                             usePortalScrollRevealHeader && 'pt-[var(--global-header-height,5rem)]',
                             isPresentationPage
                                 ? 'relative z-10 flex h-dvh min-h-0 w-full max-w-none flex-col overflow-hidden p-0'
-                                : hideAppChrome || isAdminSignInPage
+                                : hideAppChrome || isAdminSignInPage || isLibraryPage
                                 ? 'relative z-10 flex w-full flex-col'
                                 : isStudentKioskSurface
                                     ? 'relative z-10 flex w-full min-h-0 flex-col overflow-hidden'

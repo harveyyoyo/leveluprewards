@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { Barcode, Check, Loader2, ScanLine, Sparkles, Trash2 } from 'lucide-react';
+import { Barcode, Camera, CameraOff, Check, Loader2, ScanLine, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import {
   catalogIsbnSet,
   isRetailIsbnBarcode,
@@ -25,6 +29,7 @@ import {
   LibraryBarcodeReaderField,
   type LibraryScanFeedback,
 } from './LibraryBarcodeReaderField';
+import { resolveBookClassification } from '@/lib/library/libraryClassification';
 
 type IntakeRowStatus =
   | 'lookup'
@@ -41,8 +46,10 @@ type IntakeRow = {
   title: string;
   author: string;
   category: string;
+  shelfLocation?: string;
   status: IntakeRowStatus;
   error?: string;
+  copies?: number;
 };
 
 function newRowId() {
@@ -51,7 +58,7 @@ function newRowId() {
 
 function lookupFailureMessage(scannedCode: string, meta: Awaited<ReturnType<typeof fetchCatalogHitByIsbn>>['meta']) {
   if (!meta.aiConfigured) {
-    return `No catalog record for ${scannedCode}. AI lookup is not configured — add OPENAI_API_KEY or GEMINI_API_KEY to .env.local.`;
+    return `No catalog record for ${scannedCode}. Type the title below to continue.`;
   }
   if (meta.aiStatus === 'error') {
     return meta.aiError
@@ -74,7 +81,8 @@ export function LibraryBookIntakeScanner({
   libraryItems?: LibraryItem[] | null;
 }) {
   const { toast } = useToast();
-  const [scanning, setScanning] = useState(false);
+  const confirm = useConfirm();
+  const [scanning, setScanning] = useState(true);
   const [rows, setRows] = useState<IntakeRow[]>([]);
   const [registering, setRegistering] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<LibraryScanFeedback | null>(null);
@@ -110,62 +118,64 @@ export function LibraryBookIntakeScanner({
       const scannedCode = isIsbn ? primaryIsbnVariant(trimmed) : trimmed;
       const codeKey = scannedCode.toUpperCase();
 
-      if (isIsbn && catalogIsbns.has(scannedCode)) {
-        setScanFeedback({
-          code: scannedCode,
-          status: 'duplicate',
-          message: 'This ISBN is already registered in your library.',
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Already in catalog',
-          description: `ISBN ${scannedCode} is already registered.`,
-        });
-        return;
-      }
-      if (!isIsbn && catalogScannedCodes.has(codeKey)) {
-        setScanFeedback({
-          code: scannedCode,
-          status: 'duplicate',
-          message: 'This barcode is already registered in your library.',
-        });
-        toast({
-          variant: 'destructive',
-          title: 'Already in catalog',
-          description: `Barcode ${scannedCode} is already registered.`,
-        });
-        return;
-      }
-
       const id = newRowId();
-      let duplicateInQueue = false;
+      let duplicateRow: IntakeRow | undefined;
       setRows((prev) => {
-        if (prev.some((r) => r.isbn.toUpperCase() === codeKey)) {
-          duplicateInQueue = true;
-          return prev;
-        }
-        return [
-          {
-            id,
-            isbn: scannedCode,
-            title: '',
-            author: '',
-            category: '',
-            status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
-          },
-          ...prev,
-        ];
+        const existing = prev.find((r) => r.isbn.toUpperCase() === codeKey);
+        if (existing) duplicateRow = existing;
+        return prev;
       });
 
-      if (duplicateInQueue) {
+      if (duplicateRow) {
+        const row = duplicateRow;
+        const label = row.title.trim() || scannedCode;
         setScanFeedback({
           code: scannedCode,
           status: 'duplicate',
-          message: 'This barcode is already in the queue.',
+          message: 'This barcode is already in the queue — confirm to add another copy.',
         });
-        toast({ title: 'Already in queue', description: `${scannedCode} was scanned already.` });
+        const isAnotherCopy = await confirm({
+          title: 'Scanned again',
+          description: `"${label}" is already in the queue. Is this another physical copy, or did you scan it by mistake?`,
+          confirmLabel: 'Add another copy',
+          cancelLabel: 'It was a mistake',
+        });
+        if (isAnotherCopy) {
+          const nextCopies = (row.copies ?? 1) + 1;
+          upsertRow({ id: row.id, copies: nextCopies });
+          toast({ title: 'Copy added', description: `"${label}" is now set to ${nextCopies} copies.` });
+        }
         return;
       }
+
+      // Not in the current queue — but it may already be a saved copy from a previous session.
+      const alreadyInCatalog = isIsbn ? catalogIsbns.has(scannedCode) : catalogScannedCodes.has(codeKey);
+      if (alreadyInCatalog) {
+        setScanFeedback({
+          code: scannedCode,
+          status: 'duplicate',
+          message: 'This barcode is already in your catalog — confirm to add another copy.',
+        });
+        const isAnotherCopy = await confirm({
+          title: 'Already in your catalog',
+          description: `A copy with barcode ${scannedCode} is already registered. Is this another physical copy, or did you scan it by mistake?`,
+          confirmLabel: 'Add another copy',
+          cancelLabel: 'It was a mistake',
+        });
+        if (!isAnotherCopy) return;
+      }
+
+      setRows((prev) => [
+        {
+          id,
+          isbn: scannedCode,
+          title: '',
+          author: '',
+          category: '',
+          status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
+        },
+        ...prev,
+      ]);
 
       setScanFeedback({ code: scannedCode, status: 'looking_up' });
 
@@ -182,11 +192,13 @@ export function LibraryBookIntakeScanner({
         const { hit, meta } = await fetchCatalogHitByIsbn(scannedCode);
         if (hit?.title) {
           const isAiGuess = hit.source === 'ai';
+          const classification = resolveBookClassification(hit.category);
           upsertRow({
             id,
             title: hit.title,
             author: hit.author ?? '',
-            category: hit.category ?? '',
+            category: hit.category ?? classification.genre.label,
+            shelfLocation: classification.shelfLocation,
             status: isAiGuess ? 'ai_review' : 'ready',
           });
           setScanFeedback({
@@ -228,7 +240,7 @@ export function LibraryBookIntakeScanner({
         });
       }
     },
-    [catalogIsbns, catalogScannedCodes, toast, upsertRow],
+    [toast, confirm, upsertRow, catalogIsbns, catalogScannedCodes],
   );
 
   const handleScan = useCallback(
@@ -239,11 +251,22 @@ export function LibraryBookIntakeScanner({
     [addScanToQueue, shouldAcceptScan],
   );
 
+  const { settings } = useSettings();
+  const cameraEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [cameraActive, setCameraActive] = useState(false);
+
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
     active: scanning,
     onScan: handleScan,
     disabled: registering,
   });
+
+  const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
+    cameraEnabled && cameraActive && scanning && !registering,
+    (code) => handleScan(code),
+    () => {},
+    { cameraEnabled: cameraEnabled && cameraActive, keepCameraWarm: true },
+  );
 
   const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
   const clearSaved = () => setRows((prev) => prev.filter((r) => r.status !== 'saved'));
@@ -253,7 +276,7 @@ export function LibraryBookIntakeScanner({
   const aiReviewCount = rows.filter((r) => r.status === 'ai_review').length;
 
   const handleRegisterAll = async () => {
-    const toSave = rows.filter((r) => r.status === 'ready' || (r.status === 'needs_title' && r.title.trim()));
+    const toSave = rows.filter((r) => r.status === 'ready' || ((r.status === 'needs_title' || r.status === 'error') && r.title.trim()));
     const missingTitle = rows.filter((r) => r.status === 'needs_title' && !r.title.trim());
     if (missingTitle.length > 0) {
       toast({
@@ -284,22 +307,16 @@ export function LibraryBookIntakeScanner({
     let saved = 0;
     for (const row of toSave) {
       upsertRow({ id: row.id, status: 'lookup' });
-      const upc = await resolveIntakeCheckoutUpc(row.isbn, upcTaken);
-      if (!upc) {
-        upsertRow({
-          id: row.id,
-          status: 'error',
-          error: row.isbn.trim() ? 'Barcode already in catalog' : 'Could not generate checkout barcode',
-        });
-        continue;
-      }
+      const upc = row.isbn;
       try {
         await onRegister({
           name: row.title.trim(),
           upc,
+          copies: row.copies ?? 1,
           author: row.author.trim() || undefined,
           isbn: row.isbn,
           category: row.category.trim() || undefined,
+          shelfLocation: row.shelfLocation?.trim() || undefined,
         });
         upsertRow({ id: row.id, status: 'saved' });
         saved += 1;
@@ -340,30 +357,63 @@ export function LibraryBookIntakeScanner({
           </h3>
           <p className="text-xs text-muted-foreground">
             Scan one or many barcodes with your reader. ISBNs are looked up online; other codes need a title in the
-            queue. Each book&apos;s own barcode is used for checkout.
+            queue. Extra copies receive unique LIB labels. Print and attach those labels before lending.
           </p>
         </div>
-        <Button
-          type="button"
-          variant={scanning ? 'secondary' : 'default'}
-          size="sm"
-          className="rounded-xl"
-          disabled={registering}
-          onClick={() => {
-            setScanning((on) => {
-              const next = !on;
-              if (next) {
-                setScanFeedback(null);
-                setTimeout(() => focusReader(), 0);
-              }
-              return next;
-            });
-          }}
-        >
-          <Barcode className="mr-2 h-4 w-4" />
-          {scanning ? 'Stop scanning' : 'Start scanning'}
-        </Button>
+        <div className="flex items-center gap-2">
+          {cameraEnabled && (
+            <Button
+              type="button"
+              variant={cameraActive ? 'default' : 'outline'}
+              size="sm"
+              className="gap-1.5 rounded-xl text-xs font-semibold"
+              disabled={registering}
+              onClick={() => {
+                if (!scanning) setScanning(true);
+                setCameraActive((v) => !v);
+              }}
+            >
+              {cameraActive ? <CameraOff className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+              <span>{cameraActive ? 'Close Camera' : 'Camera Scan'}</span>
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant={scanning ? 'secondary' : 'default'}
+            size="sm"
+            className="rounded-xl"
+            disabled={registering}
+            onClick={() => {
+              setScanning((on) => {
+                const next = !on;
+                if (next) {
+                  setScanFeedback(null);
+                  setTimeout(() => focusReader(), 0);
+                } else {
+                  setCameraActive(false);
+                }
+                return next;
+              });
+            }}
+          >
+            <Barcode className="mr-2 h-4 w-4" />
+            {scanning ? 'Stop scanning' : 'Start scanning'}
+          </Button>
+        </div>
       </div>
+
+      {cameraEnabled && cameraActive && scanning && (
+        <div className="overflow-hidden rounded-2xl border bg-muted/30 p-2 shadow-inner">
+          <BarcodeScannerCameraView
+            videoRef={videoRef}
+            hasCameraPermission={hasCameraPermission}
+            zoom={zoom}
+            onZoomChange={setZoom}
+            viewportClassName="aspect-video max-h-48 rounded-xl overflow-hidden shadow-inner"
+            hintText="Align book ISBN barcode in the camera frame"
+          />
+        </div>
+      )}
 
       {scanning ? (
         <LibraryBarcodeReaderField
@@ -378,7 +428,7 @@ export function LibraryBookIntakeScanner({
         />
       ) : (
         <p className="text-sm text-muted-foreground rounded-xl border border-dashed bg-background/60 px-4 py-5 text-center">
-          Press <strong className="text-foreground">Start scanning</strong> to register books with the barcode reader.
+          Press <strong className="text-foreground">Start scanning</strong> {cameraEnabled ? 'or Camera Scan ' : ''}to register books.
         </p>
       )}
 
@@ -421,12 +471,54 @@ export function LibraryBookIntakeScanner({
                   disabled={row.status === 'saved' || row.status === 'lookup'}
                   className="h-8 text-sm sm:col-span-2 rounded-lg"
                 />
+                <label className="text-xs font-medium">Copies
+                  <Input aria-label={`Copies of ${row.title || row.isbn}`} type="number" min={1} max={25} value={row.copies ?? 1}
+                    disabled={row.status === 'saved' || registering}
+                    onChange={(event) => upsertRow({ id: row.id, copies: Math.min(25, Math.max(1, Number(event.target.value) || 1)) })} className="w-20" />
+                </label>
                 <Input
                   value={row.author}
                   onChange={(e) => upsertRow({ id: row.id, author: e.target.value })}
                   placeholder="Author"
                   disabled={row.status === 'saved' || row.status === 'lookup'}
                   className="h-8 text-sm rounded-lg"
+                />
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={row.category}
+                    onChange={(e) => {
+                      const newCat = e.target.value;
+                      const res = resolveBookClassification(newCat);
+                      upsertRow({
+                        id: row.id,
+                        category: newCat,
+                        shelfLocation: row.shelfLocation || res.shelfLocation,
+                      });
+                    }}
+                    placeholder="Genre"
+                    disabled={row.status === 'saved' || row.status === 'lookup'}
+                    className="h-8 text-xs rounded-lg flex-1"
+                  />
+                  {row.category ? (
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-[10px] shrink-0 px-1.5 py-0.5"
+                      style={{
+                        borderColor: `${resolveBookClassification(row.category).color}60`,
+                        backgroundColor: `${resolveBookClassification(row.category).color}15`,
+                        color: resolveBookClassification(row.category).color,
+                      }}
+                    >
+                      {resolveBookClassification(row.category).genre.callPrefix}
+                    </Badge>
+                  ) : null}
+                </div>
+                <Input
+                  value={row.shelfLocation ?? ''}
+                  onChange={(e) => upsertRow({ id: row.id, shelfLocation: e.target.value })}
+                  placeholder="Shelf placement"
+                  disabled={row.status === 'saved' || row.status === 'lookup'}
+                  className="h-8 text-xs rounded-lg"
                 />
                 <Input
                   value={row.isbn}

@@ -29,12 +29,15 @@ export interface LibraryItem {
   notes?: string;
   /** Due date for overdue tracking (optional). */
   dueAt?: number | null;
+  activeLoanId?: string | null;
+  condition?: 'good' | 'lost' | 'damaged';
+  archived?: boolean;
 }
 
 export type LibraryItemInput = Pick<
   LibraryItem,
   'name' | 'upc' | 'author' | 'isbn' | 'category' | 'shelfLocation' | 'copyNumber' | 'notes'
->;
+> & { copies?: number };
 
 export interface Class {
   id: string;

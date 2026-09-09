@@ -133,7 +133,7 @@ export function StudentLibraryCheckoutsCard({
           return (
             <Link
               key={item.id}
-              href={`/${schoolId}/library/book?code=${encodeURIComponent(item.upc)}`}
+              href={`/${schoolId}/library/book?action=return&code=${encodeURIComponent(item.upc)}`}
               className={cn(
                 'block rounded-xl border px-3 py-2 transition-colors hover:bg-muted/50',
                 overdueDays > 0
@@ -162,8 +162,8 @@ export function StudentLibraryCheckoutsCard({
               {kioskCheckoutEnabled ? (
                 <p className="text-[10px] text-muted-foreground mt-0.5">
                   {overdueDays > 0
-                    ? 'Scan this book at the coupon scanner to return'
-                    : 'Scan the book barcode at the coupon card to return · tap for details'}
+                    ? 'Tap to return this book at the library'
+                    : 'Tap to return or view book details'}
                 </p>
               ) : topAlert ? (
                 <p className="text-[10px] font-semibold text-amber-900/80 dark:text-amber-200/90 mt-0.5">

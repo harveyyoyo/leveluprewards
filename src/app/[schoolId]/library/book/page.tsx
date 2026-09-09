@@ -43,6 +43,8 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
   const [item, setItem] = useState<LibraryItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const scanLock = useRef(false);
+  const [mode, setMode] = useState<'checkout' | 'return'>(searchParams.get('action') === 'return' ? 'return' : 'checkout');
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const cardBuffer = useRef('');
   const cardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,7 +62,8 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
 
   const processStudentCard = useCallback(
     async (badgeId: string) => {
-      if (!firestore || !schoolId || !code || busy) return;
+      if (!firestore || !schoolId || !code || scanLock.current) return;
+      scanLock.current = true;
       setBusy(true);
       try {
         const studentId = await lookupStudentId(firestore, schoolId, badgeId);
@@ -72,6 +75,7 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
         const result = await performLibraryCheckoutOrReturn(firestore, schoolId, studentId, code, {
           policy: libraryPolicy,
           functions,
+          action: mode,
         });
         if (result.action === 'checkout') {
           setLastAction('checkout');
@@ -96,6 +100,8 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
             title: 'Returned',
             description: result.pointsMessage || result.item.name,
           });
+        } else if (result.action === 'already_done') {
+          toast({ title: 'Already scanned', description: mode === 'checkout' ? 'This copy is already checked out to you.' : 'This copy is already returned.' });
         } else if (result.action === 'wrong_borrower') {
           playSound('error');
           toast({
@@ -114,11 +120,14 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
           playSound('error');
           toast({ variant: 'destructive', title: 'Book not found' });
         }
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Could not save scan', description: (e as Error).message });
       } finally {
+        scanLock.current = false;
         setBusy(false);
       }
     },
-    [firestore, schoolId, code, busy, playSound, toast, libraryPolicy, functions],
+    [firestore, schoolId, code, mode, playSound, toast, libraryPolicy, functions],
   );
 
   const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
@@ -181,6 +190,10 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-lg mx-auto space-y-6">
+        <div className="flex gap-2" role="group" aria-label="Library scan action">
+          <Button disabled={busy} variant={mode === 'checkout' ? 'default' : 'outline'} onClick={() => setMode('checkout')}>Check out</Button>
+          <Button disabled={busy} variant={mode === 'return' ? 'default' : 'outline'} onClick={() => setMode('return')}>Return</Button>
+        </div>
         <Card className="border-t-4 border-primary shadow-lg overflow-hidden">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

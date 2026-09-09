@@ -38,4 +38,21 @@ describe('getLibraryPolicyFromSettings', () => {
     expect(getLibraryPolicyFromSettings({ libraryMaxCheckoutsPerStudent: 5 }).maxCheckoutsPerStudent).toBe(5);
     expect(getLibraryPolicyFromSettings({ libraryMaxCheckoutsPerStudent: 0 }).maxCheckoutsPerStudent).toBe(0);
   });
+
+  it('maps smart circulation and hardware scanning settings', () => {
+    const policy = getLibraryPolicyFromSettings({
+      libraryAutoDetectCirculation: true,
+      libraryCameraScanEnabled: true,
+      libraryGracePeriodDays: 3,
+      libraryMaxRenewals: 4,
+      libraryKioskAllowDropBoxReturn: true,
+      libraryMaxFineCap: 25,
+    });
+    expect(policy.autoDetectCirculation).toBe(true);
+    expect(policy.cameraScanEnabled).toBe(true);
+    expect(policy.gracePeriodDays).toBe(3);
+    expect(policy.maxRenewals).toBe(4);
+    expect(policy.kioskAllowDropBoxReturn).toBe(true);
+    expect(policy.maxFineCap).toBe(25);
+  });
 });

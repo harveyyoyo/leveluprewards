@@ -7,7 +7,7 @@ export function staffLandingPath(schoolId: string, type: StaffPortalLoginOption[
   if (type === 'secretary') return `/${schoolId}/secretary`;
   if (type === 'prizeClerk') return `/${schoolId}/admin`;
   if (type === 'reports') return `/${schoolId}/reports`;
-  if (type === 'librarian') return `/${schoolId}/librarian`;
+  if (type === 'librarian') return `/${schoolId}/library`;
   if (type === 'office') return officeStaffEntryHref(schoolId);
   if (type === 'houseCoordinator') return `/${schoolId}/admin`;
   return `/${schoolId}/admin`;

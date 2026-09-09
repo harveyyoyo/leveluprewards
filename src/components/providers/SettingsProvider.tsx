@@ -43,11 +43,13 @@ import {
     type LegacyModeSignals,
 } from '@/lib/legacyMode';
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
+import type { LibraryGenreConfig, BarcodeNumberScheme } from '@/lib/library/libraryClassification';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
+import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 
 type ColorScheme =
     | 'default'
@@ -101,6 +103,10 @@ interface Settings {
     housesRealmTheme?: HousesRealmThemeId;
     /** Visual theme for the dedicated Classroom realm (background, glow, accents). School-wide. */
     classroomRealmTheme?: ClassroomRealmThemeId;
+    /** Visual theme for the dedicated Library workspace and self-checkout portal. School-wide. */
+    libraryTheme?: LibraryThemeId;
+    /** When on, student self-checkout kiosk matches the selected library theme. */
+    libraryThemeMatchKiosk?: boolean;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
     /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
@@ -410,6 +416,14 @@ interface Settings {
         icon?: string;
     }[];
 
+    /**
+     * Single on/off switch for the merged Displays feature (Hall of Fame, Smart Screen, Bulletin
+     * board ??? one hallway-TV feature with three templates). Replaces independently toggling
+     * `smartScreenEnabled` / `bulletinEnabled` / `enableClassLeaderboard`, which are kept only for
+     * back-compat reads of settings docs saved before the merge.
+     */
+    displaysEnabled?: boolean;
+
     // Bulletin Board
     bulletinEnabled?: boolean;
     bulletinTitle?: string;
@@ -491,6 +505,84 @@ interface Settings {
     libraryOnTimeReturnPoints?: number;
     /** Category used for library late fees and on-time bonuses (app_points mode). */
     libraryPointsCategoryId?: string;
+
+    // Advanced Library Circulation & Policy Settings
+    /** When true, scanning automatically detects whether to borrow or return based on book status. */
+    libraryAutoDetectCirculation?: boolean;
+    /** Grace period in days before a book is flagged as overdue or incurs late fees. */
+    libraryGracePeriodDays?: number;
+    /** Maximum number of times a student can renew a book (0 = no renewals). */
+    libraryMaxRenewals?: number;
+    /** Additional days granted on renewal (defaults to loan period). */
+    libraryRenewalDays?: number;
+    /** Allow renewing a loan even if it has already passed its due date. */
+    libraryAllowRenewIfOverdue?: boolean;
+    /** Allow a student to borrow multiple copies of the same book title. */
+    libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Maximum fine or deduction cap per book (0 = no limit). */
+    libraryMaxFineCap?: number;
+    /** Require staff to record an audit reason when waiving a library fine. */
+    libraryRequireWaiverReason?: boolean;
+
+    // Library Kiosk & Hardware Scanning Settings
+    /** When true, enable camera / webcam barcode scanning on library stations, desk, and intake. */
+    libraryCameraScanEnabled?: boolean;
+    /** Allow students to self-return books at the library kiosk station. */
+    libraryKioskAllowSelfReturn?: boolean;
+    /** Enable Quick Return / Drop Box mode (return books without student ID card). */
+    libraryKioskAllowDropBoxReturn?: boolean;
+    /** Auto-reset countdown seconds for kiosk session after scan (0 = manual). */
+    libraryKioskAutoResetSeconds?: number;
+    /** Require an admin/librarian passcode to leave the kiosk (off by default — a plain tap exits). */
+    libraryKioskExitRequiresPasscode?: boolean;
+    /** Play sound effects and audio chimes on scan / checkout / return. */
+    libraryKioskSoundEffects?: boolean;
+    /** Show book recommendations after checkout or return. */
+    libraryKioskShowRecommendations?: boolean;
+    /** Show active loans summary on student kiosk screen. */
+    libraryKioskShowActiveLoans?: boolean;
+    /** Show book cover image thumbnail when available. */
+    libraryKioskShowBookCover?: boolean;
+
+    // Library Cataloging & Printing Defaults
+    /** Default shelf location for newly added copies. */
+    libraryDefaultShelf?: string;
+    /** Default genre / category for new books. */
+    libraryDefaultCategory?: string;
+    /** Default print format for copy barcode labels. */
+    libraryLabelFormat?: 'sticker' | 'spine' | 'pocket';
+    /** Barcode standard on printed labels: CODE128 or QR. */
+    libraryBarcodeFormat?: 'CODE128' | 'QR';
+    /** Barcode numbering scheme: 'genre_code' (FIC-823-0001), 'dewey_numeric' (823-0001), 'prefix_genre' (LIB-FIC-0001), or 'classic_random'. */
+    libraryBarcodeNumberScheme?: BarcodeNumberScheme;
+    /** Configured library genres with colors, call prefixes, and shelf placement. */
+    libraryGenreDefinitions?: LibraryGenreConfig[];
+    /** List of physical library placement sections/zones for shelving. */
+    libraryPlacementZones?: string[];
+    /** Automatically lookup book details from Google Books / OpenLibrary on ISBN scan. */
+    libraryAutoLookupGoogleBooks?: boolean;
+
+    // Library Behavior & Overdue Alerts
+    /** Days before due date to display upcoming due warning. */
+    libraryOverdueWarningDays?: number;
+    /** Surface overdue book notices on teacher classroom rosters. */
+    libraryNotifyTeacherOnOverdue?: boolean;
+    /** Enable reading milestone streaks and badges. */
+    libraryReadingMilestonesEnabled?: boolean;
+
+    // Library Return Sounds & Feedback Responses
+    /** Sound played when a book is returned on time. */
+    libraryReturnSoundOnTime?: 'chime_bright' | 'arcade_success' | 'gentle_bell' | 'synth_sparkle' | 'cheerful_pop' | 'none';
+    /** Sound played when a book is returned late/overdue. */
+    libraryReturnSoundLate?: 'gentle_warning' | 'buzzer_retro' | 'reminder_tone' | 'clock_tick' | 'subtle_thud' | 'none';
+    /** Feedback response message template when returned on time. */
+    libraryReturnResponseOnTimeMode?: 'cheerful' | 'academic' | 'arcade' | 'minimal' | 'custom';
+    /** Custom return on-time response template (supports {title}). */
+    libraryReturnResponseOnTimeCustom?: string;
+    /** Feedback response message template when returned late. */
+    libraryReturnResponseLateMode?: 'gentle' | 'informative' | 'firm' | 'motivational' | 'custom';
+    /** Custom return late response template (supports {title}, {days}). */
+    libraryReturnResponseLateCustom?: string;
 
     // Student Portal Interface overrides (set by admin)
     studentDisplayMode?: DisplayModePreference;
@@ -589,6 +681,7 @@ export interface SmartScreenProfile {
     settings: Partial<Settings>;
 }
 
+
 /** Settings with display mode resolved for rendering (`web` | `app` | `mobile`). */
 type ResolvedSettings = Omit<Settings, 'displayMode'> & { displayMode: ResolvedDisplayMode };
 
@@ -675,6 +768,36 @@ const defaultSettings: Settings = {
     enableHouses: false,
     housesRealmTheme: 'cosmic',
     classroomRealmTheme: 'chalkboard',
+    libraryTheme: 'classic_oak',
+    libraryThemeMatchKiosk: true,
+    libraryAutoDetectCirculation: true,
+    libraryLoanPeriodDays: 14,
+    libraryGracePeriodDays: 0,
+    libraryMaxCheckoutsPerStudent: 3,
+    libraryMaxRenewals: 2,
+    libraryRenewalDays: 14,
+    libraryAllowRenewIfOverdue: false,
+    libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryMaxFineCap: 20,
+    libraryRequireWaiverReason: true,
+    libraryCameraScanEnabled: false,
+    libraryKioskAllowSelfReturn: true,
+    libraryKioskAllowDropBoxReturn: true,
+    libraryKioskAutoResetSeconds: 8,
+    libraryKioskExitRequiresPasscode: false,
+    libraryKioskSoundEffects: true,
+    libraryKioskShowRecommendations: true,
+    libraryKioskShowActiveLoans: true,
+    libraryKioskShowBookCover: true,
+    libraryDefaultShelf: '',
+    libraryDefaultCategory: 'General',
+    libraryLabelFormat: 'sticker',
+    libraryBarcodeFormat: 'CODE128',
+    libraryBarcodeNumberScheme: 'genre_code',
+    libraryAutoLookupGoogleBooks: true,
+    libraryOverdueWarningDays: 3,
+    libraryNotifyTeacherOnOverdue: true,
+    libraryReadingMilestonesEnabled: true,
     housesRollupPoints: true,
     showHouseOnStudentKiosk: true,
     houseSortingUseFakeQuestions: false,
@@ -824,7 +947,7 @@ const defaultSettings: Settings = {
     kioskSponsorSpeed: 'normal',
     kioskSponsorPosition: 'bottom',
     kioskSponsorBannerStyle: 'primary',
-    kioskSponsorIcon: 'ðŸŽ‰',
+    kioskSponsorIcon: '🎉',
     kioskSponsorSchedules: [],
 
     bulletinEnabled: true,
@@ -873,8 +996,6 @@ const defaultSettings: Settings = {
     payLibrary: true,
     payOffice: false,
     paySss: false,
-    libraryLoanPeriodDays: 14,
-    libraryMaxCheckoutsPerStudent: 3,
     libraryStudentKioskCheckoutEnabled: true,
     libraryAutoStudentPortalEnabled: true,
     libraryLateFeesEnabled: true,
@@ -1367,7 +1488,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 delete (parsed as Partial<Settings>).activeTourId;
-                const nextSettings = applyEntitlements({ 
+                const nextSettings = applyEntitlements({
                     ...defaultSettings, 
                     ...featureDefaultsFromRemote,
                     ...parsed,

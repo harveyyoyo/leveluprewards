@@ -154,6 +154,31 @@ function googleBooksApiKey(): string | undefined {
   return key ? key : undefined;
 }
 
+/**
+ * Race a set of lookups and resolve with the first truthy result. Unlike
+ * `Promise.any`, a task resolving with `null` (no match) doesn't win the race —
+ * we keep waiting on the remaining tasks until one hits or all come back empty.
+ * This turns a chain of sequential fallback lookups into one bounded by the
+ * slowest task instead of the sum of every task's latency.
+ */
+export async function firstHit<T>(tasks: Array<() => Promise<T | null>>): Promise<T | null> {
+  if (!tasks.length) return null;
+  return new Promise((resolve) => {
+    let remaining = tasks.length;
+    const settle = (result: T | null) => {
+      if (result) {
+        resolve(result);
+        return;
+      }
+      remaining -= 1;
+      if (remaining === 0) resolve(null);
+    };
+    for (const task of tasks) {
+      task().then(settle).catch(() => settle(null));
+    }
+  });
+}
+
 async function lookupOpenLibrary(variants: string[]): Promise<LibraryCatalogHit | null> {
   if (!variants.length) return null;
   const bibkeys = variants.map((v) => `ISBN:${v}`).join(',');
@@ -171,28 +196,29 @@ async function lookupOpenLibrary(variants: string[]): Promise<LibraryCatalogHit 
   return null;
 }
 
+async function lookupOpenLibrarySearchVariant(isbn: string): Promise<LibraryCatalogHit | null> {
+  const url = `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&limit=1&fields=title,author_name,isbn,subject`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    docs?: { title?: string; author_name?: string[]; isbn?: string[]; subject?: string[] }[];
+  };
+  const doc = data.docs?.[0];
+  if (!doc?.title) return null;
+  return {
+    title: doc.title.trim(),
+    author: doc.author_name?.[0]?.trim(),
+    isbn: doc.isbn?.[0] || isbn,
+    category: doc.subject?.[0]?.trim(),
+    source: 'openlibrary',
+  };
+}
+
 async function lookupOpenLibrarySearch(variants: string[]): Promise<LibraryCatalogHit | null> {
-  for (const isbn of variants) {
-    const url = `https://openlibrary.org/search.json?isbn=${encodeURIComponent(isbn)}&limit=1&fields=title,author_name,isbn,subject`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) continue;
-    const data = (await res.json()) as {
-      docs?: { title?: string; author_name?: string[]; isbn?: string[]; subject?: string[] }[];
-    };
-    const doc = data.docs?.[0];
-    if (!doc?.title) continue;
-    return {
-      title: doc.title.trim(),
-      author: doc.author_name?.[0]?.trim(),
-      isbn: doc.isbn?.[0] || isbn,
-      category: doc.subject?.[0]?.trim(),
-      source: 'openlibrary',
-    };
-  }
-  return null;
+  return firstHit(variants.map((isbn) => () => lookupOpenLibrarySearchVariant(isbn)));
 }
 
 /** Parse isbnsearch.org book page HTML (used by lookupIsbnSearchOrg and tests). */
@@ -212,94 +238,80 @@ export function parseIsbnSearchOrgHtml(html: string, fallbackIsbn: string): Libr
   };
 }
 
+async function lookupIsbnSearchOrgVariant(isbn: string): Promise<LibraryCatalogHit | null> {
+  const url = `https://isbnsearch.org/isbn/${encodeURIComponent(isbn)}`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return null;
+  return parseIsbnSearchOrgHtml(await res.text(), isbn);
+}
+
 async function lookupIsbnSearchOrg(variants: string[]): Promise<LibraryCatalogHit | null> {
-  for (const isbn of variants) {
-    const url = `https://isbnsearch.org/isbn/${encodeURIComponent(isbn)}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) continue;
-    const hit = parseIsbnSearchOrgHtml(await res.text(), isbn);
-    if (hit) return hit;
-  }
-  return null;
+  return firstHit(variants.map((isbn) => () => lookupIsbnSearchOrgVariant(isbn)));
+}
+
+async function lookupGoogleBooksVariant(isbn: string, apiKey: string | undefined): Promise<LibraryCatalogHit | null> {
+  // `country` is required by the Google Books API; an API key avoids the
+  // aggressive 429 rate limiting applied to anonymous requests.
+  const params = new URLSearchParams({ q: `isbn:${isbn}`, maxResults: '1', country: 'US' });
+  if (apiKey) params.set('key', apiKey);
+  const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
+    next: { revalidate: 86400 },
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    items?: {
+      volumeInfo?: {
+        title?: string;
+        authors?: string[];
+        categories?: string[];
+        publisher?: string;
+        publishedDate?: string;
+        industryIdentifiers?: { type?: string; identifier?: string }[];
+      };
+    }[];
+  };
+  const info = data.items?.[0]?.volumeInfo;
+  if (!info?.title) return null;
+  const fromIds =
+    info.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier ||
+    info.industryIdentifiers?.find((id) => id.type === 'ISBN_10')?.identifier;
+  return {
+    title: info.title.trim(),
+    author: info.authors?.[0]?.trim(),
+    isbn: fromIds || isbn,
+    category: info.categories?.[0]?.trim(),
+    publisher: info.publisher?.trim(),
+    publishedYear: info.publishedDate?.slice(0, 4),
+    source: 'google',
+  };
 }
 
 async function lookupGoogleBooks(variants: string[]): Promise<LibraryCatalogHit | null> {
   const apiKey = googleBooksApiKey();
-  for (const isbn of variants) {
-    // `country` is required by the Google Books API; an API key avoids the
-    // aggressive 429 rate limiting applied to anonymous requests.
-    const params = new URLSearchParams({ q: `isbn:${isbn}`, maxResults: '1', country: 'US' });
-    if (apiKey) params.set('key', apiKey);
-    const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': CATALOG_LOOKUP_USER_AGENT },
-      next: { revalidate: 86400 },
-    });
-    if (!res.ok) continue;
-    const data = (await res.json()) as {
-      items?: {
-        volumeInfo?: {
-          title?: string;
-          authors?: string[];
-          categories?: string[];
-          publisher?: string;
-          publishedDate?: string;
-          industryIdentifiers?: { type?: string; identifier?: string }[];
-        };
-      }[];
-    };
-    const info = data.items?.[0]?.volumeInfo;
-    if (!info?.title) continue;
-    const fromIds =
-      info.industryIdentifiers?.find((id) => id.type === 'ISBN_13')?.identifier ||
-      info.industryIdentifiers?.find((id) => id.type === 'ISBN_10')?.identifier;
-    return {
-      title: info.title.trim(),
-      author: info.authors?.[0]?.trim(),
-      isbn: fromIds || isbn,
-      category: info.categories?.[0]?.trim(),
-      publisher: info.publisher?.trim(),
-      publishedYear: info.publishedDate?.slice(0, 4),
-      source: 'google',
-    };
-  }
-  return null;
+  return firstHit(variants.map((isbn) => () => lookupGoogleBooksVariant(isbn, apiKey)));
 }
 
-/** Lookup title/author/category from the internet using ISBN-10/13 (and common EAN) barcodes. */
+/**
+ * Lookup title/author/category from the internet using ISBN-10/13 (and common EAN)
+ * barcodes. All catalog sources (and, within each, all ISBN variants) are queried
+ * concurrently — the first one to report a hit wins, so total latency is bounded by
+ * the slowest single request instead of the sum of every source's round-trip.
+ */
 export async function lookupBookByIsbn(isbnRaw: string): Promise<LibraryCatalogHit | null> {
   const variants = getIsbnLookupVariants(isbnRaw);
   if (!variants.length) return null;
 
-  try {
-    const openLib = await lookupOpenLibrary(variants);
-    if (openLib) return openLib;
-  } catch {
-    /* try fallback */
-  }
-
-  try {
-    const search = await lookupOpenLibrarySearch(variants);
-    if (search) return search;
-  } catch {
-    /* try fallback */
-  }
-
-  try {
-    const google = await lookupGoogleBooks(variants);
-    if (google) return google;
-  } catch {
-    /* try fallback */
-  }
-
-  try {
-    return await lookupIsbnSearchOrg(variants);
-  } catch {
-    return null;
-  }
+  return firstHit<LibraryCatalogHit>([
+    () => lookupOpenLibrary(variants),
+    () => lookupOpenLibrarySearch(variants),
+    () => lookupGoogleBooks(variants),
+    () => lookupIsbnSearchOrg(variants),
+  ]);
 }
 
 /** Build a set of normalized ISBNs already in the school catalog. */

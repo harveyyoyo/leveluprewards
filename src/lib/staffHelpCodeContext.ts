@@ -76,11 +76,19 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['library', 'book', 'checkout', 'barcode', 'upc'],
+    keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme'],
     paths: [
-      'src/app/[schoolId]/admin/sections/AdminLibraryTab.tsx',
-      'src/app/[schoolId]/librarian/page.tsx',
-      'src/app/[schoolId]/library/self-checkout/page.tsx',
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryTabLauncher.tsx',
+      'src/components/library/LibraryThemeSettingsCard.tsx',
+    ],
+  },
+  {
+    keys: ['library', 'catalog', 'book', 'books', 'borrow', 'return', 'kiosk', 'self-checkout', 'circulation', 'isbn'],
+    paths: [
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryStudentSelfCheckoutPortal.tsx',
+      'src/app/[schoolId]/library/kiosk/page.tsx',
     ],
   },
   {

@@ -77,10 +77,24 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     if (pathname === `/${routeSchoolId}/teacher`) return true;
     return loginState === 'teacher' || loginState === 'admin';
   }
-  if (section === 'secretary') return loginState === 'secretary' || loginState === 'admin';
-  if (section === 'prize-clerk') return loginState === 'prizeClerk' || loginState === 'admin';
+  if (section === 'secretary') {
+    if (pathname === `/${routeSchoolId}/secretary` || pathname === `/${routeSchoolId}/secretary/`) return true;
+    return loginState === 'secretary' || loginState === 'admin' || loginState === 'school';
+  }
+  if (section === 'prize-clerk') {
+    if (pathname === `/${routeSchoolId}/prize-clerk` || pathname === `/${routeSchoolId}/prize-clerk/`) return true;
+    return loginState === 'prizeClerk' || loginState === 'admin' || loginState === 'school';
+  }
   if (section === 'reports') return loginState === 'reports' || loginState === 'admin';
-  if (section === 'librarian') return loginState === 'librarian' || loginState === 'admin';
+  if (section === 'librarian') {
+    if (pathname === `/${routeSchoolId}/librarian` || pathname === `/${routeSchoolId}/librarian/`) return true;
+    return (
+      loginState === 'librarian' ||
+      loginState === 'admin' ||
+      loginState === 'school' ||
+      loginState === 'teacher'
+    );
+  }
   if (section === 'office') {
     if (pathname === `/${routeSchoolId}/office`) {
       return loginState === 'school' || loginState === 'office' || loginState === 'admin';
