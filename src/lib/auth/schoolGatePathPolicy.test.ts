@@ -35,6 +35,12 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['houseCoordinator']))).toBe(true);
   });
 
+  it('displays allow staff and portal', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['admin']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['kiosk']))).toBe(false);
+  });
+
   it('default hub routes for kiosk', () => {
     expect(schoolPathAllowedByGate(`/${sid}/student`, sid, new Set(['kiosk']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/portal`, sid, new Set(['portal']))).toBe(true);
@@ -48,5 +54,12 @@ describe('schoolPathAllowedByGate', () => {
     );
     expect(schoolPathAllowedByGate(`/${sid}/student`, sid, new Set(['studentPortal']))).toBe(false);
     expect(schoolPathAllowedByGate(`/${sid}/admin`, sid, new Set(['studentPortal']))).toBe(false);
+  });
+
+  it('librarian, secretary, and prize-clerk root routes allow portal scope', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/secretary`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/prize-clerk`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['librarian']))).toBe(true);
   });
 });

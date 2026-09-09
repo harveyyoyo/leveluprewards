@@ -137,9 +137,12 @@ export default function Header() {
     pathname?.includes('/house-sorting') || pathname?.includes('/houses-realm');
   const isClassroomRealmPage =
     pathname?.includes('/classroom-realm') || pathname?.includes('/classroom');
+  const isLibraryPage =
+    pathname?.includes('/library') || pathname?.includes('/librarian');
   const isFullscreenSpecialPage =
     isHouseSortingPage ||
     isClassroomRealmPage ||
+    isLibraryPage ||
     (fullscreen &&
     (pathname?.includes('/hall-of-fame') ||
       pathname?.includes('/bulletin-board') ||
@@ -294,7 +297,7 @@ export default function Header() {
   const adminSideTabHeader =
     !!schoolId &&
     typeof pathname === 'string' &&
-    new RegExp(`^/${schoolId}/(?:admin|teacher|secretary|reports|librarian)(?:/|$)`).test(pathname);
+    new RegExp(`^/${schoolId}/(?:admin|teacher|secretary|reports)(?:/|$)`).test(pathname);
 
   const headerWrapClassName = adminSideTabHeader
     ? staffPortalHeaderWrapClassName(staffPortalWide)

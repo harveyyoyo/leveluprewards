@@ -48,6 +48,6 @@ describe('staffHelpCodeContext', () => {
     });
     expect(files.length).toBeGreaterThan(0);
     expect(block).toContain('Repository excerpts');
-    expect(block).toContain('AdminLibraryTab');
+    expect(block).toContain('LibraryWorkspace');
   });
 });

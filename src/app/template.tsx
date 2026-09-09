@@ -16,7 +16,11 @@ export default function AppRouteTemplate({ children }: { children: React.ReactNo
   const reduceMotion = useReducedMotion();
 
   // Transform on this wrapper breaks `position: fixed` fullscreen children.
-  if (isPresentationRoute(pathname)) {
+  if (
+    isPresentationRoute(pathname) ||
+    pathname?.includes('/library') ||
+    pathname?.includes('/librarian')
+  ) {
     return <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>;
   }
 

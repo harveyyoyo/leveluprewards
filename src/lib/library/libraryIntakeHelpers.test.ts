@@ -19,10 +19,10 @@ describe('libraryIntakeHelpers', () => {
     expect(upcTaken).toHaveBeenCalledWith('9781422631157');
   });
 
-  it('resolveIntakeCheckoutUpc returns null when the book barcode is taken', async () => {
-    const upcTaken = vi.fn().mockResolvedValue(true);
+  it('resolveIntakeCheckoutUpc falls back to a generated LIB code when the book barcode is already taken', async () => {
+    const upcTaken = vi.fn().mockResolvedValueOnce(true).mockResolvedValue(false);
     const upc = await resolveIntakeCheckoutUpc('9781422631157', upcTaken);
-    expect(upc).toBeNull();
+    expect(upc).toMatch(/^LIB[0-9A-F]{8}$/);
   });
 
   it('resolveIntakeCheckoutUpc generates LIB when no barcode was scanned', async () => {

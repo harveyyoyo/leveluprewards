@@ -133,26 +133,6 @@ service cloud.firestore {
         && recessReasonOk(request.resource.data.reason);
     }
 
-    function isLibraryCheckoutUpdate() {
-      return isAuth()
-        && (
-          (
-            resource.data.status == 'available'
-            && request.resource.data.status == 'checked_out'
-            && request.resource.data.checkedOutTo is string
-            && request.resource.data.checkedOutAt is number
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedOutTo', 'checkedOutAt', 'dueAt'])
-          )
-          || (
-            resource.data.status == 'checked_out'
-            && request.resource.data.status == 'available'
-            && request.resource.data.checkedOutTo == null
-            && request.resource.data.checkedOutAt == null
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'checkedOutTo', 'checkedOutAt', 'dueAt'])
-          )
-        );
-    }
-
     function teacherIdFor(schoolId) {
       return teacherRoleData(schoolId).teacherId;
     }
@@ -417,9 +397,20 @@ service cloud.firestore {
 
       match /library/{itemId} {
         allow read: if isSchoolMember(schoolId) || hasStudentPortalSession(schoolId);
-        allow create, delete: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper();
-        allow update: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper() || isLibraryCheckoutUpdate();
+        // Circulation and catalog writes are validated by trusted callable functions.
+        allow write: if false;
       }
+      match /libraryLoans/{loanId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper()
+          || (hasStudentPortalSession(schoolId) && resource.data.studentId == request.auth.uid);
+        allow write: if false;
+      }
+      match /libraryEvents/{eventId} {
+        allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper();
+        allow write: if false;
+      }
+      match /libraryRequests/{requestId} { allow read, write: if false; }
+      match /libraryMeta/{metaId} { allow read, write: if false; }
 
       // Desk staff logins. Admins manage all roles; office staff may manage office-role accounts only.
       match /staffAccounts/{accountId} {

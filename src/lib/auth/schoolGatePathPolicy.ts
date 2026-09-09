@@ -40,16 +40,30 @@ export function schoolPathAllowedByGate(
     return scopes.has('teacher') || scopes.has('admin');
   }
   if (section === 'secretary') {
+    if (pathname === prefix + 'secretary' || pathname === prefix + 'secretary/') {
+      return true;
+    }
     return scopes.has('secretary') || scopes.has('admin');
   }
   if (section === 'prize-clerk') {
+    if (pathname === prefix + 'prize-clerk' || pathname === prefix + 'prize-clerk/') {
+      return true;
+    }
     return scopes.has('prizeClerk') || scopes.has('admin');
   }
   if (section === 'reports') {
     return scopes.has('reports') || scopes.has('admin');
   }
   if (section === 'librarian') {
-    return scopes.has('librarian') || scopes.has('admin');
+    if (pathname === prefix + 'librarian' || pathname === prefix + 'librarian/') {
+      return true;
+    }
+    return (
+      scopes.has('librarian') ||
+      scopes.has('admin') ||
+      scopes.has('teacher') ||
+      scopes.has('portal')
+    );
   }
   if (section === 'office') {
     if (pathname === prefix + 'office' || pathname === prefix + 'office/') {

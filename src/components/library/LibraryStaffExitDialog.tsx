@@ -28,7 +28,9 @@ export function LibraryStaffExitDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUnlocked: () => void;
+  /** Fires with the role that just authenticated — the caller's own `loginState`
+   *  hasn't propagated yet at this point, so route off this instead of context. */
+  onUnlocked: (role: 'admin' | 'librarian') => void;
 }) {
   const { schoolId, login } = useAppContext();
   const { auth, functions, user } = useFirebase();
@@ -59,7 +61,7 @@ export function LibraryStaffExitDialog({
       }
       resetFields();
       onOpenChange(false);
-      onUnlocked();
+      onUnlocked('admin');
     } finally {
       setBusy(false);
     }
@@ -83,7 +85,7 @@ export function LibraryStaffExitDialog({
       });
       resetFields();
       onOpenChange(false);
-      onUnlocked();
+      onUnlocked('librarian');
     } catch {
       toast({
         variant: 'destructive',

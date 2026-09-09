@@ -166,7 +166,7 @@ export default function TeacherPage() {
         } else if (loginState === 'reports') {
             router.replace(`/${schoolId}/reports`);
         } else if (loginState === 'librarian') {
-            router.replace(`/${schoolId}/librarian`);
+            router.replace(`/${schoolId}/library`);
         } else if (loginState === 'office') {
             router.replace(`/${schoolId}/office`);
         } else if (loginState === 'houseCoordinator') {
