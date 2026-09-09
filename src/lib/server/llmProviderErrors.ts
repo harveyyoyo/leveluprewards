@@ -7,16 +7,31 @@ export function isLlmProviderFailure(e: unknown): boolean {
   );
 }
 
-export function userFacingLlmError(e: unknown, context = 'generate the theme'): string {
+/** Which provider actually produced the failing response, when the caller tracked it. */
+export type LlmProvider = 'openai' | 'gemini';
+
+export function userFacingLlmError(
+  e: unknown,
+  context = 'generate the theme',
+  provider?: LlmProvider,
+): string {
   const msg = e instanceof Error ? e.message : String(e);
+  const providerLabel = provider === 'openai' ? 'OpenAI' : 'Google Gemini';
+  const switchHint =
+    provider === 'openai'
+      ? 'Try a Gemini model in the model dropdown, or retry later.'
+      : 'Try GPT-4o-mini in the model dropdown, or retry later.';
+
   if (/429|quota|RESOURCE_EXHAUSTED/i.test(msg)) {
-    return `Google Gemini quota is exceeded, so we could not ${context}. Try GPT-4o-mini in the model dropdown, or retry later.`;
+    return `${providerLabel} quota is exceeded, so we could not ${context}. ${switchHint}`;
   }
   if (/503|high demand|UNAVAILABLE/i.test(msg)) {
-    return `Gemini is temporarily overloaded. Wait a minute, switch to GPT-4o-mini, or try Gemini 2.5 Flash-Lite.`;
+    return provider === 'openai'
+      ? `OpenAI is temporarily overloaded, so we could not ${context}. Wait a minute or switch to a Gemini model.`
+      : `Gemini is temporarily overloaded. Wait a minute, switch to GPT-4o-mini, or try Gemini 2.5 Flash-Lite.`;
   }
   if (/401|403|API key|PERMISSION_DENIED|permission denied/i.test(msg)) {
-    return 'The AI service is not correctly configured on the server. Ask your tech contact to check the Gemini API key.';
+    return `The AI service is not correctly configured on the server. Ask your tech contact to check the ${providerLabel} API key.`;
   }
   if (msg.trim()) return msg.slice(0, 240);
   return `Could not ${context}. Please try again.`;

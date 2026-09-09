@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback, Fragment, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -1861,7 +1861,6 @@ function TeacherPrinterInnerBody({
     const { toast } = useToast();
     const firestore = useFirestore();
     const { settings, updateSettings } = useSettings();
-    const searchParams = useSearchParams();
 
     const teachersQuery = useMemoFirebase(() => schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null, [firestore, schoolId]);
     const { data: teachers, isLoading: teachersLoading } = useCollection<Teacher>(teachersQuery);
@@ -1888,21 +1887,45 @@ function TeacherPrinterInnerBody({
         [allTabValues],
     );
 
-    const [activeTeacherTab, setActiveTeacherTab] = useState(defaultTab);
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
+
+    const [activeTeacherTab, setActiveTeacherTabState] = useState(() => {
+        const raw = searchParams.get('tab')?.trim().toLowerCase() || '';
+        const normalized = raw ? normalizeStaffPortalTabValue(raw) : '';
+        return normalized && staffPortalTabIsValid(normalized, allTabValues) ? normalized : defaultTab;
+    });
     const [pendingTeacherAwardCount, setPendingTeacherAwardCount] = useState(0);
 
-    useEffect(() => {
-        if (secretaryMode) return;
-        const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
-        const tab = normalizeStaffPortalTabValue(rawTab);
-        if (tab && staffPortalTabIsValid(tab, allTabValues)) {
-            setActiveTeacherTab(tab);
+    // Keeps the URL deep-linkable to a tab. A stale/unrecognized ?tab= (e.g. a kiosk
+    // bookmarked to a since-renamed tab) is simply ignored — resolvedTeacherTab below
+    // sanitizes again on every render, so it can never crash the portal.
+    const setActiveTeacherTab = useCallback((value: string) => {
+        setActiveTeacherTabState(value);
+        const params = new URLSearchParams(searchParams.toString());
+        if (value === defaultTab) {
+            params.delete('tab');
+        } else {
+            params.set('tab', value);
         }
-    }, [allTabValues, searchParams, secretaryMode]);
+        params.delete('section');
+        const qs = params.toString();
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    }, [defaultTab, pathname, router, searchParams]);
+
+    useEffect(() => {
+        const raw = searchParams.get('tab')?.trim().toLowerCase() || '';
+        if (!raw) return;
+        const normalized = normalizeStaffPortalTabValue(raw);
+        if (staffPortalTabIsValid(normalized, allTabValues)) {
+            setActiveTeacherTabState(normalized);
+        }
+    }, [searchParams, allTabValues]);
 
     const handleIntroTourStaffTab = useCallback((tabValue: string) => {
         setActiveTeacherTab(tabValue);
-    }, []);
+    }, [setActiveTeacherTab]);
     useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
     const toggleTeacherPinnedAddOn = (tabValue: string, pinned: boolean) => {

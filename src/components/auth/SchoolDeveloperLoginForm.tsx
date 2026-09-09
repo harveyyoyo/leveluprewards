@@ -304,6 +304,32 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         await signOut(auth);
       }
 
+      // Redirect-first: desktop Chrome routinely blocks the OAuth popup window (surfacing its
+      // own "pop-ups blocked" banner) even on a real click. Redirect only needs sessionStorage
+      // and a normal top-level browser context, so use it directly and only fall back to a
+      // popup when redirect itself isn't usable (e.g. in-app browsers / blocked storage).
+      if (canUseGoogleRedirectSignIn()) {
+        if (shouldThrottleGoogleRedirect()) {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: t('auth.googleStillStarting'),
+            description:
+              'Wait a few seconds for the previous Google sign-in attempt to finish, or refresh the page and try again.',
+          });
+          return;
+        }
+        markPendingGoogleRedirect();
+        markGoogleRedirectAttempt();
+        if (auth.currentUser?.isAnonymous) {
+          await linkWithRedirect(auth.currentUser, provider);
+        } else {
+          await signInWithRedirect(auth, provider);
+        }
+        // The browser will navigate away; no toast needed here.
+        return;
+      }
+
       // If the app started an anonymous session (normal for this app),
       // link it to Google so the UID stays stable for role provisioning.
       const result = auth.currentUser?.isAnonymous
@@ -367,48 +393,17 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         return;
       }
 
-      const shouldRedirect =
-        code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment';
-
-      if (shouldRedirect) {
-        if (!canUseGoogleRedirectSignIn()) {
-          playSound('error');
-          toast({
-            variant: 'destructive',
-            title: 'Google sign-in needs a full browser',
-            description: googleRedirectRecoveryHint(),
-          });
-          return;
-        }
-
-        if (shouldThrottleGoogleRedirect()) {
-          playSound('error');
-          toast({
-            variant: 'destructive',
-            title: t('auth.googleStillStarting'),
-            description:
-              'Wait a few seconds for the previous Google redirect to finish, or refresh the page and try again.',
-          });
-          return;
-        }
-        try {
-          markPendingGoogleRedirect();
-          markGoogleRedirectAttempt();
-          const provider = new GoogleAuthProvider();
-          // Only force account picker for redirect when switching accounts
-          if (hasGoogleUser && !isAllowedGoogleEmail) {
-            provider.setCustomParameters({ prompt: 'select_account' });
-          }
-          if (auth.currentUser?.isAnonymous) {
-            await linkWithRedirect(auth.currentUser, provider);
-          } else {
-            await signInWithRedirect(auth, provider);
-          }
-          // The browser will navigate away; no toast needed here.
-          return;
-        } catch (redirectErr) {
-          console.error('Google redirect sign-in failed:', redirectErr);
-        }
+      // Redirect is already tried first (above) whenever it's usable. Reaching a
+      // popup-blocked error here means redirect itself isn't available in this browser
+      // (in-app webview / blocked storage) — there's no better fallback left.
+      if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Google sign-in needs a full browser',
+          description: googleRedirectRecoveryHint(),
+        });
+        return;
       }
 
       playSound('error');

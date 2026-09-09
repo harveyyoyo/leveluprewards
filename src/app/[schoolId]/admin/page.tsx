@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, Suspense, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
@@ -313,6 +313,8 @@ function AdminDashboardInner() {
     ? params.schoolId.trim().toLowerCase()
     : ctxSchoolId;
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const functions = useFunctions();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -511,9 +513,24 @@ function AdminDashboardInner() {
 
   const [activeMainTab, setActiveMainTab] = useState('welcome');
 
+  // Keeps the URL in sync so each tab is deep-linkable/shareable and back/forward works.
+  const goToMainTab = useCallback((value: string) => {
+    setActiveMainTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'welcome') {
+      params.delete('tab');
+    } else {
+      params.set('tab', value);
+    }
+    // A section param only makes sense for the tab it was set on.
+    params.delete('section');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
   const handleIntroTourStaffTab = useCallback((tabValue: string) => {
-    setActiveMainTab(tabValue);
-  }, []);
+    goToMainTab(tabValue);
+  }, [goToMainTab]);
   useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
   useEffect(() => {
@@ -809,13 +826,13 @@ function AdminDashboardInner() {
     if (!pinnedNow.includes(tabValue)) return;
     updateSettings({ adminPinnedAddOnTabs: pinnedNow.filter((x) => x !== tabValue) });
     if (activeMainTab === tabValue) {
-      setActiveMainTab('welcome');
+      goToMainTab('welcome');
     }
   };
 
   const handleMobileMainTabChange = (value: string) => {
     if (orderedMainTabs.some((t) => t.value === value)) {
-      setActiveMainTab(value);
+      goToMainTab(value);
       return;
     }
 
@@ -824,7 +841,7 @@ function AdminDashboardInner() {
       return;
     }
 
-    setActiveMainTab(value);
+    goToMainTab(value);
   };
 
   const persistMainTabOrder = (next: string[]) => {
@@ -920,7 +937,7 @@ function AdminDashboardInner() {
       Object.assign(patch, addOnTabEnablePatch(tabValue));
       
       updateSettings(patch);
-      setActiveMainTab(tabValue);
+      goToMainTab(tabValue);
     } else {
       patch.adminPinnedAddOnTabs = pinnedNow.filter((x) => x !== tabValue);
       let nextHidden = [...hiddenNow];
@@ -989,7 +1006,7 @@ function AdminDashboardInner() {
       updateSettings(patch);
       
       if (activeMainTab === tabValue) {
-        setActiveMainTab('welcome');
+        goToMainTab('welcome');
       }
     }
   };
@@ -1138,13 +1155,13 @@ function AdminDashboardInner() {
     patch.adminHiddenAddOnTabs = nextHidden;
     updateSettings(patch);
 
-    if (offIds.has(activeMainTab)) setActiveMainTab('welcome');
+    if (offIds.has(activeMainTab)) goToMainTab('welcome');
   };
 
   useLayoutEffect(() => {
     const allowedTabs = new Set(orderedMainTabs.map((t) => t.value));
-    if (!allowedTabs.has(activeMainTab)) setActiveMainTab('welcome');
-  }, [activeMainTab, orderedMainTabs]);
+    if (!allowedTabs.has(activeMainTab)) goToMainTab('welcome');
+  }, [activeMainTab, orderedMainTabs, goToMainTab]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
@@ -1804,7 +1821,7 @@ function AdminDashboardInner() {
                       key={t.value}
                       value={t.value}
                       isActive={isTabActive}
-                      onSelect={() => setActiveMainTab(t.value)}
+                      onSelect={() => goToMainTab(t.value)}
                       triggerClassName={
                         isColoredAddOn
                           ? cn(
@@ -1864,7 +1881,7 @@ function AdminDashboardInner() {
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
-            onValueChange={setActiveMainTab}
+            onValueChange={goToMainTab}
             className={staffPortalWorkspaceMainClassName()}
           >
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
@@ -1875,7 +1892,7 @@ function AdminDashboardInner() {
               role="admin"
               settings={settings}
               schoolId={schoolId}
-              onGoToTab={setActiveMainTab}
+              onGoToTab={goToMainTab}
               onBulkRoster={() => setBulkRosterOpen(true)}
               schoolName={schoolData?.name?.trim() || null}
               staffName={userName}

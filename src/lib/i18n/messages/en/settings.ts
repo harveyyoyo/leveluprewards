@@ -113,6 +113,18 @@ const settings = {
     searchPlaceholder: 'Search features…',
     signInAsAdmin: 'Sign in as admin',
   },
+  search: {
+    placeholder: 'Search settings…',
+    noResults: 'No settings match “{query}”.',
+    groups: {
+      hub: 'Menu',
+      interface: 'Interface',
+      general: 'School',
+      features: 'Advanced',
+      pillars: 'Products',
+      device: 'Device',
+    },
+  },
   back: {
     toSchoolSettings: 'Back to school settings',
     toGeneral: 'Back to general settings',

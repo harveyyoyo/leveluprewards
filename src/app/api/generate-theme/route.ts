@@ -8,7 +8,9 @@ import {
     geminiModelAttemptOrder,
     isLlmProviderFailure,
     userFacingLlmError,
+    type LlmProvider,
 } from '@/lib/server/llmProviderErrors';
+import { assertStudentThemeGenerationAllowedForSchool } from '@/lib/server/studentThemeGate';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const defaultOpenAI = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || '' });
@@ -155,23 +157,34 @@ async function generateThemeWithGemini(
 }
 
 export async function POST(req: NextRequest) {
+    // Tracked outside the try block so the catch can attribute errors to whichever
+    // provider actually made the failing call (Gemini may fall back to OpenAI mid-request).
+    let usedProvider: LlmProvider = 'gemini';
     try {
-        const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 12 });
+        // Staff use this to set a school's default theme; kiosk students use it to theme
+        // their own portal/ID card. Kiosk sessions are anonymous, so this only requires
+        // sign-in — access is gated on the school's `enableStudentThemes` setting instead.
+        const guarded = await guardAiRoute(req, { requireSchoolStaff: false, maxRequests: 12 });
         if (!guarded.ok) return guarded.response;
-        const { prompt, model = 'gpt-4o-mini' } = guarded.value.body;
+        const { prompt, model = 'gpt-4o-mini', schoolId: rawSchoolId } = guarded.value.body;
 
         if (typeof prompt !== 'string' || !prompt.trim()) {
             return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
         }
+        if (typeof rawSchoolId !== 'string' || !rawSchoolId.trim()) {
+            return NextResponse.json({ error: 'schoolId is required.' }, { status: 400 });
+        }
+        const gateResponse = await assertStudentThemeGenerationAllowedForSchool(rawSchoolId);
+        if (gateResponse) return gateResponse;
         const selectedModel = typeof model === 'string' ? model : 'gpt-4o-mini';
 
         const systemInstruction = `You are an expert UI/UX designer with a bold, creative vision. Your task is to generate a distinctive, memorable theme (color palette + typography + background) for a student web portal based on the user's prompt.
 
 DESIGN PHILOSOPHY:
-- Be creative and adventurous: avoid generic "safe" choices. Surprise the user with unexpected but cohesive combinations.
-- Fonts: Choose Google Fonts that have strong personality and match the theme's vibe. Favor distinctive display, slab, rounded, or thematic fonts (e.g. "Bangers", "Creepster", "Lobster", "Righteous", "Orbitron", "Permanent Marker", "Rye", "Monoton", "Bungee", "Archivo Black", "Abril Fatface", "Playfair Display", "Oswald", "Anton", "Rubik Mono One", "Fugaz One", "Luckiest Guy", "Staatliches", "Bebas Neue", "Alfa Slab One"). Avoid bland system-like fonts unless the prompt explicitly asks for minimalism.
-- Background: Prefer a patterned or multi-color background when it fits the prompt. Use CSS that can be set as the \`background\` property: linear-gradient, radial-gradient, or repeating patterns (e.g. repeating-linear-gradient, subtle stripes/dots). If a solid color fits better, use \`background\` only and leave \`backgroundStyle\` null.
-- Ensure excellent contrast between text and background for accessibility. Primary and accent colors must stand out clearly on the background.
+- Be creative and adventurous: avoid generic "safe" choices. Surprise the user with unexpected but cohesive combinations. Clarity always wins over novelty, though — see the legibility rules below.
+- Fonts: Choose Google Fonts that have strong personality and match the theme's vibe, but stay legible at small ID-card sizes and for numerals (points balance, class number, barcode digits). Favor distinctive display, slab, rounded, or thematic fonts that are still easy to scan (e.g. "Bangers", "Lobster", "Righteous", "Orbitron", "Permanent Marker", "Bungee", "Archivo Black", "Abril Fatface", "Playfair Display", "Oswald", "Anton", "Rubik Mono One", "Fugaz One", "Luckiest Guy", "Staatliches", "Bebas Neue", "Alfa Slab One"). Avoid fonts that sacrifice legibility for style — no dripping/horror scripts, ultra-thin neon-tube styles, or anything with broken/disconnected letterforms. Avoid bland system-like fonts unless the prompt explicitly asks for minimalism.
+- Background: Prefer a patterned or multi-color background when it fits the prompt. Use CSS that can be set as the \`background\` property: linear-gradient, radial-gradient, or repeating patterns (e.g. repeating-linear-gradient, subtle stripes/dots). If a solid color fits better, use \`background\` only and leave \`backgroundStyle\` null. If you use a pattern or gradient, keep it low-detail enough that a color sampled from any point still contrasts with the text color.
+- Clarity is the top priority: text, primary, and accent colors must be clearly readable against the background/card in every part of the theme — treat this like designing for accessibility (WCAG AAA, 7:1 contrast) even though the exact math will be double-checked and corrected server-side. Prefer palettes that are unambiguously readable over ones that are merely "technically passing."
 
 You MUST reply with a JSON object.
 
@@ -190,8 +203,10 @@ Required schema:
         let responseText = '';
 
         if (selectedModel.startsWith('gpt')) {
+            usedProvider = 'openai';
             responseText = await generateThemeWithOpenAi(prompt, systemInstruction, selectedModel);
         } else {
+            usedProvider = 'gemini';
             try {
                 responseText = await generateThemeWithGemini(prompt, systemInstruction, selectedModel);
             } catch (geminiError) {
@@ -199,6 +214,7 @@ Required schema:
                     console.warn(
                         'generate-theme: all Gemini models failed; falling back to gpt-4o-mini.',
                     );
+                    usedProvider = 'openai';
                     responseText = await generateThemeWithOpenAi(
                         prompt,
                         systemInstruction,
@@ -233,7 +249,7 @@ Required schema:
     } catch (error) {
         console.error('Error in /api/generate-theme:', error);
         return NextResponse.json(
-            { error: userFacingLlmError(error) },
+            { error: userFacingLlmError(error, undefined, usedProvider) },
             { status: 500 },
         );
     }
