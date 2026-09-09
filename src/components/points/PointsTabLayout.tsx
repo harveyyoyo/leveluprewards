@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useIntroTourSectionListener } from '@/lib/introTourSection';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Award, Ticket, Coins, ClipboardList, Palette } from 'lucide-react';
@@ -57,7 +58,28 @@ export function PointsTabLayout({
 }: PointsTabLayoutProps) {
   const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
-  const [section, setSection] = useState<PointsTabSection>(activeDefault);
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [section, setSectionState] = useState<PointsTabSection>(() => {
+    const raw = searchParams.get('section');
+    return raw && sections.includes(raw as PointsTabSection) ? (raw as PointsTabSection) : activeDefault;
+  });
+
+  // Keeps the URL deep-linkable to a specific section (e.g. ?tab=coupons&section=print).
+  const setSection = useCallback((next: PointsTabSection) => {
+    setSectionState(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === activeDefault) {
+      params.delete('section');
+    } else {
+      params.set('section', next);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [activeDefault, pathname, router, searchParams]);
 
   const handleIntroTourSection = useCallback(
     (sectionId: string) => {
@@ -65,7 +87,7 @@ export function PointsTabLayout({
         setSection(sectionId as PointsTabSection);
       }
     },
-    [sections],
+    [sections, setSection],
   );
   useIntroTourSectionListener(handleIntroTourSection);
 
