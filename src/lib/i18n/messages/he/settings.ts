@@ -112,6 +112,18 @@ const settings = {
     searchPlaceholder: 'חיפוש תכונות…',
     signInAsAdmin: 'כניסה כמנהל',
   },
+  search: {
+    placeholder: 'חיפוש הגדרות…',
+    noResults: 'אין הגדרות שתואמות “{query}”.',
+    groups: {
+      hub: 'תפריט',
+      interface: 'ממשק',
+      general: 'בית ספר',
+      features: 'מתקדם',
+      pillars: 'מוצרים',
+      device: 'מכשיר',
+    },
+  },
   back: {
     toSchoolSettings: 'חזרה להגדרות בית ספר',
     toGeneral: 'חזרה להגדרות כלליות',

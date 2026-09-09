@@ -64,7 +64,13 @@ import { WELCOME_GREETING_STYLES } from '@/components/welcome/WelcomeGreeting';
 import { IdCardPrinterSettingsSection } from '@/components/settings/IdCardPrinterSettingsSection';
 import { SettingsFaceEnrollmentsPanel } from '@/components/settings/SettingsFaceEnrollmentsPanel';
 import { SettingsSectionJumpNav } from '@/components/settings/SettingsSectionJumpNav';
+import { SettingsSearchBar, SettingsSearchResults } from '@/components/settings/SettingsSearchBar';
 import { FeatureFilterContext, SettingsFeatureRow } from '@/components/settings/SettingsFeatureRow';
+import {
+    buildSettingsSearchItems,
+    filterSettingsSearchItems,
+    type SettingsSearchItem,
+} from '@/lib/settings/settingsSearchIndex';
 import { SUPPLEMENTARY_PRODUCTS, type ProductPillarKey } from '@/lib/productPillars';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
 import { OfficePortalEntryLink } from '@/components/integrations/OfficePortalEntryLink';
@@ -121,6 +127,7 @@ export function SettingsModal() {
     const [interfaceRole, setInterfaceRole] = useState<RoleView>('global');
     const [previewMode, setPreviewMode] = useState<PreviewMode>('live');
     const [featureQuery, setFeatureQuery] = useState('');
+    const [settingsQuery, setSettingsQuery] = useState('');
     const [featuresEnabledOnly, setFeaturesEnabledOnly] = useState(false);
     const [showComingSoonFeatures, setShowComingSoonFeatures] = useState(false);
     const [selectedProfileId, setSelectedProfileId] = useState('');
@@ -133,6 +140,7 @@ export function SettingsModal() {
     const { isWide: staffPortalWideLayout, toggleLayoutMode: toggleStaffPortalLayout } = useStaffPortalLayoutMode();
     const originalSettingsRef = useRef<AppSettings | null>(null);
     const committedRef = useRef(false);
+    const pendingJumpRef = useRef<string | null>(null);
     const isShortLinkKioskRoute = typeof pathname === 'string' && pathname.startsWith('/s/');
     const autoOpenedFromQueryRef = useRef(false);
     const pendingSettingsViewRef = useRef<SettingsView | null>(null);
@@ -146,6 +154,8 @@ export function SettingsModal() {
             originalSettingsRef.current = cloneSettings(settingsPreferences);
             setDraft(cloneSettings(settingsPreferences));
             setView(initialView ?? 'hub');
+            setSettingsQuery('');
+            setFeatureQuery('');
             setPreviewMode(fullAccess ? 'draft' : 'live');
             if (typeof window !== 'undefined') {
                 setSelectedProfileId(localStorage.getItem('current_kiosk_profile_id') || '');
@@ -341,6 +351,46 @@ export function SettingsModal() {
             document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     };
+
+    const showDeviceSettings = isStudentKioskUiContext(loginState, pathname, schoolId);
+    const settingsSearchItems = useMemo(
+        () =>
+            buildSettingsSearchItems({
+                t,
+                canManageSchoolSettings,
+                showDevice: showDeviceSettings,
+            }),
+        [t, canManageSchoolSettings, showDeviceSettings],
+    );
+    const settingsSearchResults = useMemo(
+        () => filterSettingsSearchItems(settingsSearchItems, settingsQuery),
+        [settingsSearchItems, settingsQuery],
+    );
+    const isSearchingSettings = settingsQuery.trim().length > 0;
+
+    const selectSettingsSearchResult = useCallback(
+        (entry: SettingsSearchItem) => {
+            pendingJumpRef.current = entry.sectionId ?? null;
+            setSettingsQuery('');
+            setView(entry.view);
+            if (entry.view === 'features' && entry.comingSoon) {
+                setShowComingSoonFeatures(true);
+            }
+            if (local.soundEnabled) playSound('click');
+        },
+        [local.soundEnabled, playSound],
+    );
+
+    useEffect(() => {
+        if (!open || isSearchingSettings) return;
+        const sectionId = pendingJumpRef.current;
+        if (!sectionId) return;
+        const timer = window.setTimeout(() => {
+            document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            pendingJumpRef.current = null;
+        }, 80);
+        return () => window.clearTimeout(timer);
+    }, [open, view, isSearchingSettings]);
 
     const handleOpenChange = (next: boolean) => {
         if (next) {
@@ -579,8 +629,9 @@ export function SettingsModal() {
                 {/* Header */}
                 <div className="px-6 pt-6 pb-4 border-b border-border/40 bg-card/30 backdrop-blur-md">
                     <DialogHeader>
-                        <div className="flex items-center gap-2">
-                            {view !== 'hub' && (
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center gap-2">
+                            {view !== 'hub' && !isSearchingSettings && (
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -610,19 +661,34 @@ export function SettingsModal() {
                                 </Button>
                             )}
                             <DialogTitle className="text-xl font-black tracking-tight text-foreground">
-                                {viewTitle[view]}
-                                {view === 'features' ? (
+                                {isSearchingSettings ? t('settings.views.hub') : viewTitle[view]}
+                                {!isSearchingSettings && view === 'features' ? (
                                     <span className="ml-2 text-sm font-bold text-amber-600 dark:text-amber-400">&middot; {t('settings.views.advancedSuffix')}</span>
-                                ) : view === 'general' ? (
+                                ) : !isSearchingSettings && view === 'general' ? (
                                     <span className="ml-2 text-sm font-bold text-muted-foreground">&middot; {t('settings.views.generalSuffix')}</span>
                                 ) : null}
                             </DialogTitle>
+                            </div>
+                            <SettingsSearchBar
+                                value={settingsQuery}
+                                onChange={setSettingsQuery}
+                                placeholder={t('settings.search.placeholder')}
+                            />
                         </div>
                     </DialogHeader>
                 </div>
 
-                <div key={view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-4">
-                    {view === 'hub' && (
+                <div key={isSearchingSettings ? 'search' : view} className="px-6 py-4 overflow-y-auto flex-1 min-h-0 flex flex-col pb-4">
+                    {isSearchingSettings ? (
+                        <SettingsSearchResults
+                            query={settingsQuery}
+                            results={settingsSearchResults}
+                            onSelect={selectSettingsSearchResult}
+                            groupLabel={(group) => t(`settings.search.groups.${group}`)}
+                            noResults={t('settings.search.noResults', { query: settingsQuery.trim() })}
+                        />
+                    ) : null}
+                    {!isSearchingSettings && view === 'hub' && (
                         <div className="grid gap-3 sm:grid-cols-2 pt-1">
                             <button
                                 type="button"
@@ -716,7 +782,7 @@ export function SettingsModal() {
                         </div>
                     )}
 
-                    {view === 'interface' && (
+                    {!isSearchingSettings && view === 'interface' && (
                         <>
                              <SettingsSectionJumpNav
                                 sections={translateInterfaceNav(INTERFACE_SECTION_NAV, t)}
@@ -1440,7 +1506,7 @@ export function SettingsModal() {
                         </>
                     )}
 
-                    {view === 'general' && (
+                    {!isSearchingSettings && view === 'general' && (
                         <div className="space-y-4">
                             <SettingsSectionJumpNav
                                 sections={translateGeneralNav(GENERAL_SECTION_NAV, t)}
@@ -2017,7 +2083,7 @@ export function SettingsModal() {
                         </div>
                     )}
 
-                    {view === 'pillars' && (
+                    {!isSearchingSettings && view === 'pillars' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
                             <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
                                 <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 pb-1 flex items-center gap-2">
@@ -2139,7 +2205,7 @@ export function SettingsModal() {
                         </div>
                     )}
 
-                    {view === 'features' && (
+                    {!isSearchingSettings && view === 'features' && (
                         <div className="space-y-6 pb-2 -mx-1 px-1">
                             <div className="rounded-2xl border border-border/40 bg-muted/20 p-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2525,11 +2591,11 @@ export function SettingsModal() {
                         </div>
                 )}
 
-                {view === 'faceEnrollments' && canManageSchoolSettings ? (
+                {!isSearchingSettings && view === 'faceEnrollments' && canManageSchoolSettings ? (
                     <SettingsFaceEnrollmentsPanel />
                 ) : null}
 
-                {view === 'device' && (
+                {!isSearchingSettings && view === 'device' && (
                     <div className="space-y-6 pb-2 -mx-1 px-1">
                         <div className="bg-slate-50 dark:bg-slate-800/30 rounded-2xl p-4 border border-slate-100 dark:border-slate-800/50 space-y-4">
                             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-500 dark:text-amber-400 pb-1 flex items-center gap-2">
