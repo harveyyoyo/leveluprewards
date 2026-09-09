@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Camera, CameraOff, Loader2, Sparkles, User } from 'lucide-react';
+import { Camera, CameraOff, Loader2, MapPin, Sparkles, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useFirestore, useFunctions } from '@/firebase';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
+import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
@@ -46,6 +48,13 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
   const [recent, setRecent] = useState<string[]>([]);
   const cameraEnabled = Boolean(settings.libraryCameraScanEnabled);
   const [cameraActive, setCameraActive] = useState(false);
+  const [returnPlacement, setReturnPlacement] = useState<{
+    title: string;
+    shelf: string;
+    callPrefix: string;
+    genreLabel: string;
+    color: string;
+  } | null>(null);
 
   const policy = useMemo(() => getLibraryPolicyFromSettings(settings, categories), [settings, categories]);
 
@@ -57,6 +66,7 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
       setStudentId(id);
       setStudentLoans(loans);
       setRecent([]);
+      setReturnPlacement(null);
       setMessage(`${getStudentName(id)} is ready. Scan a book to borrow or return.`);
       setError(false);
     } catch (e) {
@@ -123,11 +133,25 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
         }
 
         if (result.action === 'checkout') {
+          setReturnPlacement(null);
           const text = `Checked out: ${result.item.name} · Due ${formatDueDate(result.dueAt)}`;
           setMessage(text);
           setRecent(prev => [text, ...prev].slice(0, 8));
           playSound('success');
         } else {
+          const classification = resolveBookClassification(
+            result.item.category,
+            settings.libraryGenreDefinitions,
+            result.item.shelfLocation,
+          );
+          setReturnPlacement({
+            title: result.item.name,
+            shelf: classification.shelfLocation,
+            callPrefix: classification.genre.callPrefix,
+            genreLabel: classification.genre.label,
+            color: classification.color,
+          });
+
           const isOverdue = (result.daysOverdue ?? 0) > 0;
           const daysOverdue = result.daysOverdue ?? 0;
           const feedback = resolveLibraryReturnFeedback(
@@ -325,6 +349,37 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
       >
         {busy ? <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Saving scan…</span> : message}
       </div>
+
+      {returnPlacement && (
+        <div
+          className="rounded-xl border p-3 flex flex-wrap items-center justify-between gap-3 text-sm animate-in fade-in duration-200 shadow-sm"
+          style={{
+            borderColor: `${returnPlacement.color}50`,
+            backgroundColor: `${returnPlacement.color}12`,
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 shrink-0" style={{ color: returnPlacement.color }} />
+            <span className="font-semibold text-foreground">
+              Reshelf &ldquo;{returnPlacement.title}&rdquo; at:
+            </span>
+            <span className="font-black underline" style={{ color: returnPlacement.color }}>
+              {returnPlacement.shelf}
+            </span>
+          </div>
+          <Badge
+            variant="outline"
+            className="font-bold text-xs"
+            style={{
+              borderColor: `${returnPlacement.color}60`,
+              backgroundColor: `${returnPlacement.color}25`,
+              color: returnPlacement.color,
+            }}
+          >
+            {returnPlacement.callPrefix} · {returnPlacement.genreLabel}
+          </Badge>
+        </div>
+      )}
 
       {studentId && mode !== 'return' && (
         <LibraryStudentLoansSummary

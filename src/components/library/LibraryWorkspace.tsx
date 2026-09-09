@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { ArrowLeft, BookOpen, Check, Download, ExternalLink, Loader2, Monitor, MoreHorizontal, Plus, Printer, Search, Sparkles } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, Download, ExternalLink, Loader2, MapPin, Monitor, MoreHorizontal, Plus, Printer, Search, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { usePrint } from '@/components/providers/PrintProvider';
+import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -320,16 +321,49 @@ export function LibraryWorkspace({
           {selectedItems.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-primary/5 p-3"><span className="mr-2 text-sm font-semibold">{selectedItems.length} selected across pages</span><Button size="sm" variant="outline" onClick={() => print(selectedItems)}>Print labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'spine')}>Spine labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'pocket')}>Pocket labels</Button><Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Edit shelf / category</Button><Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button></div>}
           <div className="flex items-center gap-3 px-3 text-sm"><Checkbox aria-label="Select this page" checked={visible.length > 0 && visible.every(i => selected.has(i.id))} onCheckedChange={checked => setSelected(prev => { const next = new Set(prev); visible.forEach(i => checked ? next.add(i.id) : next.delete(i.id)); return next; })} />Select this page<span className="ml-auto text-muted-foreground">{catalog.length} copies</span></div>
           {!catalogLoading && !catalog.length ? <div className="rounded-xl border border-dashed p-10 text-center"><BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><h3 className="font-semibold">{search || status !== 'all' ? 'No matching copies' : 'Add your first books'}</h3><p className="mt-2 text-sm text-muted-foreground">{search || status !== 'all' ? 'Try another search or show all copies.' : 'Scan an ISBN or enter a title to start your catalog.'}</p></div> : null}
-          <ul className="space-y-2">{visible.map(item => <li key={item.id} className="flex items-start gap-3 rounded-xl border bg-background p-4">
-            <Checkbox className="mt-1" aria-label={`Select ${item.name} ${item.upc}`} checked={selected.has(item.id)} onCheckedChange={checked => setSelected(prev => { const next = new Set(prev); checked ? next.add(item.id) : next.delete(item.id); return next; })} />
-            <div className="min-w-0 flex-1"><button className="text-left font-semibold hover:underline" onClick={() => { setEditing(item); setEditOpen(true); }}>{item.name}</button><p className="text-sm text-muted-foreground">{item.author || 'Author not recorded'}{item.shelfLocation ? ` · Shelf ${item.shelfLocation}` : ''}</p><p className="mt-1 break-all font-mono text-xs text-muted-foreground">{item.upc}{item.copyNumber ? ` · Copy ${item.copyNumber}` : ''}</p>
-              <div className="mt-2 flex flex-wrap gap-2"><Badge variant={item.condition === 'lost' || item.condition === 'damaged' ? 'destructive' : 'secondary'}>{item.condition && item.condition !== 'good' ? item.condition : item.status === 'checked_out' ? 'On loan' : 'Available'}</Badge>{item.checkedOutTo && <span className="text-sm">{getName(item.checkedOutTo)} · Due {formatDueDate(item.dueAt)}</span>}</div>
-            </div>
-            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={busy} aria-label={`Actions for ${item.name}`}><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => { setEditing(item); setEditOpen(true); }}>Edit copy</DropdownMenuItem><DropdownMenuItem onSelect={() => void run(async () => { await save({ name: item.name, upc: '', author: item.author, isbn: item.isbn, category: item.category, shelfLocation: item.shelfLocation }); })}>Add another copy</DropdownMenuItem><DropdownMenuItem onSelect={() => print([item])}>Print label</DropdownMenuItem>
-              {item.status === 'checked_out' ? <><DropdownMenuItem onSelect={() => void itemAction(item, 'return')}>Return book</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'renew')}>Renew loan</DropdownMenuItem></> : <><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'lost' })}>Mark lost</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'damaged' })}>Mark damaged</DropdownMenuItem>{item.condition && item.condition !== 'good' && <DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'good' })}>Mark available</DropdownMenuItem>}<DropdownMenuItem onSelect={() => void itemAction(item, 'archive')}>Archive copy</DropdownMenuItem></>}
-            </DropdownMenuContent></DropdownMenu>
-          </li>)}</ul>
+          <ul className="space-y-2">{visible.map(item => {
+            const classification = resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation);
+            return (
+              <li
+                key={item.id}
+                className="flex items-start gap-3 rounded-xl border bg-background p-4 transition-all"
+                style={{
+                  borderLeftColor: classification.color,
+                  borderLeftWidth: '3.5px',
+                }}
+              >
+                <Checkbox className="mt-1" aria-label={`Select ${item.name} ${item.upc}`} checked={selected.has(item.id)} onCheckedChange={checked => setSelected(prev => { const next = new Set(prev); checked ? next.add(item.id) : next.delete(item.id); return next; })} />
+                <div className="min-w-0 flex-1">
+                  <button className="text-left font-semibold hover:underline" onClick={() => { setEditing(item); setEditOpen(true); }}>{item.name}</button>
+                  <p className="text-sm text-muted-foreground">{item.author || 'Author not recorded'}</p>
+                  <p className="mt-1 break-all font-mono text-xs text-muted-foreground">{item.upc}{item.copyNumber ? ` · Copy ${item.copyNumber}` : ''}</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className="font-bold text-xs px-2 py-0.5"
+                      style={{
+                        backgroundColor: `${classification.color}15`,
+                        borderColor: `${classification.color}50`,
+                        color: classification.color,
+                      }}
+                    >
+                      {classification.genre.callPrefix} · {classification.genre.label}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
+                      <MapPin className="h-3 w-3 inline text-primary/70" />
+                      {classification.shelfLocation}
+                    </span>
+                    <Badge variant={item.condition === 'lost' || item.condition === 'damaged' ? 'destructive' : 'secondary'}>{item.condition && item.condition !== 'good' ? item.condition : item.status === 'checked_out' ? 'On loan' : 'Available'}</Badge>
+                    {item.checkedOutTo && <span className="text-sm">{getName(item.checkedOutTo)} · Due {formatDueDate(item.dueAt)}</span>}
+                  </div>
+                </div>
+                <DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon" disabled={busy} aria-label={`Actions for ${item.name}`}><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => { setEditing(item); setEditOpen(true); }}>Edit copy</DropdownMenuItem><DropdownMenuItem onSelect={() => void run(async () => { await save({ name: item.name, upc: '', author: item.author, isbn: item.isbn, category: item.category, shelfLocation: item.shelfLocation }); })}>Add another copy</DropdownMenuItem><DropdownMenuItem onSelect={() => print([item])}>Print label</DropdownMenuItem>
+                  {item.status === 'checked_out' ? <><DropdownMenuItem onSelect={() => void itemAction(item, 'return')}>Return book</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'renew')}>Renew loan</DropdownMenuItem></> : <><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'lost' })}>Mark lost</DropdownMenuItem><DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'damaged' })}>Mark damaged</DropdownMenuItem>{item.condition && item.condition !== 'good' && <DropdownMenuItem onSelect={() => void itemAction(item, 'condition', { condition: 'good' })}>Mark available</DropdownMenuItem>}<DropdownMenuItem onSelect={() => void itemAction(item, 'archive')}>Archive copy</DropdownMenuItem></>}
+                </DropdownMenuContent></DropdownMenu>
+              </li>
+            );
+          })}</ul>
           {pagination(Math.min(page, pageCount), pageCount, setPage)}
         </TabsContent>
         <TabsContent value="loans" className="mt-6 space-y-4">

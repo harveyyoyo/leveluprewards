@@ -2,7 +2,7 @@
 export function isPresentationRoute(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return (
-    /^\/[^/]+\/(library|librarian)\/?$/.test(pathname) ||
+    pathname.includes('/library/kiosk') ||
     pathname.includes('/houses-realm') ||
     pathname.includes('/classroom-realm') ||
     pathname.includes('/house-sorting') ||

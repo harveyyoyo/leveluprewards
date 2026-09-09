@@ -8,11 +8,17 @@ import {
   Camera,
   CheckCircle2,
   Coins,
+  Layers,
+  MapPin,
   MessageSquare,
+  Palette,
   Play,
+  Plus,
   Printer,
+  RotateCcw,
   ScanBarcode,
   Sparkles,
+  Trash2,
   Volume2,
   VolumeX,
 } from 'lucide-react';
@@ -22,6 +28,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  DEFAULT_LIBRARY_GENRES,
+  DEFAULT_LIBRARY_PLACEMENT_ZONES,
+  getActiveLibraryGenres,
+  generateGenreBarcode,
+  type LibraryGenreConfig,
+  type BarcodeNumberScheme,
+} from '@/lib/library/libraryClassification';
 import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
@@ -50,6 +64,7 @@ import { Badge } from '@/components/ui/badge';
 
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {
   const { settings, updateSettings } = useSettings();
+  const { toast } = useToast();
   const [testingSound, setTestingSound] = useState<string | null>(null);
   const categoryList = categories ?? [];
   const rewardMode = resolveLibraryRewardMode(settings);
@@ -104,6 +119,72 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const autoLookupGoogleBooks = settings.libraryAutoLookupGoogleBooks !== false;
   const notifyTeacherOnOverdue = settings.libraryNotifyTeacherOnOverdue !== false;
   const milestonesOn = settings.libraryReadingMilestonesEnabled !== false;
+
+  const barcodeScheme: BarcodeNumberScheme = settings.libraryBarcodeNumberScheme ?? 'genre_code';
+  const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
+  const [newGenreName, setNewGenreName] = useState('');
+  const [newGenrePrefix, setNewGenrePrefix] = useState('');
+  const [newGenreColor, setNewGenreColor] = useState('#2563EB');
+  const [newGenreShelf, setNewGenreShelf] = useState('');
+  const [isAddingGenre, setIsAddingGenre] = useState(false);
+
+  const GENRE_COLOR_PALETTE = [
+    '#2563EB', // Sapphire Blue
+    '#059669', // Emerald Green
+    '#D97706', // Amber Gold
+    '#6366F1', // Indigo
+    '#9333EA', // Purple
+    '#0D9488', // Teal
+    '#EA580C', // Orange
+    '#E11D48', // Rose
+    '#CA8A04', // Yellow
+    '#0284C7', // Sky
+    '#475569', // Slate
+    '#EC4899', // Pink
+    '#84CC16', // Lime
+    '#64748B', // Neutral
+  ];
+
+  const handleUpdateGenre = (id: string, patch: Partial<LibraryGenreConfig>) => {
+    const next = genres.map((g) => (g.id === id ? { ...g, ...patch } : g));
+    updateSettings({ libraryGenreDefinitions: next });
+    toast({ title: 'Genre updated' });
+  };
+
+  const handleAddGenre = () => {
+    if (!newGenreName.trim()) return;
+    const cleanPrefix = (newGenrePrefix.trim() || newGenreName.slice(0, 3)).toUpperCase();
+    const newId = `custom_${Date.now()}`;
+    const newGenre: LibraryGenreConfig = {
+      id: newId,
+      label: newGenreName.trim(),
+      callPrefix: cleanPrefix,
+      dewey: '100',
+      color: newGenreColor || '#2563EB',
+      defaultShelf: newGenreShelf.trim() || 'Main Stacks',
+    };
+    const next = [...genres, newGenre];
+    updateSettings({ libraryGenreDefinitions: next });
+    setNewGenreName('');
+    setNewGenrePrefix('');
+    setNewGenreShelf('');
+    setIsAddingGenre(false);
+    toast({ title: `Genre "${newGenre.label}" added` });
+  };
+
+  const handleRemoveGenre = (id: string) => {
+    const next = genres.filter((g) => g.id !== id);
+    updateSettings({ libraryGenreDefinitions: next });
+    toast({ title: 'Genre removed' });
+  };
+
+  const handleResetGenres = () => {
+    updateSettings({
+      libraryGenreDefinitions: undefined,
+      libraryBarcodeNumberScheme: 'genre_code',
+    });
+    toast({ title: 'Reset to standard library genres & colors' });
+  };
 
   return (
     <div className="space-y-6">
@@ -1000,7 +1081,322 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
         </CardContent>
       </Card>
 
-      {/* 5. Alerts & Behavior Feedback */}
+      {/* 5. Genre Classification, Barcode Colors & Shelving Placement */}
+      <Card className="border-dashed shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                <Palette className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  Genre Color Barcodes &amp; Library Shelf Placement
+                </CardTitle>
+                <CardDescription>
+                  Color-code barcodes by genre, format numbers logically (e.g. FIC-823-001), and designate where books belong in the library.
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 text-xs rounded-xl"
+                onClick={handleResetGenres}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Reset Standards
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-6 pt-1">
+          {/* Barcode Numbering Scheme */}
+          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="lib-barcode-scheme" className="text-sm font-bold flex items-center gap-2">
+                  <ScanBarcode className="h-4 w-4 text-primary" />
+                  Barcode Numbering Scheme
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Format copy barcodes so numbers reflect the genre and Dewey category.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Select
+                  value={barcodeScheme}
+                  onValueChange={(v) =>
+                    updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })
+                  }
+                >
+                  <SelectTrigger id="lib-barcode-scheme" className="w-[280px] rounded-xl font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="genre_code">
+                      Genre Code (e.g. FIC-823-0001) · Recommended
+                    </SelectItem>
+                    <SelectItem value="dewey_numeric">
+                      Dewey Decimal (e.g. 823-0001)
+                    </SelectItem>
+                    <SelectItem value="prefix_genre">
+                      School Prefix (e.g. LIB-FIC-0001)
+                    </SelectItem>
+                    <SelectItem value="classic_random">
+                      Classic Random (e.g. LIB8A3F9B2C)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Scheme Visual Sample */}
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/50 text-xs">
+              <span className="text-muted-foreground font-medium">Live format sample:</span>
+              <Badge
+                variant="outline"
+                className="font-mono text-xs px-2 py-0.5"
+                style={{
+                  borderColor: '#2563EB',
+                  backgroundColor: '#2563EB15',
+                  color: '#2563EB',
+                }}
+              >
+                {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 142 })}
+              </Badge>
+              <span className="text-muted-foreground">· Fiction</span>
+
+              <Badge
+                variant="outline"
+                className="font-mono text-xs px-2 py-0.5 ml-2"
+                style={{
+                  borderColor: '#059669',
+                  backgroundColor: '#05966915',
+                  color: '#059669',
+                }}
+              >
+                {generateGenreBarcode({ category: 'Science', scheme: barcodeScheme, sequenceNumber: 88 })}
+              </Badge>
+              <span className="text-muted-foreground">· Science</span>
+
+              <Badge
+                variant="outline"
+                className="font-mono text-xs px-2 py-0.5 ml-2"
+                style={{
+                  borderColor: '#EA580C',
+                  backgroundColor: '#EA580C15',
+                  color: '#EA580C',
+                }}
+              >
+                {generateGenreBarcode({ category: 'Graphic Novel', scheme: barcodeScheme, sequenceNumber: 23 })}
+              </Badge>
+              <span className="text-muted-foreground">· Graphic Novels</span>
+            </div>
+          </div>
+
+          {/* Genre & Shelving Placement Table */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Library Placement &amp; Genre Colors
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Assign each genre a distinct visual color and physical library location. When books are returned, the screen will route them to this shelf!
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-xl gap-1.5 text-xs"
+                onClick={() => setIsAddingGenre(!isAddingGenre)}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add Genre
+              </Button>
+            </div>
+
+            {/* Add Genre Form */}
+            {isAddingGenre && (
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="font-semibold text-xs text-primary flex items-center gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Create New Library Genre &amp; Shelf Location
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <Label className="text-xs">Genre Name</Label>
+                    <Input
+                      placeholder="e.g. Manga, Coding, Poetry"
+                      value={newGenreName}
+                      onChange={(e) => setNewGenreName(e.target.value)}
+                      className="rounded-xl mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Call Prefix (2-4 letters)</Label>
+                    <Input
+                      placeholder="e.g. MAN, COD, POE"
+                      value={newGenrePrefix}
+                      onChange={(e) => setNewGenrePrefix(e.target.value.toUpperCase())}
+                      className="rounded-xl mt-1 uppercase"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Shelf / Placement Location</Label>
+                    <Input
+                      placeholder="e.g. Room 204 - Shelf B"
+                      value={newGenreShelf}
+                      onChange={(e) => setNewGenreShelf(e.target.value)}
+                      className="rounded-xl mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Accent Color</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div
+                        className="h-9 w-9 rounded-xl border shadow-inner shrink-0"
+                        style={{ backgroundColor: newGenreColor }}
+                      />
+                      <div className="flex flex-wrap gap-1 flex-1">
+                        {GENRE_COLOR_PALETTE.slice(0, 6).map((hex) => (
+                          <button
+                            key={hex}
+                            type="button"
+                            onClick={() => setNewGenreColor(hex)}
+                            className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-125"
+                            style={{ backgroundColor: hex }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button size="sm" variant="ghost" onClick={() => setIsAddingGenre(false)}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleAddGenre} disabled={!newGenreName.trim()}>
+                    Save Genre
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Genres List */}
+            <div className="rounded-2xl border divide-y overflow-hidden bg-card">
+              {genres.map((g) => {
+                const sampleBarcode = generateGenreBarcode({
+                  category: g.label,
+                  customGenres: genres,
+                  scheme: barcodeScheme,
+                  sequenceNumber: 1,
+                });
+
+                return (
+                  <div
+                    key={g.id}
+                    className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-muted/15 transition-colors"
+                  >
+                    {/* Left: Color dot, Name, Prefix */}
+                    <div className="flex items-center gap-3 min-w-[220px]">
+                      {/* Color Picker Dropdown / Palette */}
+                      <div className="relative group shrink-0">
+                        <div
+                          className="h-7 w-7 rounded-lg border shadow-sm flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                          style={{ backgroundColor: g.color }}
+                          title="Click to pick color"
+                        >
+                          {g.callPrefix.slice(0, 2)}
+                        </div>
+                        {/* Quick Color Swatch Hover Bar */}
+                        <div className="absolute left-0 top-9 hidden group-hover:flex z-50 p-1.5 bg-popover border rounded-xl shadow-xl gap-1">
+                          {GENRE_COLOR_PALETTE.map((hex) => (
+                            <button
+                              key={hex}
+                              type="button"
+                              onClick={() => handleUpdateGenre(g.id, { color: hex })}
+                              className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-125"
+                              style={{ backgroundColor: hex }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5 font-bold text-sm">
+                          <span>{g.label}</span>
+                          <Badge
+                            variant="outline"
+                            className="font-mono text-[10px] px-1.5 py-0"
+                            style={{
+                              borderColor: `${g.color}60`,
+                              backgroundColor: `${g.color}15`,
+                              color: g.color,
+                            }}
+                          >
+                            {g.callPrefix}
+                          </Badge>
+                        </div>
+                        <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
+                          <span>Barcode: {sampleBarcode}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Middle: Physical Shelf Placement */}
+                    <div className="flex-1 max-w-md">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <Input
+                          value={g.defaultShelf}
+                          placeholder="Placement location in library..."
+                          onChange={(e) => handleUpdateGenre(g.id, { defaultShelf: e.target.value })}
+                          className="h-8 text-xs rounded-xl bg-background"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right: Preview badge & Delete */}
+                    <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
+                      <div
+                        className="px-2 py-1 rounded-md text-[11px] font-bold border shrink-0 flex items-center gap-1"
+                        style={{
+                          backgroundColor: `${g.color}15`,
+                          borderColor: `${g.color}40`,
+                          color: g.color,
+                        }}
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
+                        <span>{g.defaultShelf.split('-')[0]?.trim() || 'Shelf'}</span>
+                      </div>
+
+                      {genres.length > 3 && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleRemoveGenre(g.id)}
+                          title="Remove genre"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 6. Alerts & Behavior Feedback */}
       <Card className="border-dashed shadow-sm">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">

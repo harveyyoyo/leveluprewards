@@ -12,6 +12,7 @@ import {
   CornerDownLeft,
   Loader2,
   Lock,
+  MapPin,
   Maximize2,
   Minimize2,
   RotateCcw,
@@ -20,6 +21,7 @@ import {
   User,
   X,
 } from 'lucide-react';
+import { resolveBookClassification, type LibraryGenreConfig } from '@/lib/library/libraryClassification';
 import { collection, query, limit } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
@@ -106,6 +108,11 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [lastReturnBorrower, setLastReturnBorrower] = useState<string | null>(null);
   const [lastReturnFeedback, setLastReturnFeedback] = useState<LibraryReturnFeedback | null>(null);
+  const [lastReturnPlacement, setLastReturnPlacement] = useState<{
+    shelf: string;
+    genre: LibraryGenreConfig;
+    color: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const scanLock = useRef(false);
   const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>('auto');
@@ -202,6 +209,7 @@ export function LibraryStudentSelfCheckoutPortal({
     setLastAction(null);
     setLastReturnBorrower(null);
     setLastReturnFeedback(null);
+    setLastReturnPlacement(null);
     setStep('student');
     setMode('auto');
     setScanError(null);
@@ -251,6 +259,17 @@ export function LibraryStudentSelfCheckoutPortal({
           setStep('success');
           await refreshStudentLoans(studentId);
         } else if (result.action === 'return') {
+          const classification = resolveBookClassification(
+            result.item.category,
+            settings.libraryGenreDefinitions,
+            result.item.shelfLocation,
+          );
+          setLastReturnPlacement({
+            shelf: classification.shelfLocation,
+            genre: classification.genre,
+            color: classification.color,
+          });
+
           const isOverdue = (result.daysOverdue ?? 0) > 0;
           const daysOverdue = result.daysOverdue ?? 0;
           const feedback = resolveLibraryReturnFeedback(
@@ -308,7 +327,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans],
+    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel],
   );
 
   // Quick Return for Drop Box mode (no student card swipe needed)
@@ -354,6 +373,16 @@ export function LibraryStudentSelfCheckoutPortal({
 
         setLastBookTitle(bookItem.name);
         setLastAction('return');
+        const classification = resolveBookClassification(
+          bookItem.category,
+          settings.libraryGenreDefinitions,
+          bookItem.shelfLocation,
+        );
+        setLastReturnPlacement({
+          shelf: classification.shelfLocation,
+          genre: classification.genre,
+          color: classification.color,
+        });
         setLastReturnBorrower(bookItem.checkedOutTo ? getStudentName(bookItem.checkedOutTo) : null);
         setStep('success');
         toast({
@@ -371,7 +400,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, libraryPolicy, functions, playSound, toast, getStudentName],
+    [firestore, schoolId, libraryPolicy, functions, playSound, toast, getStudentName, settings],
   );
 
   const processStudent = useCallback(
@@ -743,6 +772,34 @@ export function LibraryStudentSelfCheckoutPortal({
               <p className="text-xs sm:text-sm leading-relaxed max-w-md mx-auto font-medium">
                 &ldquo;{lastReturnFeedback.message}&rdquo;
               </p>
+            </div>
+          )}
+
+          {step === 'success' && lastAction === 'return' && lastReturnPlacement && (
+            <div
+              className="w-full rounded-2xl border-2 p-3.5 text-center space-y-1 shadow-sm animate-in fade-in duration-200"
+              style={{
+                borderColor: `${lastReturnPlacement.color}60`,
+                backgroundColor: `${lastReturnPlacement.color}15`,
+              }}
+            >
+              <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base font-bold">
+                <MapPin className="h-4 w-4 shrink-0" style={{ color: lastReturnPlacement.color }} />
+                <span className="text-foreground">Please return book to:</span>
+                <span className="font-black underline" style={{ color: lastReturnPlacement.color }}>
+                  {lastReturnPlacement.shelf}
+                </span>
+                <span
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full border"
+                  style={{
+                    borderColor: `${lastReturnPlacement.color}60`,
+                    backgroundColor: `${lastReturnPlacement.color}25`,
+                    color: lastReturnPlacement.color,
+                  }}
+                >
+                  {lastReturnPlacement.genre.callPrefix} · {lastReturnPlacement.genre.label}
+                </span>
+              </div>
             </div>
           )}
         </div>

@@ -28,6 +28,7 @@ import {
   LibraryBarcodeReaderField,
   type LibraryScanFeedback,
 } from './LibraryBarcodeReaderField';
+import { resolveBookClassification } from '@/lib/library/libraryClassification';
 
 type IntakeRowStatus =
   | 'lookup'
@@ -44,6 +45,7 @@ type IntakeRow = {
   title: string;
   author: string;
   category: string;
+  shelfLocation?: string;
   status: IntakeRowStatus;
   error?: string;
   copies?: number;
@@ -159,11 +161,13 @@ export function LibraryBookIntakeScanner({
         const { hit, meta } = await fetchCatalogHitByIsbn(scannedCode);
         if (hit?.title) {
           const isAiGuess = hit.source === 'ai';
+          const classification = resolveBookClassification(hit.category);
           upsertRow({
             id,
             title: hit.title,
             author: hit.author ?? '',
-            category: hit.category ?? '',
+            category: hit.category ?? classification.genre.label,
+            shelfLocation: classification.shelfLocation,
             status: isAiGuess ? 'ai_review' : 'ready',
           });
           setScanFeedback({
@@ -281,6 +285,7 @@ export function LibraryBookIntakeScanner({
           author: row.author.trim() || undefined,
           isbn: row.isbn,
           category: row.category.trim() || undefined,
+          shelfLocation: row.shelfLocation?.trim() || undefined,
         });
         upsertRow({ id: row.id, status: 'saved' });
         saved += 1;
@@ -446,6 +451,43 @@ export function LibraryBookIntakeScanner({
                   placeholder="Author"
                   disabled={row.status === 'saved' || row.status === 'lookup'}
                   className="h-8 text-sm rounded-lg"
+                />
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    value={row.category}
+                    onChange={(e) => {
+                      const newCat = e.target.value;
+                      const res = resolveBookClassification(newCat);
+                      upsertRow({
+                        id: row.id,
+                        category: newCat,
+                        shelfLocation: row.shelfLocation || res.shelfLocation,
+                      });
+                    }}
+                    placeholder="Genre"
+                    disabled={row.status === 'saved' || row.status === 'lookup'}
+                    className="h-8 text-xs rounded-lg flex-1"
+                  />
+                  {row.category ? (
+                    <Badge
+                      variant="outline"
+                      className="font-mono text-[10px] shrink-0 px-1.5 py-0.5"
+                      style={{
+                        borderColor: `${resolveBookClassification(row.category).color}60`,
+                        backgroundColor: `${resolveBookClassification(row.category).color}15`,
+                        color: resolveBookClassification(row.category).color,
+                      }}
+                    >
+                      {resolveBookClassification(row.category).genre.callPrefix}
+                    </Badge>
+                  ) : null}
+                </div>
+                <Input
+                  value={row.shelfLocation ?? ''}
+                  onChange={(e) => upsertRow({ id: row.id, shelfLocation: e.target.value })}
+                  placeholder="Shelf placement"
+                  disabled={row.status === 'saved' || row.status === 'lookup'}
+                  className="h-8 text-xs rounded-lg"
                 />
                 <Input
                   value={row.isbn}

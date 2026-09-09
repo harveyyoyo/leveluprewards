@@ -43,6 +43,7 @@ import {
     type LegacyModeSignals,
 } from '@/lib/legacyMode';
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
+import type { LibraryGenreConfig, BarcodeNumberScheme } from '@/lib/library/libraryClassification';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
@@ -550,6 +551,12 @@ interface Settings {
     libraryLabelFormat?: 'sticker' | 'spine' | 'pocket';
     /** Barcode standard on printed labels: CODE128 or QR. */
     libraryBarcodeFormat?: 'CODE128' | 'QR';
+    /** Barcode numbering scheme: 'genre_code' (FIC-823-0001), 'dewey_numeric' (823-0001), 'prefix_genre' (LIB-FIC-0001), or 'classic_random'. */
+    libraryBarcodeNumberScheme?: BarcodeNumberScheme;
+    /** Configured library genres with colors, call prefixes, and shelf placement. */
+    libraryGenreDefinitions?: LibraryGenreConfig[];
+    /** List of physical library placement sections/zones for shelving. */
+    libraryPlacementZones?: string[];
     /** Automatically lookup book details from Google Books / OpenLibrary on ISBN scan. */
     libraryAutoLookupGoogleBooks?: boolean;
 
@@ -783,6 +790,7 @@ const defaultSettings: Settings = {
     libraryDefaultCategory: 'General',
     libraryLabelFormat: 'sticker',
     libraryBarcodeFormat: 'CODE128',
+    libraryBarcodeNumberScheme: 'genre_code',
     libraryAutoLookupGoogleBooks: true,
     libraryOverdueWarningDays: 3,
     libraryNotifyTeacherOnOverdue: true,
