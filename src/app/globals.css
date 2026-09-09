@@ -1966,10 +1966,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   height: 100%;
   display: block;
   object-fit: contain;
-  /* Most uploaded logos are opaque PNGs with a white square backdrop, not
-     true transparency. Multiply blends white pixels into the card's
-     background so they read as transparent without touching the asset. */
-  mix-blend-mode: multiply;
 }
 .print-id-app-text {
   display: flex;
@@ -2019,7 +2015,6 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   height: 100%;
   display: block;
   object-fit: contain;
-  mix-blend-mode: multiply;
 }
 .print-id-header {
   font-size: calc(10px * var(--print-id-font-scale));

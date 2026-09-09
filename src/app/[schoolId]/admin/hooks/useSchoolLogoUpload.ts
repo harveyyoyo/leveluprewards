@@ -17,6 +17,7 @@ import {
   LOGO_UPLOAD_MAX_BYTES,
   resolveLogoContentType,
 } from '@/lib/logoUpload';
+import { makeLogoBackgroundTransparent } from '@/lib/logoTransparency';
 
 type ToastFn = ReturnType<typeof useToast>['toast'];
 type PlaySoundFn = (sound: SoundEffect) => void;
@@ -95,6 +96,13 @@ export function useSchoolLogoUpload({
         setIsLogoUploading(true);
         toast({ title: 'Uploading logo…', description: 'Please wait.' });
 
+        // SVGs are already vector/scalable — only raster logos need their
+        // white background cleared (and only PNG can carry the result's
+        // transparency).
+        const processedBlob = isSvgLogoFile(blob, fileName)
+          ? blob
+          : await makeLogoBackgroundTransparent(blob);
+
         const imageBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -103,7 +111,7 @@ export function useSchoolLogoUpload({
             resolve(base64 || '');
           };
           reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(blob);
+          reader.readAsDataURL(processedBlob);
         });
 
         const uploadLogo = httpsCallable<
@@ -113,7 +121,7 @@ export function useSchoolLogoUpload({
         const res = await uploadLogo({
           schoolId,
           imageBase64,
-          contentType: resolveLogoContentType(blob, fileName) || 'image/jpeg',
+          contentType: resolveLogoContentType(processedBlob, fileName) || 'image/jpeg',
         });
 
         const data = res.data;
