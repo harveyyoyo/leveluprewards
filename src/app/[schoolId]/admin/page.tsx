@@ -446,6 +446,8 @@ function AdminDashboardInner() {
     handleLogoUpload,
     handleCropComplete,
     handleRemoveLogo,
+    isFixingLogoBackground,
+    handleFixLogoBackground,
   } = useSchoolLogoUpload({
     schoolId,
     schoolDocRef,
@@ -2319,6 +2321,8 @@ function AdminDashboardInner() {
               handleLogoUpload={handleLogoUpload}
               handleRemoveLogo={handleRemoveLogo}
               isLogoUploading={isLogoUploading}
+              handleFixLogoBackground={handleFixLogoBackground}
+              isFixingLogoBackground={isFixingLogoBackground}
               toast={toast}
               playSound={(s: any) => playSound(s)}
             />

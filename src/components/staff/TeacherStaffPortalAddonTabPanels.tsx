@@ -154,6 +154,8 @@ export function TeacherStaffPortalAddonTabPanels({
     handleLogoUpload,
     handleCropComplete,
     handleRemoveLogo,
+    isFixingLogoBackground,
+    handleFixLogoBackground,
   } = useSchoolLogoUpload({
     schoolId,
     schoolDocRef,
@@ -426,6 +428,8 @@ export function TeacherStaffPortalAddonTabPanels({
             handleLogoUpload={handleLogoUpload}
             handleRemoveLogo={handleRemoveLogo}
             isLogoUploading={isLogoUploading}
+            handleFixLogoBackground={handleFixLogoBackground}
+            isFixingLogoBackground={isFixingLogoBackground}
             toast={toast}
             playSound={(s) => playSound(s)}
           />
