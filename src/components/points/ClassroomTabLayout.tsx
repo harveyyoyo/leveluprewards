@@ -115,7 +115,8 @@ function ClassroomTabLayoutInner({
 
   const contentCardClassName = cn(
     'w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm [contain:layout_paint]',
-    realmMode && 'border-white/12 bg-white/[0.06] text-white shadow-none',
+    realmMode &&
+      'classroom-realm-paper border-stone-300/80 bg-[#f7f4ee] text-foreground shadow-xl shadow-black/25',
   );
 
   const headerRow =

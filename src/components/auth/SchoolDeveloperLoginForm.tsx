@@ -894,6 +894,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   <span>{t('auth.tryDemoSchool')}</span>
                   <span className="text-muted-foreground/60 group-open:rotate-180 transition-transform">▾</span>
                 </summary>
+                <p className="px-4 py-2 text-xs text-muted-foreground">Demo school passcode: <strong className="font-mono text-foreground">1234</strong></p>
                 <div className="px-3 pb-3 pt-1 flex gap-2">
                   <button
                     type="button"

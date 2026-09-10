@@ -45,76 +45,72 @@ export async function applyClassroomPointsToStudents(
     return { success: false, message: 'No students selected.', count: 0 };
   }
 
-  const uniqueIds = [...new Set(studentIds)].filter((id) => id.trim().length > 0 && !id.includes('/'));
+  const uniqueIds = [...new Set(studentIds.map((id) => id.trim()))].filter((id) => id.trim().length > 0 && !id.includes('/'));
   if (uniqueIds.length === 0) {
     return { success: false, message: 'No valid students selected.', count: 0 };
   }
+  if (uniqueIds.length > 120) {
+    return { success: false, message: 'Select at most 120 students per award.', count: 0 };
+  }
   const desc = classroomActivityDescription(description);
-  const chunkSize = 80;
-  let processedCount = 0;
 
   try {
-    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-      const chunkIds = uniqueIds.slice(i, i + chunkSize);
-      // Count inside the transaction resets on retry; only commit the final value.
-      const chunkCount = await runTransaction(firestore, async (transaction) => {
-        let committedCount = 0;
-        const studentRefs = chunkIds.map((id) =>
-          doc(firestore, 'schools', schoolId, 'students', id),
+    const processedCount = await runTransaction(firestore, async (transaction) => {
+      let committedCount = 0;
+      const studentRefs = uniqueIds.map((id) =>
+        doc(firestore, 'schools', schoolId, 'students', id),
+      );
+      const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
+
+      for (const studentDoc of studentDocs) {
+        if (!studentDoc.exists()) continue;
+        const studentData = studentDoc.data() as Student;
+        const now = Date.now();
+        const current = studentData.classroomPoints ?? 0;
+        const next = Math.max(0, current + signedDelta);
+        // Use the clamped delta so period totals stay in sync with the balance.
+        const appliedDelta = next - current;
+        const periodUpdate = applyPointsByPeriod(
+          studentData.classroomPointsByPeriod,
+          appliedDelta,
+          now,
         );
-        const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
 
-        for (const studentDoc of studentDocs) {
-          if (!studentDoc.exists()) continue;
-          const studentData = studentDoc.data() as Student;
-          const now = Date.now();
-          const current = studentData.classroomPoints ?? 0;
-          const next = Math.max(0, current + signedDelta);
-          // Use the clamped delta so period totals stay in sync with the balance.
-          const appliedDelta = next - current;
-          const periodUpdate = applyPointsByPeriod(
-            studentData.classroomPointsByPeriod,
-            appliedDelta,
-            now,
-          );
+        transaction.update(studentDoc.ref, {
+          classroomPoints: next,
+          classroomPointsByPeriod: periodUpdate,
+          updatedAt: now,
+        });
 
-          transaction.update(studentDoc.ref, {
-            classroomPoints: next,
-            classroomPointsByPeriod: periodUpdate,
-            updatedAt: now,
-          });
+        const activityRef = doc(collection(studentDoc.ref, 'activities'));
+        transaction.set(activityRef, {
+          desc,
+          amount: appliedDelta,
+          date: now,
+          classroomOnly: true,
+        });
 
-          const activityRef = doc(collection(studentDoc.ref, 'activities'));
-          transaction.set(activityRef, {
-            desc,
-            amount: signedDelta,
-            date: now,
-            classroomOnly: true,
-          });
+        const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
+        transaction.set(logRef, {
+          studentId: studentDoc.id,
+          studentName:
+            [studentData.nickname || studentData.firstName, studentData.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim() || studentDoc.id,
+          classId: meta.classId ?? studentData.classId ?? null,
+          className: meta.className ?? null,
+          teacherId: meta.teacherId,
+          teacherName: meta.teacherName,
+          points: appliedDelta,
+          description: desc,
+          createdAt: now,
+        });
 
-          const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
-          transaction.set(logRef, {
-            studentId: studentDoc.id,
-            studentName:
-              [studentData.nickname || studentData.firstName, studentData.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim() || studentDoc.id,
-            classId: meta.classId ?? studentData.classId ?? null,
-            className: meta.className ?? null,
-            teacherId: meta.teacherId,
-            teacherName: meta.teacherName,
-            points: signedDelta,
-            description: desc,
-            createdAt: now,
-          });
-
-          committedCount += 1;
-        }
-        return committedCount;
-      });
-      processedCount += chunkCount;
-    }
+        committedCount += 1;
+      }
+      return committedCount;
+    });
 
     return {
       success: processedCount > 0,
@@ -156,114 +152,112 @@ export async function applyRewardsPointsToStudents(
     return { success: false, message: 'A description is required.', count: 0 };
   }
 
-  const uniqueIds = [...new Set(studentIds)].filter((id) => id.trim().length > 0 && !id.includes('/'));
+  const uniqueIds = [...new Set(studentIds.map((id) => id.trim()))].filter((id) => id.trim().length > 0 && !id.includes('/'));
   if (uniqueIds.length === 0) {
     return { success: false, message: 'No valid students selected.', count: 0 };
   }
+  if (uniqueIds.length > 120) {
+    return { success: false, message: 'Select at most 120 students per award.', count: 0 };
+  }
 
   const logDesc = classroomActivityDescription(desc);
-  const chunkSize = signedDelta > 0 ? 80 : 200;
-  let processedCount = 0;
+
   const rollupHousePoints = options?.rollupHousePoints === true;
 
   try {
-    for (let i = 0; i < uniqueIds.length; i += chunkSize) {
-      const chunkIds = uniqueIds.slice(i, i + chunkSize);
-      // Count inside the transaction resets on retry; only commit the final value.
-      const chunkCount = await runTransaction(firestore, async (transaction) => {
-        let committedCount = 0;
-        const studentRefs = chunkIds.map((id) =>
-          doc(firestore, 'schools', schoolId, 'students', id),
-        );
-        const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
-        const houseDeltas = new Map<string, number>();
-        const houseSnaps = rollupHousePoints
-          ? await readHouseRollupSnaps(
-              transaction,
-              firestore,
-              schoolId,
-              studentDocs
-                .filter((d) => d.exists())
-                .map((d) => (d.data() as Student).houseId)
-                .filter((id): id is string => Boolean(id)),
-            )
-          : new Map();
+    const processedCount = await runTransaction(firestore, async (transaction) => {
+      let committedCount = 0;
+      const studentRefs = uniqueIds.map((id) =>
+        doc(firestore, 'schools', schoolId, 'students', id),
+      );
+      const studentDocs = await Promise.all(studentRefs.map((ref) => transaction.get(ref)));
+      const houseDeltas = new Map<string, number>();
+      const houseSnaps = rollupHousePoints
+        ? await readHouseRollupSnaps(
+            transaction,
+            firestore,
+            schoolId,
+            studentDocs
+              .filter((d) => d.exists())
+              .map((d) => (d.data() as Student).houseId)
+              .filter((id): id is string => Boolean(id)),
+          )
+        : new Map();
 
-        for (const studentDoc of studentDocs) {
-          if (!studentDoc.exists()) continue;
-          const studentData = studentDoc.data() as Student;
-          const now = Date.now();
+      for (const studentDoc of studentDocs) {
+        if (!studentDoc.exists()) continue;
+        const studentData = studentDoc.data() as Student;
+        const now = Date.now();
 
-          if (signedDelta > 0) {
-            const newPoints = Number(studentData.points ?? 0) + signedDelta;
-            const newLifetime = (studentData.lifetimePoints || 0) + signedDelta;
-            const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
-            const categoryPointsUpdate = { ...studentData.categoryPoints };
-            categoryPointsUpdate[categoryKey] = (categoryPointsUpdate[categoryKey] || 0) + signedDelta;
-            const pointsByPeriodUpdate = applyPointsByPeriod(studentData.pointsByPeriod, signedDelta, now);
-            const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
-              studentData.categoryPointsByPeriod,
-              categoryKey,
-              signedDelta,
-              now,
-            );
+        const currentPoints = Number(studentData.points ?? 0);
+        const appliedDelta = Math.max(0, currentPoints + signedDelta) - currentPoints;
+        if (signedDelta > 0) {
+          const newPoints = Number(studentData.points ?? 0) + signedDelta;
+          const newLifetime = (studentData.lifetimePoints || 0) + signedDelta;
+          const categoryKey = classroomAwardCategoryKey(meta.teacherId, desc);
+          const categoryPointsUpdate = { ...studentData.categoryPoints };
+          categoryPointsUpdate[categoryKey] = (categoryPointsUpdate[categoryKey] || 0) + signedDelta;
+          const pointsByPeriodUpdate = applyPointsByPeriod(studentData.pointsByPeriod, signedDelta, now);
+          const categoryPointsByPeriodUpdate = applyCategoryPointsByPeriod(
+            studentData.categoryPointsByPeriod,
+            categoryKey,
+            signedDelta,
+            now,
+          );
 
-            transaction.update(studentDoc.ref, {
-              points: newPoints,
-              lifetimePoints: newLifetime,
-              categoryPoints: categoryPointsUpdate,
-              pointsByPeriod: pointsByPeriodUpdate,
-              categoryPointsByPeriod: categoryPointsByPeriodUpdate,
-              updatedAt: now,
-            });
-
-            if (rollupHousePoints && studentData.houseId) {
-              houseDeltas.set(
-                studentData.houseId,
-                (houseDeltas.get(studentData.houseId) ?? 0) + signedDelta,
-              );
-            }
-          } else {
-            const magnitude = Math.abs(signedDelta);
-            const newPoints = Math.max(0, Number(studentData.points ?? 0) - magnitude);
-            transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
-
-            if (rollupHousePoints && studentData.houseId) {
-              houseDeltas.set(
-                studentData.houseId,
-                (houseDeltas.get(studentData.houseId) ?? 0) - magnitude,
-              );
-            }
-          }
-
-          const activityRef = doc(collection(studentDoc.ref, 'activities'));
-          transaction.set(activityRef, { desc, amount: signedDelta, date: now });
-
-          const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
-          transaction.set(logRef, {
-            studentId: studentDoc.id,
-            studentName:
-              [studentData.nickname || studentData.firstName, studentData.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim() || studentDoc.id,
-            classId: meta.classId ?? studentData.classId ?? null,
-            className: meta.className ?? null,
-            teacherId: meta.teacherId,
-            teacherName: meta.teacherName,
-            points: signedDelta,
-            description: logDesc,
-            createdAt: now,
+          transaction.update(studentDoc.ref, {
+            points: newPoints,
+            lifetimePoints: newLifetime,
+            categoryPoints: categoryPointsUpdate,
+            pointsByPeriod: pointsByPeriodUpdate,
+            categoryPointsByPeriod: categoryPointsByPeriodUpdate,
+            updatedAt: now,
           });
 
-          committedCount += 1;
+          if (rollupHousePoints && studentData.houseId) {
+            houseDeltas.set(
+              studentData.houseId,
+              (houseDeltas.get(studentData.houseId) ?? 0) + signedDelta,
+            );
+          }
+        } else {
+          const newPoints = currentPoints + appliedDelta;
+          transaction.update(studentDoc.ref, { points: newPoints, updatedAt: now });
+
+          if (rollupHousePoints && studentData.houseId) {
+            houseDeltas.set(
+              studentData.houseId,
+              (houseDeltas.get(studentData.houseId) ?? 0) + appliedDelta,
+            );
+          }
         }
 
-        writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
-        return committedCount;
-      });
-      processedCount += chunkCount;
-    }
+        const activityRef = doc(collection(studentDoc.ref, 'activities'));
+        transaction.set(activityRef, { desc, amount: appliedDelta, date: now });
+
+        const logRef = doc(collection(firestore, 'schools', schoolId, 'classroomAwards'));
+        transaction.set(logRef, {
+          studentId: studentDoc.id,
+          studentName:
+            [studentData.nickname || studentData.firstName, studentData.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim() || studentDoc.id,
+          classId: meta.classId ?? studentData.classId ?? null,
+          className: meta.className ?? null,
+          teacherId: meta.teacherId,
+          teacherName: meta.teacherName,
+          points: appliedDelta,
+          description: logDesc,
+          createdAt: now,
+        });
+
+        committedCount += 1;
+      }
+
+      writeHousePointsRollupsFromDeltas(transaction, houseSnaps, houseDeltas);
+      return committedCount;
+    });
 
     return {
       success: processedCount > 0,

@@ -721,6 +721,83 @@ html[data-office-portal] .office-content-pane {
   html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select) {
     color: #f4f7f0;
   }
+
+  /*
+   * Light nested classroom UI (white desks, cream seating themes, popovers)
+   * must keep dark ink. The rules above paint the dark stage with near-white
+   * text; without this reset, student names and form labels disappear.
+   * Bold color is unset (not forced) so colored buttons can keep white labels.
+   */
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) {
+    color: #1c1917;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink {
+    color: hsl(var(--foreground));
+  }
+
+  html[data-classroom-realm] .classroom-realm-paper {
+    background-color: #f7f4ee !important;
+    border-color: rgba(28, 25, 23, 0.14) !important;
+    color: #1c1917;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ),
+  html[data-classroom-realm] .classroom-light-ink :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ),
+  html[data-classroom-realm] .classroom-realm-paper :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: unset;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.text-foreground, .text-card-foreground) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.text-muted-foreground) {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(
+      .text-foreground,
+      .text-card-foreground
+    ),
+  html[data-classroom-realm] .classroom-realm-paper :where(.text-foreground, .text-card-foreground) {
+    color: #1c1917 !important;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(.text-muted-foreground),
+  html[data-classroom-realm] .classroom-realm-paper :where(.text-muted-foreground) {
+    color: rgba(28, 25, 23, 0.62) !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.bg-card, .bg-background),
+  html[data-classroom-realm] .classroom-realm-paper :where(.bg-card, .bg-background) {
+    background-color: #fff !important;
+    color: #1c1917 !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(input, textarea, select),
+  html[data-classroom-realm] .classroom-realm-paper :where(input, textarea, select) {
+    color: #1c1917;
+    background-color: #fff;
+  }
   
   .coupon-preview-container {
     container-type: inline-size;

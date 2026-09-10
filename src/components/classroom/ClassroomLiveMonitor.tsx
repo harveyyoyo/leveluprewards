@@ -175,8 +175,8 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   }
 
   const monitorContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background">
-      <div className="relative z-10 flex h-full w-full flex-col overflow-hidden bg-background">
+    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden bg-background">
+      <div className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
         <div className="flex h-full min-h-0 w-full flex-col pl-3 pt-2 pb-2 pr-0">
           <ClassroomPointsPanel
             variant="fullscreen"

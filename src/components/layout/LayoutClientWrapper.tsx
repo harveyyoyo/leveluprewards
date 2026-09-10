@@ -515,7 +515,7 @@ function LayoutClientWrapperInner({
                             <HoverRevealHeaderShell
                                 visible={studentKioskTopEdgeHeaderVisible}
                                 peekWhenHidden={false}
-                                layout="overlay"
+                                layout="spacer"
                             >
                                 <Header />
                             </HoverRevealHeaderShell>

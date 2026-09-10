@@ -15,6 +15,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
   record,
   defs = [],
   onToggle,
+  disabled = false,
   /** When true, only `defs` are shown (no auto-discovery of other boolean fields on `record`). */
   restrictToDefs = false,
   /** When true, toggles can wrap onto multiple lines. */
@@ -27,6 +28,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
   record: T;
   defs?: ToggleDef[];
   onToggle: (key: string, newValue: boolean) => void;
+  disabled?: boolean;
   restrictToDefs?: boolean;
   wrap?: boolean;
   containerClassName?: string;
@@ -69,6 +71,7 @@ export function AutoCircularToggles<T extends Record<string, any>>({
           <Button
             key={key}
             type="button"
+            disabled={disabled}
             variant="outline"
             size="icon"
             className={cn(
@@ -87,6 +90,8 @@ export function AutoCircularToggles<T extends Record<string, any>>({
               onToggle(key, !val);
             }}
             title={label}
+            aria-label={label}
+            aria-pressed={val}
           >
             {isPill ? (
               <span className="inline-flex items-center gap-1 leading-none">

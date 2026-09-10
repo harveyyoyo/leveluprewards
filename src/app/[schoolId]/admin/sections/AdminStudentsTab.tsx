@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogIn,
+  MoreHorizontal,
   Plus,
   Printer,
   ScanFace,
@@ -30,6 +31,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from "@/components/staff/StaffPortalSection";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu';
 import { Checkbox } from "@/components/ui/checkbox";
 import { handleSelectableRowClick } from "@/lib/ui/selectableRowClick";
 import { Input } from "@/components/ui/input";
@@ -70,7 +72,6 @@ import { useSchoolFaceEnrollments } from "@/hooks/useSchoolFaceEnrollments";
 import { cn } from "@/lib/utils";
 import type { Class, Student, Teacher } from "@/lib/types";
 import {
-  AutoCircularToggles,
   type ToggleDef,
 } from "@/components/admin/AutoCircularToggles";
 import { STUDENT_WELCOME_STYLES_LIVE } from "@/lib/students/studentWelcome";
@@ -115,12 +116,6 @@ function formatAssignedTeachers(
   if (names.length === 1) return names[0];
   if (names.length === 2) return `${names[0]} · ${names[1]}`;
   return `${names.length} teachers`;
-}
-
-function kioskToggleHeaderLabel(def: ToggleDef): string {
-  if (def.key === "welcomeBackScreenEnabled") return "Splash";
-  if (def.key === "welcomePageEnabled") return "Style";
-  return def.shortLabel;
 }
 
 function isBirthdayToday(birthdayIso?: string): boolean {
@@ -362,26 +357,21 @@ export function AdminStudentsTab({
 
   const studentActionHeaderLabels = [
     "Pts",
-    ...studentKioskWelcomeToggleDefs.map(kioskToggleHeaderLabel),
     ...(settings.enableFaceLogin ? (["Face"] as const) : []),
     "Sign in",
-    "Theme",
     "ID",
     "Act",
     ...(settings.enableBadges ? (["Badges"] as const) : []),
-    "Purge",
-    "Delete",
+    "More",
   ];
   const studentActionHeaderHints: Record<string, string> = {
     Pts: "Total points balance",
+    Face: "Face login enrollment",
+    "Sign in": "Sign this student into the kiosk",
     ID: "Preview student ID card",
     Act: "Activity history",
-    ...Object.fromEntries(
-      studentKioskWelcomeToggleDefs.map((def) => [
-        kioskToggleHeaderLabel(def),
-        def.label,
-      ]),
-    ),
+    Badges: "View badges for this student",
+    More: "Theme, kiosk welcome, purge, and delete",
   };
   const studentsListGridCols = studentsListGridColumns(
     studentActionHeaderLabels.length,
@@ -482,6 +472,7 @@ export function AdminStudentsTab({
               <div className="relative min-w-0 flex-1">
                 <Input
                   placeholder="Search by name, nickname, or ID..."
+                  aria-label="Search students by name, nickname, or ID"
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                   className="rounded-full pl-10 h-11"
@@ -668,6 +659,7 @@ export function AdminStudentsTab({
                       handleSelectableRowClick(event, () => toggleStudentSelected(s.id))
                     }
                     onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         toggleStudentSelected(s.id);
@@ -787,21 +779,6 @@ export function AdminStudentsTab({
                       onClick={(e) => e.stopPropagation()}
                     >
                       <StudentPointsTypeButton student={s} />
-                      {studentKioskWelcomeToggleDefs.length > 0 ? (
-                        <AutoCircularToggles
-                          record={s}
-                          defs={studentKioskWelcomeToggleDefs}
-                          restrictToDefs
-                          wrap={false}
-                          containerClassName="sm:contents shrink-0 flex-nowrap gap-0.5"
-                          toggleButtonClassName="h-8 w-8 min-h-0 min-w-0 text-[7px] sm:justify-self-center"
-                          onToggle={(key, val) => {
-                            if (onUpdateStudent) {
-                              onUpdateStudent({ ...s, [key]: val });
-                            }
-                          }}
-                        />
-                      ) : null}
                       {settings.enableFaceLogin ? (
                         (() => {
                           const faceEnrollment = activeByStudentId.get(s.id);
@@ -860,15 +837,6 @@ export function AdminStudentsTab({
                         variant="outline"
                         size="icon"
                         className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
-                        onClick={() => setThemeStudent?.(s)}
-                        title="Generate AI Theme"
-                      >
-                        <Wand2 className="w-4 h-4 text-purple-500" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => previewIdCardStudent?.(s)}
                         title="Preview ID Card"
                       >
@@ -908,24 +876,31 @@ export function AdminStudentsTab({
                           />
                         </Button>
                       )}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-primary hover:bg-primary/10 sm:justify-self-center"
-                        title="Purge points & badges"
-                        onClick={() => setStudentToPurge?.(s)}
-                      >
-                        <Zap className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full text-destructive hover:bg-destructive/10 sm:justify-self-center"
-                        onClick={() => deleteStudent?.(s.id)}
-                        title="Delete student"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full sm:justify-self-center" aria-label={`More actions for ${s.firstName} ${s.lastName}`}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onSelect={() => setThemeStudent?.(s)}>
+                            <Wand2 className="mr-2 h-4 w-4" /> Generate AI theme
+                          </DropdownMenuItem>
+                          {studentKioskWelcomeToggleDefs.map((def) => (
+                            <DropdownMenuCheckboxItem key={def.key} checked={s[def.key as keyof Student] !== false}
+                              onCheckedChange={(checked) => onUpdateStudent?.({ ...s, [def.key]: checked })}>
+                              {def.key === 'welcomeBackScreenEnabled' ? 'Welcome back greeting' : 'Welcome screen'}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setStudentToPurge?.(s)}>
+                            <Zap className="mr-2 h-4 w-4" /> Purge points &amp; badges…
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => deleteStudent?.(s.id)}>
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete student…
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </li>
                 );
