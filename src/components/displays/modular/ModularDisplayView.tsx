@@ -588,7 +588,7 @@ export function ModularDisplayView({
                     )}
                   </div>
                   <span className="shrink-0 rounded-xl px-2.5 py-1 text-xs font-black bg-emerald-500 text-emerald-950 shadow-sm">
-                    +{inc.points ?? 0} pts
+                    +{inc.value ?? 0} pts
                   </span>
                 </div>
               ))}
