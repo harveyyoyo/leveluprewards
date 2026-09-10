@@ -46,10 +46,12 @@ import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
 import type { LibraryGenreConfig, BarcodeNumberScheme } from '@/lib/library/libraryClassification';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
+import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 import type { LibraryThemeId } from '@/lib/library/libraryThemes';
+import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
     | 'default'
@@ -470,6 +472,10 @@ interface Settings {
     smartScreenShowJewishHolidays?: boolean;
     /** Multiple named Smart Screen versions; open with `?screenProfileId=<id>`. */
     smartScreenProfiles?: Record<string, SmartScreenProfile>;
+    /** Multiple named school displays; open with `?displayId=<id>`. */
+    displayProfiles?: Record<string, SchoolDisplayProfile>;
+    /** Unified modular display screens configuring widgets across all pillars. */
+    modularDisplayScreens?: Record<string, ModularScreenConfig>;
     // Special Occasions
     enableBirthdayPoints: boolean;
     birthdayPointsAmount: number;
@@ -681,6 +687,15 @@ export interface SmartScreenProfile {
     settings: Partial<Settings>;
 }
 
+export interface SchoolDisplayProfile {
+    id: string;
+    name: string;
+    template: 'hall-of-fame' | 'smart' | 'bulletin';
+    createdAt: number;
+    updatedAt: number;
+    /** Display-specific settings overrides for this display. */
+    settings?: Partial<Settings>;
+}
 
 /** Settings with display mode resolved for rendering (`web` | `app` | `mobile`). */
 type ResolvedSettings = Omit<Settings, 'displayMode'> & { displayMode: ResolvedDisplayMode };
@@ -950,6 +965,8 @@ const defaultSettings: Settings = {
     kioskSponsorIcon: '🎉',
     kioskSponsorSchedules: [],
 
+    displaysEnabled: true,
+
     bulletinEnabled: true,
     bulletinTitle: 'School Bulletin Board',
     bulletinTheme: 'default',
@@ -987,6 +1004,8 @@ const defaultSettings: Settings = {
     smartScreenShowHebrewDate: false,
     smartScreenShowJewishHolidays: false,
     smartScreenProfiles: {},
+    displayProfiles: {},
+    modularDisplayScreens: {},
     enableBirthdayPoints: false,
     birthdayPointsAmount: 100,
     payRewards: true,
@@ -1488,6 +1507,15 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 }
                 // Demo school: production defaults are applied only on first-run (see no-saved-settings branch below).
                 delete (parsed as Partial<Settings>).activeTourId;
+                // Back-compat: settings docs saved before the merge into one `displaysEnabled` switch
+                // don't have the field yet — derive it once from whichever of the three legacy flags was on.
+                if (typeof parsed.displaysEnabled !== 'boolean') {
+                    parsed.displaysEnabled = displaysFeatureEnabled({
+                        bulletinEnabled: parsed.bulletinEnabled ?? defaultSettings.bulletinEnabled,
+                        smartScreenEnabled: parsed.smartScreenEnabled ?? defaultSettings.smartScreenEnabled,
+                        enableClassLeaderboard: parsed.enableClassLeaderboard ?? defaultSettings.enableClassLeaderboard,
+                    });
+                }
                 const nextSettings = applyEntitlements({
                     ...defaultSettings, 
                     ...featureDefaultsFromRemote,
@@ -1532,6 +1560,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         if (!isLoaded || !schoolId || !stableRemoteAppSettingsJson || !isDisplaySettingsRoute(pathname)) return;
         try {
             const remote = JSON.parse(stableRemoteAppSettingsJson) as Partial<Settings>;
+            if (typeof remote.displaysEnabled !== 'boolean') {
+                remote.displaysEnabled = displaysFeatureEnabled({
+                    bulletinEnabled: remote.bulletinEnabled ?? defaultSettings.bulletinEnabled,
+                    smartScreenEnabled: remote.smartScreenEnabled ?? defaultSettings.smartScreenEnabled,
+                    enableClassLeaderboard: remote.enableClassLeaderboard ?? defaultSettings.enableClassLeaderboard,
+                });
+            }
             const next = applyEntitlements({ ...defaultSettings, ...remote });
             setSettings(next);
             const settingsKey = getLocalArcadeSettingsKey(schoolId, loginState, pathname);

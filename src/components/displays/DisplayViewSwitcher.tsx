@@ -9,9 +9,6 @@ import type { DisplayView } from '@/lib/displays/displayRoutes';
 type DisplayViewSwitcherProps = {
   schoolId: string;
   activeView: DisplayView;
-  bulletinEnabled: boolean;
-  smartScreenEnabled: boolean;
-  hallOfFameEnabled: boolean;
 };
 
 type SwitcherOption = {
@@ -19,6 +16,13 @@ type SwitcherOption = {
   label: string;
   icon: LucideIcon;
 };
+
+/** Hall of Fame is the default/first template of the merged Displays feature. */
+const TEMPLATE_OPTIONS: readonly SwitcherOption[] = [
+  { view: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy },
+  { view: 'smart', label: 'Smart Screen', icon: Monitor },
+  { view: 'bulletin', label: 'Bulletin', icon: Megaphone },
+];
 
 function buildSwitchHref(
   schoolId: string,
@@ -30,25 +34,13 @@ function buildSwitchHref(
   return `/${schoolId}/displays?${params.toString()}`;
 }
 
-export function DisplayViewSwitcher({
-  schoolId,
-  activeView,
-  bulletinEnabled,
-  smartScreenEnabled,
-  hallOfFameEnabled,
-}: DisplayViewSwitcherProps) {
+export function DisplayViewSwitcher({ schoolId, activeView }: DisplayViewSwitcherProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   if (!pathname?.includes('/displays')) return null;
 
-  const options: SwitcherOption[] = [];
-  if (smartScreenEnabled) options.push({ view: 'smart', label: 'Smart Screen', icon: Monitor });
-  if (bulletinEnabled) options.push({ view: 'bulletin', label: 'Bulletin', icon: Megaphone });
-  if (hallOfFameEnabled) options.push({ view: 'hall-of-fame', label: 'Hall of Fame', icon: Trophy });
-
-  // Only show the switcher when there is more than one display to switch between.
-  if (options.length < 2) return null;
+  const options = TEMPLATE_OPTIONS;
 
   const current = new URLSearchParams(searchParams.toString());
 

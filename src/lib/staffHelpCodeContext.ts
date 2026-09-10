@@ -105,7 +105,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
-      'src/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel.tsx',
+      'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
       'src/app/[schoolId]/displays/page.tsx',
     ],
   },
@@ -117,10 +117,12 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['bulletin', 'bulletin board', 'announcement'],
+    keys: ['display', 'displays', 'hallway display', 'smart screen', 'smartscreen', 'bulletin', 'bulletin board', 'announcement'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
-      'src/app/[schoolId]/bulletin-board/page.tsx',
+      'src/components/displays/DisplayTvPairModal.tsx',
+      'src/app/[schoolId]/displays/page.tsx',
+      'src/app/[schoolId]/displays-realm/page.tsx',
     ],
   },
   {

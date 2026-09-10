@@ -35,10 +35,13 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['houseCoordinator']))).toBe(true);
   });
 
-  it('displays allow staff and portal', () => {
+  it('displays and displays-realm allow staff and portal', () => {
     expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['teacher']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['admin']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/displays`, sid, new Set(['kiosk']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/displays-realm`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/displays-realm`, sid, new Set(['admin']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/displays-realm`, sid, new Set(['kiosk']))).toBe(false);
   });
 
   it('default hub routes for kiosk', () => {

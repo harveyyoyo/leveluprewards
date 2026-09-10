@@ -110,13 +110,14 @@ export default function BulletinBoardDisplay({
     }
   }, [isPreview, isInitialized, loginState, router, toast]);
 
-  const bulletinEnabled = settings.bulletinEnabled !== false;
+  // Bulletin board is a template of the merged Displays feature ??? gate on the one `displaysEnabled` switch.
+  const displaysOn = settings.displaysEnabled !== false;
   const showIncentiveCards = isPreview || incentivesVisibleOnSurface(settings, 'bulletinBoard');
   const bulletinTitle = settings.bulletinTitle || 'School Bulletin Board';
   const bulletinSubtitle = (settings.bulletinSubtitle ?? '').trim() || DEFAULT_BULLETIN_SUBTITLE;
   const schoolLogoUrl = schoolMeta?.logoUrl;
   const logoSize = settings.bulletinLogoSize || 'md';
-  const showBoard = isPreview || bulletinEnabled;
+  const showBoard = isPreview || displaysOn;
 
   if (!isPreview && (!isInitialized || !VIEWER_LOGIN_STATES.has(loginState))) {
     return (

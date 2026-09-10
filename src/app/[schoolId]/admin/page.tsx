@@ -609,16 +609,12 @@ function AdminDashboardInner() {
         isOn: (s) => staffPortalAdminAddOnIsOn(s, 'displays'),
         enable: () =>
           updateSettings({
-            bulletinEnabled: true,
-            smartScreenEnabled: true,
-            enableClassLeaderboard: true,
+            displaysEnabled: true,
             adminHiddenAddOnTabs: removeHidden('displays'),
           }),
         disable: () =>
           updateSettings({
-            bulletinEnabled: false,
-            smartScreenEnabled: false,
-            enableClassLeaderboard: false,
+            displaysEnabled: false,
             adminHiddenAddOnTabs: removeHidden('displays'),
             adminPinnedAddOnTabs: removePinned('displays'),
           }),
@@ -891,9 +887,7 @@ function AdminDashboardInner() {
         patch.recessStudentKioskEnabled = true;
         break;
       case 'displays':
-        patch.bulletinEnabled = true;
-        patch.smartScreenEnabled = true;
-        patch.enableClassLeaderboard = true;
+        patch.displaysEnabled = true;
         break;
       case 'incentives':
         patch.enableIncentives = true;
@@ -956,9 +950,7 @@ function AdminDashboardInner() {
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
         case 'displays':
-          patch.bulletinEnabled = false;
-          patch.smartScreenEnabled = false;
-          patch.enableClassLeaderboard = false;
+          patch.displaysEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'incentives':
@@ -1040,9 +1032,7 @@ function AdminDashboardInner() {
           patch.recessStudentKioskEnabled = true;
           break;
         case 'displays':
-          patch.bulletinEnabled = true;
-          patch.smartScreenEnabled = true;
-          patch.enableClassLeaderboard = true;
+          patch.displaysEnabled = true;
           break;
         case 'incentives':
           patch.enableIncentives = true;
@@ -1105,9 +1095,7 @@ function AdminDashboardInner() {
           nextHidden = nextHidden.filter((x) => x !== 'attendance');
           break;
         case 'displays':
-          patch.bulletinEnabled = false;
-          patch.smartScreenEnabled = false;
-          patch.enableClassLeaderboard = false;
+          patch.displaysEnabled = false;
           nextHidden = nextHidden.filter((x) => x !== 'displays');
           break;
         case 'incentives':
