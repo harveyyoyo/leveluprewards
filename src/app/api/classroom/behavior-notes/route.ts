@@ -7,6 +7,7 @@ import {
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import { verifyStaffForSchoolApi } from '@/lib/server/verifyStaffForSchoolApi';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
 import type { BehaviorNoteKind } from '@/lib/types';
 import { parseBehaviorNoteCreatedAt } from '@/lib/classroom/behaviorNoteTime';
 import { evaluateClassroomAlertRulesForStudent } from '@/lib/server/classroomAlertRulesEvaluator';
@@ -212,8 +213,8 @@ export async function POST(req: NextRequest) {
     if (shareToBulletinBoard) {
       if ((kind as BehaviorNoteKind) !== 'positive') {
         bulletinMessage = 'Only positive notes can be posted to the bulletin board.';
-      } else if (appSettings.bulletinEnabled === false) {
-        bulletinMessage = 'Bulletin board is off for this school.';
+      } else if (!displaysFeatureEnabled(appSettings)) {
+        bulletinMessage = 'Displays are off for this school.';
       } else {
         try {
           const studentFirstName = firstNameFromStudentLabel(studentName);

@@ -134,7 +134,12 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     return canAccessHallOfFameRoute(loginState);
   }
 
-  if (section === 'smart-screen' || section === 'displays' || section === 'bulletin-board') {
+  if (
+    section === 'smart-screen' ||
+    section === 'displays' ||
+    section === 'displays-realm' ||
+    section === 'bulletin-board'
+  ) {
     return (
       loginState === 'teacher' ||
       loginState === 'admin' ||
