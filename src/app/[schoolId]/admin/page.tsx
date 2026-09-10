@@ -134,11 +134,6 @@ import {
 } from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sampleBadges';
 
-// The Students and Library tabs are eager. Other admin tabs are
-// code-split with `next/dynamic` so its chunk is only fetched when the admin
-// actually clicks into it — this dramatically reduces the initial admin JS.
-import { AdminStudentsTab } from './sections/AdminStudentsTab';
-import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import {
@@ -162,11 +157,13 @@ import {
   AdminGoalsTab,
   AdminHousesTab,
   AdminIntegrationsTab,
+  AdminLibraryTab,
   AdminNotificationsTab,
   AdminPrizesTab,
   AdminReportsTab,
   AdminStatsTab,
   AdminStudentPortalTab,
+  AdminStudentsTab,
   AdminTeachersTab,
 } from './adminTabDynamics';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
@@ -1252,9 +1249,6 @@ function AdminDashboardInner() {
     toast,
   });
 
-  /** Show shell as soon as the default Students tab can render; other collections load in background. */
-  const isShellLoading = studentsLoading || classesLoading;
-
   const collectionErrors = [
     { name: 'Students', error: studentsError },
     { name: 'Classes', error: classesError },
@@ -1275,10 +1269,6 @@ function AdminDashboardInner() {
     const student = students?.find(s => s.id === studentId);
     return student ? `${student.firstName} ${student.lastName}` : `ID: ${studentId}`;
   };
-
-  if (isShellLoading) {
-    return <AdminDashboardSkeleton />;
-  }
 
   if (collectionErrors.length > 0) {
     return (
@@ -1902,6 +1892,7 @@ function AdminDashboardInner() {
               settings={settings}
               classes={classes}
               students={students}
+              rosterLoading={studentsLoading || classesLoading}
               filteredStudents={filteredStudents}
               studentCsvInputRef={studentCsvInputRef}
               onStudentCsvFileChange={onStudentCsvFileChange}

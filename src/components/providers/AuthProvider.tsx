@@ -176,13 +176,17 @@ function reportSessionSyncFailure(phase: 'firebase-session' | 'school-gate') {
 async function waitForReadableRole(
     roleRef: DocumentReference,
     expectedRole: string,
-    options: { quick?: boolean } = {},
+    options: { quick?: boolean; maxWaitMs?: number } = {},
 ) {
     const attempts = options.quick ? 50 : 24;
     const fastDelay = options.quick ? 80 : 150;
     const slowDelay = options.quick ? 80 : 350;
+    const deadline = typeof options.maxWaitMs === 'number' ? Date.now() + options.maxWaitMs : null;
 
     for (let i = 0; i < attempts; i++) {
+        if (deadline !== null && Date.now() >= deadline) {
+            return null;
+        }
         try {
             const roleDoc = await getDocFromServer(roleRef);
             const data = roleDoc.exists() ? roleDoc.data() : null;
@@ -192,7 +196,14 @@ async function waitForReadableRole(
         } catch {
             // Permission errors are expected for a moment while the role grant propagates.
         }
-        await wait(i < 10 ? fastDelay : slowDelay);
+        const delay = i < 10 ? fastDelay : slowDelay;
+        if (deadline !== null) {
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) return null;
+            await wait(Math.min(delay, remaining));
+        } else {
+            await wait(delay);
+        }
     }
 
     return null;
@@ -1127,6 +1138,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
                     const roleData = await waitForReadableRole(adminRoleRef, 'admin', {
                         quick: isPublicSampleSchoolId(lowerSchoolId),
+                        // Don't stall first Admin open for several seconds if the role write is slow to read.
+                        maxWaitMs: 1200,
                     });
 
                     if (!roleData) {

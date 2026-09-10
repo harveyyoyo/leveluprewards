@@ -103,3 +103,11 @@ export const AdminRecessTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminRecessTab'), 'AdminRecessTab'),
   { loading: tabLoader, ssr: false },
 );
+export const AdminStudentsTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminStudentsTab'), 'AdminStudentsTab'),
+  { loading: tabLoader, ssr: false },
+);
+export const AdminLibraryTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminLibraryTab'), 'AdminLibraryTab'),
+  { loading: tabLoader, ssr: false },
+);
