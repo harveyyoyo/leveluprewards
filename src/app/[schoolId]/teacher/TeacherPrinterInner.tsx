@@ -111,8 +111,7 @@ import { GoalsManager } from '@/components/goals/GoalsManager';
 import { homeworkRewardCategoryKey } from '@/lib/homeworkRewards';
 import { studentsInTeacherScope } from '@/lib/reportsScope';
 import { isLeadershipPersonnel } from '@/lib/teacherPersonnelRole';
-import { ClassroomCommandCenter } from '@/components/classroom/ClassroomCommandCenter';
-import { ClassroomOpenOwnLink } from '@/components/classroom/ClassroomOpenOwnLink';
+import { ClassroomTabLauncher } from '@/components/classroom/ClassroomTabLauncher';
 import { TeacherStaffPortalAddonTabPanels } from '@/components/staff/TeacherStaffPortalAddonTabPanels';
 import {
   teacherPortalTabContentClassName,
@@ -2247,18 +2246,7 @@ function TeacherPrinterInnerBody({
 
                             {teacherTabEnabled('classroom') && (
                             <TeacherPortalTabPane tabId="classroom" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
-                                <div className="mb-3 flex justify-end">
-                                    <ClassroomOpenOwnLink schoolId={schoolId!} />
-                                </div>
-                                <ClassroomCommandCenter
-                                    schoolId={schoolId!}
-                                    categories={categories}
-                                    classes={classes}
-                                    students={studentsForTeacherActions}
-                                    teachers={teachers}
-                                    variant="teacher"
-                                    activeTeacherId={teacherId}
-                                />
+                                <ClassroomTabLauncher schoolId={schoolId!} />
                             </TeacherPortalTabPane>
                             )}
 
