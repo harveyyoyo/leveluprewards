@@ -64,6 +64,8 @@ export function AdminBrandingTab({
   handleLogoUpload,
   handleRemoveLogo,
   isLogoUploading,
+  handleFixLogoBackground,
+  isFixingLogoBackground,
   toast,
   playSound,
 }: {
@@ -81,6 +83,8 @@ export function AdminBrandingTab({
   handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveLogo: () => void;
   isLogoUploading: boolean;
+  handleFixLogoBackground: () => void;
+  isFixingLogoBackground: boolean;
   toast: (args: { variant?: 'default' | 'destructive'; title: string; description?: string }) => void;
   playSound: (...args: any[]) => void;
 }) {
@@ -293,6 +297,28 @@ export function AdminBrandingTab({
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
                     Supported extensions: PNG, JPG, JPEG, WebP, and SVG under 10MB. Raster logos can be cropped after upload; SVG uploads as-is. We recommend high-contrast square shapes (min. 256×256px for raster).
                   </p>
+                  {currentLogo ? (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-fit rounded-xl font-bold text-xs"
+                        disabled={isFixingLogoBackground || isLogoUploading}
+                        onClick={handleFixLogoBackground}
+                      >
+                        {isFixingLogoBackground ? (
+                          <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ImageIcon className="mr-2 h-3.5 w-3.5" />
+                        )}
+                        Fix white background on current logo
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        If your logo shows a white box on ID cards, use this to clear it — no need to re-upload the file.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Preset Option Grids */}

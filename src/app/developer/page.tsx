@@ -226,6 +226,7 @@ export default function DeveloperPage() {
   const [appLogoUrl, setAppLogoUrl] = useState<string | null>(null);
   const [appLogoHistory, setAppLogoHistory] = useState<string[]>([]);
   const [isAppLogoUploading, setIsAppLogoUploading] = useState(false);
+  const [isFixingAppLogoBackground, setIsFixingAppLogoBackground] = useState(false);
   const appLogoInputRef = useRef<HTMLInputElement | null>(null);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
@@ -418,6 +419,41 @@ export default function DeveloperPage() {
       });
     } finally {
       setIsAppLogoUploading(false);
+    }
+  };
+
+  /**
+   * Reprocesses the *currently stored* app logo's white background to
+   * transparent, server-side, without asking the developer to re-select and
+   * re-upload the file.
+   */
+  const handleFixAppLogoBackground = async () => {
+    if (!functions) return;
+    try {
+      setIsFixingAppLogoBackground(true);
+      toast({ title: 'Fixing logo background…', description: 'Please wait.' });
+      const fixLogo = httpsCallable<Record<string, never>, { logoUrl: string }>(functions, 'fixAppLogoBackground');
+      const res = await fixLogo({});
+      const data = res.data;
+      if (!data?.logoUrl) throw new Error('No logo URL returned');
+      setAppLogoUrl(data.logoUrl);
+      setAppLogoHistory((prev) => [data.logoUrl, ...prev.filter((url) => url !== data.logoUrl)]);
+      playSound('success');
+      toast({
+        title: 'Logo background fixed!',
+        description: 'The white background behind the app logo is now transparent.',
+      });
+    } catch (error: unknown) {
+      console.error('Fix app logo background failed', error);
+      playSound('error');
+      const err = error as { code?: string; message?: string };
+      let description = err?.message || 'Could not fix the logo background. Try again.';
+      if (err?.code === 'functions/permission-denied') {
+        description = 'You need developer access to update the app logo.';
+      }
+      toast({ variant: 'destructive', title: 'Could not fix logo background', description });
+    } finally {
+      setIsFixingAppLogoBackground(false);
     }
   };
 
@@ -1319,6 +1355,24 @@ export default function DeveloperPage() {
                         tabIndex={-1}
                         onChange={handleAppLogoUpload}
                       />
+                      {appLogoUrl ? (
+                        <div className="space-y-1.5 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={handleFixAppLogoBackground}
+                            disabled={isFixingAppLogoBackground || isAppLogoUploading}
+                          >
+                            {isFixingAppLogoBackground ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                            Fix white background on current logo
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            If the logo shows a white box on ID cards, use this to clear it — no need to re-upload the file.
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </div>

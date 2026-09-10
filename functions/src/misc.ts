@@ -1571,6 +1571,170 @@ exports.setAppLogoUrl = functions.https.onCall(
 );
 
 // ========================================================================
+// Callables: Fix an already-uploaded logo's white background in place
+// (border-flood-fill to transparent), without asking the admin/developer
+// to re-select and re-upload the file. Mirrors uploadSchoolLogo/uploadAppLogo's
+// storage + Firestore bookkeeping, just sourced from the existing file
+// instead of a freshly-picked one.
+// ========================================================================
+
+/** Extracts the storage object path out of one of our own download-token URLs. */
+function storagePathFromLogoUrl(url: string): string | null {
+  const match = /\/o\/([^?]+)\?/.exec(url);
+  if (!match) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null;
+  }
+}
+
+exports.fixSchoolLogoBackground = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    try {
+      requireString(data.schoolId, "schoolId");
+      const schoolId = String(data.schoolId).trim().toLowerCase();
+      await requireSchoolAdmin(schoolId, context);
+
+      const db = admin.firestore();
+      const schoolSnap = await db.collection("schools").doc(schoolId).get();
+      const currentUrl = schoolSnap.exists ? String(schoolSnap.data()?.logoUrl || "") : "";
+      if (!currentUrl) {
+        throw new functions.https.HttpsError("failed-precondition", "This school has no logo to fix.");
+      }
+      const path = storagePathFromLogoUrl(currentUrl);
+      if (!path) {
+        throw new functions.https.HttpsError("failed-precondition", "Could not resolve the current logo's storage location.");
+      }
+
+      const bucket = admin.storage().bucket();
+      const sourceFile = bucket.file(path);
+      const [metadata] = await sourceFile.getMetadata();
+      if (metadata.contentType === "image/svg+xml") {
+        throw new functions.https.HttpsError("failed-precondition", "This logo is an SVG (already scalable/transparent) — nothing to fix.");
+      }
+
+      const [buffer] = await sourceFile.download();
+      const { makeLogoBackgroundTransparentBuffer } = await import("./logoTransparency");
+      const pngBuffer = await makeLogoBackgroundTransparentBuffer(buffer);
+
+      const timestamp = Date.now();
+      const newPath = `school-logos/${schoolId}-${timestamp}`;
+      const newFile = bucket.file(newPath);
+      const downloadToken = crypto.randomUUID();
+      await newFile.save(pngBuffer, {
+        metadata: {
+          contentType: "image/png",
+          metadata: { firebaseStorageDownloadTokens: downloadToken },
+        },
+        validation: false,
+      });
+
+      const encodedPath = encodeURIComponent(newPath);
+      const logoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+
+      await db.collection("schools").doc(schoolId).update({
+        logoUrl,
+        logoHistory: FieldValue.arrayUnion({
+          url: logoUrl,
+          uploadedAt: timestamp,
+          uploadedBy: context.auth!.uid,
+        }),
+      });
+      await db.collection("schoolPublic").doc(schoolId).set(
+        { active: true, logoUrl, updatedAt: timestamp },
+        { merge: true }
+      );
+
+      return { logoUrl };
+    } catch (e: any) {
+      if (e instanceof functions.https.HttpsError) throw e;
+      console.error("fixSchoolLogoBackground: unexpected error", e);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Unexpected error while fixing the logo background.",
+        { originalMessage: String(e?.message || e) }
+      );
+    }
+  }
+);
+
+exports.fixAppLogoBackground = functions.https.onCall(
+  async (_data: any, context: functions.https.CallableContext) => {
+    try {
+      requireAuth(context);
+      if (!(await isDeveloper(context))) {
+        throw new functions.https.HttpsError(
+          "permission-denied",
+          "Developer access required to fix the app logo."
+        );
+      }
+
+      const db = admin.firestore();
+      const configSnap = await db.collection("appConfig").doc("global").get();
+      const currentUrl = configSnap.exists ? String(configSnap.data()?.appLogoUrl || "") : "";
+      if (!currentUrl) {
+        throw new functions.https.HttpsError("failed-precondition", "There is no app logo to fix.");
+      }
+      const path = storagePathFromLogoUrl(currentUrl);
+      if (!path) {
+        throw new functions.https.HttpsError("failed-precondition", "Could not resolve the current logo's storage location.");
+      }
+
+      const bucket = admin.storage().bucket();
+      const sourceFile = bucket.file(path);
+      const [metadata] = await sourceFile.getMetadata();
+      if (metadata.contentType === "image/svg+xml") {
+        throw new functions.https.HttpsError("failed-precondition", "This logo is an SVG (already scalable/transparent) — nothing to fix.");
+      }
+
+      const [buffer] = await sourceFile.download();
+      const { makeLogoBackgroundTransparentBuffer } = await import("./logoTransparency");
+      const pngBuffer = await makeLogoBackgroundTransparentBuffer(buffer);
+
+      const timestamp = Date.now();
+      const newPath = `app-branding/app-logo-${timestamp}`;
+      const newFile = bucket.file(newPath);
+      const downloadToken = crypto.randomUUID();
+      await newFile.save(pngBuffer, {
+        metadata: {
+          contentType: "image/png",
+          metadata: { firebaseStorageDownloadTokens: downloadToken },
+        },
+        validation: false,
+      });
+
+      const encodedPath = encodeURIComponent(newPath);
+      const logoUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+
+      await db.collection("appConfig").doc("global").set(
+        {
+          appLogoUrl: logoUrl,
+          appLogoHistory: FieldValue.arrayUnion({
+            url: logoUrl,
+            uploadedAt: timestamp,
+            uploadedBy: context.auth!.uid,
+          }),
+          updatedAt: timestamp,
+          updatedBy: context.auth!.uid,
+        },
+        { merge: true }
+      );
+
+      return { logoUrl };
+    } catch (e: any) {
+      if (e instanceof functions.https.HttpsError) throw e;
+      console.error("fixAppLogoBackground: unexpected error", e);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Unexpected error while fixing the app logo background.",
+        { originalMessage: String(e?.message || e) }
+      );
+    }
+  }
+);
+
+// ========================================================================
 // Callable: Upload student profile photo (admin only)
 // ========================================================================
 
