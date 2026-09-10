@@ -2,6 +2,9 @@
 
 import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
 import { ClassroomCommandCenter, type ClassroomWorkbenchTab } from '@/components/classroom/ClassroomCommandCenter';
+import { ClassroomOpenOwnLink } from '@/components/classroom/ClassroomOpenOwnLink';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import type { Category, Class, Student } from '@/lib/types';
 
 export function AdminClassroomTab({
@@ -27,13 +30,23 @@ export function AdminClassroomTab({
   const initialTab = initialSection ? mapSectionToTab[initialSection] : 'seating';
 
   return (
-    <ClassroomCommandCenter
-      schoolId={schoolId}
-      categories={categories}
-      classes={classes}
-      students={students}
-      variant="admin"
-      initialTab={initialTab}
-    />
+    <StaffPortalTabPanel
+      tabValue="classroom"
+      trailing={
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <TabWalkthroughHeaderAction />
+          <ClassroomOpenOwnLink schoolId={schoolId} />
+        </div>
+      }
+    >
+      <ClassroomCommandCenter
+        schoolId={schoolId}
+        categories={categories}
+        classes={classes}
+        students={students}
+        variant="admin"
+        initialTab={initialTab}
+      />
+    </StaffPortalTabPanel>
   );
 }
