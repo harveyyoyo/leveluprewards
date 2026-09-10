@@ -1,5 +1,9 @@
 # Working in this repo
 
+## How to talk to the owner
+
+The owner is a beginner. Never use technical terms in replies they will read. Assume they are new. See `.agent/knowledge/user-communication.md`.
+
 ## Multiple agents run here at once
 
 The user runs several Claude Code agents/sessions concurrently, often against this same

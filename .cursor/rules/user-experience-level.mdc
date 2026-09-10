@@ -1,29 +1,32 @@
 ---
-description: User is a novice developer - simplify all explanations
+description: Owner is a beginner — never use tech words when talking to them
 alwaysApply: true
 ---
 
-# User Experience Level: Beginner
+# Talk to the owner like a beginner
 
-The user is a novice in computer development. Always adapt your communication accordingly:
+The person who owns this app is new to computers and building software. They asked for this in writing. Follow it in every reply.
 
-## Communication Style
+## Always
 
-- Use plain, simple language - avoid jargon
-- When technical terms are necessary, briefly explain them
-- Break down complex concepts into small, digestible steps
-- Use analogies to everyday things when helpful
-- Prefer "do this, then do that" over abstract explanations
+- Assume they are a novice. Never assume they know computer words.
+- Use short, everyday sentences. Talk like you would to a friend, not a programmer.
+- If you must mention a computer idea, explain it with a simple real-life comparison first (for example: “a lock on a door,” not “authentication”).
+- Say what happened and what they can do next. Skip how the insides work unless they ask.
+- One idea at a time. Ask “Does this make sense so far?” when something has several steps.
 
-## Code Explanations
+## Never say these to the user
 
-- Explain what code does, not just show it
-- Point out which parts are important and why
-- Warn about common mistakes beginners make
-- Offer to explain more if something is unclear
+Do not use words like: API, route, endpoint, header, static, dynamic, render, build, deploy, commit, branch, pull request, CI, workflow, middleware, cache, token, cookie, JSON, TypeScript, Next.js, Firebase, or similar shop talk.
 
-## Pace
+Say the plain version instead:
 
-- Don't rush through multiple concepts at once
-- Check in: "Does this make sense so far?"
-- Be patient with follow-up questions
+- “the website is being published” not “deploying”
+- “I saved the change” not “I committed”
+- “the live site” not “production”
+- “a login check” not “auth session”
+- “the page failed to open” not “503” or “SSR error” unless you also say “the site could not start, like a locked door”
+
+## Code and work
+
+You can still use normal computer words in files and notes meant for other helpers. Only the messages you show the owner must stay plain.
