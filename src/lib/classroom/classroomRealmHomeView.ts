@@ -1,41 +1,31 @@
-export type ClassroomRealmHomePhase = 'off' | 'need-sign-in' | 'loading' | 'ready';
+export type ClassroomRealmHomeUi = 'leftover-realm-hub' | 'command-center';
+
+export type ClassroomRealmHomePhase = 'off' | 'hub';
 
 export type ClassroomRealmHomeViewInput = {
   classroomOn: boolean;
-  staffOk: boolean;
-  canReadRoster: boolean;
-  studentsLoading: boolean;
-  classesLoading: boolean;
-  /** Once the command center has been shown, keep it through settings/roster refetches. */
-  keepReady: boolean;
+  /** Once the leftover hub has painted, keep it through settings refetches. */
+  keepHub: boolean;
 };
 
 /**
- * Standalone /classroom-realm home. Never fall back to the older chalkboard
- * realm hub after the command center has already painted.
+ * Standalone /classroom-realm home.
+ * PR #59 locked the seating-chart command center — that was the older UI.
+ * Home is the leftover chalkboard Classroom Realm hub only. Never remount
+ * ClassroomCommandCenter after settings load.
  */
+export function classroomRealmHomeUi(): ClassroomRealmHomeUi {
+  return 'leftover-realm-hub';
+}
+
 export function classroomRealmHomePhase(
   input: ClassroomRealmHomeViewInput,
 ): ClassroomRealmHomePhase {
-  if (input.keepReady) return 'ready';
+  if (input.keepHub) return 'hub';
   if (!input.classroomOn) return 'off';
-  if (!input.staffOk || !input.canReadRoster) return 'need-sign-in';
-  if (input.studentsLoading || input.classesLoading) return 'loading';
-  return 'ready';
+  return 'hub';
 }
 
-export function shouldLatchClassroomCommandCenter(input: {
-  classroomOn: boolean;
-  staffOk: boolean;
-  canReadRoster: boolean;
-  studentsLoading: boolean;
-  classesLoading: boolean;
-}): boolean {
-  return (
-    input.classroomOn &&
-    input.staffOk &&
-    input.canReadRoster &&
-    !input.studentsLoading &&
-    !input.classesLoading
-  );
+export function shouldLatchClassroomRealmHub(classroomOn: boolean): boolean {
+  return classroomOn;
 }
