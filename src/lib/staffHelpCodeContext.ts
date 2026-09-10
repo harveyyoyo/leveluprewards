@@ -106,6 +106,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/components/displays/DisplaysTabLauncher.tsx',
       'src/app/[schoolId]/displays/page.tsx',
     ],
   },
@@ -120,6 +121,7 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     keys: ['display', 'displays', 'hallway display', 'smart screen', 'smartscreen', 'bulletin', 'bulletin board', 'announcement'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/components/displays/DisplaysTabLauncher.tsx',
       'src/components/displays/DisplayTvPairModal.tsx',
       'src/app/[schoolId]/displays/page.tsx',
       'src/app/[schoolId]/displays-realm/page.tsx',
@@ -206,7 +208,7 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/office\/billing/i, paths: ['src/app/[schoolId]/office/billing/page.tsx'] },
   { pattern: /\/office\/reports/i, paths: ['src/app/[schoolId]/office/reports/page.tsx'] },
   { pattern: /\/office(?:\/|$)/i, paths: ['src/app/[schoolId]/office/page.tsx'] },
-  { pattern: /\/classroom-realm/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
+  { pattern: /\/classroom-realm/i, paths: ['src/components/classroom/ClassroomTabLauncher.tsx', 'src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/classroom(?:\/|$)/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/librarian/i, paths: ['src/app/[schoolId]/librarian/page.tsx'] },
   { pattern: /\/secretary/i, paths: ['src/app/[schoolId]/secretary/page.tsx'] },

@@ -229,7 +229,7 @@ function LayoutClientWrapperInner({
     const schoolPathMatch =
       typeof pathname === 'string'
         ? pathname.match(
-            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|displays|office)(?:\/|$)/i,
+            /^\/([^/]+)\/(?:portal|student|student-home|teacher|admin|admin-sign-in|prize|secretary|prize-clerk|reports|sign-in|hall-of-fame|bulletin-board|smart-screen|displays-realm|displays|classroom-realm|classroom|office)(?:\/|$)/i,
           )
         : null;
     const routeSchoolId = schoolPathMatch?.[1];

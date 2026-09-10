@@ -131,7 +131,7 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
   }
 
   if (section === 'classroom-realm' || section === 'classroom') {
-    return canAccessHallOfFameRoute(loginState);
+    return canAccessHallOfFameRoute(loginState) || loginState === 'school';
   }
 
   if (
@@ -248,8 +248,19 @@ function SchoolSessionGateBody({
     }
 
     if (!canUseRoute(pathname, route, loginState)) {
-      const fallback =
-        loginState === 'teacher'
+      const section = pathname.startsWith(`/${route}/`)
+        ? pathname.slice(`/${route}/`.length).split('/')[0]
+        : '';
+      const standaloneApp =
+        section === 'classroom-realm' ||
+        section === 'classroom' ||
+        section === 'displays-realm' ||
+        section === 'displays';
+      // Teachers used to get sent to /admin, which bounced Open Classroom / Open Displays
+      // back into the staff tab after a brief visit to the standalone page.
+      const fallback = standaloneApp
+        ? schoolLoginHref()
+        : loginState === 'teacher'
           ? schoolStaffPortalHref(route, 'admin')
           : schoolLoginHref();
       if (pathname !== fallback) {

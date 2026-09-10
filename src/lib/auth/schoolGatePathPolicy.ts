@@ -114,6 +114,7 @@ export function schoolPathAllowedByGate(
 
   if (section === 'classroom-realm' || section === 'classroom') {
     return (
+      scopes.has('portal') ||
       scopes.has('admin') ||
       scopes.has('teacher') ||
       scopes.has('secretary') ||
