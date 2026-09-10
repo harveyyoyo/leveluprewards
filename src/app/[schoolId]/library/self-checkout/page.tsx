@@ -87,6 +87,7 @@ export default function LibrarySelfCheckoutPage() {
       schoolId={schoolId}
       categories={categories}
       getStudentName={getStudentName}
+      students={students}
     />
   );
 }

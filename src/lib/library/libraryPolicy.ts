@@ -26,6 +26,8 @@ export type LibraryPolicySettings = {
   renewalDays: number;
   allowRenewIfOverdue: boolean;
   allowMultipleCopiesOfSameTitle: boolean;
+  /** Allow taking out / checking out books using the published ISBN barcode. Turned on by default. */
+  allowIsbnCheckout: boolean;
   maxFineCap: number;
   cameraScanEnabled: boolean;
   kioskAllowDropBoxReturn: boolean;
@@ -72,6 +74,7 @@ export function getLibraryPolicyFromSettings(
     libraryRenewalDays?: number;
     libraryAllowRenewIfOverdue?: boolean;
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    libraryAllowIsbnCheckout?: boolean;
     libraryMaxFineCap?: number;
     libraryCameraScanEnabled?: boolean;
     libraryKioskAllowDropBoxReturn?: boolean;
@@ -111,6 +114,7 @@ export function getLibraryPolicyFromSettings(
     renewalDays: Math.max(1, settings.libraryRenewalDays ?? loanPeriodDays),
     allowRenewIfOverdue: settings.libraryAllowRenewIfOverdue === true,
     allowMultipleCopiesOfSameTitle: settings.libraryAllowMultipleCopiesOfSameTitle === true,
+    allowIsbnCheckout: settings.libraryAllowIsbnCheckout !== false,
     maxFineCap: Math.max(0, settings.libraryMaxFineCap ?? 20),
     cameraScanEnabled: settings.libraryCameraScanEnabled === true,
     kioskAllowDropBoxReturn: settings.libraryKioskAllowDropBoxReturn !== false,
@@ -190,3 +194,26 @@ export function isLibraryStandaloneSelfCheckoutEnabled(settings: LibraryStudentC
   if (!isLibraryPillarEnabled(settings)) return false;
   return settings.libraryAutoStudentPortalEnabled !== false;
 }
+
+/**
+ * Resolves the effective checkout limit for a student.
+ * If the student has a custom `libraryMaxCheckouts`, it takes precedence:
+ * - 0 = unlimited books
+ * - N > 0 = custom limit of N books
+ * Otherwise falls back to school policy `maxCheckoutsPerStudent` (or default 3).
+ */
+export function resolveStudentMaxCheckouts(
+  student?: { libraryMaxCheckouts?: number | null } | null,
+  policyDefault: number = 3,
+): number {
+  if (
+    student?.libraryMaxCheckouts !== undefined &&
+    student?.libraryMaxCheckouts !== null &&
+    typeof student.libraryMaxCheckouts === 'number' &&
+    !isNaN(student.libraryMaxCheckouts)
+  ) {
+    return Math.max(0, student.libraryMaxCheckouts);
+  }
+  return Math.max(0, policyDefault);
+}
+

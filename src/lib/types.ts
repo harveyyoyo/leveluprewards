@@ -30,14 +30,70 @@ export interface LibraryItem {
   activeLoanId?: string | null;
   condition?: 'good' | 'lost' | 'damaged';
   archived?: boolean;
+  /** Whether the copy spine/barcode label has been printed and verified. */
+  labeled?: boolean;
+  /** Timestamp when the copy was marked as labeled. */
+  labeledAt?: number;
   /** Due date for overdue tracking (optional). */
   dueAt?: number | null;
+  /** Cover image URL (Open Library, Google Books, or custom upload). */
+  coverUrl?: string;
+  /** Book synopsis or description. */
+  description?: string;
+  /** Reading level metrics (e.g. Lexile 650L, Grade 3-5, AR 4.2, F&P). */
+  readingLevel?: string;
+  /** Number of pages in the book. */
+  pageCount?: number;
+  /** Publication year (e.g. "2021"). */
+  publishedYear?: string;
+  /** Book series name (e.g. "Percy Jackson & the Olympians"). */
+  series?: string;
+  /** Series volume/book number (e.g. "Book 1"). */
+  volume?: string;
+  /** Number of student ratings submitted. */
+  ratingCount?: number;
+  /** Average student rating (1 to 5 scale). */
+  ratingAvg?: number;
 }
+
+/** Primary organization hierarchy for library book shelving and catalog grouping. */
+export type LibraryOrganizationScheme =
+  | 'genre_then_author'
+  | 'author_then_genre'
+  | 'shelf_then_author';
+
 
 export type LibraryItemInput = Pick<
   LibraryItem,
-  'name' | 'upc' | 'author' | 'isbn' | 'category' | 'shelfLocation' | 'copyNumber' | 'notes'
+  | 'name'
+  | 'upc'
+  | 'author'
+  | 'isbn'
+  | 'category'
+  | 'shelfLocation'
+  | 'copyNumber'
+  | 'notes'
+  | 'coverUrl'
+  | 'description'
+  | 'readingLevel'
+  | 'pageCount'
+  | 'publishedYear'
+  | 'series'
+  | 'volume'
 > & { copies?: number };
+
+export interface LibraryBookReview {
+  id: string;
+  itemId: string;
+  bookTitle: string;
+  studentId: string;
+  studentName?: string;
+  rating: number; // 1 to 5
+  tags?: string[];
+  reviewText?: string;
+  createdAt: number;
+  approved?: boolean;
+}
 
 export interface Class {
   id: string;
@@ -242,6 +298,13 @@ export interface Student {
   libraryPoints?: number;
   /** Accumulated library fine balance (abstract units, not school reward points). */
   libraryFineBalance?: number;
+  /**
+   * Custom maximum books this student can have checked out at once.
+   * - `undefined` / `null`: Use school-wide default (`settings.libraryMaxCheckoutsPerStudent ?? 3`)
+   * - `0`: Unlimited books
+   * - `N > 0`: Custom limit of N books
+   */
+  libraryMaxCheckouts?: number | null;
   classId?: string;
   houseId?: string;
   nfcId: string;

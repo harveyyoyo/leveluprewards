@@ -38,7 +38,7 @@ export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
           Library
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Library opens in its own dedicated space — book catalog, barcode scanning intake, circulation desk,
+          Library opens in its own dedicated space — book catalog, barcode scanning intake, library desk,
           student self-checkout kiosk, and return policies.
         </p>
       </div>

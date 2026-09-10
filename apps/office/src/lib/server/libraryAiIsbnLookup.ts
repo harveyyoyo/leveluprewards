@@ -22,7 +22,10 @@ Reply with ONLY a JSON object (no prose, no markdown) matching this schema:
   "author": "string",
   "category": "string",
   "publisher": "string",
-  "publishedYear": "string"
+  "publishedYear": "string",
+  "description": "string",
+  "pageCount": number,
+  "readingLevel": "string"
 }
 
 Set "found" to true when web search identifies a specific published book for this ISBN — even if minor details (subtitle wording, year) differ slightly across retailers. Use the title and author that most booksellers or the publisher agree on. Set "found" to false only when search returns nothing useful or conflicting titles with no clear match.`;
@@ -33,7 +36,10 @@ export type AiBookResult = {
   author?: string;
   category?: string;
   publisher?: string;
-  publishedYear?: string;
+  publishedYear?: string;
+  description?: string;
+  pageCount?: number;
+  readingLevel?: string;
 };
 
 export type AiIsbnLookupStatus = 'not_configured' | 'matched' | 'no_match' | 'error';
@@ -55,7 +61,11 @@ export function hitFromAiResult(result: AiBookResult, fallbackIsbn: string): Lib
     isbn: fallbackIsbn,
     category: result.category?.trim() || undefined,
     publisher: result.publisher?.trim() || undefined,
-    publishedYear: result.publishedYear?.trim() || undefined,
+    publishedYear: result.publishedYear?.trim() || undefined,
+    description: result.description?.trim() || undefined,
+    pageCount: typeof result.pageCount === 'number' && result.pageCount > 0 ? result.pageCount : undefined,
+    readingLevel: result.readingLevel?.trim() || undefined,
+    coverUrl: fallbackIsbn ? `https://covers.openlibrary.org/b/isbn/${fallbackIsbn}-M.jpg?default=false` : undefined,
     source: 'ai',
   };
 }

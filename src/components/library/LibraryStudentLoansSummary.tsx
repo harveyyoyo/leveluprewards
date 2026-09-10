@@ -4,6 +4,7 @@ import { BookOpen, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { computeDaysOverdue, formatDueDate, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 import type { LibraryItem } from '@/lib/types';
+import { LibraryBookCover } from './LibraryBookCover';
 import { cn } from '@/lib/utils';
 
 export function LibraryStudentLoansSummary({
@@ -23,8 +24,13 @@ export function LibraryStudentLoansSummary({
   categoryPoints?: number;
   compact?: boolean;
 }) {
+  const isUnlimited = maxCheckouts === 0;
   const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
-  const countLabel = max ? `${items.length} / ${max} books` : `${items.length} book${items.length === 1 ? '' : 's'}`;
+  const countLabel = isUnlimited
+    ? `${items.length} book${items.length === 1 ? '' : 's'} (Unlimited)`
+    : max
+    ? `${items.length} / ${max} books`
+    : `${items.length} book${items.length === 1 ? '' : 's'}`;
 
   const tierLines: string[] = [];
   if (libraryPolicy?.rewardMode === 'isolated_points' && typeof libraryPoints === 'number') {
@@ -72,24 +78,34 @@ export function LibraryStudentLoansSummary({
               <li
                 key={item.id}
                 className={cn(
-                  'rounded-lg border px-2.5 py-1.5 text-xs',
+                  'rounded-lg border px-2.5 py-1.5 text-xs flex items-center gap-2',
                   overdueDays > 0
                     ? 'border-amber-400/60 bg-amber-50/80 dark:bg-amber-950/30'
                     : 'border-border/60 bg-muted/20',
                 )}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-semibold truncate">{item.name}</span>
-                  {overdueDays > 0 ? (
-                    <Badge variant="destructive" className="shrink-0 text-[9px]">
-                      {overdueDays}d late
-                    </Badge>
-                  ) : null}
+                <LibraryBookCover
+                  coverUrl={item.coverUrl}
+                  isbn={item.isbn}
+                  title={item.name}
+                  author={item.author}
+                  aspect="thumb"
+                  className="h-9 w-6 shrink-0 rounded border shadow-xs"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-semibold truncate">{item.name}</span>
+                    {overdueDays > 0 ? (
+                      <Badge variant="destructive" className="shrink-0 text-[9px] px-1 py-0">
+                        {overdueDays}d late
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
+                    <Calendar className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                    {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
+                  </p>
                 </div>
-                <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Calendar className="h-3 w-3 shrink-0" aria-hidden />
-                  {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
-                </p>
               </li>
             );
           })}

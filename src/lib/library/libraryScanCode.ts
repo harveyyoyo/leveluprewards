@@ -33,4 +33,89 @@ export function generateLibraryBarcode(): string {
   return `${LIBRARY_BARCODE_PREFIX}${hex}`;
 }
 
-export type LibraryLabelFormat = 'sticker' | 'spine' | 'pocket';
+export type LibraryLabelFormat =
+  | 'sticker'       // Avery 5160: 1" x 2-5/8" (30 per sheet)
+  | 'spine'         // Avery 5167: Slim Spine 1/2" x 1-3/4" (80 per sheet)
+  | 'spine_square'  // Square Spine: 1" x 1-1/2" (30 per sheet)
+  | 'large_plate'   // Avery 5163: Large Inside Bookplate 2" x 4" (10 per sheet)
+  | 'thermal'       // Thermal Roll: 2-1/4" x 1-1/4" (Dymo / Zebra continuous)
+  | 'pocket';       // Circulation Pocket Slip: 2-3/4" x 4-1/4"
+
+export interface LibraryLabelOption {
+  id: LibraryLabelFormat;
+  name: string;
+  shortName: string;
+  dimensions: string;
+  sheetType: string;
+  itemsPerPage: number;
+  description: string;
+  badge: string;
+}
+
+export const LIBRARY_LABEL_OPTIONS: LibraryLabelOption[] = [
+  {
+    id: 'sticker',
+    name: 'Avery 5160 — Standard Sticker',
+    shortName: 'Standard (Avery 5160)',
+    dimensions: '1" × 2⅝" (25.4 × 66.7 mm)',
+    sheetType: 'Letter Sheet (3 × 10 grid)',
+    itemsPerPage: 30,
+    description: 'Most popular library standard. Full barcode, color genre banner, title, author, and shelf location.',
+    badge: '30 / sheet',
+  },
+  {
+    id: 'spine',
+    name: 'Avery 5167 — Slim Spine Label',
+    shortName: 'Slim Spine (Avery 5167)',
+    dimensions: '½" × 1¾" (12.7 × 44.5 mm)',
+    sheetType: 'Letter Sheet (4 × 20 grid)',
+    itemsPerPage: 80,
+    description: 'Narrow sticker for thin book spines. Genre call prefix, call number, and short title.',
+    badge: '80 / sheet',
+  },
+  {
+    id: 'spine_square',
+    name: 'Square Spine Label',
+    shortName: 'Square Spine (1" × 1½")',
+    dimensions: '1" × 1½" (25.4 × 38.1 mm)',
+    sheetType: 'Letter Sheet (3 × 10 grid)',
+    itemsPerPage: 30,
+    description: 'Classic collegiate spine label with large genre color block, bold call prefix, and author cutter.',
+    badge: '30 / sheet',
+  },
+  {
+    id: 'large_plate',
+    name: 'Avery 5163 — Large Bookplate',
+    shortName: 'Large Bookplate (Avery 5163)',
+    dimensions: '2" × 4" (50.8 × 101.6 mm)',
+    sheetType: 'Letter Sheet (2 × 5 grid)',
+    itemsPerPage: 10,
+    description: 'Inside cover bookplate with large high-density barcode, book synopsis, shelf, and school name.',
+    badge: '10 / sheet',
+  },
+  {
+    id: 'thermal',
+    name: 'Thermal Roll (Dymo / Zebra / Brother)',
+    shortName: 'Thermal Roll',
+    dimensions: '2¼" × 1¼" (57 × 32 mm)',
+    sheetType: 'Continuous Roll (1 per page)',
+    itemsPerPage: 1,
+    description: 'For direct thermal desktop label printers. Prints individual peel-and-stick labels on demand.',
+    badge: '1 / page (Roll)',
+  },
+  {
+    id: 'pocket',
+    name: 'Circulation Pocket Slip',
+    shortName: 'Pocket Slip',
+    dimensions: '2¾" × 4¼" (69.8 × 108 mm)',
+    sheetType: 'Cardstock / Sheet (4 per sheet)',
+    itemsPerPage: 4,
+    description: 'Traditional checkout pocket slip with date due grid, patron signature line, and barcode.',
+    badge: '4 / sheet',
+  },
+];
+
+export function getLibraryLabelOption(format: LibraryLabelFormat): LibraryLabelOption {
+  return LIBRARY_LABEL_OPTIONS.find((opt) => opt.id === format) ?? LIBRARY_LABEL_OPTIONS[0];
+}
+

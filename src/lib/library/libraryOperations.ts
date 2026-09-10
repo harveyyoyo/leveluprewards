@@ -46,22 +46,85 @@ function catalogLookupCodes(rawCode: string): string[] {
   return [...codes];
 }
 
+export type FindLibraryItemOptions = {
+  allowIsbn?: boolean;
+  preferredStatus?: 'available' | 'checked_out';
+  studentId?: string;
+};
+
 export async function findLibraryItemByUpc(
   firestore: Firestore,
   schoolId: string,
   rawCode: string,
+  options?: FindLibraryItemOptions,
 ): Promise<{ item: LibraryItem; itemId: string } | null> {
   const codes = catalogLookupCodes(rawCode);
   if (!codes.length) return null;
+
+  // 1. Exact UPC match (copy barcode)
+  let foundByUpc: { item: LibraryItem; itemId: string } | null = null;
   for (const upc of codes) {
     const snap = await getDocs(
       query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', upc), limit(1)),
     );
     if (!snap.empty) {
       const itemDoc = snap.docs[0];
-      return { item: { id: itemDoc.id, ...itemDoc.data() } as LibraryItem, itemId: itemDoc.id };
+      const item = { id: itemDoc.id, ...itemDoc.data() } as LibraryItem;
+      if (!item.archived) {
+        foundByUpc = { item, itemId: itemDoc.id };
+        if (!options?.preferredStatus || item.status === options.preferredStatus) {
+          return foundByUpc;
+        }
+        break;
+      }
     }
   }
+
+  // 2. ISBN lookup if enabled (turned on by default)
+  const allowIsbn = options?.allowIsbn !== false;
+  if (allowIsbn) {
+    for (const isbn of codes) {
+      const snap = await getDocs(
+        query(
+          collection(firestore, 'schools', schoolId, 'library'),
+          where('isbn', '==', isbn),
+          limit(20),
+        ),
+      );
+      if (!snap.empty) {
+        const nonArchived = snap.docs
+          .map((d) => ({ item: { id: d.id, ...d.data() } as LibraryItem, itemId: d.id }))
+          .filter((res) => !res.item.archived);
+
+        if (nonArchived.length > 0) {
+          // Prioritize copy checked out to this student (for returns)
+          if (options?.studentId) {
+            const studentCopy = nonArchived.find(
+              (c) => c.item.status === 'checked_out' && c.item.checkedOutTo === options.studentId,
+            );
+            if (studentCopy) return studentCopy;
+          }
+
+          // Prioritize preferred status (e.g. available copy when taking out a book)
+          if (options?.preferredStatus === 'available') {
+            const availableCopy = nonArchived.find((c) => c.item.status === 'available');
+            if (availableCopy) return availableCopy;
+          } else if (options?.preferredStatus === 'checked_out') {
+            const checkedOutCopy = nonArchived.find((c) => c.item.status === 'checked_out');
+            if (checkedOutCopy) return checkedOutCopy;
+          }
+
+          // Otherwise prefer available copy, or fallback to first copy
+          const availableCopy = nonArchived.find((c) => c.item.status === 'available');
+          return availableCopy ?? nonArchived[0];
+        }
+      }
+    }
+  }
+
+  // Fallback to the UPC match if found (even if not preferred status)
+  if (foundByUpc) return foundByUpc;
+
   return null;
 }
 
@@ -114,7 +177,19 @@ export async function performLibraryCheckoutOrReturn(
     allowCrossReturn?: boolean;
   },
 ): Promise<LibraryCheckoutResult> {
-  const found = await findLibraryItemByUpc(firestore, schoolId, rawCode);
+  const allowIsbn = options?.policy?.allowIsbnCheckout !== false;
+  const preferredStatus =
+    options?.action === 'checkout'
+      ? 'available'
+      : options?.action === 'return'
+        ? 'checked_out'
+        : undefined;
+
+  const found = await findLibraryItemByUpc(firestore, schoolId, rawCode, {
+    allowIsbn,
+    preferredStatus,
+    studentId,
+  });
   if (!found || found.item.archived) return { action: 'not_found' };
   const { item, itemId } = found;
 

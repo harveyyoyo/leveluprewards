@@ -19,10 +19,10 @@ const numeric = (value: unknown, fallback: number) =>
  * Request receipts make a retry after an uncertain network response safe. */
 export async function runLibraryOperation(db: Firestore, schoolId: string, data: Data, actor: LibraryActor) {
   const action = data.action;
-  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive'].includes(action)) {
+  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive', 'review'].includes(action)) {
     throw new HttpsError('invalid-argument', 'Unknown library action.');
   }
-  if (!['checkout', 'return'].includes(action) && !actor.staff) {
+  if (!['checkout', 'return', 'review'].includes(action) && !actor.staff) {
     throw new HttpsError('permission-denied', 'Library staff access required.');
   }
   const requestId = libraryId(data.requestId, 'request ID');
@@ -34,7 +34,8 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     throw new HttpsError('permission-denied', 'Use your own student account.');
   }
   const fingerprint = JSON.stringify([action, itemId, studentId, data.expectedLoanId ?? null,
-    data.expectedCheckedOutAt ?? null, data.condition ?? null, data.amount ?? null, data.reason ?? null]);
+    data.expectedCheckedOutAt ?? null, data.condition ?? null, data.amount ?? null, data.reason ?? null,
+    data.rating ?? null, data.reviewText ?? null]);
   return db.runTransaction(async tx => {
     const receipt = await tx.get(receiptRef);
     if (receipt.exists) {
@@ -92,6 +93,50 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const studentSnap = await tx.get(studentRef);
     if (!studentSnap.exists) fail('Student not found.');
     const student = studentSnap.data()!;
+
+    if (action === 'review') {
+      const rating = Math.min(5, Math.max(1, Math.round(numeric(data.rating, 5))));
+      const reviewText = String(data.reviewText ?? '').trim().slice(0, 500);
+      const studentName = data.studentName ? String(data.studentName).slice(0, 100) : `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
+      const reviewRef = school.collection('libraryReviews').doc();
+      tx.set(reviewRef, {
+        itemId,
+        isbn: item.isbn || '',
+        studentId,
+        studentName,
+        rating,
+        reviewText,
+        createdAt: now,
+      });
+      const count = numeric(item.ratingCount, 0);
+      const oldAvg = numeric(item.ratingAvg, 0);
+      const newCount = count + 1;
+      const newAvg = Math.round(((oldAvg * count + rating) / newCount) * 10) / 10;
+      tx.update(itemRef, { ratingCount: newCount, ratingAvg: newAvg });
+      const bonus = 5;
+      const categoryId = String(settings.libraryPointsCategoryId ?? '').trim();
+      const category = categoryId ? await tx.get(school.collection('categories').doc(categoryId)) : null;
+      const categoryName = category?.data()?.name ?? '';
+      const mode = settings.libraryRewardMode || (categoryName ? 'app_points' : 'none');
+      const studentUpdates: Data = { libraryUpdatedAt: now };
+      if (mode === 'isolated_points') {
+        studentUpdates.libraryPoints = numeric(student.libraryPoints, 0) + bonus;
+      } else if (mode === 'app_points' && categoryName) {
+        studentUpdates.points = numeric(student.points, 0) + bonus;
+        studentUpdates.categoryPoints = {
+          ...(student.categoryPoints ?? {}),
+          [categoryName]: (student.categoryPoints?.[categoryName] ?? 0) + bonus,
+        };
+      }
+      tx.update(studentRef, studentUpdates);
+      tx.set(studentRef.collection('activities').doc(), {
+        desc: `Book review bonus (+${bonus} pts): ${item.name}`,
+        amount: bonus,
+        date: now,
+      });
+      return finish({ success: true, ratingAvg: newAvg, ratingCount: newCount, message: 'Thank you for reviewing this book!' });
+    }
+
     const loanDays = Math.max(1, numeric(settings.libraryLoanPeriodDays, 14));
     if (action === 'checkout') {
       if (item.archived || (item.condition && item.condition !== 'good')) fail('This copy is unavailable.');
@@ -101,7 +146,9 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       }
       const loans = await tx.get(school.collection('library').where('checkedOutTo', '==', studentId));
       const count = loans.docs.filter(d => d.data().status === 'checked_out').length;
-      const max = numeric(settings.libraryMaxCheckoutsPerStudent, 3);
+      const defaultMax = numeric(settings.libraryMaxCheckoutsPerStudent, 3);
+      const studentCustomMax = student.libraryMaxCheckouts != null ? numeric(student.libraryMaxCheckouts, -1) : -1;
+      const max = studentCustomMax >= 0 ? studentCustomMax : defaultMax;
       if (max > 0 && count >= max) return finish({ action: 'limit_reached', currentCount: count, max });
       const loanRef = school.collection('libraryLoans').doc();
       const dueAt = now + loanDays * DAY;

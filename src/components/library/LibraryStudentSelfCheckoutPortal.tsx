@@ -9,6 +9,7 @@ import {
   Camera,
   CameraOff,
   CheckCircle2,
+  Compass,
   CornerDownLeft,
   Loader2,
   Lock,
@@ -18,6 +19,7 @@ import {
   RotateCcw,
   ScanBarcode,
   Sparkles,
+  Star,
   User,
   X,
 } from 'lucide-react';
@@ -40,7 +42,7 @@ import {
   getStudentLibraryCheckouts,
   forceReturnLibraryItem,
 } from '@/lib/library/libraryOperations';
-import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
+import { computeDaysOverdue, getLibraryPolicyFromSettings, resolveStudentMaxCheckouts } from '@/lib/library/libraryPolicy';
 import {
   playLibraryReturnAudio,
   resolveLibraryReturnFeedback,
@@ -51,15 +53,20 @@ import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
 import { resolveLibraryTheme } from '@/lib/library/libraryThemes';
 import { getLibraryBookRecommendations } from '@/lib/library/libraryRecommendations';
 import { computeStudentLibraryStanding } from '@/lib/library/libraryBehavior';
-import type { Category, LibraryItem } from '@/lib/types';
+import type { Category, LibraryItem, Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
+import { LibraryBookCover } from './LibraryBookCover';
 import { LibraryStaffExitDialog } from './LibraryStaffExitDialog';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { LibraryStudentBehaviorBadge } from './LibraryStudentBehaviorBadge';
 import { LibraryRecommendationsCard } from './LibraryRecommendationsCard';
+import { LibraryBookDiscoveryModal } from './LibraryBookDiscoveryModal';
+import { LibraryBookReviewDialog } from './LibraryBookReviewDialog';
+import { LibraryStudentNamePicker } from './LibraryStudentNamePicker';
+import { AnimatedScannerLogo } from './AnimatedScannerLogo';
 
 type PortalStep = 'student' | 'book' | 'success';
 
@@ -79,6 +86,7 @@ export function LibraryStudentSelfCheckoutPortal({
   schoolId,
   categories,
   getStudentName,
+  students: studentsProp,
   embedded = false,
   exitOpen: exitOpenProp,
   onExitOpenChange,
@@ -87,6 +95,7 @@ export function LibraryStudentSelfCheckoutPortal({
   schoolId: string;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
+  students?: Student[] | null;
   /** When true, renders inside a modal overlay instead of a full-page route. */
   embedded?: boolean;
   exitOpen?: boolean;
@@ -109,6 +118,9 @@ export function LibraryStudentSelfCheckoutPortal({
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentLoans, setStudentLoans] = useState<LibraryItem[]>([]);
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
+  const [lastBookItem, setLastBookItem] = useState<LibraryItem | null>(null);
+  const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
   const [lastReturnBorrower, setLastReturnBorrower] = useState<string | null>(null);
   const [lastReturnFeedback, setLastReturnFeedback] = useState<LibraryReturnFeedback | null>(null);
@@ -119,20 +131,30 @@ export function LibraryStudentSelfCheckoutPortal({
   } | null>(null);
   const [busy, setBusy] = useState(false);
   const scanLock = useRef(false);
-  const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>('auto');
+  const defaultMode = settings.libraryKioskDefaultMode ?? 'auto';
+  const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>(defaultMode);
   const [scanError, setScanError] = useState<string | null>(null);
   const [exitOpenInternal, setExitOpenInternal] = useState(false);
   const exitOpen = exitOpenProp ?? exitOpenInternal;
   const setExitOpen = onExitOpenChange ?? setExitOpenInternal;
   const [sessionReady, setSessionReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  /** A book scanned before the student card, in Borrow/Auto mode — held until a student is identified. */
+  const [pendingBookCode, setPendingBookCode] = useState<string | null>(null);
 
-  // Load catalog items for recommendation engine
+  // Load catalog items for recommendation engine and discovery
   const catalogQuery = useMemoFirebase(
-    () => (firestore && schoolId ? query(collection(firestore, 'schools', schoolId, 'library'), limit(150)) : null),
+    () => (firestore && schoolId ? query(collection(firestore, 'schools', schoolId, 'library'), limit(500)) : null),
     [firestore, schoolId],
   );
   const { data: catalogItems } = useCollection<LibraryItem>(catalogQuery);
+
+  const studentsQuery = useMemoFirebase(
+    () => (firestore && schoolId && !studentsProp ? collection(firestore, 'schools', schoolId, 'students') : null),
+    [firestore, schoolId, studentsProp],
+  );
+  const { data: queriedStudents } = useCollection<Student>(studentsQuery);
+  const students = studentsProp ?? queriedStudents;
 
   const libraryPolicy = useMemo(
     () => getLibraryPolicyFromSettings(settings, categories),
@@ -140,8 +162,17 @@ export function LibraryStudentSelfCheckoutPortal({
   );
   const libraryTheme = useMemo(() => resolveLibraryTheme(settings.libraryTheme), [settings.libraryTheme]);
   const matchKioskTheme = settings.libraryThemeMatchKiosk !== false;
+  const dropBoxOn = settings.libraryKioskAllowDropBoxReturn !== false;
   const shouldAcceptScan = useMemo(() => createScanDeduper(1500), []);
   const studentLabel = studentId ? getStudentName(studentId) : null;
+  const currentStudent = useMemo(
+    () => (studentId ? students?.find((s) => s.id === studentId) : null),
+    [students, studentId],
+  );
+  const effectiveMaxCheckouts = useMemo(
+    () => resolveStudentMaxCheckouts(currentStudent, libraryPolicy.maxCheckoutsPerStudent),
+    [currentStudent, libraryPolicy.maxCheckoutsPerStudent],
+  );
 
   // Recommendations and standing computations
   const recommendations = useMemo(() => {
@@ -181,11 +212,7 @@ export function LibraryStudentSelfCheckoutPortal({
 
   useEffect(() => {
     if (!isInitialized || !schoolId) return;
-    if (loginState === 'student' || loginState === 'school') {
-      setSessionReady(true);
-      return;
-    }
-    if (embedded && STAFF_LIBRARY_SESSION_STATES.has(loginState)) {
+    if (loginState === 'student' || loginState === 'school' || STAFF_LIBRARY_SESSION_STATES.has(loginState)) {
       setSessionReady(true);
       return;
     }
@@ -204,58 +231,60 @@ export function LibraryStudentSelfCheckoutPortal({
     return () => {
       cancelled = true;
     };
-  }, [embedded, isInitialized, login, loginState, schoolId, toast]);
+  }, [isInitialized, login, loginState, schoolId, toast]);
 
   const resetForNextStudent = useCallback(() => {
     setStudentId(null);
     setStudentLoans([]);
     setLastBookTitle(null);
+    setLastBookItem(null);
     setLastAction(null);
     setLastReturnBorrower(null);
     setLastReturnFeedback(null);
     setLastReturnPlacement(null);
     setStep('student');
-    setMode('auto');
+    setMode(settings.libraryKioskDefaultMode ?? 'auto');
     setScanError(null);
+    setPendingBookCode(null);
   }, []);
 
   // 0 means "disabled (manual tap only)" — the Library → Settings station auto-reset option.
   const autoResetSeconds = settings.libraryKioskAutoResetSeconds ?? 8;
+  const isModalActive = exitOpen || reviewOpen || discoveryOpen;
+  const idleActive =
+    autoResetSeconds > 0 &&
+    !busy &&
+    !isModalActive &&
+    (!!studentId || step === 'success');
+
   const idleRemaining = useLibraryIdleReset(
-    autoResetSeconds > 0 && !!studentId && !busy && !exitOpen,
+    idleActive,
     resetForNextStudent,
     autoResetSeconds,
   );
 
-  /** No passcode was required, so this tab was never authenticated as staff —
-   *  land somewhere that doesn't need a staff session instead of a login wall. */
-  const exitToNeutral = useCallback(() => {
+  const exitToLibrary = useCallback(() => {
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    }
     if (onExit) {
       onExit();
       return;
     }
-    router.push(`/${schoolId}/portal`);
+    router.push(`/${schoolId}/library`);
   }, [onExit, router, schoolId]);
-
-  const requestExit = useCallback(() => {
-    if (settings.libraryKioskExitRequiresPasscode) {
-      setExitOpen(true);
-    } else {
-      exitToNeutral();
-    }
-  }, [settings.libraryKioskExitRequiresPasscode, setExitOpen, exitToNeutral]);
 
   const handleBack = useCallback(() => {
     if (step !== 'student') {
       resetForNextStudent();
       return;
     }
-    requestExit();
-  }, [step, resetForNextStudent, requestExit]);
+    exitToLibrary();
+  }, [step, resetForNextStudent, exitToLibrary]);
 
   const handleExit = useCallback(() => {
-    requestExit();
-  }, [requestExit]);
+    exitToLibrary();
+  }, [exitToLibrary]);
 
   const refreshStudentLoans = useCallback(
     async (id: string) => {
@@ -282,6 +311,7 @@ export function LibraryStudentSelfCheckoutPortal({
         if (result.action === 'checkout') {
           playSound('success');
           setLastBookTitle(result.item.name);
+          setLastBookItem(result.item);
           setLastAction('checkout');
           setLastReturnFeedback(null);
           setStep('success');
@@ -318,6 +348,7 @@ export function LibraryStudentSelfCheckoutPortal({
           }
 
           setLastBookTitle(result.item.name);
+          setLastBookItem(result.item);
           setLastAction('return');
           setStep('success');
           await refreshStudentLoans(studentId);
@@ -357,6 +388,14 @@ export function LibraryStudentSelfCheckoutPortal({
     },
     [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel],
   );
+
+  // A book scanned before the student card (Borrow/Auto mode) resolves as soon as the student is identified.
+  useEffect(() => {
+    if (!studentId || !pendingBookCode) return;
+    const code = pendingBookCode;
+    setPendingBookCode(null);
+    void processBook(code);
+  }, [studentId, pendingBookCode, processBook]);
 
   // Quick Return for Drop Box mode (no student card swipe needed)
   const processDropBoxReturn = useCallback(
@@ -400,6 +439,7 @@ export function LibraryStudentSelfCheckoutPortal({
         }
 
         setLastBookTitle(bookItem.name);
+        setLastBookItem(bookItem);
         setLastAction('return');
         const classification = resolveBookClassification(
           bookItem.category,
@@ -457,6 +497,31 @@ export function LibraryStudentSelfCheckoutPortal({
     [firestore, schoolId, playSound, toast, refreshStudentLoans],
   );
 
+  const selectStudent = useCallback(
+    async (selectedStudentId: string) => {
+      if (!firestore || !schoolId || !selectedStudentId) return;
+      setBusy(true);
+      try {
+        setStudentId(selectedStudentId);
+        setStep('book');
+        setScanError(null);
+        await refreshStudentLoans(selectedStudentId);
+        if (settings.libraryKioskSoundEffects !== false) {
+          playSound('success');
+        }
+      } catch (err) {
+        toast({
+          variant: 'destructive',
+          title: 'Error loading account',
+          description: (err as Error).message || 'Could not load student account.',
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [firestore, schoolId, refreshStudentLoans, settings.libraryKioskSoundEffects, playSound, toast],
+  );
+
   const handleScan = useCallback(
     (code: string) => {
       if (scanLock.current || !shouldAcceptScan(code) || !firestore || !schoolId) return;
@@ -465,17 +530,39 @@ export function LibraryStudentSelfCheckoutPortal({
       setScanError(null);
       void (async () => {
         try {
-          const found = await findLibraryItemByUpc(firestore, schoolId, code);
+          const found = await findLibraryItemByUpc(firestore, schoolId, code, {
+            allowIsbn: libraryPolicy.allowIsbnCheckout,
+            preferredStatus: mode === 'return' ? 'checked_out' : 'available',
+            studentId: studentId || undefined,
+          });
 
           if (step === 'student') {
-            if (found) {
-              if (mode === 'return') {
-                // Quick drop-box book return without prior student ID scan
-                await processDropBoxReturn(found.item);
-                return;
-              }
-              throw new Error('Scan your student ID card first to borrow books.');
+            // 1. First check if this barcode is for an item currently checked out (on loan)
+            const returnCandidate = await findLibraryItemByUpc(firestore, schoolId, code, {
+              allowIsbn: libraryPolicy.allowIsbnCheckout,
+              preferredStatus: 'checked_out',
+            });
+
+            // In auto mode or return mode: if a checked-out book is scanned, automatically return it!
+            if (returnCandidate && (returnCandidate.item.status === 'checked_out' || returnCandidate.item.activeLoanId)) {
+              await processDropBoxReturn(returnCandidate.item);
+              return;
             }
+
+            // 2. Otherwise, check for an available book to borrow
+            const borrowCandidate = await findLibraryItemByUpc(firestore, schoolId, code, {
+              allowIsbn: libraryPolicy.allowIsbnCheckout,
+              preferredStatus: 'available',
+            });
+
+            if (borrowCandidate) {
+              // Auto/Borrow: hold the book and wait for the student card — either order works.
+              setPendingBookCode(code);
+              playSound('success');
+              toast({ title: 'Book ready to borrow', description: 'Now scan your student ID card to finish borrowing.' });
+              return;
+            }
+
             await processStudent(code);
           } else if (found) {
             await processBook(code);
@@ -499,7 +586,7 @@ export function LibraryStudentSelfCheckoutPortal({
         }
       })();
     },
-    [step, mode, processBook, processStudent, processDropBoxReturn, shouldAcceptScan, firestore, schoolId, playSound],
+    [step, mode, processBook, processStudent, processDropBoxReturn, shouldAcceptScan, firestore, schoolId, playSound, toast],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
@@ -509,7 +596,7 @@ export function LibraryStudentSelfCheckoutPortal({
   });
 
   const cameraSettingEnabled = Boolean(settings.libraryCameraScanEnabled);
-  const [cameraActive, setCameraActive] = useState(cameraSettingEnabled);
+  const [cameraActive, setCameraActive] = useState(false);
 
   const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
     cameraSettingEnabled && cameraActive && sessionReady && !exitOpen && !busy,
@@ -529,7 +616,9 @@ export function LibraryStudentSelfCheckoutPortal({
     step === 'student'
       ? mode === 'checkout'
         ? 'Scan your student ID card to start borrowing.'
-        : 'Scan any book barcode to return it.'
+        : mode === 'return'
+          ? 'Scan any book barcode to return it.'
+          : 'Scan a borrowed book to return it, or scan your student badge to borrow.'
       : step === 'book'
         ? `Scan each book barcode for ${studentLabel ?? 'this student'}.`
         : 'Scan another book or tap Done.';
@@ -545,7 +634,9 @@ export function LibraryStudentSelfCheckoutPortal({
   return (
     <div
       className={cn(
-        'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden transition-colors',
+        embedded
+          ? 'relative flex w-full flex-1 flex-col overflow-hidden transition-colors rounded-2xl min-h-[640px]'
+          : 'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden transition-colors',
         matchKioskTheme && libraryTheme.tone === 'dark' ? 'dark' : '',
         'bg-gradient-to-b from-primary/10 via-background to-background',
       )}
@@ -558,38 +649,42 @@ export function LibraryStudentSelfCheckoutPortal({
         )}
       >
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 shrink-0 gap-2 rounded-xl border-2 border-foreground/20 bg-background px-3 font-bold shadow-sm hover:bg-muted"
-            disabled={busy}
-            onClick={handleBack}
-            aria-label={step !== 'student' ? 'Back to start' : 'Exit kiosk'}
-          >
-            {step !== 'student' ? (
-              <>
-                <CornerDownLeft className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
-                <span className="text-sm">Back</span>
-              </>
-            ) : (
-              <>
-                <X className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
-                <span className="text-sm">Close</span>
-              </>
-            )}
-          </Button>
+          {(step !== 'student' || (!embedded && onExit)) && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0 gap-2 rounded-xl border-2 border-foreground/20 bg-background px-3 font-bold shadow-sm hover:bg-muted"
+              disabled={busy}
+              onClick={handleBack}
+              aria-label={step !== 'student' ? 'Back to start' : 'Exit kiosk'}
+            >
+              {step !== 'student' ? (
+                <>
+                  <CornerDownLeft className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  <span className="text-sm">Back</span>
+                </>
+              ) : (
+                <>
+                  <X className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
+                  <span className="text-sm">Close</span>
+                </>
+              )}
+            </Button>
+          )}
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11 rounded-xl text-muted-foreground hover:text-foreground"
-            onClick={toggleFullscreen}
-            title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen Kiosk'}
-            aria-label="Toggle Fullscreen"
-          >
-            {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-          </Button>
+          {!embedded && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 rounded-xl text-muted-foreground hover:text-foreground"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen Kiosk'}
+              aria-label="Toggle Fullscreen"
+            >
+              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </Button>
+          )}
         </div>
 
         <div className="min-w-0 flex-1 text-center">
@@ -613,81 +708,29 @@ export function LibraryStudentSelfCheckoutPortal({
             type="button"
             variant="outline"
             size="sm"
-            className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold"
-            disabled={busy}
-            onClick={handleExit}
+            className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold bg-background shadow-sm hover:bg-muted"
+            onClick={() => setDiscoveryOpen(true)}
           >
-            <Lock className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Staff Exit</span>
+            <Compass className="h-4 w-4 text-primary" />
+            <span className="hidden sm:inline">Find Books</span>
           </Button>
+          {(!embedded || onExit) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold"
+              disabled={busy}
+              onClick={handleExit}
+            >
+              <Lock className="h-4 w-4 shrink-0" aria-hidden />
+              <span className="hidden sm:inline">Staff Exit</span>
+            </Button>
+          )}
         </div>
       </header>
 
       <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col items-center justify-start gap-4 overflow-y-auto p-4 sm:p-6 md:p-8">
-        {/* Step 1: Mode Picker (Borrow/Return vs Drop Box Return) on Idle */}
-        {step === 'student' && (
-          <div className="grid w-full grid-cols-2 gap-3 pb-2 pt-1">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setMode('auto');
-                playSound('click');
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 text-center transition-all',
-                mode !== 'return'
-                  ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
-                  : 'border-border/80 bg-card hover:border-primary/40',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-xl font-bold',
-                  mode !== 'return'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                <BookOpen className="h-6 w-6" />
-              </div>
-              <span className="text-base font-black text-foreground">Borrow &amp; Return</span>
-              <span className="text-xs text-muted-foreground leading-tight">
-                Scan ID badge to start (auto-detect)
-              </span>
-            </button>
-
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setMode('return');
-                playSound('click');
-              }}
-              className={cn(
-                'flex flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 text-center transition-all',
-                mode === 'return'
-                  ? 'border-emerald-500 bg-emerald-500/10 shadow-md ring-2 ring-emerald-500/30'
-                  : 'border-border/80 bg-card hover:border-emerald-500/40',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex h-12 w-12 items-center justify-center rounded-xl font-bold',
-                  mode === 'return'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                <RotateCcw className="h-6 w-6" />
-              </div>
-              <span className="text-base font-black text-foreground">Quick Return</span>
-              <span className="text-xs text-muted-foreground leading-tight">
-                Scan book barcode directly
-              </span>
-            </button>
-          </div>
-        )}
 
         {/* Big Icon Status Indicator */}
         <div
@@ -722,7 +765,31 @@ export function LibraryStudentSelfCheckoutPortal({
               <p className="px-2 text-3xl font-black tracking-tight text-foreground sm:text-4xl leading-none">
                 {studentLabel}
               </p>
-              <LibraryStudentBehaviorBadge standing={standing} />
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <LibraryStudentBehaviorBadge standing={standing} />
+                {autoResetSeconds > 0 && (
+                  <div
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-xs transition-colors',
+                      idleRemaining <= 5
+                        ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200 animate-pulse'
+                        : 'border-border/60 bg-muted/50 text-muted-foreground',
+                    )}
+                    role="timer"
+                    aria-live="polite"
+                  >
+                    <RotateCcw
+                      className={cn(
+                        'h-3 w-3 text-primary',
+                        idleRemaining <= 5 && 'text-amber-600 animate-spin',
+                      )}
+                    />
+                    <span>
+                      Auto-reset in <strong className="font-mono font-bold text-foreground">{idleRemaining}s</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
 
@@ -740,7 +807,9 @@ export function LibraryStudentSelfCheckoutPortal({
             {step === 'student'
               ? mode === 'return'
                 ? 'Scan book barcode to return'
-                : 'Scan your student ID card'
+                : mode === 'auto'
+                  ? 'Scan a book to return, or scan card to borrow'
+                  : 'Scan student card or type name'
               : step === 'book'
                 ? mode === 'checkout'
                   ? 'Scan book barcode to borrow'
@@ -752,6 +821,13 @@ export function LibraryStudentSelfCheckoutPortal({
                   : 'Book checked out!'}
           </h2>
 
+          {step === 'student' && mode === 'auto' && (
+            <p className="text-xs font-semibold text-muted-foreground flex items-center justify-center gap-1 pt-0.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span>Auto Return is on: just scan any borrowed book to return it instantly!</span>
+            </p>
+          )}
+
           {step === 'book' && mode === 'auto' && (
             <p className="text-xs font-medium text-muted-foreground flex items-center justify-center gap-1">
               <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
@@ -760,13 +836,26 @@ export function LibraryStudentSelfCheckoutPortal({
           )}
 
           {lastBookTitle && step === 'success' ? (
-            <div className="space-y-0.5 pt-1">
-              <p className="text-base font-bold text-primary sm:text-lg">{lastBookTitle}</p>
-              {lastReturnBorrower ? (
-                <p className="text-xs text-muted-foreground">
-                  Returned for <span className="font-semibold text-foreground">{lastReturnBorrower}</span>
-                </p>
-              ) : null}
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <LibraryBookCover
+                coverUrl={lastBookItem?.coverUrl}
+                isbn={lastBookItem?.isbn}
+                title={lastBookTitle || lastBookItem?.name}
+                author={lastBookItem?.author}
+                aspect="portrait"
+                className="h-20 w-14 shrink-0 rounded-xl shadow-inner border"
+              />
+              <div className="text-left space-y-0.5">
+                <p className="text-base font-bold text-primary sm:text-lg leading-tight">{lastBookTitle}</p>
+                {lastBookItem?.author && (
+                  <p className="text-xs text-muted-foreground">{lastBookItem.author}</p>
+                )}
+                {lastReturnBorrower ? (
+                  <p className="text-xs text-muted-foreground">
+                    Returned for <span className="font-semibold text-foreground">{lastReturnBorrower}</span>
+                  </p>
+                ) : null}
+              </div>
             </div>
           ) : null}
 
@@ -828,6 +917,47 @@ export function LibraryStudentSelfCheckoutPortal({
                   {lastReturnPlacement.genre.callPrefix} · {lastReturnPlacement.genre.label}
                 </span>
               </div>
+            </div>
+          )}
+
+          {step === 'success' && lastAction === 'return' && (
+            <div className="pt-1 flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReviewOpen(true)}
+                className="gap-1.5 rounded-xl border-amber-400/80 bg-amber-50/70 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-xs font-bold shadow-sm"
+              >
+                <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                Rate this book for +5 bonus points!
+              </Button>
+            </div>
+          )}
+
+          {/* Success Auto-Reset Countdown Banner */}
+          {step === 'success' && autoResetSeconds > 0 && (
+            <div className="w-full max-w-md mx-auto rounded-2xl border-2 border-primary/25 bg-card/90 p-3.5 text-center space-y-2 shadow-sm animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span className="flex items-center gap-1.5 text-primary">
+                  <RotateCcw className="h-3.5 w-3.5 animate-spin" style={{ animationDuration: '4s' }} />
+                  <span>Auto-Reset Countdown</span>
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 font-mono text-xs font-black text-primary border border-primary/20">
+                  {idleRemaining}s remaining
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-muted/60">
+                <div
+                  className="h-full bg-primary transition-all duration-1000 ease-linear rounded-full"
+                  style={{
+                    width: `${Math.min(100, Math.max(0, (idleRemaining / (autoResetSeconds || 8)) * 100))}%`,
+                  }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Returning to start screen in <strong className="text-foreground">{idleRemaining} second{idleRemaining === 1 ? '' : 's'}</strong> for next student.
+              </p>
             </div>
           )}
         </div>
@@ -910,6 +1040,50 @@ export function LibraryStudentSelfCheckoutPortal({
           </div>
         )}
 
+        {/* Step 1: Fast Name Type & Instant Popup */}
+        {step === 'student' && mode !== 'return' && (
+          <div className="w-full max-w-lg space-y-3 pt-1 animate-in fade-in duration-200">
+            <div className="rounded-3xl border-2 border-primary/20 bg-card p-4 sm:p-5 shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary font-black shadow-inner">
+                    <User className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black tracking-tight text-foreground">
+                      Type your name
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      No card needed — start typing to find yourself
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+                  <Sparkles className="h-3 w-3" /> Quick Find
+                </span>
+              </div>
+              <LibraryStudentNamePicker
+                students={students}
+                disabled={busy}
+                onSelect={(s) => void selectStudent(s.id)}
+                variant="kiosk"
+                clearOnSelect
+                placeholder="Type your name (e.g. Alex, Sarah)…"
+                label=""
+              />
+            </div>
+
+            <div className="relative flex items-center justify-center py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/60" />
+              </div>
+              <div className="relative bg-background px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                or scan student ID card below
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Camera Scanner Viewfinder (Enabled via Library Settings) */}
         {cameraSettingEnabled && (
           <div className="w-full space-y-2">
@@ -949,9 +1123,12 @@ export function LibraryStudentSelfCheckoutPortal({
 
         {/* Scanner Barcode Input Field */}
         <div className="w-full space-y-2">
-          <div className="flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground">
-            <ScanBarcode className="h-4 w-4 text-primary" />
-            <span>Barcode Reader Ready</span>
+          <div className="flex items-center justify-center py-0.5">
+            <AnimatedScannerLogo
+              size="md"
+              active={!busy}
+              label="Barcode Reader Ready"
+            />
           </div>
           <LibraryBarcodeReaderField
             inputId="library-self-checkout-reader"
@@ -973,11 +1150,46 @@ export function LibraryStudentSelfCheckoutPortal({
           </p>
         )}
 
+        {/* Step 1 Quick Mode Switcher (Non-intrusive) */}
+        {step === 'student' && dropBoxOn && (
+          <div className="pt-1 text-center">
+            {mode === 'return' ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs font-bold text-primary hover:bg-primary/10 gap-1.5 border-primary/30"
+                onClick={() => {
+                  setMode('auto');
+                  playSound('click');
+                }}
+              >
+                <User className="h-3.5 w-3.5" />
+                <span>Switch to Student Sign-In / Borrow</span>
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground gap-1.5"
+                onClick={() => {
+                  setMode('return');
+                  playSound('click');
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Return only? Lock to Drop Box Mode</span>
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Student Loans Summary Card */}
         {studentId && step !== 'student' ? (
           <LibraryStudentLoansSummary
             items={studentLoans}
-            maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
+            maxCheckouts={effectiveMaxCheckouts}
             libraryPolicy={libraryPolicy}
             compact
           />
@@ -988,11 +1200,17 @@ export function LibraryStudentSelfCheckoutPortal({
           <LibraryRecommendationsCard recommendations={recommendations} className="mt-1" />
         )}
 
-        {/* Idle Countdown Status */}
-        {studentId && idleRemaining <= 15 && (
-          <p role="status" className="text-center text-xs font-semibold text-muted-foreground">
-            Session resetting in {idleRemaining}s. Tap or scan to keep going.
-          </p>
+        {/* Idle Countdown Alert Banner */}
+        {studentId && step === 'book' && autoResetSeconds > 0 && idleRemaining <= 5 && (
+          <div
+            role="status"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50/95 py-2 px-3 text-center text-xs font-semibold text-amber-900 shadow-sm dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-200 animate-bounce"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-spin" />
+            <span>
+              Session resetting in <strong className="font-mono font-extrabold">{idleRemaining}s</strong>! Tap screen or scan to keep going.
+            </span>
+          </div>
         )}
 
         {busy ? <Loader2 className="h-8 w-8 animate-spin text-primary" /> : null}
@@ -1017,7 +1235,7 @@ export function LibraryStudentSelfCheckoutPortal({
               disabled={busy}
               onClick={resetForNextStudent}
             >
-              Done · Next Student
+              Done · Next Student {autoResetSeconds > 0 ? `(${idleRemaining}s)` : ''}
             </Button>
           </div>
         ) : step === 'book' ? (
@@ -1036,13 +1254,26 @@ export function LibraryStudentSelfCheckoutPortal({
       <LibraryStaffExitDialog
         open={exitOpen}
         onOpenChange={setExitOpen}
-        onUnlocked={(role) => {
-          if (onExit) {
-            onExit();
-            return;
-          }
-          router.push(`/${schoolId}/${role === 'admin' ? 'admin' : 'library'}`);
+        onUnlocked={() => {
+          exitToLibrary();
         }}
+      />
+
+      <LibraryBookDiscoveryModal
+        isOpen={discoveryOpen}
+        setIsOpen={setDiscoveryOpen}
+        catalogItems={catalogItems ?? []}
+      />
+
+      <LibraryBookReviewDialog
+        isOpen={reviewOpen}
+        setIsOpen={setReviewOpen}
+        schoolId={schoolId}
+        studentId={studentId || (lastBookItem?.checkedOutTo ?? '')}
+        studentName={studentLabel || undefined}
+        itemId={lastBookItem?.id || ''}
+        bookTitle={lastBookTitle || ''}
+        coverUrl={lastBookItem?.coverUrl}
       />
     </div>
   );

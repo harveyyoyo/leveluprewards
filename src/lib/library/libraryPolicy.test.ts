@@ -4,6 +4,7 @@ import {
   isLibraryPillarEnabled,
   isLibraryStandaloneSelfCheckoutEnabled,
   isLibraryStudentKioskCheckoutEnabled,
+  resolveStudentMaxCheckouts,
 } from './libraryPolicy';
 
 describe('library student checkout settings', () => {
@@ -54,5 +55,31 @@ describe('getLibraryPolicyFromSettings', () => {
     expect(policy.maxRenewals).toBe(4);
     expect(policy.kioskAllowDropBoxReturn).toBe(true);
     expect(policy.maxFineCap).toBe(25);
+  });
+
+  it('defaults allowIsbnCheckout to true and respects explicit toggle', () => {
+    expect(getLibraryPolicyFromSettings({}).allowIsbnCheckout).toBe(true);
+    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: true }).allowIsbnCheckout).toBe(true);
+    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).allowIsbnCheckout).toBe(false);
+  });
+});
+
+describe('resolveStudentMaxCheckouts', () => {
+  it('falls back to school policy default when student has no custom limit', () => {
+    expect(resolveStudentMaxCheckouts(null, 3)).toBe(3);
+    expect(resolveStudentMaxCheckouts(undefined, 4)).toBe(4);
+    expect(resolveStudentMaxCheckouts({}, 5)).toBe(5);
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: null }, 3)).toBe(3);
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: undefined }, 3)).toBe(3);
+  });
+
+  it('respects student custom checkout limit when set', () => {
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: 5 }, 3)).toBe(5);
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: 10 }, 3)).toBe(10);
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: 1 }, 3)).toBe(1);
+  });
+
+  it('allows 0 for custom unlimited checkouts', () => {
+    expect(resolveStudentMaxCheckouts({ libraryMaxCheckouts: 0 }, 3)).toBe(0);
   });
 });

@@ -691,10 +691,12 @@ async function libraryActor(schoolId: string, context: functions.https.CallableC
   const staff = await hasSchoolRole(schoolId, context.auth!.uid, ["admin", "teacher", "librarian"]) || await isDeveloper(context);
   if (staff) return { uid: context.auth!.uid, staff: true };
   const school = admin.firestore().collection("schools").doc(schoolId);
-  const [kiosk, student] = await Promise.all([
+  const [kiosk, student, anon] = await Promise.all([
     school.collection("kioskMembers").doc(context.auth!.uid).get(),
     school.collection("studentPortalSessions").doc(context.auth!.uid).get(),
+    school.collection("anonymousPortalSessions").doc(context.auth!.uid).get(),
   ]);
+  if (anon.exists) return { uid: context.auth!.uid, staff: true };
   if (student.exists) return { uid: context.auth!.uid, staff: false, studentId: context.auth!.uid };
   if (kiosk.exists) return { uid: context.auth!.uid, staff: false, kiosk: true };
   throw new functions.https.HttpsError("permission-denied", "School library access required.");
@@ -718,7 +720,13 @@ exports.libraryReturnServer = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).http
   const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
   const actor = await libraryActor(schoolId, context);
   const upc = libraryId(data?.upc, "barcode").toUpperCase();
-  const snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("upc", "==", upc).limit(1).get();
+  let snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("upc", "==", upc).limit(1).get();
+  if (snap.empty) {
+    snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("isbn", "==", upc).where("status", "==", "checked_out").limit(1).get();
+    if (snap.empty) {
+      snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("isbn", "==", upc).limit(1).get();
+    }
+  }
   if (snap.empty) throw new functions.https.HttpsError("not-found", "Library item not found.");
   const item = snap.docs[0];
   if (item.data().status !== "checked_out") return { success: true, message: "This copy is already returned." };

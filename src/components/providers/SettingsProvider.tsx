@@ -43,7 +43,12 @@ import {
     type LegacyModeSignals,
 } from '@/lib/legacyMode';
 import { isStudentKioskUiContext } from '@/lib/students/studentKioskRoute';
-import type { LibraryGenreConfig, BarcodeNumberScheme } from '@/lib/library/libraryClassification';
+import {
+    type LibraryGenreConfig,
+    type BarcodeNumberScheme,
+    DEFAULT_LIBRARY_PLACEMENT_ZONES,
+} from '@/lib/library/libraryClassification';
+import type { LibraryOrganizationScheme } from '@/lib/types';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
@@ -519,14 +524,24 @@ interface Settings {
     libraryAllowRenewIfOverdue?: boolean;
     /** Allow a student to borrow multiple copies of the same book title. */
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Allow taking out / checking out books using the published ISBN barcode in addition to copy barcodes. */
+    libraryAllowIsbnCheckout?: boolean;
     /** Maximum fine or deduction cap per book (0 = no limit). */
     libraryMaxFineCap?: number;
     /** Require staff to record an audit reason when waiving a library fine. */
     libraryRequireWaiverReason?: boolean;
+    /** Show the Available Books / Active Loans / Student Patrons quick-filter chips on the Library Desk lookup card. Off by default. */
+    libraryDeskShowQuickFilters?: boolean;
+    /** Show the Total Catalog / On Shelf / Active Loans / Overdue stat cards at the top of the Library Desk. On by default. */
+    libraryDeskShowTotals?: boolean;
+    /** Animate the Library Desk stat totals with a count-up effect. On by default; turn off for plain static numbers. */
+    libraryDeskTotalsAnimated?: boolean;
 
     // Library Kiosk & Hardware Scanning Settings
     /** When true, enable camera / webcam barcode scanning on library stations, desk, and intake. */
     libraryCameraScanEnabled?: boolean;
+    /** Default mode when kiosk initializes ('auto', 'checkout', 'return'). Defaults to 'auto'. */
+    libraryKioskDefaultMode?: 'auto' | 'checkout' | 'return';
     /** Allow students to self-return books at the library kiosk station. */
     libraryKioskAllowSelfReturn?: boolean;
     /** Enable Quick Return / Drop Box mode (return books without student ID card). */
@@ -550,17 +565,23 @@ interface Settings {
     /** Default genre / category for new books. */
     libraryDefaultCategory?: string;
     /** Default print format for copy barcode labels. */
-    libraryLabelFormat?: 'sticker' | 'spine' | 'pocket';
+    libraryLabelFormat?: 'sticker' | 'spine' | 'spine_square' | 'large_plate' | 'thermal' | 'pocket';
     /** Barcode standard on printed labels: CODE128 or QR. */
     libraryBarcodeFormat?: 'CODE128' | 'QR';
     /** Barcode numbering scheme: 'genre_code' (FIC-823-0001), 'dewey_numeric' (823-0001), 'prefix_genre' (LIB-FIC-0001), or 'classic_random'. */
     libraryBarcodeNumberScheme?: BarcodeNumberScheme;
+    /** Primary book shelving hierarchy: 'genre_then_author' (default), 'author_then_genre', or 'shelf_then_author'. */
+    libraryOrganizationScheme?: LibraryOrganizationScheme;
     /** Configured library genres with colors, call prefixes, and shelf placement. */
     libraryGenreDefinitions?: LibraryGenreConfig[];
     /** List of physical library placement sections/zones for shelving. */
     libraryPlacementZones?: string[];
     /** Automatically lookup book details from Google Books / OpenLibrary on ISBN scan. */
     libraryAutoLookupGoogleBooks?: boolean;
+    /** Show real book cover images in the catalog. On by default; turn off to show simplified color placeholder covers instead. */
+    libraryCatalogShowCoverImages?: boolean;
+    /** Navigation layout for the library workspace: classic sidebar+tabs, or a portal-style hub with big Librarian/Catalog/Student Kiosk cards. Defaults to sidebar. */
+    libraryLayoutStyle?: 'sidebar' | 'hub';
 
     // Library Behavior & Overdue Alerts
     /** Days before due date to display upcoming due warning. */
@@ -778,9 +799,14 @@ const defaultSettings: Settings = {
     libraryRenewalDays: 14,
     libraryAllowRenewIfOverdue: false,
     libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryAllowIsbnCheckout: true,
     libraryMaxFineCap: 20,
     libraryRequireWaiverReason: true,
+    libraryDeskShowQuickFilters: false,
+    libraryDeskShowTotals: true,
+    libraryDeskTotalsAnimated: true,
     libraryCameraScanEnabled: false,
+    libraryKioskDefaultMode: 'auto',
     libraryKioskAllowSelfReturn: true,
     libraryKioskAllowDropBoxReturn: true,
     libraryKioskAutoResetSeconds: 8,
@@ -794,7 +820,11 @@ const defaultSettings: Settings = {
     libraryLabelFormat: 'sticker',
     libraryBarcodeFormat: 'CODE128',
     libraryBarcodeNumberScheme: 'genre_code',
+    libraryOrganizationScheme: 'genre_then_author',
+    libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES,
     libraryAutoLookupGoogleBooks: true,
+    libraryCatalogShowCoverImages: true,
+    libraryLayoutStyle: 'sidebar',
     libraryOverdueWarningDays: 3,
     libraryNotifyTeacherOnOverdue: true,
     libraryReadingMilestonesEnabled: true,
@@ -1304,7 +1334,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
         if (remoteSettings || saved) {
             try {
-                let parsed = remoteSettings ? { ...remoteSettings } : JSON.parse(saved || '{}');
+                const localParsed = saved ? JSON.parse(saved) : {};
+                // Merge remote over local rather than replacing outright: local-only settings
+                // (not yet flushed to Firestore, e.g. picked on a role that doesn't sync) must
+                // survive a reload instead of being silently discarded.
+                let parsed = remoteSettings ? { ...localParsed, ...remoteSettings } : localParsed;
 
                 if (isStudentKioskUiContext(loginState, pathname, schoolId)) {
                     if (activeProfileId) {

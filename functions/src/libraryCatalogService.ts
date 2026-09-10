@@ -3,7 +3,23 @@ import { randomUUID } from 'crypto';
 import { HttpsError } from 'firebase-functions/v1/https';
 import { libraryId } from './libraryService';
 
-const fields = ['name', 'upc', 'isbn', 'author', 'category', 'shelfLocation', 'copyNumber', 'notes'];
+const fields = [
+  'name',
+  'upc',
+  'isbn',
+  'author',
+  'category',
+  'shelfLocation',
+  'copyNumber',
+  'notes',
+  'coverUrl',
+  'description',
+  'readingLevel',
+  'pageCount',
+  'publishedYear',
+  'series',
+  'volume',
+];
 export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: Record<string, any>, uid: string) {
   const school = db.collection('schools').doc(schoolId);
   const receiptRef = school.collection('libraryRequests').doc(`${uid}_${libraryId(data.requestId, 'request ID')}`);
@@ -32,12 +48,18 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
       for (const doc of docs) tx.update(doc.ref, patch);
       result = { success: true, count: docs.length };
     } else {
-      const input = data.item ?? {};
+      const input = data.item ?? data.input ?? {};
       if (typeof input.name !== 'string' || !input.name.trim()) throw new HttpsError('invalid-argument', 'Title is required.');
       const copies = data.itemId ? 1 : input.copies ?? 1;
       if (!Number.isInteger(copies) || copies < 1 || copies > 25) throw new HttpsError('invalid-argument', 'Add between 1 and 25 copies.');
       const payload: Record<string, any> = {};
-      for (const field of fields) payload[field] = typeof input[field] === 'string' ? input[field].trim().slice(0, field === 'notes' ? 2000 : 300) || null : null;
+      for (const field of fields) {
+        if (field === 'pageCount') {
+          payload[field] = typeof input[field] === 'number' && Number.isFinite(input[field]) && input[field] > 0 ? Math.floor(input[field]) : null;
+        } else {
+          payload[field] = typeof input[field] === 'string' ? input[field].trim().slice(0, field === 'notes' || field === 'description' || field === 'coverUrl' ? 2000 : 300) || null : null;
+        }
+      }
       payload.upc = payload.upc?.toUpperCase() ?? '';
       const existing = data.itemId ? await tx.get(school.collection('library').doc(libraryId(data.itemId, 'copy ID'))) : null;
       if (existing && !existing.exists) throw new HttpsError('not-found', 'Copy no longer exists.');

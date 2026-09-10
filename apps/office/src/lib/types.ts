@@ -29,11 +29,39 @@ export interface LibraryItem {
   notes?: string;
   /** Due date for overdue tracking (optional). */
   dueAt?: number | null;
+  /** Cover image URL. */
+  coverUrl?: string;
+  /** Book synopsis or description. */
+  description?: string;
+  /** Reading level metrics (e.g. Lexile, Grade, AR). */
+  readingLevel?: string;
+  /** Number of pages in the book. */
+  pageCount?: number;
+  /** Publication year (e.g. "2021"). */
+  publishedYear?: string;
+  /** Book series name. */
+  series?: string;
+  /** Series volume/book number. */
+  volume?: string;
 }
 
 export type LibraryItemInput = Pick<
   LibraryItem,
-  'name' | 'upc' | 'author' | 'isbn' | 'category' | 'shelfLocation' | 'copyNumber' | 'notes'
+  | 'name'
+  | 'upc'
+  | 'author'
+  | 'isbn'
+  | 'category'
+  | 'shelfLocation'
+  | 'copyNumber'
+  | 'notes'
+  | 'coverUrl'
+  | 'description'
+  | 'readingLevel'
+  | 'pageCount'
+  | 'publishedYear'
+  | 'series'
+  | 'volume'
 >;
 
 export interface Class {

@@ -59,6 +59,7 @@ import {
   computeDaysOverdue,
   getLibraryPolicyFromSettings,
   isLibraryStudentKioskCheckoutEnabled,
+  resolveStudentMaxCheckouts,
 } from '@/lib/library/libraryPolicy';
 import { listStudentLibraryBooksRead } from '@/lib/library/libraryStudentHistory';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
@@ -1624,7 +1625,7 @@ export function StudentDashboardInner({
         themed={!!effectiveTheme}
         topAlert={overdueLibraryBooks.length > 0}
         kioskCheckoutEnabled
-        maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
+        maxCheckouts={resolveStudentMaxCheckouts(student, libraryPolicy.maxCheckoutsPerStudent)}
         libraryPolicy={libraryPolicy}
         libraryPoints={student.libraryPoints}
         libraryFineBalance={student.libraryFineBalance}

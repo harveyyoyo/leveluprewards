@@ -5,7 +5,7 @@ import { ScanBarcode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isLibraryStandaloneSelfCheckoutEnabled } from '@/lib/library/libraryPolicy';
-import type { Category } from '@/lib/types';
+import type { Category, Student } from '@/lib/types';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 
 export function LibrarySelfCheckoutOverlay({
@@ -14,12 +14,14 @@ export function LibrarySelfCheckoutOverlay({
   schoolId,
   categories,
   getStudentName,
+  students,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   schoolId: string;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
+  students?: Student[] | null;
 }) {
   const [exitOpen, setExitOpen] = useState(false);
 
@@ -61,6 +63,7 @@ export function LibrarySelfCheckoutOverlay({
         schoolId={schoolId}
         categories={categories}
         getStudentName={getStudentName}
+        students={students}
         embedded
         exitOpen={exitOpen}
         onExitOpenChange={setExitOpen}
@@ -74,11 +77,13 @@ export function LibrarySelfCheckoutLaunchButton({
   schoolId,
   categories,
   getStudentName,
+  students,
   className,
 }: {
   schoolId: string;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
+  students?: Student[] | null;
   className?: string;
 }) {
   const { settings } = useSettings();
@@ -108,6 +113,7 @@ export function LibrarySelfCheckoutLaunchButton({
         schoolId={schoolId}
         categories={categories}
         getStudentName={getStudentName}
+        students={students}
       />
     </>
   );

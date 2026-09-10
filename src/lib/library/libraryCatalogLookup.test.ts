@@ -1,15 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { firstHit, parseIsbnSearchOrgHtml } from './libraryCatalogLookup';
+import { firstHit, isSuspiciousCatalogTitle, parseIsbnSearchOrgHtml } from './libraryCatalogLookup';
 
 function delayed<T>(ms: number, value: T): () => Promise<T> {
   return () => new Promise((resolve) => setTimeout(() => resolve(value), ms));
 }
 
 const SAMPLE_HTML = `
-<h1>What a Story! Captivating Stories Rich with Meaning</h1>
-<p><strong>Author:</strong> Yechiel Spero</p>
-<p><strong>Publisher:</strong> ArtScroll, Mesorah Publications, Limited</p>
-<p><strong>Published:</strong> 2022</p>
+<div class="bookinfo">
+  <h1>What a Story! Captivating Stories Rich with Meaning</h1>
+  <p><strong>Author:</strong> Yechiel Spero</p>
+  <p><strong>Publisher:</strong> ArtScroll, Mesorah Publications, Limited</p>
+  <p><strong>Published:</strong> 2022</p>
+</div>
 `;
 
 describe('parseIsbnSearchOrgHtml', () => {
@@ -25,8 +27,30 @@ describe('parseIsbnSearchOrgHtml', () => {
     });
   });
 
-  it('returns null when the page has no title heading', () => {
+  it('rejects bot challenge pages like "Please Verify to Continue"', () => {
+    const botHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head><title>Please Verify to Continue</title></head>
+        <body>
+          <h1>Please Verify to Continue</h1>
+          <p>Checking your browser before accessing isbnsearch.org.</p>
+        </body>
+      </html>
+    `;
+    expect(parseIsbnSearchOrgHtml(botHtml, '9781400065820')).toBeNull();
+  });
+
+  it('returns null when the page has no title heading or book markers', () => {
     expect(parseIsbnSearchOrgHtml('<p>Not found</p>', '9781422631157')).toBeNull();
+  });
+
+  it('flags suspicious bot and error titles', () => {
+    expect(isSuspiciousCatalogTitle('Please Verify to Continue')).toBe(true);
+    expect(isSuspiciousCatalogTitle('Just a moment...')).toBe(true);
+    expect(isSuspiciousCatalogTitle('Attention Required! | Cloudflare')).toBe(true);
+    expect(isSuspiciousCatalogTitle('403 Forbidden')).toBe(true);
+    expect(isSuspiciousCatalogTitle('A Doubter\'s Almanac')).toBe(false);
   });
 });
 
@@ -51,5 +75,13 @@ describe('firstHit', () => {
 
   it('resolves null immediately for an empty task list', async () => {
     expect(await firstHit([])).toBeNull();
+  });
+});
+
+describe('searchBooksByTitle', () => {
+  it('returns empty array when given an empty or whitespace string', async () => {
+    const { searchBooksByTitle } = await import('./libraryCatalogLookup');
+    expect(await searchBooksByTitle('')).toEqual([]);
+    expect(await searchBooksByTitle('   ')).toEqual([]);
   });
 });

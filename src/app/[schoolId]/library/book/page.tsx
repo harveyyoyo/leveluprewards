@@ -54,7 +54,10 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
       setLoading(false);
       return;
     }
-    void findLibraryItemByUpc(firestore, schoolId, code).then((found) => {
+    void findLibraryItemByUpc(firestore, schoolId, code, {
+      allowIsbn: libraryPolicy.allowIsbnCheckout,
+      preferredStatus: mode === 'return' ? 'checked_out' : (mode === 'checkout' ? 'available' : undefined),
+    }).then((found) => {
       setItem(found?.item ?? null);
       setLoading(false);
     });

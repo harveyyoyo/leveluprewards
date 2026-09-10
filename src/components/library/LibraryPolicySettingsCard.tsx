@@ -3,18 +3,24 @@
 import { useState } from 'react';
 import {
   AlertTriangle,
+  ArrowRight,
   Bell,
   BookMarked,
+  BookOpen,
   Camera,
+  Check,
   CheckCircle2,
   Coins,
+  Edit2,
   Layers,
+  Library,
   MapPin,
   MessageSquare,
   Palette,
   Play,
   Plus,
   Printer,
+  RefreshCw,
   RotateCcw,
   ScanBarcode,
   Sparkles,
@@ -37,9 +43,14 @@ import {
   type BarcodeNumberScheme,
 } from '@/lib/library/libraryClassification';
 import {
+  LIBRARY_ORGANIZATION_SCHEMES,
+  type LibraryOrganizationScheme,
+} from '@/lib/library/libraryOrganization';
+import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
+import { LIBRARY_LABEL_OPTIONS, getLibraryLabelOption, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -61,6 +72,7 @@ import {
 } from '@/lib/library/libraryAudio';
 import type { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {
   const { settings, updateSettings } = useSettings();
@@ -116,11 +128,67 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const activeLoansOn = settings.libraryKioskShowActiveLoans !== false;
   const allowOverdueRenewals = settings.libraryAllowRenewIfOverdue === true;
   const allowMultiCopies = settings.libraryAllowMultipleCopiesOfSameTitle === true;
+  const allowIsbnCheckoutOn = settings.libraryAllowIsbnCheckout !== false;
   const autoLookupGoogleBooks = settings.libraryAutoLookupGoogleBooks !== false;
+  const showCoverImages = settings.libraryCatalogShowCoverImages !== false;
   const notifyTeacherOnOverdue = settings.libraryNotifyTeacherOnOverdue !== false;
   const milestonesOn = settings.libraryReadingMilestonesEnabled !== false;
 
   const barcodeScheme: BarcodeNumberScheme = settings.libraryBarcodeNumberScheme ?? 'genre_code';
+  const orgScheme: LibraryOrganizationScheme = settings.libraryOrganizationScheme ?? 'genre_then_author';
+  const placementZones: string[] =
+    settings.libraryPlacementZones && settings.libraryPlacementZones.length > 0
+      ? settings.libraryPlacementZones
+      : DEFAULT_LIBRARY_PLACEMENT_ZONES;
+
+  const [newShelfName, setNewShelfName] = useState('');
+  const [isAddingShelf, setIsAddingShelf] = useState(false);
+  const [editingShelfIndex, setEditingShelfIndex] = useState<number | null>(null);
+  const [editingShelfValue, setEditingShelfValue] = useState('');
+
+  const handleAddShelf = () => {
+    const trimmed = newShelfName.trim();
+    if (!trimmed) return;
+    if (placementZones.some((z) => z.toLowerCase() === trimmed.toLowerCase())) {
+      toast({
+        variant: 'destructive',
+        title: 'Location already exists',
+        description: `"${trimmed}" is already in your physical library locations.`,
+      });
+      return;
+    }
+    const next = [...placementZones, trimmed];
+    updateSettings({ libraryPlacementZones: next });
+    setNewShelfName('');
+    setIsAddingShelf(false);
+    toast({ title: `Added "${trimmed}" to shelf locations` });
+  };
+
+  const handleSaveShelfEdit = (index: number) => {
+    const trimmed = editingShelfValue.trim();
+    if (!trimmed) return;
+    const next = [...placementZones];
+    next[index] = trimmed;
+    updateSettings({ libraryPlacementZones: next });
+    setEditingShelfIndex(null);
+    setEditingShelfValue('');
+    toast({ title: 'Shelf location updated' });
+  };
+
+  const handleRemoveShelf = (index: number) => {
+    const removed = placementZones[index];
+    const next = placementZones.filter((_, i) => i !== index);
+    updateSettings({
+      libraryPlacementZones: next.length > 0 ? next : DEFAULT_LIBRARY_PLACEMENT_ZONES,
+    });
+    toast({ title: `Removed "${removed}" from shelves` });
+  };
+
+  const handleResetShelves = () => {
+    updateSettings({ libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES });
+    toast({ title: 'Reset to standard library shelf locations' });
+  };
+
   const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
   const [newGenreName, setNewGenreName] = useState('');
   const [newGenrePrefix, setNewGenrePrefix] = useState('');
@@ -341,6 +409,94 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 onCheckedChange={(v) => updateSettings({ libraryAllowMultipleCopiesOfSameTitle: v })}
               />
             </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Allow checkout by ISBN number</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Allow taking out books by scanning or typing the book's printed ISBN number, automatically assigning an available copy.
+                </p>
+              </div>
+              <Switch
+                checked={allowIsbnCheckoutOn}
+                onCheckedChange={(v) => updateSettings({ libraryAllowIsbnCheckout: v })}
+              />
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      {/* Sync with LevelUp App — one place to decide what connects to the main app */}
+      <AccordionItem value="sync" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
+                <RefreshCw className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-medium">
+                  Sync with LevelUp App
+                </div>
+                <p className="text-sm text-muted-foreground font-normal">
+                  Decide whether library points, overdue notices, and student checkout connect to the main LevelUp app.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'One place to control whether the library integrates with LevelUp points, teacher notifications, and the student dashboard — or stays fully self-contained.',
+              ),
+            ]}
+            ariaLabel="About syncing with LevelUp"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-3">
+          <div className="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <Label className="text-xs font-bold">Points &amp; rewards</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Choose whether returns affect school points, a library-only balance, fines, or nothing.
+            </p>
+            <Select value={rewardMode} onValueChange={(v) => setRewardMode(v as LibraryRewardMode)}>
+              <SelectTrigger className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(LIBRARY_REWARD_MODE_LABELS) as LibraryRewardMode[]).map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {LIBRARY_REWARD_MODE_LABELS[mode]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-bold">Student Dashboard checkout</p>
+              <p className="text-[11px] text-muted-foreground">
+                Let students borrow &amp; return books by scanning barcodes on their own LevelUp Student Dashboard kiosk.
+              </p>
+            </div>
+            <Switch
+              checked={kioskCheckoutOn}
+              onCheckedChange={(v) => updateSettings({ libraryStudentKioskCheckoutEnabled: v })}
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-bold">Overdue notifications</p>
+              <p className="text-[11px] text-muted-foreground">
+                Flag overdue books on teacher classroom seating charts and attendance rosters in LevelUp.
+              </p>
+            </div>
+            <Switch
+              checked={notifyTeacherOnOverdue}
+              onCheckedChange={(v) => updateSettings({ libraryNotifyTeacherOnOverdue: v })}
+            />
           </div>
         </AccordionContent>
       </AccordionItem>
@@ -386,7 +542,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Enable built-in device webcam/camera to scan student ID cards and book barcodes directly on library stations, circulation desk, and catalog intake without an external handheld scanner.
+                Enable built-in device webcam/camera to scan student ID cards and book barcodes directly on library stations, library desk, and catalog intake without an external handheld scanner.
               </p>
             </div>
             <Switch
@@ -411,15 +567,24 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div>
-                <p className="text-xs font-bold">Student kiosk (signed in)</p>
+                <p className="text-xs font-bold">Default Kiosk Scan Mode</p>
                 <p className="text-[11px] text-muted-foreground">
-                  Borrow and return books using the barcode scanner on personal student rewards kiosk.
+                  Choose default behavior when students scan at the kiosk. Auto mode instantly returns borrowed books without tapping Drop Box.
                 </p>
               </div>
-              <Switch
-                checked={kioskCheckoutOn}
-                onCheckedChange={(v) => updateSettings({ libraryStudentKioskCheckoutEnabled: v })}
-              />
+              <Select
+                value={settings.libraryKioskDefaultMode ?? 'auto'}
+                onValueChange={(v: 'auto' | 'checkout' | 'return') => updateSettings({ libraryKioskDefaultMode: v })}
+              >
+                <SelectTrigger className="h-8 w-44 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">⚡ Auto (Smart Return)</SelectItem>
+                  <SelectItem value="checkout">📖 Borrow (Sign in first)</SelectItem>
+                  <SelectItem value="return">📥 Drop Box (Return only)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
@@ -521,6 +686,46 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <Switch
                 checked={settings.libraryKioskExitRequiresPasscode ?? false}
                 onCheckedChange={(v) => updateSettings({ libraryKioskExitRequiresPasscode: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Quick-filter chips on Library Desk</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Off by default. Show Available Books / Active Loans / Student Patrons shortcut chips above the Library Desk lookup search bar.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryDeskShowQuickFilters ?? false}
+                onCheckedChange={(v) => updateSettings({ libraryDeskShowQuickFilters: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Show totals on Library Desk</p>
+                <p className="text-[11px] text-muted-foreground">
+                  On by default. Show the Total Catalog / On Shelf / Active Loans / Overdue stat cards at the top of the Library Desk.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryDeskShowTotals ?? true}
+                onCheckedChange={(v) => updateSettings({ libraryDeskShowTotals: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Animate totals (count-up effect)</p>
+                <p className="text-[11px] text-muted-foreground">
+                  On by default. Numbers count up when the Library Desk loads. Turn off for plain static numbers.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryDeskTotalsAnimated ?? true}
+                disabled={(settings.libraryDeskShowTotals ?? true) === false}
+                onCheckedChange={(v) => updateSettings({ libraryDeskTotalsAnimated: v })}
               />
             </div>
           </div>
@@ -848,20 +1053,16 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           />
         </div>
         <AccordionContent className="px-4 space-y-4">
-          <div className="space-y-2">
-            <Label className="text-xs font-bold">When books are returned</Label>
-            <Select value={rewardMode} onValueChange={(v) => setRewardMode(v as LibraryRewardMode)}>
-              <SelectTrigger className="rounded-xl">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(LIBRARY_REWARD_MODE_LABELS) as LibraryRewardMode[]).map((mode) => (
-                  <SelectItem key={mode} value={mode}>
-                    {LIBRARY_REWARD_MODE_LABELS[mode]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-bold">When books are returned</p>
+              <p className="text-[11px] text-muted-foreground">
+                Set in Policies &amp; Settings → Sync with LevelUp App.
+              </p>
+            </div>
+            <Badge variant="secondary" className="text-xs font-bold shrink-0">
+              {LIBRARY_REWARD_MODE_LABELS[rewardMode]}
+            </Badge>
           </div>
 
           {rewardMode === 'app_points' ? (
@@ -1025,6 +1226,19 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             />
           </div>
 
+          <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <div>
+              <p className="text-xs font-bold">Show book cover images</p>
+              <p className="text-[11px] text-muted-foreground">
+                On by default. Turn off to show simplified color placeholder covers instead of real book cover images in the catalog.
+              </p>
+            </div>
+            <Switch
+              checked={showCoverImages}
+              onCheckedChange={(v) => updateSettings({ libraryCatalogShowCoverImages: v })}
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="lib-default-shelf" className="text-xs font-bold">
@@ -1057,18 +1271,23 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <Select
                 value={settings.libraryLabelFormat ?? 'sticker'}
                 onValueChange={(v) =>
-                  updateSettings({ libraryLabelFormat: v as 'sticker' | 'spine' | 'pocket' })
+                  updateSettings({ libraryLabelFormat: v as LibraryLabelFormat })
                 }
               >
-                <SelectTrigger id="lib-label-format" className="rounded-xl">
+                <SelectTrigger id="lib-label-format" className="rounded-xl text-xs font-semibold">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sticker">Adhesive Barcode Sticker</SelectItem>
-                  <SelectItem value="spine">Narrow Book Spine Label</SelectItem>
-                  <SelectItem value="pocket">Checkout Card Pocket Slip</SelectItem>
+                <SelectContent className="rounded-xl">
+                  {LIBRARY_LABEL_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                      {opt.shortName}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-[10.5px] text-muted-foreground">
+                {getLibraryLabelOption(settings.libraryLabelFormat ?? 'sticker').dimensions} · {getLibraryLabelOption(settings.libraryLabelFormat ?? 'sticker').badge}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -1094,20 +1313,23 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
         </AccordionContent>
       </AccordionItem>
 
-      {/* 5. Genre Classification, Barcode Colors & Shelving Placement */}
+      {/* 5. Book Shelving Hierarchy, Physical Locations & Genre Classification */}
       <AccordionItem value="genre" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
               <div className="rounded-lg bg-primary/10 p-2 text-primary shrink-0">
-                <Palette className="h-5 w-5" />
+                <Library className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-base font-medium">
-                  Genre Color Barcodes &amp; Library Shelf Placement
+                <div className="text-base font-medium flex items-center gap-2">
+                  <span>Book Organization Hierarchy &amp; Physical Shelves</span>
+                  <Badge variant="outline" className="text-xs font-normal">
+                    {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.shortLabel ?? 'Genre → Author'}
+                  </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
-                  Color-code barcodes by genre, format numbers logically (e.g. FIC-823-001), and designate where books belong in the library.
+                  Choose whether to organize by Genre then Author or Author then Genre, manage physical shelves (&quot;Where in the library books are&quot;), and color-code genres.
                 </p>
               </div>
             </div>
@@ -1116,14 +1338,266 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             variant="outline"
             size="sm"
             className="gap-1.5 text-xs rounded-xl shrink-0"
-            onClick={handleResetGenres}
+            onClick={() => {
+              handleResetGenres();
+              handleResetShelves();
+              updateSettings({ libraryOrganizationScheme: 'genre_then_author' });
+            }}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Reset Standards
+            Reset All Standards
           </Button>
         </div>
 
         <AccordionContent className="px-4 space-y-6 pt-1">
+          {/* A. Book Shelving & Organization Hierarchy */}
+          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-primary" />
+                  Book Organization &amp; Filing Hierarchy
+                </Label>
+                <Badge variant="secondary" className="text-[10px] font-semibold">
+                  Active: {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.shortLabel}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                How books are shelved physically in the library, browsed in the catalog, and guided on the self-checkout return screen.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => {
+                const s = LIBRARY_ORGANIZATION_SCHEMES[key];
+                const isSelected = orgScheme === key;
+                return (
+                  <div
+                    key={key}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => updateSettings({ libraryOrganizationScheme: key })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        updateSettings({ libraryOrganizationScheme: key });
+                      }
+                    }}
+                    className={cn(
+                      'rounded-xl border-2 p-3.5 cursor-pointer transition-all text-left flex flex-col justify-between space-y-2 select-none',
+                      isSelected
+                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                        : 'border-border/70 hover:border-primary/50 hover:bg-muted/30 bg-background',
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="font-bold text-xs sm:text-sm text-foreground">{s.label}</span>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-snug">{s.description}</p>
+                    </div>
+                    <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-1 text-[10px] font-mono text-primary font-semibold">
+                      <span>{s.example}</span>
+                      {key === 'genre_then_author' && (
+                        <span className="rounded bg-primary/15 px-1.5 py-0.2 text-[9px] uppercase font-bold text-primary">
+                          Standard
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Live Filing Guide Explainer Box */}
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+                <div>
+                  <span className="font-bold text-foreground">Active Shelving Guide: </span>
+                  <span className="text-muted-foreground">
+                    {orgScheme === 'genre_then_author'
+                      ? 'Books are housed in Genre bays (e.g. Fiction, Science), then filed A-Z by author surname.'
+                      : orgScheme === 'author_then_genre'
+                        ? 'Books are filed strictly by Author (A-Z), with sub-clustering by Genre within each author.'
+                        : 'Books are organized by physical library shelf/room location, then by Author.'}
+                  </span>
+                </div>
+              </div>
+              <Badge variant="outline" className="font-mono text-[11px] shrink-0 self-start sm:self-auto bg-background">
+                {orgScheme === 'genre_then_author'
+                  ? 'Sign: [Fiction Bay] · Shelf: [C - Canin, Ethan]'
+                  : orgScheme === 'author_then_genre'
+                    ? 'Sign: [Canin, Ethan] · Shelf: [Fiction]'
+                    : 'Sign: [Aisle 1 - Fiction Bays] · Shelf: [Canin, Ethan]'}
+              </Badge>
+            </div>
+          </div>
+
+          {/* B. Physical Shelves & Library Locations Manager ("Where in the library a book is") */}
+          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-bold flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Where Books Are in the Library (Physical Shelves &amp; Locations)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Customize physical bookcases, aisles, spinner racks, and quiet nooks. Available in copy dropdowns and return guidance.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl gap-1.5 text-xs"
+                  onClick={() => setIsAddingShelf(!isAddingShelf)}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Shelf / Location
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="rounded-xl text-xs text-muted-foreground"
+                  onClick={handleResetShelves}
+                  title="Reset to standard school library placement zones"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            </div>
+
+            {/* School Default Shelf Location */}
+            <div className="rounded-xl border bg-background p-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="text-xs font-bold text-foreground">Default Library Shelf for New Books</span>
+                <p className="text-[11px] text-muted-foreground">
+                  Pre-populates new intake books when no specific shelf is entered.
+                </p>
+              </div>
+              <Select
+                value={settings.libraryDefaultShelf || 'Main Stacks'}
+                onValueChange={(v) => updateSettings({ libraryDefaultShelf: v })}
+              >
+                <SelectTrigger className="w-[280px] rounded-xl text-xs font-medium">
+                  <SelectValue placeholder="Select default shelf..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Main Stacks">Main Stacks (Default)</SelectItem>
+                  {placementZones.map((zone) => (
+                    <SelectItem key={zone} value={zone}>
+                      {zone}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Add Shelf Input */}
+            {isAddingShelf && (
+              <div className="rounded-xl border border-primary/40 bg-primary/5 p-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <MapPin className="h-4 w-4 text-primary shrink-0" />
+                <Input
+                  placeholder="e.g. Aisle 4 - Graphic Novels, Reading Nook Low Bin..."
+                  value={newShelfName}
+                  onChange={(e) => setNewShelfName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddShelf();
+                    }
+                  }}
+                  className="rounded-xl text-xs bg-background"
+                  autoFocus
+                />
+                <Button size="sm" onClick={handleAddShelf} disabled={!newShelfName.trim()} className="rounded-xl text-xs shrink-0">
+                  Save Shelf
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsAddingShelf(false)} className="rounded-xl text-xs shrink-0">
+                  Cancel
+                </Button>
+              </div>
+            )}
+
+            {/* Shelf Locations Grid */}
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {placementZones.map((zone, idx) => {
+                const isEditing = editingShelfIndex === idx;
+                const isDefault = (settings.libraryDefaultShelf || 'Main Stacks') === zone;
+
+                if (isEditing) {
+                  return (
+                    <div key={idx} className="flex items-center gap-1.5 p-2 rounded-xl border border-primary bg-background shadow-sm">
+                      <Input
+                        value={editingShelfValue}
+                        onChange={(e) => setEditingShelfValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveShelfEdit(idx);
+                          }
+                        }}
+                        className="h-7 text-xs rounded-lg flex-1"
+                        autoFocus
+                      />
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-primary" onClick={() => handleSaveShelfEdit(idx)}>
+                        <Check className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground" onClick={() => setEditingShelfIndex(null)}>
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={zone}
+                    className="flex items-center justify-between gap-2 p-2.5 rounded-xl border bg-card hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-xs font-medium text-foreground truncate">{zone}</span>
+                      {isDefault && (
+                        <Badge variant="secondary" className="text-[9px] px-1 py-0 font-bold shrink-0">
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity shrink-0">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                        title="Edit shelf name"
+                        onClick={() => {
+                          setEditingShelfIndex(idx);
+                          setEditingShelfValue(zone);
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      {placementZones.length > 1 && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          title="Delete shelf location"
+                          onClick={() => handleRemoveShelf(idx)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Barcode Numbering Scheme */}
           <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1436,19 +1910,6 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
         </div>
         <AccordionContent className="px-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
-              <div>
-                <p className="text-xs font-bold">Notify teachers on overdue books</p>
-                <p className="text-[11px] text-muted-foreground">
-                  Flag overdue books on teacher classroom seating charts and attendance rosters.
-                </p>
-              </div>
-              <Switch
-                checked={notifyTeacherOnOverdue}
-                onCheckedChange={(v) => updateSettings({ libraryNotifyTeacherOnOverdue: v })}
-              />
-            </div>
-
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div>
                 <p className="text-xs font-bold">Reading milestone streaks</p>

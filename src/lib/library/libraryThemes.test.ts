@@ -55,4 +55,17 @@ describe('libraryThemes', () => {
       expect(contrast).toBeGreaterThanOrEqual(4.5);
     }
   });
+
+  it('provides style categories and look-and-feel uiClasses for every theme', () => {
+    const validStyles = new Set(['fun', 'pro', 'classic', 'cyber']);
+    for (const id of LIBRARY_THEME_IDS) {
+      const theme = LIBRARY_THEMES[id];
+      expect(validStyles.has(theme.styleCategory)).toBe(true);
+      expect(theme.styleName).toBeTruthy();
+      expect(theme.uiClasses.cardRadius).toMatch(/^rounded-/);
+      expect(theme.uiClasses.buttonRadius).toMatch(/^rounded-/);
+      expect(theme.uiClasses.badgeRadius).toContain('rounded-');
+      expect(theme.uiClasses.greeting).toBeTruthy();
+    }
+  });
 });
