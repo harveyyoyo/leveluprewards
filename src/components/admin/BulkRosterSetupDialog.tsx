@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -43,10 +43,13 @@ import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import type { ParsedSchoolSnapshot } from '@/lib/schoolDataImport';
 
 export type BulkRosterKind = 'classes' | 'teachers' | 'students';
+export type BulkRosterTab = 'csv' | 'ai';
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Which tab to show when the dialog opens. */
+  initialTab?: BulkRosterTab;
   aiClassNames: string[];
   onClassesCsv: (text: string) => Promise<void>;
   onTeachersCsv: (text: string) => Promise<void>;
@@ -73,6 +76,7 @@ function totalInSnapshot(s: ParsedSchoolSnapshot): number {
 export function BulkRosterSetupDialog({
   open,
   onOpenChange,
+  initialTab = 'csv',
   aiClassNames,
   onClassesCsv,
   onTeachersCsv,
@@ -84,6 +88,7 @@ export function BulkRosterSetupDialog({
   const studentsRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<BulkRosterKind | null>(null);
+  const [activeTab, setActiveTab] = useState<BulkRosterTab>(initialTab);
 
   const authFetch = useAuthFetch();
   const { schoolId } = useAppContext();
@@ -105,6 +110,10 @@ export function BulkRosterSetupDialog({
     setAiSnapshot(null);
     setAiUpsertStudents(true);
   };
+
+  useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   const wrap =
     (kind: BulkRosterKind, fn: (text: string) => Promise<void>) =>
@@ -260,7 +269,7 @@ export function BulkRosterSetupDialog({
               </AlertDescription>
             </Alert>
 
-            <Tabs defaultValue="csv" className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as BulkRosterTab)} className="w-full">
               <TabsList className="grid w-full grid-cols-2 rounded-xl">
                 <TabsTrigger value="csv" className="rounded-lg gap-2">
                   <FileSpreadsheet className="w-4 h-4" />
