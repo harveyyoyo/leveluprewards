@@ -60,6 +60,7 @@ export function useSchoolLogoUpload({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [isLogoUploading, setIsLogoUploading] = useState(false);
   const [cropLogoSrc, setCropLogoSrc] = useState<string | null>(null);
+  const [isFixingLogoBackground, setIsFixingLogoBackground] = useState(false);
 
   // Show the most-recently-set URL first, then historical uploads, with
   // dupes removed. Used by the "previous logos" dropdown. Pulling the two
@@ -263,6 +264,44 @@ export function useSchoolLogoUpload({
     }
   }, [schoolId, schoolDocRef, firestore, playSound, toast]);
 
+  /**
+   * Reprocesses the *currently stored* logo's white background to transparent,
+   * server-side, without asking the admin to re-select and re-upload the file.
+   */
+  const handleFixLogoBackground = useCallback(async () => {
+    if (!schoolId || !functions) return;
+    try {
+      setIsFixingLogoBackground(true);
+      toast({ title: 'Fixing logo background…', description: 'Please wait.' });
+      const fixLogo = httpsCallable<{ schoolId: string }, { logoUrl: string }>(
+        functions,
+        'fixSchoolLogoBackground',
+      );
+      const res = await fixLogo({ schoolId });
+      const data = res.data;
+      if (!data?.logoUrl) throw new Error('No logo URL returned');
+      setLogoPreviewUrl(data.logoUrl);
+      playSound('success');
+      toast({
+        title: 'Logo background fixed!',
+        description: 'The white background behind your logo is now transparent.',
+      });
+    } catch (error: unknown) {
+      console.error('Fix logo background failed', error);
+      playSound('error');
+      const err = error as { code?: string; message?: string };
+      let description = err?.message || 'Could not fix the logo background. Try again.';
+      if (err?.code === 'functions/failed-precondition') {
+        description = err.message || description;
+      } else if (err?.code === 'functions/permission-denied') {
+        description = 'You need admin access to update the school logo.';
+      }
+      toast({ variant: 'destructive', title: 'Could not fix logo background', description });
+    } finally {
+      setIsFixingLogoBackground(false);
+    }
+  }, [schoolId, functions, playSound, toast]);
+
   return {
     logoPreviewUrl,
     setLogoPreviewUrl,
@@ -273,5 +312,7 @@ export function useSchoolLogoUpload({
     handleLogoUpload,
     handleCropComplete,
     handleRemoveLogo,
+    isFixingLogoBackground,
+    handleFixLogoBackground,
   } as const;
 }
