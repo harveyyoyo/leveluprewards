@@ -1385,17 +1385,19 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
 /* ============================================================
    Credit Card Layout
-   Horizontal ID-1 card that mimics a premium credit/debit card:
-   • metallic sheen overlay
-   • EMV-style chip graphic (absolute-positioned, purely decorative)
-   • monospaced embossed name at bottom-left
-   • student photo at top-right as a small inset
-   • barcode/QR tucked into the right edge
+   Three stacked zones on an ISO ID-1 card:
+   1) top: brand left, photo/QR right
+   2) mid: chip, card number, valid-thru + name
+   3) bottom: full-width scannable barcode with UPC digits
    ============================================================ */
 .print-id-card--credit-card {
   border: none;
   overflow: hidden;
   position: relative;
+  padding: 3mm 4mm 0;
+  gap: 0;
+  justify-content: flex-start;
+  text-align: left;
 }
 
 /* Metallic sheen overlay — sits behind content via pseudo-element */
@@ -1438,158 +1440,175 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   z-index: 2;
 }
 
-/* Header stays compact at top */
-.print-id-card--credit-card .print-id-header-container {
-  border-bottom: none;
-  padding-bottom: 2px;
-  margin-bottom: 0;
-}
-.print-id-card--credit-card .print-id-school {
-  position: absolute;
-  bottom: 4mm;
-  right: 5mm;
-  text-align: right;
-  z-index: 10;
-}
-.print-id-card--credit-card .print-id-school .print-id-header {
-  display: none; /* Hide school text, just show logo */
+.print-id-card--credit-card .credit-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-/* ---- EMV Chip & Contactless ---- */
+.print-id-card--credit-card .credit-card-brand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+.print-id-card--credit-card .credit-card-brand .print-id-header {
+  font-size: calc(10px * var(--print-id-font-scale));
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+.print-id-card--credit-card .credit-card-brand .print-id-app-name {
+  font-size: calc(8px * var(--print-id-font-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+.print-id-card--credit-card .credit-card-brand .print-id-app-logo {
+  height: 16px;
+  max-width: 24px;
+}
+
+.print-id-card--credit-card .print-id-avatar,
+.print-id-card--credit-card .print-id-qr-slot {
+  width: 12mm;
+  height: 12mm;
+  min-width: 12mm;
+  min-height: 12mm;
+  position: static;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+}
+
+.print-id-card--credit-card .credit-card-mid {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1.5mm;
+  padding: 1.5mm 0 1.5mm;
+}
+
+.print-id-card--credit-card .credit-card-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+}
+
 .credit-card-chip {
-  width: 14mm;
-  height: 10mm;
-  position: absolute;
-  left: 6mm;
-  top: 19mm;
-  z-index: 3;
+  width: 12mm;
+  height: 9mm;
+  position: static;
+  flex-shrink: 0;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
 
 .credit-card-contactless {
-  position: absolute;
-  left: 19mm;
-  top: 21mm;
+  position: static;
   width: 5mm;
   height: 5mm;
-  opacity: 0.6;
-  z-index: 3;
+  opacity: 0.55;
+  flex-shrink: 0;
 }
 
-/* ---- Fake PAN and Valid Thru ---- */
 .print-id-card--credit-card .credit-card-number {
-  position: absolute;
-  top: 31mm;
-  left: 6mm;
+  position: static;
   width: 100%;
   font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace;
-  font-size: calc(14px * var(--print-id-font-scale));
-  letter-spacing: 0.08em;
+  font-size: calc(13px * var(--print-id-font-scale));
+  letter-spacing: 0.12em;
   font-weight: 700;
   text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
   text-align: left;
-  z-index: 3;
+  line-height: 1.1;
+}
+
+.print-id-card--credit-card .credit-card-identity {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .print-id-card--credit-card .credit-card-valid-thru {
-  position: absolute;
-  top: 37mm;
-  left: 20mm;
+  position: static;
   display: flex;
   align-items: center;
   gap: 4px;
-  z-index: 3;
+  flex-shrink: 0;
 }
 .print-id-card--credit-card .valid-thru-label {
-  font-size: calc(4px * var(--print-id-font-scale));
-  line-height: 1;
+  font-size: calc(5px * var(--print-id-font-scale));
+  line-height: 1.05;
   text-align: right;
-  opacity: 0.8;
+  opacity: 0.75;
 }
 .print-id-card--credit-card .valid-thru-date {
   font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace;
-  font-size: calc(9px * var(--print-id-font-scale));
+  font-size: calc(10px * var(--print-id-font-scale));
   font-weight: 700;
   text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
 }
 
-/* ---- Main content zone: push text to bottom-left, credit-card style ---- */
-.print-id-card--credit-card .print-id-main {
+.print-id-card--credit-card .print-id-text {
+  position: static;
+  text-align: left;
+  min-width: 0;
   flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-end;
-  padding: 0 5mm 3mm 5mm;
-  gap: 2px;
 }
-
-.print-id-card--credit-card .print-id-left {
-  flex-direction: column;
-  align-items: flex-start;
-  margin-left: 0 !important;
-  gap: 2px !important;
-  width: 100%;
-}
-
-/* Name: embossed monospace credit-card lettering */
 .print-id-card--credit-card .print-id-name {
   font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: calc(11px * var(--print-id-font-scale));
-  letter-spacing: 0.12em;
-  line-height: 1.25;
-  text-shadow:
-    0 0.5px 0 rgba(255, 255, 255, 0.35);
+  font-size: calc(11px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  text-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.35);
 }
-
 .print-id-card--credit-card .print-id-nickname {
   font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: calc(9px * var(--print-id-font-scale));
+  font-size: calc(8px * var(--print-id-font-scale));
+  margin-top: 1px;
 }
 
+.print-id-card--credit-card .print-id-theme-emoji-center,
 .print-id-card--credit-card .print-id-class {
-  display: none; /* Hide class to look more like a credit card */
-}
-
-.print-id-card--credit-card .print-id-text {
-  text-align: left;
-}
-
-/* Avatar floats to right of main, small thumbnail */
-.print-id-card--credit-card .print-id-avatar {
-  width: 14mm;
-  height: 14mm;
-  position: absolute;
-  right: 6mm;
-  top: 14mm;
-  border-radius: 2px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* QR slot in credit card mode */
-.print-id-card--credit-card .print-id-qr-slot {
-  width: 16mm;
-  height: 16mm;
-  min-width: 16mm;
-  min-height: 16mm;
-  position: absolute;
-  right: 5mm;
-  top: 13mm;
-  border-radius: 2px;
-}
-
-/* Theme emoji: completely hidden on credit card */
-.print-id-card--credit-card .print-id-theme-emoji-center {
   display: none;
 }
 
-/* Barcode strip at bottom — completely hidden, we use the aesthetic */
+/* Bottom barcode row — bars plus the human-readable UPC */
 .print-id-card--credit-card .print-id-barcode-container {
-  display: none;
+  display: flex;
+  position: static;
+  width: calc(100% + 8mm);
+  margin: 0 -4mm 0;
+  padding: 2mm 4mm 1.5mm;
+  border-radius: 0;
+  border-top: none;
+  background: #ffffff;
+  color: #000000;
+  flex-shrink: 0;
+  overflow: visible;
+}
+.print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode {
+  width: 100%;
+  max-width: none;
+}
+.print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode-svg {
+  min-height: 0.28in;
+  max-height: 0.4in;
+  overflow: visible;
 }
 
 
@@ -3314,8 +3333,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     border-radius: 0 !important;
   }
 
-  /* Credit Card Print Overrides */
-  .print-id-card--credit-card { border: none !important; }
+  /* Credit Card Print Overrides — stacked zones, not pinned positions */
+  .print-id-card--credit-card { border: none !important; padding: 3mm 4mm 0 !important; gap: 0 !important; justify-content: flex-start !important; text-align: left !important; }
   .print-id-card--credit-card::before {
     content: ""; position: absolute !important; inset: 0 !important; z-index: 1 !important;
     background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 35%, rgba(0,0,0,0.02) 50%, rgba(255,255,255,0.08) 65%, rgba(0,0,0,0.06) 100%) !important;
@@ -3325,22 +3344,35 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12) !important;
   }
   .print-id-card--credit-card > * { position: relative !important; z-index: 2 !important; }
-  .print-id-card--credit-card .print-id-header-container { border-bottom: none !important; padding-bottom: 2px !important; margin-bottom: 0 !important; }
-  .print-id-card--credit-card .print-id-school { position: absolute !important; bottom: 4mm !important; right: 5mm !important; text-align: right !important; z-index: 10 !important; }
-  .print-id-card--credit-card .print-id-school .print-id-header { display: none !important; }
-  .print-id-card--credit-card .credit-card-chip { width: 14mm !important; height: 10mm !important; position: absolute !important; left: 6mm !important; top: 19mm !important; z-index: 3 !important; }
-  .print-id-card--credit-card .credit-card-contactless { position: absolute !important; left: 19mm !important; top: 21mm !important; width: 5mm !important; height: 5mm !important; z-index: 3 !important; }
-  .print-id-card--credit-card .credit-card-number { position: absolute !important; top: 31mm !important; left: 6mm !important; width: 100% !important; font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-size: calc(14px * var(--print-id-font-scale)) !important; letter-spacing: 0.08em !important; font-weight: 700 !important; text-align: left !important; z-index: 3 !important; }
-  .print-id-card--credit-card .credit-card-valid-thru { position: absolute !important; top: 37mm !important; left: 20mm !important; display: flex !important; align-items: center !important; gap: 4px !important; z-index: 3 !important; }
-  .print-id-card--credit-card .print-id-main { flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 5mm 3mm 5mm !important; }
-  .print-id-card--credit-card .print-id-left { flex-direction: column !important; align-items: flex-start !important; margin-left: 0 !important; width: 100% !important; }
-  .print-id-card--credit-card .print-id-name { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: calc(11px * var(--print-id-font-scale)) !important; letter-spacing: 0.12em !important; }
-  .print-id-card--credit-card .print-id-nickname { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; font-size: calc(9px * var(--print-id-font-scale)) !important; }
-  .print-id-card--credit-card .print-id-class { display: none !important; }
-  .print-id-card--credit-card .print-id-avatar { width: 14mm !important; height: 14mm !important; position: absolute !important; right: 6mm !important; top: 14mm !important; }
-  .print-id-card--credit-card .print-id-qr-slot { width: 16mm !important; height: 16mm !important; min-width: 16mm !important; min-height: 16mm !important; position: absolute !important; right: 5mm !important; top: 13mm !important; }
+  .print-id-card--credit-card .credit-card-top { display: flex !important; align-items: center !important; justify-content: space-between !important; }
+  .print-id-card--credit-card .credit-card-brand { display: flex !important; align-items: center !important; gap: 5px !important; min-width: 0 !important; flex: 1 !important; text-align: left !important; }
+  .print-id-card--credit-card .credit-card-mid { flex: 1 !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; gap: 1.5mm !important; }
+  .print-id-card--credit-card .credit-card-chip-row { display: flex !important; align-items: center !important; gap: 2.5mm !important; }
+  .print-id-card--credit-card .credit-card-chip { width: 12mm !important; height: 9mm !important; position: static !important; }
+  .print-id-card--credit-card .credit-card-contactless { position: static !important; width: 5mm !important; height: 5mm !important; }
+  .print-id-card--credit-card .credit-card-number { position: static !important; width: 100% !important; font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-size: calc(13px * var(--print-id-font-scale)) !important; letter-spacing: 0.12em !important; font-weight: 700 !important; text-align: left !important; }
+  .print-id-card--credit-card .credit-card-identity { display: flex !important; align-items: flex-end !important; justify-content: space-between !important; }
+  .print-id-card--credit-card .credit-card-valid-thru { position: static !important; display: flex !important; align-items: center !important; gap: 4px !important; }
+  .print-id-card--credit-card .print-id-text { position: static !important; text-align: left !important; flex: 1 !important; }
+  .print-id-card--credit-card .print-id-name { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: calc(11px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; letter-spacing: 0.1em !important; }
+  .print-id-card--credit-card .print-id-class,
   .print-id-card--credit-card .print-id-theme-emoji-center { display: none !important; }
-  .print-id-card--credit-card .print-id-barcode-container { display: none !important; }
+  .print-id-card--credit-card .print-id-avatar,
+  .print-id-card--credit-card .print-id-qr-slot { width: 12mm !important; height: 12mm !important; min-width: 12mm !important; min-height: 12mm !important; position: static !important; }
+  .print-id-card--credit-card .print-id-barcode-container {
+    display: flex !important;
+    position: static !important;
+    width: calc(100% + 8mm) !important;
+    margin: 0 -4mm 0 !important;
+    padding: 2mm 4mm 1.5mm !important;
+    border-radius: 0 !important;
+    border-top: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+  .print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode { width: 100% !important; max-width: none !important; }
+  .print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode-svg { min-height: 0.28in !important; max-height: 0.4in !important; overflow: visible !important; }
 
   /* Modern Layout Print Overrides */
   .print-id-card--modern { flex-direction: row !important; padding: 0 !important; overflow: hidden !important; }
@@ -3730,8 +3762,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     border-radius: 0 !important;
   }
 
-  /* DTC Credit Card Overrides */
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card { border: none !important; }
+  /* DTC Credit Card Overrides — stacked zones, not pinned positions */
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card { border: none !important; padding: 3mm 4mm 0 !important; gap: 0 !important; justify-content: flex-start !important; text-align: left !important; }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card::before {
     content: ""; position: absolute !important; inset: 0 !important; z-index: 1 !important;
     background: linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.05) 35%, rgba(0,0,0,0.02) 50%, rgba(255,255,255,0.08) 65%, rgba(0,0,0,0.06) 100%) !important;
@@ -3741,22 +3773,35 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12) !important;
   }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card > * { position: relative !important; z-index: 2 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-header-container { border-bottom: none !important; padding-bottom: 2px !important; margin-bottom: 0 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-school { position: absolute !important; bottom: 4mm !important; right: 5mm !important; text-align: right !important; z-index: 10 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-school .print-id-header { display: none !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-chip { width: 14mm !important; height: 10mm !important; position: absolute !important; left: 6mm !important; top: 19mm !important; z-index: 3 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-contactless { position: absolute !important; left: 19mm !important; top: 21mm !important; width: 5mm !important; height: 5mm !important; z-index: 3 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-number { position: absolute !important; top: 31mm !important; left: 6mm !important; width: 100% !important; font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-size: calc(14px * var(--print-id-font-scale)) !important; letter-spacing: 0.08em !important; font-weight: 700 !important; text-align: left !important; z-index: 3 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-valid-thru { position: absolute !important; top: 37mm !important; left: 20mm !important; display: flex !important; align-items: center !important; gap: 4px !important; z-index: 3 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-main { flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 5mm 3mm 5mm !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-left { flex-direction: column !important; align-items: flex-start !important; margin-left: 0 !important; width: 100% !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-name { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: calc(11px * var(--print-id-font-scale)) !important; letter-spacing: 0.12em !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-nickname { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; text-transform: uppercase !important; letter-spacing: 0.08em !important; font-size: calc(9px * var(--print-id-font-scale)) !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-class { display: none !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-avatar { width: 14mm !important; height: 14mm !important; position: absolute !important; right: 6mm !important; top: 14mm !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-qr-slot { width: 16mm !important; height: 16mm !important; min-width: 16mm !important; min-height: 16mm !important; position: absolute !important; right: 5mm !important; top: 13mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-top { display: flex !important; align-items: center !important; justify-content: space-between !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-brand { display: flex !important; align-items: center !important; gap: 5px !important; min-width: 0 !important; flex: 1 !important; text-align: left !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-mid { flex: 1 !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; gap: 1.5mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-chip-row { display: flex !important; align-items: center !important; gap: 2.5mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-chip { width: 12mm !important; height: 9mm !important; position: static !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-contactless { position: static !important; width: 5mm !important; height: 5mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-number { position: static !important; width: 100% !important; font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-size: calc(13px * var(--print-id-font-scale)) !important; letter-spacing: 0.12em !important; font-weight: 700 !important; text-align: left !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-identity { display: flex !important; align-items: flex-end !important; justify-content: space-between !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .credit-card-valid-thru { position: static !important; display: flex !important; align-items: center !important; gap: 4px !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-text { position: static !important; text-align: left !important; flex: 1 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-name { font-family: 'OCR A Std', 'OCR-A', 'Courier New', Courier, monospace !important; font-weight: 700 !important; text-transform: uppercase !important; font-size: calc(11px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; letter-spacing: 0.1em !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-class,
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-theme-emoji-center { display: none !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-barcode-container { display: none !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-avatar,
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-qr-slot { width: 12mm !important; height: 12mm !important; min-width: 12mm !important; min-height: 12mm !important; position: static !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--credit-card .print-id-barcode-container {
+    display: flex !important;
+    position: static !important;
+    width: calc(100% + 8mm) !important;
+    margin: 0 -4mm 0 !important;
+    padding: 2mm 4mm 1.5mm !important;
+    border-radius: 0 !important;
+    border-top: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode { width: 100% !important; max-width: none !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card.print-id-card--credit-card .print-id-barcode-container .print-barcode-svg { min-height: 0.28in !important; max-height: 0.4in !important; overflow: visible !important; }
 
   /* DTC Modern Layout Overrides */
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--modern { flex-direction: row !important; padding: 0 !important; overflow: hidden !important; }
