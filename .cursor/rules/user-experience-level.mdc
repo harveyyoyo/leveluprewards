@@ -27,6 +27,10 @@ Say the plain version instead:
 - “a login check” not “auth session”
 - “the page failed to open” not “503” or “SSR error” unless you also say “the site could not start, like a locked door”
 
+## After the live site is published
+
+Always open the real live website and click through it before telling the owner they can check. Home, sign-in, and any page the change touched. Do not skip this.
+
 ## Code and work
 
 You can still use normal computer words in files and notes meant for other helpers. Only the messages you show the owner must stay plain.
