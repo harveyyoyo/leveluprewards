@@ -2,9 +2,19 @@ import type { Auth } from 'firebase/auth';
 import { httpsCallable, type Functions } from 'firebase/functions';
 import { authFetch } from '@/lib/authFetch';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
-import { isCallableInfrastructureError, messageFromVerifySchoolAccessError } from '@/lib/loginResult';
+import {
+  isCallableInfrastructureError,
+  isSchoolAccessCredentialError,
+  messageFromVerifySchoolAccessError,
+} from '@/lib/loginResult';
 
-type VerifyAdminResult = { ok: true } | { ok: false; message: string; infrastructureFailure?: boolean };
+type VerifyAdminResult =
+  | { ok: true }
+  | { ok: false; message: string; infrastructureFailure?: boolean; credentialFailure?: boolean };
+
+function canUseAdminApiFallback(status: number): boolean {
+  return status === 503 || status === 502 || status === 404 || status === 0;
+}
 
 async function verifyAdminPasscodeViaApi(
   auth: Auth,
@@ -90,13 +100,78 @@ async function verifyAdminPasscodeViaCallable(
       ok: false,
       message: messageFromVerifySchoolAccessError(e, 'Invalid admin passcode.'),
       infrastructureFailure: isCallableInfrastructureError(e),
+      credentialFailure: isSchoolAccessCredentialError(e),
     };
   }
 }
 
+function apiRouteResultToVerifyResult(
+  apiResult: { ok: true } | { ok: false; message: string; status: number },
+): VerifyAdminResult {
+  if (apiResult.ok) return apiResult;
+  return {
+    ok: false,
+    message: apiResult.message,
+    infrastructureFailure: canUseAdminApiFallback(apiResult.status),
+    credentialFailure:
+      apiResult.status === 403 || apiResult.status === 404 || apiResult.status === 412,
+  };
+}
+
+/**
+ * Run callable + SSR API in parallel; first success wins.
+ * Waits for every attempt before returning a credential error (avoids false
+ * negatives when one backend is slower — same pattern as school login).
+ */
+async function raceAdminPasscodeVerification(
+  auth: Auth,
+  functions: Functions,
+  schoolId: string,
+  passcode: string,
+): Promise<VerifyAdminResult> {
+  const tasks: Promise<VerifyAdminResult>[] = [
+    verifyAdminPasscodeViaApi(auth, schoolId, passcode).then(apiRouteResultToVerifyResult),
+    verifyAdminPasscodeViaCallable(auth, functions, schoolId, passcode),
+  ];
+
+  return new Promise((resolve) => {
+    let remaining = tasks.length;
+    let resolved = false;
+    const successes: VerifyAdminResult[] = [];
+    const credentialFailures: VerifyAdminResult[] = [];
+    const otherFailures: VerifyAdminResult[] = [];
+
+    const finish = () => {
+      if (resolved) return;
+      if (successes.length > 0) {
+        resolved = true;
+        resolve(successes[0]!);
+        return;
+      }
+      if (remaining > 0) return;
+      resolved = true;
+      resolve(
+        credentialFailures[0] ??
+          otherFailures[0] ?? { ok: false, message: 'Could not verify admin passcode.' },
+      );
+    };
+
+    for (const task of tasks) {
+      void task.then((result) => {
+        remaining -= 1;
+        if (result.ok) successes.push(result);
+        else if (result.credentialFailure) credentialFailures.push(result);
+        else otherFailures.push(result);
+        finish();
+      });
+    }
+  });
+}
+
 /**
  * Verify an admin passcode via Next API (local/stale-callable friendly) or Cloud Function.
- * Development uses the local API first so `npm run dev` behaves like the portal path.
+ * Production: callable + SSR API in parallel (avoids Cloud Function cold-start delay).
+ * Development: local API first so `npm run dev` behaves like the portal path.
  */
 export async function verifyAdminPasscodeLogin(
   auth: Auth,
@@ -134,19 +209,7 @@ export async function verifyAdminPasscodeLogin(
     return { ok: false, message: apiResult.message };
   }
 
-  const callableResult = await verifyAdminPasscodeViaCallable(auth, functions, args.schoolId, args.passcode);
-  if (callableResult.ok) return callableResult;
-
-  // For Google bypass (empty passcode), the callable and API route may have different
-  // env var / Firestore access — try the API route as a fallback regardless of error type.
-  const isGoogleBypass = args.passcode.trim().length === 0;
-  if (!callableResult.infrastructureFailure && !isGoogleBypass) {
-    return { ok: false, message: callableResult.message };
-  }
-
-  const apiResult = await verifyAdminPasscodeViaApi(auth, args.schoolId, args.passcode);
-  if (apiResult.ok) return apiResult;
-
-  // Return the more specific message from whichever path had a real auth rejection.
-  return { ok: false, message: isGoogleBypass ? callableResult.message : apiResult.message };
+  const raced = await raceAdminPasscodeVerification(auth, functions, args.schoolId, args.passcode);
+  if (raced.ok) return raced;
+  return { ok: false, message: raced.message };
 }

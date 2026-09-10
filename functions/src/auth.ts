@@ -15,6 +15,12 @@ import "./init";
 
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
+/** Keep school/admin login callables warm so the first live sign-in is not a cold start. */
+const HOT_AUTH_FUNCTION_OPTIONS = {
+  timeoutSeconds: 30,
+  memory: "256MB" as const,
+  minInstances: 1,
+};
 /** Public demo schools on the login page — kiosk may register without prior portal passcode. */
 const PUBLIC_SAMPLE_SCHOOL_IDS = new Set(["schoolabc", "yeshiva"]);
 
@@ -399,7 +405,9 @@ async function collectFullSchoolData(schoolId: string) {
 // Callable: Verify school passcode (used by login and student logout)
 // ========================================================================
 
-exports.verifySchoolPasscode = functions.https.onCall(
+exports.verifySchoolPasscode = functions
+  .runWith(HOT_AUTH_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
@@ -452,14 +460,16 @@ exports.verifySchoolPasscode = functions.https.onCall(
 
     return { success: true };
   }
-);
+  );
 
 // ========================================================================
 // Callable: Verify school access passcode (NO role provisioning)
 // Used for "school sign-in" gate before choosing student/staff/admin.
 // ========================================================================
 
-exports.verifySchoolAccessPasscode = functions.https.onCall(
+exports.verifySchoolAccessPasscode = functions
+  .runWith(HOT_AUTH_FUNCTION_OPTIONS)
+  .https.onCall(
   async (data: any, context: functions.https.CallableContext) => {
     requireAuth(context);
     requireString(data.schoolId, "schoolId");
@@ -507,7 +517,7 @@ exports.verifySchoolAccessPasscode = functions.https.onCall(
 
     return { success: true };
   }
-);
+  );
 
 // ========================================================================
 // Developer allow-list (appConfig/global.developerUids) for attendance etc.

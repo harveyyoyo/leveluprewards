@@ -138,6 +138,7 @@ export function AdminStudentsTab({
   settings,
   classes,
   students,
+  rosterLoading = false,
   filteredStudents,
   studentCsvInputRef,
   onStudentCsvFileChange,
@@ -179,6 +180,7 @@ export function AdminStudentsTab({
   };
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
+  rosterLoading?: boolean;
   filteredStudents: Student[];
   studentCsvInputRef: React.RefObject<HTMLInputElement>;
   onStudentCsvFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -576,7 +578,13 @@ export function AdminStudentsTab({
 
           <AdminRecordListScroll>
             <ul className="flex w-full min-w-0 flex-col gap-1.5">
-              {filteredStudents.length === 0 ? (
+              {rosterLoading && filteredStudents.length === 0 ? (
+                <li
+                  className="animate-pulse h-64 w-full rounded-xl bg-muted/40"
+                  aria-busy="true"
+                  aria-label="Loading students"
+                />
+              ) : filteredStudents.length === 0 ? (
                 <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
