@@ -32,6 +32,7 @@ import {
 } from '@/lib/auth/schoolLoginRedirect';
 import { canBypassSchoolAdminPasscode } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { canReadPrivateSchoolDocument, isLeftoverCustomAuthUser } from '@/lib/hallOfFameAccess';
 import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
@@ -509,7 +510,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUserId(auth.currentUser.uid);
                 }
 
-                if (savedState === 'developer') {
+                if (savedState === 'developer' && isLeftoverCustomAuthUser(auth.currentUser)) {
+                    setLoginState('school');
+                    setIsAdmin(false);
+                    setIsTeacher(false);
+                    setIsSecretary(false);
+                    setIsPrizeClerk(false);
+                    setIsReports(false);
+                    setIsLibrarian(false);
+                    setIsOffice(false);
+                    setIsHouseCoordinator(false);
+                    setUserName(null);
+                    setTeacherDocId(null);
+                    localStorage.setItem('loginState', 'school');
+                    localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+                } else if (savedState === 'developer') {
                     setLoginState('developer');
                     setIsTeacher(false);
                     setIsSecretary(false);
@@ -698,6 +713,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsPrizeClerk(false);
                     setIsReports(false);
                 }
+            } else if (savedState === 'developer' && isLeftoverCustomAuthUser(auth.currentUser)) {
+                localStorage.removeItem('loginState');
+                localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+                setLoginState('loggedOut');
+                setIsAdmin(false);
+                setIsTeacher(false);
+                setIsSecretary(false);
+                setIsPrizeClerk(false);
+                setIsReports(false);
+                setIsLibrarian(false);
+                setIsOffice(false);
+                setIsHouseCoordinator(false);
             } else if (savedState === 'developer') {
                 setLoginState('developer');
                 setIsAdmin(true);
@@ -896,17 +923,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const sid = schoolId.trim().toLowerCase();
-        const isStaff =
-            loginState === 'admin' ||
-            loginState === 'developer' ||
-            loginState === 'teacher' ||
-            loginState === 'secretary' ||
-            loginState === 'prizeClerk' ||
-            loginState === 'reports' ||
-            loginState === 'librarian' ||
-            loginState === 'office' ||
-            loginState === 'houseCoordinator';
-        const metadataRef = isStaff
+        const canReadPrivateSchoolDoc = canReadPrivateSchoolDocument({
+            loginState,
+            isAdmin,
+            isTeacher,
+            isSecretary,
+            isPrizeClerk,
+            isReports,
+            isLibrarian,
+            isOffice,
+            isHouseCoordinator,
+            email: auth?.currentUser?.email,
+        });
+        const metadataRef = canReadPrivateSchoolDoc
             ? doc(firestore, 'schools', sid)
             : schoolPublicDocRef(firestore, sid);
         const applySnapshot = (snapshot: { metadata: { fromCache: boolean } }) => {
@@ -952,7 +981,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 window.removeEventListener('online', onBrowserOnline);
             }
         };
-    }, [firestore, schoolId, loginState]);
+    }, [
+        firestore,
+        schoolId,
+        loginState,
+        isAdmin,
+        isTeacher,
+        isSecretary,
+        isPrizeClerk,
+        isReports,
+        isLibrarian,
+        isOffice,
+        isHouseCoordinator,
+        auth?.currentUser?.email,
+    ]);
 
     const login = useCallback(
         async (
