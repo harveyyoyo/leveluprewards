@@ -366,14 +366,12 @@ export function AdminStudentsTab({
   ];
   const studentActionHeaderHints: Record<string, string> = {
     Pts: "Total points balance",
+    Face: "Face login enrollment",
+    "Sign in": "Sign this student into the kiosk",
     ID: "Preview student ID card",
     Act: "Activity history",
-    ...Object.fromEntries(
-      studentKioskWelcomeToggleDefs.map((def) => [
-        kioskToggleHeaderLabel(def),
-        def.label,
-      ]),
-    ),
+    Badges: "View badges for this student",
+    More: "Theme, kiosk welcome, purge, and delete",
   };
   const studentsListGridCols = studentsListGridColumns(
     studentActionHeaderLabels.length,
