@@ -18,7 +18,8 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Import or print IDs',
         checklist: [
-          'Use Import CSV for rosters. Recognized columns open a quick mapping step; unusual exports are read with AI automatically.',
+          'Use Import CSV for standard roster files. Recognized columns open a quick mapping step; unusual exports are read with AI automatically.',
+          'Use Import with AI to paste messy lists or upload PDF/DOCX — the AI sorts students (and can create related classes too).',
           'Print ID cards from the toolbar when students are ready for the kiosk.',
         ],
       },
