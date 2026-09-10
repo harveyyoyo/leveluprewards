@@ -9,6 +9,7 @@ import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, type DocumentData } from 'firebase/firestore';
 import { removeUndefinedDeep } from '@/lib/db/helpers';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
+import { canReadPrivateSchoolDocument } from '@/lib/hallOfFameAccess';
 import { DEFAULT_PLAN, normalizePlan, PLANS, type PlanTier, type SchoolPlanConfig } from '@/lib/plans';
 import {
     applyPillarAccessToSettings,
@@ -1146,8 +1147,32 @@ function getLocalArcadeSettingsKey(
 }
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-    const { schoolId, isInitialized, loginState } = useAuth();
-    const { firestore } = useFirebase();
+    const {
+        schoolId,
+        isInitialized,
+        loginState,
+        isAdmin,
+        isTeacher,
+        isSecretary,
+        isPrizeClerk,
+        isReports,
+        isLibrarian,
+        isOffice,
+        isHouseCoordinator,
+    } = useAuth();
+    const { firestore, auth } = useFirebase();
+    const canReadPrivateSchoolDoc = canReadPrivateSchoolDocument({
+        loginState,
+        isAdmin,
+        isTeacher,
+        isSecretary,
+        isPrizeClerk,
+        isReports,
+        isLibrarian,
+        isOffice,
+        isHouseCoordinator,
+        email: auth?.currentUser?.email,
+    });
     const [settings, setSettings] = useState<Settings>(defaultSettings);
     const [isLoaded, setIsLoaded] = useState(false);
     const [automaticLegacySignals, setAutomaticLegacySignals] = useState<LegacyModeSignals>({});
@@ -1156,22 +1181,12 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         () => isStudentKioskUiContext(loginState, pathname, schoolId),
         [loginState, pathname, schoolId],
     );
-    const isStaff =
-        loginState === 'admin' ||
-        loginState === 'developer' ||
-        loginState === 'teacher' ||
-        loginState === 'secretary' ||
-        loginState === 'prizeClerk' ||
-        loginState === 'reports' ||
-        loginState === 'librarian' ||
-        loginState === 'office' ||
-        loginState === 'houseCoordinator';
     const schoolDocRef = useMemoFirebase(() => {
         if (!firestore || !schoolId) return null;
         const sid = schoolId.trim().toLowerCase();
-        if (isStaff) return doc(firestore, 'schools', sid);
+        if (canReadPrivateSchoolDoc) return doc(firestore, 'schools', sid);
         return schoolPublicDocRef(firestore, sid);
-    }, [firestore, schoolId, isStaff]);
+    }, [firestore, schoolId, canReadPrivateSchoolDoc]);
     const { data: schoolData } = useDoc<
         SchoolPlanConfig & {
             appSettings?: Partial<Settings>;
@@ -1666,7 +1681,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(settingsKey, JSON.stringify(persisted));
             latestForFirestoreRef.current = persisted;
 
-            if (schoolId && firestore && (loginState === 'admin' || loginState === 'developer' || loginState === 'teacher')) {
+            if (schoolId && firestore && canReadPrivateSchoolDoc && (loginState === 'admin' || loginState === 'developer' || loginState === 'teacher')) {
                 const flushSid = schoolId.trim().toLowerCase();
                 lastScheduledFlushSchoolIdRef.current = flushSid;
                 if (firestoreFlushTimerRef.current) {

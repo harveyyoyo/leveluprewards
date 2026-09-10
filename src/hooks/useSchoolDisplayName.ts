@@ -3,6 +3,7 @@ import { doc } from 'firebase/firestore';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
+import { useCanReadPrivateSchoolDocument } from '@/hooks/useCanReadSchoolRoster';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -33,25 +34,15 @@ export function formatSchoolIdSlug(schoolId: string) {
 /** Firestore `name`, then session cache, then title-cased slug (e.g. yeshiva → Yeshiva). */
 export function useSchoolDisplayName(explicitSchoolId?: string | null) {
   const { firestore } = useFirebase();
-  const { schoolId: authSchoolId, loginState } = useAuth();
+  const { schoolId: authSchoolId } = useAuth();
   const schoolId = (explicitSchoolId ?? authSchoolId)?.trim().toLowerCase() || null;
-
-  const isStaff =
-    loginState === 'admin' ||
-    loginState === 'developer' ||
-    loginState === 'teacher' ||
-    loginState === 'secretary' ||
-    loginState === 'prizeClerk' ||
-    loginState === 'reports' ||
-    loginState === 'librarian' ||
-    loginState === 'office' ||
-    loginState === 'houseCoordinator';
+  const canReadPrivateSchoolDoc = useCanReadPrivateSchoolDocument();
 
   const schoolDocRef = useMemoFirebase(() => {
     if (!firestore || !schoolId) return null;
-    if (isStaff) return doc(firestore, 'schools', schoolId);
+    if (canReadPrivateSchoolDoc) return doc(firestore, 'schools', schoolId);
     return schoolPublicDocRef(firestore, schoolId);
-  }, [firestore, schoolId, isStaff]);
+  }, [firestore, schoolId, canReadPrivateSchoolDoc]);
 
   const { data: schoolData, isLoading } = useDoc<{ name?: string }>(schoolDocRef);
   const [cachedSchoolName, setCachedSchoolName] = useState<string | null>(() => readCachedSchoolName(schoolId));
