@@ -1,34 +1,37 @@
 'use client';
 
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useDeferredValue, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
+import { ClassroomLiveTeachChrome } from '@/components/classroom/ClassroomLiveTeachChrome';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { useClassroomRealmRoster } from '@/hooks/useClassroomRealmRoster';
+import { useClassroomTeachNow } from '@/hooks/useClassroomTeachNow';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import { filterCategoriesForStaffPortal } from '@/lib/staffCategoryScope';
 import { isClassroomPillarOn } from '@/lib/productPillars';
-import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
+import {
+  CLASSROOM_ALL_STUDENTS_FILTER_ID,
+  CLASSROOM_TAB_LABEL,
+} from '@/lib/classroom/classroomTabSections';
 import { DEFAULT_CLASSROOM_SESSION_TIMEOUT_MS } from '@/lib/classroom/classroomManagementSettings';
 import { classroomRealmHref } from '@/lib/classroomRealmUrl';
+import { pickClassroomActiveClass, rememberClassroomActiveClass } from '@/lib/classroom/classroomActiveClass';
 import { teacherWithBudgetAfterSpend } from '@/lib/teacherBudget';
 import { useClassroomIdleExit } from '@/hooks/useClassroomIdleExit';
 
+const spring = { type: 'spring' as const, stiffness: 280, damping: 28 };
+
 export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChrome?: boolean }) {
-  const [portalReady, setPortalReady] = useState(false);
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-
-  useEffect(() => {
-    setPortalReady(true);
-  }, []);
 
   const schoolId = typeof params.schoolId === 'string' ? params.schoolId : '';
   const classIdFromUrl = (searchParams?.get('classId') || '').trim();
@@ -50,11 +53,13 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     categories: rawCategories,
     categoriesLoading,
     canReadRoster,
+    variant,
   } = useClassroomRealmRoster(schoolId, { includeCategories: true });
   const storageScope =
     scopeFromUrl || (schoolWide ? 'admin' : activeTeacherId || 'staff');
 
   const deferredStudents = useDeferredValue(students);
+  const isStudentAudience = audienceFromUrl === 'student';
 
   const categories = useMemo(
     () =>
@@ -98,11 +103,12 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   const handleMonitorClassChange = useCallback(
     (nextClassId: string) => {
       if (!nextClassId) return;
-      const params = new URLSearchParams(searchParams?.toString() ?? '');
-      params.set('classId', nextClassId);
-      if (storageScope) params.set('scope', storageScope);
-      if (audienceFromUrl === 'student') params.set('audience', 'student');
-      router.replace(`${classroomRealmHref(schoolId, 'live')}?${params.toString()}`);
+      rememberClassroomActiveClass(nextClassId);
+      const next = new URLSearchParams(searchParams?.toString() ?? '');
+      next.set('classId', nextClassId);
+      if (storageScope) next.set('scope', storageScope);
+      if (audienceFromUrl === 'student') next.set('audience', 'student');
+      router.replace(`${classroomRealmHref(schoolId, 'live')}?${next.toString()}`);
     },
     [audienceFromUrl, router, schoolId, searchParams, storageScope],
   );
@@ -124,6 +130,20 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
       router.replace(schoolId ? `/${schoolId}/portal` : '/');
     }
   }, [isInitialized, loginState, router, schoolId]);
+
+  const monitorClassId =
+    classIdFromUrl === CLASSROOM_ALL_STUDENTS_FILTER_ID
+      ? CLASSROOM_ALL_STUDENTS_FILTER_ID
+      : pickClassroomActiveClass(classes, classIdFromUrl);
+
+  const teach = useClassroomTeachNow({
+    schoolId,
+    classes,
+    students,
+    variant,
+    activeTeacherId,
+    initialClassId: monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID ? undefined : monitorClassId,
+  });
 
   if (!isInitialized || !canAccessHallOfFameRoute(loginState)) {
     return (
@@ -180,8 +200,14 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
     );
   }
 
+  const teachStudents =
+    monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID ? deferredStudents : teach.classStudents;
+
   const monitorContent = (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={spring}
       className="classroom-realm-root classroom-realm-manage fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
       style={{ backgroundColor: 'var(--cr-base, #102016)' }}
     >
@@ -189,7 +215,29 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
         className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden"
         style={{ backgroundColor: 'var(--cr-base, #102016)' }}
       >
-        <div className="flex h-full min-h-0 w-full flex-col pl-3 pt-2 pb-2 pr-0">
+        {!isStudentAudience ? (
+          <ClassroomLiveTeachChrome
+            schoolId={schoolId}
+            classId={teach.selectedClassId || monitorClassId}
+            classNameLabel={
+              monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID
+                ? 'All students'
+                : teach.activeClass?.name || 'Classroom'
+            }
+            scope={storageScope}
+            students={teachStudents}
+            sessionPoints={teach.sessionPoints}
+            passes={
+              monitorClassId === CLASSROOM_ALL_STUDENTS_FILTER_ID
+                ? teach.allActivePasses
+                : teach.classActivePasses
+            }
+            bathroomMaxMinutes={teach.bathroomMaxMinutes}
+            onReturn={(id) => void teach.handleEndPass(id)}
+            onAward={teach.handleRandomAward}
+          />
+        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col pl-3 pt-2 pb-2 pr-0">
           <ClassroomPointsPanel
             variant="fullscreen"
             audience={audienceFromUrl}
@@ -198,28 +246,24 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
             classes={classes}
             categories={categories}
             storageScope={storageScope}
-            initialClassId={classIdFromUrl || undefined}
+            initialClassId={monitorClassId || undefined}
             budgetOptions={budgetOptions}
             onClassIdChange={handleMonitorClassChange}
           />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 
-  const shell = hideRealmChrome ? (
-    <ClassroomRealmShell schoolId={schoolId} hideChrome>
-      {monitorContent}
-    </ClassroomRealmShell>
-  ) : (
-    monitorContent
-  );
-
-  if (portalReady) {
-    return createPortal(shell, document.body);
+  if (hideRealmChrome) {
+    return (
+      <ClassroomRealmShell schoolId={schoolId} hideChrome>
+        {monitorContent}
+      </ClassroomRealmShell>
+    );
   }
 
-  return shell;
+  return monitorContent;
 }
 
 export default function ClassroomRealmLivePage() {
