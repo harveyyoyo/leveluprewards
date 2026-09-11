@@ -1,11 +1,10 @@
 'use client';
 
 import type { RefObject } from 'react';
-import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { AlertCircle, CheckCircle2, Loader2, ScanBarcode, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { AnimatedScannerLogo } from './AnimatedScannerLogo';
 
 export type LibraryScanFeedbackStatus =
   | 'looking_up'
@@ -82,6 +81,9 @@ export function LibraryBarcodeReaderField({
   scanFeedback,
   className,
   showIcon = true,
+  showEnterHint = true,
+  showSweep = true,
+  placeholder,
 }: {
   inputId?: string;
   inputRef: RefObject<HTMLInputElement | null>;
@@ -93,6 +95,9 @@ export function LibraryBarcodeReaderField({
   scanFeedback?: LibraryScanFeedback | null;
   className?: string;
   showIcon?: boolean;
+  showEnterHint?: boolean;
+  showSweep?: boolean;
+  placeholder?: string;
 }) {
   const feedbackMeta = scanFeedback ? STATUS_META[scanFeedback.status] : null;
 
@@ -101,14 +106,13 @@ export function LibraryBarcodeReaderField({
       {/* Scanner Input Row */}
       <div className="relative flex items-center">
         {showIcon && (
-          <div className="absolute left-2.5 flex items-center pointer-events-none text-muted-foreground z-10">
-            <AnimatedScannerLogo
-              size="sm"
-              active={active}
-              showLabel={false}
-              showStatusDot={false}
-            />
-          </div>
+          <ScanBarcode
+            className={cn(
+              'absolute left-2.5 z-10 h-3.5 w-3.5 pointer-events-none',
+              active ? 'text-primary' : 'text-muted-foreground',
+            )}
+            aria-hidden
+          />
         )}
         <Input
           id={inputId}
@@ -122,10 +126,17 @@ export function LibraryBarcodeReaderField({
               onSubmit();
             }
           }}
-          placeholder={active ? 'Scan barcode with reader wedge or type code & press Enter…' : 'Reader paused — click Resume reader…'}
+          placeholder={
+            placeholder !== undefined
+              ? placeholder
+              : active
+                ? 'Scan barcode with reader wedge or type code & press Enter…'
+                : 'Reader paused — click Resume reader…'
+          }
           className={cn(
             showIcon ? 'pl-8' : 'pl-3',
-            'pr-20 font-mono text-xs h-9 rounded-xl border transition-all',
+            showEnterHint ? 'pr-20' : 'pr-3',
+            'font-mono text-xs h-9 rounded-xl border transition-all',
             active
               ? 'border-primary/50 bg-background shadow-xs focus-visible:ring-1 focus-visible:ring-primary'
               : 'border-muted bg-muted/40 text-muted-foreground',
@@ -136,18 +147,29 @@ export function LibraryBarcodeReaderField({
           disabled={!active}
           aria-label="Barcode reader scan field"
         />
-        <div className="absolute right-2 flex items-center gap-1.5 pointer-events-none">
-          <span className="text-[10px] font-mono text-muted-foreground/80 bg-muted px-1.5 py-0.5 rounded">
-            Enter ↵
-          </span>
-          <span
-            className={cn(
-              'h-2 w-2 rounded-full shrink-0',
-              active ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/40',
-            )}
-            title={active ? 'Scanner active' : 'Scanner paused'}
-          />
-        </div>
+        {active && showSweep ? (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
+            <motion.div
+              className="absolute inset-y-0 w-24 -ml-12 bg-gradient-to-r from-transparent via-primary/25 to-transparent"
+              initial={{ left: '0%' }}
+              animate={{ left: '100%' }}
+              transition={{ type: 'spring', stiffness: 24, damping: 22, repeat: Infinity, repeatType: 'mirror' }}
+            />
+            <motion.div
+              className="absolute top-[18%] bottom-[18%] w-px -ml-px bg-primary/80 shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]"
+              initial={{ left: '0%' }}
+              animate={{ left: '100%' }}
+              transition={{ type: 'spring', stiffness: 24, damping: 22, repeat: Infinity, repeatType: 'mirror' }}
+            />
+          </div>
+        ) : null}
+        {showEnterHint ? (
+          <div className="absolute right-2 z-10 flex items-center pointer-events-none">
+            <span className="text-[10px] font-mono text-muted-foreground/80 bg-muted px-1.5 py-0.5 rounded">
+              Enter ↵
+            </span>
+          </div>
+        ) : null}
       </div>
 
       {/* Compact Scan Feedback Pill (Only shown when there is feedback) */}

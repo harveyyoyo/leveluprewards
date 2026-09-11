@@ -161,6 +161,24 @@ export function computeLateFeePoints(daysOverdue: number, pointsPerDay: number):
   return daysOverdue * pointsPerDay;
 }
 
+/** Days that actually count toward a late fee after the school's grace period. */
+export function computeChargeableLateDays(daysOverdue: number, gracePeriodDays = 0): number {
+  if (daysOverdue <= 0) return 0;
+  return Math.max(0, daysOverdue - Math.max(0, gracePeriodDays));
+}
+
+/** Late fee after grace days and an optional max-fine cap (0 = no cap). */
+export function computeCappedLateFee(
+  daysOverdue: number,
+  pointsPerDay: number,
+  gracePeriodDays = 0,
+  maxFineCap = 0,
+): number {
+  const fee = computeLateFeePoints(computeChargeableLateDays(daysOverdue, gracePeriodDays), pointsPerDay);
+  if (maxFineCap > 0) return Math.min(fee, maxFineCap);
+  return fee;
+}
+
 export function formatDueDate(dueAt: number | null | undefined): string {
   if (!dueAt) return 'No due date';
   return new Date(dueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });

@@ -152,6 +152,7 @@ export function LibraryBookCover({
           src={currentSrc}
           alt={title || 'Book cover'}
           onError={handleError}
+          referrerPolicy="no-referrer"
           className={cn('h-full w-full object-cover transition-opacity duration-200', imgClassName)}
           loading="lazy"
         />

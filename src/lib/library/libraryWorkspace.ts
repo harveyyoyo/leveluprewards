@@ -1,4 +1,5 @@
 import type { LibraryItem } from '@/lib/types';
+import { computeDaysOverdue } from '@/lib/library/libraryPolicy';
 
 export interface LibraryLoan {
   id: string;
@@ -14,11 +15,22 @@ export interface LibraryLoan {
   rewardMode?: string;
 }
 
+function matchesCatalogStatus(item: LibraryItem, status: string) {
+  if (status === 'all') return true;
+  if (status === 'available') {
+    return item.status === 'available' && (!item.condition || item.condition === 'good');
+  }
+  if (status === 'checked_out') return item.status === 'checked_out';
+  if (status === 'overdue') {
+    return item.status === 'checked_out' && computeDaysOverdue(item.dueAt) > 0;
+  }
+  return item.condition === status;
+}
+
 export function filterLibraryCatalog(items: LibraryItem[], search: string, status: string, borrower: (id?: string) => string) {
   const term = search.trim().toLowerCase();
   return items.filter(item => !item.archived &&
-    (status === 'all' || (status === 'available' ? item.status === 'available' && (!item.condition || item.condition === 'good') :
-      status === 'checked_out' ? item.status === 'checked_out' : item.condition === status)) &&
+    matchesCatalogStatus(item, status) &&
     (!term || [item.name, item.author, item.upc, item.isbn, item.category, item.shelfLocation, item.copyNumber,
       item.checkedOutTo ? borrower(item.checkedOutTo) : ''].join(' ').toLowerCase().includes(term)))
     .sort((a, b) => a.name.localeCompare(b.name) || a.upc.localeCompare(b.upc));

@@ -1,10 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Check, Palette, Sparkles, Monitor, Smile, Briefcase, BookOpen, Moon, LayoutGrid, PanelLeft } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Check, Palette, Sparkles, Monitor, Type, RotateCcw } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
@@ -19,6 +23,12 @@ import {
 } from '@/lib/library/libraryThemes';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import {
+  DEFAULT_LIBRARY_HUB_COPY,
+  patchLibraryHubCopy,
+  resolveLibraryHubCopy,
+  type LibraryHubCopyField,
+} from '@/lib/library/libraryHubCopy';
 
 const STYLE_FILTERS: { id: 'all' | LibraryStyleCategory; label: string; icon: string }[] = [
   { id: 'all', label: 'All Themes', icon: '🎨' },
@@ -35,7 +45,6 @@ export function LibraryThemeSettingsCard() {
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
   const currentTheme = resolveLibraryTheme(currentThemeId);
   const matchKiosk = settings.libraryThemeMatchKiosk !== false;
-  const layoutStyle = (settings.libraryLayoutStyle as 'sidebar' | 'hub') || 'sidebar';
 
   const handleSelectTheme = (themeId: LibraryThemeId) => {
     updateSettings({ libraryTheme: themeId });
@@ -63,94 +72,6 @@ export function LibraryThemeSettingsCard() {
 
   return (
     <Accordion type="single" collapsible className="space-y-3">
-      <AccordionItem value="layout" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 pr-3">
-          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
-            <div className="flex items-center gap-2.5 text-left">
-              <div className="rounded-xl bg-primary/10 p-2 text-primary shrink-0">
-                <LayoutGrid className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="text-base font-bold flex flex-wrap items-center gap-2">
-                  <span>Navigation Layout</span>
-                  <Badge variant="outline" className="font-bold text-xs bg-primary/5 text-primary border-primary/20">
-                    {layoutStyle === 'hub' ? 'Portal Hub' : 'Sidebar'}
-                  </Badge>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground font-normal mt-0.5">
-                  Choose how staff navigate the library: a classic sidebar with tabs, or a Portal Hub landing screen with big Librarian, Catalog, and Student Kiosk cards.
-                </p>
-              </div>
-            </div>
-          </AccordionTrigger>
-          <StaffPortalTabInfoPopover
-            sections={[
-              staffPortalTabInfoSection(
-                'Sidebar keeps every station one click away in a persistent left nav. Portal Hub matches the main LevelUp portal style — pick a big card, then use the back button to return home.',
-              ),
-            ]}
-            ariaLabel="About navigation layout"
-          />
-        </div>
-        <AccordionContent className="px-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => updateSettings({ libraryLayoutStyle: 'sidebar' })}
-              className={cn(
-                'group relative flex items-center gap-3 rounded-2xl border p-4 text-left transition-all hover:shadow-md',
-                layoutStyle === 'sidebar'
-                  ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-sm'
-                  : 'border-border bg-card hover:border-primary/50',
-              )}
-              aria-pressed={layoutStyle === 'sidebar'}
-            >
-              <div className="h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                <PanelLeft className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-black text-sm tracking-tight text-foreground">Sidebar</h4>
-                  {layoutStyle === 'sidebar' && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs shrink-0">
-                      <Check className="h-3 w-3" />
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Classic left-nav with every station always visible.</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => updateSettings({ libraryLayoutStyle: 'hub' })}
-              className={cn(
-                'group relative flex items-center gap-3 rounded-2xl border p-4 text-left transition-all hover:shadow-md',
-                layoutStyle === 'hub'
-                  ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-sm'
-                  : 'border-border bg-card hover:border-primary/50',
-              )}
-              aria-pressed={layoutStyle === 'hub'}
-            >
-              <div className="h-11 w-11 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                <LayoutGrid className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="font-black text-sm tracking-tight text-foreground">Portal Hub</h4>
-                  {layoutStyle === 'hub' && (
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs shrink-0">
-                      <Check className="h-3 w-3" />
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">Big Librarian / Catalog / Student Kiosk cards, like the main LevelUp portal.</p>
-              </div>
-            </button>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-
       <AccordionItem value="theme" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -348,6 +269,287 @@ export function LibraryThemeSettingsCard() {
           </div>
         </AccordionContent>
       </AccordionItem>
+
+      <AccordionItem value="hub-copy" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary shrink-0">
+                <Type className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-bold">Front page wording</div>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal mt-0.5">
+                  Change the welcome line, the three door cards, and the buttons on the library home screen.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Leave a box blank to keep the built-in text. The little pill above the welcome line uses the school name unless you type something else.',
+              ),
+            ]}
+            ariaLabel="About front page wording"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-5">
+          <LibraryHubCopyFields />
+        </AccordionContent>
+      </AccordionItem>
     </Accordion>
+  );
+}
+
+function LibraryHubCopyFields() {
+  const { settings, updateSettings } = useSettings();
+  const { toast } = useToast();
+  const resolved = resolveLibraryHubCopy(settings.libraryHubCopy);
+
+  const setField = (field: LibraryHubCopyField, value: string) => {
+    updateSettings({
+      libraryHubCopy: patchLibraryHubCopy(settings.libraryHubCopy, field, value),
+    });
+  };
+
+  const resetAll = () => {
+    updateSettings({ libraryHubCopy: {} });
+    toast({
+      title: 'Front page wording reset',
+      description: 'The library home screen is using the built-in text again.',
+    });
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" size="sm" className="rounded-xl gap-1.5 text-xs font-bold" onClick={resetAll}>
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset all wording
+        </Button>
+      </div>
+
+      <HubCopyGroup title="Welcome banner">
+        <HubCopyInput
+          id="hub-header-product"
+          label="Word under the school name (top left)"
+          value={settings.libraryHubCopy?.headerProduct ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.headerProduct}
+          onChange={(v) => setField('headerProduct', v)}
+        />
+        <HubCopyInput
+          id="hub-eyebrow"
+          label="Small pill above the welcome title"
+          hint="Leave blank to show the school name."
+          value={settings.libraryHubCopy?.eyebrow ?? ''}
+          placeholder={resolved.eyebrow || 'School name'}
+          onChange={(v) => setField('eyebrow', v)}
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-welcome-lead"
+            label="Welcome title (first words)"
+            value={settings.libraryHubCopy?.welcomeLead ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.welcomeLead}
+            onChange={(v) => setField('welcomeLead', v)}
+          />
+          <HubCopyInput
+            id="hub-welcome-highlight"
+            label="Underlined title words"
+            value={settings.libraryHubCopy?.welcomeHighlight ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.welcomeHighlight}
+            onChange={(v) => setField('welcomeHighlight', v)}
+          />
+        </div>
+        <HubCopyInput
+          id="hub-intro"
+          label="Sentence under the title"
+          multiline
+          value={settings.libraryHubCopy?.intro ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.intro}
+          onChange={(v) => setField('intro', v)}
+        />
+        <HubCopyInput
+          id="hub-enter"
+          label="Button on each card"
+          value={settings.libraryHubCopy?.enterLabel ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.enterLabel}
+          onChange={(v) => setField('enterLabel', v)}
+        />
+        <HubCopyInput
+          id="hub-footer"
+          label="Small line at the bottom"
+          value={settings.libraryHubCopy?.footer ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.footer}
+          onChange={(v) => setField('footer', v)}
+        />
+      </HubCopyGroup>
+
+      <HubCopyGroup title="Librarian card">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-desk-title"
+            label="Title"
+            value={settings.libraryHubCopy?.deskTitle ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.deskTitle}
+            onChange={(v) => setField('deskTitle', v)}
+          />
+          <HubCopyInput
+            id="hub-desk-tagline"
+            label="Small line under the title"
+            value={settings.libraryHubCopy?.deskTagline ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.deskTagline}
+            onChange={(v) => setField('deskTagline', v)}
+          />
+        </div>
+        <HubCopyInput
+          id="hub-desk-badge"
+          label="Corner badge"
+          value={settings.libraryHubCopy?.deskBadge ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.deskBadge}
+          onChange={(v) => setField('deskBadge', v)}
+        />
+        <HubCopyInput
+          id="hub-desk-desc"
+          label="Description"
+          multiline
+          value={settings.libraryHubCopy?.deskDescription ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.deskDescription}
+          onChange={(v) => setField('deskDescription', v)}
+        />
+      </HubCopyGroup>
+
+      <HubCopyGroup title="Catalog card">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-catalog-title"
+            label="Title"
+            value={settings.libraryHubCopy?.catalogTitle ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.catalogTitle}
+            onChange={(v) => setField('catalogTitle', v)}
+          />
+          <HubCopyInput
+            id="hub-catalog-tagline"
+            label="Small line under the title"
+            value={settings.libraryHubCopy?.catalogTagline ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.catalogTagline}
+            onChange={(v) => setField('catalogTagline', v)}
+          />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-catalog-badge"
+            label="Badge when there is no count"
+            value={settings.libraryHubCopy?.catalogBadge ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.catalogBadge}
+            onChange={(v) => setField('catalogBadge', v)}
+          />
+          <HubCopyInput
+            id="hub-catalog-copies"
+            label="Word after the copy count"
+            hint="Shown as “19 copies” on the badge."
+            value={settings.libraryHubCopy?.catalogCopiesLabel ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.catalogCopiesLabel}
+            onChange={(v) => setField('catalogCopiesLabel', v)}
+          />
+        </div>
+        <HubCopyInput
+          id="hub-catalog-desc"
+          label="Description"
+          multiline
+          value={settings.libraryHubCopy?.catalogDescription ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.catalogDescription}
+          onChange={(v) => setField('catalogDescription', v)}
+        />
+      </HubCopyGroup>
+
+      <HubCopyGroup title="Student Station card">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-kiosk-title"
+            label="Title"
+            value={settings.libraryHubCopy?.kioskTitle ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.kioskTitle}
+            onChange={(v) => setField('kioskTitle', v)}
+          />
+          <HubCopyInput
+            id="hub-kiosk-tagline"
+            label="Small line under the title"
+            value={settings.libraryHubCopy?.kioskTagline ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.kioskTagline}
+            onChange={(v) => setField('kioskTagline', v)}
+          />
+        </div>
+        <HubCopyInput
+          id="hub-kiosk-badge"
+          label="Corner badge"
+          value={settings.libraryHubCopy?.kioskBadge ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.kioskBadge}
+          onChange={(v) => setField('kioskBadge', v)}
+        />
+        <HubCopyInput
+          id="hub-kiosk-desc"
+          label="Description"
+          multiline
+          value={settings.libraryHubCopy?.kioskDescription ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.kioskDescription}
+          onChange={(v) => setField('kioskDescription', v)}
+        />
+      </HubCopyGroup>
+    </div>
+  );
+}
+
+function HubCopyGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="space-y-3 rounded-2xl border bg-muted/20 p-3.5">
+      <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function HubCopyInput({
+  id,
+  label,
+  hint,
+  value,
+  placeholder,
+  onChange,
+  multiline,
+}: {
+  id: string;
+  label: string;
+  hint?: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  multiline?: boolean;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id} className="text-xs font-bold">
+        {label}
+      </Label>
+      {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}
+      {multiline ? (
+        <Textarea
+          id={id}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="min-h-[72px] rounded-xl text-sm"
+        />
+      ) : (
+        <Input
+          id={id}
+          value={value}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className="rounded-xl"
+        />
+      )}
+    </div>
   );
 }

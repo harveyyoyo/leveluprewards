@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Barcode, BookOpen, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, User } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFunctions } from '@/firebase';
+import { callLibrary } from '@/lib/library/libraryOperations';
 import {
   Dialog,
   DialogContent,
@@ -100,7 +100,7 @@ export function LibraryItemModal({
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { setLibraryStickersToPrint } = usePrint();
-  const firestore = useFirestore();
+  const functions = useFunctions();
   const isEditing = !!item;
 
   useEffect(() => {
@@ -336,11 +336,8 @@ export function LibraryItemModal({
       createdAt: Date.now(),
     };
     setLibraryStickersToPrint([printItem], { format, schoolId: sid });
-    if (firestore && sid && item?.id && item.id !== 'draft-label') {
-      const itemRef = doc(firestore, 'schools', sid, 'library', item.id);
-      updateDoc(itemRef, { labeled: true, labeledAt: Date.now() }).catch(() => {});
-      item.labeled = true;
-      item.labeledAt = Date.now();
+    if (functions && sid && item?.id && item.id !== 'draft-label') {
+      callLibrary(functions, 'libraryCirculation', { schoolId: sid, itemId: item.id, action: 'label' }).catch(() => {});
     }
     const opt = getLibraryLabelOption(format);
     toast({ title: `Printing ${opt.shortName}`, description: normalizedUpc });

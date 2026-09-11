@@ -5,11 +5,8 @@ import { Search, User, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Student } from '@/lib/types';
-import { cn, getStudentNickname } from '@/lib/utils';
-
-function studentDisplayName(s: Student): string {
-  return `${getStudentNickname(s)} ${s.lastName ?? ''}`.trim() || s.id;
-}
+import { cn } from '@/lib/utils';
+import { LibraryStudentNamedLabel, useLibraryStudentDisplay } from './LibraryStudentNamedLabel';
 
 function matchesStudentSearch(s: Student, term: string): boolean {
   const terms = term.split(/\s+/).filter(Boolean);
@@ -56,6 +53,7 @@ export function LibraryStudentNamePicker({
   className,
   label = 'Find student by name',
 }: LibraryStudentNamePickerProps) {
+  const { formatName } = useLibraryStudentDisplay();
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -71,8 +69,8 @@ export function LibraryStudentNamePicker({
 
     // Sort: exact prefix match first, then alphabetically
     list.sort((a, b) => {
-      const nameA = studentDisplayName(a).toLowerCase();
-      const nameB = studentDisplayName(b).toLowerCase();
+      const nameA = formatName(a).toLowerCase();
+      const nameB = formatName(b).toLowerCase();
       const aStarts = nameA.startsWith(normalized);
       const bStarts = nameB.startsWith(normalized);
       if (aStarts && !bStarts) return -1;
@@ -81,7 +79,7 @@ export function LibraryStudentNamePicker({
     });
 
     return list.slice(0, 10);
-  }, [students, normalized]);
+  }, [students, normalized, formatName]);
 
   // Reset active index when matches change
   useEffect(() => {
@@ -100,7 +98,7 @@ export function LibraryStudentNamePicker({
     if (clearOnSelect) {
       setQuery('');
     } else {
-      setQuery(studentDisplayName(student));
+      setQuery(formatName(student));
     }
     setOpen(false);
     onSelect(student);
@@ -255,7 +253,7 @@ export function LibraryStudentNamePicker({
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={s.photoUrl}
-                              alt={studentDisplayName(s)}
+                              alt={formatName(s)}
                               className="h-full w-full object-cover rounded-xl"
                             />
                           ) : (
@@ -269,7 +267,14 @@ export function LibraryStudentNamePicker({
                               isSelected ? 'text-primary-foreground' : 'text-foreground',
                             )}
                           >
-                            {studentDisplayName(s)}
+                            <LibraryStudentNamedLabel
+                              student={s}
+                              applyColor={!isSelected}
+                              nameClassName={cn(
+                                'truncate font-black tracking-tight leading-tight',
+                                isSelected ? 'text-primary-foreground' : 'text-foreground',
+                              )}
+                            />
                           </p>
                           <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
                             {s.nickname && s.firstName && s.nickname.toLowerCase() !== s.firstName.toLowerCase() ? (

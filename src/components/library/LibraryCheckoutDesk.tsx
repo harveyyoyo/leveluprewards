@@ -130,6 +130,12 @@ export function LibraryCheckoutDesk({
   const policy = useMemo(() => getLibraryPolicyFromSettings(settings, categories), [settings, categories]);
   const student = useMemo(() => students?.find((s) => s.id === studentId), [students, studentId]);
 
+  useEffect(() => {
+    if (!policy.autoDetectCirculation && mode === 'auto') {
+      setMode('checkout');
+    }
+  }, [policy.autoDetectCirculation, mode]);
+
   const executeCheckout = useCallback(
     async (targetStudentId: string, bookRaw: string, bookItem?: LibraryItem) => {
       if (!firestore || !schoolId) return;
@@ -302,7 +308,7 @@ export function LibraryCheckoutDesk({
         studentId: item.checkedOutTo ?? studentId,
       });
       playSound('success');
-      toast({ title: 'Loan renewed', description: `Renewed "${item.name}" for 14 days.` });
+      toast({ title: 'Loan renewed', description: `Renewed "${item.name}" for ${policy.renewalDays} days.` });
       if (studentId && firestore) {
         setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId));
       }
@@ -350,14 +356,9 @@ export function LibraryCheckoutDesk({
           let foundItem = foundItemRaw;
           if (!foundItem && !studentFoundId && catalogItems?.length) {
             const cleanLower = cleanRaw.toLowerCase().trim();
-            const matched = catalogItems.find(
-              (it) =>
-                it.name.toLowerCase().trim() === cleanLower ||
-                it.name.toLowerCase().includes(cleanLower) ||
-                (it.author && it.author.toLowerCase().includes(cleanLower))
-            );
-            if (matched) {
-              foundItem = { item: matched, itemId: matched.id };
+            const exactTitle = catalogItems.filter((it) => it.name.toLowerCase().trim() === cleanLower);
+            if (exactTitle.length === 1) {
+              foundItem = { item: exactTitle[0], itemId: exactTitle[0].id };
             }
           }
 

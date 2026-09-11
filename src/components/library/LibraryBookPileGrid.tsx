@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Star,
   Tag,
+  User,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,21 @@ import { LibraryBookCover } from './LibraryBookCover';
 import type { LibraryItem } from '@/lib/types';
 import type { BookPile } from '@/lib/library/bookPiles';
 import { cn } from '@/lib/utils';
+
+function loanedToLabel(item: LibraryItem, getName: (id?: string) => string) {
+  const who = item.checkedOutTo ? getName(item.checkedOutTo).trim() : '';
+  return who ? `On loan to ${who}` : 'On loan';
+}
+
+function pileLoanBorrowers(pile: BookPile, getName: (id?: string) => string) {
+  const names = pile.copies
+    .filter((copy) => copy.status === 'checked_out')
+    .map((copy) => {
+      const who = copy.checkedOutTo ? getName(copy.checkedOutTo).trim() : '';
+      return who || 'Unknown student';
+    });
+  return [...new Set(names)];
+}
 
 export interface LibraryBookPileGridProps {
   piles: BookPile[];
@@ -140,7 +156,7 @@ export function LibraryBookPileGrid({
                         needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
                       )}
                     >
-                      {isDamaged ? item.condition : isLoaned ? 'On loan' : needsProcessing ? 'Needs Processing' : 'Available'}
+                      {isDamaged ? item.condition : isLoaned ? loanedToLabel(item, getName) : needsProcessing ? 'Needs Processing' : 'Available'}
                     </Badge>
                   </div>
 
@@ -161,6 +177,12 @@ export function LibraryBookPileGrid({
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                       {item.author || 'Author not recorded'}
                     </p>
+                    {isLoaned ? (
+                      <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 truncate">
+                        <User className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{loanedToLabel(item, getName)}</span>
+                      </p>
+                    ) : null}
                   </div>
 
                   <div className="space-y-1 pt-1 border-t text-[10px]">
@@ -279,7 +301,9 @@ export function LibraryBookPileGrid({
                       >
                         {pile.availableCount > 0
                           ? `${pile.availableCount} avail`
-                          : `${pile.loanCount} on loan`}
+                          : pileLoanBorrowers(pile, getName).length === 1
+                            ? `On loan to ${pileLoanBorrowers(pile, getName)[0]}`
+                            : `${pile.loanCount} on loan`}
                       </Badge>
                     </div>
 
@@ -301,6 +325,16 @@ export function LibraryBookPileGrid({
                       <p className="text-[10px] text-muted-foreground truncate mt-0.5">
                         {pile.author || 'Author not recorded'}
                       </p>
+                      {pile.loanCount > 0 ? (
+                        <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 truncate">
+                          <User className="h-3 w-3 shrink-0" />
+                          <span className="truncate">
+                            {pileLoanBorrowers(pile, getName).length === 1
+                              ? `On loan to ${pileLoanBorrowers(pile, getName)[0]}`
+                              : `On loan to ${pileLoanBorrowers(pile, getName).join(', ')}`}
+                          </span>
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="space-y-1 pt-1 border-t text-[10px]">
@@ -484,7 +518,7 @@ export function LibraryBookPileGrid({
                               needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
                             )}
                           >
-                            {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : needsProcessing ? 'Needs Processing' : 'Available'}
+                            {isDamaged ? copy.condition : isLoaned ? loanedToLabel(copy, getName) : needsProcessing ? 'Needs Processing' : 'Available'}
                           </Badge>
                         </div>
 
@@ -590,7 +624,7 @@ export function LibraryBookPileGrid({
                     needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
                   )}
                 >
-                  {isDamaged ? item.condition : isLoaned ? 'On loan' : needsProcessing ? 'Needs Processing' : 'Available'}
+                  {isDamaged ? item.condition : isLoaned ? loanedToLabel(item, getName) : needsProcessing ? 'Needs Processing' : 'Available'}
                 </Badge>
               </div>
             </div>
@@ -749,7 +783,7 @@ export function LibraryBookPileGrid({
                           needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
                         )}
                       >
-                        {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : needsProcessing ? 'Needs Processing' : 'Available'}
+                        {isDamaged ? copy.condition : isLoaned ? loanedToLabel(copy, getName) : needsProcessing ? 'Needs Processing' : 'Available'}
                       </Badge>
                     </div>
                   </div>

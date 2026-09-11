@@ -55,6 +55,7 @@ import type { SmartScreenTheme } from '@/lib/smartScreenThemes';
 import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 import type { LibraryThemeId } from '@/lib/library/libraryThemes';
+import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
 
 type ColorScheme =
     | 'default'
@@ -112,6 +113,18 @@ interface Settings {
     libraryTheme?: LibraryThemeId;
     /** When on, student self-checkout kiosk matches the selected library theme. */
     libraryThemeMatchKiosk?: boolean;
+    /**
+     * How student names appear in the library. Default `preferred_full` uses nickname
+     * (or first name) + last name. `follow_school` uses `privacyStudentNameDisplayMode`.
+     */
+    libraryStudentNameDisplayMode?: 'preferred_full' | 'preferred_only' | 'legal_full' | 'follow_school';
+    /**
+     * How LevelUp student themes appear next to library names.
+     * Default `emoji_and_color` matches classroom desks.
+     */
+    libraryStudentThemeDisplay?: 'off' | 'emoji' | 'emoji_and_color';
+    /** Custom wording for the library home (welcome + three doors). Blank fields use the built-in text. */
+    libraryHubCopy?: Partial<LibraryHubCopy>;
     /** When on, teacher point awards also update each house's cached totals. */
     housesRollupPoints: boolean;
     /** House standings: roll up from student rewards (default on), or house points edited manually on Houses tab. */
@@ -582,7 +595,7 @@ interface Settings {
     libraryAutoLookupGoogleBooks?: boolean;
     /** Show real book cover images in the catalog. On by default; turn off to show simplified color placeholder covers instead. */
     libraryCatalogShowCoverImages?: boolean;
-    /** Navigation layout for the library workspace: classic sidebar+tabs, or a portal-style hub with big Librarian/Catalog/Student Kiosk cards. Defaults to sidebar. */
+    /** Retired: library always uses the portal hub. Kept so older saved settings still load. */
     libraryLayoutStyle?: 'sidebar' | 'hub';
 
     // Library Behavior & Overdue Alerts
@@ -793,6 +806,8 @@ const defaultSettings: Settings = {
     classroomRealmTheme: 'chalkboard',
     libraryTheme: 'classic_oak',
     libraryThemeMatchKiosk: true,
+    libraryStudentNameDisplayMode: 'preferred_full',
+    libraryStudentThemeDisplay: 'emoji_and_color',
     libraryAutoDetectCirculation: true,
     libraryLoanPeriodDays: 14,
     libraryGracePeriodDays: 0,
@@ -827,7 +842,7 @@ const defaultSettings: Settings = {
     libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES,
     libraryAutoLookupGoogleBooks: true,
     libraryCatalogShowCoverImages: true,
-    libraryLayoutStyle: 'sidebar',
+    libraryLayoutStyle: 'hub',
     libraryOverdueWarningDays: 3,
     libraryNotifyTeacherOnOverdue: true,
     libraryReadingMilestonesEnabled: true,
@@ -1454,6 +1469,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 if (parsed.privacyStudentNameDisplayMode !== 'full' && parsed.privacyStudentNameDisplayMode !== 'preferred_only') {
                     delete (parsed as Partial<Settings>).privacyStudentNameDisplayMode;
                 }
+                if (
+                    parsed.libraryStudentNameDisplayMode !== 'preferred_full' &&
+                    parsed.libraryStudentNameDisplayMode !== 'preferred_only' &&
+                    parsed.libraryStudentNameDisplayMode !== 'legal_full' &&
+                    parsed.libraryStudentNameDisplayMode !== 'follow_school'
+                ) {
+                    delete (parsed as Partial<Settings>).libraryStudentNameDisplayMode;
+                }
+                if (
+                    parsed.libraryStudentThemeDisplay !== 'off' &&
+                    parsed.libraryStudentThemeDisplay !== 'emoji' &&
+                    parsed.libraryStudentThemeDisplay !== 'emoji_and_color'
+                ) {
+                    delete (parsed as Partial<Settings>).libraryStudentThemeDisplay;
+                }
+                const hubCopy = sanitizeLibraryHubCopy(parsed.libraryHubCopy);
+                if (hubCopy) parsed.libraryHubCopy = hubCopy;
+                else delete (parsed as Partial<Settings>).libraryHubCopy;
                 parsed.displayMode = normalizeDisplayModePreference(parsed.displayMode);
                 parsed.mainPortalCards = resolveMainPortalCards(parsed.mainPortalCards);
                 if (parsed.studentDisplayMode !== undefined) {

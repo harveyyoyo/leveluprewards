@@ -226,6 +226,28 @@ export async function performLibraryCheckoutOrReturn(
   });
 }
 
+export async function saveLibraryCatalogItem(
+  functions: Functions | null | undefined,
+  schoolId: string,
+  item: Record<string, unknown>,
+  existingId?: string,
+) {
+  return callLibrary<{ success: boolean; count: number; items?: LibraryItem[] }>(functions, 'libraryCatalogSave', {
+    schoolId,
+    itemId: existingId,
+    item,
+    input: item,
+  });
+}
+
+export async function deleteLibraryCatalogItem(
+  functions: Functions | null | undefined,
+  schoolId: string,
+  itemId: string,
+) {
+  return callLibrary(functions, 'libraryCirculation', { schoolId, action: 'delete', itemId });
+}
+
 export async function forceReturnLibraryItem(
   _firestore: Firestore, schoolId: string, item: LibraryItem,
   options?: { policy?: LibraryPolicySettings; functions?: Functions | null },

@@ -95,6 +95,7 @@ import dynamic from 'next/dynamic';
 import { CategoryModal } from '@/components/admin/CategoryModal';
 import { LibraryItemModal } from '@/components/library/LibraryItemModal';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
+import { deleteLibraryCatalogItem, saveLibraryCatalogItem } from '@/lib/library/libraryOperations';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { IdCardPrintSetupDialog } from '@/components/admin/IdCardPrintSetupDialog';
@@ -1579,7 +1580,7 @@ function AdminDashboardInner() {
   };
 
   const handleSaveLibraryItem = async (data: LibraryItemInput, existingId?: string) => {
-    if (!firestore || !schoolId) throw new Error('School not ready.');
+    if (!functions || !schoolId) throw new Error('School not ready.');
     const upc = normalizeLibraryUpc(data.upc);
     if (await libraryUpcTaken(upc, existingId)) {
       throw new Error('Another item already uses this barcode.');
@@ -1594,18 +1595,7 @@ function AdminDashboardInner() {
       copyNumber: data.copyNumber ?? null,
       notes: data.notes ?? null,
     };
-    if (existingId) {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'library', existingId), payload);
-    } else {
-      await setDoc(doc(collection(firestore, 'schools', schoolId, 'library')), {
-        ...payload,
-        status: 'available',
-        checkedOutTo: null,
-        checkedOutAt: null,
-        createdAt: Date.now(),
-        addedBy: 'Admin',
-      });
-    }
+    await saveLibraryCatalogItem(functions, schoolId, payload, existingId);
   };
 
   const handleAddLibraryItem = () => {
@@ -1621,7 +1611,7 @@ function AdminDashboardInner() {
   const handleDeleteLibraryItem = async (itemId: string) => {
     if (!firestore || !schoolId) return;
     if (await confirm({ title: 'Delete Library Item?', description: 'Are you sure you want to remove this item? This cannot be undone.' })) {
-      deleteDoc(doc(firestore, 'schools', schoolId, 'library', itemId));
+      await deleteLibraryCatalogItem(functions, schoolId, itemId);
       playSound('trash');
       toast({ title: 'Item Deleted', description: 'The library item has been removed.' });
     }

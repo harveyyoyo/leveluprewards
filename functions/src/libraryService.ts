@@ -86,6 +86,7 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       if (!studentId) fail('Select a student.');
       if (item.status === 'checked_out') fail('This copy is still checked out — return it first.');
       if (item.condition === 'damaged') return finish({ success: true, message: 'Already marked as damaged.' });
+      if (item.lastCheckedOutTo !== studentId) fail('You can only report damage on a book you just returned.');
       tx.update(itemRef, { condition: 'damaged' });
       tx.set(school.collection('libraryEvents').doc(), {
         itemId, title: item.name, action, condition: 'damaged', studentId, actorUid: actor.uid, date: now,
@@ -119,7 +120,14 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       const rating = Math.min(5, Math.max(1, Math.round(numeric(data.rating, 5))));
       const reviewText = String(data.reviewText ?? '').trim().slice(0, 500);
       const studentName = data.studentName ? String(data.studentName).slice(0, 100) : `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
-      const reviewRef = school.collection('libraryReviews').doc();
+      const reviewRef = school.collection('libraryReviews').doc(`${studentId}_${itemId}`);
+      const existingReview = await tx.get(reviewRef);
+      if (existingReview.exists) {
+        return finish({ success: true, message: 'You already reviewed this book.', alreadyReviewed: true });
+      }
+      if (item.checkedOutTo !== studentId && item.lastCheckedOutTo !== studentId) {
+        fail('Borrow this book before reviewing it.');
+      }
       tx.set(reviewRef, {
         itemId,
         isbn: item.isbn || '',
@@ -161,7 +169,8 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const loanDays = Math.max(1, numeric(settings.libraryLoanPeriodDays, 14));
     if (action === 'checkout') {
       if (item.archived || (item.condition && item.condition !== 'good')) fail('This copy is unavailable.');
-      if (!item.labeled || !item.shelfLocation) fail('This copy still needs processing (spine label + shelf location) before it can be checked out.');
+      // Only copies explicitly marked not-ready are blocked. Older catalog rows have no `labeled` field.
+      if (item.labeled === false) fail('This copy still needs a spine label before it can be checked out.');
       if (item.status === 'checked_out') {
         if (item.checkedOutTo === studentId) return finish({ action: 'already_done', itemId, item: { ...item, id: itemId } });
         return finish({ action: 'wrong_borrower', item: { ...item, id: itemId } });
@@ -195,10 +204,16 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const loan = loanSnap.data() ?? { itemId, studentId, title: item.name, upc: item.upc,
       checkedOutAt: item.checkedOutAt ?? null, dueAt: item.dueAt ?? null, renewalCount: 0, legacy: true };
     if (action === 'renew') {
-      const dueAt = Math.max(now, numeric(item.dueAt, now)) + loanDays * DAY;
+      const renewalDays = Math.max(1, numeric(settings.libraryRenewalDays, loanDays));
+      const maxRenewals = numeric(settings.libraryMaxRenewals, 2);
+      const allowRenewIfOverdue = settings.libraryAllowRenewIfOverdue === true;
+      const currentRenewals = numeric(loan.renewalCount, 0);
+      if (!allowRenewIfOverdue && item.dueAt && now > item.dueAt) fail('This loan is overdue. Return it or ask a librarian to renew it.');
+      if (maxRenewals > 0 && currentRenewals >= maxRenewals) fail(`This copy has already been renewed ${currentRenewals} time${currentRenewals === 1 ? '' : 's'}.`);
+      const dueAt = Math.max(now, numeric(item.dueAt, now)) + renewalDays * DAY;
       tx.update(itemRef, { dueAt, activeLoanId: loanRef.id });
       tx.update(studentRef, { libraryUpdatedAt: now });
-      tx.set(loanRef, { ...loan, dueAt, renewalCount: numeric(loan.renewalCount, 0) + 1, renewedAt: now, renewedBy: actor.uid });
+      tx.set(loanRef, { ...loan, dueAt, renewalCount: currentRenewals + 1, renewedAt: now, renewedBy: actor.uid });
       tx.set(school.collection('libraryEvents').doc(), { action, itemId, studentId, title: item.name, date: now, dueAt, actorUid: actor.uid });
       return finish({ success: true, dueAt, message: 'Loan renewed.' });
     }
@@ -207,7 +222,11 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const categoryName = category?.data()?.name ?? '';
     const mode = settings.libraryRewardMode || (categoryName ? 'app_points' : 'none');
     const daysOverdue = item.dueAt && now > item.dueAt ? Math.ceil((now - item.dueAt) / DAY) : 0;
-    const fee = settings.libraryLateFeesEnabled !== false ? daysOverdue * numeric(settings.libraryLatePointsPerDay, 2) : 0;
+    const graceDays = numeric(settings.libraryGracePeriodDays, 0);
+    const chargeableDays = Math.max(0, daysOverdue - graceDays);
+    const uncappedFee = settings.libraryLateFeesEnabled !== false ? chargeableDays * numeric(settings.libraryLatePointsPerDay, 2) : 0;
+    const fineCap = numeric(settings.libraryMaxFineCap, 0);
+    const fee = fineCap > 0 ? Math.min(uncappedFee, fineCap) : uncappedFee;
     const bonus = daysOverdue === 0 ? numeric(settings.libraryOnTimeReturnPoints, 0) : 0;
     let pointsDelta = 0;
     const studentUpdates: Data = { libraryUpdatedAt: now };
@@ -225,7 +244,7 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       studentUpdates.categoryPoints = { ...(student.categoryPoints ?? {}),
         [categoryName]: (student.categoryPoints?.[categoryName] ?? 0) + pointsDelta };
     }
-    const changes = { status: 'available', checkedOutTo: null, checkedOutAt: null, dueAt: null, activeLoanId: null };
+    const changes = { status: 'available', checkedOutTo: null, checkedOutAt: null, dueAt: null, activeLoanId: null, lastCheckedOutTo: studentId };
     tx.update(itemRef, changes);
     tx.update(studentRef, studentUpdates);
     tx.set(loanRef, { ...loan, returnedAt: now, returnedBy: actor.uid, daysOverdue, pointsDelta, rewardMode: mode });

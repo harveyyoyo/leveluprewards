@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeCappedLateFee,
+  computeChargeableLateDays,
   getLibraryPolicyFromSettings,
   isLibraryPillarEnabled,
   isLibraryStandaloneSelfCheckoutEnabled,
@@ -61,6 +63,19 @@ describe('getLibraryPolicyFromSettings', () => {
     expect(getLibraryPolicyFromSettings({}).allowIsbnCheckout).toBe(true);
     expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: true }).allowIsbnCheckout).toBe(true);
     expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).allowIsbnCheckout).toBe(false);
+  });
+});
+
+describe('late fee grace and cap', () => {
+  it('does not charge during the grace period', () => {
+    expect(computeChargeableLateDays(2, 3)).toBe(0);
+    expect(computeCappedLateFee(2, 2, 3, 20)).toBe(0);
+  });
+
+  it('charges only the days after grace and honors the max fine cap', () => {
+    expect(computeChargeableLateDays(5, 2)).toBe(3);
+    expect(computeCappedLateFee(5, 2, 2, 20)).toBe(6);
+    expect(computeCappedLateFee(30, 2, 0, 10)).toBe(10);
   });
 });
 

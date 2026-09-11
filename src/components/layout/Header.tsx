@@ -287,13 +287,38 @@ export default function Header() {
   const canLogout =
     loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
-  const paidProducts: string[] = [];
-  if (isRewardsPillarOn(settings)) paidProducts.push(t('header.products.rewards'));
-  if (isPillarOn(settings, 'payClassroom', pillarAccess)) paidProducts.push(t('header.products.classroom'));
-  if (isPillarOn(settings, 'payAttendance', pillarAccess)) paidProducts.push(t('header.products.attendance'));
-  if (isPillarOn(settings, 'payHomework', pillarAccess)) paidProducts.push(t('header.products.homework'));
-  if (isPillarOn(settings, 'payLibrary', pillarAccess)) paidProducts.push(t('header.products.library'));
-  const paidProductsLabel = paidProducts.join(' • ');
+  const staffHome =
+    schoolId && loginState === 'teacher' ? `/${schoolId}/teacher` : schoolId ? `/${schoolId}/admin` : '';
+  const headerProductLinks: { id: string; label: string; href: string }[] = [];
+  if (schoolId) {
+    if (isRewardsPillarOn(settings)) {
+      headerProductLinks.push({ id: 'rewards', label: t('header.products.rewards'), href: staffHome });
+    }
+    if (isPillarOn(settings, 'payClassroom', pillarAccess)) {
+      headerProductLinks.push({
+        id: 'classroom',
+        label: t('header.products.classroom'),
+        href: `/${schoolId}/classroom-realm`,
+      });
+    }
+    if (isPillarOn(settings, 'payAttendance', pillarAccess)) {
+      headerProductLinks.push({
+        id: 'attendance',
+        label: t('header.products.attendance'),
+        href: `${staffHome}?tab=attendance`,
+      });
+    }
+    if (isPillarOn(settings, 'payHomework', pillarAccess)) {
+      headerProductLinks.push({
+        id: 'homework',
+        label: t('header.products.homework'),
+        href: `${staffHome}?tab=homework`,
+      });
+    }
+    if (isPillarOn(settings, 'payLibrary', pillarAccess)) {
+      headerProductLinks.push({ id: 'library', label: t('header.products.library'), href: `/${schoolId}/library` });
+    }
+  }
   const adminSideTabHeader =
     !!schoolId &&
     typeof pathname === 'string' &&
@@ -551,7 +576,8 @@ export default function Header() {
         {/* Left: Branding */}
         <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
-            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true">
+            <div className="flex items-center gap-1 sm:gap-4 pl-0.5">
+            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -578,13 +604,32 @@ export default function Header() {
             ) : (
               <Logo className="h-10 w-auto" />
             )}
-            <div className="flex-col hidden sm:flex">
-              <span className="text-lg font-black tracking-widest uppercase text-primary">levelUp EDU</span>
-              {paidProductsLabel && (
-                <span className="text-xs font-bold uppercase text-muted-foreground tracking-wider">{paidProductsLabel}</span>
-              )}
+            </Link>
+            <div className="hidden flex-col sm:flex">
+              <Link href={logoLink} className="text-lg font-black tracking-widest uppercase text-primary hover:opacity-80">
+                levelUp EDU
+              </Link>
+              {headerProductLinks.length > 0 ? (
+                <nav aria-label="School products" className="flex max-w-[16rem] flex-wrap items-center gap-x-1 leading-tight">
+                  {headerProductLinks.map((item, index) => (
+                    <span key={item.id} className="inline-flex items-center gap-x-1">
+                      {index > 0 ? (
+                        <span className="text-xs font-bold text-muted-foreground/45" aria-hidden>
+                          •
+                        </span>
+                      ) : null}
+                      <Link
+                        href={item.href}
+                        className="text-xs font-bold uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      >
+                        {item.label}
+                      </Link>
+                    </span>
+                  ))}
+                </nav>
+              ) : null}
             </div>
-          </Link>
+            </div>
         </div>
         </div>
 

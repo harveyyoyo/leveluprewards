@@ -20,8 +20,16 @@ import {
   Plus,
   X,
 } from 'lucide-react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFunctions } from '@/firebase';
+import {
+  callLibrary,
+  forceReturnLibraryItem,
+  renewLibraryItem,
+  updateStudentLibraryAccount,
+  waiveLibraryFine,
+} from '@/lib/library/libraryOperations';
+import { getIsbnLookupVariants } from '@/lib/library/libraryCatalogLookup';
+import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +42,9 @@ import { formatDueDate, computeDaysOverdue, resolveStudentMaxCheckouts } from '@
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import type { Category, LibraryItem, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { LibraryBookCover } from './LibraryBookCover';
+import { LibraryStudentNamedLabel, useLibraryStudentDisplay } from './LibraryStudentNamedLabel';
+import { motion } from 'framer-motion';
 
 export interface LibraryInfoDeskProps {
   catalogItems?: LibraryItem[] | null;
@@ -41,11 +52,13 @@ export interface LibraryInfoDeskProps {
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
   onSwitchToKiosk: (studentId?: string) => void;
-  onViewCatalog: (statusFilter?: 'available' | 'checked_out') => void;
+  onViewCatalog: (statusFilter?: 'all' | 'available' | 'checked_out' | 'overdue') => void;
   onOpenIntake?: (initialCode?: string) => void;
   onOpenBookDetails?: (book: LibraryItem) => void;
   schoolId: string | null;
   schoolName?: string;
+  initialScanCode?: string | null;
+  onClearInitialScan?: () => void;
 }
 
 
@@ -75,8 +88,12 @@ export function LibraryInfoDesk({
   onOpenBookDetails,
   schoolId,
   schoolName = 'School Library',
+  initialScanCode,
+  onClearInitialScan,
 }: LibraryInfoDeskProps) {
   const { settings } = useSettings();
+  const { formatName } = useLibraryStudentDisplay();
+  const functions = useFunctions();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
   const currentTheme = resolveLibraryTheme(currentThemeId);
   const isNightDesk = currentTheme.id === 'night_desk';
@@ -88,6 +105,7 @@ export function LibraryInfoDesk({
   const [unrecognizedCode, setUnrecognizedCode] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [savingLimit, setSavingLimit] = useState(false);
+  const [busyLoanId, setBusyLoanId] = useState<string | null>(null);
   const [customLimitInput, setCustomLimitInput] = useState('');
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
@@ -148,21 +166,24 @@ export function LibraryInfoDesk({
         return;
       }
 
-      // Check if book
-      const bookMatch = (catalogItems || []).find(
-        (b) => b.upc.toUpperCase() === clean.toUpperCase() || b.isbn === clean,
-      );
+      // Check if book (UPC or ISBN-10/13 variants)
+      const lookupCodes = new Set([
+        normalizeLibraryUpc(clean),
+        ...getIsbnLookupVariants(clean).map((code) => normalizeLibraryUpc(code)),
+      ]);
+      const bookMatch = (catalogItems || []).find((b) => {
+        const upc = normalizeLibraryUpc(b.upc || '');
+        const isbn = b.isbn ? normalizeLibraryUpc(b.isbn) : '';
+        return (upc && lookupCodes.has(upc)) || (isbn && lookupCodes.has(isbn));
+      });
       if (bookMatch) {
         setSelectedBook(bookMatch);
         setSelectedStudent(null);
         setUnrecognizedCode(null);
         setShowSuggestions(false);
 
-        // Auto-mark copy as labeled if verified by physical scan
-        if (firestore && schoolId && !bookMatch.labeled) {
-          const itemRef = doc(firestore, 'schools', schoolId, 'library', bookMatch.id);
-          updateDoc(itemRef, { labeled: true, labeledAt: Date.now() }).catch(() => {});
-          bookMatch.labeled = true;
+        if (functions && schoolId && bookMatch.labeled === false) {
+          callLibrary(functions, 'libraryCirculation', { schoolId, itemId: bookMatch.id, action: 'label' }).catch(() => {});
         }
         return;
       }
@@ -177,8 +198,14 @@ export function LibraryInfoDesk({
       setSelectedStudent(null);
       setShowSuggestions(true);
     },
-    [students, catalogItems, firestore, schoolId],
+    [students, catalogItems, functions, schoolId],
   );
+
+  useEffect(() => {
+    if (!initialScanCode?.trim()) return;
+    handleScanLookup(initialScanCode.trim());
+    onClearInitialScan?.();
+  }, [initialScanCode, handleScanLookup, onClearInitialScan]);
 
   const reader = useBarcodeReaderWedge({
     active: true,
@@ -217,29 +244,125 @@ export function LibraryInfoDesk({
   }, [selectedStudent, settings.libraryMaxCheckoutsPerStudent]);
 
   const handleUpdateStudentLimit = async (newLimit: number | null) => {
-    if (!firestore || !schoolId || !selectedStudent?.id) return;
+    if (!schoolId || !selectedStudent?.id) return;
     try {
       setSavingLimit(true);
-      const studentRef = doc(firestore, 'schools', schoolId, 'students', selectedStudent.id);
-      await updateDoc(studentRef, { libraryMaxCheckouts: newLimit });
+      await updateStudentLibraryAccount(functions, schoolId, selectedStudent.id, {
+        libraryMaxCheckouts: newLimit,
+      });
       setSelectedStudent((prev) => (prev ? { ...prev, libraryMaxCheckouts: newLimit } : null));
       toast({
         title: 'Borrowing limit updated',
         description:
           newLimit === null
-            ? `Reset to school default (${settings.libraryMaxCheckoutsPerStudent ?? 3} books)`
+            ? `Back to the school default (${settings.libraryMaxCheckoutsPerStudent ?? 3} books)`
             : newLimit === 0
-            ? `Allowed unlimited checkouts for ${selectedStudent.firstName}`
-            : `Set to ${newLimit} books for ${selectedStudent.firstName}`,
+            ? `${formatName(selectedStudent)} may borrow as many books as they need`
+            : `${formatName(selectedStudent)} may borrow up to ${newLimit} books`,
       });
     } catch (err: any) {
       toast({
         variant: 'destructive',
-        title: 'Failed to update borrowing limit',
-        description: err?.message || 'Could not save student setting.',
+        title: 'Could not update this account',
+        description: err?.message || 'Please try again.',
       });
     } finally {
       setSavingLimit(false);
+    }
+  };
+
+  const handleToggleStudentBlocked = async () => {
+    if (!schoolId || !selectedStudent?.id) return;
+    const nextBlocked = !selectedStudent.libraryBlocked;
+    try {
+      setSavingLimit(true);
+      await updateStudentLibraryAccount(functions, schoolId, selectedStudent.id, {
+        libraryBlocked: nextBlocked,
+      });
+      setSelectedStudent((prev) => (prev ? { ...prev, libraryBlocked: nextBlocked } : null));
+      toast({
+        title: nextBlocked ? 'Borrowing paused' : 'Borrowing turned back on',
+        description: nextBlocked
+          ? `${formatName(selectedStudent)} cannot borrow at the student station until you resume their account.`
+          : `${formatName(selectedStudent)} may borrow again.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not update this account',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
+  const handleWaiveFines = async () => {
+    if (!schoolId || !selectedStudent?.id) return;
+    const amount = selectedStudent.libraryFineBalance ?? 0;
+    if (amount <= 0) return;
+    try {
+      setSavingLimit(true);
+      await waiveLibraryFine(
+        functions,
+        schoolId,
+        selectedStudent.id,
+        amount,
+        'Librarian waived remaining library fines',
+      );
+      setSelectedStudent((prev) => (prev ? { ...prev, libraryFineBalance: 0 } : null));
+      toast({
+        title: 'Fines cleared',
+        description: `We cleared ${amount} fine units from ${formatName(selectedStudent)}'s account.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not clear fines',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setSavingLimit(false);
+    }
+  };
+
+  const handleStaffRenew = async (item: LibraryItem) => {
+    if (!schoolId) return;
+    try {
+      setBusyLoanId(item.id);
+      const result = await renewLibraryItem(functions, schoolId, item, { override: true });
+      toast({
+        title: 'More time added',
+        description: result.message || `Due date updated for “${item.name}”.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not add more time',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setBusyLoanId(null);
+    }
+  };
+
+  const handleStaffReturn = async (item: LibraryItem) => {
+    if (!schoolId || !firestore) return;
+    try {
+      setBusyLoanId(item.id);
+      await forceReturnLibraryItem(firestore, schoolId, item, { functions });
+      toast({
+        title: 'Book returned',
+        description: `“${item.name}” is back on the shelf.`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not return this book',
+        description: err?.message || 'Please try again.',
+      });
+    } finally {
+      setBusyLoanId(null);
     }
   };
 
@@ -254,15 +377,15 @@ export function LibraryInfoDesk({
       {/* 2. INFO LOOKUP SEARCH BAR (READ ONLY LOOKUPS) — centered on the page while idle, moves to the top once a search/result appears */}
       <div
         className={cn(
-          'flex flex-1 flex-col items-center transition-all duration-500 ease-out',
+          'flex flex-1 flex-col items-center gap-8 transition-all duration-500 ease-out',
           !selectedBook && !selectedStudent
-            ? 'justify-center min-h-[64vh] sm:min-h-[68vh]'
+            ? 'justify-center min-h-[52vh] sm:min-h-[68vh]'
             : 'justify-start min-h-0',
         )}
       >
       <div
         className={cn(
-          'w-full max-w-2xl rounded-3xl border p-6 sm:p-8 shadow-lg space-y-5 relative transition-all',
+          'w-full max-w-2xl rounded-3xl border p-4 sm:p-8 shadow-lg space-y-4 sm:space-y-5 relative transition-all',
           isNightDesk
             ? 'border-slate-800 bg-slate-900/90 text-white'
             : isReadingRoom
@@ -272,11 +395,11 @@ export function LibraryInfoDesk({
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Search className="h-5 w-5" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight">
+              <h3 className="text-lg sm:text-2xl font-black tracking-tight">
                 Quick Information &amp; Shelf Lookup
               </h3>
               <Badge variant="secondary" className="text-[10px] font-bold uppercase tracking-wider">
@@ -319,7 +442,7 @@ export function LibraryInfoDesk({
                 }
               }}
               placeholder="Search title, author, barcode, shelf location, or student name…"
-              className="h-14 flex-1 border-0 bg-transparent text-lg sm:text-xl font-medium placeholder:text-muted-foreground shadow-none focus-visible:ring-0 focus-visible:outline-none"
+              className="h-12 sm:h-14 min-w-0 flex-1 border-0 bg-transparent text-base sm:text-xl font-medium placeholder:text-muted-foreground shadow-none focus-visible:ring-0 focus-visible:outline-none"
             />
             {searchQuery ? (
               <Button
@@ -444,13 +567,15 @@ export function LibraryInfoDesk({
                       className="w-full text-left p-2.5 rounded-xl hover:bg-muted/80 flex items-center justify-between gap-3 transition-colors text-xs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="h-8 w-6 rounded bg-muted border overflow-hidden shrink-0 flex items-center justify-center">
-                          {b.coverUrl ? (
-                            <img src={b.coverUrl} alt="" className="h-full w-full object-cover" />
-                          ) : (
-                            <BookOpen className="h-3 w-3 text-muted-foreground" />
-                          )}
-                        </div>
+                        <LibraryBookCover
+                          coverUrl={b.coverUrl}
+                          isbn={b.isbn}
+                          title={b.name}
+                          author={b.author}
+                          aspect="thumb"
+                          showTitleInFallback={false}
+                          className="h-8 w-6 rounded border"
+                        />
                         <div className="min-w-0">
                           <div className="font-bold text-foreground truncate">{b.name}</div>
                           <div className="text-[11px] text-muted-foreground truncate">
@@ -494,7 +619,7 @@ export function LibraryInfoDesk({
                         </div>
                         <div className="min-w-0">
                           <div className="font-bold text-foreground truncate">
-                            {s.firstName} {s.lastName}
+                            <LibraryStudentNamedLabel student={s} nameClassName="font-bold" />
                           </div>
                           <div className="text-[11px] text-muted-foreground truncate">
                             Student ID: {s.id}
@@ -567,21 +692,27 @@ export function LibraryInfoDesk({
 
         {/* 4. LOOKED UP ITEM INFORMATION PANEL */}
         {selectedBook && bookClassification && (
-          <div
+          <motion.div
+            layoutId="library-lookup-result"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={cn(
-              'rounded-2xl border p-5 space-y-4 animate-in fade-in',
-              isNightDesk ? 'border-slate-800 bg-slate-950/60' : 'border-border/80 bg-muted/20',
+              'w-full max-w-2xl rounded-3xl border-2 p-6 sm:p-8 space-y-4',
+              isNightDesk ? 'border-slate-800 bg-slate-950/80' : currentTheme.classes.card,
+              'shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)]',
             )}
           >
             <div className="flex items-start justify-between gap-4">
               <div className="flex gap-4 min-w-0">
-                <div className="w-16 h-22 rounded-xl bg-muted border overflow-hidden shrink-0 shadow-sm flex items-center justify-center">
-                  {selectedBook.coverUrl ? (
-                    <img src={selectedBook.coverUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <BookOpen className="h-7 w-7 text-muted-foreground" />
-                  )}
-                </div>
+                <LibraryBookCover
+                  coverUrl={selectedBook.coverUrl}
+                  isbn={selectedBook.isbn}
+                  title={selectedBook.name}
+                  author={selectedBook.author}
+                  aspect="portrait"
+                  className="h-28 w-[4.5rem] rounded-xl border shadow-md"
+                />
 
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -717,15 +848,16 @@ export function LibraryInfoDesk({
                 <ArrowRight className="h-3 w-3" />
               </Button>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* 5. LOOKED UP PATRON INFORMATION PANEL */}
         {selectedStudent && (
           <div
             className={cn(
-              'rounded-3xl border-2 p-5 sm:p-6 space-y-4 shadow-md animate-in fade-in zoom-in-95 duration-200',
+              'w-full max-w-2xl rounded-3xl border-2 p-4 sm:p-8 space-y-4 animate-in fade-in zoom-in-95 duration-200',
               isNightDesk ? 'border-slate-800 bg-slate-950/60' : currentTheme.classes.card,
+              'shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)]',
             )}
           >
             <div className="flex items-start justify-between gap-4">
@@ -735,7 +867,10 @@ export function LibraryInfoDesk({
                 </div>
                 <div>
                   <h4 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
-                    {selectedStudent.firstName} {selectedStudent.lastName}
+                    <LibraryStudentNamedLabel
+                      student={selectedStudent}
+                      nameClassName="text-2xl sm:text-3xl font-black tracking-tight"
+                    />
                   </h4>
                   <p className="text-xs sm:text-sm text-muted-foreground">
                     Student ID: {selectedStudent.id}
@@ -782,7 +917,7 @@ export function LibraryInfoDesk({
                     )}
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Allow this specific student to borrow more books simultaneously.
+                    Change how many books this student may have at once, or pause borrowing.
                   </p>
                 </div>
 
@@ -873,14 +1008,52 @@ export function LibraryInfoDesk({
               </div>
             </div>
 
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={selectedStudent.libraryBlocked ? 'default' : 'outline'}
+                disabled={savingLimit}
+                onClick={() => void handleToggleStudentBlocked()}
+                className="h-8 rounded-lg px-3 text-xs font-bold"
+              >
+                {selectedStudent.libraryBlocked ? 'Turn borrowing back on' : 'Pause borrowing'}
+              </Button>
+              {(selectedStudent.libraryFineBalance ?? 0) > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={savingLimit}
+                  onClick={() => void handleWaiveFines()}
+                  className="h-8 rounded-lg px-3 text-xs font-bold"
+                >
+                  Clear {selectedStudent.libraryFineBalance} fine units
+                </Button>
+              ) : null}
+            </div>
+            {selectedStudent.libraryBlocked ? (
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                This account is paused. {formatName(selectedStudent)} cannot borrow at the student station until you turn it back on.
+              </p>
+            ) : null}
+
             {/* Student's Current Active Loans — same big, cover-thumbnail summary used in the Kiosk */}
             <div className="space-y-1.5">
               {selectedStudent.libraryFineBalance ? (
                 <p className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
-                  Fine Balance: {selectedStudent.libraryFineBalance} units
+                  Fine balance: {selectedStudent.libraryFineBalance} units
                 </p>
               ) : null}
-              <LibraryStudentLoansSummary items={studentLoans} maxCheckouts={effectiveStudentLimit} />
+              <LibraryStudentLoansSummary
+                items={studentLoans}
+                maxCheckouts={effectiveStudentLimit}
+                staffActions={{
+                  busyId: busyLoanId,
+                  onRenew: (item) => void handleStaffRenew(item),
+                  onReturn: (item) => void handleStaffReturn(item),
+                }}
+              />
             </div>
 
             <Button
@@ -889,7 +1062,7 @@ export function LibraryInfoDesk({
               className="w-full h-12 sm:h-14 rounded-2xl text-sm sm:text-base font-black gap-2 bg-primary text-primary-foreground shadow-md"
             >
               <Monitor className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>Open Kiosk for {selectedStudent.firstName}</span>
+              <span>Open Kiosk for {formatName(selectedStudent)}</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>

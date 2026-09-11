@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import {
   AlertCircle,
-  ArrowLeft,
   BookOpen,
   BookOpenCheck,
   Check,
@@ -15,7 +14,6 @@ import {
   ClipboardCheck,
   Clock,
   Download,
-  ExternalLink,
   FileSpreadsheet,
   BarChart3,
   FolderTree,
@@ -37,7 +35,6 @@ import {
   Search,
   Settings,
   SlidersHorizontal,
-  Sparkles,
   Star,
   Tag,
   Trash2,
@@ -71,7 +68,6 @@ import {
   type LibraryOrganizationScheme,
   type BookPrimaryGroup,
 } from '@/lib/library/libraryOrganization';
-import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
 import { LibraryTotalsStatCards } from './LibraryTotalsStatCards';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
@@ -91,7 +87,9 @@ import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryT
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { groupBooksIntoPiles, getBookPileKey, type BookPile } from '@/lib/library/bookPiles';
 import { LibraryBookPileGrid } from './LibraryBookPileGrid';
+import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { formatLibraryStudentName, resolveLibraryStudentNameMode } from '@/lib/library/libraryStudentDisplay';
 
 const PAGE_SIZE = 36;
 const nativeSelect = 'h-10 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary';
@@ -154,19 +152,7 @@ export function LibraryWorkspace({
     },
     [navSoundEnabled, playSound],
   );
-  const libraryLayoutStyle = (settings.libraryLayoutStyle as 'sidebar' | 'hub') || 'sidebar';
-  const [hubHome, setHubHome] = useState(libraryLayoutStyle === 'hub');
-  // Settings hydrate asynchronously (localStorage/Firestore read happens after first render), so
-  // the very first render never sees the user's real saved layout — only the default. Once the
-  // real value arrives and turns out to be 'hub', land on the hub screen instead of staying on
-  // whatever the default-render tab happened to be.
-  const sawHubLayoutRef = useRef(libraryLayoutStyle === 'hub');
-  useEffect(() => {
-    if (libraryLayoutStyle === 'hub' && !sawHubLayoutRef.current) {
-      sawHubLayoutRef.current = true;
-      setHubHome(true);
-    }
-  }, [libraryLayoutStyle]);
+  const [hubHome, setHubHome] = useState(true);
 
   // Support deep-linking to a specific station via ?tab=, the same convention the admin
   // dashboard uses — e.g. /schoolabc/library?tab=catalog opens straight to the Catalog.
@@ -189,7 +175,7 @@ export function LibraryWorkspace({
   // (e.g. the admin dashboard's ?tab=) so each section is a real, shareable, reloadable URL.
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    const nextTab = libraryLayoutStyle === 'hub' && hubHome ? null : tab;
+    const nextTab = hubHome ? null : tab;
     if (nextTab) {
       if (params.get('tab') === nextTab) return;
       params.set('tab', nextTab);
@@ -200,14 +186,14 @@ export function LibraryWorkspace({
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, hubHome, libraryLayoutStyle]);
+  }, [tab, hubHome]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled'>('all');
   const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'shelf'>('newest');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [catalogPresentation, setCatalogPresentation] = useState<'scheme' | 'grouped' | 'copies'>('copies');
   const [activeScheme, setActiveScheme] = useState<LibraryOrganizationScheme>(
@@ -307,12 +293,13 @@ export function LibraryWorkspace({
   );
 
   const studentsById = useMemo(() => new Map((students ?? []).map((s) => [s.id, s])), [students]);
+  const studentNameMode = resolveLibraryStudentNameMode(
+    settings.libraryStudentNameDisplayMode,
+    settings.privacyStudentNameDisplayMode,
+  );
   const getName = useCallback(
-    (id?: string) => {
-      const s = studentsById.get(id ?? '');
-      return s ? `${s.firstName} ${s.lastName}`.trim() : 'Unknown student';
-    },
-    [studentsById],
+    (id?: string) => formatLibraryStudentName(studentsById.get(id ?? ''), studentNameMode),
+    [studentsById, studentNameMode],
   );
   const getClass = useCallback(
     (id?: string) => {
@@ -694,20 +681,11 @@ export function LibraryWorkspace({
   const currentCatalogSlice = filteredCatalog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const currentGroupSlice = catalogGroups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const schoolInitials = useMemo(() => {
-    const name = (schoolName || 'Library System').trim();
-    const words = name.split(/\s+/).filter(Boolean);
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.slice(0, 2).toUpperCase() || 'LB';
-  }, [schoolName]);
-
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
   const backToPortalHref = `/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`;
 
-  if (libraryLayoutStyle === 'hub' && hubHome) {
+  if (hubHome) {
     return (
       <LibraryPortalHub
         schoolName={schoolName}
@@ -731,21 +709,16 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        'min-h-dvh transition-colors duration-300 pb-24',
+        'min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))]',
         isNightDesk
           ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
             ? 'flex flex-col bg-[#fafaf9] text-[#0f172a]'
-            : libraryLayoutStyle === 'hub'
-              ? 'flex flex-col'
-              : 'flex flex-col md:flex-row',
+            : 'flex flex-col',
         currentTheme.classes.wrapper
       )}
     >
-      {libraryLayoutStyle === 'hub' ? (
-        /* Compact back-bar replacing the sidebar/tab nav when using the Portal Hub layout:
-           just the three destinations, centered and larger — active shown by color alone. */
-        <div className={cn('w-full border-b backdrop-blur-md px-3 sm:px-6 py-3 flex items-center justify-between gap-3', currentTheme.classes.header)}>
+      <div className={cn('w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3', currentTheme.classes.header)}>
           <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href={backToPortalHref}
@@ -768,7 +741,7 @@ export function LibraryWorkspace({
             </button>
           </div>
 
-          <div className="flex items-center gap-3 sm:gap-8">
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-4 md:gap-8">
             {(
               [
                 { id: 'desk', label: 'Librarian', icon: Library, activeClass: 'text-blue-600 dark:text-blue-400' },
@@ -780,14 +753,15 @@ export function LibraryWorkspace({
                 key={id}
                 type="button"
                 onClick={() => switchTab(id)}
+                aria-label={label}
                 className={cn(
-                  'flex items-center gap-2 py-1.5 text-sm sm:text-base font-black tracking-tight transition-colors',
+                  'flex items-center gap-1.5 sm:gap-2 py-1.5 px-2 sm:px-0 text-sm sm:text-base font-black tracking-tight transition-colors',
                   // Loans & Notices lives inside Catalog now, so keep Catalog lit up while viewing it.
                   (tab === id || (id === 'catalog' && tab === 'loans')) ? activeClass : 'text-muted-foreground/40 hover:text-muted-foreground',
                 )}
               >
                 <SwitchIcon className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
-                <span>{label}</span>
+                <span className="hidden sm:inline">{label}</span>
               </button>
             ))}
           </div>
@@ -805,285 +779,14 @@ export function LibraryWorkspace({
             <Settings className="h-4 w-4" />
           </button>
         </div>
-      ) : isNightDesk ? (
-        /* Top Navigation & School Identity Container for Concept B */
-        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6">
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {!embedded && (
-                <Button asChild variant="ghost" size="icon" className="rounded-xl h-8 w-8 -ml-1 text-slate-400 hover:text-white">
-                  <Link
-                    href={`/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`}
-                    aria-label="Back to school"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-              {/* Amber Initials Badge */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-slate-950 font-black text-sm shadow-md">
-                {schoolInitials}
-              </div>
-              <div>
-                <h1 className="font-black text-sm uppercase tracking-tight text-white leading-tight">
-                  {schoolName || 'School Library'}
-                </h1>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
-                  CIRCULATION · NIGHT DESK
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs text-slate-300 shadow-sm">
-                <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-                <span className="font-medium">Scanner connected</span>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => switchTab('kiosk')}
-                className={cn(
-                  'h-8 rounded-xl px-3.5 text-xs font-bold gap-1.5 shadow-xs transition-all',
-                  tab === 'kiosk'
-                    ? 'bg-amber-500 text-slate-950 border-amber-400'
-                    : 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-white',
-                )}
-              >
-                <Monitor className="h-3.5 w-3.5" />
-                <span>Kiosk</span>
-              </Button>
-            </div>
-          </header>
-
-          <nav className="rounded-2xl border border-slate-800 bg-slate-900/80 p-1.5 flex flex-wrap items-center justify-between gap-2 shadow-lg backdrop-blur-md" aria-label="Library stations">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {[
-                { id: 'desk', label: 'Library Desk' },
-                { id: 'kiosk', label: 'Kiosk Mode' },
-                { id: 'catalog', label: 'Catalog' },
-                { id: 'loans', label: 'Loans & Notices', alertBadge: overdueLoans.length },
-                { id: 'reports', label: 'Reports' },
-                { id: 'settings', label: 'Policies & Settings' },
-              ].map(({ id, label, alertBadge }) => {
-                const active = tab === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => switchTab(id)}
-                    className={cn(
-                      'flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all',
-                      active
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60 font-semibold',
-                    )}
-                  >
-                    <span>{label}</span>
-                    {alertBadge && alertBadge > 0 ? (
-                      <span className={cn('rounded-full px-2 py-0.5 text-xs font-black', active ? 'bg-slate-950 text-amber-400' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30')}>
-                        {alertBadge}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-
-            <Button
-              size="sm"
-              onClick={() => setIntakeOpen(true)}
-              className="rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold px-4 py-1.5 text-xs border border-slate-700 h-8 gap-1.5 shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add books</span>
-            </Button>
-          </nav>
-        </div>
-      ) : isReadingRoom ? (
-        /* Top Navigation & Literary Gazette Header for Concept C (The Reading Room) */
-        <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6">
-          <header className="border-b border-stone-200 pb-5 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {!embedded && (
-                <Button asChild variant="ghost" size="icon" className="rounded-xl h-8 w-8 -ml-1 text-stone-500 hover:text-stone-900">
-                  <Link
-                    href={`/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`}
-                    aria-label="Back to school"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-              <div className="space-y-1">
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <h1 className="font-serif font-black text-2xl sm:text-3xl text-stone-950 uppercase tracking-widest leading-none">
-                    THE READING ROOM
-                  </h1>
-                  <span className="font-serif italic text-xs text-stone-600 font-medium">
-                    {schoolName || 'School Library'} &middot; VOL. 1
-                  </span>
-                </div>
-                <p className="text-[10px] uppercase font-bold tracking-widest text-stone-600">
-                  A Gazette of Circulating Works, Borrowers &amp; Ledger Notes
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 self-end sm:self-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => switchTab('kiosk')}
-                className={cn(
-                  'h-8 rounded-full px-3.5 text-xs font-black uppercase tracking-wider gap-1.5 shadow-xs transition-all font-serif',
-                  tab === 'kiosk'
-                    ? 'bg-stone-900 text-stone-100 border-stone-900'
-                    : 'border-stone-300 bg-stone-100 hover:bg-stone-200 text-stone-900',
-                )}
-              >
-                <Monitor className="h-3.5 w-3.5" />
-                <span>Kiosk</span>
-              </Button>
-            </div>
-          </header>
-
-          {/* Underline Scholarly Tabs */}
-          <nav className="border-b border-stone-200 flex flex-wrap items-center justify-between gap-2 -mt-2" aria-label="Library stations">
-            <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto">
-              {[
-                { id: 'desk', label: 'LIBRARY INFO' },
-                { id: 'kiosk', label: 'KIOSK (CHECK IN / OUT)' },
-                { id: 'catalog', label: 'CATALOG' },
-                { id: 'loans', label: overdueLoans.length > 0 ? `LOANS & NOTICES (${overdueLoans.length})` : 'LOANS & NOTICES' },
-                { id: 'reports', label: 'REPORTS' },
-                { id: 'settings', label: 'POLICIES & SETTINGS' },
-              ].map(({ id, label }) => {
-                const active = tab === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => switchTab(id)}
-                    className={cn(
-                      'pb-3 pt-1 text-xs font-black uppercase tracking-wider transition-colors relative whitespace-nowrap',
-                      active
-                        ? 'text-stone-950 font-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-stone-950'
-                        : 'text-stone-600 hover:text-stone-900',
-                    )}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <Button
-              size="sm"
-              onClick={() => setIntakeOpen(true)}
-              className="rounded-full bg-stone-900 hover:bg-stone-800 text-stone-100 font-bold px-4 py-1.5 text-xs h-8 gap-1.5 mb-2 shadow-xs"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add books</span>
-            </Button>
-          </nav>
-        </div>
-      ) : (
-        /* Far-Left Vertical Station Navigation Sidebar */
-        <aside className="w-full md:w-60 lg:w-64 shrink-0 border-b md:border-b-0 md:border-r border-border/70 bg-card/60 backdrop-blur-md p-4 sm:p-5 flex flex-col justify-between gap-6 md:sticky md:top-0 md:self-start md:max-h-dvh md:overflow-y-auto">
-          <div className="space-y-6">
-            {/* School Brand Identity Header in Sidebar */}
-            <div className="flex items-center gap-3 px-1">
-              {!embedded && (
-                <Button asChild variant="ghost" size="icon" className="rounded-xl h-8 w-8 -ml-1 text-muted-foreground hover:text-foreground">
-                  <Link
-                    href={`/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`}
-                    aria-label="Back to school"
-                  >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white font-black text-sm shadow-xs">
-                {schoolInitials}
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-black text-sm text-foreground uppercase tracking-tight truncate leading-tight">
-                  {schoolName || 'School Library'}
-                </h2>
-                <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mt-0.5">
-                  LIBRARY SYSTEM
-                </p>
-              </div>
-            </div>
-
-            {/* Stations Navigation Stack */}
-            <div className="space-y-2">
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/70">
-                Stations
-              </div>
-
-              <nav className="grid grid-cols-2 sm:grid-cols-4 md:flex md:flex-col gap-1.5" aria-label="Library stations">
-                {[
-                  { id: 'desk', label: 'Library Desk', icon: Sparkles },
-                  { id: 'kiosk', label: 'Kiosk Mode', icon: Monitor },
-                  { id: 'catalog', label: 'Catalog', icon: BookOpen },
-                  { id: 'loans', label: 'Loans & Notices', alertBadge: overdueLoans.length, icon: Clock },
-                  { id: 'reports', label: 'Reports', icon: BarChart3 },
-                  { id: 'settings', label: 'Policies & Settings', icon: Settings },
-                ].map(({ id, label, alertBadge, icon: StationIcon }) => {
-                  const active = tab === id;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => switchTab(id)}
-                      className={cn(
-                        'group relative flex items-center gap-3 px-3.5 py-2.5 text-left transition-all w-full text-xs font-bold rounded-xl',
-                        active
-                          ? 'bg-primary/10 text-primary font-black shadow-2xs'
-                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                      )}
-                    >
-                      <StationIcon className={cn('h-4 w-4 shrink-0 transition-colors', active ? 'text-primary' : 'text-muted-foreground/70 group-hover:text-foreground')} />
-                      <span className="truncate flex-1">{label}</span>
-                      {alertBadge && alertBadge > 0 ? (
-                        <span className="shrink-0 rounded-full bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 text-[10px] font-black text-rose-600 dark:text-rose-400">
-                          {alertBadge}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-          </div>
-
-          {/* Low-profile Kiosk link at bottom of sidebar on desktop */}
-          <div className="hidden md:block pt-3 border-t border-border/60">
-            <Button
-              asChild
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start gap-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground h-9"
-            >
-              <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
-                <Monitor className="h-3.5 w-3.5 text-primary" />
-                <span className="truncate">Student Kiosk</span>
-                <ExternalLink className="h-3 w-3 opacity-60 ml-auto" />
-              </Link>
-            </Button>
-          </div>
-        </aside>
-      )}
 
       {/* Main Column: Top Bar + Content */}
       <div className={cn('flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
 
 
         {/* Main Workstation View Area */}
-        <main className={cn('flex-1 min-w-0 p-4 sm:p-6 lg:p-8 space-y-6 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
-        {/* 1. LIBRARY INFO TAB (Info Only) */}
+        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
+        {/* 1. LIBRARY DESK — lookup only; borrow/return happens on the Kiosk */}
         {tab === 'desk' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <LibraryInfoDesk
@@ -1091,6 +794,8 @@ export function LibraryWorkspace({
               students={students}
               categories={categories}
               getStudentName={getName}
+              initialScanCode={pendingScanCode}
+              onClearInitialScan={() => setPendingScanCode(null)}
               onSwitchToKiosk={(studentId) => {
                 setKioskHandoffStudentId(studentId ?? null);
                 setTab('kiosk');
@@ -1116,7 +821,7 @@ export function LibraryWorkspace({
         {/* 2. KIOSK MODE TAB (Check-in & Check-out Station) */}
         {tab === 'kiosk' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden shadow-xs min-h-[640px]">
+            <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden shadow-xs min-h-[min(640px,calc(100dvh-7rem))] md:min-h-[640px]">
               {schoolId ? (
                 <LibraryStudentSelfCheckoutPortal
                   schoolId={schoolId}
@@ -1126,6 +831,7 @@ export function LibraryWorkspace({
                   embedded
                   initialStudentId={kioskHandoffStudentId}
                   onInitialStudentConsumed={() => setKioskHandoffStudentId(null)}
+                  onExit={() => setHubHome(true)}
                 />
               ) : (
                 <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -1150,67 +856,63 @@ export function LibraryWorkspace({
                 isNightDesk={isNightDesk}
                 isReadingRoom={isReadingRoom}
                 currentTheme={currentTheme}
+                activeFilter={
+                  status === 'available' || status === 'checked_out' || status === 'overdue' || status === 'all'
+                    ? status
+                    : undefined
+                }
                 onViewCatalog={(statusFilter) => {
                   setStatus(statusFilter ?? 'all');
                   setPage(1);
-                }}
-                onViewLoans={(subTab) => {
-                  setLoanSubTab(subTab);
-                  switchTab('loans');
                 }}
               />
             )}
             {/* Catalog Top Header Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-black tracking-tight text-foreground">Book Catalog</h2>
-                  <Badge variant="secondary" className="font-bold text-xs">
-                    {filteredCatalog.length} {filteredCatalog.length === 1 ? 'copy' : 'copies'}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Browse copies, print spine labels, audit inventory, or import spreadsheets.
-                </p>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-black tracking-tight text-foreground">Book Catalog</h2>
+                <Badge variant="secondary" className="font-bold text-xs">
+                  {filteredCatalog.length}{' '}
+                  {status === 'checked_out'
+                    ? 'on loan'
+                    : status === 'overdue'
+                      ? 'overdue'
+                      : status === 'available'
+                        ? 'on shelf'
+                        : filteredCatalog.length === 1
+                          ? 'copy'
+                          : 'copies'}
+                </Badge>
               </div>
 
               <div className="flex items-center gap-2">
-                {libraryLayoutStyle === 'hub' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => switchTab('loans')}
-                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
-                  >
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Loans &amp; Notices</span>
-                    {overdueLoans.length > 0 && (
-                      <Badge variant="destructive" className="h-4 min-w-4 px-1 rounded-full text-[10px] font-black">
-                        {overdueLoans.length}
-                      </Badge>
-                    )}
-                  </Button>
-                )}
-                {libraryLayoutStyle === 'hub' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => switchTab('reports')}
-                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
-                  >
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    <span>Reports</span>
-                  </Button>
-                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs">
                       <SlidersHorizontal className="h-3.5 w-3.5" />
-                      <span>Catalog Tools</span>
+                      <span>Tools</span>
                       <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52">
+                    {(
+                      <>
+                        <DropdownMenuItem onClick={() => switchTab('loans')} className="gap-2 text-xs">
+                          <Clock className="h-4 w-4 text-primary" />
+                          <span>Loans &amp; Notices</span>
+                          {overdueLoans.length > 0 ? (
+                            <Badge variant="destructive" className="ml-auto h-4 min-w-4 px-1 rounded-full text-[10px] font-black">
+                              {overdueLoans.length}
+                            </Badge>
+                          ) : null}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => switchTab('reports')} className="gap-2 text-xs">
+                          <BarChart3 className="h-4 w-4 text-primary" />
+                          <span>Reports</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem onClick={() => setShelfAuditOpen(true)} className="gap-2 text-xs">
                       <ClipboardCheck className="h-4 w-4 text-primary" />
                       <span>Shelf Audit Station</span>
@@ -1351,6 +1053,7 @@ export function LibraryWorkspace({
                     <option value="all">All Statuses</option>
                     <option value="available">Available Now</option>
                     <option value="checked_out">On Loan</option>
+                    <option value="overdue">Overdue</option>
                     <option value="lost">Lost</option>
                     <option value="damaged">Damaged</option>
                   </select>
@@ -1471,27 +1174,26 @@ export function LibraryWorkspace({
                 </div>
               )}
 
-              {/* Selection Bar inside Filter Toolbar */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50 text-[11px] text-muted-foreground">
-                {selected.size > 0 ? (
-                  <div className="flex items-center gap-2 font-bold text-primary">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    <span>{selected.size} copies selected — actions available in dock below</span>
-                  </div>
-                ) : (
-                  <span className="italic hidden sm:inline text-muted-foreground/80">
-                    💡 Click a book to view its details. Use the checkbox to select copies for Print Labels, Assign Shelf, or other bulk actions.
-                  </span>
-                )}
-                <span>
-                  Showing {Math.min(filteredCatalog.length, (page - 1) * PAGE_SIZE + 1)}–
-                  {Math.min(filteredCatalog.length, page * PAGE_SIZE)} of {filteredCatalog.length} copies
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
+                  <Checkbox
+                    checked={
+                      currentCatalogSlice.length > 0 &&
+                      currentCatalogSlice.every((i) => selected.has(i.id))
+                    }
+                    onCheckedChange={selectAllCurrentPage}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span>Select page</span>
+                </label>
+                <span className="text-[11px] text-muted-foreground">
+                  {filteredCatalog.length} {filteredCatalog.length === 1 ? 'copy' : 'copies'}
                 </span>
               </div>
             </div>
 
-            {/* Elevated Selection Action Dock — always visible; actions disable until books are selected */}
-            {(
+            {/* Selection actions only appear after a book is checked */}
+            {selected.size > 0 && (
               <div className="sticky top-16 z-20 -mx-1 my-2">
                 <div
                   className={cn(
@@ -1500,24 +1202,13 @@ export function LibraryWorkspace({
                   )}
                 >
                   <div className="flex flex-wrap items-center gap-3">
-                    <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
-                      <Checkbox
-                        checked={
-                          currentCatalogSlice.length > 0 &&
-                          currentCatalogSlice.every((i) => selected.has(i.id))
-                        }
-                        onCheckedChange={selectAllCurrentPage}
-                        className="h-3.5 w-3.5"
-                      />
-                      <span>Select page ({currentCatalogSlice.length})</span>
-                    </label>
                     <Badge
                       className={cn(
                         'bg-primary text-primary-foreground font-black text-xs sm:text-sm py-1 px-3 shadow-xs',
                         currentTheme.uiClasses.badgeRadius
                       )}
                     >
-                      {selected.size} {selected.size === 1 ? 'Book' : 'Books'} Selected
+                      {selected.size} {selected.size === 1 ? 'book' : 'books'} selected
                     </Badge>
                     <button
                       type="button"
@@ -1702,7 +1393,7 @@ export function LibraryWorkspace({
                   )}
                 >
                   <FolderTree className="h-3.5 w-3.5 text-primary" />
-                  <span>Organized Hierarchy</span>
+                  <span>Shelves</span>
                 </button>
                 <button
                   type="button"
@@ -1718,7 +1409,7 @@ export function LibraryWorkspace({
                   )}
                 >
                   <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Group Titles</span>
+                  <span>Titles</span>
                 </button>
                 <button
                   type="button"
@@ -1734,7 +1425,7 @@ export function LibraryWorkspace({
                   )}
                 >
                   <Layers className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>All Copies</span>
+                  <span>Copies</span>
                 </button>
               </div>
 
@@ -1765,6 +1456,15 @@ export function LibraryWorkspace({
               </div>
             </div>
 
+            <AnimatePresence mode="wait">
+            <motion.div
+              key={`${catalogPresentation}-${status}`}
+              layoutId="library-catalog-results"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            >
             {/* PRESENTATION MODE 1: ORGANIZED HIERARCHY SCHEME VIEW */}
             {catalogPresentation === 'scheme' && (
               <div className="space-y-6">
@@ -2033,6 +1733,8 @@ export function LibraryWorkspace({
                 })}
               </div>
             )}
+            </motion.div>
+            </AnimatePresence>
 
             {/* Pagination Controls */}
             <div className="flex items-center justify-between py-4 border-t">
@@ -2317,9 +2019,9 @@ export function LibraryWorkspace({
                   <h2 className="text-lg sm:text-xl font-black text-foreground">Library Settings &amp; Configuration</h2>
                   <p className="text-xs text-muted-foreground">Manage circulation limits, shelving zones, fines, and visual themes.</p>
                 </div>
-                <TabsList className="bg-muted/70 p-1 rounded-xl self-start sm:self-auto">
-                  <TabsTrigger value="policies" className="rounded-lg text-xs font-bold px-4">Circulation &amp; Shelves</TabsTrigger>
-                  <TabsTrigger value="theme" className="rounded-lg text-xs font-bold px-4">Theme &amp; Atmosphere</TabsTrigger>
+                <TabsList className="bg-muted/70 p-1 rounded-xl self-start sm:self-auto w-full sm:w-auto">
+                  <TabsTrigger value="policies" className="rounded-lg text-xs font-bold px-3 sm:px-4 flex-1 sm:flex-none">Circulation &amp; Shelves</TabsTrigger>
+                  <TabsTrigger value="theme" className="rounded-lg text-xs font-bold px-3 sm:px-4 flex-1 sm:flex-none">Theme &amp; Atmosphere</TabsTrigger>
                 </TabsList>
               </div>
               <TabsContent value="policies" className="mt-0 space-y-6">
@@ -2338,14 +2040,14 @@ export function LibraryWorkspace({
           <div>
             Sunset Terrace · Story nook open till 4:30
           </div>
-          <Link
-            href={`/${schoolId}/library/kiosk`}
-            target="_blank"
+          <button
+            type="button"
+            onClick={() => switchTab('kiosk')}
             className="hover:text-slate-300 flex items-center gap-1.5 font-medium transition-colors"
           >
             <span>Open student kiosk</span>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
+            <Monitor className="h-3.5 w-3.5" />
+          </button>
         </footer>
       )}
     </div>

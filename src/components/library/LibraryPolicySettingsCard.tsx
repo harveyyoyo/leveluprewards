@@ -59,6 +59,12 @@ import {
   type LibraryRewardMode,
 } from '@/lib/library/libraryPolicy';
 import {
+  LIBRARY_STUDENT_NAME_DISPLAY_LABELS,
+  LIBRARY_STUDENT_THEME_DISPLAY_LABELS,
+  type LibraryStudentNameDisplayMode,
+  type LibraryStudentThemeDisplay,
+} from '@/lib/library/libraryStudentDisplay';
+import {
   LIBRARY_LATE_RESPONSES,
   LIBRARY_LATE_SOUNDS,
   LIBRARY_ON_TIME_RESPONSES,
@@ -213,10 +219,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
     '#64748B', // Neutral
   ];
 
-  const handleUpdateGenre = (id: string, patch: Partial<LibraryGenreConfig>) => {
+  const handleUpdateGenre = (id: string, patch: Partial<LibraryGenreConfig>, options?: { silent?: boolean }) => {
     const next = genres.map((g) => (g.id === id ? { ...g, ...patch } : g));
     updateSettings({ libraryGenreDefinitions: next });
-    toast({ title: 'Genre updated' });
+    if (!options?.silent) toast({ title: 'Genre updated' });
   };
 
   const handleAddGenre = () => {
@@ -255,7 +261,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   };
 
   return (
-    <Accordion type="multiple" defaultValue={['circulation']} className="space-y-3">
+    <Accordion type="multiple" className="space-y-3">
       {/* 1. Circulation & Loan Policies */}
       <AccordionItem value="circulation" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
         <div className="flex items-center gap-2 pr-3">
@@ -439,7 +445,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                   Sync with LevelUp App
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
-                  Decide whether library points, overdue notices, and student checkout connect to the main LevelUp app.
+                  Decide whether library points, student names, student themes, overdue notices, and student checkout connect to the main LevelUp app.
                 </p>
               </div>
             </div>
@@ -447,7 +453,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           <StaffPortalTabInfoPopover
             sections={[
               staffPortalTabInfoSection(
-                'One place to control whether the library integrates with LevelUp points, teacher notifications, and the student dashboard — or stays fully self-contained.',
+                'One place to control whether the library integrates with LevelUp points, student names and themes, teacher notifications, and the student dashboard — or stays fully self-contained.',
               ),
             ]}
             ariaLabel="About syncing with LevelUp"
@@ -497,6 +503,54 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               checked={notifyTeacherOnOverdue}
               onCheckedChange={(v) => updateSettings({ libraryNotifyTeacherOnOverdue: v })}
             />
+          </div>
+
+          <div className="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <Label className="text-xs font-bold">Student display names</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Choose how names appear at the desk, catalog, loans list, and student station. Default uses each student&apos;s nickname (or first name) plus last name.
+            </p>
+            <Select
+              value={settings.libraryStudentNameDisplayMode ?? 'preferred_full'}
+              onValueChange={(v) =>
+                updateSettings({ libraryStudentNameDisplayMode: v as LibraryStudentNameDisplayMode })
+              }
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(LIBRARY_STUDENT_NAME_DISPLAY_LABELS) as LibraryStudentNameDisplayMode[]).map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {LIBRARY_STUDENT_NAME_DISPLAY_LABELS[mode]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 rounded-lg border bg-muted/30 px-3 py-2.5">
+            <Label className="text-xs font-bold">Student themes on names</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Use the same sticker / theme emoji (and optional color) that students have in LevelUp. Turned off automatically if Student Themes are disabled for the whole school.
+            </p>
+            <Select
+              value={settings.libraryStudentThemeDisplay ?? 'emoji_and_color'}
+              onValueChange={(v) =>
+                updateSettings({ libraryStudentThemeDisplay: v as LibraryStudentThemeDisplay })
+              }
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(LIBRARY_STUDENT_THEME_DISPLAY_LABELS) as LibraryStudentThemeDisplay[]).map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {LIBRARY_STUDENT_THEME_DISPLAY_LABELS[mode]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </AccordionContent>
       </AccordionItem>
@@ -1854,7 +1908,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                         <Input
                           value={g.defaultShelf}
                           placeholder="Placement location in library..."
-                          onChange={(e) => handleUpdateGenre(g.id, { defaultShelf: e.target.value })}
+                          onChange={(e) => handleUpdateGenre(g.id, { defaultShelf: e.target.value }, { silent: true })}
                           className="h-8 text-xs rounded-xl bg-background"
                         />
                       </div>
