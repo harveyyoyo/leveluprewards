@@ -125,12 +125,7 @@ export function schoolPathAllowedByGate(
     );
   }
 
-  if (
-    section === 'smart-screen' ||
-    section === 'displays' ||
-    section === 'displays-realm' ||
-    section === 'bulletin-board'
-  ) {
+  if (section === 'smart-screen' || section === 'displays' || section === 'displays-realm' || section === 'bulletin-board') {
     return (
       scopes.has('portal') ||
       scopes.has('admin') ||

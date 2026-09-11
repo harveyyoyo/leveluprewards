@@ -41,17 +41,23 @@ export function LibraryThemeSwitcher({ className }: { className?: string }) {
         <Button
           variant="outline"
           size="sm"
-          className={cn('h-9 gap-1.5 rounded-lg border bg-background/80 px-2.5 text-xs font-semibold shadow-sm', className)}
-          aria-label={`Current library theme: ${currentTheme.label}. Click to switch theme.`}
+          className={cn(
+            'h-9 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-semibold shadow-2xs hover:bg-muted flex items-center gap-2 transition-all shrink-0',
+            className
+          )}
+          aria-label={`Current library theme: ${currentTheme.label} (${currentTheme.styleName}). Click to switch theme.`}
         >
-          <Palette className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="hidden sm:inline">{currentTheme.icon}</span>
-          <span className="hidden md:inline">{currentTheme.label}</span>
+          <span
+            className="h-2.5 w-2.5 rounded-full shrink-0 shadow-xs"
+            style={{ backgroundColor: currentTheme.swatches.primary }}
+          />
+          <span className="font-bold text-xs">{currentTheme.label}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 p-1.5">
-        <DropdownMenuLabel className="px-2 py-1 text-xs font-bold text-muted-foreground">
-          Library Atmosphere
+      <DropdownMenuContent align="end" className="w-64 p-1.5">
+        <DropdownMenuLabel className="px-2 py-1 text-xs font-black text-muted-foreground flex items-center justify-between">
+          <span>Look &amp; Feel Atmosphere</span>
+          <span className="text-[10px] font-normal">{currentTheme.styleName}</span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {LIBRARY_THEME_IDS.map((id) => {
@@ -63,17 +69,19 @@ export function LibraryThemeSwitcher({ className }: { className?: string }) {
               key={id}
               onClick={() => handleSelect(id)}
               className={cn(
-                'flex items-center justify-between rounded-md px-2 py-1.5 text-xs cursor-pointer',
+                'flex items-center justify-between px-2 py-1.5 text-xs cursor-pointer',
+                theme.uiClasses.buttonRadius,
                 isActive && 'bg-primary/10 font-bold text-primary'
               )}
             >
-              <div className="flex items-center gap-2">
-                <span>{theme.icon}</span>
-                <span>{theme.label}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="shrink-0">{theme.icon}</span>
+                <span className="truncate">{theme.label}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0 font-normal">({theme.styleName.split(' ')[0]})</span>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <div
-                  className="h-3 w-3 rounded-full border border-black/10"
+                  className="h-3 w-3 rounded-full border border-black/10 shadow-xs"
                   style={{ backgroundColor: theme.swatches.primary }}
                 />
                 {isActive && <Check className="h-3.5 w-3.5 text-primary" />}

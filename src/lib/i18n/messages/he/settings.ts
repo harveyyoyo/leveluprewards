@@ -76,12 +76,14 @@ const settings = {
     mainPortalCardRequiresRewards: 'דורש שהעמוד Rewards יהיה פעיל.',
     mainPortalCardRequiresStudentPortal: 'יש להפעיל תחילה את פורטל הבית של התלמיד בהגדרות בית הספר.',
     mainPortalCardRequiresParentPortal: 'דורש שהפורטל להורים יהיה פעיל.',
+    mainPortalCardRequiresLibrary: 'דורש שמודול הספרייה יהיה מופעל.',
     mainPortalCard: {
       admin: 'פורטל ניהול',
       print: 'פורטל מורים',
       redeem: 'קיוסק תלמידים',
       'student-home': 'פורטל בית תלמיד',
       parent: 'פורטל הורים',
+      'library-kiosk': 'קיוסק ספרייה',
     },
     mainPortalCardDesc: {
       admin: 'לוח ניהול לתלמידים, כיתות, פרסים והגדרות.',
@@ -89,6 +91,7 @@ const settings = {
       redeem: 'כניסת תלמידים במקום, נקודות וחנות פרסים.',
       'student-home': 'תלמידים נכנסים מהבית לצפייה בהתקדמות.',
       parent: 'משפחות צופות בנקודות, הערות ונוכחות.',
+      'library-kiosk': 'עמדה ייעודית להשאלה והחזרה עצמאית של ספרים על ידי תלמידים.',
     },
   },
   general: {

@@ -75,8 +75,22 @@ export function useBarcodeReaderWedge({
       }
     };
 
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        !target.closest('input, textarea, select, button, a, [role=tab], [role=dialog], [role=menuitem], [role=option], [role=checkbox]')
+      ) {
+        inputRef.current?.focus({ preventScroll: true });
+      }
+    };
+
     window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      document.removeEventListener('click', handleDocumentClick);
+    };
   }, [active, disabled, submitScan]);
 
   return {

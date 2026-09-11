@@ -7,6 +7,7 @@ export const PARENT_PORTAL_JWT_ISS = 'levelup:parent-portal';
 export type VerifiedParentPortalSession = {
   schoolId: string;
   studentId: string;
+  email: string;
 };
 
 export async function signParentPortalSession(
@@ -15,9 +16,10 @@ export async function signParentPortalSession(
   const secret = getAuthGateSecret();
   if (!secret) return null;
   return new SignJWT({
-    v: 1,
+    v: 2,
     sch: payload.schoolId.trim().toLowerCase(),
     sid: payload.studentId,
+    email: payload.email.trim().toLowerCase(),
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(PARENT_PORTAL_JWT_ISS)
@@ -36,11 +38,13 @@ export async function verifyParentPortalSession(
       issuer: PARENT_PORTAL_JWT_ISS,
       algorithms: ['HS256'],
     });
-    if (Number(payload.v) !== 1) return null;
+    // Reject older sessions that did not prove email ownership.
+    if (Number(payload.v) !== 2) return null;
     const schoolId = typeof payload.sch === 'string' ? payload.sch.trim().toLowerCase() : '';
     const studentId = typeof payload.sid === 'string' ? payload.sid.trim() : '';
-    if (!schoolId || !studentId) return null;
-    return { schoolId, studentId };
+    const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
+    if (!schoolId || !studentId || !email) return null;
+    return { schoolId, studentId, email };
   } catch {
     return null;
   }

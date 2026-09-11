@@ -31,7 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { httpsCallable } from 'firebase/functions';
 import { ThemeGeneratorModal } from '../themes/ThemeGeneratorModal';
 import { AdminFaceEnrollmentPanel } from '../admin/AdminFaceEnrollmentPanel';
-import { Wand2, Trash2, Loader2 } from 'lucide-react';
+import { Wand2, Trash2, Loader2, BookOpen } from 'lucide-react';
 import { ImageCropper } from '../admin/ImageCropper';
 import { cn, getStudentNickname } from '@/lib/utils';
 import { obfuscateField, deobfuscateField } from '@/lib/crypto';
@@ -86,6 +86,8 @@ export function StudentModal({
   const [studentWelcomeAllowed, setStudentWelcomeAllowed] = useState(true);
   const [welcomeBackAllowed, setWelcomeBackAllowed] = useState(true);
   const [welcomeGreetingStyleId, setWelcomeGreetingStyleId] = useState('');
+  const [libraryLimitMode, setLibraryLimitMode] = useState<string>('default');
+  const [customLibraryLimit, setCustomLibraryLimit] = useState('');
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
   const { toast } = useToast();
@@ -118,6 +120,22 @@ export function StudentModal({
         setStudentWelcomeAllowed(student.welcomePageEnabled !== false);
         setWelcomeBackAllowed(student.welcomeBackScreenEnabled !== false);
         setWelcomeGreetingStyleId(student.welcomeGreetingStyleId || '');
+        if (student.libraryMaxCheckouts === 0) {
+          setLibraryLimitMode('unlimited');
+          setCustomLibraryLimit('0');
+        } else if (student.libraryMaxCheckouts != null) {
+          const sVal = student.libraryMaxCheckouts.toString();
+          if (['1', '2', '3', '4', '5', '6', '8', '10'].includes(sVal)) {
+            setLibraryLimitMode(sVal);
+            setCustomLibraryLimit(sVal);
+          } else {
+            setLibraryLimitMode('custom');
+            setCustomLibraryLimit(sVal);
+          }
+        } else {
+          setLibraryLimitMode('default');
+          setCustomLibraryLimit('');
+        }
       } else { // Create mode
         setFirstName('');
         setMiddleName('');
@@ -140,6 +158,8 @@ export function StudentModal({
         setStudentWelcomeAllowed(true);
         setWelcomeBackAllowed(true);
         setWelcomeGreetingStyleId('');
+        setLibraryLimitMode('default');
+        setCustomLibraryLimit('');
       }
     }
   }, [student, isOpen]);
@@ -397,6 +417,18 @@ export function StudentModal({
     const normalizedNickname = nickname.trim();
     const normalizedTheme = theme ? (normalizeStudentTheme(theme) ?? theme) : undefined;
 
+    let finalLibraryMaxCheckouts: number | null | undefined = undefined;
+    if (libraryLimitMode === 'default') {
+      finalLibraryMaxCheckouts = null;
+    } else if (libraryLimitMode === 'unlimited') {
+      finalLibraryMaxCheckouts = 0;
+    } else {
+      const num = parseInt(customLibraryLimit || libraryLimitMode, 10);
+      if (!isNaN(num) && num >= 0) {
+        finalLibraryMaxCheckouts = num;
+      }
+    }
+
     if (isEditing && student) {
       const updatedStudent: Student = {
         ...student,
@@ -424,6 +456,7 @@ export function StudentModal({
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
         welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
         welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
+        libraryMaxCheckouts: finalLibraryMaxCheckouts,
       };
       await updateStudent(updatedStudent);
       playSound('success');
@@ -453,6 +486,7 @@ export function StudentModal({
         welcomePageEnabled: studentWelcomeAllowed ? true : false,
         welcomeBackScreenEnabled: welcomeBackAllowed ? true : false,
         welcomeGreetingStyleId: welcomeGreetingStyleId.trim() || undefined,
+        libraryMaxCheckouts: finalLibraryMaxCheckouts,
       };
       await addStudent(newStudent);
       playSound('success');
@@ -636,6 +670,61 @@ export function StudentModal({
               </div>
             </div>
           )}
+          {/* Library Checkout Limit */}
+          <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="student-library-limit" className="font-bold flex items-center gap-1.5">
+                <BookOpen className="h-4 w-4 text-primary" />
+                Library Checkout Limit
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                How many library books this student can borrow at once. Overrides the school default ({settings.libraryMaxCheckoutsPerStudent ?? 3} books).
+              </p>
+            </div>
+            <div className="flex items-center gap-3 pt-1 flex-wrap">
+              <Select
+                value={libraryLimitMode}
+                onValueChange={(val) => {
+                  setLibraryLimitMode(val);
+                  if (val === 'default') setCustomLibraryLimit('');
+                  else if (val === 'unlimited') setCustomLibraryLimit('0');
+                  else if (val !== 'custom') setCustomLibraryLimit(val);
+                }}
+              >
+                <SelectTrigger id="student-library-limit" className="w-64 h-9 text-xs rounded-xl">
+                  <SelectValue placeholder="Select checkout limit" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">School Default ({settings.libraryMaxCheckoutsPerStudent ?? 3} books)</SelectItem>
+                  <SelectItem value="1">1 Book</SelectItem>
+                  <SelectItem value="2">2 Books</SelectItem>
+                  <SelectItem value="3">3 Books</SelectItem>
+                  <SelectItem value="4">4 Books</SelectItem>
+                  <SelectItem value="5">5 Books</SelectItem>
+                  <SelectItem value="6">6 Books</SelectItem>
+                  <SelectItem value="8">8 Books</SelectItem>
+                  <SelectItem value="10">10 Books</SelectItem>
+                  <SelectItem value="unlimited">Unlimited (No Limit)</SelectItem>
+                  <SelectItem value="custom">Custom Number…</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {libraryLimitMode === 'custom' && (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="Books"
+                    value={customLibraryLimit}
+                    onChange={(e) => setCustomLibraryLimit(e.target.value)}
+                    className="w-24 h-9 text-xs rounded-xl"
+                  />
+                  <span className="text-xs text-muted-foreground font-semibold">books</span>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="student-id">Student ID (for scanning)</Label>
             <div className="flex gap-2">

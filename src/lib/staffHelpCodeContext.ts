@@ -78,18 +78,13 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme', 'class library'],
     paths: [
+      'src/app/[schoolId]/admin/sections/AdminLibraryTab.tsx',
       'src/components/library/LibraryWorkspace.tsx',
       'src/components/library/LibraryTabLauncher.tsx',
       'src/components/library/LibraryLocationsCard.tsx',
       'src/components/library/LibraryThemeSettingsCard.tsx',
-    ],
-  },
-  {
-    keys: ['library', 'catalog', 'book', 'books', 'borrow', 'return', 'kiosk', 'self-checkout', 'circulation', 'isbn'],
-    paths: [
-      'src/components/library/LibraryWorkspace.tsx',
-      'src/components/library/LibraryStudentSelfCheckoutPortal.tsx',
-      'src/app/[schoolId]/library/kiosk/page.tsx',
+      'src/app/[schoolId]/librarian/page.tsx',
+      'src/app/[schoolId]/library/self-checkout/page.tsx',
     ],
   },
   {
@@ -104,10 +99,19 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     paths: ['src/app/[schoolId]/admin/sections/AdminBrandingTab.tsx'],
   },
   {
+    keys: ['library', 'catalog', 'book', 'books', 'borrow', 'return', 'kiosk', 'self-checkout', 'circulation', 'isbn'],
+    paths: [
+      'src/components/library/LibraryWorkspace.tsx',
+      'src/components/library/LibraryStudentSelfCheckoutPortal.tsx',
+      'src/app/[schoolId]/library/kiosk/page.tsx',
+    ],
+  },
+  {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
       'src/components/displays/DisplaysTabLauncher.tsx',
+      'src/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel.tsx',
       'src/app/[schoolId]/displays/page.tsx',
     ],
   },
@@ -119,13 +123,14 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['display', 'displays', 'hallway display', 'smart screen', 'smartscreen', 'bulletin', 'bulletin board', 'announcement'],
+    keys: ['bulletin', 'bulletin board', 'announcement'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
       'src/components/displays/DisplaysTabLauncher.tsx',
       'src/components/displays/DisplayTvPairModal.tsx',
       'src/app/[schoolId]/displays/page.tsx',
       'src/app/[schoolId]/displays-realm/page.tsx',
+      'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },
   {

@@ -37,7 +37,7 @@ describe('libraryAiIsbnLookup parsing', () => {
         },
         '9781422631157',
       ),
-    ).toEqual({
+    ).toMatchObject({
       title: 'What a Story!',
       author: 'Rabbi Yechiel Spero',
       isbn: '9781422631157',

@@ -89,11 +89,11 @@ export const PRESET_BULLETIN_THEMES: BulletinThemePreset[] = [
   {
     id: 'midnight',
     name: 'Midnight Arcade',
-    pageClassName: 'bg-gradient-to-b from-[#0a0f1d] via-slate-950 to-[#0a0f1d]',
+    pageClassName: 'bg-gradient-to-b from-slate-900 via-violet-950 to-slate-950',
     cardClassName:
-      'bg-slate-900/95 border-violet-400/50 text-white shadow-2xl',
-    accentBorderClassName: 'border-t-violet-400',
-    itemClassName: 'bg-slate-800/90 border-violet-400/40 text-violet-100',
+      'bg-gradient-to-b from-slate-800/95 via-violet-950/90 to-slate-950/95 border-violet-500/45 text-violet-50',
+    accentBorderClassName: 'border-t-violet-500',
+    itemClassName: 'bg-violet-950/60 border-violet-700/40 text-violet-50',
   },
 ];
 
@@ -244,6 +244,20 @@ export function getBulletinBoardItemClassName(themeId: string | undefined): stri
 
 /** Used when `bulletinSubtitle` is empty in school settings. */
 export const DEFAULT_BULLETIN_SUBTITLE = 'Visual reminders and incentives for earning points!';
+
+/** Firestore bulletin incentive row used by Displays settings previews. */
+export type BulletinBoardIncentiveRecord = {
+  id: string;
+  title?: string;
+  description?: string;
+  value?: number;
+  icon?: string;
+  currencyIcon?: string;
+  displaySurfaces?: { bulletinBoard?: boolean; smartScreen?: boolean };
+  createdAt?: number;
+  showAsIncentive?: boolean;
+  active?: boolean;
+};
 
 export const BULLETIN_EMOJI_SUGGESTIONS = [
   '\u{1F389}',

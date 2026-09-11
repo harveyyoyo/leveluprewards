@@ -1,9 +1,9 @@
 'use client';
 
 import type { RefObject } from 'react';
+import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, Loader2, ScanBarcode, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 export type LibraryScanFeedbackStatus =
@@ -80,6 +80,10 @@ export function LibraryBarcodeReaderField({
   hint,
   scanFeedback,
   className,
+  showIcon = true,
+  showEnterHint = true,
+  showSweep = true,
+  placeholder,
 }: {
   inputId?: string;
   inputRef: RefObject<HTMLInputElement | null>;
@@ -90,73 +94,107 @@ export function LibraryBarcodeReaderField({
   hint?: string;
   scanFeedback?: LibraryScanFeedback | null;
   className?: string;
+  showIcon?: boolean;
+  showEnterHint?: boolean;
+  showSweep?: boolean;
+  placeholder?: string;
 }) {
   const feedbackMeta = scanFeedback ? STATUS_META[scanFeedback.status] : null;
 
   return (
-    <div
-      className={cn(
-        'rounded-xl border-2 border-dashed p-4 space-y-3 transition-colors',
-        active ? 'border-primary/50 bg-primary/5' : 'border-muted bg-muted/30',
-        className,
-      )}
-    >
-      <Label htmlFor={inputId} className="flex items-center gap-2 text-sm font-bold">
-        <ScanBarcode className="h-4 w-4 text-ring" aria-hidden />
-        {scanFeedback ? 'Scan received' : 'Scan ready'}
-      </Label>
-      <p className="text-xs text-muted-foreground">
-        {hint ??
-          'Focus this field, then scan with your USB or Bluetooth barcode reader. Each scan ends with Enter.'}
-      </p>
+    <div className={cn('space-y-1.5', className)}>
+      {/* Scanner Input Row */}
+      <div className="relative flex items-center">
+        {showIcon && (
+          <ScanBarcode
+            className={cn(
+              'absolute left-2.5 z-10 h-3.5 w-3.5 pointer-events-none',
+              active ? 'text-primary' : 'text-muted-foreground',
+            )}
+            aria-hidden
+          />
+        )}
+        <Input
+          id={inputId}
+          ref={inputRef as RefObject<HTMLInputElement>}
+          type="text"
+          value={scanBuffer}
+          onChange={(e) => onScanBufferChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
+          placeholder={
+            placeholder !== undefined
+              ? placeholder
+              : active
+                ? 'Scan barcode with reader wedge or type code & press Enter…'
+                : 'Reader paused — click Resume reader…'
+          }
+          className={cn(
+            showIcon ? 'pl-8' : 'pl-3',
+            showEnterHint ? 'pr-20' : 'pr-3',
+            'font-mono text-xs h-9 rounded-xl border transition-all',
+            active
+              ? 'border-primary/50 bg-background shadow-xs focus-visible:ring-1 focus-visible:ring-primary'
+              : 'border-muted bg-muted/40 text-muted-foreground',
+          )}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          disabled={!active}
+          aria-label="Barcode reader scan field"
+        />
+        {active && showSweep ? (
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl" aria-hidden>
+            <motion.div
+              className="absolute inset-y-0 w-24 -ml-12 bg-gradient-to-r from-transparent via-primary/25 to-transparent"
+              initial={{ left: '0%' }}
+              animate={{ left: '100%' }}
+              transition={{ type: 'spring', stiffness: 24, damping: 22, repeat: Infinity, repeatType: 'mirror' }}
+            />
+            <motion.div
+              className="absolute top-[18%] bottom-[18%] w-px -ml-px bg-primary/80 shadow-[0_0_8px_2px_hsl(var(--primary)/0.5)]"
+              initial={{ left: '0%' }}
+              animate={{ left: '100%' }}
+              transition={{ type: 'spring', stiffness: 24, damping: 22, repeat: Infinity, repeatType: 'mirror' }}
+            />
+          </div>
+        ) : null}
+        {showEnterHint ? (
+          <div className="absolute right-2 z-10 flex items-center pointer-events-none">
+            <span className="text-[10px] font-mono text-muted-foreground/80 bg-muted px-1.5 py-0.5 rounded">
+              Enter ↵
+            </span>
+          </div>
+        ) : null}
+      </div>
 
-      {scanFeedback && feedbackMeta ? (
+      {/* Compact Scan Feedback Pill (Only shown when there is feedback) */}
+      {scanFeedback && feedbackMeta && (
         <div
           className={cn(
-            'rounded-xl border px-4 py-3 space-y-1.5',
+            'flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1 text-xs transition-all shadow-2xs animate-in fade-in-50 duration-150',
             feedbackMeta.className,
           )}
           role="status"
           aria-live="polite"
         >
-          <p className="font-mono text-lg font-bold tracking-wide break-all">{scanFeedback.code}</p>
-          <div className="flex items-center gap-2 text-sm font-semibold">
+          <div className="flex items-center gap-2 min-w-0 truncate">
             <StatusIcon kind={feedbackMeta.icon} />
-            <span>{feedbackMeta.label}</span>
+            <span className="font-mono font-bold shrink-0">{scanFeedback.code}</span>
+            <span className="text-[11px] opacity-75 shrink-0">· {feedbackMeta.label}</span>
+            {scanFeedback.title && (
+              <span className="font-semibold truncate">· &quot;{scanFeedback.title}&quot;</span>
+            )}
+            {scanFeedback.message && !scanFeedback.title && (
+              <span className="text-[11px] opacity-90 truncate">· {scanFeedback.message}</span>
+            )}
           </div>
-          {scanFeedback.title ? (
-            <p className="text-sm font-medium leading-snug">{scanFeedback.title}</p>
-          ) : null}
-          {scanFeedback.message ? (
-            <p className="text-xs opacity-90 leading-relaxed">{scanFeedback.message}</p>
-          ) : null}
-        </div>
-      ) : (
-        <div className="rounded-xl border border-dashed border-primary/30 bg-background/60 px-4 py-5 text-center">
-          <p className="text-sm font-medium text-muted-foreground">Ready — scan a barcode</p>
         </div>
       )}
-
-      <Input
-        id={inputId}
-        ref={inputRef as RefObject<HTMLInputElement>}
-        type="text"
-        value={scanBuffer}
-        onChange={(e) => onScanBufferChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            onSubmit();
-          }
-        }}
-        placeholder={active ? 'Or type barcode and press Enter…' : 'Waiting…'}
-        className="font-mono text-sm h-11 rounded-xl"
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        disabled={!active}
-        aria-label="Barcode reader scan field"
-      />
     </div>
   );
 }

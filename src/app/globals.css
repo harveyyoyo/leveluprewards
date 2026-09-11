@@ -98,6 +98,26 @@
   max-height: 0.22in;
 }
 
+/* Animated Barcode Scanner Laser Beam */
+@keyframes scanner-laser-sweep {
+  0% {
+    top: 6%;
+    opacity: 0.35;
+  }
+  50% {
+    top: 88%;
+    opacity: 1;
+  }
+  100% {
+    top: 6%;
+    opacity: 0.35;
+  }
+}
+
+.animate-scanner-laser {
+  animation: scanner-laser-sweep 1.8s ease-in-out infinite;
+}
+
 /* System emoji fonts — theme/display fonts rarely include emoji glyphs. */
 :root {
   --emoji-font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "Android Emoji", emoji, sans-serif;
@@ -650,7 +670,7 @@ html[data-office-portal] .office-content-pane {
       .font-bold,
       .font-black,
       .font-extrabold
-    ) {
+    ):not(.classroom-native-colors, .classroom-native-colors *) {
     color: inherit;
   }
 
@@ -721,11 +741,11 @@ html[data-office-portal] .office-content-pane {
     color: rgba(244, 247, 240, 0.58) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.border-border) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.border-border):not(.classroom-native-colors, .classroom-native-colors *) {
     border-color: rgba(255, 255, 255, 0.12) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select) {
+  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select):not(.classroom-native-colors, .classroom-native-colors *) {
     color: #f4f7f0;
   }
 
@@ -1671,7 +1691,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   display: none;
 }
 
-/* Bottom barcode row — bars plus the human-readable UPC */
+/* Bottom barcode row — own row, so it cannot cover the card number */
 .print-id-card--credit-card .print-id-barcode-container {
   display: flex;
   position: static;
@@ -3197,8 +3217,71 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     align-content: start !important;
   }
 
+  /* 1. Standard Sticker (Avery 5160) */
+  #library-barcode-print-wrapper[data-label-format="sticker"] .library-barcode-print-page {
+    grid-template-columns: repeat(3, 2.625in) !important;
+    grid-template-rows: repeat(10, 1in) !important;
+    column-gap: 0.125in !important;
+    row-gap: 0 !important;
+    padding: 0.5in 0.1875in !important;
+  }
+
+  /* 2. Slim Spine (Avery 5167: 4 cols x 20 rows) */
+  #library-barcode-print-wrapper[data-label-format="spine"] .library-barcode-print-page {
+    grid-template-columns: repeat(4, 1.75in) !important;
+    grid-template-rows: repeat(20, 0.5in) !important;
+    column-gap: 0.3in !important;
+    row-gap: 0 !important;
+    padding: 0.5in 0.28in !important;
+  }
+
+  /* 3. Square Spine (3 cols x 10 rows) */
+  #library-barcode-print-wrapper[data-label-format="spine_square"] .library-barcode-print-page {
+    grid-template-columns: repeat(3, 2.625in) !important;
+    grid-template-rows: repeat(10, 1in) !important;
+    column-gap: 0.125in !important;
+    row-gap: 0 !important;
+    padding: 0.5in 0.1875in !important;
+  }
+
+  /* 4. Large Inside Cover Bookplate (Avery 5163: 2 cols x 5 rows) */
+  #library-barcode-print-wrapper[data-label-format="large_plate"] .library-barcode-print-page {
+    grid-template-columns: repeat(2, 4in) !important;
+    grid-template-rows: repeat(5, 2in) !important;
+    column-gap: 0.1875in !important;
+    row-gap: 0 !important;
+    padding: 0.5in 0.15in !important;
+  }
+
+  /* 5. Pocket Slip (2 cols x 2 rows) */
+  #library-barcode-print-wrapper[data-label-format="pocket"] .library-barcode-print-page {
+    grid-template-columns: repeat(2, 3.75in) !important;
+    grid-template-rows: repeat(2, 4.75in) !important;
+    column-gap: 0.5in !important;
+    row-gap: 0.5in !important;
+    padding: 0.5in 0.25in !important;
+  }
+
+  /* 6. Thermal Roll (1 per page) */
+  #library-barcode-print-wrapper[data-label-format="thermal"] .library-barcode-print-page {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 2.25in !important;
+    height: 1.25in !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    page-break-after: always;
+  }
+
   .library-barcode-print-page:last-child {
     page-break-after: auto;
+  }
+
+  .library-barcode-sticker-placeholder {
+    box-sizing: border-box !important;
+    visibility: hidden !important;
   }
 
   .library-barcode-sticker {
@@ -3255,26 +3338,41 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     line-height: 1;
   }
 
+  /* Specific Sticker format sizes */
   .library-barcode-sticker--spine {
-    width: 0.55in !important;
-    height: 1.25in !important;
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    padding: 2mm !important;
+    width: 1.75in !important;
+    height: 0.5in !important;
+    padding: 0.03in 0.06in !important;
+    border: 1px dashed #cbd5e1 !important;
+    writing-mode: horizontal-tb !important;
   }
 
-  .library-barcode-sticker--spine .library-barcode-sticker-code {
-    font-size: 11pt !important;
+  .library-barcode-sticker--spine_square {
+    width: 2.625in !important;
+    height: 1in !important;
+    padding: 0.04in 0.08in !important;
+    border: 1px dashed #cbd5e1 !important;
+  }
+
+  .library-barcode-sticker--large_plate {
+    width: 4in !important;
+    height: 2in !important;
+    padding: 0.12in 0.15in !important;
+    border: 1px dashed #cbd5e1 !important;
   }
 
   .library-barcode-sticker--pocket {
-    width: 2.75in !important;
-    height: 1.75in !important;
-    padding: 3mm !important;
+    width: 3.75in !important;
+    height: 4.75in !important;
+    padding: 0.15in !important;
+    border: 1px dashed #cbd5e1 !important;
   }
 
-  .library-barcode-sticker--pocket .library-barcode-sticker-title {
-    font-size: 11pt !important;
+  .library-barcode-sticker--thermal {
+    width: 2.25in !important;
+    height: 1.25in !important;
+    padding: 0.06in 0.08in !important;
+    border: 1px solid #000 !important;
   }
 
   body.id-card-printing #student-id-print-wrapper .print-prize-id-card.print-id-card {

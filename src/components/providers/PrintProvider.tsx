@@ -103,7 +103,7 @@ interface PrintContextType {
     setPrizeIdCardsToPrint: (data: { prizes: Prize[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     setStaffIdCardsToPrint: (data: { subjects: StaffIdCardSubject[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
     setRecessPassesToPrint: (data: { passes: RecessReasonMeta[]; schoolId: string; printerType?: 'dtc4500e'; cornerStyle?: 'rounded' | 'rectangular'; sheetSpacing?: IdCardSheetSpacing }) => void;
-    setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => void;
+    setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat; startOffset?: number }) => void;
 }
 
 const PrintContext = createContext<PrintContextType | null>(null);
@@ -165,7 +165,12 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
     const [prizeIdPrintData, setPrizeIdPrintData] = useState<PrizeIdPrintJob | null>(null);
     const [staffIdPrintData, setStaffIdPrintData] = useState<StaffIdPrintJob | null>(null);
     const [recessPassPrintData, setRecessPassPrintData] = useState<RecessPassPrintJob | null>(null);
-    const [libraryPrintJob, setLibraryPrintJob] = useState<{ items: LibraryItem[]; format: LibraryLabelFormat; schoolId: string } | null>(null);
+    const [libraryPrintJob, setLibraryPrintJob] = useState<{
+        items: LibraryItem[];
+        format: LibraryLabelFormat;
+        schoolId: string;
+        startOffset?: number;
+    } | null>(null);
     const { settings } = useSettings();
     const prizeVoucherPaperFormat: PrizeVoucherPaperFormat =
         settings.prizeVoucherPaperFormat === 'thermal_80mm' ? 'thermal_80mm' : 'label_50x70';
@@ -462,13 +467,18 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     ...(data.printerType === 'dtc4500e' ? { dtcIndex: 0 } : {}),
                 });
             },
-            setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat }) => {
+            setLibraryStickersToPrint: (items: LibraryItem[], options: { schoolId: string; format?: LibraryLabelFormat; startOffset?: number }) => {
                 const sid = (options?.schoolId ?? '').trim();
                 if (!sid) {
                     toast({ variant: 'destructive', title: 'Cannot print library labels', description: 'Missing schoolId.' });
                     return;
                 }
-                setLibraryPrintJob({ items, format: options?.format ?? 'sticker', schoolId: sid });
+                setLibraryPrintJob({
+                    items,
+                    format: options?.format ?? 'sticker',
+                    schoolId: sid,
+                    startOffset: options?.startOffset ?? 0,
+                });
             },
         }),
         [toast],
@@ -593,6 +603,7 @@ export function PrintProvider({ children }: { children: React.ReactNode }) {
                     items={libraryPrintJob.items}
                     format={libraryPrintJob.format}
                     schoolId={libraryPrintJob.schoolId}
+                    startOffset={libraryPrintJob.startOffset}
                     onReady={triggerLibraryStickerPrint}
                 />
             )}

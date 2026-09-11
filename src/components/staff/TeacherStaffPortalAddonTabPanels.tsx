@@ -7,10 +7,7 @@ import {
   getDocs,
   limit,
   query,
-  setDoc,
-  updateDoc,
   where,
-  deleteDoc,
 } from 'firebase/firestore';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -38,6 +35,7 @@ import { BadgeModal } from '@/components/badges/BadgeModal';
 import { ImageCropper } from '@/components/admin/ImageCropper';
 import { useSchoolLogoUpload } from '@/app/[schoolId]/admin/hooks/useSchoolLogoUpload';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
+import { deleteLibraryCatalogItem, saveLibraryCatalogItem } from '@/lib/library/libraryOperations';
 import type { LibraryItemInput } from '@/lib/types';
 import { addAchievement, updateAchievement, addBadge, updateBadge, deleteBadge } from '@/lib/db';
 import type {
@@ -203,7 +201,7 @@ export function TeacherStaffPortalAddonTabPanels({
   };
 
   const handleSaveLibraryItem = async (data: LibraryItemInput, existingId?: string) => {
-    if (!firestore || !schoolId) throw new Error('School not ready.');
+    if (!functions || !schoolId) throw new Error('School not ready.');
     const upc = normalizeLibraryUpc(data.upc);
     if (await libraryUpcTaken(upc, existingId)) {
       throw new Error('Another item already uses this barcode.');
@@ -218,18 +216,7 @@ export function TeacherStaffPortalAddonTabPanels({
       copyNumber: data.copyNumber ?? null,
       notes: data.notes ?? null,
     };
-    if (existingId) {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'library', existingId), payload);
-    } else {
-      await setDoc(doc(collection(firestore, 'schools', schoolId, 'library')), {
-        ...payload,
-        status: 'available',
-        checkedOutTo: null,
-        checkedOutAt: null,
-        createdAt: Date.now(),
-        addedBy: 'Teacher',
-      });
-    }
+    await saveLibraryCatalogItem(functions, schoolId, payload, existingId);
   };
 
   const handleDeleteLibraryItem = async (itemId: string) => {
@@ -242,7 +229,7 @@ export function TeacherStaffPortalAddonTabPanels({
         destructive: true,
       })
     ) {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'library', itemId));
+      await deleteLibraryCatalogItem(functions, schoolId, itemId);
       playSound('trash');
       toast({ title: 'Item deleted', description: 'The library item has been removed.' });
     }

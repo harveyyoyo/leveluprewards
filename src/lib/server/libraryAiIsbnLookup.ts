@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
-import type { LibraryCatalogHit } from '@/lib/library/libraryCatalogLookup';
+import { type LibraryCatalogHit, isSuspiciousCatalogTitle } from '@/lib/library/libraryCatalogLookup';
 import { parseLooseJson } from '@/lib/server/looseJson';
 
 /**
@@ -48,7 +48,7 @@ export type AiIsbnLookupOutcome = {
 /** Map a parsed AI JSON payload to a catalog hit (exported for tests). */
 export function hitFromAiResult(result: AiBookResult, fallbackIsbn: string): LibraryCatalogHit | null {
   const title = result.title?.trim();
-  if (!result.found || !title) return null;
+  if (!result.found || !title || isSuspiciousCatalogTitle(title)) return null;
   return {
     title,
     author: result.author?.trim() || undefined,

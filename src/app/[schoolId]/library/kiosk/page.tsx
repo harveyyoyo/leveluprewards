@@ -86,6 +86,7 @@ export default function LibraryKioskPage() {
       schoolId={schoolId}
       categories={categories}
       getStudentName={getStudentName}
+      students={students}
     />
   );
 }

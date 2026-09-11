@@ -26,6 +26,8 @@ export type LibraryPolicySettings = {
   renewalDays: number;
   allowRenewIfOverdue: boolean;
   allowMultipleCopiesOfSameTitle: boolean;
+  /** Allow taking out / checking out books using the published ISBN barcode. Turned on by default. */
+  allowIsbnCheckout: boolean;
   maxFineCap: number;
   cameraScanEnabled: boolean;
   kioskAllowDropBoxReturn: boolean;
@@ -72,6 +74,7 @@ export function getLibraryPolicyFromSettings(
     libraryRenewalDays?: number;
     libraryAllowRenewIfOverdue?: boolean;
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    libraryAllowIsbnCheckout?: boolean;
     libraryMaxFineCap?: number;
     libraryCameraScanEnabled?: boolean;
     libraryKioskAllowDropBoxReturn?: boolean;
@@ -111,6 +114,7 @@ export function getLibraryPolicyFromSettings(
     renewalDays: Math.max(1, settings.libraryRenewalDays ?? loanPeriodDays),
     allowRenewIfOverdue: settings.libraryAllowRenewIfOverdue === true,
     allowMultipleCopiesOfSameTitle: settings.libraryAllowMultipleCopiesOfSameTitle === true,
+    allowIsbnCheckout: settings.libraryAllowIsbnCheckout !== false,
     maxFineCap: Math.max(0, settings.libraryMaxFineCap ?? 20),
     cameraScanEnabled: settings.libraryCameraScanEnabled === true,
     kioskAllowDropBoxReturn: settings.libraryKioskAllowDropBoxReturn !== false,
@@ -157,6 +161,24 @@ export function computeLateFeePoints(daysOverdue: number, pointsPerDay: number):
   return daysOverdue * pointsPerDay;
 }
 
+/** Days that actually count toward a late fee after the school's grace period. */
+export function computeChargeableLateDays(daysOverdue: number, gracePeriodDays = 0): number {
+  if (daysOverdue <= 0) return 0;
+  return Math.max(0, daysOverdue - Math.max(0, gracePeriodDays));
+}
+
+/** Late fee after grace days and an optional max-fine cap (0 = no cap). */
+export function computeCappedLateFee(
+  daysOverdue: number,
+  pointsPerDay: number,
+  gracePeriodDays = 0,
+  maxFineCap = 0,
+): number {
+  const fee = computeLateFeePoints(computeChargeableLateDays(daysOverdue, gracePeriodDays), pointsPerDay);
+  if (maxFineCap > 0) return Math.min(fee, maxFineCap);
+  return fee;
+}
+
 export function formatDueDate(dueAt: number | null | undefined): string {
   if (!dueAt) return 'No due date';
   return new Date(dueAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -190,3 +212,26 @@ export function isLibraryStandaloneSelfCheckoutEnabled(settings: LibraryStudentC
   if (!isLibraryPillarEnabled(settings)) return false;
   return settings.libraryAutoStudentPortalEnabled !== false;
 }
+
+/**
+ * Resolves the effective checkout limit for a student.
+ * If the student has a custom `libraryMaxCheckouts`, it takes precedence:
+ * - 0 = unlimited books
+ * - N > 0 = custom limit of N books
+ * Otherwise falls back to school policy `maxCheckoutsPerStudent` (or default 3).
+ */
+export function resolveStudentMaxCheckouts(
+  student?: { libraryMaxCheckouts?: number | null } | null,
+  policyDefault: number = 3,
+): number {
+  if (
+    student?.libraryMaxCheckouts !== undefined &&
+    student?.libraryMaxCheckouts !== null &&
+    typeof student.libraryMaxCheckouts === 'number' &&
+    !isNaN(student.libraryMaxCheckouts)
+  ) {
+    return Math.max(0, student.libraryMaxCheckouts);
+  }
+  return Math.max(0, policyDefault);
+}
+

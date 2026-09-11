@@ -12,6 +12,11 @@ describe('portalHub', () => {
     expect(resolveMainPortalCards(undefined)).toEqual([...DEFAULT_MAIN_PORTAL_CARDS]);
     expect(resolveMainPortalCards([])).toEqual([...DEFAULT_MAIN_PORTAL_CARDS]);
     expect(resolveMainPortalCards(['parent', 'invalid'])).toEqual(['parent']);
+    expect(resolveMainPortalCards(['admin', 'print', 'redeem'])).toEqual([
+      'admin',
+      'print',
+      'redeem',
+    ]);
   });
 
   it('preserves canonical card order', () => {

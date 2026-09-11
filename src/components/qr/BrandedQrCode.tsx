@@ -86,6 +86,7 @@ export const BrandedQrCode = forwardRef<HTMLDivElement, BrandedQrCodeProps>(func
           bgColor="#ffffff"
           fgColor="#000000"
           className="branded-qr-canvas block h-full w-full"
+          style={{ width: '100%', height: '100%' }}
         />
         <div
           className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center"

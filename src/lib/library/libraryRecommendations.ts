@@ -6,6 +6,7 @@ export interface BookRecommendation {
   author: string;
   category?: string;
   shelfLocation?: string;
+  coverUrl?: string;
   reason: string;
   matchScore: number;
 }
@@ -90,6 +91,7 @@ export function getLibraryBookRecommendations(
       author: item.author?.trim() || 'School Library',
       category: item.category?.trim(),
       shelfLocation: item.shelfLocation?.trim(),
+      coverUrl: item.coverUrl,
       reason,
       matchScore: score,
     };

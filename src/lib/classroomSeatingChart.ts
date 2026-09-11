@@ -573,7 +573,8 @@ export function loadClassroomSession(
 ): ClassroomSessionData {
   if (typeof window === 'undefined') return EMPTY_SESSION;
   try {
-    const raw = sessionStorage.getItem(classroomSessionStorageKey(schoolId, scope, classId));
+    const key = classroomSessionStorageKey(schoolId, scope, classId);
+    const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
     if (!raw) return EMPTY_SESSION;
     return normalizeSessionPayload(JSON.parse(raw));
   } catch {
@@ -632,7 +633,8 @@ export function saveClassroomSession(
   if (typeof window === 'undefined') return;
   try {
     const key = classroomSessionStorageKey(schoolId, scope, classId);
-    sessionStorage.setItem(key, JSON.stringify(data));
+    // Daily sessions must be readable by newly opened projector tabs as well.
+    localStorage.setItem(key, JSON.stringify(data));
     broadcastClassroomSessionUpdate(key, data);
   } catch {
     /* quota */

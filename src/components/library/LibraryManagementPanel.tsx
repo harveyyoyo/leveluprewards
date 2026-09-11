@@ -32,15 +32,14 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useToast } from '@/hooks/use-toast';
-import type { LibraryItem, LibraryItemInput } from '@/lib/types';
-import { isSchoolLibraryBarcode, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import { isSchoolLibraryBarcode, LIBRARY_LABEL_OPTIONS, getLibraryLabelOption, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { useAppContext } from '@/components/AppProvider';
 import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibrarySelfCheckoutLaunchButton } from './LibrarySelfCheckoutOverlay';
-import type { Category, Student } from '@/lib/types';
+import type { Category, Student, LibraryItem, LibraryItemInput } from '@/lib/types';
 
 export type LibrarySortKey = 'title' | 'author' | 'shelf' | 'status' | 'barcode' | 'checkedOut';
 export type LibraryStatusFilter = 'all' | 'available' | 'checked_out' | 'overdue';
@@ -157,9 +156,10 @@ export function LibraryManagementPanel({
         return;
       }
       setLibraryStickersToPrint(items, { format, schoolId: resolvedSchoolId });
+      const opt = getLibraryLabelOption(format);
       toast({
         title: 'Printing labels',
-        description: `${items.length} label(s) — ${format === 'sticker' ? 'standard sticker' : format === 'spine' ? 'spine label' : 'pocket label'}.`,
+        description: `${items.length} label(s) — ${opt.shortName} (${opt.dimensions}).`,
       });
     },
     [setLibraryStickersToPrint, toast, resolvedSchoolId],
@@ -478,13 +478,16 @@ export function LibraryManagementPanel({
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Select value={labelFormat} onValueChange={(v) => setLabelFormat(v as LibraryLabelFormat)}>
-                    <SelectTrigger className="w-[130px] rounded-xl h-9 bg-background text-xs font-bold border-primary/25">
+                    <SelectTrigger className="w-[180px] rounded-xl h-9 bg-background text-xs font-bold border-primary/25">
                       <SelectValue placeholder="Label format" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      <SelectItem value="sticker">Sticker Label</SelectItem>
-                      <SelectItem value="spine">Spine Label</SelectItem>
-                      <SelectItem value="pocket">Pocket Label</SelectItem>
+                      {LIBRARY_LABEL_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          <span className="font-semibold text-xs">{opt.shortName}</span>
+                          <span className="text-[10px] text-muted-foreground ml-1.5 font-mono">({opt.dimensions})</span>
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
 
@@ -717,6 +720,7 @@ export function LibraryManagementPanel({
                   schoolId={schoolId}
                   categories={categories}
                   getStudentName={getStudentName}
+                  students={students}
                 />
               </div>
             ) : null}

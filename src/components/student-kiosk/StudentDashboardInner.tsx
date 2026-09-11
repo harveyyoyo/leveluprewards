@@ -59,6 +59,7 @@ import {
   computeDaysOverdue,
   getLibraryPolicyFromSettings,
   isLibraryStudentKioskCheckoutEnabled,
+  resolveStudentMaxCheckouts,
 } from '@/lib/library/libraryPolicy';
 import { listStudentLibraryBooksRead } from '@/lib/library/libraryStudentHistory';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
@@ -993,7 +994,7 @@ export function StudentDashboardInner({
               : '';
           toast({
             title: 'Library — Checked out',
-            description: `"${result.item.name}" is on your account.${dueHint} Scan again to return.`,
+            description: `"${result.item.name}" is on your account.${dueHint} Tap the book under My library books to return it.`,
           });
           setCouponCode('');
           return;
@@ -1006,6 +1007,11 @@ export function StudentDashboardInner({
               result.pointsMessage ||
               `Thank you for returning "${result.item.name}".`,
           });
+          setCouponCode('');
+          return;
+        }
+        if (result.action === 'already_done') {
+          toast({ title: 'Already checked out', description: 'This book is already on your account. Tap it under My library books to return it.' });
           setCouponCode('');
           return;
         }
@@ -1031,6 +1037,9 @@ export function StudentDashboardInner({
         }
       } catch (e) {
         console.error('Library scan error:', e);
+        toast({ variant: 'destructive', title: 'Could not process scan', description: 'Please try again or ask library staff for help.' });
+        setCouponCode('');
+        return;
       }
     }
 
@@ -1620,7 +1629,7 @@ export function StudentDashboardInner({
         themed={!!effectiveTheme}
         topAlert={overdueLibraryBooks.length > 0}
         kioskCheckoutEnabled
-        maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
+        maxCheckouts={resolveStudentMaxCheckouts(student, libraryPolicy.maxCheckoutsPerStudent)}
         libraryPolicy={libraryPolicy}
         libraryPoints={student.libraryPoints}
         libraryFineBalance={student.libraryFineBalance}

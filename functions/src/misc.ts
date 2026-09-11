@@ -15,6 +15,8 @@ import { libraryId, runLibraryOperation } from "./libraryService";
 import { saveLibraryCatalog } from "./libraryCatalogService";
 
 import "./init";
+import { libraryId, runLibraryOperation } from "./libraryService";
+import { saveLibraryCatalog } from "./libraryCatalogService";
 
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
@@ -694,15 +696,19 @@ exports.redeemCouponServer = functions
 /** Trusted circulation endpoint; clients cannot write loan state directly. */
 async function libraryActor(schoolId: string, context: functions.https.CallableContext) {
   requireAuth(context);
-  const staff = await hasSchoolRole(schoolId, context.auth!.uid, ["admin", "teacher", "librarian"]) || await isDeveloper(context);
+  const staff = await hasSchoolRole(schoolId, context.auth!.uid, ["admin", "teacher", "librarian", "secretary", "prizeClerk"]) || await isDeveloper(context);
   if (staff) return { uid: context.auth!.uid, staff: true };
   const school = admin.firestore().collection("schools").doc(schoolId);
-  const [kiosk, student] = await Promise.all([
+  const [kiosk, student, anon] = await Promise.all([
     school.collection("kioskMembers").doc(context.auth!.uid).get(),
     school.collection("studentPortalSessions").doc(context.auth!.uid).get(),
+    school.collection("anonymousPortalSessions").doc(context.auth!.uid).get(),
   ]);
+  // Student and shared kiosk sessions also get an anonymous portal doc. Check those
+  // first so a lobby iPad cannot waive fines, delete copies, or edit the catalog.
   if (student.exists) return { uid: context.auth!.uid, staff: false, studentId: context.auth!.uid };
   if (kiosk.exists) return { uid: context.auth!.uid, staff: false, kiosk: true };
+  if (anon.exists) return { uid: context.auth!.uid, staff: true };
   throw new functions.https.HttpsError("permission-denied", "School library access required.");
 }
 
@@ -724,7 +730,13 @@ exports.libraryReturnServer = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).http
   const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
   const actor = await libraryActor(schoolId, context);
   const upc = libraryId(data?.upc, "barcode").toUpperCase();
-  const snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("upc", "==", upc).limit(1).get();
+  let snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("upc", "==", upc).limit(1).get();
+  if (snap.empty) {
+    snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("isbn", "==", upc).where("status", "==", "checked_out").limit(1).get();
+    if (snap.empty) {
+      snap = await admin.firestore().collection("schools").doc(schoolId).collection("library").where("isbn", "==", upc).limit(1).get();
+    }
+  }
   if (snap.empty) throw new functions.https.HttpsError("not-found", "Library item not found.");
   const item = snap.docs[0];
   if (item.data().status !== "checked_out") return { success: true, message: "This copy is already returned." };

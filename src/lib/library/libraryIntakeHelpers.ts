@@ -63,6 +63,21 @@ export async function fetchCatalogHitByIsbn(isbnDigits: string): Promise<IsbnLoo
   }
 }
 
+/** Fetch online book catalog suggestions by title query. */
+export async function fetchCatalogHitsByTitle(title: string): Promise<LibraryCatalogHit[]> {
+  const trimmed = title.trim();
+  if (trimmed.length < 2) return [];
+  try {
+    const res = await fetch(`/api/library/lookup-title?title=${encodeURIComponent(trimmed)}`);
+    if (!res.ok) return [];
+    const json = (await res.json()) as { hits?: LibraryCatalogHit[] };
+    return json.hits ?? [];
+  } catch {
+    return [];
+  }
+}
+
+
 /** Whether checkout uses a school-generated LIB sticker vs the book's own barcode. */
 export function usesLibCheckoutSticker(upc: string): boolean {
   return isSchoolLibraryBarcode(normalizeLibraryUpc(upc));

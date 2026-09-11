@@ -618,7 +618,8 @@ export default function Header() {
         {/* Left: Branding */}
         <div className="z-10 flex min-w-0 shrink-0 items-center justify-self-start gap-1 sm:gap-4">
           <div className={cn("items-center gap-1 sm:gap-4", schoolId ? "hidden sm:flex" : "flex")}>
-            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 pl-0.5 group" data-home-button="true">
+            <div className="flex items-center gap-1 sm:gap-4 pl-0.5">
+            <Link href={logoLink} className="flex items-center gap-1 sm:gap-4 group" data-home-button="true">
             {appLogoUrl ? (
               <span className={cn(
                 "inline-flex h-10 w-auto max-w-[200px] shrink-0 items-center justify-center transition-all duration-300",
@@ -656,7 +657,8 @@ export default function Header() {
               </Link>
               {paidProductsNav}
             </div>
-        </div>
+            </div>
+          </div>
         </div>
 
         {/* Center: school name — in document flow so multi-line names expand the header */}
