@@ -86,7 +86,7 @@ export function useLibraryLocations(schoolId: string | null | undefined) {
       }
       await setDoc(doc(firestore, 'schools', schoolId, 'libraries', id), { archived: true }, { merge: true });
     },
-    [firestore, locations, schoolId],
+    [firestore, schoolId],
   );
 
   const restoreLocation = useCallback(

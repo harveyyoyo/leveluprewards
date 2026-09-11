@@ -380,7 +380,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel, activeLibrary.id, libraryNames],
+    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel, activeLibrary.id, activeLibrary.name, libraryNames],
   );
 
   // Quick Return for Drop Box mode (no student card swipe needed)
