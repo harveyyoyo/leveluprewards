@@ -10,6 +10,7 @@ import {
   CLASS_AWARDS_LIVE_LAUNCH_LABEL,
   CLASS_AWARDS_STUDENT_LAUNCH_LABEL,
 } from '@/lib/classroom/classroomTabSections';
+import { pickClassroomActiveClass } from '@/lib/classroom/classroomActiveClass';
 import { Button } from '@/components/ui/button';
 import type { Class } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -32,10 +33,7 @@ export function ClassroomLaunchMonitorButton({
 
   const openMonitorDisplay = useCallback(() => {
     if (!classes.length) return;
-    const saved =
-      typeof window !== 'undefined' ? localStorage.getItem('defaultClassId')?.trim() : '';
-    const classId =
-      saved && classes.some((c) => c.id === saved) ? saved : (classes[0]?.id ?? '');
+    const classId = pickClassroomActiveClass(classes);
     if (!classId) return;
     openClassroomFullscreenTab({
       schoolId,

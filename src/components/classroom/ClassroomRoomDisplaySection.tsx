@@ -1,7 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ExternalLink, Monitor } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
 import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
@@ -35,6 +36,10 @@ type ClassroomRoomDisplaySectionProps = {
   scope: string;
   classes: Class[];
   students: Student[];
+  /** `tv` puts the student screen first; settings tucks underneath. */
+  layout?: 'settings' | 'tv';
+  classId?: string;
+  onClassIdChange?: (classId: string) => void;
 };
 
 export function ClassroomRoomDisplaySection({
@@ -42,8 +47,21 @@ export function ClassroomRoomDisplaySection({
   scope,
   classes,
   students,
+  layout = 'settings',
+  classId: classIdProp,
+  onClassIdChange,
 }: ClassroomRoomDisplaySectionProps) {
-  const [classId, setClassId] = useState(() => classes[0]?.id ?? '');
+  const [classId, setClassIdState] = useState(() => classIdProp || classes[0]?.id || '');
+  const setClassId = (next: string) => {
+    setClassIdState(next);
+    onClassIdChange?.(next);
+  };
+
+  useEffect(() => {
+    if (classIdProp && classIdProp !== classId) {
+      setClassIdState(classIdProp);
+    }
+  }, [classIdProp, classId]);
   const [prefsVersion, setPrefsVersion] = useState(0);
   const firestore = useFirestore();
   const { teacherDocId } = useAppContext();
@@ -93,6 +111,144 @@ export function ClassroomRoomDisplaySection({
     );
   }
 
+  const classPicker = (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div className="min-w-[12rem] flex-1 space-y-1">
+        <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Class
+        </Label>
+        <Select value={effectiveClassId} onValueChange={setClassId}>
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="Choose class" />
+          </SelectTrigger>
+          <SelectContent>
+            {classes.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {layout === 'settings' ? (
+        <p className="text-xs text-muted-foreground sm:max-w-md sm:pb-2">
+          Display URL:{' '}
+          <span className="font-mono text-foreground">
+            /{schoolId}/classroom-screen?classId={effectiveClassId || '…'}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+
+  const settingsForm = (
+    <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+        What the room sees
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="room-tab-title" className="text-xs font-semibold">
+            Headline
+          </Label>
+          <Input
+            id="room-tab-title"
+            key={`title-${effectiveClassId}-${prefs.title}`}
+            defaultValue={prefs.title}
+            onBlur={(e) => update({ title: e.target.value })}
+            className="h-9 rounded-lg"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label htmlFor="room-tab-message" className="text-xs font-semibold">
+            Daily message
+          </Label>
+          <Input
+            id="room-tab-message"
+            key={`message-${effectiveClassId}-${prefs.message}`}
+            defaultValue={prefs.message}
+            onBlur={(e) => update({ message: e.target.value })}
+            className="h-9 rounded-lg"
+          />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <Label className="text-xs font-semibold">Style</Label>
+          <Select
+            key={`design-${effectiveClassId}-${prefs.design}`}
+            defaultValue={normalizeClassroomDesign(prefs.design)}
+            onValueChange={(v) => update({ design: v as ClassroomScreenPrefs['design'] })}
+          >
+            <SelectTrigger className="h-9 rounded-lg">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CLASSROOM_DESIGNS.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {(Object.keys(CLASSROOM_SCREEN_MODULE_LABELS) as ClassroomScreenModule[]).map((key) => (
+          <label
+            key={key}
+            className="flex cursor-pointer items-start gap-2 rounded-lg border bg-background p-2"
+          >
+            <Checkbox
+              defaultChecked={prefs.modules[key]}
+              onCheckedChange={(v) => toggleModule(key, v === true)}
+              className="mt-0.5"
+            />
+            <span className="text-xs">
+              <span className="font-semibold">{CLASSROOM_SCREEN_MODULE_LABELS[key].label}</span>
+              <span className="block text-muted-foreground">
+                {CLASSROOM_SCREEN_MODULE_LABELS[key].description}
+              </span>
+            </span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  const preview = (
+    <div
+      className={cn(
+        'overflow-hidden rounded-xl border shadow-inner',
+        layout === 'tv' && 'rounded-3xl border-white/15 shadow-2xl shadow-black/40',
+      )}
+    >
+      <ClassroomRoomDisplayView
+        key={`${effectiveClassId}-${prefsVersion}`}
+        schoolId={schoolId}
+        scope={scope}
+        classId={effectiveClassId}
+        classLabel={classLabel}
+        students={classStudents}
+        embedded
+        className={layout === 'tv' ? 'min-h-[min(72vh,760px)]' : 'min-h-[min(52vh,480px)]'}
+      />
+    </div>
+  );
+
+  if (layout === 'tv') {
+    return (
+      <div className="space-y-4">
+        {classPicker}
+        {preview}
+        <details className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+          <summary className="cursor-pointer text-sm font-bold text-white">
+            Tune this screen
+          </summary>
+          <div className="classroom-realm-paper mt-4 rounded-xl p-1">{settingsForm}</div>
+        </details>
+      </div>
+    );
+  }
+
   return (
     <ClassroomSectionFrame
       title="Room display"
@@ -114,116 +270,10 @@ export function ClassroomRoomDisplaySection({
       }
     >
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-[12rem] flex-1 space-y-1">
-            <Label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              Class
-            </Label>
-            <Select value={effectiveClassId} onValueChange={setClassId}>
-              <SelectTrigger className="h-10 rounded-xl">
-                <SelectValue placeholder="Choose class" />
-              </SelectTrigger>
-              <SelectContent>
-                {classes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <p className="text-xs text-muted-foreground sm:max-w-md sm:pb-2">
-            Display URL:{' '}
-            <span className="font-mono text-foreground">
-              /{schoolId}/classroom-screen?classId={effectiveClassId || '…'}
-            </span>
-          </p>
-        </div>
-
+        {classPicker}
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-          <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
-            <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
-              What the room sees
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="room-tab-title" className="text-xs font-semibold">
-                  Headline
-                </Label>
-                <Input
-                  id="room-tab-title"
-                  key={`title-${effectiveClassId}-${prefs.title}`}
-                  defaultValue={prefs.title}
-                  onBlur={(e) => update({ title: e.target.value })}
-                  className="h-9 rounded-lg"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label htmlFor="room-tab-message" className="text-xs font-semibold">
-                  Daily message
-                </Label>
-                <Input
-                  id="room-tab-message"
-                  key={`message-${effectiveClassId}-${prefs.message}`}
-                  defaultValue={prefs.message}
-                  onBlur={(e) => update({ message: e.target.value })}
-                  className="h-9 rounded-lg"
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label className="text-xs font-semibold">Style</Label>
-                <Select
-                  key={`design-${effectiveClassId}-${prefs.design}`}
-                  defaultValue={normalizeClassroomDesign(prefs.design)}
-                  onValueChange={(v) => update({ design: v as ClassroomScreenPrefs['design'] })}
-                >
-                  <SelectTrigger className="h-9 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CLASSROOM_DESIGNS.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {(Object.keys(CLASSROOM_SCREEN_MODULE_LABELS) as ClassroomScreenModule[]).map((key) => (
-                <label
-                  key={key}
-                  className="flex cursor-pointer items-start gap-2 rounded-lg border bg-background p-2"
-                >
-                  <Checkbox
-                    defaultChecked={prefs.modules[key]}
-                    onCheckedChange={(v) => toggleModule(key, v === true)}
-                    className="mt-0.5"
-                  />
-                  <span className="text-xs">
-                    <span className="font-semibold">{CLASSROOM_SCREEN_MODULE_LABELS[key].label}</span>
-                    <span className="block text-muted-foreground">
-                      {CLASSROOM_SCREEN_MODULE_LABELS[key].description}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="overflow-hidden rounded-xl border shadow-inner">
-            <ClassroomRoomDisplayView
-              key={`${effectiveClassId}-${prefsVersion}`}
-              schoolId={schoolId}
-              scope={scope}
-              classId={effectiveClassId}
-              classLabel={classLabel}
-              students={classStudents}
-              embedded
-              className="min-h-[min(52vh,480px)]"
-            />
-          </div>
+          {settingsForm}
+          {preview}
         </div>
       </div>
     </ClassroomSectionFrame>
