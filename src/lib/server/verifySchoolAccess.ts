@@ -2,7 +2,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
-import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
+import { schoolPasscodeConfigured, verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 const APP_CONFIG_GLOBAL = 'global';
 
@@ -159,7 +159,14 @@ export async function verifySchoolAccessServer(
       },
     ))
   ) {
-    if (!legacyExpected) {
+    // Hashed secrets live in schools/{id}/secrets; plaintext fields are deleted after migrate.
+    const configured = await schoolPasscodeConfigured(
+      db,
+      schoolId,
+      PASSCODE_SECRET_IDS.schoolAccess,
+      legacyExpected,
+    );
+    if (!configured) {
       throw new VerifySchoolAccessError(
         'failed-precondition',
         'This school has no access passcode configured. An administrator must set one before sign-in is possible.',

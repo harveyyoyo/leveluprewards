@@ -445,7 +445,13 @@ exports.verifySchoolPasscode = functions
         { kind: "school", fields: ["adminPasscode", "passcode"] },
       );
       if (!verified) {
-        if (!legacyExpected) {
+        // Hashed secrets live in schools/{id}/secrets; plaintext fields are deleted after migrate.
+        const configured = await schoolPasscodeConfigured(
+          schoolId,
+          PASSCODE_SECRET_IDS.admin,
+          legacyExpected,
+        );
+        if (!configured) {
           throw new functions.https.HttpsError(
             "failed-precondition",
             "This school has no admin passcode configured. An administrator must set one before login is possible."
@@ -503,7 +509,13 @@ exports.verifySchoolAccessPasscode = functions
       { kind: "school", fields: ["schoolAccessPasscode", "passcode"] },
     );
     if (!verified) {
-      if (!legacyExpected) {
+      // Hashed secrets live in schools/{id}/secrets; plaintext fields are deleted after migrate.
+      const configured = await schoolPasscodeConfigured(
+        schoolId,
+        PASSCODE_SECRET_IDS.schoolAccess,
+        legacyExpected,
+      );
+      if (!configured) {
         throw new functions.https.HttpsError(
           "failed-precondition",
           "This school has no access passcode configured. An administrator must set one before sign-in is possible."

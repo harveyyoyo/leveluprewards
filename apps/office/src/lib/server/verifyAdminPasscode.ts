@@ -2,7 +2,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
-import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
+import { schoolPasscodeConfigured, verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 export class VerifyAdminPasscodeError extends Error {
   constructor(
@@ -93,7 +93,14 @@ export async function verifyAdminPasscodeServer(
         { kind: 'school', fields: ['adminPasscode', 'passcode'] },
       ))
     ) {
-      if (!legacyExpected) {
+      // Hashed secrets live in schools/{id}/secrets; plaintext fields are deleted after migrate.
+      const configured = await schoolPasscodeConfigured(
+        db,
+        schoolId,
+        PASSCODE_SECRET_IDS.admin,
+        legacyExpected,
+      );
+      if (!configured) {
         throw new VerifyAdminPasscodeError(
           'failed-precondition',
           'This school has no admin passcode configured. An administrator must set one before login is possible.',
