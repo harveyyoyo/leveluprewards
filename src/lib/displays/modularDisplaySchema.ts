@@ -61,7 +61,7 @@ export const DISPLAY_MODULE_CATALOG: readonly DisplayModuleMeta[] = [
     key: 'podium',
     label: 'Hall of Fame Podium',
     shortLabel: 'Podium',
-    description: 'Gold, silver, and bronze stands with crowns and avatars for top leaders.',
+    description: 'One, two, or three podium places for the selected student rankings.',
     category: 'hall-of-fame',
     icon: Crown,
   },
@@ -77,7 +77,7 @@ export const DISPLAY_MODULE_CATALOG: readonly DisplayModuleMeta[] = [
     key: 'classStandings',
     label: 'Class Standings',
     shortLabel: 'Classes',
-    description: 'Classroom rankings and featured class spotlight of the day.',
+    description: 'Class totals using your selected categories and point period.',
     category: 'hall-of-fame',
     icon: Users,
   },
@@ -85,15 +85,15 @@ export const DISPLAY_MODULE_CATALOG: readonly DisplayModuleMeta[] = [
     key: 'houseStandings',
     label: 'House Standings',
     shortLabel: 'Houses',
-    description: 'House system points, progress meters, and team rankings.',
+    description: 'House rankings from student totals for your selected scope and points.',
     category: 'hall-of-fame',
     icon: Star,
   },
   {
     key: 'schoolGoal',
-    label: 'School-Wide Goal',
+    label: 'Class Milestone',
     shortLabel: 'School Goal',
-    description: 'Progress bar and celebration target for the school-wide milestone.',
+    description: 'An active class goal with a lifetime points target (without a date range).',
     category: 'hall-of-fame',
     icon: Target,
   },
@@ -101,7 +101,7 @@ export const DISPLAY_MODULE_CATALOG: readonly DisplayModuleMeta[] = [
   // Smart Screen & Daily Info
   {
     key: 'clockDate',
-    label: 'Clock & Date Hero',
+    label: 'Clock & Date',
     shortLabel: 'Clock',
     description: 'High-visibility digital time, day of week, and full date.',
     category: 'smart-screen',
@@ -117,7 +117,7 @@ export const DISPLAY_MODULE_CATALOG: readonly DisplayModuleMeta[] = [
   },
   {
     key: 'schoolStats',
-    label: 'School Daily Stats',
+    label: 'School Totals',
     shortLabel: 'Stats',
     description: 'Quick totals for enrolled students, points awarded, and prizes available.',
     category: 'smart-screen',
@@ -481,6 +481,19 @@ export interface ModularScreenConfig {
   orientation: ScreenOrientation;
   layout: ScreenLayoutMode;
   enabledModules: DisplayModuleKey[];
+  /** Total students to show, including podium winners; older screens default to 15. */
+  studentLimit?: number;
+  /** Empty class id means the entire school. */
+  classId?: string;
+  categoryIds?: string[];
+  pointBasis?: 'lifetime' | 'balance' | 'day' | 'week' | 'month' | 'semester' | 'year';
+  podiumSize?: 1 | 2 | 3;
+  leaderboardColumns?: 1 | 2 | 3;
+  presentation?: 'fit' | 'scroll';
+  gridColumns?: 0 | 1 | 2 | 3 | 4;
+  itemsPerCard?: number;
+  modulesPerPage?: number;
+  pageSeconds?: number;
   heroModule?: DisplayModuleKey;
   customTitle?: string;
   customMessage?: string;
@@ -501,6 +514,9 @@ export const READY_MADE_PRESET_SCREENS: Record<string, ModularScreenConfig> = {
     orientation: 'landscape',
     layout: 'mirror',
     autoScroll: true,
+    podiumSize: 3,
+    studentLimit: 15,
+    leaderboardColumns: 2,
     enabledModules: [
       'podium',
       'studentLeaders',
@@ -524,6 +540,8 @@ export const READY_MADE_PRESET_SCREENS: Record<string, ModularScreenConfig> = {
     theme: 'daylight',
     orientation: 'landscape',
     layout: 'dashboard',
+    studentLimit: 5,
+    presentation: 'fit',
     enabledModules: [
       'clockDate',
       'weather',
@@ -550,6 +568,7 @@ export const READY_MADE_PRESET_SCREENS: Record<string, ModularScreenConfig> = {
     theme: 'studio',
     orientation: 'landscape',
     layout: 'grid',
+    presentation: 'fit',
     enabledModules: [
       'clockDate',
       'celebrationPosts',

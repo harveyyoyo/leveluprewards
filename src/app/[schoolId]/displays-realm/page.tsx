@@ -1,40 +1,29 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  ArrowUpRight,
   Check,
-  CheckCircle2,
-  Copy,
-  Crown,
-  Heart,
-  Layers,
   LayoutGrid,
-  Lock,
-  Megaphone,
   Monitor,
-  MonitorPlay,
   Palette,
   Pause,
   Play,
   Plus,
-  RotateCcw,
-  Scroll,
+  Save,
+  Search,
+  Settings2,
   Smartphone,
-  Sliders,
-  Sparkles,
   Trash2,
   Trophy,
   Tv,
-  Wand2,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
+  X,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -42,1342 +31,917 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { useSettings } from '@/components/providers/SettingsProvider';
-import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
-import { schoolPortalHref } from '@/lib/officePublicUrl';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog";
+import { useSettings } from "@/components/providers/SettingsProvider";
+import { displaysFeatureEnabled } from "@/lib/displays/displayRoutes";
+import { schoolPortalHref } from "@/lib/officePublicUrl";
+import { useToast } from "@/hooks/use-toast";
 import {
   CURATED_MIX_RECIPES,
-  DARK_THEMES,
   DISPLAY_MODULE_CATALOG,
   DISPLAY_PRESET_CATALOG,
-  LIGHT_THEMES,
+  MODULAR_THEMES,
   READY_MADE_PRESET_SCREENS,
-  buildDefaultScreenConfig,
-  type CuratedMixRecipe,
   type DisplayModuleKey,
   type ModularScreenConfig,
-  type ModularThemeId,
-  type PresetKey,
-  type ScreenOrientation,
-} from '@/lib/displays/modularDisplaySchema';
-import { useDisplaysLiveFeed } from '@/hooks/useDisplaysLiveFeed';
-import { ModularDisplayView } from '@/components/displays/modular/ModularDisplayView';
+} from "@/lib/displays/modularDisplaySchema";
+import { useDisplaysLiveFeed } from "@/hooks/useDisplaysLiveFeed";
+import { ModularDisplayView } from "@/components/displays/modular/ModularDisplayView";
+import { DisplayCanvasPreview } from "@/components/displays/DisplayCanvasPreview";
+import { DisplayTvPairModal } from "@/components/displays/DisplayTvPairModal";
 
-type WorkbenchTab = 'presets' | 'modules' | 'themes' | 'layout';
+import {
+  DisplayLeaderboardSettings,
+  DisplayLayoutSettings,
+  validDisplayNumbers,
+} from "@/components/displays/DisplayConfiguration";
+
+type EditorTab = "screen" | "content" | "points" | "style";
+type PendingAction =
+  { type: "select"; id: string } | { type: "new" } | { type: "leave" };
+const EDITOR_TABS = [
+  { id: "screen" as const, label: "Screen", icon: Settings2 },
+  { id: "content" as const, label: "Content", icon: LayoutGrid },
+  { id: "points" as const, label: "Points", icon: Trophy },
+  { id: "style" as const, label: "Style", icon: Palette },
+];
+const isTemplateId = (id: string) =>
+  Object.prototype.hasOwnProperty.call(READY_MADE_PRESET_SCREENS, id);
 
 export default function DisplaysRealmPage() {
-  const params = useParams();
-  const schoolId = String(params.schoolId || '');
+  const { schoolId: schoolParam } = useParams();
+  const schoolId = String(schoolParam || "");
+  const router = useRouter();
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
-
-  // Consolidated live feed data for preview & screens
   const liveFeed = useDisplaysLiveFeed(schoolId);
+  const [selectedId, setSelectedId] = useState("hall-of-fame");
+  const [draft, setDraft] = useState<ModularScreenConfig | null>(null);
+  const [tab, setTab] = useState<EditorTab>("screen");
+  const [search, setSearch] = useState("");
+  const [tone, setTone] = useState<"all" | "dark" | "light">("all");
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [showTv, setShowTv] = useState(false);
+  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+  const [showControls, setShowControls] = useState(true);
 
-  // Active screen state
-  const [activeScreenId, setActiveScreenId] = useState<string>('hall-of-fame');
-  const [workbenchTab, setWorkbenchTab] = useState<WorkbenchTab>('presets');
-  const [themeToneTab, setThemeToneTab] = useState<'dark' | 'light'>('dark');
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newScreenName, setNewScreenName] = useState('');
-  const [newScreenPreset, setNewScreenPreset] = useState<PresetKey>('hall-of-fame');
-  const [copiedLink, setCopiedLink] = useState(false);
-
-  // Resolved list of all available screens (3 ready-made + custom screens stored in settings)
-  const allScreens = useMemo(() => {
-    const list: ModularScreenConfig[] = [];
-    const savedScreens = settings.modularDisplayScreens || {};
-
-    // 1. Ready-Made Presets (ALWAYS pristine factory presets, strictly read-only)
-    for (const key of ['hall-of-fame', 'smart-screen', 'bulletin-board'] as const) {
-      list.push(READY_MADE_PRESET_SCREENS[key]);
-    }
-
-    // 2. Custom User-Created Screens
-    for (const [id, screen] of Object.entries(savedScreens)) {
-      if (!['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(id) && screen) {
-        list.push(screen);
-      }
-    }
-
-    return list;
-  }, [settings.modularDisplayScreens]);
-
-  // Clean up any legacy override keys in settings for the 3 factory presets
-  useEffect(() => {
-    const saved = settings.modularDisplayScreens;
-    if (saved && (saved['hall-of-fame'] || saved['smart-screen'] || saved['bulletin-board'])) {
-      const cleaned = { ...saved };
-      delete cleaned['hall-of-fame'];
-      delete cleaned['smart-screen'];
-      delete cleaned['bulletin-board'];
-      updateSettings({ modularDisplayScreens: cleaned });
-    }
-  }, [settings.modularDisplayScreens, updateSettings]);
-
-  const activeScreen: ModularScreenConfig = useMemo(() => {
-    return allScreens.find((s) => s.id === activeScreenId) || allScreens[0];
-  }, [allScreens, activeScreenId]);
-
-  // Read-only guard: default system presets cannot be directly modified
-  const isScreenReadOnly = Boolean(
-    activeScreen.isReadyMade || ['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(activeScreen.id),
+  const savedScreens = settings.modularDisplayScreens || {};
+  const selected =
+    savedScreens[selectedId] ||
+    READY_MADE_PRESET_SCREENS[selectedId] ||
+    READY_MADE_PRESET_SCREENS["hall-of-fame"];
+  const screen = draft || selected;
+  const dirty = draft !== null;
+  const isTemplate = isTemplateId(screen.id);
+  const customScreens = Object.values(savedScreens).filter(
+    (item) => item && !isTemplateId(item.id),
   );
+  const validDraft =
+    screen.name.trim().length > 0 &&
+    screen.enabledModules.length > 0 &&
+    validDisplayNumbers(screen);
+  const fitMode =
+    screen.presetKey !== "hall-of-fame" &&
+    screen.id !== "hall-of-fame" &&
+    screen.presentation !== "scroll";
+  const autoScroll =
+    !fitMode && (screen.autoScroll ?? screen.presetKey === "hall-of-fame");
 
-  // Separate ready-made presets from custom user screens for the top navigation bar
-  const readyMadeScreens = useMemo(() => {
-    return allScreens.filter(
-      (s) => s.isReadyMade || ['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(s.id),
-    );
-  }, [allScreens]);
-
-  const customScreens = useMemo(() => {
-    return allScreens.filter(
-      (s) => !s.isReadyMade && !['hall-of-fame', 'smart-screen', 'bulletin-board'].includes(s.id),
-    );
-  }, [allScreens]);
-
-  // Duplicate a preset or active screen into a new customizable copy
-  const handleDuplicatePreset = (source?: ModularScreenConfig) => {
-    const target = source || activeScreen;
-    const newId = `screen-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const newScreen: ModularScreenConfig = {
-      ...target,
-      id: newId,
-      name: `${target.name} (Custom)`,
-      isReadyMade: false,
-      presetKey: (target.presetKey || target.id) as PresetKey,
-      updatedAt: Date.now(),
-      createdAt: Date.now(),
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
     };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
-    const nextSaved = {
-      ...(settings.modularDisplayScreens || {}),
-      [newId]: newScreen,
-    };
-
-    updateSettings({ modularDisplayScreens: nextSaved });
-    setActiveScreenId(newId);
-
-    toast({
-      title: 'Preset Duplicated!',
-      description: `Created "${newScreen.name}". You can now customize all modules, theme, and settings.`,
-    });
-  };
-
-  // Update active screen configuration
-  const handleUpdateActiveScreen = (updates: Partial<ModularScreenConfig>) => {
-    if (isScreenReadOnly) {
-      toast({
-        title: 'Default Preset is Read-Only',
-        description: 'Default presets cannot be modified directly. Click "Duplicate to Customize" to create your own editable copy.',
-      });
+  const edit = (updates: Partial<ModularScreenConfig>) => {
+    if (
+      Object.entries(updates).every(
+        ([key, value]) =>
+          JSON.stringify(screen[key as keyof ModularScreenConfig]) ===
+          JSON.stringify(value),
+      )
+    )
       return;
-    }
-
-    const nextScreen: ModularScreenConfig = {
-      ...activeScreen,
+    setDraft((previous) => ({
+      ...(previous || selected),
+      ...(!previous && isTemplateId(selected.id)
+        ? { name: `${selected.name} — custom` }
+        : {}),
       ...updates,
+    }));
+  };
+
+  const save = () => {
+    if (!draft || !validDraft) return;
+    const now = Date.now();
+    const next: ModularScreenConfig = {
+      ...draft,
+      id: isTemplateId(draft.id) ? `screen-${crypto.randomUUID()}` : draft.id,
+      name: draft.name.trim(),
+      isReadyMade: false,
+      createdAt: isTemplateId(draft.id) ? now : draft.createdAt,
+      updatedAt: now,
+    };
+    updateSettings({
+      modularDisplayScreens: { ...savedScreens, [next.id]: next },
+    });
+    setSelectedId(next.id);
+    setDraft(null);
+    toast({
+      title: "Screen saved",
+      description: `“${next.name}” is ready to open. Changes sync through your school settings.`,
+    });
+  };
+
+  const perform = (action: PendingAction) => {
+    setDraft(null);
+    setPending(null);
+    setPreviewPlaying(false);
+    if (action.type === "select") setSelectedId(action.id);
+    if (action.type === "new") setShowTemplates(true);
+    if (action.type === "leave") router.push(schoolPortalHref(schoolId));
+  };
+  const request = (action: PendingAction) => {
+    if (dirty) setPending(action);
+    else perform(action);
+  };
+
+  const startFrom = (template: ModularScreenConfig) => {
+    setSelectedId(template.presetKey || template.id);
+    setDraft({
+      ...template,
+      id: `screen-${crypto.randomUUID()}`,
+      name: `${template.name} — custom`,
+      isReadyMade: false,
+      createdAt: Date.now(),
       updatedAt: Date.now(),
-    };
-
-    const nextSaved = {
-      ...(settings.modularDisplayScreens || {}),
-      [nextScreen.id]: nextScreen,
-    };
-
-    updateSettings({ modularDisplayScreens: nextSaved });
+    });
+    setTab("screen");
+    setShowTemplates(false);
+    setShowControls(true);
   };
 
-  // Apply an entire preset layout, modules, and theme to the active screen
-  const handleApplyPresetToActive = (presetKey: PresetKey) => {
-    if (isScreenReadOnly) {
-      toast({
-        title: 'Default Preset is Read-Only',
-        description: 'Cannot modify a default preset. Create or duplicate a custom screen first.',
-      });
-      return;
-    }
-
-    const preset = READY_MADE_PRESET_SCREENS[presetKey];
-    if (!preset) return;
-
-    handleUpdateActiveScreen({
-      theme: preset.theme,
-      layout: preset.layout,
-      enabledModules: [...preset.enabledModules],
-      heroModule: preset.heroModule,
-      customTitle: preset.customTitle,
-      customMessage: preset.customMessage,
-      autoScroll: preset.autoScroll,
+  const toggleModule = (key: DisplayModuleKey, checked: boolean) => {
+    edit({
+      enabledModules: checked
+        ? [...screen.enabledModules, key]
+        : screen.enabledModules.filter((value) => value !== key),
     });
+  };
 
+  const remove = () => {
+    const next = { ...savedScreens };
+    delete next[selected.id];
+    updateSettings({ modularDisplayScreens: next });
+    setDraft(null);
+    setSelectedId("hall-of-fame");
+    setConfirmDelete(false);
     toast({
-      title: 'Preset Applied',
-      description: `Loaded "${preset.name}" modules & styling into "${activeScreen.name}".`,
-    });
-  };
-
-  // Apply a curated recipe mix to the active screen
-  const handleApplyRecipe = (recipe: CuratedMixRecipe) => {
-    if (isScreenReadOnly) {
-      toast({
-        title: 'Default Preset is Read-Only',
-        description: 'Duplicate this preset into a custom screen to apply recipes.',
-      });
-      return;
-    }
-
-    handleUpdateActiveScreen({
-      theme: recipe.theme,
-      enabledModules: [...recipe.modules],
-      heroModule: recipe.modules[0],
-    });
-
-    toast({
-      title: 'Mix Applied!',
-      description: `Loaded "${recipe.name}" with ${recipe.modules.length} modules into "${activeScreen.name}".`,
-    });
-  };
-
-  // Toggle a single module on or off
-  const handleToggleModule = (key: DisplayModuleKey, checked: boolean) => {
-    if (isScreenReadOnly) {
-      toast({
-        title: 'Default Preset is Read-Only',
-        description: 'Duplicate this preset to customize its modules.',
-      });
-      return;
-    }
-
-    const current = new Set(activeScreen.enabledModules || []);
-    if (checked) {
-      current.add(key);
-    } else {
-      current.delete(key);
-    }
-    handleUpdateActiveScreen({ enabledModules: Array.from(current) });
-  };
-
-  // Create a new screen
-  const handleCreateScreen = () => {
-    const trimmed = newScreenName.trim();
-    if (!trimmed) {
-      toast({
-        variant: 'destructive',
-        title: 'Screen name required',
-        description: 'Please give this display screen a name (e.g. "Main Entrance TV").',
-      });
-      return;
-    }
-
-    const slug = trimmed
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 36);
-    const newId = `${slug || 'screen'}-${Date.now().toString(36)}`;
-
-    const newScreen = buildDefaultScreenConfig(newId, trimmed, newScreenPreset);
-
-    const nextSaved = {
-      ...(settings.modularDisplayScreens || {}),
-      [newId]: newScreen,
-    };
-
-    updateSettings({ modularDisplayScreens: nextSaved });
-    setActiveScreenId(newId);
-    setNewScreenName('');
-    setIsCreateModalOpen(false);
-
-    toast({
-      title: 'Screen Created',
-      description: `"${trimmed}" is ready. Customize its modules and layout below.`,
-    });
-  };
-
-  // Delete a custom screen
-  const handleDeleteScreen = (id: string, name: string) => {
-    const nextSaved = { ...(settings.modularDisplayScreens || {}) };
-    delete nextSaved[id];
-
-    updateSettings({ modularDisplayScreens: nextSaved });
-    if (activeScreenId === id) {
-      setActiveScreenId('hall-of-fame');
-    }
-
-    toast({
-      title: 'Screen Removed',
-      description: `Deleted "${name}".`,
-    });
-  };
-
-  // Reset a ready-made preset back to default
-  const handleResetPreset = (presetKey: string) => {
-    const nextSaved = { ...(settings.modularDisplayScreens || {}) };
-    delete nextSaved[presetKey];
-    updateSettings({ modularDisplayScreens: nextSaved });
-    const targetName = READY_MADE_PRESET_SCREENS[presetKey]?.name || presetKey;
-    toast({
-      title: 'Preset Reset',
-      description: `Restored default factory configuration for "${targetName}".`,
-    });
-  };
-
-  // Fullscreen URL for live TV
-  const fullScreenHref = useMemo(() => {
-    return `/${schoolId}/displays?screen=${activeScreen.id}&fullscreen=1`;
-  }, [activeScreen.id, schoolId]);
-
-  const handleCopyLink = () => {
-    const fullUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}${fullScreenHref}`
-        : fullScreenHref;
-
-    navigator.clipboard.writeText(fullUrl).then(() => {
-      setCopiedLink(true);
-      setTimeout(() => setCopiedLink(false), 2200);
-      toast({
-        title: 'TV Link Copied',
-        description: 'Paste this link into your hallway TV browser or digital signage app.',
-      });
+      title: "Screen deleted",
+      description: "Choose another screen for any TV that used this link.",
     });
   };
 
   if (!displaysFeatureEnabled(settings)) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background p-8">
-        <div className="max-w-md space-y-4 text-center">
-          <MonitorPlay className="mx-auto h-12 w-12 text-muted-foreground" aria-hidden />
-          <h2 className="text-xl font-black tracking-tight">Displays is off for this school</h2>
-          <p className="text-sm text-muted-foreground">
-            Turn on Displays in Settings to build and manage your hallway displays.
-          </p>
-          <Link
-            href={schoolPortalHref(schoolId)}
-            className="inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to LevelUp
-          </Link>
-        </div>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 p-8 text-center">
+        <Monitor className="h-10 w-10 text-muted-foreground" />
+        <h1 className="text-2xl font-bold">Displays is off for this school</h1>
+        <p className="text-muted-foreground">
+          Turn on Displays in school settings to get started.
+        </p>
+        <Button onClick={() => router.push(schoolPortalHref(schoolId))}>
+          Back to LevelUp
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh w-screen flex-col overflow-hidden bg-background text-foreground select-none">
-      {/* TOP STUDIO APP BAR */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border/80 px-4 bg-card/70 backdrop-blur-md z-20">
-        {/* Left: LevelUp back link & Studio Branding */}
-        <div className="flex items-center gap-3 min-w-0">
-          <Link
-            href={schoolPortalHref(schoolId)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border/80 px-3 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            LevelUp
-          </Link>
-          <div className="flex items-center gap-2 min-w-0">
-            <MonitorPlay className="h-5 w-5 shrink-0 text-primary" />
-            <span className="truncate text-sm font-black tracking-tight sm:text-base">Displays Studio</span>
-          </div>
-        </div>
-
-        {/* Center: Screen Selector Tabs */}
-        {/* Center: Screen Selector Tabs (Presets Segment + Custom Screens) */}
-        <div className="flex items-center gap-2.5 overflow-x-auto py-1 px-2 scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {/* Segment 1: Ready-Made Presets */}
-          <div className="flex items-center gap-1.5 rounded-2xl bg-muted/60 p-1 border border-border/80 shadow-inner">
-            <span className="hidden xl:flex items-center gap-1 px-2 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-              <Layers className="h-3 w-3" />
-              Presets
-            </span>
-            {DISPLAY_PRESET_CATALOG.map((preset) => {
-              const isActive = activeScreenId === preset.key;
-              const Icon = preset.icon;
-              return (
-                <button
-                  key={preset.key}
-                  type="button"
-                  onClick={() => setActiveScreenId(preset.key)}
-                  className={cn(
-                    'flex shrink-0 items-center gap-2 rounded-xl px-3 py-1.5 text-xs sm:text-sm font-black transition-all',
-                    isActive
-                      ? preset.accentColor === 'amber'
-                        ? 'bg-amber-500 text-amber-950 shadow-md ring-2 ring-amber-400/50'
-                        : preset.accentColor === 'sky'
-                        ? 'bg-sky-500 text-sky-950 shadow-md ring-2 ring-sky-400/50'
-                        : 'bg-purple-600 text-white shadow-md ring-2 ring-purple-400/50'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-background/80',
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">{preset.name}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Subtle separator */}
-          <div className="h-6 w-px bg-border/80 shrink-0" />
-
-          {/* Segment 2: Custom Screens & New Screen Button */}
-          <div className="flex items-center gap-2">
-            {customScreens.map((screen) => {
-              const isActive = screen.id === activeScreenId;
-              return (
-                <button
-                  key={screen.id}
-                  type="button"
-                  onClick={() => setActiveScreenId(screen.id)}
-                  className={cn(
-                    'flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-xs sm:text-sm font-bold transition-all shadow-sm',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary/40'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50',
-                  )}
-                >
-                  <Tv className="h-4 w-4 shrink-0" />
-                  <span className="whitespace-nowrap">{screen.name}</span>
-                </button>
-              );
-            })}
-
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-background text-foreground">
+      <header className="shrink-0 border-b bg-card px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCreateModalOpen(true)}
-              className="h-9 shrink-0 gap-1.5 rounded-xl border-dashed border-primary/50 bg-primary/5 px-3 text-xs sm:text-sm font-bold text-primary hover:bg-primary/10 shadow-sm"
+              variant="ghost"
+              size="icon"
+              onClick={() => request({ type: "leave" })}
+              aria-label="Back to LevelUp"
             >
-              <Plus className="h-4 w-4" />
-              <span>New Screen</span>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="flex items-center gap-2 text-lg font-bold">
+                <Monitor className="h-5 w-5 text-primary" />
+                Displays Studio
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                Choose a screen. Make it yours. Show it on a TV.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {dirty && (
+              <Button
+                variant="ghost"
+                onClick={() => setPending({ type: "select", id: selectedId })}
+              >
+                Discard changes
+              </Button>
+            )}
+            <Button
+              onClick={save}
+              disabled={!dirty || !validDraft}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Save screen
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setShowTv(true)}
+              disabled={dirty}
+              title={
+                dirty
+                  ? "Save your changes before opening this screen on a TV"
+                  : undefined
+              }
+              className="gap-2"
+            >
+              <Tv className="h-4 w-4" />
+              Show on TV
             </Button>
           </div>
         </div>
-
-        {/* Right: Quick Actions */}
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCopyLink}
-            className="h-9 gap-2 rounded-xl text-xs sm:text-sm font-bold shadow-sm"
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <label htmlFor="display-selector" className="text-sm font-medium">
+            Screen
+          </label>
+          <select
+            id="display-selector"
+            value={selectedId}
+            onChange={(event) =>
+              request({ type: "select", id: event.target.value })
+            }
+            className="h-10 w-full max-w-xs rounded-lg border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {copiedLink ? (
-              <>
-                <Check className="h-4 w-4 text-emerald-500" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                Copy TV Link
-              </>
+            <optgroup label="Ready to use">
+              {DISPLAY_PRESET_CATALOG.map((preset) => (
+                <option key={preset.key} value={preset.key}>
+                  {preset.name}
+                </option>
+              ))}
+            </optgroup>
+            {customScreens.length > 0 && (
+              <optgroup label="Your saved screens">
+                {customScreens.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </optgroup>
             )}
+          </select>
+          <Button
+            variant="outline"
+            onClick={() => request({ type: "new" })}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            New screen
           </Button>
-
-          <Button asChild size="sm" className="h-9 gap-2 rounded-xl text-xs sm:text-sm font-black shadow-md">
-            <Link href={fullScreenHref} target="_blank" rel="noopener noreferrer">
-              Launch Fullscreen
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          <p
+            role="status"
+            className={cn(
+              "text-xs",
+              dirty
+                ? "font-semibold text-amber-700 dark:text-amber-300"
+                : "text-muted-foreground",
+            )}
+          >
+            {dirty
+              ? "Unsaved changes · Preview only"
+              : isTemplate
+                ? "Ready to use · Edits create your own copy"
+                : "Saved screen · Edit and save to update your TV"}
+          </p>
         </div>
       </header>
 
-      {/* MAIN WORKBENCH: LEFT CONTROLS + RIGHT TV CANVAS */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* LEFT STUDIO DRAWER */}
-        <aside className="flex w-[380px] sm:w-[440px] shrink-0 flex-col border-r border-border/80 bg-card/50 backdrop-blur-sm overflow-hidden">
-          {/* Drawer Navigation Tabs: Presets, Modules, Themes, Settings */}
-          <div className="grid grid-cols-4 border-b border-border/80 bg-muted/30 p-2 gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() => setWorkbenchTab('presets')}
-              className={cn(
-                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
-                workbenchTab === 'presets'
-                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+        {showControls && (
+          <aside
+            aria-label="Screen configuration"
+            className="flex max-h-[55dvh] w-full shrink-0 flex-col border-b bg-card md:max-h-none md:w-[340px] md:border-b-0 md:border-r xl:w-[380px]"
+          >
+            <div
+              role="tablist"
+              aria-label="Configure screen"
+              className="grid shrink-0 grid-cols-4 gap-1 border-b p-2"
             >
-              <Layers className="h-3.5 w-3.5 shrink-0" />
-              <span>Presets</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkbenchTab('modules')}
-              className={cn(
-                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
-                workbenchTab === 'modules'
-                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <LayoutGrid className="h-3.5 w-3.5 shrink-0" />
-              <span>Modules</span>
-              <span className="rounded-full bg-primary/15 px-1 py-0.2 text-[9px] font-black text-primary">
-                {activeScreen.enabledModules?.length || 0}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkbenchTab('themes')}
-              className={cn(
-                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
-                workbenchTab === 'themes'
-                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Palette className="h-3.5 w-3.5 shrink-0" />
-              <span>Themes</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setWorkbenchTab('layout')}
-              className={cn(
-                'flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 rounded-xl py-2 px-1 text-[11px] sm:text-xs font-black transition-all',
-                workbenchTab === 'layout'
-                  ? 'bg-background text-foreground shadow-md ring-1 ring-border'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              <Sliders className="h-3.5 w-3.5 shrink-0" />
-              <span>Settings</span>
-            </button>
-          </div>
-
-          {/* Read-Only Preset Warning & Quick Duplicate Banner */}
-          {isScreenReadOnly && (
-            <div className="mx-3 mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-950 dark:text-amber-200 shrink-0">
-              <div className="flex items-center gap-2 font-black text-xs mb-1">
-                <Lock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span>Default Factory Preset (Read-Only)</span>
-              </div>
-              <p className="text-[11px] font-medium text-amber-900/80 dark:text-amber-300/80 leading-relaxed mb-2.5">
-                Default presets are locked to protect official displays. Duplicate this screen to customize its modules, themes, or school titles!
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => handleDuplicatePreset(activeScreen)}
-                className="w-full h-8 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs gap-1.5 shadow-sm"
-              >
-                <Copy className="h-3.5 w-3.5" />
-                Duplicate to Customize
-              </Button>
+              {EDITOR_TABS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  id={`tab-${id}`}
+                  role="tab"
+                  aria-selected={tab === id}
+                  aria-controls="configuration-panel"
+                  tabIndex={tab === id ? 0 : -1}
+                  onClick={() => setTab(id)}
+                  onKeyDown={(event) => {
+                    if (
+                      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                        event.key,
+                      )
+                    )
+                      return;
+                    event.preventDefault();
+                    const index = EDITOR_TABS.findIndex(
+                      (item) => item.id === id,
+                    );
+                    const next =
+                      event.key === "Home"
+                        ? 0
+                        : event.key === "End"
+                          ? EDITOR_TABS.length - 1
+                          : (index +
+                              (event.key === "ArrowRight"
+                                ? 1
+                                : EDITOR_TABS.length - 1)) %
+                            EDITOR_TABS.length;
+                    setTab(EDITOR_TABS[next].id);
+                    document
+                      .getElementById(`tab-${EDITOR_TABS[next].id}`)
+                      ?.focus();
+                  }}
+                  className={cn(
+                    "flex items-center justify-center gap-1 rounded-lg px-2 py-3 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    tab === id
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </button>
+              ))}
             </div>
-          )}
-
-          {/* Drawer Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {/* TAB 0: PRESETS SHOWCASE & MIXER */}
-            {workbenchTab === 'presets' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-base font-black tracking-tight flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-primary" />
-                    Ready-Made Screen Presets
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                    3 official display layouts. Open any preset directly, or duplicate it to create your own custom variation.
-                  </p>
-                </div>
-
-                {/* Active Screen Banner / Identity */}
-                <div className="rounded-2xl border-2 border-border/80 bg-muted/40 p-3.5 space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                      Active Screen
-                    </span>
-                    {isScreenReadOnly ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">
-                        <Lock className="h-3 w-3" />
-                        Default Preset (Read-Only)
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5 text-[10px] font-black text-primary uppercase">
-                        Custom Screen
-                      </span>
-                    )}
+            <div
+              id="configuration-panel"
+              role="tabpanel"
+              aria-labelledby={`tab-${tab}`}
+              className="min-h-0 flex-1 overflow-y-auto p-5"
+            >
+              {tab === "screen" && (
+                <div className="space-y-6">
+                  <div>
+                    <h2 className="text-base font-bold">Screen details</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Changes appear in the preview. Save when you’re ready.
+                    </p>
                   </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-black text-foreground truncate">{activeScreen.name}</p>
-                    <span className="text-xs font-semibold text-muted-foreground shrink-0">
-                      {activeScreen.enabledModules?.length || 0} modules active
-                    </span>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="screen-name"
+                      className="text-sm font-semibold"
+                    >
+                      Screen name
+                    </label>
+                    <Input
+                      id="screen-name"
+                      value={screen.name}
+                      onChange={(event) => edit({ name: event.target.value })}
+                      placeholder="e.g. Front entrance TV"
+                      maxLength={80}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      For finding this screen in your list.
+                    </p>
                   </div>
-                  {isScreenReadOnly && (
-                    <div className="pt-2 border-t border-border/60">
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="screen-title"
+                      className="text-sm font-semibold"
+                    >
+                      Title on the TV
+                    </label>
+                    <Input
+                      id="screen-title"
+                      value={screen.customTitle || ""}
+                      onChange={(event) =>
+                        edit({ customTitle: event.target.value })
+                      }
+                      placeholder={liveFeed.schoolMeta?.name || "School name"}
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="screen-message"
+                      className="text-sm font-semibold"
+                    >
+                      Message on the TV
+                    </label>
+                    <textarea
+                      id="screen-message"
+                      value={screen.customMessage || ""}
+                      onChange={(event) =>
+                        edit({ customMessage: event.target.value })
+                      }
+                      placeholder="Learn, level up, and lead today!"
+                      maxLength={200}
+                      rows={3}
+                      className="flex w-full resize-y rounded-lg border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <fieldset className="space-y-2">
+                    <legend className="text-sm font-semibold">
+                      TV orientation
+                    </legend>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["landscape", "portrait"] as const).map(
+                        (orientation) => (
+                          <button
+                            key={orientation}
+                            type="button"
+                            aria-pressed={screen.orientation === orientation}
+                            onClick={() => edit({ orientation })}
+                            className={cn(
+                              "flex items-center justify-center gap-2 rounded-xl border p-3 text-sm focus-visible:ring-2 focus-visible:ring-ring",
+                              screen.orientation === orientation
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "hover:bg-muted",
+                            )}
+                          >
+                            {orientation === "landscape" ? (
+                              <Monitor className="h-5 w-5" />
+                            ) : (
+                              <Smartphone className="h-5 w-5" />
+                            )}
+                            {orientation === "landscape"
+                              ? "Wide · 16:9"
+                              : "Tall · 9:16"}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </fieldset>
+                  <DisplayLayoutSettings screen={screen} onChange={edit} />
+                  {!fitMode && (
+                    <div className="flex items-start justify-between gap-4 rounded-xl border p-4">
+                      <div>
+                        <label
+                          htmlFor="screen-scroll"
+                          className="text-sm font-semibold"
+                        >
+                          Scroll automatically
+                        </label>
+                        <p
+                          id="scroll-help"
+                          className="mt-1 text-xs leading-relaxed text-muted-foreground"
+                        >
+                          Move through content that doesn’t fit on the TV.
+                          Useful for long leaderboards.
+                        </p>
+                      </div>
+                      <Switch
+                        id="screen-scroll"
+                        aria-describedby="scroll-help"
+                        checked={autoScroll}
+                        onCheckedChange={(checked) =>
+                          edit({ autoScroll: checked })
+                        }
+                      />
+                    </div>
+                  )}
+                  {!isTemplateId(selected.id) && (
+                    <div className="border-t pt-4">
                       <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => handleDuplicatePreset(activeScreen)}
-                        className="w-full h-7 text-xs font-black gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                        variant="ghost"
+                        className="gap-2 text-destructive"
+                        onClick={() => setConfirmDelete(true)}
                       >
-                        <Copy className="h-3.5 w-3.5" />
-                        Duplicate to Customize
+                        <Trash2 className="h-4 w-4" />
+                        Delete saved screen
                       </Button>
                     </div>
                   )}
                 </div>
+              )}
 
-                {/* The 3 Ready-Made Preset Cards */}
-                <div className="space-y-3.5">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                      Available Presets (3)
-                    </h4>
+              {tab === "content" && (
+                <div className="space-y-5">
+                  <div>
+                    <h2 className="text-base font-bold">
+                      What’s on your screen
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Turn items on or off. {screen.enabledModules.length}{" "}
+                      selected.
+                    </p>
                   </div>
-
-                  {DISPLAY_PRESET_CATALOG.map((preset) => {
-                    const Icon = preset.icon;
-                    const isViewing = activeScreen.id === preset.key;
-
-                    return (
-                      <div
-                        key={preset.key}
-                        className={cn(
-                          'rounded-2xl border-2 p-4 transition-all shadow-sm space-y-3',
-                          preset.accentColor === 'amber'
-                            ? 'border-amber-500/30 bg-amber-500/5 hover:border-amber-500/60'
-                            : preset.accentColor === 'sky'
-                            ? 'border-sky-500/30 bg-sky-500/5 hover:border-sky-500/60'
-                            : 'border-purple-500/30 bg-purple-500/5 hover:border-purple-500/60',
-                          isViewing && 'ring-2 ring-primary/40 shadow-md',
-                        )}
-                      >
-                        {/* Header */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      aria-label="Find content"
+                      placeholder="Find content…"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  {screen.enabledModules.length === 0 && (
+                    <p
+                      role="status"
+                      className="rounded-lg bg-amber-500/10 p-3 text-sm"
+                    >
+                      Choose at least one item before saving.
+                    </p>
+                  )}
+                  {(["hall-of-fame", "smart-screen", "bulletin"] as const).map(
+                    (category) => {
+                      const modules = DISPLAY_MODULE_CATALOG.filter(
+                        (item) =>
+                          item.category === category &&
+                          (item.key !== "hebrewCalendar" ||
+                            liveFeed.isJewishOrthodox) &&
+                          `${item.label} ${item.description}`
+                            .toLowerCase()
+                            .includes(search.trim().toLowerCase()),
+                      );
+                      if (!modules.length) return null;
+                      return (
+                        <fieldset key={category} className="space-y-2">
+                          <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {category === "hall-of-fame"
+                              ? "Recognition"
+                              : category === "smart-screen"
+                                ? "Daily information"
+                                : "News & rewards"}
+                          </legend>
+                          {modules.map((item) => (
                             <div
+                              key={item.key}
                               className={cn(
-                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-md',
-                                preset.accentColor === 'amber'
-                                  ? 'bg-amber-500 text-amber-950 shadow-amber-500/20'
-                                  : preset.accentColor === 'sky'
-                                  ? 'bg-sky-500 text-sky-950 shadow-sky-500/20'
-                                  : 'bg-purple-600 text-white shadow-purple-600/20',
+                                "flex items-start gap-3 rounded-xl border p-3",
+                                screen.enabledModules.includes(item.key) &&
+                                  "border-primary/30 bg-primary/5",
                               )}
                             >
-                              <Icon className="h-5 w-5" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-black leading-tight text-foreground truncate">
-                                  {preset.name}
-                                </h4>
-                                {isViewing && (
-                                  <span className="rounded-md bg-primary px-1.5 py-0.2 text-[10px] font-black text-primary-foreground uppercase">
-                                    Current
-                                  </span>
+                              <item.icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                              <div className="min-w-0 flex-1">
+                                <label
+                                  htmlFor={`module-${item.key}`}
+                                  className="cursor-pointer text-sm font-semibold"
+                                >
+                                  {item.label}
+                                </label>
+                                <p
+                                  id={`help-${item.key}`}
+                                  className="mt-1 text-xs leading-relaxed text-muted-foreground"
+                                >
+                                  {item.description}
+                                </p>
+                              </div>
+                              <Switch
+                                id={`module-${item.key}`}
+                                aria-describedby={`help-${item.key}`}
+                                checked={screen.enabledModules.includes(
+                                  item.key,
                                 )}
-                              </div>
-                              <p className="text-xs font-bold text-muted-foreground truncate">
-                                {preset.tagline}
-                              </p>
+                                onCheckedChange={(checked) =>
+                                  toggleModule(item.key, checked)
+                                }
+                              />
                             </div>
-                          </div>
-
-                          <span className="shrink-0 rounded-full border border-border/80 bg-background/80 px-2 py-0.5 text-[10px] font-black text-foreground">
-                            {preset.defaultModulesCount} Modules
-                          </span>
-                        </div>
-
-                        {/* Description */}
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {preset.description}
-                        </p>
-
-                        {/* Module chips preview */}
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {preset.highlightModules.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-lg border border-border/70 bg-background/80 px-2 py-0.5 text-[10px] font-bold text-foreground/90 shadow-2xs"
-                            >
-                              {tag}
-                            </span>
                           ))}
-                          <span className="rounded-lg bg-muted/60 px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground">
-                            +{preset.defaultModulesCount - preset.highlightModules.length} more
-                          </span>
-                        </div>
-
-                        {/* Action buttons */}
-                        <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                          {isViewing ? (
-                            <div className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-black text-primary">
-                              <CheckCircle2 className="h-4 w-4" />
-                              Active Screen
-                            </div>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="default"
-                              size="sm"
-                              onClick={() => setActiveScreenId(preset.key)}
-                              className="flex-1 h-8 rounded-xl text-xs font-black"
-                            >
-                              Open Screen
-                            </Button>
-                          )}
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDuplicatePreset(READY_MADE_PRESET_SCREENS[preset.key])}
-                            className="flex-1 h-8 rounded-xl text-xs font-bold shadow-2xs"
-                            title={`Create a customizable duplicate copy of ${preset.name}`}
-                          >
-                            <Copy className="h-3.5 w-3.5 mr-1 text-primary" />
-                            Duplicate
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Instant Curated Remix Recipes */}
-                <div className="space-y-3.5 pt-2">
-                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                      Instant Preset Mixes
-                    </h4>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                      Need parts from multiple templates? 1-click recipes that combine them for "{activeScreen.name}".
-                    </p>
-                  </div>
-
-                  <div className="space-y-2.5">
-                    {CURATED_MIX_RECIPES.map((recipe) => {
-                      const Icon = recipe.icon;
-                      return (
-                        <div
-                          key={recipe.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card p-3 shadow-2xs hover:border-primary/40 transition-all"
-                        >
-                          <div className="flex items-start gap-2.5 min-w-0">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary mt-0.5">
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="text-xs font-black text-foreground truncate">{recipe.name}</p>
-                                <span className="rounded-md bg-muted px-1.5 py-0.2 text-[9px] font-black uppercase text-muted-foreground">
-                                  {recipe.badge}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-muted-foreground leading-tight line-clamp-1 mt-0.5">
-                                {recipe.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={isScreenReadOnly}
-                            onClick={() => handleApplyRecipe(recipe)}
-                            className="h-7 shrink-0 rounded-lg px-2.5 text-xs font-bold"
-                          >
-                            Apply
-                          </Button>
-                        </div>
+                        </fieldset>
                       );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 1: MODULES MIXER */}
-            {workbenchTab === 'modules' && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-base font-black tracking-tight">Mix & Match Modules</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                    Toggle any components across Hall of Fame, Smart Screen, and Bulletin for this screen.
-                  </p>
-                </div>
-
-                {/* Group 1: Hall of Fame */}
-                <div className="space-y-2.5">
-                  <div className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
-                    <Crown className="h-4 w-4 shrink-0 text-amber-500" />
-                    <span>Hall of Fame Leaderboards</span>
-                  </div>
-                  <div className="space-y-2">
-                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'hall-of-fame').map((mod) => {
-                      const Icon = mod.icon;
-                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
-                      return (
-                        <div
-                          key={mod.key}
-                          className={cn(
-                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
-                            isEnabled
-                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
-                          )}
-                        >
-                          <div className="flex items-start gap-3 min-w-0">
-                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
-                            <div className="min-w-0">
-                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
-                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            disabled={isScreenReadOnly}
-                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
-                            aria-label={mod.label}
-                            className="shrink-0"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Group 2: Clock & Daily Info */}
-                <div className="space-y-2.5">
-                  <div className="px-3 py-1.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-sky-700 dark:text-sky-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
-                    <Monitor className="h-4 w-4 shrink-0 text-sky-500" />
-                    <span>Smart Screen & Daily Info</span>
-                  </div>
-                  <div className="space-y-2">
-                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'smart-screen').map((mod) => {
-                      const Icon = mod.icon;
-                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
-                      return (
-                        <div
-                          key={mod.key}
-                          className={cn(
-                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
-                            isEnabled
-                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
-                          )}
-                        >
-                          <div className="flex items-start gap-3 min-w-0">
-                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
-                            <div className="min-w-0">
-                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
-                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            disabled={isScreenReadOnly}
-                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
-                            aria-label={mod.label}
-                            className="shrink-0"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Group 3: Bulletin & Rewards */}
-                <div className="space-y-2.5">
-                  <div className="px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-400 text-xs font-black uppercase tracking-wider flex items-center gap-2">
-                    <Tv className="h-4 w-4 shrink-0 text-purple-500" />
-                    <span>Bulletin Board & Rewards</span>
-                  </div>
-                  <div className="space-y-2">
-                    {DISPLAY_MODULE_CATALOG.filter((m) => m.category === 'bulletin').map((mod) => {
-                      const Icon = mod.icon;
-                      const isEnabled = (activeScreen.enabledModules || []).includes(mod.key);
-                      return (
-                        <div
-                          key={mod.key}
-                          className={cn(
-                            'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-3.5 transition-all shadow-sm',
-                            isEnabled
-                              ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                              : 'border-border/70 bg-background/60 opacity-80 hover:opacity-100',
-                          )}
-                        >
-                          <div className="flex items-start gap-3 min-w-0">
-                            <Icon className={cn('h-5 w-5 shrink-0 mt-0.5', isEnabled ? 'text-primary' : 'text-muted-foreground')} />
-                            <div className="min-w-0">
-                              <p className="text-sm font-black leading-snug text-foreground">{mod.label}</p>
-                              <p className="text-xs text-muted-foreground leading-normal mt-0.5 line-clamp-2">{mod.description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={isEnabled}
-                            disabled={isScreenReadOnly}
-                            onCheckedChange={(checked) => handleToggleModule(mod.key, checked)}
-                            aria-label={mod.label}
-                            className="shrink-0"
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: THEMES (DIVIDED BY DARK & LIGHT) */}
-            {workbenchTab === 'themes' && (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="text-base font-black tracking-tight">Select Theme</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 leading-relaxed">
-                    Themes are engineered for high contrast and readability on hallway TV monitors.
-                  </p>
-                </div>
-
-                {/* Dark vs Light Tone Selector */}
-                <div className="grid grid-cols-2 gap-2 rounded-2xl bg-muted/60 p-1.5 border border-border/80">
-                  <button
-                    type="button"
-                    onClick={() => setThemeToneTab('dark')}
-                    className={cn(
-                      'flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
-                      themeToneTab === 'dark'
-                        ? 'bg-slate-900 text-white shadow-md'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    🌙 Dark Themes ({DARK_THEMES.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setThemeToneTab('light')}
-                    className={cn(
-                      'flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs sm:text-sm font-black transition-all',
-                      themeToneTab === 'light'
-                        ? 'bg-white text-slate-950 shadow-md ring-1 ring-slate-300'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    ☀️ Light Themes ({LIGHT_THEMES.length})
-                  </button>
-                </div>
-
-                {/* Theme Cards Grid */}
-                <div className="grid grid-cols-1 gap-3">
-                  {(themeToneTab === 'dark' ? DARK_THEMES : LIGHT_THEMES).map((theme) => {
-                    const isSelected = activeScreen.theme === theme.id;
-                    return (
-                      <button
-                        key={theme.id}
-                        type="button"
-                        onClick={() => {
-                          if (isScreenReadOnly) {
-                            toast({
-                              title: 'Default Preset is Read-Only',
-                              description: 'Click "Duplicate to Customize" to create an editable copy with custom themes.',
-                            });
-                            return;
-                          }
-                          handleUpdateActiveScreen({ theme: theme.id as ModularThemeId });
-                        }}
-                        className={cn(
-                          'flex items-center justify-between gap-3.5 rounded-2xl border-2 p-4 text-left transition-all',
-                          isSelected
-                            ? 'border-primary ring-2 ring-primary/50 shadow-lg'
-                            : 'border-border/80 hover:border-primary/50 hover:shadow-md',
-                          isScreenReadOnly && 'cursor-not-allowed opacity-85',
-                        )}
-                        style={{ backgroundColor: theme.previewBg }}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="text-sm font-black leading-tight"
-                              style={{ color: theme.tone === 'dark' ? '#ffffff' : '#0f172a' }}
-                            >
-                              {theme.name}
-                            </span>
-                            {isSelected && (
-                              <span className="rounded-md bg-primary px-2 py-0.5 text-[10px] font-black text-primary-foreground uppercase shadow-sm">
-                                Active
-                              </span>
-                            )}
-                          </div>
-                          <p
-                            className="text-xs mt-1 leading-relaxed line-clamp-2"
-                            style={{ color: theme.tone === 'dark' ? '#cbd5e1' : '#334155' }}
-                          >
-                            {theme.description}
-                          </p>
-                        </div>
-
-                        {/* Swatch dots */}
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span
-                            className="h-5 w-5 rounded-full border-2 border-white/30 shadow-md"
-                            style={{ backgroundColor: theme.previewCard }}
-                          />
-                          <span
-                            className="h-5 w-5 rounded-full border-2 border-white/30 shadow-md"
-                            style={{ backgroundColor: theme.previewAccent }}
-                          />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: LAYOUT & SCREEN SETTINGS */}
-            {workbenchTab === 'layout' && (
-              <div className="space-y-5">
-                <div>
-                  <h3 className="text-sm font-black tracking-tight">Screen Settings</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Adjust screen orientation, titles, and layout options.
-                  </p>
-                </div>
-
-                {/* Screen Orientation */}
-                <div className="space-y-2">
-                  <label className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                    Monitor Orientation
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      disabled={isScreenReadOnly}
-                      onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
-                      className={cn(
-                        'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
-                        activeScreen.orientation === 'landscape'
-                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
-                          : 'border-border hover:border-primary/40 text-muted-foreground',
-                        isScreenReadOnly && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      <Monitor className="h-4 w-4" />
-                      Wide (16:9 Landscape)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isScreenReadOnly}
-                      onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
-                      className={cn(
-                        'flex items-center justify-center gap-2 rounded-xl border p-3 text-xs font-bold transition-all',
-                        activeScreen.orientation === 'portrait'
-                          ? 'border-primary bg-primary/10 text-primary ring-1 ring-primary/40'
-                          : 'border-border hover:border-primary/40 text-muted-foreground',
-                        isScreenReadOnly && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      <Smartphone className="h-4 w-4" />
-                      Tall (9:16 Portrait)
-                    </button>
-                  </div>
-                </div>
-
-                {/* Auto-Scroll Display Setting */}
-                <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-border/80 bg-muted/40 p-3.5">
-                  <div className="space-y-0.5 min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <Scroll className="h-4 w-4 text-primary shrink-0" />
-                      <label className="text-xs font-bold text-foreground">Auto-Scroll Display</label>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-tight">
-                      Continuously scroll student leaderboards, classes, and statistics on hallway TV monitors.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={Boolean(
-                      activeScreen.autoScroll ??
-                        (activeScreen.id === 'hall-of-fame' || activeScreen.presetKey === 'hall-of-fame'),
-                    )}
-                    disabled={isScreenReadOnly}
-                    onCheckedChange={(checked) => handleUpdateActiveScreen({ autoScroll: checked })}
-                    className="shrink-0"
-                  />
-                </div>
-
-                {/* Custom Screen Title & Message */}
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold">Screen Title</label>
-                    <Input
-                      value={activeScreen.customTitle || ''}
-                      disabled={isScreenReadOnly}
-                      onChange={(e) => handleUpdateActiveScreen({ customTitle: e.target.value })}
-                      placeholder="e.g. Hall of Fame, Main Lobby Screen"
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold">Subtitle / Banner Message</label>
-                    <Input
-                      value={activeScreen.customMessage || ''}
-                      disabled={isScreenReadOnly}
-                      onChange={(e) => handleUpdateActiveScreen({ customMessage: e.target.value })}
-                      placeholder="e.g. Learn, level up, and lead today!"
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Preset & Template Connection Card */}
-                <div className="rounded-2xl border-2 border-border/80 bg-muted/40 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                      Preset Template
-                    </span>
-                    {activeScreen.isReadyMade ? (
-                      <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase flex items-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        Factory Preset
-                      </span>
-                    ) : (
-                      <span className="rounded-full bg-primary/15 border border-primary/30 px-2.5 py-0.5 text-[10px] font-black text-primary uppercase">
-                        Custom Screen
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {activeScreen.isReadyMade
-                      ? 'This official factory preset is protected from edits to ensure standard hallway consistency. To change its modules, themes, or titles, duplicate it into an editable screen.'
-                      : `Created from "${activeScreen.presetKey || 'hall-of-fame'}" starter template.`}
-                  </p>
-
-                  {activeScreen.isReadyMade ? (
-                    <Button
-                      type="button"
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleDuplicatePreset(activeScreen)}
-                      className="w-full gap-2 rounded-xl text-xs font-black bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-                    >
-                      <Copy className="h-3.5 w-3.5" />
-                      Duplicate to Customize
-                    </Button>
-                  ) : (
-                    <div className="space-y-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleApplyPresetToActive(activeScreen.presetKey || 'hall-of-fame')}
-                        className="w-full gap-2 rounded-xl text-xs font-bold shadow-2xs"
-                      >
-                        <Wand2 className="h-3.5 w-3.5 text-primary" />
-                        Re-apply Starter Layout
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteScreen(activeScreen.id, activeScreen.name)}
-                        className="w-full gap-2 rounded-xl text-xs font-bold"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete This Screen
+                    },
+                  )}
+                  {!DISPLAY_MODULE_CATALOG.some(
+                    (item) =>
+                      (item.key !== "hebrewCalendar" ||
+                        liveFeed.isJewishOrthodox) &&
+                      `${item.label} ${item.description}`
+                        .toLowerCase()
+                        .includes(search.trim().toLowerCase()),
+                  ) && (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>No content matches “{search}”.</p>
+                      <Button variant="outline" onClick={() => setSearch("")}>
+                        Clear search
                       </Button>
                     </div>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        </aside>
+              )}
 
-        {/* RIGHT CANVAS: RESPONSIVE SCALED TV PREVIEW */}
-        <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-950/25 overflow-hidden relative">
-          {/* Canvas Floating Top Bar */}
-          <div className="absolute top-4 right-6 flex items-center gap-2 z-10 bg-background/80 backdrop-blur-md rounded-2xl border p-1.5 shadow-md">
-            {isScreenReadOnly ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-amber-700 dark:text-amber-300 bg-amber-500/10 rounded-xl border border-amber-500/30">
-                <Lock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Read-Only Preset</span>
-              </div>
-            ) : null}
+              {tab === "points" && (
+                <div className="space-y-4">
+                  <h2 className="text-base font-bold">
+                    Choose who and what to celebrate
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    These settings apply to the ranking and student cards you
+                    turn on in Content.
+                  </p>
+                  <DisplayLeaderboardSettings
+                    screen={screen}
+                    onChange={edit}
+                    classes={liveFeed.classes || []}
+                    categories={liveFeed.categories || []}
+                  />
+                </div>
+              )}
 
-            {isScreenReadOnly ? (
+              {tab === "style" && (
+                <div className="space-y-5">
+                  <div>
+                    <h2 className="text-base font-bold">Choose a look</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Try any theme in the preview before saving.
+                    </p>
+                  </div>
+                  <div
+                    role="group"
+                    aria-label="Theme brightness"
+                    className="flex gap-1 rounded-lg bg-muted p-1"
+                  >
+                    {(["all", "dark", "light"] as const).map((value) => (
+                      <button
+                        key={value}
+                        aria-pressed={tone === value}
+                        onClick={() => setTone(value)}
+                        className={cn(
+                          "flex-1 rounded-md px-3 py-2 text-sm capitalize focus-visible:ring-2 focus-visible:ring-ring",
+                          tone === value
+                            ? "bg-background font-semibold shadow-sm"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.values(MODULAR_THEMES)
+                      .filter((theme) => tone === "all" || theme.tone === tone)
+                      .map((theme) => (
+                        <button
+                          key={theme.id}
+                          aria-pressed={screen.theme === theme.id}
+                          onClick={() => edit({ theme: theme.id })}
+                          className={cn(
+                            "overflow-hidden rounded-xl border-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            screen.theme === theme.id
+                              ? "border-primary"
+                              : "border-border hover:border-primary/40",
+                          )}
+                        >
+                          <div
+                            className="space-y-2 p-3"
+                            style={{ background: theme.previewBg }}
+                          >
+                            <div
+                              className="h-2 w-1/2 rounded"
+                              style={{ background: theme.previewAccent }}
+                            />
+                            <div className="grid grid-cols-2 gap-2">
+                              <div
+                                className="h-8 rounded"
+                                style={{ background: theme.previewCard }}
+                              />
+                              <div
+                                className="h-8 rounded"
+                                style={{ background: theme.previewCard }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between gap-1 p-2.5 text-xs font-semibold">
+                            {theme.name}
+                            {screen.theme === theme.id && (
+                              <Check className="h-4 w-4 shrink-0 text-primary" />
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+
+        <main
+          aria-label="Display preview"
+          className="flex min-h-[420px] min-w-0 flex-1 flex-col gap-4 bg-slate-100 p-4 dark:bg-slate-950/40 md:min-h-0 xl:p-6"
+        >
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">
+                {dirty ? "Preview of your changes" : screen.name}
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {screen.orientation === "portrait"
+                  ? "Tall · 9:16"
+                  : "Wide · 16:9"}{" "}
+                · {screen.enabledModules.length} content items
+                {dirty ? " · Save to update your TV" : ""}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {autoScroll && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-pressed={previewPlaying}
+                  onClick={() => setPreviewPlaying(!previewPlaying)}
+                  className="gap-2"
+                >
+                  {previewPlaying ? (
+                    <Pause className="h-4 w-4" />
+                  ) : (
+                    <Play className="h-4 w-4" />
+                  )}
+                  {previewPlaying ? "Pause preview" : "Play preview"}
+                </Button>
+              )}
               <Button
-                type="button"
+                variant="outline"
                 size="sm"
-                onClick={() => handleDuplicatePreset(activeScreen)}
-                className="h-7 px-2.5 text-xs font-black gap-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+                onClick={() => setShowControls(!showControls)}
+                aria-expanded={showControls}
+                className="gap-2"
               >
-                <Copy className="h-3.5 w-3.5" />
-                Duplicate to Edit
+                {showControls ? (
+                  <X className="h-4 w-4" />
+                ) : (
+                  <Settings2 className="h-4 w-4" />
+                )}
+                {showControls ? "Hide controls" : "Edit screen"}
               </Button>
-            ) : null}
-
-            {(activeScreen.autoScroll ?? (activeScreen.id === 'hall-of-fame' || activeScreen.presetKey === 'hall-of-fame')) ? (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 rounded-xl border border-emerald-500/30">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>Auto-Scroll Active</span>
+            </div>
+          </div>
+          <DisplayCanvasPreview orientation={screen.orientation}>
+            {screen.enabledModules.length > 0 ? (
+              <ModularDisplayView
+                config={screen}
+                feed={liveFeed}
+                variant="preview"
+                autoScroll={autoScroll && previewPlaying}
+                onToggleAutoScroll={() => setPreviewPlaying((value) => !value)}
+                className="h-full w-full"
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-4 bg-slate-950 text-white">
+                <LayoutGrid className="h-12 w-12" />
+                <p className="text-3xl font-bold">Your screen starts here</p>
+                <p className="text-xl">
+                  Choose items in Content to fill your display.
+                </p>
               </div>
-            ) : null}
-
-            <div className="h-4 w-px bg-border mx-0.5" />
-
-            <button
-              type="button"
-              disabled={isScreenReadOnly}
-              onClick={() => handleUpdateActiveScreen({ orientation: 'landscape' })}
-              className={cn(
-                'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
-                activeScreen.orientation === 'landscape'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-                isScreenReadOnly && 'opacity-60 cursor-not-allowed',
-              )}
-            >
-              <Monitor className="h-3.5 w-3.5" />
-              Wide TV
-            </button>
-            <button
-              type="button"
-              disabled={isScreenReadOnly}
-              onClick={() => handleUpdateActiveScreen({ orientation: 'portrait' })}
-              className={cn(
-                'flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold transition-all',
-                activeScreen.orientation === 'portrait'
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-                isScreenReadOnly && 'opacity-60 cursor-not-allowed',
-              )}
-            >
-              <Smartphone className="h-3.5 w-3.5" />
-              Tall Kiosk
-            </button>
-          </div>
-
-          {/* Scaled TV Monitor Bezel */}
-          <div
-            className={cn(
-              'relative flex flex-col overflow-hidden rounded-[2.5rem] border-[12px] border-slate-900 bg-slate-950 shadow-2xl ring-1 ring-white/10 transition-all duration-300',
-              activeScreen.orientation === 'landscape'
-                ? 'w-full max-w-[1140px] aspect-[16/9]'
-                : 'h-full max-h-[760px] aspect-[9/16]',
             )}
-          >
-            <ModularDisplayView
-              config={activeScreen}
-              feed={liveFeed}
-              variant="preview"
-              className="h-full w-full"
-            />
-          </div>
+          </DisplayCanvasPreview>
+          <p className="shrink-0 text-center text-xs text-muted-foreground">
+            {liveFeed.isLoading
+              ? "Loading school data…"
+              : "School data updates automatically."}{" "}
+            Preview is scaled to fit this window.
+          </p>
         </main>
       </div>
 
-      {/* CREATE NEW SCREEN MODAL */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={showTemplates} onOpenChange={setShowTemplates}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-black tracking-tight">Create New Screen</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Add a custom hallway TV display. Choose a starter layout or start fresh.
+            <DialogTitle>Start with a screen</DialogTitle>
+            <DialogDescription>
+              Choose a starting point, then make it yours. Nothing changes on
+              your TVs until you save.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-3">
-            <div className="space-y-1.5">
-              <label htmlFor="screen-name" className="text-xs font-bold">
-                Screen Name
-              </label>
-              <Input
-                id="screen-name"
-                value={newScreenName}
-                onChange={(e) => setNewScreenName(e.target.value)}
-                placeholder="e.g. Front Entrance TV, Cafeteria Monitor, Gym Leaderboard"
-                className="h-10 text-sm"
-                autoFocus
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold">Starter Preset Template</label>
-              <div className="grid grid-cols-1 gap-2.5">
-                {DISPLAY_PRESET_CATALOG.map((preset) => {
-                  const isSelected = newScreenPreset === preset.key;
-                  const Icon = preset.icon;
-                  return (
-                    <button
-                      key={preset.key}
-                      type="button"
-                      onClick={() => setNewScreenPreset(preset.key)}
-                      className={cn(
-                        'flex items-center justify-between gap-3 rounded-2xl border-2 p-3 text-left transition-all',
-                        isSelected
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-md'
-                          : 'border-border/80 bg-background/60 hover:border-primary/40 hover:bg-muted/30',
-                      )}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div
-                          className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                            preset.accentColor === 'amber'
-                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                              : preset.accentColor === 'sky'
-                              ? 'bg-sky-500/15 text-sky-600 dark:text-sky-400'
-                              : 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-foreground">{preset.name}</span>
-                            <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded-md bg-muted text-muted-foreground">
-                              {preset.defaultModulesCount} modules
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-tight line-clamp-1 mt-0.5">
-                            {preset.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div
-                        className={cn(
-                          'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all',
-                          isSelected
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground/30',
-                        )}
-                      >
-                        {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+          <div className="space-y-3">
+            {DISPLAY_PRESET_CATALOG.map((preset) => (
+              <button
+                key={preset.key}
+                onClick={() => startFrom(READY_MADE_PRESET_SCREENS[preset.key])}
+                className="flex w-full items-start gap-4 rounded-xl border p-4 text-left hover:border-primary hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <preset.icon className="mt-1 h-6 w-6 shrink-0 text-primary" />
+                <div>
+                  <p className="font-semibold">{preset.name}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {preset.tagline}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {preset.highlightModules.join(" · ")}
+                  </p>
+                </div>
+                <Plus className="ml-auto mt-1 h-4 w-4 shrink-0" />
+              </button>
+            ))}
           </div>
+          <details className="rounded-xl border p-4">
+            <summary className="cursor-pointer text-sm font-semibold">
+              More starting combinations
+            </summary>
+            <div className="mt-3 space-y-2">
+              {CURATED_MIX_RECIPES.map((recipe) => (
+                <button
+                  key={recipe.id}
+                  onClick={() =>
+                    startFrom({
+                      ...READY_MADE_PRESET_SCREENS["smart-screen"],
+                      name: recipe.name,
+                      theme: recipe.theme,
+                      enabledModules: [...recipe.modules],
+                      heroModule: recipe.modules[0],
+                    })
+                  }
+                  className="w-full rounded-lg p-3 text-left hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <p className="text-sm font-semibold">{recipe.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {recipe.description}
+                  </p>
+                </button>
+              ))}
+            </div>
+          </details>
+        </DialogContent>
+      </Dialog>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-              Cancel
+      <Dialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Keep your changes?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes to “{screen.name || "Untitled screen"}”.
+              Save them before continuing, or discard this preview.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-wrap gap-2">
+            <Button variant="ghost" onClick={() => setPending(null)}>
+              Keep editing
             </Button>
-            <Button type="button" onClick={handleCreateScreen}>
-              Create Screen
+            <Button
+              variant="outline"
+              onClick={() => pending && perform(pending)}
+            >
+              Discard changes
+            </Button>
+            <Button
+              disabled={!validDraft}
+              onClick={() => {
+                if (pending) {
+                  save();
+                  perform(pending);
+                }
+              }}
+            >
+              Save and continue
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete “{selected.name}”?</DialogTitle>
+            <DialogDescription>
+              This removes the saved screen and any unsaved edits. TVs using its
+              link will need another screen. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={remove}>
+              Delete screen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <DisplayTvPairModal
+        isOpen={showTv}
+        onClose={() => setShowTv(false)}
+        schoolId={schoolId}
+        screenId={selected.id}
+        screenName={selected.name}
+      />
     </div>
   );
 }

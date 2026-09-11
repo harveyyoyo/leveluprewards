@@ -43,6 +43,15 @@ Display mode, themes, optional helper “?” tooltips, welcome tour, printing o
   - `Sci-Fi Synth` (futuristic synthesizer soundscapes)
   These custom sound definitions govern success, error, login, hover, and alert audio cues dynamically to elevate user engagement.
 
+## Displays Studio (hallway TVs)
+
+- Open **Displays → Open Displays** in the staff portal to use the standalone studio. Choose Hall of Fame, Smart Screen, Bulletin Board, or a saved custom screen. **New screen** offers starter templates and mixes.
+- **Screen** sets the name, TV title/message, orientation, and layout. **Content** switches cards on or off and can search the available cards. **Style** previews theme colors. Use **Hide controls** for a larger TV preview.
+- **Points** selects **Entire school** or a specific class, one or several point categories, and the point period. Lifetime earned includes points already spent; current balance is spendable points. Category breakdowns support lifetime, month, semester, and year; daily/weekly and balance rankings are available when using all categories. Semester counters use January–June or July–December; year counters use the calendar year.
+- **Students to show** accepts an exact whole number, including podium winners. **Podium places** supports 1, 2, or 3. Hall of Fame keeps the podium visible with the remaining students ranked underneath; ranking columns and automatic scrolling are configurable. Class and house student totals use the selected scope and points. The Class Milestone card shows an available active class goal with an unrestricted lifetime-points target.
+- Smart Screen and Bulletin Board default to **Fit to screen**. Choose content columns, cards per screen, rows per card, and seconds between pages. Extra cards and longer lists rotate without scrolling; fewer cards/rows improve readability. Scrolling remains an optional presentation mode.
+- Changes are drafts until **Save screen**. Editing a ready-made template creates a custom copy. Switching screens or leaving with changes prompts to save, discard, or keep editing. **Show on TV** becomes available after saving and provides the screen link and fullscreen instructions. A localhost link only works on the same computer.
+
 ## Coupons (print and redeem)
 
 - **Where to print:** **Admin → Coupons → Print coupons**, **Teacher → Coupons → Print coupons**, or a secretary coupon desk. Regular print jobs create one-time codes (each slip works once at the student kiosk).

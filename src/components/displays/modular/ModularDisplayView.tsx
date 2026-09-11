@@ -1,35 +1,36 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
-  Cake,
-  CalendarDays,
-  ChartNoAxesColumnIncreasing,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import {
   Clock,
   CloudSun,
   Crown,
-  Gift,
-  Heart,
-  Lightbulb,
-  Megaphone,
   Pause,
   Play,
   School,
-  Scroll,
-  Sparkles,
-  Star,
-  Target,
   Trophy,
-  Users,
-} from 'lucide-react';
-import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
-import type { DisplaysLiveFeed } from '@/hooks/useDisplaysLiveFeed';
+} from "lucide-react";
+import { cn, displayStudentNameOnSharedBoard } from "@/lib/utils";
+import type { DisplaysLiveFeed } from "@/hooks/useDisplaysLiveFeed";
 import {
-  MODULAR_THEMES,
+  DISPLAY_MODULE_CATALOG,
   resolveScreenTheme,
   type DisplayModuleKey,
   type ModularScreenConfig,
-} from '@/lib/displays/modularDisplaySchema';
+  type ModularThemeConfig,
+} from "@/lib/displays/modularDisplaySchema";
+import {
+  buildDisplayRanking,
+  positiveInteger,
+  type DisplayRankedStudent,
+} from "@/lib/displays/displayRanking";
 import {
   FOCUS_SKILLS,
   LEARNING_QUOTES,
@@ -38,13 +39,16 @@ import {
   dayIndex,
   formatSmartScreenDate,
   formatSmartScreenTime,
-  hourInTimeZone,
   safeTimeZone,
-} from '@/lib/smartScreen/smartScreenFormat';
-import { formatTodayHebrewDate, getUpcomingJewishHolidays } from '@/lib/hebrewCalendar';
+} from "@/lib/smartScreen/smartScreenFormat";
+import {
+  formatTodayHebrewDate,
+  getUpcomingJewishHolidays,
+} from "@/lib/hebrewCalendar";
+import { incentiveCategoriesForSurface } from "@/lib/incentives/incentiveSurfaces";
+import { DisplayFitGrid, FitCardContent, pageItems } from "./DisplayFitGrid";
 
-export type ModularDisplayVariant = 'fullscreen' | 'preview';
-
+export type ModularDisplayVariant = "fullscreen" | "preview";
 export interface ModularDisplayViewProps {
   config: ModularScreenConfig;
   feed: DisplaysLiveFeed;
@@ -55,669 +59,788 @@ export interface ModularDisplayViewProps {
   style?: CSSProperties;
 }
 
+function DisplayCard({
+  title,
+  children,
+  theme,
+  fit = false,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  theme: ModularThemeConfig;
+  fit?: boolean;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border p-4 shadow-lg",
+        theme.cardClass,
+        fit && "h-full",
+        className,
+      )}
+    >
+      <h3
+        className={cn(
+          "mb-3 shrink-0 truncate border-b border-current/15 pb-2 text-sm font-black uppercase tracking-wide",
+          theme.textClass,
+        )}
+      >
+        {title}
+      </h3>
+      {fit ? (
+        <FitCardContent>{children}</FitCardContent>
+      ) : (
+        <div className="min-w-0">{children}</div>
+      )}
+    </section>
+  );
+}
+
+function Podium({
+  rows,
+  theme,
+}: {
+  rows: DisplayRankedStudent[];
+  theme: ModularThemeConfig;
+}) {
+  const ordered =
+    rows.length >= 2 ? [rows[1], rows[0], ...rows.slice(2)] : rows;
+  if (!rows.length)
+    return (
+      <p className="p-4 text-center text-base">
+        No students match this selection yet.
+      </p>
+    );
+  return (
+    <div
+      className="flex items-end justify-center gap-6 px-4 pb-1 pt-2"
+      data-display-podium
+    >
+      {ordered.map(({ student, points, rank }) => (
+        <div
+          key={student.id}
+          className="flex min-w-0 max-w-[320px] flex-1 flex-col items-center text-center"
+          data-podium-place={rank}
+        >
+          {rank === 1 && <Crown className="mb-1 h-7 w-7 text-amber-400" />}
+          <span
+            className={cn(
+              "mb-2 flex h-10 w-10 items-center justify-center rounded-full text-lg font-black",
+              rank === 1
+                ? "bg-amber-400 text-amber-950"
+                : rank === 2
+                  ? "bg-slate-200 text-slate-900"
+                  : "bg-amber-700 text-white",
+            )}
+          >
+            {rank}
+          </span>
+          <p
+            className="w-full truncate text-2xl font-black"
+            title={displayStudentNameOnSharedBoard(student, "preferred_only")}
+          >
+            {displayStudentNameOnSharedBoard(student, "preferred_only")}
+          </p>
+          <p
+            className={cn(
+              "mb-2 text-lg font-bold tabular-nums",
+              theme.accentClass,
+            )}
+          >
+            {points.toLocaleString()} pts
+          </p>
+          <div
+            className={cn(
+              "flex w-full items-center justify-center rounded-t-2xl border-t-4 text-sm font-black shadow-lg",
+              rank === 1
+                ? "h-24 border-amber-200 bg-gradient-to-b from-amber-400 to-amber-600 text-amber-950"
+                : rank === 2
+                  ? "h-16 border-white bg-gradient-to-b from-slate-200 to-slate-400 text-slate-900"
+                  : "h-12 border-amber-400 bg-gradient-to-b from-amber-600 to-amber-800 text-white",
+            )}
+          >
+            {rank === 1 ? "1st place" : rank === 2 ? "2nd place" : "3rd place"}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RankedStudent({
+  row,
+  theme,
+}: {
+  row: DisplayRankedStudent;
+  theme: ModularThemeConfig;
+}) {
+  return (
+    <div
+      className="flex min-w-0 items-center gap-3 rounded-xl border border-current/15 bg-black/5 px-3 py-2.5 text-sm"
+      data-student-rank={row.rank}
+    >
+      <span className="flex h-7 min-w-7 items-center justify-center rounded-lg bg-current/10 font-black">
+        {row.rank}
+      </span>
+      <span className="min-w-0 flex-1 truncate font-bold">
+        {displayStudentNameOnSharedBoard(row.student, "preferred_only")}
+      </span>
+      <span
+        className={cn("shrink-0 font-black tabular-nums", theme.accentClass)}
+      >
+        {row.points.toLocaleString()} pts
+      </span>
+    </div>
+  );
+}
+
 export function ModularDisplayView({
   config,
   feed,
-  variant = 'fullscreen',
+  variant = "fullscreen",
   autoScroll: autoScrollProp,
   onToggleAutoScroll,
   className,
   style,
 }: ModularDisplayViewProps) {
-  const {
-    now,
-    schoolMeta,
-    students,
-    classes,
-    houses,
-    prizes,
-    goals,
-    bulletinIncentives,
-    bulletinPosts,
-    locationInfo,
-    isJewishOrthodox,
-    schoolId,
-  } = feed;
-
-  const isPreview = variant === 'preview';
   const theme = resolveScreenTheme(config.theme);
-  const isPortrait = config.orientation === 'portrait';
-  const enabledSet = useMemo(() => new Set(config.enabledModules || []), [config.enabledModules]);
-
-  // Calculations
-  const displayTimeZone = safeTimeZone(locationInfo?.timeZone) || safeTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const timeFormatted = formatSmartScreenTime(now, displayTimeZone);
-  const dateFormatted = formatSmartScreenDate(now, displayTimeZone);
-
-  const totalPoints = useMemo(
-    () => students.reduce((acc, s) => acc + (s.points || 0), 0),
-    [students],
+  const enabled = useMemo(
+    () => new Set(config.enabledModules),
+    [config.enabledModules],
   );
-
-  const topStudents = useMemo(() => {
-    return [...students]
-      .sort((a, b) => (b.lifetimePoints ?? b.points ?? 0) - (a.lifetimePoints ?? a.points ?? 0))
-      .slice(0, 30);
-  }, [students]);
-
-  const topHouses = useMemo(() => {
-    return [...houses]
-      .sort((a, b) => (b.lifetimePoints ?? b.points ?? 0) - (a.lifetimePoints ?? a.points ?? 0))
-      .slice(0, 4);
-  }, [houses]);
-
-  const activePrizes = useMemo(() => {
-    return [...prizes]
-      .filter((p) => p.inStock !== false && (p.stockCount ?? 1) > 0)
-      .sort((a, b) => Number(a.points ?? 0) - Number(b.points ?? 0))
-      .slice(0, 6);
-  }, [prizes]);
-
-  const birthdayStudents = useMemo(() => {
-    return students.filter((s) => birthdayMatchesToday(s.birthday, now)).slice(0, 4);
-  }, [students, now]);
-
-  const activeGoal = useMemo(() => {
-    return goals.find((g) => (g as any).active !== false) || goals[0] || null;
-  }, [goals]);
-
-  const schoolTitle = config.customTitle || schoolMeta?.name || schoolId.replace(/-/g, ' ').toUpperCase();
-  const schoolMessage = config.customMessage || 'Learn, level up, and lead today!';
-
-  const compliment = SCHOOL_COMPLIMENTS[dayIndex(now, SCHOOL_COMPLIMENTS.length)];
-  const focusSkill = FOCUS_SKILLS[dayIndex(now, FOCUS_SKILLS.length)];
-  const quote = LEARNING_QUOTES[dayIndex(now, LEARNING_QUOTES.length)];
-
-  // Auto-scroll loop state & refs
-  const contentScrollRef = useRef<HTMLDivElement>(null);
-  const [autoScrollPaused, setAutoScrollPaused] = useState(false);
-  const userInteractingRef = useRef(false);
-  const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  const shouldAutoScroll =
-    autoScrollProp !== undefined
-      ? autoScrollProp
-      : (config.autoScroll ?? (config.id === 'hall-of-fame' || config.presetKey === 'hall-of-fame'));
-
-  const handleUserInteraction = () => {
-    userInteractingRef.current = true;
-    if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    resumeTimerRef.current = setTimeout(() => {
-      userInteractingRef.current = false;
-    }, 4500);
-  };
-
+  const hall =
+    config.presetKey === "hall-of-fame" || config.id === "hall-of-fame";
+  const fit = !hall && config.presentation !== "scroll";
+  const ranking = useMemo(
+    () =>
+      buildDisplayRanking(
+        feed.students,
+        feed.classes,
+        feed.categories || [],
+        config,
+        feed.now,
+      ),
+    [feed.students, feed.classes, feed.categories, config, feed.now],
+  );
+  const timeZone =
+    safeTimeZone(feed.locationInfo?.timeZone) ||
+    safeTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const title = config.customTitle || feed.schoolMeta?.name || feed.schoolId;
+  const message = config.customMessage || "Learn, level up, and lead today!";
+  const bodyKeys = config.enabledModules.filter(
+    (key) =>
+      key !== "clockDate" &&
+      key !== "weather" &&
+      (key !== "hebrewCalendar" || feed.isJewishOrthodox) &&
+      (!hall || (key !== "podium" && key !== "studentLeaders")),
+  );
+  const pageCapacity = positiveInteger(
+    config.modulesPerPage,
+    config.orientation === "portrait" ? 6 : 9,
+    12,
+  );
+  const modulePages = fit
+    ? Math.max(1, Math.ceil(bodyKeys.length / pageCapacity))
+    : 1;
+  const [tick, setTick] = useState(0);
+  const listTick = Math.floor(tick / modulePages);
+  const itemsPerCard = positiveInteger(config.itemsPerCard, 3, 20);
   useEffect(() => {
-    if (!shouldAutoScroll || autoScrollPaused) return;
+    setTick(0);
+    if (!fit) return;
+    const timer = setInterval(
+      () => setTick((value) => value + 1),
+      positiveInteger(config.pageSeconds, 10, 120) * 1000,
+    );
+    return () => clearInterval(timer);
+  }, [fit, config.id, config.pageSeconds, modulePages]);
 
-    const el = contentScrollRef.current;
-    if (!el) return;
-
-    let cancelled = false;
-    let animationId = 0;
-    let timerId: ReturnType<typeof setTimeout> | undefined;
-
-    const startScrollLoop = () => {
-      const speed = 0.55;
-      let lastTime = 0;
-
-      const step = (time: number) => {
-        if (cancelled || !el) return;
-
-        if (userInteractingRef.current) {
-          animationId = requestAnimationFrame(step);
-          return;
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+  const interactionUntil = useRef(0);
+  const shouldScroll =
+    !fit && (autoScrollProp ?? config.autoScroll ?? hall) && !paused;
+  useEffect(() => {
+    setPaused(false);
+    scrollRef.current?.scrollTo?.({ top: 0 });
+  }, [
+    config.id,
+    config.classId,
+    config.pointBasis,
+    config.categoryIds,
+    config.studentLimit,
+    config.podiumSize,
+  ]);
+  useEffect(() => {
+    if (!shouldScroll) return;
+    let frame = 0;
+    let previous = 0;
+    let holdUntil = performance.now() + 3500;
+    let resetAt = 0;
+    let position = scrollRef.current?.scrollTop || 0;
+    const step = (now: number) => {
+      const element = scrollRef.current;
+      if (!element) return;
+      const delta = previous ? Math.min(50, now - previous) : 0;
+      previous = now;
+      if (Date.now() < interactionUntil.current) position = element.scrollTop;
+      else if (
+        now >= holdUntil &&
+        element.scrollHeight > element.clientHeight + 2
+      ) {
+        if (resetAt && now >= resetAt) {
+          element.scrollTop = 0;
+          position = 0;
+          resetAt = 0;
+          holdUntil = now + 3500;
+        } else if (!resetAt) {
+          position += delta * 0.035;
+          element.scrollTop = position;
+          if (
+            element.scrollTop + element.clientHeight >=
+            element.scrollHeight - 2
+          )
+            resetAt = now + 3500;
         }
-
-        if (!lastTime) lastTime = time;
-        const delta = Math.min(time - lastTime, 50);
-        lastTime = time;
-
-        const distance = (speed * delta) / 16;
-        el.scrollTop += distance;
-
-        const isBottom = Math.ceil(el.clientHeight + el.scrollTop) >= el.scrollHeight - 8;
-
-        if (isBottom) {
-          // Reached bottom: pause to read bottom stats, then smoothly glide back to top
-          timerId = setTimeout(() => {
-            if (cancelled || !el) return;
-            el.scrollTo({ top: 0, behavior: 'smooth' });
-
-            // Hold at top for 4.5s so viewers can see podium champions before scrolling again
-            timerId = setTimeout(() => {
-              if (cancelled) return;
-              lastTime = 0;
-              animationId = requestAnimationFrame(step);
-            }, 4500);
-          }, 3500);
-          return;
-        }
-
-        animationId = requestAnimationFrame(step);
-      };
-
-      // Initial pause at top before scrolling down
-      timerId = setTimeout(() => {
-        if (cancelled) return;
-        animationId = requestAnimationFrame(step);
-      }, 3500);
-    };
-
-    const checkReady = () => {
-      if (cancelled) return;
-      if (el.scrollHeight > el.clientHeight + 10) {
-        startScrollLoop();
-      } else {
-        timerId = setTimeout(checkReady, 1200);
       }
+      frame = requestAnimationFrame(step);
     };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [
+    shouldScroll,
+    config.id,
+    config.classId,
+    config.pointBasis,
+    config.categoryIds,
+    config.studentLimit,
+    config.podiumSize,
+  ]);
 
-    checkReady();
-
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(animationId);
-      if (timerId) clearTimeout(timerId);
-      if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
-    };
-  }, [shouldAutoScroll, autoScrollPaused, config]);
-
-  // Podium slots
-  const podiumTop3 = topStudents.slice(0, 3);
-  const firstPlace = podiumTop3[0];
-  const secondPlace = podiumTop3[1];
-  const thirdPlace = podiumTop3[2];
-
-  // Helper card wrapper
-  const ModuleCard = ({
-    title,
-    icon: Icon,
-    children,
-    className: cardCls,
-    accentBorder,
-  }: {
-    title: string;
-    icon: any;
-    children: React.ReactNode;
-    className?: string;
-    accentBorder?: boolean;
-  }) => (
-    <div
-      className={cn(
-        'flex flex-col overflow-hidden rounded-3xl border-2 p-4 sm:p-5 shadow-2xl backdrop-blur-md transition-all',
-        theme.cardClass,
-        accentBorder && theme.heroBorderClass,
-        cardCls,
-      )}
-    >
-      <div className="mb-3.5 flex items-center justify-between gap-2 border-b border-current/20 pb-3">
-        <div className="flex items-center gap-2.5">
-          <Icon className={cn('h-5 w-5 shrink-0', theme.accentClass)} />
-          <h3 className={cn('text-sm sm:text-base font-black uppercase tracking-wider', theme.textClass)}>{title}</h3>
-        </div>
+  const list = <T,>(
+    rows: T[],
+    render: (row: T, index: number) => ReactNode,
+    empty: string,
+  ) => {
+    const page = fit
+      ? pageItems(rows, listTick, itemsPerCard)
+      : { items: rows, pages: 1, page: 0 };
+    return (
+      <div className="space-y-2">
+        {page.items.length ? (
+          page.items.map(render)
+        ) : (
+          <p className={cn("text-sm", theme.quietClass)}>{empty}</p>
+        )}
+        {page.pages > 1 && (
+          <p
+            className={cn(
+              "pt-1 text-right text-xs font-semibold",
+              theme.quietClass,
+            )}
+          >
+            {page.page * itemsPerCard + 1}–
+            {Math.min(rows.length, (page.page + 1) * itemsPerCard)} of{" "}
+            {rows.length} · Rotating
+          </p>
+        )}
       </div>
-      <div className="min-h-0 flex-1">{children}</div>
+    );
+  };
+  const simpleRow = (
+    name: string,
+    points: number,
+    key: string,
+    description?: string,
+  ) => (
+    <div
+      key={key}
+      className="flex items-center justify-between gap-3 rounded-xl border border-current/15 bg-black/5 p-3"
+    >
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold" title={name}>
+          {name}
+        </p>
+        {description && (
+          <p className={cn("mt-1 line-clamp-2 text-xs", theme.quietClass)}>
+            {description}
+          </p>
+        )}
+      </div>
+      <span
+        className={cn(
+          "shrink-0 text-sm font-black tabular-nums",
+          theme.accentClass,
+        )}
+      >
+        {points.toLocaleString()} pts
+      </span>
     </div>
   );
+  const activePrizes = feed.prizes
+    .filter((prize) => prize.inStock !== false && (prize.stockCount ?? 1) > 0)
+    .sort((a, b) => Number(a.points || 0) - Number(b.points || 0));
+  const houseRows = feed.houses
+    .map((house) => ({
+      house,
+      points: ranking.ranked
+        .filter((row) => row.student.houseId === house.id)
+        .reduce((sum, row) => sum + row.points, 0),
+    }))
+    .sort((a, b) => b.points - a.points);
+  const birthdays = ranking.scoped.filter((student) =>
+    birthdayMatchesToday(student.birthday, feed.now),
+  );
 
+  const renderModule = (key: DisplayModuleKey) => {
+    let content: ReactNode;
+    switch (key) {
+      case "podium":
+        content = <Podium rows={ranking.podium} theme={theme} />;
+        break;
+      case "studentLeaders":
+        content = list(
+          enabled.has("podium") ? ranking.remaining : ranking.visible,
+          (row) => (
+            <RankedStudent key={row.student.id} row={row} theme={theme} />
+          ),
+          "No more students in this selection.",
+        );
+        break;
+      case "classStandings":
+        content = list(
+          ranking.classRanks,
+          (row, index) =>
+            simpleRow(
+              `${fit ? (listTick % Math.max(1, Math.ceil(ranking.classRanks.length / itemsPerCard))) * itemsPerCard + index + 1 : index + 1}. ${row.name}`,
+              row.points,
+              row.id,
+            ),
+          "No classes match this selection.",
+        );
+        break;
+      case "houseStandings":
+        content = (
+          <>
+            {list(
+              houseRows,
+              ({ house, points }) => simpleRow(house.name, points, house.id),
+              "No houses set up yet.",
+            )}
+            <p className={cn("mt-2 text-xs", theme.quietClass)}>
+              Student totals for the selected scope and points.
+            </p>
+          </>
+        );
+        break;
+      case "schoolStats":
+        content = (
+          <dl className="space-y-2">
+            {[
+              { label: "Students", value: ranking.scoped.length },
+              { label: "Selected points", value: ranking.totalPoints },
+              { label: "Rewards", value: activePrizes.length },
+            ].map(({ label, value }) => (
+              <div
+                key={label}
+                className={cn(
+                  "flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3",
+                  theme.statCardClass,
+                )}
+              >
+                <dt className="text-xs font-bold">{label}</dt>
+                <dd
+                  className={cn(
+                    "text-xl font-black tabular-nums",
+                    theme.accentClass,
+                  )}
+                >
+                  {value.toLocaleString()}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        );
+        break;
+      case "celebrationPosts":
+        content = list(
+          feed.bulletinPosts,
+          (post) => (
+            <div
+              key={post.id}
+              className="flex gap-3 rounded-xl border border-current/15 bg-black/5 p-3"
+            >
+              <span className="text-2xl">{post.emoji || "🎉"}</span>
+              <div className="min-w-0">
+                <p className="line-clamp-2 text-sm font-bold">
+                  {post.title || "Celebration"}
+                </p>
+                <p
+                  className={cn("mt-1 line-clamp-3 text-xs", theme.quietClass)}
+                >
+                  {post.message}
+                </p>
+              </div>
+            </div>
+          ),
+          "Teacher celebrations will appear here.",
+        );
+        break;
+      case "incentiveTasks":
+        content = list(
+          incentiveCategoriesForSurface(
+            feed.categories,
+            config.presetKey === "smart-screen"
+              ? "smartScreen"
+              : "bulletinBoard",
+          ),
+          (item) =>
+            simpleRow(
+              item.title || "Point opportunity",
+              item.value || 0,
+              item.id,
+              item.description,
+            ),
+          "No active point opportunities.",
+        );
+        break;
+      case "rewardsShowcase":
+        content = list(
+          activePrizes,
+          (prize) => simpleRow(prize.name, Number(prize.points || 0), prize.id),
+          "In-stock rewards will appear here.",
+        );
+        break;
+      case "birthdays":
+        content = list(
+          birthdays,
+          (student) => (
+            <p
+              key={student.id}
+              className="rounded-xl border border-current/15 p-3 text-sm font-bold"
+            >
+              🎂 {displayStudentNameOnSharedBoard(student, "preferred_only")}
+            </p>
+          ),
+          "No birthdays today. Celebrate someone with kindness!",
+        );
+        break;
+      case "compliment":
+        content = (
+          <p className="text-base font-semibold leading-relaxed">
+            {SCHOOL_COMPLIMENTS[dayIndex(feed.now, SCHOOL_COMPLIMENTS.length)]}
+          </p>
+        );
+        break;
+      case "focusSkill":
+        content = (
+          <p className="text-base font-semibold leading-relaxed">
+            {FOCUS_SKILLS[dayIndex(feed.now, FOCUS_SKILLS.length)]}
+          </p>
+        );
+        break;
+      case "quote":
+        content = (
+          <p className="text-base font-semibold italic leading-relaxed">
+            {LEARNING_QUOTES[dayIndex(feed.now, LEARNING_QUOTES.length)]}
+          </p>
+        );
+        break;
+      case "daySchedule":
+        content = (
+          <div className="flex gap-2">
+            {["Arrive", "Learn", "Level up"].map((label, index) => (
+              <div
+                key={label}
+                className={cn(
+                  "min-w-0 flex-1 rounded-xl border p-3 text-center",
+                  theme.statCardClass,
+                )}
+              >
+                <p className="text-xs opacity-70">Step {index + 1}</p>
+                <p className="mt-2 text-sm font-bold">{label}</p>
+              </div>
+            ))}
+          </div>
+        );
+        break;
+      case "hebrewCalendar":
+        content = (
+          <div className="space-y-3">
+            <p className="text-lg font-bold">
+              {formatTodayHebrewDate(feed.now)}
+            </p>
+            {getUpcomingJewishHolidays({ from: feed.now, limit: 2 }).map(
+              (holiday) => (
+                <p key={holiday.id} className="text-sm">
+                  {holiday.nameEn} ·{" "}
+                  {holiday.date.toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </p>
+              ),
+            )}
+          </div>
+        );
+        break;
+      case "schoolGoal": {
+        // Goal cards must not compare an unrelated school balance against a personal goal.
+        const goal = feed.goals.find(
+          (item) =>
+            item.type === "class" &&
+            item.status === "active" &&
+            !item.categoryId &&
+            !item.startDate &&
+            !item.endDate &&
+            (!config.classId || item.classId === config.classId),
+        );
+        const points = goal
+          ? feed.students
+              .filter((student) => student.classId === goal.classId)
+              .reduce(
+                (sum, student) =>
+                  sum + (student.lifetimePoints ?? student.points ?? 0),
+                0,
+              )
+          : 0;
+        content = goal ? (
+          <div className="space-y-3">
+            <p className="text-base font-bold">{goal.title}</p>
+            <p className="text-sm">
+              {points.toLocaleString()} / {goal.targetPoints.toLocaleString()}{" "}
+              pts
+            </p>
+            <div className="h-3 overflow-hidden rounded-full bg-black/15">
+              <div
+                className={cn("h-full", theme.meterFillClass)}
+                style={{
+                  width: `${Math.max(0, Math.min(100, (points / Math.max(1, goal.targetPoints)) * 100))}%`,
+                }}
+              />
+            </div>
+            <p className="text-xs">
+              {feed.classes.find((item) => item.id === goal.classId)?.name} ·
+              Lifetime class points
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm">
+            No active class milestone available for this view.
+          </p>
+        );
+        break;
+      }
+      default:
+        return null;
+    }
+    return (
+      <DisplayCard
+        key={key}
+        title={
+          DISPLAY_MODULE_CATALOG.find((item) => item.key === key)?.label || key
+        }
+        theme={theme}
+        fit={fit}
+      >
+        {content}
+      </DisplayCard>
+    );
+  };
+
+  const showScope =
+    enabled.has("podium") ||
+    enabled.has("studentLeaders") ||
+    enabled.has("classStandings") ||
+    enabled.has("schoolStats") ||
+    enabled.has("houseStandings");
   return (
     <div
       data-modular-display-root
+      data-presentation={hall ? "hall-of-fame" : fit ? "fit" : "scroll"}
       style={style}
       className={cn(
-        'relative flex w-full flex-col font-sans select-none overflow-hidden',
-        isPreview ? 'h-full' : 'h-screen max-h-screen',
-        isPortrait ? 'p-3 sm:p-5' : 'p-4 sm:p-6 lg:p-8',
+        "flex w-full flex-col gap-3 overflow-hidden p-4 font-sans",
+        variant === "preview" ? "h-full" : "h-dvh",
         theme.pageClass,
+        theme.textClass,
         className,
       )}
     >
-      {/* Top Banner & Hero Header */}
-      <header className="mb-5 flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-4">
-          {schoolMeta?.logoUrl ? (
+      <header className="flex shrink-0 items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {feed.schoolMeta?.logoUrl ? (
             <img
-              src={schoolMeta.logoUrl}
+              src={feed.schoolMeta.logoUrl}
               alt=""
-              className="h-14 w-14 rounded-2xl bg-white/20 p-2 object-contain shadow-lg border-2 border-white/20"
+              className="h-12 w-12 shrink-0 rounded-xl bg-white/20 p-1.5 object-contain"
             />
           ) : (
-            <div className={cn('flex h-14 w-14 items-center justify-center rounded-2xl border-2 shadow-lg', theme.badgeClass)}>
-              <School className="h-7 w-7" />
-            </div>
+            <School className="h-10 w-10 shrink-0" />
           )}
-          <div>
-            <h1 className={cn('text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight', theme.textClass)}>{schoolTitle}</h1>
-            <p className={cn('text-xs sm:text-sm font-bold mt-0.5', theme.quietClass)}>{schoolMessage}</p>
+          <div className="min-w-0">
+            <h1 className="line-clamp-2 text-3xl font-black leading-tight">
+              {title}
+            </h1>
+            <p
+              className={cn(
+                "mt-1 line-clamp-2 text-sm font-semibold",
+                theme.quietClass,
+              )}
+            >
+              {message}
+            </p>
           </div>
         </div>
-
-        {/* Integrated Controls & Weather/Clock Pill */}
-        <div className="flex items-center gap-3">
-          {/* Auto-scroll toggle pill */}
-          {shouldAutoScroll && (
+        <div
+          className="flex shrink-0 flex-wrap justify-end gap-2"
+          style={{ maxWidth: "40%" }}
+        >
+          {!fit && (config.autoScroll ?? hall) && (
             <button
               type="button"
-              onClick={() => {
-                if (onToggleAutoScroll) {
-                  onToggleAutoScroll();
-                } else {
-                  setAutoScrollPaused((p) => !p);
-                }
-              }}
+              onClick={() =>
+                onToggleAutoScroll ? onToggleAutoScroll() : setPaused(!paused)
+              }
               className={cn(
-                'flex items-center gap-1.5 rounded-2xl border px-3.5 py-2 text-xs font-black shadow-lg transition-all',
-                autoScrollPaused
-                  ? 'border-amber-400/50 bg-amber-950/70 text-amber-200'
-                  : 'border-emerald-400/50 bg-emerald-950/70 text-emerald-200',
+                "flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-bold",
+                theme.badgeClass,
               )}
-              title={autoScrollPaused ? 'Click to resume auto-scroll' : 'Click to pause auto-scroll'}
             >
-              {autoScrollPaused ? (
-                <>
-                  <Play className="h-3.5 w-3.5 fill-current" />
-                  <span>Scroll: Paused</span>
-                </>
+              {shouldScroll ? (
+                <Pause className="h-3 w-3" />
               ) : (
-                <>
-                  <Pause className="h-3.5 w-3.5 fill-current" />
-                  <span>Auto-Scroll: ON</span>
-                </>
+                <Play className="h-3 w-3" />
               )}
+              {shouldScroll ? "Pause scrolling" : "Resume scrolling"}
             </button>
           )}
-
-          {enabledSet.has('weather') && (
-            <div className={cn('flex items-center gap-2.5 rounded-2xl border-2 px-4 py-2.5 shadow-lg', theme.cardClass)}>
-              <CloudSun className={cn('h-6 w-6', theme.accentClass)} />
-              <div>
-                <p className={cn('text-sm sm:text-base font-black leading-none', theme.textClass)}>
-                  {locationInfo?.temperatureF ?? 72}°F
+          {enabled.has("weather") && (
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-xl border p-3",
+                theme.cardClass,
+              )}
+            >
+              <CloudSun className="h-5 w-5" />
+              <div className="text-xs font-bold">
+                <p>
+                  {feed.locationInfo?.ok &&
+                  typeof feed.locationInfo.temperatureF === "number"
+                    ? `${feed.locationInfo.temperatureF}°F`
+                    : "Weather unavailable"}
                 </p>
-                <p className={cn('text-xs font-bold leading-none mt-1', theme.quietClass)}>
-                  {locationInfo?.condition || 'Clear'}
+                <p className="mt-1 opacity-70">
+                  {feed.locationInfo?.ok ? feed.locationInfo.condition : ""}
                 </p>
               </div>
             </div>
           )}
-
-          {enabledSet.has('clockDate') && (
-            <div className={cn('flex items-center gap-3 rounded-2xl border-2 px-5 py-2.5 shadow-lg', theme.cardClass)}>
-              <Clock className={cn('h-6 w-6', theme.accentClass)} />
-              <div>
-                <p className={cn('text-base sm:text-lg font-black tracking-wider leading-none', theme.textClass)}>{timeFormatted}</p>
-                <p className={cn('text-xs font-bold leading-none mt-1', theme.quietClass)}>{dateFormatted}</p>
+          {enabled.has("clockDate") && (
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-xl border p-3",
+                theme.cardClass,
+              )}
+            >
+              <Clock className="h-5 w-5" />
+              <div className="text-xs">
+                <p className="whitespace-nowrap text-sm font-black">
+                  {formatSmartScreenTime(feed.now, timeZone)}
+                </p>
+                <p className="mt-1">
+                  {formatSmartScreenDate(feed.now, timeZone)}
+                </p>
               </div>
             </div>
           )}
         </div>
       </header>
-
-      {/* Scrollable Content Container (With Auto-Scroll Loop & Touch/Wheel Support) */}
-      <div
-        ref={contentScrollRef}
-        tabIndex={0}
-        role="region"
-        aria-label="Display screen content"
-        onWheel={handleUserInteraction}
-        onTouchStart={handleUserInteraction}
-        onPointerDown={handleUserInteraction}
-        className="flex-1 min-h-0 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent space-y-5 focus:outline-none"
-      >
-        {/* School-wide Goal Progress Bar (if enabled) */}
-        {enabledSet.has('schoolGoal') && activeGoal && (
-          <div className={cn('rounded-3xl border-2 p-4 sm:p-5 shadow-xl', theme.cardClass)}>
-            <div className="flex items-center justify-between text-sm sm:text-base font-black mb-2">
-              <span className={cn('flex items-center gap-2', theme.textClass)}>
-                <Target className={cn('h-5 w-5', theme.accentClass)} />
-                School Milestone: {activeGoal.title || 'Community Goal'}
-              </span>
-              <span className={cn('text-base font-black', theme.accentClass)}>
-                {totalPoints.toLocaleString()} / {(activeGoal.targetPoints || 50000).toLocaleString()} pts
-              </span>
-            </div>
-            <div className="h-4 w-full rounded-full bg-black/40 border border-white/20 overflow-hidden shadow-inner">
-              <div
-                className={cn('h-full transition-all duration-1000', theme.meterFillClass)}
-                style={{
-                  width: `${Math.min(100, Math.round((totalPoints / (activeGoal.targetPoints || 50000)) * 100))}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Main Grid of Modules */}
-        <div
+      {showScope && (
+        <p
           className={cn(
-            'grid gap-4 sm:gap-5 pb-28 sm:pb-32',
-            isPortrait ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+            "shrink-0 truncate text-xs font-bold",
+            theme.quietClass,
           )}
+          title={`${ranking.scopeLabel} · ${ranking.categoryLabel} · ${ranking.basisLabel}`}
         >
-        {/* Hall of Fame: Podium */}
-        {enabledSet.has('podium') && (
-          <ModuleCard title="Podium Leaders" icon={Crown} className="md:col-span-2 lg:col-span-2">
-            <div className="flex h-full items-end justify-center gap-3 sm:gap-6 pt-7 pb-2">
-              {/* 2nd Place */}
-              <div className="flex flex-col items-center flex-1 max-w-[140px]">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-slate-100 bg-slate-200 text-slate-900 font-black text-base mb-1.5 shadow-lg">
-                  2
-                </div>
-                <p className={cn('text-sm sm:text-base font-black text-center truncate w-full', theme.textClass)}>
-                  {secondPlace ? displayStudentNameOnSharedBoard(secondPlace, 'preferred_only') : 'Leading Scholar'}
-                </p>
-                <p className={cn('text-xs sm:text-sm font-black', theme.accentClass)}>
-                  {(secondPlace?.lifetimePoints ?? secondPlace?.points ?? 1250).toLocaleString()} pts
-                </p>
-                <div className="mt-2 h-24 w-full rounded-t-2xl bg-gradient-to-b from-slate-200 via-slate-300 to-slate-400 border-t-4 border-white flex flex-col items-center justify-center font-black text-slate-900 shadow-xl text-sm">
-                  <span>SILVER</span>
-                  <span className="text-[10px] font-extrabold uppercase opacity-75">2nd Place</span>
-                </div>
+          {ranking.scopeLabel} · {ranking.categoryLabel} · {ranking.basisLabel}
+        </p>
+      )}
+      {hall && enabled.has("podium") && (
+        <div
+          className="min-h-0 shrink-0"
+          style={{ height: "36%" }}
+          data-fixed-podium
+        >
+          <DisplayCard title="Podium leaders" theme={theme} fit>
+            <Podium rows={ranking.podium} theme={theme} />
+          </DisplayCard>
+        </div>
+      )}
+      {fit ? (
+        <DisplayFitGrid config={config} pageTick={tick}>
+          {bodyKeys.map(renderModule)}
+        </DisplayFitGrid>
+      ) : (
+        <div
+          ref={scrollRef}
+          role="region"
+          aria-label={
+            hall ? "Rankings below the podium" : "Display screen content"
+          }
+          tabIndex={0}
+          onWheel={() => {
+            interactionUntil.current = Date.now() + 4500;
+          }}
+          onTouchStart={() => {
+            interactionUntil.current = Date.now() + 4500;
+          }}
+          onPointerDown={() => {
+            interactionUntil.current = Date.now() + 4500;
+          }}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-4 focus-visible:outline focus-visible:outline-2"
+        >
+          {hall && enabled.has("studentLeaders") && (
+            <section aria-label="Student rankings">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-black">
+                <Trophy className="h-4 w-4" />
+                {ranking.podium.length
+                  ? "More student leaders"
+                  : "Student leaders"}{" "}
+                · {ranking.visible.length} of {ranking.scoped.length} students
+              </h2>
+              <div
+                className="grid gap-2"
+                style={{
+                  gridTemplateColumns: `repeat(${config.orientation === "portrait" ? 1 : config.leaderboardColumns || 2},minmax(0,1fr))`,
+                }}
+              >
+                {ranking.remaining.map((row) => (
+                  <RankedStudent key={row.student.id} row={row} theme={theme} />
+                ))}
               </div>
-
-              {/* 1st Place */}
-              <div className="flex flex-col items-center flex-1 max-w-[160px]">
-                <Crown className="h-8 w-8 text-amber-400 mb-1 animate-bounce drop-shadow-[0_2px_8px_rgba(251,191,36,0.6)]" />
-                <div className="flex h-13 w-13 items-center justify-center rounded-full border-2 border-amber-200 bg-amber-400 text-amber-950 font-black text-xl mb-1.5 shadow-xl shadow-amber-400/30">
-                  1
-                </div>
-                <p className={cn('text-base sm:text-lg font-black text-center truncate w-full drop-shadow-sm', theme.textClass)}>
-                  {firstPlace ? displayStudentNameOnSharedBoard(firstPlace, 'preferred_only') : 'Top Champion'}
-                </p>
-                <p className={cn('text-sm sm:text-base font-black', theme.accentClass)}>
-                  {(firstPlace?.lifetimePoints ?? firstPlace?.points ?? 2400).toLocaleString()} pts
-                </p>
-                <div className="mt-2 h-36 w-full rounded-t-2xl bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 border-t-4 border-amber-200 flex flex-col items-center justify-center font-black text-amber-950 shadow-2xl text-base">
-                  <span>GOLD</span>
-                  <span className="text-xs font-extrabold uppercase opacity-85">1st Place</span>
-                </div>
-              </div>
-
-              {/* 3rd Place */}
-              <div className="flex flex-col items-center flex-1 max-w-[140px]">
-                <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-amber-300 bg-amber-700 text-white font-black text-base mb-1.5 shadow-lg">
-                  3
-                </div>
-                <p className={cn('text-sm sm:text-base font-black text-center truncate w-full', theme.textClass)}>
-                  {thirdPlace ? displayStudentNameOnSharedBoard(thirdPlace, 'preferred_only') : 'Rising Star'}
-                </p>
-                <p className={cn('text-xs sm:text-sm font-black', theme.accentClass)}>
-                  {(thirdPlace?.lifetimePoints ?? thirdPlace?.points ?? 980).toLocaleString()} pts
-                </p>
-                <div className="mt-2 h-18 w-full rounded-t-2xl bg-gradient-to-b from-amber-600 via-amber-700 to-amber-800 border-t-4 border-amber-400 flex flex-col items-center justify-center font-black text-amber-100 shadow-xl text-sm">
-                  <span>BRONZE</span>
-                  <span className="text-[10px] font-extrabold uppercase opacity-75">3rd Place</span>
-                </div>
-              </div>
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Hall of Fame: Student Leaderboard */}
-        {enabledSet.has('studentLeaders') && (
-          <ModuleCard title="Top Students" icon={Trophy}>
-            <div className="space-y-2">
-              {topStudents.slice(0, 15).map((student, idx) => (
-                <div
-                  key={student.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-current/15 bg-black/15 dark:bg-white/10 px-3.5 py-2.5 text-sm font-bold shadow-sm"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg font-black text-xs bg-white/20 text-current shadow-inner">
-                      {idx + 1}
-                    </span>
-                    <span className={cn('truncate font-bold', theme.textClass)}>{displayStudentNameOnSharedBoard(student, 'preferred_only')}</span>
-                  </div>
-                  <span className={cn('shrink-0 font-black', theme.accentClass)}>
-                    {(student.lifetimePoints ?? student.points ?? 0).toLocaleString()} pts
-                  </span>
-                </div>
-              ))}
-              {topStudents.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>Points awarded will appear here.</p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Hall of Fame: House Standings */}
-        {enabledSet.has('houseStandings') && (
-          <ModuleCard title="House Standings" icon={Star}>
-            <div className="space-y-3">
-              {topHouses.map((house) => {
-                const pts = house.lifetimePoints ?? house.points ?? 0;
-                const max = Math.max(1, topHouses[0]?.lifetimePoints ?? topHouses[0]?.points ?? 1);
-                const pct = Math.round((pts / max) * 100);
-                return (
-                  <div key={house.id} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm font-black">
-                      <span className={cn('truncate', theme.textClass)}>{house.name}</span>
-                      <span className={theme.accentClass}>{pts.toLocaleString()} pts</span>
-                    </div>
-                    <div className="h-3 w-full rounded-full bg-black/30 border border-white/15 overflow-hidden shadow-inner">
-                      <div
-                        className={cn('h-full rounded-full transition-all', theme.meterFillClass)}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {topHouses.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>House rankings will appear here.</p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Hall of Fame: Class Standings */}
-        {enabledSet.has('classStandings') && (
-          <ModuleCard title="Class Standings" icon={Users}>
-            <div className="space-y-2">
-              {classes.slice(0, 5).map((cls, i) => (
-                <div
-                  key={cls.id}
-                  className="flex items-center justify-between text-sm font-bold rounded-2xl border border-current/15 bg-black/15 dark:bg-white/10 px-3.5 py-2.5 shadow-sm"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-6 w-6 items-center justify-center rounded-lg font-black text-xs bg-white/20 text-current">
-                      {i + 1}
-                    </span>
-                    <span className={cn('truncate', theme.textClass)}>{cls.name}</span>
-                  </div>
-                  <span className={cn('shrink-0 rounded-lg px-2 py-0.5 text-xs font-black bg-white/20', theme.quietClass)}>
-                    Class
-                  </span>
-                </div>
-              ))}
-              {classes.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>Classes will appear here.</p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Bulletin: Celebration Posts Feed */}
-        {enabledSet.has('celebrationPosts') && (
-          <ModuleCard title="Live Celebrations" icon={Megaphone} className="md:col-span-2">
-            <div className="space-y-2.5">
-              {bulletinPosts.slice(0, 4).map((post) => (
-                <div
-                  key={post.id}
-                  className="flex items-center justify-between gap-3.5 rounded-2xl border-2 border-current/20 bg-black/15 dark:bg-white/10 p-3 shadow-md"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl shrink-0">{post.emoji || '🎉'}</span>
-                    <div className="min-w-0">
-                      <p className={cn('text-sm font-black truncate', theme.textClass)}>{post.title || 'Celebration'}</p>
-                      <p className={cn('text-xs font-semibold truncate mt-0.5', theme.quietClass)}>
-                        {post.message || ''}
-                      </p>
-                    </div>
-                  </div>
-                  {post.createdAt && (
-                    <span className={cn('text-xs font-black uppercase shrink-0 px-2 py-1 rounded-lg bg-white/15', theme.accentClass)}>
-                      {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {bulletinPosts.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>
-                  Teacher shoutouts and praise posts will appear live here.
+              {!ranking.remaining.length && (
+                <p className="text-sm opacity-70">
+                  {ranking.visible.length
+                    ? "All selected students are on the podium."
+                    : "No students match this selection."}
                 </p>
               )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Bulletin: Point Opportunities (Incentives) */}
-        {enabledSet.has('incentiveTasks') && (
-          <ModuleCard title="Earn Points (Opportunities)" icon={Target}>
-            <div className="space-y-2.5">
-              {bulletinIncentives.slice(0, 4).map((inc) => (
-                <div
-                  key={inc.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border-2 border-current/20 bg-black/15 dark:bg-white/10 p-3 shadow-md"
-                >
-                  <div className="min-w-0">
-                    <p className={cn('text-sm font-black truncate', theme.textClass)}>{inc.title}</p>
-                    {inc.description && (
-                      <p className={cn('text-xs font-semibold truncate mt-0.5', theme.quietClass)}>{inc.description}</p>
-                    )}
-                  </div>
-                  <span className="shrink-0 rounded-xl px-2.5 py-1 text-xs font-black bg-emerald-500 text-emerald-950 shadow-sm">
-                    +{inc.value ?? 0} pts
-                  </span>
-                </div>
-              ))}
-              {bulletinIncentives.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>No active incentives scheduled.</p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Bulletin: Rewards to Chase */}
-        {enabledSet.has('rewardsShowcase') && (
-          <ModuleCard title="Rewards to Chase" icon={Gift}>
-            <div className="space-y-2">
-              {activePrizes.slice(0, 4).map((prize) => (
-                <div
-                  key={prize.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-current/15 bg-black/15 dark:bg-white/10 px-3.5 py-2.5 text-sm font-bold shadow-sm"
-                >
-                  <span className={cn('truncate font-black', theme.textClass)}>{prize.name}</span>
-                  <span className={cn('shrink-0 font-black', theme.accentClass)}>
-                    {Number(prize.points ?? 0).toLocaleString()} pts
-                  </span>
-                </div>
-              ))}
-              {activePrizes.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>In-stock shop rewards appear here.</p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Daily Stats */}
-        {enabledSet.has('schoolStats') && (
-          <ModuleCard title="School Stats" icon={ChartNoAxesColumnIncreasing}>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className={cn('rounded-2xl border-2 p-3.5 shadow-lg flex flex-col justify-center', theme.statCardClass)}>
-                <p className={cn('text-xs font-black uppercase tracking-wider', theme.quietClass)}>Scholars</p>
-                <p className={cn('text-xl sm:text-2xl lg:text-3xl font-black mt-1', theme.textClass)}>{students.length}</p>
-              </div>
-              <div className={cn('rounded-2xl border-2 p-3.5 shadow-lg flex flex-col justify-center', theme.statCardClass)}>
-                <p className={cn('text-xs font-black uppercase tracking-wider', theme.quietClass)}>Points</p>
-                <p className={cn('text-xl sm:text-2xl lg:text-3xl font-black mt-1', theme.accentClass)}>
-                  {totalPoints.toLocaleString()}
-                </p>
-              </div>
-              <div className={cn('rounded-2xl border-2 p-3.5 shadow-lg flex flex-col justify-center', theme.statCardClass)}>
-                <p className={cn('text-xs font-black uppercase tracking-wider', theme.quietClass)}>Rewards</p>
-                <p className={cn('text-xl sm:text-2xl lg:text-3xl font-black mt-1', theme.textClass)}>{activePrizes.length}</p>
-              </div>
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Today's Schedule */}
-        {enabledSet.has('daySchedule') && (
-          <ModuleCard title="School is in Motion" icon={CalendarDays}>
-            <div className="grid grid-cols-3 gap-3 text-center text-xs font-black">
-              {['Arrive', 'Learn', 'Level Up'].map((step, idx) => (
-                <div key={step} className={cn('rounded-2xl border-2 py-3 px-2 shadow-md', theme.statCardClass)}>
-                  <p className={cn('text-[11px] font-black uppercase', theme.accentClass)}>Step {idx + 1}</p>
-                  <p className="text-sm font-black mt-1">{step}</p>
-                </div>
-              ))}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Compliment */}
-        {enabledSet.has('compliment') && (
-          <ModuleCard title="Daily Compliment" icon={Heart}>
-            <p className="text-sm sm:text-base font-bold leading-relaxed">{compliment}</p>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Focus Skill */}
-        {enabledSet.has('focusSkill') && (
-          <ModuleCard title="Focus Skill" icon={Lightbulb}>
-            <p className="text-sm sm:text-base font-bold leading-relaxed">{focusSkill}</p>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Quote */}
-        {enabledSet.has('quote') && (
-          <ModuleCard title="Growth Quote" icon={Sparkles}>
-            <p className="text-sm sm:text-base font-bold italic leading-relaxed">"{quote}"</p>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Birthdays */}
-        {enabledSet.has('birthdays') && (
-          <ModuleCard title="Happy Birthday!" icon={Cake}>
-            <div className="space-y-2">
-              {birthdayStudents.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center gap-2.5 rounded-xl border border-current/15 bg-black/15 dark:bg-white/10 px-3 py-2 text-sm font-black"
-                >
-                  <span className="text-lg">🎂</span>
-                  <span className="truncate">{displayStudentNameOnSharedBoard(s, 'preferred_only')}</span>
-                </div>
-              ))}
-              {birthdayStudents.length === 0 && (
-                <p className={cn('text-sm font-semibold', theme.quietClass)}>
-                  No birthdays today. Celebrating every scholar!
-                </p>
-              )}
-            </div>
-          </ModuleCard>
-        )}
-
-        {/* Smart Screen: Hebrew Date & Holidays */}
-        {enabledSet.has('hebrewCalendar') && isJewishOrthodox && (
-          <ModuleCard title="Hebrew Calendar" icon={Star}>
-            <div className="space-y-2 text-sm font-bold">
-              <p className="text-base font-black">{formatTodayHebrewDate(now)}</p>
-              {getUpcomingJewishHolidays({ from: now, limit: 2 }).map((h) => (
-                <div key={h.id} className="flex items-center justify-between text-xs rounded-lg bg-black/15 dark:bg-white/10 p-2">
-                  <span className="font-black">{h.nameEn}</span>
-                  <span className={theme.quietClass}>{h.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                </div>
-              ))}
-            </div>
-          </ModuleCard>
-        )}
-      </div>
-      </div>
+            </section>
+          )}
+          <div
+            className="grid items-start gap-3"
+            style={{
+              gridTemplateColumns: `repeat(${config.gridColumns || (config.orientation === "portrait" ? 1 : 3)},minmax(0,1fr))`,
+            }}
+          >
+            {bodyKeys.map(renderModule)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-

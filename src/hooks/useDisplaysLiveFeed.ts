@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, limit, orderBy, query, where } from 'firebase/firestore';
-import type { Category, Class, Goal, House, Prize, Student } from '@/lib/types';
-import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
-import { useSchoolProfile } from '@/hooks/useSchoolProfile';
-import { useSmartScreenDisplayData, type SmartScreenLocationInfo } from '@/hooks/useSmartScreenDisplayData';
+import { useEffect, useMemo, useState } from "react";
+import {
+  useCollection,
+  useDoc,
+  useFirestore,
+  useMemoFirebase,
+} from "@/firebase";
+import { collection, limit, orderBy, query } from "firebase/firestore";
+import type { Category, Class, Goal, House, Prize, Student } from "@/lib/types";
+import { useSchoolMetadataDocRef } from "@/hooks/useSchoolMetadataDocRef";
+import { useSchoolProfile } from "@/hooks/useSchoolProfile";
+import type { SmartScreenLocationInfo } from "@/hooks/useSmartScreenDisplayData";
+import { useDisplayWeather } from "@/hooks/useDisplayWeather";
 import {
   incentiveCategoriesForSurface,
   type IncentiveListItem,
-} from '@/lib/incentives/incentiveSurfaces';
+} from "@/lib/incentives/incentiveSurfaces";
 
 export type BulletinPost = {
   id: string;
@@ -26,6 +32,7 @@ export interface DisplaysLiveFeed {
   schoolMeta: { logoUrl?: string; name?: string } | null;
   students: Student[];
   classes: Class[];
+  categories: Category[];
   houses: House[];
   prizes: Prize[];
   goals: Goal[];
@@ -36,7 +43,10 @@ export interface DisplaysLiveFeed {
   isLoading: boolean;
 }
 
-export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): DisplaysLiveFeed {
+export function useDisplaysLiveFeed(
+  schoolId: string,
+  configuredZip?: string,
+): DisplaysLiveFeed {
   const firestore = useFirestore();
   const [now, setNow] = useState<Date>(() => new Date());
 
@@ -49,35 +59,43 @@ export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): D
   // School Profile & Metadata
   const { isJewishOrthodox } = useSchoolProfile();
   const schoolDocRef = useSchoolMetadataDocRef();
-  const { data: schoolMeta } = useDoc<{ logoUrl?: string; name?: string }>(schoolDocRef);
+  const { data: schoolMeta } = useDoc<{ logoUrl?: string; name?: string }>(
+    schoolDocRef,
+  );
 
   // Firestore Queries
   const studentsQuery = useMemoFirebase(
-    () => (schoolId ? query(collection(firestore, 'schools', schoolId, 'students'), limit(250)) : null),
+    () =>
+      schoolId ? collection(firestore, "schools", schoolId, "students") : null,
     [firestore, schoolId],
   );
-  const { data: rawStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: rawStudents, isLoading: studentsLoading } =
+    useCollection<Student>(studentsQuery);
 
   const classesQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'classes') : null),
+    () =>
+      schoolId ? collection(firestore, "schools", schoolId, "classes") : null,
     [firestore, schoolId],
   );
   const { data: rawClasses } = useCollection<Class>(classesQuery);
 
   const housesQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'houses') : null),
+    () =>
+      schoolId ? collection(firestore, "schools", schoolId, "houses") : null,
     [firestore, schoolId],
   );
   const { data: rawHouses } = useCollection<House>(housesQuery);
 
   const prizesQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'prizes') : null),
+    () =>
+      schoolId ? collection(firestore, "schools", schoolId, "prizes") : null,
     [firestore, schoolId],
   );
   const { data: rawPrizes } = useCollection<Prize>(prizesQuery);
 
   const goalsQuery = useMemoFirebase(
-    () => (schoolId ? collection(firestore, 'schools', schoolId, 'goals') : null),
+    () =>
+      schoolId ? collection(firestore, "schools", schoolId, "goals") : null,
     [firestore, schoolId],
   );
   const { data: rawGoals } = useCollection<Goal>(goalsQuery);
@@ -86,8 +104,8 @@ export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): D
     () =>
       schoolId
         ? query(
-            collection(firestore, 'schools', schoolId, 'bulletinBoardPosts'),
-            orderBy('createdAt', 'desc'),
+            collection(firestore, "schools", schoolId, "bulletinBoardPosts"),
+            orderBy("createdAt", "desc"),
             limit(15),
           )
         : null,
@@ -98,14 +116,14 @@ export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): D
   const incentivesQuery = useMemoFirebase(
     () =>
       schoolId
-        ? query(collection(firestore, 'schools', schoolId, 'categories'), where('showAsIncentive', '==', true))
+        ? collection(firestore, "schools", schoolId, "categories")
         : null,
     [firestore, schoolId],
   );
   const { data: rawIncentives } = useCollection<Category>(incentivesQuery);
 
   // Weather & Geo Data
-  const smartScreenData = useSmartScreenDisplayData(schoolId, configuredZip || '');
+  const locationInfo = useDisplayWeather(configuredZip || "");
 
   // Memoized collections
   const students = useMemo(() => rawStudents || [], [rawStudents]);
@@ -115,7 +133,7 @@ export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): D
   const goals = useMemo(() => rawGoals || [], [rawGoals]);
   const bulletinPosts = useMemo(() => rawPosts || [], [rawPosts]);
   const bulletinIncentives = useMemo(
-    () => incentiveCategoriesForSurface(rawIncentives, 'bulletinBoard'),
+    () => incentiveCategoriesForSurface(rawIncentives, "bulletinBoard"),
     [rawIncentives],
   );
 
@@ -125,12 +143,13 @@ export function useDisplaysLiveFeed(schoolId: string, configuredZip?: string): D
     schoolMeta: schoolMeta || null,
     students,
     classes,
+    categories: rawIncentives || [],
     houses,
     prizes,
     goals,
     bulletinIncentives,
     bulletinPosts,
-    locationInfo: smartScreenData.locationInfo,
+    locationInfo,
     isJewishOrthodox,
     isLoading: studentsLoading,
   };
