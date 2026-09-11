@@ -30,6 +30,23 @@ type BestFlyerPick = {
   note: string;
 };
 
+function UnavailableClassicPreview({ title }: { title: string }) {
+  return (
+    <div
+      className="relative flex h-[299px] items-center justify-center overflow-hidden border-b border-white/[0.06] bg-slate-900/80 px-8 text-center"
+      role="img"
+      aria-label={`No original style is available for ${title}`}
+    >
+      <div className="max-w-52">
+        <p className="text-sm font-extrabold text-amber-100">Bold Navy only</p>
+        <p className="mt-1 text-xs leading-relaxed text-slate-400">
+          This flyer does not have an archived original layout.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const BEST_FLYER_PICKS: readonly BestFlyerPick[] = [
   {
     key: 'general',
@@ -91,20 +108,25 @@ function FlyerCard({
   const href = resolveFlyerHref(flyer, theme);
   const classicOnly = theme === 'classic';
   const hasClassic = flyerSupportsClassic(flyer);
+  const originalUnavailable = classicOnly && !hasClassic;
 
   return (
     <article
       className={cn(
         'group flex flex-col overflow-hidden rounded-3xl border bg-white/[0.02] backdrop-blur-md transition-all duration-300 hover:bg-white/[0.04]',
         flyer.preview.border,
-        classicOnly && !hasClassic && 'opacity-40',
+        originalUnavailable && 'opacity-40',
       )}
     >
-      <FlyerSnapshotPreview
-        href={href}
-        title={flyer.name}
-        tag={classicOnly && hasClassic ? 'Classic' : flyer.preview.tag}
-      />
+      {originalUnavailable ? (
+        <UnavailableClassicPreview title={flyer.name} />
+      ) : (
+        <FlyerSnapshotPreview
+          href={href}
+          title={flyer.name}
+          tag={classicOnly && hasClassic ? 'Classic' : flyer.preview.tag}
+        />
+      )}
       <div className="flex flex-1 flex-col p-5">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-lg font-black text-white">{flyer.name}</h3>
@@ -115,7 +137,7 @@ function FlyerCard({
           </span>
         </div>
         <p className="mt-1.5 flex-1 text-sm leading-relaxed text-slate-400">{flyer.description}</p>
-        {classicOnly && !hasClassic ? (
+        {originalUnavailable ? (
           <p className="mt-2 text-xs text-amber-200/80">Original layout not archived — Bold Navy only.</p>
         ) : null}
         <div className="mt-3 flex flex-wrap gap-2">
@@ -129,7 +151,7 @@ function FlyerCard({
           ))}
         </div>
         <div className="mt-4">
-          {classicOnly && !hasClassic ? (
+          {originalUnavailable ? (
             <span
               className={cn(
                 buttonVariants({ size: 'sm' }),
