@@ -3,22 +3,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Home, QrCode, Shuffle } from 'lucide-react';
+import { Home, Shuffle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
-import { ClassroomScreenPairModal } from '@/components/classroom/ClassroomScreenPairModal';
 import { RandomStudentPickerModal } from '@/components/classroom/RandomStudentPickerModal';
 import { classroomRealmHref } from '@/lib/classroomRealmUrl';
-import { CLASSROOM_REALM_ACCENT_BUTTON } from '@/components/classroom/ClassroomRealmChrome';
-import type { Class, Student } from '@/lib/types';
+import type { Student } from '@/lib/types';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 
 export function ClassroomLiveTeachChrome({
   schoolId,
-  classId,
   classNameLabel,
-  scope,
   students,
   sessionPoints,
   passes,
@@ -37,7 +33,6 @@ export function ClassroomLiveTeachChrome({
   onReturn: (studentId: string) => void;
   onAward: (studentId: string, points: number, reason: string) => Promise<void>;
 }) {
-  const [pairOpen, setPairOpen] = useState(false);
   const [randomOpen, setRandomOpen] = useState(false);
 
   return (
@@ -83,17 +78,6 @@ export function ClassroomLiveTeachChrome({
               <Shuffle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Random pick
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setPairOpen(true)}
-              disabled={!classId}
-              className="h-8 rounded-xl border-0 text-xs font-bold"
-              style={CLASSROOM_REALM_ACCENT_BUTTON}
-            >
-              <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              Pair TV
-            </Button>
           </div>
         </div>
         <ClassroomWhosOutPulse
@@ -103,14 +87,6 @@ export function ClassroomLiveTeachChrome({
           onReturn={onReturn}
         />
       </motion.div>
-      <ClassroomScreenPairModal
-        isOpen={pairOpen}
-        onClose={() => setPairOpen(false)}
-        schoolId={schoolId}
-        classId={classId}
-        classNameLabel={classNameLabel}
-        scope={scope}
-      />
       <RandomStudentPickerModal
         isOpen={randomOpen}
         onClose={() => setRandomOpen(false)}

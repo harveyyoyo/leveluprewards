@@ -136,6 +136,7 @@ function ClassroomRealmNav({
     },
   ];
 
+  const raffleVisible = manageSections.includes('raffle');
   const dockItems: NavItem[] = [
     teachItems[0],
     teachItems[1],
@@ -145,8 +146,19 @@ function ClassroomRealmNav({
       label: 'Manage',
       href: classroomRealmManageHref(schoolId, 'seating'),
       icon: BookOpenCheck,
-      active: onManage,
+      active: onManage && manageSection !== 'raffle',
     },
+    ...(raffleVisible
+      ? [
+          {
+            id: 'raffle',
+            label: 'Raffle',
+            href: classroomRealmManageHref(schoolId, 'raffle'),
+            icon: Dices,
+            active: onManage && manageSection === 'raffle',
+          } satisfies NavItem,
+        ]
+      : []),
     lookItems[0],
   ];
 
