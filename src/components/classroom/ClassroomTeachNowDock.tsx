@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { QrCode, Shuffle, Sparkles, Timer, Users } from 'lucide-react';
+import { Dices, Shuffle, Sparkles, Timer, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,10 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ClassroomScreenPairModal } from '@/components/classroom/ClassroomScreenPairModal';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
 import { RandomStudentPickerModal } from '@/components/classroom/RandomStudentPickerModal';
 import { useClassroomTeachNow } from '@/hooks/useClassroomTeachNow';
+import { classroomRealmManageHref } from '@/lib/classroomRealmUrl';
+import { isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import type { Class, Student } from '@/lib/types';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
@@ -42,8 +45,9 @@ export function ClassroomTeachNowDock({
     variant,
     activeTeacherId,
   });
-  const [isPairModalOpen, setIsPairModalOpen] = useState(false);
   const [isRandomModalOpen, setIsRandomModalOpen] = useState(false);
+  const { settings } = useSettings();
+  const showRaffle = isClassroomRaffleSectionVisible(settings, variant);
 
   if (teach.availableClasses.length === 0) {
     return (
@@ -54,7 +58,7 @@ export function ClassroomTeachNowDock({
         className={cn('mx-auto max-w-5xl px-6', className)}
       >
         <div className="rounded-3xl border border-white/12 bg-white/[0.06] p-5 text-center text-sm text-white/60 backdrop-blur-md">
-          Add a class and students first — then random pick, bathroom passes, and TV pairing show up here.
+          Add a class and students first — then random pick, bathroom passes, and raffle show up here.
         </div>
       </motion.div>
     );
@@ -145,16 +149,19 @@ export function ClassroomTeachNowDock({
               <Shuffle className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               Random pick
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsPairModalOpen(true)}
-              className="h-9 rounded-xl border-white/20 bg-white/8 font-bold text-xs text-white hover:bg-white/14 hover:text-white"
-            >
-              <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              Pair TV
-            </Button>
+            {showRaffle ? (
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-xl border-white/20 bg-white/8 font-bold text-xs text-white hover:bg-white/14 hover:text-white"
+              >
+                <Link href={classroomRealmManageHref(schoolId, 'raffle')}>
+                  <Dices className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+                  Raffle
+                </Link>
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -166,14 +173,6 @@ export function ClassroomTeachNowDock({
         />
       </motion.div>
 
-      <ClassroomScreenPairModal
-        isOpen={isPairModalOpen}
-        onClose={() => setIsPairModalOpen(false)}
-        schoolId={schoolId}
-        classId={teach.selectedClassId}
-        classNameLabel={teach.activeClass?.name || 'Classroom'}
-        scope={teach.seatingScope}
-      />
       <RandomStudentPickerModal
         isOpen={isRandomModalOpen}
         onClose={() => setIsRandomModalOpen(false)}

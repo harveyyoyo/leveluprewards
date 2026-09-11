@@ -4,7 +4,7 @@ import { useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { BookOpenCheck, LayoutGrid, Monitor, Palette, Sparkles, Tv } from 'lucide-react';
+import { BookOpenCheck, Dices, LayoutGrid, Monitor, Palette, Sparkles, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ClassroomRealmHero, ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
 import {
@@ -23,7 +23,7 @@ import {
   resolveClassroomRealmTheme,
   type ClassroomRealmThemeId,
 } from '@/lib/classroom/classroomRealmThemes';
-import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
+import { CLASSROOM_TAB_LABEL, isClassroomRaffleSectionVisible } from '@/lib/classroom/classroomTabSections';
 import {
   classroomRealmHomePhase,
   classroomRealmHomeUi,
@@ -65,6 +65,13 @@ const tools = [
     icon: BookOpenCheck,
   },
   {
+    id: 'raffle',
+    title: 'Raffle',
+    desc: 'Draw a winner — tickets, wheel, and jackpot.',
+    href: (schoolId: string) => classroomRealmManageHref(schoolId, 'raffle'),
+    icon: Dices,
+  },
+  {
     id: 'setup',
     title: 'More setup',
     desc: 'Seating wizard and extra classroom options.',
@@ -92,6 +99,11 @@ export default function ClassroomRealmHomePage() {
   const isStaff = canAccessHallOfFameRoute(loginState);
   const roster = useClassroomRealmRoster(schoolId);
   const keepHubRef = useRef(false);
+  const showRaffle = isClassroomRaffleSectionVisible(
+    settings,
+    loginState === 'teacher' ? 'teacher' : 'admin',
+  );
+  const homeTools = showRaffle ? tools : tools.filter((card) => card.id !== 'raffle');
 
   if (shouldLatchClassroomRealmHub(classroomOn)) {
     keepHubRef.current = true;
@@ -163,6 +175,19 @@ export default function ClassroomRealmHomePage() {
               Open class screen
             </Link>
           </Button>
+          {showRaffle ? (
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="rounded-full border-white/25 bg-white/5 px-8 font-semibold text-white hover:bg-white/10 hover:text-white"
+            >
+              <Link href={classroomRealmManageHref(schoolId, 'raffle')}>
+                <Dices className="mr-2 h-5 w-5" aria-hidden />
+                Open raffle
+              </Link>
+            </Button>
+          ) : null}
         </ClassroomRealmHero>
 
         {isStaff && roster.canReadRoster ? (
@@ -181,7 +206,7 @@ export default function ClassroomRealmHomePage() {
             transition={spring}
             className="mx-auto mb-8 max-w-5xl px-6 text-center text-sm text-white/50"
           >
-            Sign in as teacher or admin to pick a student, time bathroom passes, and pair a TV.
+            Sign in as teacher or admin to pick a student, time bathroom passes, and run a raffle.
           </motion.div>
         )}
 
@@ -243,9 +268,13 @@ export default function ClassroomRealmHomePage() {
           initial="hidden"
           animate="visible"
           variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08, delayChildren: 0.12 } } }}
-          className="mx-auto mt-5 grid max-w-5xl gap-4 px-6 sm:grid-cols-3"
+          className={
+            homeTools.length >= 4
+              ? 'mx-auto mt-5 grid max-w-5xl gap-4 px-6 sm:grid-cols-2 lg:grid-cols-4'
+              : 'mx-auto mt-5 grid max-w-5xl gap-4 px-6 sm:grid-cols-3'
+          }
         >
-          {tools.map((card) => {
+          {homeTools.map((card) => {
             const Icon = card.icon;
             return (
               <motion.div

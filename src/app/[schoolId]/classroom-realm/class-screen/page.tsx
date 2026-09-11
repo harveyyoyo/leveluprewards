@@ -4,11 +4,10 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ExternalLink, LayoutGrid, Loader2, QrCode, Tv } from 'lucide-react';
+import { ExternalLink, LayoutGrid, Loader2, Tv } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
 import { ClassroomRealmPageHeader } from '@/components/classroom/ClassroomRealmChrome';
 import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
-import { ClassroomScreenPairModal } from '@/components/classroom/ClassroomScreenPairModal';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -31,7 +30,6 @@ export default function ClassroomRealmClassScreenPage() {
   const classroomOn = isClassroomPillarOn(settings);
   const roster = useClassroomRealmRoster(schoolId, { includeCategories: true });
   const deferredStudents = useDeferredValue(roster.students);
-  const [pairOpen, setPairOpen] = useState(false);
   const [mode, setMode] = useState<ScreenMode>('poster');
   const [classId, setClassId] = useState(() => pickClassroomActiveClass(roster.classes));
 
@@ -39,8 +37,6 @@ export default function ClassroomRealmClassScreenPage() {
     () => pickClassroomActiveClass(roster.classes, classId),
     [roster.classes, classId],
   );
-  const activeClass = roster.classes.find((c) => c.id === effectiveClassId);
-
   const handleClassChange = (next: string) => {
     setClassId(next);
     rememberClassroomActiveClass(next);
@@ -111,17 +107,7 @@ export default function ClassroomRealmClassScreenPage() {
             }}
           >
             <ExternalLink className="mr-2 h-4 w-4" aria-hidden />
-            Open on TV
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPairOpen(true)}
-            disabled={!effectiveClassId}
-            className="border-white/20 text-white hover:bg-white/10 hover:text-white"
-          >
-            <QrCode className="mr-2 h-4 w-4" aria-hidden />
-            Pair TV
+            Open class screen
           </Button>
           <Button
             type="button"
@@ -205,14 +191,6 @@ export default function ClassroomRealmClassScreenPage() {
           </motion.div>
         )}
       </div>
-      <ClassroomScreenPairModal
-        isOpen={pairOpen}
-        onClose={() => setPairOpen(false)}
-        schoolId={schoolId}
-        classId={effectiveClassId || activeClass?.id || ''}
-        classNameLabel={activeClass?.name || 'Classroom'}
-        scope={roster.seatingScope}
-      />
     </ClassroomRealmShell>
   );
 }

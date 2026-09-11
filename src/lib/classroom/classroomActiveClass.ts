@@ -1,4 +1,4 @@
-/** Remember the class a teacher just picked so Live, Class screen, and Pair TV stay in sync. */
+/** Remember the class a teacher just picked so Live and Class screen stay in sync. */
 
 const SESSION_KEY = 'levelup-classroom-active-class';
 const LEGACY_KEY = 'defaultClassId';

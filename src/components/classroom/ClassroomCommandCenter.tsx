@@ -13,7 +13,6 @@ import {
   Monitor,
   Palette,
   Projector,
-  QrCode,
   RotateCcw,
   Settings as SettingsIcon,
   Shuffle,
@@ -50,7 +49,7 @@ import { endBathroomPass } from '@/lib/db/bathroom';
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import { buildClassroomFullscreenUrl } from '@/lib/classroomPointsUrl';
-import { buildClassroomPairPath } from '@/lib/classroom/classroomScreenPairUrl';
+import { buildClassroomScreenUrl } from '@/lib/classroomScreen';
 import {
   CLASSROOM_REALM_THEMES,
   resolveClassroomRealmTheme,
@@ -62,7 +61,6 @@ import {
   type ClassroomSessionData,
 } from '@/lib/classroomSeatingChart';
 import { ClassroomPointsPanel } from '@/components/points/ClassroomPointsPanel';
-import { ClassroomScreenPairModal } from '@/components/classroom/ClassroomScreenPairModal';
 import { RandomStudentPickerModal } from '@/components/classroom/RandomStudentPickerModal';
 import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
 import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePanel';
@@ -115,7 +113,6 @@ export function ClassroomCommandCenter({
 
   // Active view & modals
   const [activeTab, setActiveTab] = useState<ClassroomWorkbenchTab>(initialTab);
-  const [isPairModalOpen, setIsPairModalOpen] = useState(false);
   const [isRandomModalOpen, setIsRandomModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [sessionPoints, setSessionPoints] = useState<number>(0);
@@ -247,11 +244,10 @@ export function ClassroomCommandCenter({
     audience: 'teacher',
   });
 
-  const studentMirrorUrl = buildClassroomPairPath({
+  const studentMirrorUrl = buildClassroomScreenUrl({
     schoolId,
     classId: selectedClassId,
     scope: seatingScope,
-    target: 'mirror',
   });
 
   const currentTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
@@ -392,18 +388,6 @@ export function ClassroomCommandCenter({
                 Student Mirror
                 <ExternalLink className="h-3 w-3 opacity-70" />
               </a>
-            </Button>
-
-            {/* Pair Screen / QR Code */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsPairModalOpen(true)}
-              className="h-9 rounded-xl font-bold text-xs gap-1.5 border-border bg-background hover:bg-muted"
-            >
-              <QrCode className="h-3.5 w-3.5" />
-              Pair TV / QR
             </Button>
 
             {/* Look / Theme Picker */}
@@ -556,16 +540,6 @@ export function ClassroomCommandCenter({
           </div>
         </TabsContent>
       </Tabs>
-
-      {/* PAIR SCREEN / QR CODE MODAL */}
-      <ClassroomScreenPairModal
-        isOpen={isPairModalOpen}
-        onClose={() => setIsPairModalOpen(false)}
-        schoolId={schoolId}
-        classId={selectedClassId}
-        classNameLabel={activeClass?.name || 'Classroom'}
-        scope={seatingScope}
-      />
 
       {/* RANDOM STUDENT SPOTLIGHT MODAL */}
       <RandomStudentPickerModal
