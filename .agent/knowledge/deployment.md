@@ -2,6 +2,12 @@
 
 Before any deployment, the site must be thoroughly tested to ensure it is working correctly.
 
+## Framework deployment completion
+
+Production and PR preview workflows share the `firebase-frameworks-studio-1273073612-71183` concurrency group with `cancel-in-progress: false` and `queue: max`. Both update the same generated SSR function; overlapping updates can return HTTP 409. Do not cancel a workflow during its Firebase deployment step, because the remote operation can continue after the runner stops.
+
+Firebase CLI 14.27.0 has returned exit code 0 after `unable to queue the operation` / `failed to update function`, without publishing a Hosting release. Both workflows now run `scripts/assert-firebase-release.cjs` against the CLI log: a completed upload is insufficient, and a confirmed Hosting release is required. Check the actual served page after deployment before reporting a UI update as live.
+
 ## Pre-Deployment Checklist
 - [ ] **Login Functionality**: Especially ensure that accounts can log in successfully (School, Teacher, Student, Admin).
 - [ ] **Core Portals**: Verify that the Student Kiosk, Teacher Portal, and Admin Portal are accessible.

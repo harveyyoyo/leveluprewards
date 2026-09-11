@@ -40,6 +40,9 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Firebase release confirmation tests
+        run: node --test scripts/assert-firebase-release.test.cjs
+
       - name: Theme contrast validation
         run: npm run test:themes
 
