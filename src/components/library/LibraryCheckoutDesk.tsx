@@ -15,6 +15,7 @@ import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCam
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { lookupStudentId } from '@/lib/db/lookup';
 import { performLibraryCheckoutOrReturn, findLibraryItemByUpc, getStudentLibraryCheckouts } from '@/lib/library/libraryOperations';
+import type { LibraryLocation } from '@/lib/library/libraryLocations';
 import { formatDueDate, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import {
   playLibraryReturnAudio,
@@ -29,8 +30,10 @@ import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { LibraryStudentNamePicker } from './LibraryStudentNamePicker';
 import { LibraryStudentBehaviorBadge } from './LibraryStudentBehaviorBadge';
 
-export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
+export function LibraryCheckoutDesk({ getStudentName, categories, students, libraryLocationId, libraryLocations }: {
   getStudentName: (id?: string) => string; categories?: Category[] | null; students?: Student[] | null;
+  libraryLocationId?: string | null;
+  libraryLocations?: LibraryLocation[];
 }) {
   const { schoolId } = useAppContext();
   const firestore = useFirestore();
@@ -116,10 +119,16 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
           policy,
           functions,
           action: effectiveAction,
+          libraryLocationId,
         });
 
         if (result.action === 'limit_reached') {
-          throw new Error(`Checkout limit reached: ${result.currentCount} of ${result.max} books.`);
+          throw new Error(`Checkout limit reached for this library: ${result.currentCount} of ${result.max} books.`);
+        }
+        if (result.action === 'wrong_library') {
+          const otherName = libraryLocations?.find((location) => location.id === result.libraryLocationId)?.name
+            ?? 'another library';
+          throw new Error(`This book belongs to ${otherName}. Switch libraries to check it out.`);
         }
         if (result.action === 'wrong_borrower') {
           throw new Error('This copy is on loan to another student.');
@@ -189,7 +198,7 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
         setBusy(false);
       }
     })();
-  }, [firestore, schoolId, studentId, mode, policy, functions, getStudentName, playSound, toast, settings]);
+  }, [firestore, schoolId, studentId, mode, policy, functions, getStudentName, playSound, toast, settings, libraryLocationId, libraryLocations]);
 
   const reader = useBarcodeReaderWedge({ active: true, disabled: busy, onScan: handleScan });
 
@@ -390,6 +399,8 @@ export function LibraryCheckoutDesk({ getStudentName, categories, students }: {
           libraryFineBalance={student?.libraryFineBalance}
           categoryPoints={policy.pointsCategoryName ? student?.categoryPoints?.[policy.pointsCategoryName] : undefined}
           compact
+          libraryLocationId={libraryLocationId}
+          libraryNames={Object.fromEntries((libraryLocations ?? []).map((location) => [location.id, location.name]))}
         />
       )}
 

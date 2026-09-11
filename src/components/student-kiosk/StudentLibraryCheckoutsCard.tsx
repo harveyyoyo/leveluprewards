@@ -5,6 +5,8 @@ import { AlertTriangle, BookOpen, BookMarked, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { itemLibraryLocationId } from '@/lib/library/libraryLocations';
+import { useLibraryLocations } from '@/hooks/useLibraryLocations';
 import type { LibraryItem } from '@/lib/types';
 import {
   computeDaysOverdue,
@@ -40,11 +42,18 @@ export function StudentLibraryCheckoutsCard({
   libraryFineBalance?: number;
   categoryPoints?: number;
 }) {
+  const { locations } = useLibraryLocations(schoolId);
+  const libraryNames = Object.fromEntries(locations.map((location) => [location.id, location.name]));
   const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
-  const countLabel = max ? `${items.length} / ${max}` : String(items.length);
+  const hasMultipleLibraries = locations.length > 1;
+  const countLabel = hasMultipleLibraries
+    ? String(items.length)
+    : max
+      ? `${items.length} / ${max}`
+      : String(items.length);
   const hasOverdue = items.some((i) => computeDaysOverdue(i.dueAt) > 0);
   const showOverdueHeader = topAlert && hasOverdue;
-  const atLimit = max != null && items.length >= max;
+  const atLimit = !hasMultipleLibraries && max != null && items.length >= max;
 
   const tierLines: string[] = [];
   if (libraryPolicy?.rewardMode === 'isolated_points' && typeof libraryPoints === 'number') {
@@ -158,6 +167,7 @@ export function StudentLibraryCheckoutsCard({
               <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
                 <Calendar className="h-3 w-3 shrink-0" aria-hidden />
                 {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
+                {hasMultipleLibraries ? ` · ${libraryNames[itemLibraryLocationId(item)] ?? 'Library'}` : ''}
               </p>
               {kioskCheckoutEnabled ? (
                 <p className="text-[10px] text-muted-foreground mt-0.5">

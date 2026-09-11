@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, query, orderBy, limit, updateDoc } from 'firebase/firestore';
 import { ArrowLeft, BookOpen, Check, Clock, Download, ExternalLink, LayoutGrid, Loader2, MapPin, Monitor, MoreHorizontal, Plus, Printer, Search, Settings, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -21,9 +21,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { LibraryItem, LibraryItemInput, Student, Class, Category } from '@/lib/types';
+import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
 import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib/library/libraryOperations';
+import {
+  DEFAULT_LIBRARY_LOCATION_ID,
+  filterItemsForLibrary,
+  itemLibraryLocationId,
+  libraryPath,
+} from '@/lib/library/libraryLocations';
 import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
 import { filterLibraryCatalog, downloadLibraryCsv, printLibraryLoans, type LibraryLoan } from '@/lib/library/libraryWorkspace';
+import { LibraryLocationSwitcher } from './LibraryLocationSwitcher';
+import { LibraryLocationsCard } from './LibraryLocationsCard';
 import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { LibraryItemModal } from './LibraryItemModal';
@@ -96,20 +105,35 @@ export function LibraryWorkspace({
   const { data: students, isLoading: studentsLoading, error: studentsError } = useCollection<Student>(studentsQuery);
   const { data: classes } = useCollection<Class>(classesQuery);
   const { data: loans, isLoading: historyLoading, error: historyError } = useCollection<LibraryLoan>(historyQuery);
+  const { locations, storedLocations, createLocation, renameLocation, archiveLocation, restoreLocation } = useLibraryLocations(schoolId);
+  const archivedLocations = useMemo(
+    () => storedLocations.filter((location) => location.archived && location.id !== DEFAULT_LIBRARY_LOCATION_ID),
+    [storedLocations],
+  );
+  const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
+  const locationClassNames = useMemo(() => {
+    const names: Record<string, string> = {};
+    for (const location of locations) {
+      const className = classes?.find((item) => item.id === location.classId)?.name;
+      if (className) names[location.id] = className;
+    }
+    return names;
+  }, [classes, locations]);
+  const scopedItems = useMemo(() => filterItemsForLibrary(items, activeLibrary.id), [activeLibrary.id, items]);
   const studentsById = useMemo(() => new Map((students ?? []).map(s => [s.id, s])), [students]);
   const getName = useCallback((id?: string) => { const s = studentsById.get(id ?? ''); return s ? `${s.firstName} ${s.lastName}`.trim() : 'Unknown student'; }, [studentsById]);
   const getClass = useCallback((id?: string) => { const s = studentsById.get(id ?? ''); return classes?.find(c => c.id === s?.classId)?.name ?? ''; }, [studentsById, classes]);
-  const catalog = useMemo(() => filterLibraryCatalog(items ?? [], search, status, getName), [items, search, status, getName]);
+  const catalog = useMemo(() => filterLibraryCatalog(scopedItems, search, status, getName), [scopedItems, search, status, getName]);
   const pageCount = Math.max(1, Math.ceil(catalog.length / PAGE_SIZE));
   const visible = catalog.slice((Math.min(page, pageCount) - 1) * PAGE_SIZE, Math.min(page, pageCount) * PAGE_SIZE);
-  const selectedItems = (items ?? []).filter(i => !i.archived && selected.has(i.id));
-  const activeLoans = useMemo(() => (items ?? []).filter(i => i.status === 'checked_out' && !i.archived), [items]);
+  const selectedItems = scopedItems.filter(i => !i.archived && selected.has(i.id));
+  const activeLoans = useMemo(() => scopedItems.filter(i => i.status === 'checked_out' && !i.archived), [scopedItems]);
   const overdue = activeLoans.filter(i => i.dueAt && i.dueAt < now);
   const filteredLoans = activeLoans.filter(i => (!overdueOnly || (i.dueAt && i.dueAt < now)) &&
     (classFilter === 'all' || studentsById.get(i.checkedOutTo ?? '')?.classId === classFilter) &&
     [i.name, i.upc, getName(i.checkedOutTo ?? undefined), getClass(i.checkedOutTo ?? undefined)].join(' ').toLowerCase().includes(loanSearch.toLowerCase()))
     .sort((a, b) => (a.dueAt ?? Number.MAX_SAFE_INTEGER) - (b.dueAt ?? Number.MAX_SAFE_INTEGER));
-  const filteredHistory = (loans ?? []).filter(l => (classFilter === 'all' || studentsById.get(l.studentId)?.classId === classFilter) &&
+  const filteredHistory = (loans ?? []).filter(l => itemLibraryLocationId(l) === activeLibrary.id && (classFilter === 'all' || studentsById.get(l.studentId)?.classId === classFilter) &&
     [l.title, l.upc, getName(l.studentId)].join(' ').toLowerCase().includes(loanSearch.toLowerCase()));
   const loanRows = history ? filteredHistory : filteredLoans;
   const loanPages = Math.max(1, Math.ceil(loanRows.length / PAGE_SIZE));
@@ -125,8 +149,27 @@ export function LibraryWorkspace({
     finally { busyRef.current = false; setBusy(false); }
   };
   const save = async (data: LibraryItemInput, itemId?: string) => {
-    const result = await callLibrary<{ items: LibraryItem[]; count: number }>(functions, 'libraryCatalogSave', { schoolId, item: data, ...(itemId ? { itemId } : {}) });
-    if (!itemId) setAddedCopies(prev => [...prev, ...result.items]);
+    const result = await callLibrary<{ items: LibraryItem[]; count: number }>(functions, 'libraryCatalogSave', {
+      schoolId,
+      item: data,
+      libraryLocationId: activeLibrary.id,
+      ...(itemId ? { itemId } : {}),
+    });
+    if (!itemId) {
+      const copies = result.items ?? [];
+      if (firestore) {
+        await Promise.all(
+          copies
+            .filter((copy) => itemLibraryLocationId(copy) !== activeLibrary.id)
+            .map((copy) =>
+              updateDoc(doc(firestore, 'schools', schoolId!, 'library', copy.id), {
+                libraryLocationId: activeLibrary.id,
+              }),
+            ),
+        );
+      }
+      setAddedCopies((prev) => [...prev, ...copies.map((copy) => ({ ...copy, libraryLocationId: activeLibrary.id }))]);
+    }
     toast({ title: itemId ? 'Copy updated' : `${result.count} copies added`, description: itemId ? undefined : 'Print labels for the new copies before lending.' });
   };
   const itemAction = (item: LibraryItem, action: string, extra: Record<string, unknown> = {}) => run(async () => {
@@ -237,26 +280,26 @@ export function LibraryWorkspace({
               className="rounded-xl font-bold text-xs gap-1 shadow-sm"
               asChild
             >
-              <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+              <Link href={libraryPath(schoolId, '/kiosk', activeLibrary.id)} target="_blank" rel="noopener noreferrer">
                 Open Kiosk
                 <ExternalLink className="h-3 w-3" />
               </Link>
             </Button>
           </div>
-          <div className="grid grid-cols-3 gap-3">{[['catalog', 'Copies', (items ?? []).filter(i => !i.archived).length], ['loans', 'On loan', activeLoans.length], ['overdue', 'Overdue', overdue.length]].map(([key, label, count]) =>
+          <div className="grid grid-cols-3 gap-3">{[['catalog', 'Copies', scopedItems.filter(i => !i.archived).length], ['loans', 'On loan', activeLoans.length], ['overdue', 'Overdue', overdue.length]].map(([key, label, count]) =>
             <button key={key} className="rounded-xl border bg-background p-4 text-left hover:border-primary focus-visible:ring-2 focus-visible:ring-ring" onClick={() => { setTab(key === 'catalog' ? 'catalog' : 'loans'); setHistory(false); setOverdueOnly(key === 'overdue'); }}><span className="block text-sm text-muted-foreground">{label}</span><span className="text-2xl font-bold">{count}</span></button>)}</div>
-          <LibraryCheckoutDesk getStudentName={getName} categories={categories} students={students} />
+          <LibraryCheckoutDesk getStudentName={getName} categories={categories} students={students} libraryLocationId={activeLibrary.id} libraryLocations={locations} />
         </TabsContent>
         <TabsContent value="catalog" className="mt-0 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Book catalog</h2><p className="text-sm text-muted-foreground">Find a copy, print labels, or add books.</p></div><Button onClick={() => setIntakeOpen(true)}><Plus className="mr-2 h-4 w-4" />Add books</Button></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Book catalog</h2><p className="text-sm text-muted-foreground">Books in {activeLibrary.name}. Find a copy, print labels, or add books.</p></div><Button onClick={() => setIntakeOpen(true)}><Plus className="mr-2 h-4 w-4" />Add books</Button></div>
           {addedCopies.length > 0 && <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4"><Check className="h-5 w-5" /><span>{addedCopies.length} new copies ready for labels.</span><Button size="sm" onClick={() => print(addedCopies)}>Print new labels</Button><Button size="sm" variant="ghost" onClick={() => setAddedCopies([])}>Dismiss</Button></div>}
           <div className="flex flex-wrap gap-3"><div className="relative min-w-48 flex-1"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" aria-label="Search catalog" placeholder="Title, author, barcode, shelf, or borrower" value={search} onChange={e => setSearch(e.target.value)} /></div>
             <select aria-label="Filter catalog status" className={nativeSelect} value={status} onChange={e => setStatus(e.target.value)}><option value="all">All copies</option><option value="available">Available</option><option value="checked_out">On loan</option><option value="lost">Lost</option><option value="damaged">Damaged</option></select>
-            <Button variant="outline" onClick={() => downloadLibraryCsv('library-catalog.csv', [['Title', 'Author', 'ISBN', 'Copy barcode', 'Shelf', 'Category', 'Status', 'Condition'], ...catalog.map(i => [i.name, i.author, i.isbn, i.upc, i.shelfLocation, i.category, i.status, i.condition ?? 'good'])])}><Download className="mr-2 h-4 w-4" />Export</Button>
+            <Button variant="outline" onClick={() => downloadLibraryCsv('library-catalog.csv', [['Library', 'Title', 'Author', 'ISBN', 'Copy barcode', 'Shelf', 'Category', 'Status', 'Condition'], ...catalog.map(i => [activeLibrary.name, i.name, i.author, i.isbn, i.upc, i.shelfLocation, i.category, i.status, i.condition ?? 'good'])])}><Download className="mr-2 h-4 w-4" />Export</Button>
           </div>
-          {selectedItems.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-primary/5 p-3"><span className="mr-2 text-sm font-semibold">{selectedItems.length} selected across pages</span><Button size="sm" variant="outline" onClick={() => print(selectedItems)}>Print labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'spine')}>Spine labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'pocket')}>Pocket labels</Button><Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Edit shelf / category</Button><Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button></div>}
+          {selectedItems.length > 0 && <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-primary/5 p-3"><span className="mr-2 text-sm font-semibold">{selectedItems.length} selected across pages</span><Button size="sm" variant="outline" onClick={() => print(selectedItems)}>Print labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'spine')}>Spine labels</Button><Button size="sm" variant="outline" onClick={() => print(selectedItems, 'pocket')}>Pocket labels</Button><Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Edit shelf / category</Button>{locations.length > 1 ? <select aria-label="Move selected copies to another library" className={nativeSelect} defaultValue="" onChange={e => { const nextLibrary = e.target.value; e.currentTarget.value = ''; if (!nextLibrary || !firestore || !schoolId) return; void run(async () => { await Promise.all(selectedItems.map(i => updateDoc(doc(firestore, 'schools', schoolId, 'library', i.id), { libraryLocationId: nextLibrary }))); setSelected(new Set()); toast({ title: 'Copies moved' }); }); }}><option value="">Move to…</option>{locations.filter(l => l.id !== activeLibrary.id).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select> : null}<Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>Clear</Button></div>}
           <div className="flex items-center gap-3 px-3 text-sm"><Checkbox aria-label="Select this page" checked={visible.length > 0 && visible.every(i => selected.has(i.id))} onCheckedChange={checked => setSelected(prev => { const next = new Set(prev); visible.forEach(i => checked ? next.add(i.id) : next.delete(i.id)); return next; })} />Select this page<span className="ml-auto text-muted-foreground">{catalog.length} copies</span></div>
-          {!catalogLoading && !catalog.length ? <div className="rounded-xl border border-dashed p-10 text-center"><BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><h3 className="font-semibold">{search || status !== 'all' ? 'No matching copies' : 'Add your first books'}</h3><p className="mt-2 text-sm text-muted-foreground">{search || status !== 'all' ? 'Try another search or show all copies.' : 'Scan an ISBN or enter a title to start your catalog.'}</p></div> : null}
+          {!catalogLoading && !catalog.length ? <div className="rounded-xl border border-dashed p-10 text-center"><BookOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground" /><h3 className="font-semibold">{search || status !== 'all' ? 'No matching copies' : `Add books to ${activeLibrary.name}`}</h3><p className="mt-2 text-sm text-muted-foreground">{search || status !== 'all' ? 'Try another search or show all copies.' : 'Scan an ISBN or enter a title to start this library catalog.'}</p></div> : null}
           <ul className="space-y-2">{visible.map(item => {
             const classification = resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation);
             return (
@@ -306,7 +349,7 @@ export function LibraryWorkspace({
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Loans &amp; returns</h2><p className="text-sm text-muted-foreground">Renew books and follow up with students.</p></div><div className="flex gap-2"><Button variant={!history ? 'default' : 'outline'} onClick={() => setHistory(false)}>Current loans</Button><Button variant={history ? 'default' : 'outline'} onClick={() => setHistory(true)}>History</Button></div></div>
           <div className="flex flex-wrap gap-3"><Input className="min-w-48 flex-1" aria-label="Search loans" placeholder="Student, book, or class" value={loanSearch} onChange={e => setLoanSearch(e.target.value)} /><select aria-label="Filter loans by class" className={nativeSelect} value={classFilter} onChange={e => setClassFilter(e.target.value)}><option value="all">All classes</option>{classes?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
             {!history && <><Button variant={overdueOnly ? 'default' : 'outline'} aria-pressed={overdueOnly} onClick={() => setOverdueOnly(v => !v)}>Overdue only</Button><Button variant="outline" onClick={() => { try { printLibraryLoans(filteredLoans, getName, getClass); } catch (e) { toast({ variant: 'destructive', title: (e as Error).message }); } }}><Printer className="mr-2 h-4 w-4" />Print list</Button></>}
-            <Button variant="outline" onClick={() => downloadLibraryCsv('library-loans.csv', [['Student', 'Class', 'Book', 'Due date', 'Returned'], ...(history ? filteredHistory.map(l => [getName(l.studentId), getClass(l.studentId), l.title, formatDueDate(l.dueAt), l.returnedAt ? new Date(l.returnedAt).toLocaleDateString() : 'On loan']) : filteredLoans.map(i => [getName(i.checkedOutTo ?? undefined), getClass(i.checkedOutTo ?? undefined), i.name, formatDueDate(i.dueAt), 'On loan']))])}>Export</Button>
+            <Button variant="outline" onClick={() => downloadLibraryCsv('library-loans.csv', [['Library', 'Student', 'Class', 'Book', 'Due date', 'Returned'], ...(history ? filteredHistory.map(l => [activeLibrary.name, getName(l.studentId), getClass(l.studentId), l.title, formatDueDate(l.dueAt), l.returnedAt ? new Date(l.returnedAt).toLocaleDateString() : 'On loan']) : filteredLoans.map(i => [activeLibrary.name, getName(i.checkedOutTo ?? undefined), getClass(i.checkedOutTo ?? undefined), i.name, formatDueDate(i.dueAt), 'On loan']))])}>Export</Button>
           </div>
           {history && <p className="text-sm text-muted-foreground">Latest 200 loans. Older loans appear here as they are returned or renewed after this update.</p>}
           {historyError && <p role="alert" className="text-destructive">Could not load history: {historyError.message}</p>}
@@ -316,6 +359,17 @@ export function LibraryWorkspace({
           {!history && (students ?? []).some(s => (s.libraryFineBalance ?? 0) > 0) && <details className="rounded-xl border bg-background p-4"><summary className="cursor-pointer font-semibold">Library fine balances</summary><p className="my-3 text-sm text-muted-foreground">Record a reason when waiving a fine.</p>{(students ?? []).filter(s => (s.libraryFineBalance ?? 0) > 0 && (classFilter === 'all' || s.classId === classFilter) && getName(s.id).toLowerCase().includes(loanSearch.toLowerCase())).map(s => <div key={s.id} className="flex items-center justify-between border-t py-3"><span>{getName(s.id)} · {s.libraryFineBalance} fine units</span><Button variant="outline" size="sm" onClick={() => { setWaiverStudent(s); setWaiverAmount(String(s.libraryFineBalance)); setWaiverReason(''); }}>Waive fine</Button></div>)}</details>}
         </TabsContent>
         <TabsContent value="settings" className="mt-0 space-y-6">
+          <LibraryLocationsCard
+            locations={locations}
+            classes={classes}
+            activeId={activeLibrary.id}
+            onSelect={setActiveLibrary}
+            onCreate={createLocation}
+            onRename={renameLocation}
+            onArchive={archiveLocation}
+            archivedLocations={archivedLocations}
+            onRestore={restoreLocation}
+          />
           <LibraryPolicySettingsCard categories={categories} />
           <LibraryThemeSettingsCard />
         </TabsContent>
@@ -339,7 +393,7 @@ export function LibraryWorkspace({
           </Button>
           <LibraryBookIntakeScanner
             onRegister={save}
-            libraryItems={items}
+            libraryItems={scopedItems}
             upcTaken={async code => !!(firestore && await findLibraryItemByUpc(firestore, schoolId, code))}
           />
         </DialogContent>
@@ -437,19 +491,28 @@ export function LibraryWorkspace({
               <div>
                 <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Library Management</h2>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Circulation desk, catalog, loans, and student self-checkout kiosk
+                  {activeLibrary.name} · Circulation desk, catalog, loans, and student self-checkout
                 </p>
+                <div className="pt-2">
+                  <LibraryLocationSwitcher
+                    locations={locations}
+                    activeId={activeLibrary.id}
+                    onChange={setActiveLibrary}
+                    classNames={locationClassNames}
+                    compact
+                  />
+                </div>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
-                <Link href={`/${schoolId}/library`} target="_blank" rel="noopener noreferrer">
+                <Link href={libraryPath(schoolId, '', activeLibrary.id)} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-4 w-4" />
                   <span>Fullscreen</span>
                 </Link>
               </Button>
               <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
-                <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+                <Link href={libraryPath(schoolId, '/kiosk', activeLibrary.id)} target="_blank" rel="noopener noreferrer">
                   <Monitor className="h-4 w-4 text-primary" />
                   <span className="hidden sm:inline">Kiosk Station</span>
                   <ExternalLink className="h-3 w-3 opacity-60" />
@@ -482,16 +545,25 @@ export function LibraryWorkspace({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{schoolName || 'Library'}</h1>
+                <h1 className="text-2xl font-bold">{activeLibrary.name}</h1>
               </div>
               <p className="text-sm opacity-80">
-                {schoolName ? 'Library · ' : ''}Books, borrowing, and returns{userName ? ` · ${userName}` : ''}
+                {schoolName ? `${schoolName} · ` : ''}Books, borrowing, and returns{userName ? ` · ${userName}` : ''}
               </p>
+              <div className="pt-2">
+                <LibraryLocationSwitcher
+                  locations={locations}
+                  activeId={activeLibrary.id}
+                  onChange={setActiveLibrary}
+                  classNames={locationClassNames}
+                  compact
+                />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2.5">
             <Button asChild variant="outline" size="sm" className="rounded-xl font-bold gap-1.5 shadow-sm">
-              <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
+              <Link href={libraryPath(schoolId, '/kiosk', activeLibrary.id)} target="_blank" rel="noopener noreferrer">
                 <Monitor className="h-4 w-4 text-primary" />
                 <span className="hidden sm:inline">Kiosk Station</span>
                 <ExternalLink className="h-3 w-3 opacity-60" />

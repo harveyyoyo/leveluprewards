@@ -3,6 +3,8 @@
 import { Book, AlertTriangle, BookMarked, Calendar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { itemLibraryLocationId } from '@/lib/library/libraryLocations';
+import { useLibraryLocations } from '@/hooks/useLibraryLocations';
 import type { LibraryItem } from '@/lib/types';
 import { computeDaysOverdue, formatDueDate } from '@/lib/library/libraryPolicy';
 import type { StudentLibraryBookRead } from '@/lib/library/libraryStudentHistory';
@@ -14,14 +16,19 @@ import type { StudentLibraryBookRead } from '@/lib/library/libraryStudentHistory
  * but is styled for the at-home portal (no scan/tap prompts).
  */
 export function StudentPortalMyBooksCard({
+  schoolId,
   items,
   booksRead = [],
   isLoading,
 }: {
+  schoolId?: string;
   items: LibraryItem[];
   booksRead?: StudentLibraryBookRead[];
   isLoading?: boolean;
 }) {
+  const { locations } = useLibraryLocations(schoolId ?? null);
+  const libraryNames = Object.fromEntries(locations.map((location) => [location.id, location.name]));
+
   if (isLoading) {
     return (
       <Card>
@@ -84,6 +91,7 @@ export function StudentPortalMyBooksCard({
                   <p className="mt-1 flex items-center gap-1 text-[10px] text-muted-foreground">
                     <Calendar className="h-3 w-3 shrink-0" aria-hidden />
                     Due {formatDueDate(item.dueAt)}
+                    {locations.length > 1 ? ` · ${libraryNames[itemLibraryLocationId(item)] ?? 'Library'}` : ''}
                   </p>
                 </div>
                 {isOverdue ? (

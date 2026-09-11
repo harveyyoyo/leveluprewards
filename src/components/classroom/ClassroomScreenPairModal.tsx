@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Check,
   Copy,
@@ -94,7 +95,12 @@ export function ClassroomScreenPairModal({
           </div>
         </DialogHeader>
 
-        <div className="mt-3 space-y-5">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06 } } }}
+          className="mt-3 space-y-5"
+        >
           {/* Audience Mode Switcher */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -265,7 +271,7 @@ export function ClassroomScreenPairModal({
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </DialogContent>
     </Dialog>
   );
