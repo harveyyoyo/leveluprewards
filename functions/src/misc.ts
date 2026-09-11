@@ -15,8 +15,6 @@ import { libraryId, runLibraryOperation } from "./libraryService";
 import { saveLibraryCatalog } from "./libraryCatalogService";
 
 import "./init";
-import { libraryId, runLibraryOperation } from "./libraryService";
-import { saveLibraryCatalog } from "./libraryCatalogService";
 
 const SUBCOLLECTIONS = ["students", "classes", "teachers", "staffAccounts", "categories", "prizes", "coupons"];
 const RETENTION_DAYS = 30;
