@@ -127,8 +127,11 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
 
   if (!isInitialized || !canAccessHallOfFameRoute(loginState)) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        className="fixed inset-0 flex items-center justify-center"
+        style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-white/70" />
       </div>
     );
   }
@@ -152,8 +155,11 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
 
   if (studentsLoading || classesLoading || categoriesLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div
+        className="fixed inset-0 flex items-center justify-center"
+        style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-white/70" />
       </div>
     );
   }
@@ -175,8 +181,14 @@ export function ClassroomLiveMonitor({ hideRealmChrome = true }: { hideRealmChro
   }
 
   const monitorContent = (
-    <div className="fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden bg-background">
-      <div className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden bg-background">
+    <div
+      className="classroom-realm-root classroom-realm-manage fixed inset-0 z-[100] flex min-h-0 flex-col overflow-hidden"
+      style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+    >
+      <div
+        className="relative z-10 flex h-full min-h-0 w-full flex-col overflow-hidden"
+        style={{ backgroundColor: 'var(--cr-base, #102016)' }}
+      >
         <div className="flex h-full min-h-0 w-full flex-col pl-3 pt-2 pb-2 pr-0">
           <ClassroomPointsPanel
             variant="fullscreen"

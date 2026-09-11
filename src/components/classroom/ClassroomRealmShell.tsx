@@ -246,7 +246,7 @@ export function ClassroomRealmShell({
   /** Live monitor runs fullscreen without side nav. */
   hideChrome?: boolean;
 }) {
-  useClassroomRealmTheme(!hideChrome);
+  useClassroomRealmTheme(true);
   const { teacherDocId } = useAppContext();
   useClassroomPrefsCloudSync(schoolId, teacherDocId || undefined);
 
@@ -337,7 +337,12 @@ export function ClassroomRealmHero({
       >
         Classroom
       </p>
-      <h1 className="classroom-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl">{title}</h1>
+      <motion.h1
+        layoutId="classroom-realm-title"
+        className="classroom-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl"
+      >
+        {title}
+      </motion.h1>
       {subtitle ? <p className="max-w-xl text-base text-white/60 sm:text-lg">{subtitle}</p> : null}
       {children ? <div className="mt-10 flex flex-wrap justify-center gap-4">{children}</div> : null}
     </motion.div>

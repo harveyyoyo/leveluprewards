@@ -25,6 +25,10 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BrandedQrCode } from '@/components/qr/BrandedQrCode';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import {
+  buildClassroomPairPath,
+  classroomPairAbsoluteUrl,
+} from '@/lib/classroom/classroomScreenPairUrl';
 
 export interface ClassroomScreenPairModalProps {
   isOpen: boolean;
@@ -32,6 +36,7 @@ export interface ClassroomScreenPairModalProps {
   schoolId: string;
   classId: string;
   classNameLabel: string;
+  scope?: string;
 }
 
 export function ClassroomScreenPairModal({
@@ -40,6 +45,7 @@ export function ClassroomScreenPairModal({
   schoolId,
   classId,
   classNameLabel,
+  scope,
 }: ClassroomScreenPairModalProps) {
   const { toast } = useToast();
   const [targetScreen, setTargetScreen] = useState<'mirror' | 'live'>('mirror');
@@ -47,12 +53,13 @@ export function ClassroomScreenPairModal({
   const [activeGuideTab, setActiveGuideTab] = useState<'promethean' | 'appletv' | 'tablet' | 'firetv'>('promethean');
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const cleanClassId = encodeURIComponent(classId || '');
-  const path =
-    targetScreen === 'mirror'
-      ? `/${schoolId}/classroom-screen?classId=${cleanClassId}`
-      : `/${schoolId}/classroom?classId=${cleanClassId}`;
-  const fullUrl = `${origin}${path}`;
+  const path = buildClassroomPairPath({
+    schoolId,
+    classId,
+    scope,
+    target: targetScreen,
+  });
+  const fullUrl = classroomPairAbsoluteUrl(path, origin);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullUrl).then(() => {

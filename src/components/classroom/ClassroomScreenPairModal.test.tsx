@@ -21,6 +21,7 @@ describe('ClassroomScreenPairModal', () => {
     expect(screen.getByText('SMART / Promethean')).toBeDefined();
     expect(screen.getByText('Apple TV / AirPlay')).toBeDefined();
     expect(screen.getByText('Classroom iPad / Tablet')).toBeDefined();
+    expect(screen.getByDisplayValue(/\/demo-school\/classroom-screen/)).toBeDefined();
   });
 
   it('does not render content when closed', () => {
