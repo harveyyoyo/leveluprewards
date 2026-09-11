@@ -4,7 +4,18 @@ import { HttpsError } from 'firebase-functions/v1/https';
 type Data = Record<string, any>;
 export type LibraryActor = { uid: string; staff: boolean; studentId?: string; kiosk?: boolean };
 const DAY = 86_400_000;
+const DEFAULT_LIBRARY_LOCATION_ID = 'main';
 const fail = (message: string): never => { throw new HttpsError('failed-precondition', message); };
+function asLibraryLocationId(value: unknown): string {
+  if (value == null || value === '') return DEFAULT_LIBRARY_LOCATION_ID;
+  if (typeof value !== 'string' || !value.trim() || value.length > 80 || value.includes('/')) {
+    throw new HttpsError('invalid-argument', 'Invalid library.');
+  }
+  return value.trim();
+}
+function itemLocationId(item: { libraryLocationId?: unknown } | null | undefined): string {
+  return asLibraryLocationId(item?.libraryLocationId ?? DEFAULT_LIBRARY_LOCATION_ID);
+}
 export function libraryId(value: unknown, label: string): string {
   if (typeof value !== 'string' || !value.trim() || value.length > 200 || value.includes('/')) {
     throw new HttpsError('invalid-argument', `Invalid ${label}.`);
@@ -99,8 +110,21 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
         if (item.checkedOutTo === studentId) return finish({ action: 'already_done', itemId, item: { ...item, id: itemId } });
         return finish({ action: 'wrong_borrower', item: { ...item, id: itemId } });
       }
+      if (data.libraryLocationId != null && data.libraryLocationId !== '') {
+        const requestedLibrary = asLibraryLocationId(data.libraryLocationId);
+        if (itemLocationId(item) !== requestedLibrary) {
+          return finish({
+            action: 'wrong_library',
+            item: { ...item, id: itemId },
+            libraryLocationId: itemLocationId(item),
+            message: 'This book belongs to a different library.',
+          });
+        }
+      }
       const loans = await tx.get(school.collection('library').where('checkedOutTo', '==', studentId));
-      const count = loans.docs.filter(d => d.data().status === 'checked_out').length;
+      const locationId = itemLocationId(item);
+      const count = loans.docs.filter(d =>
+        d.data().status === 'checked_out' && itemLocationId(d.data()) === locationId).length;
       const max = numeric(settings.libraryMaxCheckoutsPerStudent, 3);
       if (max > 0 && count >= max) return finish({ action: 'limit_reached', currentCount: count, max });
       const loanRef = school.collection('libraryLoans').doc();
@@ -109,8 +133,8 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       tx.update(itemRef, changes);
       tx.update(studentRef, { libraryUpdatedAt: now });
       tx.set(loanRef, {
-        itemId, studentId, title: item.name, upc: item.upc, checkedOutAt: now, dueAt,
-        returnedAt: null, renewalCount: 0, actorUid: actor.uid,
+        itemId, studentId, title: item.name, upc: item.upc, libraryLocationId: locationId,
+        checkedOutAt: now, dueAt, returnedAt: null, renewalCount: 0, actorUid: actor.uid,
       });
       tx.set(studentRef.collection('activities').doc(), { desc: `Checked out library item: ${item.name}`, amount: 0, date: now });
       return finish({ action: 'checkout', itemId, item: { ...item, id: itemId, ...changes }, dueAt });

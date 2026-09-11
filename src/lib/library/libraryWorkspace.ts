@@ -6,6 +6,7 @@ export interface LibraryLoan {
   studentId: string;
   title: string;
   upc: string;
+  libraryLocationId?: string | null;
   checkedOutAt: number;
   dueAt: number;
   returnedAt?: number | null;

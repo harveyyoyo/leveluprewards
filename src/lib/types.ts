@@ -16,6 +16,8 @@ export interface LibraryItem {
   name: string;
   upc: string;
   status: 'available' | 'checked_out';
+  /** Which library this copy belongs to. Missing means the default school library. */
+  libraryLocationId?: string | null;
   checkedOutTo?: string | null;
   checkedOutAt?: number | null;
   addedBy?: string;

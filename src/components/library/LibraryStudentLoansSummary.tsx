@@ -3,6 +3,7 @@
 import { BookOpen, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { computeDaysOverdue, formatDueDate, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
+import { itemBelongsToLibrary, itemLibraryLocationId } from '@/lib/library/libraryLocations';
 import type { LibraryItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +15,8 @@ export function LibraryStudentLoansSummary({
   libraryFineBalance,
   categoryPoints,
   compact = false,
+  libraryNames,
+  libraryLocationId,
 }: {
   items: LibraryItem[];
   maxCheckouts?: number;
@@ -22,9 +25,16 @@ export function LibraryStudentLoansSummary({
   libraryFineBalance?: number;
   categoryPoints?: number;
   compact?: boolean;
+  libraryNames?: Record<string, string>;
+  libraryLocationId?: string | null;
 }) {
   const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
-  const countLabel = max ? `${items.length} / ${max} books` : `${items.length} book${items.length === 1 ? '' : 's'}`;
+  const counted = libraryLocationId
+    ? items.filter((item) => itemBelongsToLibrary(item, libraryLocationId))
+    : items;
+  const countLabel = max
+    ? `${counted.length} / ${max} in this library`
+    : `${items.length} book${items.length === 1 ? '' : 's'}`;
 
   const tierLines: string[] = [];
   if (libraryPolicy?.rewardMode === 'isolated_points' && typeof libraryPoints === 'number') {
@@ -89,6 +99,9 @@ export function LibraryStudentLoansSummary({
                 <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Calendar className="h-3 w-3 shrink-0" aria-hidden />
                   {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
+                  {libraryNames && Object.keys(libraryNames).length > 1
+                    ? ` · ${libraryNames[itemLibraryLocationId(item)] ?? 'Library'}`
+                    : ''}
                 </p>
               </li>
             );

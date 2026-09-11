@@ -9,6 +9,10 @@ import {
 import { httpsCallable, type Functions } from 'firebase/functions';
 import type { LibraryItem } from '@/lib/types';
 import { getIsbnLookupVariants } from '@/lib/library/libraryCatalogLookup';
+import {
+  itemBelongsToLibrary,
+  itemLibraryLocationId,
+} from '@/lib/library/libraryLocations';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 
@@ -25,6 +29,7 @@ export type LibraryCheckoutResult =
     }
   | { action: 'wrong_borrower'; item: LibraryItem; borrowerName?: string }
   | { action: 'limit_reached'; currentCount: number; max: number }
+  | { action: 'wrong_library'; item: LibraryItem; libraryLocationId: string }
   | { action: 'not_found' }
   | { action: 'already_done' };
 
@@ -69,13 +74,18 @@ export async function getStudentLibraryCheckouts(
   firestore: Firestore,
   schoolId: string,
   studentId: string,
+  options?: { libraryLocationId?: string | null },
 ): Promise<LibraryItem[]> {
   const snap = await getDocs(
     query(collection(firestore, 'schools', schoolId, 'library'), where('checkedOutTo', '==', studentId)),
   );
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as LibraryItem)
-    .filter((item) => item.status === 'checked_out');
+    .filter((item) => {
+      if (item.status !== 'checked_out') return false;
+      if (!options?.libraryLocationId) return true;
+      return itemBelongsToLibrary(item, options.libraryLocationId);
+    });
 }
 
 export async function countStudentLibraryCheckouts(
@@ -112,6 +122,7 @@ export async function performLibraryCheckoutOrReturn(
     functions?: Functions | null;
     action?: 'checkout' | 'return' | 'auto';
     allowCrossReturn?: boolean;
+    libraryLocationId?: string | null;
   },
 ): Promise<LibraryCheckoutResult> {
   const found = await findLibraryItemByUpc(firestore, schoolId, rawCode);
@@ -139,6 +150,14 @@ export async function performLibraryCheckoutOrReturn(
     }
   }
 
+  if (
+    action === 'checkout' &&
+    options?.libraryLocationId &&
+    !itemBelongsToLibrary(item, options.libraryLocationId)
+  ) {
+    return { action: 'wrong_library', item, libraryLocationId: itemLibraryLocationId(item) };
+  }
+
   const effectiveStudentId =
     action === 'return' && item.checkedOutTo && options?.allowCrossReturn
       ? item.checkedOutTo
@@ -148,6 +167,9 @@ export async function performLibraryCheckoutOrReturn(
     schoolId, studentId: effectiveStudentId, itemId, action,
     expectedLoanId: item.activeLoanId ?? null,
     expectedCheckedOutAt: item.checkedOutAt ?? null,
+    ...(action === 'checkout' && options?.libraryLocationId
+      ? { libraryLocationId: options.libraryLocationId }
+      : {}),
   });
 }
 

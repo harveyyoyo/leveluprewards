@@ -34,12 +34,15 @@ import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { lookupStudentId } from '@/lib/db/lookup';
+import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
 import {
   performLibraryCheckoutOrReturn,
   findLibraryItemByUpc,
   getStudentLibraryCheckouts,
   forceReturnLibraryItem,
 } from '@/lib/library/libraryOperations';
+import { filterItemsForLibrary } from '@/lib/library/libraryLocations';
+import { LibraryStationPicker } from './LibraryStationPicker';
 import { computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import {
   playLibraryReturnAudio,
@@ -133,6 +136,20 @@ export function LibraryStudentSelfCheckoutPortal({
     [firestore, schoolId],
   );
   const { data: catalogItems } = useCollection<LibraryItem>(catalogQuery);
+  const { locations } = useLibraryLocations(schoolId);
+  const { active: activeLibrary, setActive: setActiveLibrary, resetChoice, needsChoice } = useActiveLibraryLocation(
+    schoolId,
+    locations,
+    { requireExplicitChoice: true },
+  );
+  const scopedCatalog = useMemo(
+    () => filterItemsForLibrary(catalogItems, activeLibrary.id),
+    [activeLibrary.id, catalogItems],
+  );
+  const libraryNames = useMemo(
+    () => Object.fromEntries(locations.map((location) => [location.id, location.name])),
+    [locations],
+  );
 
   const libraryPolicy = useMemo(
     () => getLibraryPolicyFromSettings(settings, categories),
@@ -145,11 +162,11 @@ export function LibraryStudentSelfCheckoutPortal({
 
   // Recommendations and standing computations
   const recommendations = useMemo(() => {
-    return getLibraryBookRecommendations(catalogItems ?? [], {
+    return getLibraryBookRecommendations(scopedCatalog, {
       studentLoans,
       limit: 6,
     });
-  }, [catalogItems, studentLoans]);
+  }, [scopedCatalog, studentLoans]);
 
   const standing = useMemo(() => {
     return computeStudentLibraryStanding(studentLoans);
@@ -278,6 +295,7 @@ export function LibraryStudentSelfCheckoutPortal({
           policy: libraryPolicy,
           functions,
           action: mode,
+          libraryLocationId: activeLibrary.id,
         });
         if (result.action === 'checkout') {
           playSound('success');
@@ -334,7 +352,14 @@ export function LibraryStudentSelfCheckoutPortal({
           toast({
             variant: 'destructive',
             title: 'Checkout limit reached',
-            description: `You already have ${result.currentCount} of ${result.max} allowed books.`,
+            description: `You already have ${result.currentCount} of ${result.max} allowed books from ${activeLibrary.name}.`,
+          });
+        } else if (result.action === 'wrong_library') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Different library',
+            description: `This book belongs to ${libraryNames[result.libraryLocationId] ?? 'another library'}. Use that station to borrow it.`,
           });
         } else if (result.action === 'wrong_borrower') {
           playSound('error');
@@ -355,7 +380,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel],
+    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel, activeLibrary.id, activeLibrary.name, libraryNames],
   );
 
   // Quick Return for Drop Box mode (no student card swipe needed)
@@ -542,6 +567,10 @@ export function LibraryStudentSelfCheckoutPortal({
     );
   }
 
+  if (needsChoice) {
+    return <LibraryStationPicker locations={locations} onPick={setActiveLibrary} />;
+  }
+
   return (
     <div
       className={cn(
@@ -594,7 +623,7 @@ export function LibraryStudentSelfCheckoutPortal({
 
         <div className="min-w-0 flex-1 text-center">
           <p className="flex items-center justify-center gap-1.5 truncate text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            <span className="truncate">{schoolName || 'Library Station'}</span>
+            <span className="truncate">{activeLibrary.name || schoolName || 'Library Station'}</span>
             {matchKioskTheme && (
               <span className="shrink-0 font-normal opacity-75">
                 · {libraryTheme.icon} {libraryTheme.label}
@@ -606,6 +635,15 @@ export function LibraryStudentSelfCheckoutPortal({
               ? 'Quick Book Return'
               : 'Student Borrow & Return'}
           </h1>
+          {locations.length > 1 ? (
+            <button
+              type="button"
+              className="text-[11px] font-semibold text-primary underline-offset-2 hover:underline"
+              onClick={resetChoice}
+            >
+              Change library
+            </button>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -980,6 +1018,8 @@ export function LibraryStudentSelfCheckoutPortal({
             maxCheckouts={libraryPolicy.maxCheckoutsPerStudent}
             libraryPolicy={libraryPolicy}
             compact
+            libraryLocationId={activeLibrary.id}
+            libraryNames={libraryNames}
           />
         ) : null}
 
