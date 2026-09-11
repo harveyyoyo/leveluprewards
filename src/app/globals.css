@@ -720,8 +720,12 @@ html[data-office-portal] .office-content-pane {
   /* Attribute-substring match so opacity-suffixed Tailwind variants (bg-card/60,
      bg-background/80, bg-muted/15, ...) are caught too — an exact class match like
      `.bg-card` only matches literal `bg-card`, not `bg-card/60`, since Tailwind
-     compiles each opacity value to its own distinct class. */
-  html[data-classroom-realm] .classroom-realm-manage :where([class*="bg-card"], [class*="bg-background"], [class*="bg-muted"]) {
+     compiles each opacity value to its own distinct class.
+     Excluded from light nested surfaces (.classroom-light-ink / .classroom-realm-paper,
+     e.g. the raffle card) so their own light-surface rules further below are the ones
+     that apply — otherwise this still wins on specificity and every muted panel on
+     those cards renders as a near-invisible pale wash. */
+  html[data-classroom-realm] .classroom-realm-manage :where([class*="bg-card"], [class*="bg-background"], [class*="bg-muted"]):not(.classroom-light-ink, .classroom-light-ink *, .classroom-realm-paper, .classroom-realm-paper *) {
     background-color: rgba(255, 255, 255, 0.06) !important;
     color: #f4f7f0 !important;
   }
@@ -732,20 +736,24 @@ html[data-office-portal] .office-content-pane {
      Same for bg-gradient-* cards (e.g. `via-background`/`via-card` hero panels):
      Tailwind's gradient-stop utilities don't match the bg-card/bg-background/
      bg-muted substring rule above, so those cards keep a light surface while
-     their own text would otherwise still get forced white by the rules below. */
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not([role="alert"] *):not([class*="bg-gradient"] *) {
+     their own text would otherwise still get forced white by the rules below.
+     Also excluded: .classroom-light-ink / .classroom-realm-paper — these :not()
+     clauses raise this rule's specificity above the light-surface text overrides
+     further below, so without listing them here too, that near-white color would
+     keep winning over a light card's own dark-ink rule. */
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not([role="alert"] *):not([class*="bg-gradient"] *):not(.classroom-light-ink, .classroom-light-ink *, .classroom-realm-paper, .classroom-realm-paper *) {
     color: #f4f7f0 !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not([role="alert"] *):not([class*="bg-gradient"] *) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not([role="alert"] *):not([class*="bg-gradient"] *):not(.classroom-light-ink, .classroom-light-ink *, .classroom-realm-paper, .classroom-realm-paper *) {
     color: rgba(244, 247, 240, 0.58) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.border-border):not(.classroom-native-colors, .classroom-native-colors *) {
+  html[data-classroom-realm] .classroom-realm-manage :where(.border-border):not(.classroom-native-colors, .classroom-native-colors *, .classroom-light-ink, .classroom-light-ink *, .classroom-realm-paper, .classroom-realm-paper *) {
     border-color: rgba(255, 255, 255, 0.12) !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select):not(.classroom-native-colors, .classroom-native-colors *) {
+  html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select):not(.classroom-native-colors, .classroom-native-colors *, .classroom-light-ink, .classroom-light-ink *, .classroom-realm-paper, .classroom-realm-paper *) {
     color: #f4f7f0;
   }
 
