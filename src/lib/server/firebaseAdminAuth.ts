@@ -123,7 +123,25 @@ export function hasFirebaseAdminCredentials(): boolean {
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.trim();
   if (projectId && clientEmail && privateKey) return true;
   if (process.env.FIREBASE_CONFIG?.trim()) return true;
+  if (shouldPreferManagedRuntimeAdminCredentials()) return true;
   return false;
+}
+
+/**
+ * Firebase Hosting SSR / Cloud Run / Cloud Functions.
+ *
+ * GitHub deploys bake the Hosting *deploy* key into `SSR_SERVICE_ACCOUNT_JSON`.
+ * That key can read school docs and check passcodes, but it cannot write
+ * `anonymousPortalSessions` — so a correct school login returns HTTP 503.
+ * The Cloud Run default service account can write; prefer it here.
+ */
+export function shouldPreferManagedRuntimeAdminCredentials(): boolean {
+  return Boolean(
+    process.env.K_SERVICE?.trim() ||
+      process.env.FUNCTION_TARGET?.trim() ||
+      process.env.FUNCTION_NAME?.trim() ||
+      process.env.FIREBASE_CONFIG?.trim(),
+  );
 }
 
 /**
@@ -139,6 +157,24 @@ export async function getFirebaseAdminApp(): Promise<App> {
     const serviceAccount = resolveServiceAccount();
     const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL?.trim();
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+
+    if (shouldPreferManagedRuntimeAdminCredentials()) {
+      try {
+        return initializeApp(undefined, ADMIN_APP_NAME);
+      } catch {
+        try {
+          return initializeApp(
+            {
+              credential: applicationDefault(),
+              projectId,
+            },
+            ADMIN_APP_NAME,
+          );
+        } catch {
+          // Fall through to the baked JSON key (local-style hosting / missing ADC).
+        }
+      }
+    }
 
     if (serviceAccount) {
       return initializeApp(

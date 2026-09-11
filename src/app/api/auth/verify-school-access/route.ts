@@ -9,8 +9,18 @@ import {
   VerifySchoolAccessError,
 } from '@/lib/server/verifySchoolAccess';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
+
+function isVerifySchoolAccessError(e: unknown): e is VerifySchoolAccessError {
+  return (
+    e instanceof VerifySchoolAccessError ||
+    (e instanceof Error && e.name === 'VerifySchoolAccessError')
+  );
+}
 
 async function getDb() {
   return getFirebaseAdminFirestore();
@@ -51,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (e) {
-    if (e instanceof VerifySchoolAccessError) {
+    if (isVerifySchoolAccessError(e)) {
       const status =
         e.code === 'not-found'
           ? 404
