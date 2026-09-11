@@ -142,7 +142,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: LayoutGrid,
     kind: 'core',
     roles: ['admin', 'teacher'],
-    teacherOperated: true,
     title: `${CLASSROOM_SEATING_SECTION_LABEL}, behavior, alerts, room display, and raffle`,
     isEnabled: (s, role) => isClassroomPillarOn(s) || role === 'admin',
   },
