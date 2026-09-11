@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
+  ArrowLeft,
   BookOpenCheck,
   Dices,
-  ExternalLink,
   Home,
   LayoutGrid,
   Monitor,
@@ -29,6 +29,7 @@ import {
 } from '@/lib/classroom/classroomTabSections';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useClassroomPrefsCloudSync } from '@/hooks/useClassroomPrefsCloudSync';
 
 const ACCENT_GRADIENT = 'linear-gradient(135deg, var(--cr-accent-from), var(--cr-accent-to))';
 const NAV_SPRING = { type: 'spring' as const, stiffness: 380, damping: 32 };
@@ -135,6 +136,7 @@ function ClassroomRealmNav({
     },
   ];
 
+  const raffleVisible = manageSections.includes('raffle');
   const dockItems: NavItem[] = [
     teachItems[0],
     teachItems[1],
@@ -144,8 +146,19 @@ function ClassroomRealmNav({
       label: 'Manage',
       href: classroomRealmManageHref(schoolId, 'seating'),
       icon: BookOpenCheck,
-      active: onManage,
+      active: onManage && manageSection !== 'raffle',
     },
+    ...(raffleVisible
+      ? [
+          {
+            id: 'raffle',
+            label: 'Raffle',
+            href: classroomRealmManageHref(schoolId, 'raffle'),
+            icon: Dices,
+            active: onManage && manageSection === 'raffle',
+          } satisfies NavItem,
+        ]
+      : []),
     lookItems[0],
   ];
 
@@ -245,7 +258,9 @@ export function ClassroomRealmShell({
   /** Live monitor runs fullscreen without side nav. */
   hideChrome?: boolean;
 }) {
-  useClassroomRealmTheme(!hideChrome);
+  useClassroomRealmTheme(true);
+  const { teacherDocId } = useAppContext();
+  useClassroomPrefsCloudSync(schoolId, teacherDocId || undefined);
 
   if (hideChrome) {
     return <div className="classroom-realm-root min-h-dvh">{children}</div>;
@@ -280,27 +295,28 @@ export function ClassroomRealmShell({
         <Suspense fallback={<div className="flex-1" />}>
           <ClassroomRealmNav schoolId={schoolId} variant="sidebar" />
         </Suspense>
-
-        <Link
-          href={schoolPortalHref(schoolId)}
-          className="mt-4 flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs font-medium text-white/50 transition-colors hover:border-white/20 hover:text-white/80"
-        >
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-          Back to LevelUp portal
-        </Link>
       </aside>
 
       <div className="relative z-10 flex min-h-dvh min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md lg:hidden">
-          <p className="font-serif text-lg font-bold text-white">Classroom</p>
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 bg-black/20 px-4 py-3 backdrop-blur-md">
           <Link
-            href={classroomRealmHref(schoolId, 'setup')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-bold"
-            style={{ color: 'var(--cr-accent-text)' }}
+            href={schoolPortalHref(schoolId)}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           >
-            <Palette className="h-3.5 w-3.5" aria-hidden />
-            Change look
+            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+            Back to LevelUp
           </Link>
+          <div className="flex w-full items-center justify-between gap-3 sm:w-auto lg:hidden">
+            <p className="font-serif text-lg font-bold text-white">Classroom</p>
+            <Link
+              href={classroomRealmHref(schoolId, 'setup')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1 text-xs font-bold"
+              style={{ color: 'var(--cr-accent-text)' }}
+            >
+              <Palette className="h-3.5 w-3.5" aria-hidden />
+              Change look
+            </Link>
+          </div>
         </header>
         <main className="flex-1 overflow-auto pb-20 lg:pb-0">{children}</main>
         <Suspense fallback={null}>
@@ -333,7 +349,12 @@ export function ClassroomRealmHero({
       >
         Classroom
       </p>
-      <h1 className="classroom-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl">{title}</h1>
+      <motion.h1
+        layoutId="classroom-realm-title"
+        className="classroom-realm-display mb-4 text-4xl font-bold text-white sm:text-6xl"
+      >
+        {title}
+      </motion.h1>
       {subtitle ? <p className="max-w-xl text-base text-white/60 sm:text-lg">{subtitle}</p> : null}
       {children ? <div className="mt-10 flex flex-wrap justify-center gap-4">{children}</div> : null}
     </motion.div>

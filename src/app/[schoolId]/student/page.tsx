@@ -607,7 +607,7 @@ function StudentLoginPage() {
       ) : (
       <>
       {/* Single column fills #screen-view so the scanner stays vertically centered in the viewport (not clustered top). */}
-      <div className="relative flex w-full flex-1 flex-col min-h-dvh" data-kiosk-snapshot-root>
+      <div className="relative flex w-full flex-1 flex-col min-h-0" data-kiosk-snapshot-root>
         <TooltipProvider>
           <div
             className={cn(

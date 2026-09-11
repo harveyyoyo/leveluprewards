@@ -1,7 +1,6 @@
 'use client';
 
 import { useDeferredValue, useEffect, useMemo } from 'react';
-import { LayoutGrid } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase, useFirestore } from '@/firebase';
 import { prefetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
@@ -182,20 +181,20 @@ export function StaffClassroomTab({
       <StaffPortalTabPanel tabValue="classroom" className={className}>
         <Card className={cn(CLASSROOM_SECTION_CARD, 'rounded-2xl border border-border/60 border-t-0 shadow-sm')}>
           <CardContent className="space-y-4 p-4 sm:p-6">
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {canEnableClassroomPillar
-              ? `${CLASSROOM_TAB_LABEL} is not enabled. Run the setup wizard to turn on seating charts and quick awards for teachers.`
-              : `${CLASSROOM_TAB_LABEL} is not enabled for your school yet. Ask a school administrator to turn it on.`}
-          </p>
-          {canEnableClassroomPillar ? (
-            <ClassroomSetupWizardTrigger
-              schoolId={schoolId}
-              classes={sortedClasses}
-              students={students ?? []}
-              updateSettings={updateSettings}
-            />
-          ) : null}
-        </CardContent>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {canEnableClassroomPillar
+                ? `${CLASSROOM_TAB_LABEL} is not enabled. Run the setup wizard to turn on seating charts and quick awards for teachers.`
+                : `${CLASSROOM_TAB_LABEL} is not enabled for your school yet. Ask a school administrator to turn it on.`}
+            </p>
+            {canEnableClassroomPillar ? (
+              <ClassroomSetupWizardTrigger
+                schoolId={schoolId}
+                classes={sortedClasses}
+                students={students ?? []}
+                updateSettings={updateSettings}
+              />
+            ) : null}
+          </CardContent>
         </Card>
       </StaffPortalTabPanel>
     );

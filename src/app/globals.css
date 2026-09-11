@@ -717,16 +717,27 @@ html[data-office-portal] .office-content-pane {
     letter-spacing: -0.02em;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.bg-card, .bg-background):not(.classroom-native-colors, .classroom-native-colors *) {
+  /* Attribute-substring match so opacity-suffixed Tailwind variants (bg-card/60,
+     bg-background/80, bg-muted/15, ...) are caught too — an exact class match like
+     `.bg-card` only matches literal `bg-card`, not `bg-card/60`, since Tailwind
+     compiles each opacity value to its own distinct class. */
+  html[data-classroom-realm] .classroom-realm-manage :where([class*="bg-card"], [class*="bg-background"], [class*="bg-muted"]) {
     background-color: rgba(255, 255, 255, 0.06) !important;
-    color: #f4f7f0;
-  }
-
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not(.classroom-native-colors, .classroom-native-colors *) {
     color: #f4f7f0 !important;
   }
 
-  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not(.classroom-native-colors, .classroom-native-colors *) {
+  /* [role=alert] callouts (shadcn Alert) already pair their own on-brand background
+     and text color per variant (e.g. bg-sky-50/text-sky-950) — excluded so the
+     blanket override below doesn't force white text onto their light surface.
+     Same for bg-gradient-* cards (e.g. `via-background`/`via-card` hero panels):
+     Tailwind's gradient-stop utilities don't match the bg-card/bg-background/
+     bg-muted substring rule above, so those cards keep a light surface while
+     their own text would otherwise still get forced white by the rules below. */
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-foreground):not([role="alert"] *):not([class*="bg-gradient"] *) {
+    color: #f4f7f0 !important;
+  }
+
+  html[data-classroom-realm] .classroom-realm-manage :where(.text-muted-foreground):not([role="alert"] *):not([class*="bg-gradient"] *) {
     color: rgba(244, 247, 240, 0.58) !important;
   }
 
@@ -736,6 +747,83 @@ html[data-office-portal] .office-content-pane {
 
   html[data-classroom-realm] .classroom-realm-manage :where(input, textarea, select):not(.classroom-native-colors, .classroom-native-colors *) {
     color: #f4f7f0;
+  }
+
+  /*
+   * Light nested classroom UI (white desks, cream seating themes, popovers)
+   * must keep dark ink. The rules above paint the dark stage with near-white
+   * text; without this reset, student names and form labels disappear.
+   * Bold color is unset (not forced) so colored buttons can keep white labels.
+   */
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) {
+    color: #1c1917;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink {
+    color: hsl(var(--foreground));
+  }
+
+  html[data-classroom-realm] .classroom-realm-paper {
+    background-color: #f7f4ee !important;
+    border-color: rgba(28, 25, 23, 0.14) !important;
+    color: #1c1917;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ),
+  html[data-classroom-realm] .classroom-light-ink :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ),
+  html[data-classroom-realm] .classroom-realm-paper :where(
+      strong,
+      b,
+      .font-bold,
+      .font-black,
+      .font-extrabold
+    ) {
+    color: unset;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.text-foreground, .text-card-foreground) {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.text-muted-foreground) {
+    color: hsl(var(--muted-foreground)) !important;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(
+      .text-foreground,
+      .text-card-foreground
+    ),
+  html[data-classroom-realm] .classroom-realm-paper :where(.text-foreground, .text-card-foreground) {
+    color: #1c1917 !important;
+  }
+
+  html[data-classroom-realm] :where(.bg-white, .bg-popover, .bg-yellow-50, .bg-yellow-300) :where(.text-muted-foreground),
+  html[data-classroom-realm] .classroom-realm-paper :where(.text-muted-foreground) {
+    color: rgba(28, 25, 23, 0.62) !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(.bg-card, .bg-background),
+  html[data-classroom-realm] .classroom-realm-paper :where(.bg-card, .bg-background) {
+    background-color: #fff !important;
+    color: #1c1917 !important;
+  }
+
+  html[data-classroom-realm] .classroom-light-ink :where(input, textarea, select),
+  html[data-classroom-realm] .classroom-realm-paper :where(input, textarea, select) {
+    color: #1c1917;
+    background-color: #fff;
   }
   
   .coupon-preview-container {
@@ -751,21 +839,20 @@ html[data-office-portal] .office-content-pane {
     font-size: 24px;
   }
 
-  /* Teacher "Print preview" (same em-based coupon as the sheet) — was inheriting ~16px; scale to match print. */
+  /* On-screen print preview only. Paper print still uses .print-coupon-wrapper (24px). */
   .coupon-print-preview-shell {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem 1.25rem;
+    padding: 1.25rem 1.5rem;
   }
 
   .coupon-print-match-wrapper .coupon-scalable, .coupon-print-match-wrapper .money-bill-scalable {
-    /* Same as .print-coupon-wrapper — em-based coupon scales with this root */
-    font-size: 24px;
+    font-size: 36px;
   }
 
   .coupon-print-match-wrapper--30 .coupon-scalable, .coupon-print-match-wrapper--30 .money-bill-scalable {
-    font-size: 19px;
+    font-size: 28px;
     justify-content: flex-start;
     gap: 0.04em;
     padding-top: 0.16em;

@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   ClassroomDeskVisual,
   ClassroomEffectOverlay,
@@ -14,7 +15,13 @@ import {
   type ClassroomEffect,
 } from '@/components/points/classroomVisualTheme';
 import type { ClassroomDeskDisplay } from '@/lib/classroom/classroomDeskDisplay';
-import type { ClassroomKioskFlyUpSize } from '@/lib/classroomSeatingChart';
+import {
+  classroomDeskVisualScale,
+  fitClassroomSeatingGrid,
+  type ClassroomDeskVisualScale,
+  type ClassroomKioskFlyUpSize,
+  type ClassroomSeatingGridFit,
+} from '@/lib/classroomSeatingChart';
 import type { TodayAttendanceStatus } from '@/hooks/useTodayAttendanceMap';
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import {
@@ -85,7 +92,7 @@ type SeatingDeskCellProps = {
   showSessionTotals: boolean;
   showSessionLastAward: boolean;
   tight: boolean;
-  fitViewport: boolean;
+  visualScale: ClassroomDeskVisualScale;
   editMode: boolean;
   isPending: boolean;
   flashPoints: number | null;
@@ -135,7 +142,7 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.showSessionTotals === next.showSessionTotals &&
     prev.showSessionLastAward === next.showSessionLastAward &&
     prev.tight === next.tight &&
-    prev.fitViewport === next.fitViewport &&
+    prev.visualScale === next.visualScale &&
     prev.editMode === next.editMode &&
     prev.isPending === next.isPending &&
     prev.flashPoints === next.flashPoints &&
@@ -172,7 +179,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   showSessionTotals,
   showSessionLastAward,
   tight,
-  fitViewport,
+  visualScale,
   editMode,
   isPending,
   flashPoints,
@@ -249,10 +256,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   return (
     <div
       ref={(el) => cellWrapRef?.(cellIndex, el)}
-      className={cn(
-        'relative min-h-0 min-w-0 overflow-visible',
-        fitViewport ? 'h-full w-full' : 'aspect-square',
-      )}
+      className="relative h-full min-h-0 min-w-0 w-full overflow-visible"
     >
       <button
         type="button"
@@ -268,6 +272,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
         onMouseDown={onMouseDown}
         onClick={onClick}
         disabled={!hasStudent && !editMode}
+        data-classroom-desk={cellIndex}
         className={cn(
           'absolute inset-0 h-full w-full',
           classroomStudentDeskClass(design, {
@@ -277,6 +282,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
             isBurstSelected,
             isRandom,
             editMode,
+            visualScale,
           }),
           isAwarding && 'opacity-60',
         )}
@@ -292,6 +298,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
               sessionPts={sessionPts}
               showBalance={showBalance}
               showSession={false}
+              visualScale={visualScale}
             />
             {showSessionTotals ? (
               <ClassroomSessionBadge
@@ -302,7 +309,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
             ) : null}
           </>
         ) : (
-          <ClassroomEmptyDeskLabel design={design} />
+          <ClassroomEmptyDeskLabel design={design} visualScale={visualScale} />
         )}
 
         {isPending && pendingStartedAt != null && autoAwardMs > 0 ? (
@@ -397,7 +404,7 @@ export type ClassroomSeatingGridProps = {
   activeCelebration: ActiveCelebrationState;
   handlersRef: RefObject<ClassroomGridHandlers>;
   className?: string;
-  /** Scale grid to available height (full-screen classroom view). */
+  /** @deprecated Grid always fits the available box; kept so callers don’t break. */
   fitViewport?: boolean;
 };
 
@@ -436,9 +443,11 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   activeCelebration,
   handlersRef,
   className,
-  fitViewport = false,
 }: ClassroomSeatingGridProps) {
+  const reduceMotion = useReducedMotion();
+  const containerRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const [fit, setFit] = useState<ClassroomSeatingGridFit | null>(null);
   const [flyUpAnchor, setFlyUpAnchor] = useState<{ x: number; y: number } | null>(null);
   const [portalReady, setPortalReady] = useState(false);
 
@@ -446,6 +455,39 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
     if (el) cellRefs.current.set(cellIndex, el);
     else cellRefs.current.delete(cellIndex);
   }, []);
+
+  const measureFit = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const next = fitClassroomSeatingGrid({
+      containerWidth: rect.width,
+      containerHeight: rect.height,
+      rows: layoutRows,
+      cols: layoutCols,
+      gap: gridGap,
+    });
+    setFit((prev) => {
+      if (
+        prev &&
+        prev.cellSize === next.cellSize &&
+        prev.gridWidth === next.gridWidth &&
+        prev.gridHeight === next.gridHeight
+      ) {
+        return prev;
+      }
+      return next;
+    });
+  }, [gridGap, layoutCols, layoutRows]);
+
+  useLayoutEffect(() => {
+    measureFit();
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => measureFit());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [measureFit]);
 
   const measureFlyUpAnchor = useCallback(() => {
     if (!flyUpCell || flyUpCell.points <= 0) {
@@ -467,7 +509,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
     if (!flyUpCell) return;
     const raf = requestAnimationFrame(() => measureFlyUpAnchor());
     return () => cancelAnimationFrame(raf);
-  }, [measureFlyUpAnchor, flyUpCell]);
+  }, [measureFlyUpAnchor, flyUpCell, fit]);
 
   useEffect(() => {
     if (!flyUpCell) return;
@@ -480,27 +522,44 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
     };
   }, [flyUpCell, measureFlyUpAnchor]);
 
-  const gridStyle = {
-    gridTemplateColumns: `repeat(${layoutCols}, minmax(0, 1fr))`,
-    ...(fitViewport ? { gridTemplateRows: `repeat(${layoutRows}, minmax(0, 1fr))` } : {}),
-    gap: gridGap,
-  };
-
+  const visualScale = classroomDeskVisualScale(fit?.cellSize ?? 120);
   const flyUpStudentId = flyUpCell ? cellStudentIds[flyUpCell.index] : null;
   const flyUpDisplay = flyUpStudentId ? deskCatalog.get(flyUpStudentId) ?? null : null;
   const flyUpName = flyUpCell?.studentName || flyUpDisplay?.name;
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        'relative min-h-0 w-full flex-1 px-0.5',
-        fitViewport ? 'h-full overflow-hidden' : 'overflow-auto',
+        'relative flex h-full min-h-0 w-full flex-1 items-center justify-center overflow-hidden px-0.5',
         className,
       )}
     >
-      <div
-        className={cn('grid w-full overflow-visible', fitViewport ? 'h-full' : 'content-start')}
-        style={gridStyle}
+      <motion.div
+        className="grid overflow-visible"
+        initial={false}
+        animate={
+          fit && fit.cellSize > 0
+            ? { width: fit.gridWidth, height: fit.gridHeight }
+            : undefined
+        }
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : { type: 'spring', stiffness: 280, damping: 32, mass: 0.7 }
+        }
+        style={{
+          gap: gridGap,
+          gridTemplateColumns: fit
+            ? `repeat(${layoutCols}, minmax(0, ${fit.cellSize}px))`
+            : `repeat(${layoutCols}, minmax(0, 1fr))`,
+          gridTemplateRows: fit
+            ? `repeat(${layoutRows}, minmax(0, ${fit.cellSize}px))`
+            : `repeat(${layoutRows}, minmax(0, 1fr))`,
+          width: fit ? undefined : '100%',
+          height: fit ? undefined : '100%',
+          aspectRatio: fit ? undefined : `${layoutCols} / ${layoutRows}`,
+        }}
       >
         {visualCells.map(({ cellIndex, visualRow }) => {
           const studentId = cellStudentIds[cellIndex];
@@ -526,8 +585,8 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               showBalance={showBalance}
               showSessionTotals={showSessionTotals}
               showSessionLastAward={showSessionLastAward}
-              tight={density === 'tight'}
-              fitViewport={fitViewport}
+              tight={density === 'tight' || visualScale !== 'lg'}
+              visualScale={visualScale}
               editMode={editMode}
               isPending={pendingCellIndex === cellIndex}
               flashPoints={flashCell?.index === cellIndex ? flashCell.points : null}
@@ -557,7 +616,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
             />
           );
         })}
-      </div>
+      </motion.div>
 
       {portalReady &&
         flyUpCell &&

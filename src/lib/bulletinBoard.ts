@@ -1,27 +1,5 @@
 import { cn } from '@/lib/utils';
 
-export type BulletinBoardIncentiveSurfaces = {
-  bulletinBoard?: boolean;
-  smartScreen?: boolean;
-  studentKiosk?: boolean;
-  studentPortal?: boolean;
-};
-
-export type BulletinBoardIncentiveRecord = {
-  id: string;
-  title: string;
-  description: string;
-  points: number;
-  icon?: string;
-  category?: string;
-  /** @deprecated Use `surfaces` — kept for legacy rows without per-surface assignment. */
-  active?: boolean;
-  /** Per-surface visibility; empty object means not shown anywhere until assigned. */
-  surfaces?: BulletinBoardIncentiveSurfaces;
-  createdAt?: number;
-  updatedAt?: number;
-};
-
 export const BULLETIN_THEME_IDS = [
   'default',
   'neon_gold',

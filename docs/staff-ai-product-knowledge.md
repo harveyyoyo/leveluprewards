@@ -13,13 +13,12 @@ Your job is to answer questions **only** about how to use this product: navigati
 ## Product map (typical school URL starts with /{schoolId}/…)
 
 - **Login screen** — school landing/sign-in page. Features built-in onscreen virtual keyboards (alphanumeric QWERTY layout for the School ID input and a numeric keypad for the Access Passcode input) for seamless touch-only kiosk interaction.
+- **Classroom / Class Awards Live** — Staff seating chart for awarding classroom points during a lesson. **Live monitor** can show **one class** or **All students** (every student you are allowed to see: the whole school for admin/leadership, or your classes if you are a teacher). Open the **Class** menu on the live chart to switch.
 - **Portal** — home hub for the school.
 - **Admin** — manage students, classes, teachers, categories, points, prizes, raffles, imports/exports, attendance, and other school configuration. The administration panel features state-of-the-art interactive dashboards and a stunning **Admin Welcome Hero** with real-time stat tiles (total students, class count, active staff, and listed prize count).
-  - **Library** — RedESIGNED! Dedicated Library Workspace (`/{schoolId}/library`) featuring a live Circulation Desk with barcode scanner wedge, full Book Catalog with ISBN scanner intake and label printing, Loans & Returns with overdue tracking, and a comprehensive **Theme & Atmosphere** setting with 7 WCAG AA accessible library themes (Classic Oak, Modern Sapphire, Emerald Study, Clean Daylight, Midnight Archive, Sunset Terrace, Lavender Reading) plus self-checkout kiosk synchronization.
-    - **Dedicated Library Kiosk (`/{schoolId}/library/kiosk`)**: A standalone kiosk mode accessible directly from the main Portal Hub for student self-checkout and quick drop-box returns. Features a full-screen mode toggle for dedicated library Chromebooks/tablets, student ID badge scan, and quick returns without requiring a student badge swipe.
-    - **Student Recommendations & Notifications**: The kiosk and student summaries automatically feature book recommendations tailored to student reading categories and school favorites, alongside real-time notification banners for overdue books and due-soon reminders.
-    - **Student Behavior & Care Tracking**: Tracks student library reliability ratings (Exemplary Caretaker, Reliable Reader, Due Reminders) with staff-logged commendations ("Book Care Champion", "Helpful Citizen") and condition flags visible at the circulation desk.
-    - **Duplicate Book Handling**: Intake scanner detects duplicate barcodes and warns ("Already in queue"), while additional copies receive unique copy barcodes and numbers. At circulation, scanning the same copy again prevents duplicate loans ("Already scanned"), scanning a 2nd physical copy respects student quota limits, and return mode marks copies checked-in idempotently.
+  - **Library** — Open **Admin → Library** or `/{schoolId}/library`. Dedicated hub with circulation desk, catalog, loans, kiosk, and Theme & Atmosphere. A school can have **more than one library** (school library and class libraries). Each library has its own catalog, desk, kiosk, and checkout limit. Existing books stay in **School Library** until staff move them. Add or rename libraries under **Library → Settings**. Kiosk stations ask which library they belong to when more than one exists (`?library=` in the URL).
+    - **Dedicated Library Kiosk (`/{schoolId}/library/kiosk`)**: Student self-checkout and drop-box returns. Same-page fullscreen for dedicated Chromebooks/tablets.
+    - **Student names and themes**: Library uses preferred name + last name by default, and can show LevelUp theme emoji and color. Both are settings.
   - **Points** — RedESIGNED! Highly polished visual selector cards with smooth micro-interactions instead of plain inputs.
   - **Notifications** — RedESIGNED! Premium multi-step setup wizard with dynamic toggles.
   - **Hall of Fame** — RedESIGNED! Beautiful action grids to configure leaderboards (Students, Class, House, Goals) with custom podiums and scrolls.
@@ -45,6 +44,22 @@ Display mode, themes, optional helper “?” tooltips, welcome tour, printing o
   - `Modern Chime` (clean, crystalline high-fidelity tones)
   - `Sci-Fi Synth` (futuristic synthesizer soundscapes)
   These custom sound definitions govern success, error, login, hover, and alert audio cues dynamically to elevate user engagement.
+
+## Displays Studio (hallway TVs)
+
+- Open **Displays → Open Displays** in the staff portal to use the standalone studio. Choose Hall of Fame, Smart Screen, Bulletin Board, or a saved custom screen. **New screen** offers starter templates and mixes.
+- **Screen** sets the name, TV title/message, orientation, and layout. **Content** switches cards on or off and can search the available cards. **Style** previews theme colors. Use **Hide controls** for a larger TV preview.
+- **Points** selects **Entire school** or a specific class, one or several point categories, and the point period. Lifetime earned includes points already spent; current balance is spendable points. Category breakdowns support lifetime, month, semester, and year; daily/weekly and balance rankings are available when using all categories. Semester counters use January–June or July–December; year counters use the calendar year.
+- **Students to show** accepts an exact whole number, including podium winners. **Podium places** supports 1, 2, or 3. Hall of Fame keeps the podium visible with the remaining students ranked underneath; ranking columns and automatic scrolling are configurable. Class and house student totals use the selected scope and points. The Class Milestone card shows an available active class goal with an unrestricted lifetime-points target.
+- Smart Screen and Bulletin Board default to **Fit to screen**. Choose content columns, cards per screen, rows per card, and seconds between pages. Extra cards and longer lists rotate without scrolling; fewer cards/rows improve readability. Scrolling remains an optional presentation mode.
+- Changes are drafts until **Save screen**. Editing a ready-made template creates a custom copy. Switching screens or leaving with changes prompts to save, discard, or keep editing. **Show on TV** becomes available after saving and provides the screen link and fullscreen instructions. A localhost link only works on the same computer.
+
+## Coupons (print and redeem)
+
+- **Where to print:** **Admin → Coupons → Print coupons**, **Teacher → Coupons → Print coupons**, or a secretary coupon desk. Regular print jobs create one-time codes (each slip works once at the student kiosk).
+- **Reusable coupon:** On **Print coupons**, check **Make this reusable** at the top. A warning explains that the slip is for staff to keep and can be scanned many times. The printed ticket also shows that warning. This prints one keep-and-scan slip.
+- **Reprint:** Staff can reprint from **Teacher → Generated coupons** or by searching the code under **Admin → Coupons → Inventory**.
+- **Do not confuse with the demo coupon:** Settings → kiosk has an optional **Reusable demo coupon** (default code `000`) for training only. That is not the staff keep-and-scan coupon.
 
 ## Notifications (automated alerts)
 

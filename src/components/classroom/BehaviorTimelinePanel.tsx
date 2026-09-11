@@ -1,16 +1,29 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Calendar, Clock, Loader2, RefreshCw, Smile, ThumbsDown } from 'lucide-react';
+import { AlertTriangle, Calendar, Clock, Loader2, RefreshCw, Smile, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import type { BehaviorNote, BehaviorNoteKind } from '@/lib/types';
 import { BEHAVIOR_NOTE_SAVED_EVENT } from '@/lib/classroom/behaviorNoteEvents';
+import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
 import { peekBehaviorNotesCache } from '@/lib/classroom/behaviorNotesCache';
-import { fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
+import { deleteBehaviorNote, fetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
 import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
+import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
 import { CLASSROOM_SEATING_SECTION_LABEL } from '@/lib/classroom/classroomTabSections';
@@ -68,9 +81,27 @@ export function BehaviorTimelinePanel({
 }) {
   const firestore = useFirestore();
   const { user } = useFirebase();
+  const { loginState } = useAppContext();
+  const { toast } = useToast();
+  const canDeleteNotes = loginState === 'admin' || loginState === 'developer';
   const [rows, setRows] = useState<BehaviorNote[]>(() => peekBehaviorNotesCache(schoolId) ?? []);
   const [isLoading, setIsLoading] = useState(() => !peekBehaviorNotesCache(schoolId));
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = useCallback(
+    async (noteId: string) => {
+      setDeletingId(noteId);
+      const result = await deleteBehaviorNote(firestore, schoolId, noteId);
+      setDeletingId(null);
+      if (result.success) {
+        setRows((prev) => prev.filter((r) => r.id !== noteId));
+      } else {
+        toast({ variant: 'destructive', title: 'Could not delete note', description: result.message });
+      }
+    },
+    [firestore, schoolId, toast],
+  );
 
   useEffect(() => {
     const cached = peekBehaviorNotesCache(schoolId);
@@ -234,6 +265,41 @@ export function BehaviorTimelinePanel({
                     <Badge variant="secondary" className="text-[10px]">
                       Staff only
                     </Badge>
+                  ) : null}
+                  {canDeleteNotes ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="ml-auto h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                          disabled={deletingId === n.id}
+                          aria-label={`Delete note for ${n.studentName}`}
+                        >
+                          {deletingId === n.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this note?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This removes the {meta.label.toLowerCase()} note for {n.studentName} from the
+                            timeline. This can&apos;t be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => void handleDelete(n.id)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   ) : null}
                 </div>
                 {n.createdAt ? (

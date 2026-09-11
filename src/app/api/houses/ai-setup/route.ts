@@ -6,6 +6,7 @@ import {
   geminiModelAttemptOrder,
   isLlmProviderFailure,
   userFacingLlmError,
+  type LlmProvider,
 } from '@/lib/server/llmProviderErrors';
 import {
   DEFAULT_HOUSES_REALM_THEME,
@@ -213,6 +214,9 @@ async function generateWithGemini(prompt: string, systemInstruction: string, sel
 }
 
 export async function POST(req: NextRequest) {
+  // Tracked outside the try block so the catch can attribute errors to whichever
+  // provider actually made the failing call (Gemini may fall back to OpenAI mid-request).
+  let usedProvider: LlmProvider = 'gemini';
   try {
     const guarded = await guardAiRoute(req, { requireSchoolStaff: true, maxRequests: 12 });
     if (!guarded.ok) return guarded.response;
@@ -241,13 +245,16 @@ export async function POST(req: NextRequest) {
 
     let responseText = '';
     if (selectedModel.startsWith('gpt')) {
+      usedProvider = 'openai';
       responseText = await generateWithOpenAi(cleanPrompt, systemInstruction, selectedModel);
     } else {
+      usedProvider = 'gemini';
       try {
         responseText = await generateWithGemini(cleanPrompt, systemInstruction, selectedModel);
       } catch (geminiError) {
         if (process.env.OPENAI_API_KEY && isLlmProviderFailure(geminiError)) {
           console.warn('houses/ai-setup: all Gemini models failed; falling back to gpt-4o-mini.');
+          usedProvider = 'openai';
           responseText = await generateWithOpenAi(cleanPrompt, systemInstruction, 'gpt-4o-mini');
         } else if (!process.env.GEMINI_API_KEY) {
           return NextResponse.json({ error: 'API key configuration error' }, { status: 500 });
@@ -287,7 +294,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error('Error in /api/houses/ai-setup:', error);
-    return NextResponse.json({ error: userFacingLlmError(error) }, { status: 500 });
+    return NextResponse.json({ error: userFacingLlmError(error, undefined, usedProvider) }, { status: 500 });
   }
 }
 

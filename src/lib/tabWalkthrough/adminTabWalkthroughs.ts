@@ -18,7 +18,8 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Import or print IDs',
         checklist: [
-          'Use Import CSV for rosters. Recognized columns open a quick mapping step; unusual exports are read with AI automatically.',
+          'Use Import CSV for standard roster files. Recognized columns open a quick mapping step; unusual exports are read with AI automatically.',
+          'Use Import with AI to paste messy lists or upload PDF/DOCX — the AI sorts students (and can create related classes too).',
           'Print ID cards from the toolbar when students are ready for the kiosk.',
         ],
       },
@@ -130,6 +131,7 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
         title: CLASSROOM_SEATING_SECTION_LABEL,
         checklist: [
           'Launch Class Awards Live for the live seating chart and quick awards.',
+          'On the live chart, use the Class menu to pick one class or All students.',
           'Launch for class screen hides behavior comments on the projector view.',
           'Set chart defaults, school access, award labels, if/then alerts, and monitor options under Settings.',
           'On the monitor: Style, Layout, Desk display, and tap mode / fly-up / celebration next to Arrange seats.',

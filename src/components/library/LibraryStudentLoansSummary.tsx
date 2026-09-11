@@ -3,6 +3,7 @@
 import { BookOpen, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { itemBelongsToLibrary } from '@/lib/library/libraryLocations';
 import { computeDaysOverdue, formatDueDate, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 import type { LibraryItem } from '@/lib/types';
 import { LibraryBookCover } from './LibraryBookCover';
@@ -17,6 +18,7 @@ export function LibraryStudentLoansSummary({
   categoryPoints,
   compact = false,
   staffActions,
+  libraryLocationId,
 }: {
   items: LibraryItem[];
   maxCheckouts?: number;
@@ -25,19 +27,23 @@ export function LibraryStudentLoansSummary({
   libraryFineBalance?: number;
   categoryPoints?: number;
   compact?: boolean;
+  libraryLocationId?: string | null;
   staffActions?: {
     busyId?: string | null;
     onRenew?: (item: LibraryItem) => void;
     onReturn?: (item: LibraryItem) => void;
   };
 }) {
+  const visibleItems = libraryLocationId
+    ? items.filter((item) => itemBelongsToLibrary(item, libraryLocationId))
+    : items;
   const isUnlimited = maxCheckouts === 0;
   const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
   const countLabel = isUnlimited
-    ? `${items.length} book${items.length === 1 ? '' : 's'} (Unlimited)`
+    ? `${visibleItems.length} book${visibleItems.length === 1 ? '' : 's'} (Unlimited)`
     : max
-    ? `${items.length} / ${max} books`
-    : `${items.length} book${items.length === 1 ? '' : 's'}`;
+    ? `${visibleItems.length} / ${max} books`
+    : `${visibleItems.length} book${visibleItems.length === 1 ? '' : 's'}`;
 
   const tierLines: string[] = [];
   if (libraryPolicy?.rewardMode === 'isolated_points' && typeof libraryPoints === 'number') {
@@ -82,13 +88,13 @@ export function LibraryStudentLoansSummary({
         </p>
       ) : null}
 
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <p className={cn('text-muted-foreground', compact ? 'text-xs' : 'text-sm sm:text-base py-1')}>
           No books checked out — scan a book barcode to borrow.
         </p>
       ) : (
         <ul className={cn('space-y-2', compact ? 'max-h-28 overflow-y-auto' : 'max-h-64 overflow-y-auto')}>
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const overdueDays = computeDaysOverdue(item.dueAt);
             return (
               <li

@@ -87,10 +87,6 @@ export const AdminDisplaysTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminDisplaysTab'), 'AdminDisplaysTab'),
   { loading: tabLoader, ssr: false },
 );
-export const AdminIncentivesTab = dynamic(
-  importAdminTabSection(() => import('./sections/AdminIncentivesTab'), 'AdminIncentivesTab'),
-  { loading: tabLoader, ssr: false },
-);
 export const AdminIntegrationsTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminIntegrationsTab'), 'AdminIntegrationsTab'),
   { loading: tabLoader, ssr: false },
@@ -105,5 +101,13 @@ export const AdminHousesTab = dynamic(
 );
 export const AdminRecessTab = dynamic(
   importAdminTabSection(() => import('./sections/AdminRecessTab'), 'AdminRecessTab'),
+  { loading: tabLoader, ssr: false },
+);
+export const AdminStudentsTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminStudentsTab'), 'AdminStudentsTab'),
+  { loading: tabLoader, ssr: false },
+);
+export const AdminLibraryTab = dynamic(
+  importAdminTabSection(() => import('./sections/AdminLibraryTab'), 'AdminLibraryTab'),
   { loading: tabLoader, ssr: false },
 );

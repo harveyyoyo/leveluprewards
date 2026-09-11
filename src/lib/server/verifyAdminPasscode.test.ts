@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import { buildPasscodeSecretDoc } from '@/lib/passcodeSecrets';
 import { verifyAdminPasscodeServer, VerifyAdminPasscodeError } from './verifyAdminPasscode';
 
 describe('verifyAdminPasscodeServer', () => {
   function createMockDb(options: {
     schoolData?: Record<string, unknown>;
     existingAdmin?: boolean;
+    hashedSecret?: { salt: string; hash: string };
   }) {
     const adminSet = vi.fn().mockResolvedValue(undefined);
     const adminGet = vi.fn().mockResolvedValue({
@@ -23,7 +25,11 @@ describe('verifyAdminPasscodeServer', () => {
 
     const secretsCollection = {
       doc: vi.fn().mockReturnValue({
-        get: vi.fn().mockResolvedValue({ exists: false, data: () => undefined }),
+        get: vi.fn().mockResolvedValue(
+          options.hashedSecret
+            ? { exists: true, data: () => options.hashedSecret }
+            : { exists: false, data: () => undefined },
+        ),
         set: vi.fn().mockResolvedValue(undefined),
       }),
     };
@@ -121,6 +127,40 @@ describe('verifyAdminPasscodeServer', () => {
         passcode: '0000',
       }),
     ).rejects.toMatchObject({ code: 'permission-denied' } satisfies Partial<VerifyAdminPasscodeError>);
+  });
+
+  it('throws permission-denied for the wrong hashed passcode', async () => {
+    const { db } = createMockDb({
+      schoolData: {},
+      hashedSecret: buildPasscodeSecretDoc('1234'),
+    });
+
+    await expect(
+      verifyAdminPasscodeServer(db, {
+        uid: 'uid-test',
+        email: '',
+        firebase: undefined,
+        schoolId: 'schoolabc',
+        passcode: '0000',
+      }),
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Invalid passcode.',
+    } satisfies Partial<VerifyAdminPasscodeError>);
+  });
+
+  it('throws failed-precondition when no admin passcode is configured', async () => {
+    const { db } = createMockDb({ schoolData: {} });
+
+    await expect(
+      verifyAdminPasscodeServer(db, {
+        uid: 'uid-test',
+        email: '',
+        firebase: undefined,
+        schoolId: 'schoolabc',
+        passcode: '0000',
+      }),
+    ).rejects.toMatchObject({ code: 'failed-precondition' } satisfies Partial<VerifyAdminPasscodeError>);
   });
 
   it('rejects wrong passcode for allowlisted Google developer when passcode is provided', async () => {

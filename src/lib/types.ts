@@ -16,6 +16,8 @@ export interface LibraryItem {
   name: string;
   upc: string;
   status: 'available' | 'checked_out';
+  /** Which library this copy belongs to. Missing means the default school library. */
+  libraryLocationId?: string | null;
   checkedOutTo?: string | null;
   checkedOutAt?: number | null;
   addedBy?: string;
@@ -193,6 +195,22 @@ export interface Category {
   isGoldenTicket?: boolean;
   /** Optional preset levels (e.g. behavior tiers); shown as quick picks in the teacher portal. */
   rubricLevels?: CategoryRubricLevel[];
+  /** How students earn this category’s points (shown on hallway / kiosk / portal cards). */
+  description?: string;
+  /** When true, this category can appear as a “ways to earn” card on chosen displays. */
+  showAsIncentive?: boolean;
+  /** Which surfaces show this category when `showAsIncentive` is true. */
+  displaySurfaces?: {
+    bulletinBoard?: boolean;
+    smartScreen?: boolean;
+    studentKiosk?: boolean;
+    studentPortal?: boolean;
+  };
+  /**
+   * When set, printed coupons and display cards for this category use this look
+   * instead of the school-wide Currency & Design settings.
+   */
+  currencyOverride?: CategoryCurrencyOverride | null;
 }
 
 export interface BonusSpinType {
@@ -369,8 +387,27 @@ export interface Coupon {
   allowedTeacherIds?: string[];
   /** Human-readable redemption limits for printing on the coupon (set when generated). */
   redemptionPrintNote?: string;
+  /** When true, staff-printed coupon can be redeemed repeatedly (keep the slip). */
+  reusable?: boolean;
   /** When true, coupon can be redeemed repeatedly (demo sample coupon from kiosk settings). */
   reusableSample?: boolean;
+  /** Snapshot of the category design at print time. Omitted on older printed coupons. */
+  currencyOverride?: CategoryCurrencyOverride | null;
+  /**
+   * Omitted or `redeemable` = a real printed/scannable coupon (the default, including every
+   * coupon printed before this field existed). `incentive` is leftover display-only catalog
+   * data from an earlier merge; those docs are not printed tickets and are never redeemed.
+   */
+  kind?: 'redeemable' | 'incentive';
+  /** Leftover display-only fields. Ignored for printed redeemable coupons. */
+  title?: string;
+  icon?: string;
+  displaySurfaces?: {
+    bulletinBoard?: boolean;
+    smartScreen?: boolean;
+    studentKiosk?: boolean;
+    studentPortal?: boolean;
+  };
 }
 
 /**
@@ -635,6 +672,11 @@ export interface BackupInfo {
   totalDocs?: number;
 }
 
+/** Per-category (or per-printed-coupon) currency/design override. */
+export type CategoryCurrencyOverride = Partial<CurrencySettings> & {
+  mode: CurrencySettings['mode'];
+};
+
 export interface CurrencySettings {
   mode: 'points' | 'money';
   pointsDesign?: string;
@@ -685,6 +727,8 @@ export interface Database {
   hasMigratedPrizes?: boolean;
   hasMigratedCoupons?: boolean;
   hasMigratedCategories?: boolean;
+  hasMigratedIncentivesToCoupons?: boolean;
+  hasMigratedIncentivesToCategories?: boolean;
 }
 
 export type GoalType = 'personal' | 'prize_savings' | 'class';
@@ -762,4 +806,6 @@ export interface BehaviorNote {
   notifyPrincipal?: boolean;
   pointsAmount?: number;
   pointsLabel?: string;
+  /** Soft-delete marker — set when a staff member removes a mistaken note. Filtered from listings. */
+  deletedAt?: number;
 }

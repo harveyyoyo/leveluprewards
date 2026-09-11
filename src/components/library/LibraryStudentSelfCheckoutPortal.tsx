@@ -36,6 +36,7 @@ import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { lookupStudentId } from '@/lib/db/lookup';
+import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
 import {
   performLibraryCheckoutOrReturn,
   findLibraryItemByUpc,
@@ -43,6 +44,8 @@ import {
   forceReturnLibraryItem,
   callLibrary,
 } from '@/lib/library/libraryOperations';
+import { filterItemsForLibrary } from '@/lib/library/libraryLocations';
+import { LibraryStationPicker } from './LibraryStationPicker';
 import { computeDaysOverdue, getLibraryPolicyFromSettings, resolveStudentMaxCheckouts } from '@/lib/library/libraryPolicy';
 import {
   playLibraryReturnAudio,
@@ -118,6 +121,8 @@ export function LibraryStudentSelfCheckoutPortal({
   onExit,
   initialStudentId,
   onInitialStudentConsumed,
+  libraryLocationId: libraryLocationIdProp,
+  libraryLocations: libraryLocationsProp,
 }: {
   schoolId: string;
   categories?: Category[] | null;
@@ -134,6 +139,9 @@ export function LibraryStudentSelfCheckoutPortal({
   initialStudentId?: string | null;
   /** Called once the initial student has been applied, so the caller can clear its own state. */
   onInitialStudentConsumed?: () => void;
+  /** When the parent already chose a library (staff workspace), use that station. */
+  libraryLocationId?: string | null;
+  libraryLocations?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const firestore = useFirestore();
@@ -189,6 +197,22 @@ export function LibraryStudentSelfCheckoutPortal({
   );
   const { data: queriedStudents } = useCollection<Student>(studentsQuery);
   const students = studentsProp ?? queriedStudents;
+  const { locations: loadedLocations } = useLibraryLocations(schoolId);
+  const parentChoseLibrary = Boolean(libraryLocationIdProp);
+  const { active: activeLibrary, setActive: setActiveLibrary, needsChoice } = useActiveLibraryLocation(
+    schoolId,
+    loadedLocations,
+    { requireExplicitChoice: !parentChoseLibrary },
+  );
+  const resolvedLibraryId = libraryLocationIdProp || activeLibrary.id;
+  const libraryNames = useMemo(
+    () => Object.fromEntries((libraryLocationsProp ?? loadedLocations).map((location) => [location.id, location.name])),
+    [libraryLocationsProp, loadedLocations],
+  );
+  const scopedCatalog = useMemo(
+    () => filterItemsForLibrary(catalogItems, resolvedLibraryId),
+    [catalogItems, resolvedLibraryId],
+  );
 
   const libraryPolicy = useMemo(
     () => getLibraryPolicyFromSettings(settings, categories),
@@ -210,11 +234,11 @@ export function LibraryStudentSelfCheckoutPortal({
 
   // Recommendations and standing computations
   const recommendations = useMemo(() => {
-    return getLibraryBookRecommendations(catalogItems ?? [], {
+    return getLibraryBookRecommendations(scopedCatalog, {
       studentLoans,
       limit: 6,
     });
-  }, [catalogItems, studentLoans]);
+  }, [scopedCatalog, studentLoans]);
 
   const standing = useMemo(() => {
     return computeStudentLibraryStanding(studentLoans);
@@ -359,10 +383,12 @@ export function LibraryStudentSelfCheckoutPortal({
         setStudentLoans([]);
         return;
       }
-      const items = await getStudentLibraryCheckouts(firestore, schoolId, id);
+      const items = await getStudentLibraryCheckouts(firestore, schoolId, id, {
+        libraryLocationId: resolvedLibraryId,
+      });
       setStudentLoans(items);
     },
-    [firestore, schoolId],
+    [firestore, resolvedLibraryId, schoolId],
   );
 
   const processBook = useCallback(
@@ -390,6 +416,7 @@ export function LibraryStudentSelfCheckoutPortal({
           policy: libraryPolicy,
           functions,
           action: circulationAction,
+          libraryLocationId: resolvedLibraryId,
         });
         if (result.action === 'checkout') {
           playSound('success');
@@ -451,6 +478,15 @@ export function LibraryStudentSelfCheckoutPortal({
             title: 'Checkout limit reached',
             description: `You already have ${result.currentCount} of ${result.max} allowed books.`,
           });
+        } else if (result.action === 'wrong_library') {
+          playSound('error');
+          toast({
+            variant: 'destructive',
+            title: 'Different library',
+            description: libraryNames[result.libraryLocationId]
+              ? `This book belongs to ${libraryNames[result.libraryLocationId]}.`
+              : 'This book belongs to a different library.',
+          });
         } else if (result.action === 'wrong_borrower') {
           playSound('error');
           toast({
@@ -470,7 +506,7 @@ export function LibraryStudentSelfCheckoutPortal({
         setBusy(false);
       }
     },
-    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel],
+    [firestore, schoolId, studentId, libraryPolicy, functions, mode, playSound, toast, refreshStudentLoans, settings, studentLabel, resolvedLibraryId, libraryNames],
   );
 
   // A book scanned before the student card (Borrow/Auto mode) resolves as soon as the student is identified.
@@ -763,6 +799,10 @@ export function LibraryStudentSelfCheckoutPortal({
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
+  }
+
+  if (!parentChoseLibrary && needsChoice) {
+    return <LibraryStationPicker locations={loadedLocations} onPick={setActiveLibrary} />;
   }
 
   return (
@@ -1379,6 +1419,7 @@ export function LibraryStudentSelfCheckoutPortal({
             items={studentLoans}
             maxCheckouts={effectiveMaxCheckouts}
             libraryPolicy={libraryPolicy}
+            libraryLocationId={resolvedLibraryId}
           />
         ) : null}
 
@@ -1484,7 +1525,7 @@ export function LibraryStudentSelfCheckoutPortal({
       <LibraryBookDiscoveryModal
         isOpen={discoveryOpen}
         setIsOpen={setDiscoveryOpen}
-        catalogItems={catalogItems ?? []}
+        catalogItems={scopedCatalog}
       />
 
       <LibraryBookReviewDialog

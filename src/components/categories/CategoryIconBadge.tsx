@@ -2,7 +2,6 @@
 
 import type { Category } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Ticket } from 'lucide-react';
 
 type Props = {
   category: Pick<Category, 'name' | 'color' | 'icon' | 'imageUrl' | 'isGoldenTicket'>;
@@ -10,58 +9,33 @@ type Props = {
   size?: 'sm' | 'md';
 };
 
+export function categoryDisplayIcon(category: Pick<Category, 'icon'>): string {
+  return category.icon?.trim() || '⭐';
+}
+
 export function CategoryIconBadge({ category, className, size = 'md' }: Props) {
   const box = size === 'sm' ? 'size-8 rounded-lg' : 'size-10 rounded-xl';
   const inner = size === 'sm' ? 'text-base' : 'text-lg';
-
-  if (category.imageUrl) {
-    return (
-      <div
-        className={cn(
-          box,
-          'flex shrink-0 items-center justify-center overflow-hidden border bg-background',
-          category.isGoldenTicket && 'ring-2 ring-amber-400/80',
-          className,
-        )}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={category.imageUrl} alt="" className="h-full w-full object-cover" />
-      </div>
-    );
-  }
-
-  if (category.icon) {
-    return (
-      <div
-        className={cn(
-          box,
-          'flex shrink-0 items-center justify-center border bg-background',
-          category.isGoldenTicket && 'ring-2 ring-amber-400/80',
-          className,
-        )}
-        aria-hidden
-      >
-        <span className={inner}>{category.icon}</span>
-      </div>
-    );
-  }
+  const fill = category.color || '#6366f1';
+  const mark = categoryDisplayIcon(category);
 
   return (
     <div
       className={cn(
         box,
-        'flex shrink-0 items-center justify-center border bg-background relative',
+        'relative flex shrink-0 items-center justify-center overflow-hidden text-white shadow-sm',
         category.isGoldenTicket && 'ring-2 ring-amber-400/80',
         className,
       )}
+      style={{ backgroundColor: fill, boxShadow: `0 0 0 2px ${fill}` }}
+      aria-hidden
     >
-      <div
-        className={cn(size === 'sm' ? 'size-4' : 'size-5', 'rounded-full border shadow-sm')}
-        style={{ backgroundColor: category.color || '#cccccc' }}
-      />
-      {category.isGoldenTicket ? (
-        <Ticket className="absolute -bottom-1 -right-1 h-3.5 w-3.5 text-amber-500 drop-shadow" aria-hidden />
-      ) : null}
+      {category.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={category.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <span className={cn(inner, 'leading-none drop-shadow-sm')}>{mark}</span>
+      )}
     </div>
   );
 }

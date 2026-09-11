@@ -20,7 +20,16 @@ export function canAccessHallOfFameRoute(loginState: string): boolean {
   );
 }
 
-/** True only when Firestore is likely to allow private school roster reads. */
+/** Firebase custom token with no email — leftover developer/office handoff, not staff. */
+export function isLeftoverCustomAuthUser(
+  user: { email?: string | null; providerData?: ReadonlyArray<unknown> } | null | undefined,
+): boolean {
+  if (!user) return false;
+  const email = typeof user.email === 'string' ? user.email.trim() : '';
+  return !email && (user.providerData?.length ?? 0) === 0;
+}
+
+/** True only when Firestore is likely to allow private `schools/{id}` reads. */
 export function canReadSchoolRoster(args: {
   loginState: string;
   isAdmin?: boolean;
@@ -50,3 +59,6 @@ export function canReadSchoolRoster(args: {
   if (args.loginState === 'developer' && Boolean(args.email?.trim())) return true;
   return false;
 }
+
+/** Same gate as roster reads — the private school document holds passcodes. */
+export const canReadPrivateSchoolDocument = canReadSchoolRoster;

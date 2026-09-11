@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Plus, Printer } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertTriangle, Plus, Printer } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
 import { useCurrency } from '@/hooks/useCurrency';
@@ -52,6 +53,7 @@ import {
   teacherBudgetRemainingPhrase,
 } from '@/lib/teacherBudget';
 import type { Category, Class, Coupon, CouponRedemptionScope, Teacher } from '@/lib/types';
+import { resolveCategoryCurrency } from '@/lib/currency/resolveCategoryCurrency';
 import { cn } from '@/lib/utils';
 
 const MAX_COUPON_PRINT_SHEETS = 100;
@@ -88,6 +90,48 @@ function localTodayYmd(): string {
   return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
 }
 
+function redemptionChoiceClass(isGraphic: boolean, selected: boolean) {
+  return cn(
+    'flex items-start gap-3 rounded-xl border p-3.5 min-w-0 cursor-pointer',
+    isGraphic ? 'border-white/10 bg-card/40' : 'border-border/70 bg-background',
+    selected &&
+      (isGraphic
+        ? 'border-chart-1 ring-2 ring-chart-1/25'
+        : 'border-primary ring-2 ring-primary/20'),
+  );
+}
+
+function RedemptionChoice({
+  id,
+  value,
+  title,
+  description,
+  selected,
+  isGraphic,
+}: {
+  id: string;
+  value: string;
+  title: string;
+  description: string;
+  selected: boolean;
+  isGraphic: boolean;
+}) {
+  return (
+    <motion.label
+      htmlFor={id}
+      layout
+      transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+      className={redemptionChoiceClass(isGraphic, selected)}
+    >
+      <RadioGroupItem value={value} id={id} className="mt-0.5 shrink-0" />
+      <span className="min-w-0 text-sm leading-snug">
+        <span className="font-bold">{title}</span>
+        <span className="block text-xs mt-0.5 text-muted-foreground">{description}</span>
+      </span>
+    </motion.label>
+  );
+}
+
 export function CouponPrintPanel({
   schoolId,
   categories,
@@ -105,8 +149,8 @@ export function CouponPrintPanel({
   teacherBudget,
   onAddCategory,
 }: CouponPrintPanelProps) {
-  const currency = useCurrency();
-  const { icon, label } = currency;
+  const schoolCurrency = useCurrency();
+  const { icon, label } = schoolCurrency;
   const { addCoupons, setCouponsToPrint, addCategory } = useAppContext();
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
@@ -135,6 +179,8 @@ export function CouponPrintPanel({
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
   const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
+  const [makeReusable, setMakeReusable] = useState(false);
+  const isReusablePrint = makeReusable;
 
   useEffect(() => {
     if (categoryList.length > 0 && !printCategoryId) {
@@ -248,7 +294,7 @@ export function CouponPrintPanel({
       });
       return;
     }
-    if (Number.isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS) {
+    if (!isReusablePrint && (Number.isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS)) {
       playSound('error');
       toast({
         variant: 'destructive',
@@ -257,7 +303,7 @@ export function CouponPrintPanel({
       });
       return;
     }
-    const couponCount = sheets * printCouponsPerPage;
+    const couponCount = isReusablePrint ? 1 : sheets * printCouponsPerPage;
     const selectedCategory = categoryList.find((c) => c.id === printCategoryId);
     if (!selectedCategory) {
       playSound('error');
@@ -397,6 +443,7 @@ export function CouponPrintPanel({
         .filter((t) => printScopeTeacherIds.includes(t.id))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((t) => t.name),
+      reusable: isReusablePrint,
     });
 
     const couponsToCreate: Coupon[] = codes.map((code) => ({
@@ -410,9 +457,11 @@ export function CouponPrintPanel({
       color: selectedCategory.color,
       ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...scopeExtra,
+      ...(isReusablePrint ? { reusable: true } : {}),
       ...(redemptionPrintNote ? { redemptionPrintNote } : {}),
       ...(startsAt !== undefined ? { startsAt } : {}),
       ...(expiresAt ? { expiresAt } : {}),
+      ...(selectedCategory.currencyOverride ? { currencyOverride: selectedCategory.currencyOverride } : {}),
     }));
 
     await addCoupons(couponsToCreate);
@@ -431,12 +480,18 @@ export function CouponPrintPanel({
     });
     playSound('success');
     toast({
-      title: 'Coupons ready to print',
-      description: `${couponCount} coupon${couponCount === 1 ? '' : 's'} generated.`,
+      title: isReusablePrint ? 'Reusable coupon ready' : 'Coupons ready to print',
+      description: isReusablePrint
+        ? 'Print this one slip and keep it. Students can scan the same code many times.'
+        : `${couponCount} coupon${couponCount === 1 ? '' : 's'} generated.`,
     });
   };
 
   const selectedCategoryForPreview = categoryList.find((c) => c.id === printCategoryId);
+  const printCurrency = useMemo(
+    () => resolveCategoryCurrency(schoolCurrency, selectedCategoryForPreview?.currencyOverride),
+    [schoolCurrency, selectedCategoryForPreview],
+  );
   const redemptionPreviewScope: CouponRedemptionScope = isTeacherRedemption
     ? printRedemptionScope === 'classes' ||
         printRedemptionScope === 'creator' ||
@@ -457,6 +512,7 @@ export function CouponPrintPanel({
       .filter((t) => printScopeTeacherIds.includes(t.id))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((t) => t.name),
+    reusable: isReusablePrint,
   });
   const previewScopeFields = useMemo<
     Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds' | 'createdByTeacherId'>>
@@ -491,6 +547,7 @@ export function CouponPrintPanel({
       color: selectedCategoryForPreview?.color,
       ...(isTeacherRedemption && creatorTeacherId ? { createdByTeacherId: creatorTeacherId } : {}),
       ...previewScopeFields,
+      ...(isReusablePrint ? { reusable: true } : {}),
       ...(redemptionPreviewNote ? { redemptionPrintNote: redemptionPreviewNote } : {}),
       ...(previewStartsAt !== undefined ? { startsAt: previewStartsAt } : {}),
       expiresAt: previewExpiresAt,
@@ -505,6 +562,7 @@ export function CouponPrintPanel({
       previewExpiresAt,
       isTeacherRedemption,
       creatorTeacherId,
+      isReusablePrint,
     ],
   );
 
@@ -513,7 +571,9 @@ export function CouponPrintPanel({
     [teacherList],
   );
 
-  const totalCoupons = (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
+  const totalCoupons = isReusablePrint
+    ? 1
+    : (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
   const budgetTeacher = teacherBudget?.currentTeacher ?? null;
   const printValueNum = parseInt(printValue, 10) || 0;
   const budgetHint =
@@ -545,28 +605,72 @@ export function CouponPrintPanel({
       )}
     >
       <CardHeader className="p-4 md:p-6">
-        <div className="flex items-center gap-1.5">
-          <CardTitle className="flex items-center gap-3">
-            <div
-              className={cn(
-                'p-2 rounded-xl',
-                isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
-              )}
-              aria-hidden
-            >
-              <Printer className="w-6 h-6" />
-            </div>
-            Print coupons
-          </CardTitle>
-          <StaffPortalTabInfoPopover
-            sections={[
-              staffPortalTabInfoSection(
-                'Generate printable coupons for student kiosk redemption. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout.',
-              ),
-            ]}
-            ariaLabel="About print coupons"
-          />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <CardTitle className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'p-2 rounded-xl',
+                  isGraphic ? 'bg-chart-1/20 text-chart-1' : 'bg-primary/10 text-primary',
+                )}
+                aria-hidden
+              >
+                <Printer className="w-6 h-6" />
+              </div>
+              Print coupons
+            </CardTitle>
+            <StaffPortalTabInfoPopover
+              sections={[
+                staffPortalTabInfoSection(
+                  'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout. Check “Make this reusable” at the top right to print one staff slip that can be scanned many times.',
+                ),
+              ]}
+              ariaLabel="About print coupons"
+            />
+          </div>
+          <label
+            htmlFor="make-coupon-reusable"
+            className={cn(
+              'flex items-center gap-2 shrink-0 rounded-xl border px-3 py-2 cursor-pointer',
+              isReusablePrint
+                ? 'border-amber-500/70 bg-amber-50 dark:bg-amber-950/40'
+                : isGraphic
+                  ? 'border-white/10 bg-foreground/5'
+                  : 'border-border/60 bg-muted/10',
+            )}
+          >
+            <Checkbox
+              id="make-coupon-reusable"
+              checked={makeReusable}
+              onCheckedChange={(checked) => setMakeReusable(checked === true)}
+            />
+            <span className="text-sm font-black whitespace-nowrap">Make this reusable</span>
+          </label>
         </div>
+        <AnimatePresence>
+          {isReusablePrint ? (
+            <motion.div
+              key="reusable-coupon-warning"
+              layout
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+              className="mt-4 flex items-start gap-3 rounded-xl border-2 border-amber-500 bg-amber-100 px-4 py-3 text-amber-950 dark:bg-amber-900/70 dark:text-amber-50 dark:border-amber-400"
+              role="alert"
+            >
+              <AlertTriangle className="h-7 w-7 shrink-0 mt-0.5" aria-hidden />
+              <div className="space-y-1">
+                <p className="text-sm font-black uppercase tracking-wide">Warning — keep this slip</p>
+                <p className="text-sm font-medium leading-snug">
+                  This is for a staff member to keep. Students can scan the same code over and over, and
+                  each scan gives points. Do not hand this out like a normal coupon. Do not throw it away.
+                  The printed ticket will also show this warning.
+                </p>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
         <PrinterReminderCallout
           title="Coupon / slip printer"
           message={settings.printerReminderPrizeVouchers}
@@ -583,9 +687,9 @@ export function CouponPrintPanel({
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8 items-start">
-            <div className="flex-1 w-full space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                <div className="space-y-2 md:col-span-2 xl:col-span-2">
+            <div className="flex-1 w-full min-w-0 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2 sm:col-span-2 min-w-0">
                   <Label className={labelClass}>Incentive Category</Label>
                   <div className="flex items-center gap-2">
                     <div className="min-w-0 flex-1">
@@ -674,7 +778,7 @@ export function CouponPrintPanel({
                     )}
                   </div>
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>{label} Value</Label>
                   <Input
                     type="number"
@@ -683,13 +787,14 @@ export function CouponPrintPanel({
                     className={cn('text-lg font-black', fieldClass)}
                   />
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                {!isReusablePrint && (
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Coupons per page</Label>
                   <Select
                     value={String(printCouponsPerPage)}
                     onValueChange={(value) => setPrintCouponsPerPage(normalizeCouponPrintPageSize(Number(value)))}
                   >
-                    <SelectTrigger className={cn('text-lg font-black', fieldClass)}>
+                    <SelectTrigger className={cn('text-sm font-bold min-w-0 [&>span]:min-w-0', fieldClass)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -701,7 +806,8 @@ export function CouponPrintPanel({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                )}
+                <div className="space-y-2 min-w-0">
                   <Label htmlFor="coupon-print-corners" className={labelClass}>
                     Coupon corners
                   </Label>
@@ -711,16 +817,17 @@ export function CouponPrintPanel({
                       setPrintCornerStyle(value === 'rounded' ? 'rounded' : 'rectangular')
                     }
                   >
-                    <SelectTrigger id="coupon-print-corners" className={cn('text-lg font-black', fieldClass)}>
+                    <SelectTrigger id="coupon-print-corners" className={cn('text-sm font-bold min-w-0 [&>span]:min-w-0', fieldClass)}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="rectangular">Rectangular (default)</SelectItem>
-                      <SelectItem value="rounded">Rounded (ID card look)</SelectItem>
+                      <SelectItem value="rectangular">Rectangular</SelectItem>
+                      <SelectItem value="rounded">Rounded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2 md:col-span-1">
+                {!isReusablePrint && (
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Sheets</Label>
                   <Input
                     type="number"
@@ -734,23 +841,24 @@ export function CouponPrintPanel({
                     Total: {totalCoupons} coupons{budgetHint}
                   </p>
                 </div>
-                <div className="space-y-2">
+                )}
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Valid from (optional)</Label>
                   <Input
                     type="date"
                     value={printStartsOn}
                     onChange={(e) => setPrintStartsOn(e.target.value)}
-                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
+                    className={cn('text-sm font-bold', fieldClass)}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className={labelClass}>Expiration (optional)</Label>
                   <Input
                     type="date"
                     min={localTodayYmd()}
                     value={printExpiresOn}
                     onChange={(e) => setPrintExpiresOn(e.target.value)}
-                    className={cn('text-xs font-bold tracking-widest', fieldClass)}
+                    className={cn('text-sm font-bold', fieldClass)}
                   />
                 </div>
               </div>
@@ -771,50 +879,32 @@ export function CouponPrintPanel({
                 <RadioGroup
                   value={printRedemptionScope}
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                  className="grid gap-3 sm:grid-cols-3"
+                  className="grid grid-cols-1 gap-2"
                 >
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="school" id="admin-crs-school" className="mt-1" />
-                    <label htmlFor="admin-crs-school" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Schoolwide</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Any enrolled student may redeem.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="classes" id="admin-crs-classes" className="mt-1" />
-                    <label htmlFor="admin-crs-classes" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Class(es)</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Only students in the classes you select.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="teachers" id="admin-crs-teachers" className="mt-1" />
-                    <label htmlFor="admin-crs-teachers" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Teacher(s)</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Students linked to selected teachers (roster or primary class).
-                      </span>
-                    </label>
-                  </div>
+                  <RedemptionChoice
+                    id="admin-crs-school"
+                    value="school"
+                    title="Schoolwide"
+                    description="Any enrolled student may redeem."
+                    selected={printRedemptionScope === 'school'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="admin-crs-classes"
+                    value="classes"
+                    title="Class(es)"
+                    description="Only students in the classes you select."
+                    selected={printRedemptionScope === 'classes'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="admin-crs-teachers"
+                    value="teachers"
+                    title="Teacher(s)"
+                    description="Students linked to selected teachers (roster or primary class)."
+                    selected={printRedemptionScope === 'teachers'}
+                    isGraphic={isGraphic}
+                  />
                 </RadioGroup>
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
@@ -886,50 +976,32 @@ export function CouponPrintPanel({
                 <RadioGroup
                   value={printRedemptionScope}
                   onValueChange={(v) => setPrintRedemptionScope(v as CouponRedemptionScope)}
-                  className="grid gap-3 sm:grid-cols-3"
+                  className="grid grid-cols-1 gap-2"
                 >
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="creator" id="crs-creator" className="mt-1" />
-                    <label htmlFor="crs-creator" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Only my students</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Students on your roster (by class primary teacher or explicit assignment) can redeem.
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="classes" id="crs-classes" className="mt-1" />
-                    <label htmlFor="crs-classes" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Selected classes</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Only students in the classes you pick below (your classes and roster).
-                      </span>
-                    </label>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex items-start gap-2 rounded-xl border p-3',
-                      isGraphic ? 'border-white/10 bg-card/40' : 'bg-background/80',
-                    )}
-                  >
-                    <RadioGroupItem value="school" id="crs-school" className="mt-1" />
-                    <label htmlFor="crs-school" className="text-sm leading-snug cursor-pointer">
-                      <span className="font-bold">Schoolwide</span>
-                      <span className="block text-xs mt-0.5 text-muted-foreground">
-                        Any enrolled student at the school may redeem.
-                      </span>
-                    </label>
-                  </div>
+                  <RedemptionChoice
+                    id="crs-creator"
+                    value="creator"
+                    title="Only my students"
+                    description="Students on your roster (by class primary teacher or explicit assignment) can redeem."
+                    selected={printRedemptionScope === 'creator'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="crs-classes"
+                    value="classes"
+                    title="Selected classes"
+                    description="Only students in the classes you pick below (your classes and roster)."
+                    selected={printRedemptionScope === 'classes'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
+                    id="crs-school"
+                    value="school"
+                    title="Schoolwide"
+                    description="Any enrolled student at the school may redeem."
+                    selected={printRedemptionScope === 'school'}
+                    isGraphic={isGraphic}
+                  />
                 </RadioGroup>
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
@@ -974,11 +1046,11 @@ export function CouponPrintPanel({
                 style={printAccentColor ? { backgroundColor: printAccentColor } : undefined}
               >
                 <Printer className="w-6 h-6 mr-3 group-hover:scale-110 transition-transform" />
-                Generate &amp; print
+                {isReusablePrint ? 'Print reusable coupon' : 'Generate & print'}
               </Button>
             </div>
 
-            <div className="w-full lg:w-80 lg:sticky lg:top-8 shrink-0">
+            <div className="w-full lg:w-[28rem] xl:w-[32rem] lg:sticky lg:top-8 shrink-0">
               <div
                 className={cn(
                   'rounded-2xl border p-6 flex flex-col items-center shadow-sm',
@@ -995,10 +1067,12 @@ export function CouponPrintPanel({
                     isGraphic ? 'border-white/10 bg-foreground/5' : 'border-border/40 bg-slate-100/80',
                   )}
                 >
-                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={currency} />
+                  <CouponPreview coupon={previewCoupon} schoolId={schoolId} cornerStyle={printCornerStyle} previewCurrency={printCurrency} />
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-6 text-center italic opacity-60">
-                  Each cell on the printed sheet matches this layout.
+                  {isReusablePrint
+                    ? 'This is the one slip you keep and scan again.'
+                    : 'Each cell on the printed sheet matches this layout.'}
                 </p>
               </div>
             </div>

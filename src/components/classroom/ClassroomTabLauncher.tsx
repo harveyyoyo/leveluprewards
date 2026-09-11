@@ -7,6 +7,7 @@ import { classroomRealmOpenHref } from '@/lib/classroomRealmUrl';
 import { CLASSROOM_TAB_LABEL } from '@/lib/classroom/classroomTabSections';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isClassroomPillarOn } from '@/lib/productPillars';
+import { openStandalonePage } from '@/lib/openStandalonePage';
 
 export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
   const { settings } = useSettings();
@@ -40,7 +41,7 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
           Classroom opens in its own teaching space — live awards, a student class screen, seating,
-          and behavior notes, with a look you can pick for your school.
+          raffle, and behavior notes, with a look you can pick for your school.
         </p>
       </div>
 
@@ -49,13 +50,16 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
         size="lg"
         className="min-w-[14rem] rounded-full bg-gradient-to-r from-lime-700 to-amber-600 px-8 text-base font-bold shadow-lg hover:from-lime-600 hover:to-amber-500"
       >
-        <a href={classroomUrl} target="_blank" rel="noopener noreferrer">
+        <a
+          href={classroomUrl}
+          onClick={(event) => openStandalonePage(classroomUrl, event)}
+        >
           <ExternalLink className="mr-2 h-5 w-5" aria-hidden />
           Open Classroom
         </a>
       </Button>
 
-      <p className="text-xs text-muted-foreground">Opens in a new tab</p>
+      <p className="text-xs text-muted-foreground">Opens as its own page</p>
     </div>
   );
 }

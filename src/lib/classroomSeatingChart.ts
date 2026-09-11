@@ -361,6 +361,14 @@ export function saveClassroomPrefs(schoolId: string, scope: string, prefs: Class
   }
 }
 
+/** Wider grid when the live monitor shows every student instead of one class. */
+export function initialLayoutColumnCount(studentCount: number): number {
+  if (studentCount <= 20) return 5;
+  if (studentCount <= 42) return 7;
+  if (studentCount <= 80) return 10;
+  return 12;
+}
+
 /** Build an initial grid that fits all student ids (5 columns by default). */
 export function buildInitialLayout(studentIds: string[], cols = 5): ClassroomSeatingLayout {
   const count = Math.max(studentIds.length, cols);
@@ -427,6 +435,49 @@ export function visualLayoutPositions(
     }
   }
   return out;
+}
+
+export type ClassroomSeatingGridFit = {
+  cellSize: number;
+  gridWidth: number;
+  gridHeight: number;
+};
+
+/**
+ * Largest square desks that fit in the available box without changing rows/cols.
+ * When the window is short or narrow, desks shrink instead of stretching into pills.
+ */
+export function fitClassroomSeatingGrid(input: {
+  containerWidth: number;
+  containerHeight: number;
+  rows: number;
+  cols: number;
+  gap: number;
+}): ClassroomSeatingGridFit {
+  const rows = Math.max(1, Math.floor(input.rows) || 1);
+  const cols = Math.max(1, Math.floor(input.cols) || 1);
+  const gap = Math.max(0, input.gap);
+  const width = Math.max(0, input.containerWidth);
+  const height = Math.max(0, input.containerHeight);
+  const gapX = gap * Math.max(0, cols - 1);
+  const gapY = gap * Math.max(0, rows - 1);
+  const cellByWidth = (width - gapX) / cols;
+  const cellByHeight = (height - gapY) / rows;
+  const cellSize = Math.max(0, Math.floor(Math.min(cellByWidth, cellByHeight)));
+  return {
+    cellSize,
+    gridWidth: cellSize * cols + gapX,
+    gridHeight: cellSize * rows + gapY,
+  };
+}
+
+export type ClassroomDeskVisualScale = 'sm' | 'md' | 'lg';
+
+/** Shrink desk labels when cells get small so names don’t overflow. */
+export function classroomDeskVisualScale(cellSize: number): ClassroomDeskVisualScale {
+  if (cellSize < 72) return 'sm';
+  if (cellSize < 104) return 'md';
+  return 'lg';
 }
 
 const SESSION_PREFIX = 'levelup-classroom-session:';

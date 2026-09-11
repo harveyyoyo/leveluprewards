@@ -86,6 +86,8 @@ export function LibraryCheckoutDesk({
   overdueLoansCount,
   catalogItems,
   onViewCatalog,
+  libraryLocationId,
+  libraryLocations,
 }: {
   getStudentName: (id?: string) => string;
   categories?: Category[] | null;
@@ -97,6 +99,8 @@ export function LibraryCheckoutDesk({
   overdueLoansCount?: number;
   catalogItems?: LibraryItem[] | null;
   onViewCatalog?: () => void;
+  libraryLocationId?: string | null;
+  libraryLocations?: { id: string; name: string }[];
 }) {
   const { schoolId } = useAppContext();
   const firestore = useFirestore();
@@ -129,6 +133,12 @@ export function LibraryCheckoutDesk({
 
   const policy = useMemo(() => getLibraryPolicyFromSettings(settings, categories), [settings, categories]);
   const student = useMemo(() => students?.find((s) => s.id === studentId), [students, studentId]);
+  const describeWrongLibrary = useCallback((resultLibraryId: string) => {
+    const otherName = libraryLocations?.find((location) => location.id === resultLibraryId)?.name;
+    return otherName
+      ? `This book belongs to ${otherName}. Switch to that library to check it out.`
+      : 'This book belongs to a different library.';
+  }, [libraryLocations]);
 
   useEffect(() => {
     if (!policy.autoDetectCirculation && mode === 'auto') {
@@ -144,8 +154,12 @@ export function LibraryCheckoutDesk({
         policy,
         functions,
         action: 'checkout',
+        libraryLocationId,
       });
 
+      if (result.action === 'wrong_library') {
+        throw new Error(describeWrongLibrary(result.libraryLocationId));
+      }
       if (result.action === 'limit_reached') {
         throw new Error(`Loan limit reached: ${sName} already has ${result.currentCount} of ${result.max} books.`);
       }
@@ -180,9 +194,9 @@ export function LibraryCheckoutDesk({
         ...prev,
       ].slice(0, 10));
 
-      setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, targetStudentId));
+      setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, targetStudentId, { libraryLocationId }));
     },
-    [firestore, schoolId, policy, functions, getStudentName, playSound],
+    [describeWrongLibrary, firestore, functions, getStudentName, libraryLocationId, playSound, policy, schoolId],
   );
 
   const selectStudent = async (id: string) => {
@@ -190,7 +204,7 @@ export function LibraryCheckoutDesk({
     locked.current = true;
     setBusy(true);
     try {
-      const loans = await getStudentLibraryCheckouts(firestore, schoolId, id);
+      const loans = await getStudentLibraryCheckouts(firestore, schoolId, id, { libraryLocationId });
       setStudentId(id);
       setStudentLoans(loans);
       const sName = getStudentName(id);
@@ -310,7 +324,7 @@ export function LibraryCheckoutDesk({
       playSound('success');
       toast({ title: 'Loan renewed', description: `Renewed "${item.name}" for ${policy.renewalDays} days.` });
       if (studentId && firestore) {
-        setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId));
+        setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId, { libraryLocationId }));
       }
     } catch (e) {
       toast({ variant: 'destructive', title: 'Renewal failed', description: (e as Error).message });
@@ -365,7 +379,7 @@ export function LibraryCheckoutDesk({
           // 1. STUDENT BADGE SCANNED
           if (studentFoundId && !foundItem) {
             setStudentId(studentFoundId);
-            const loans = await getStudentLibraryCheckouts(firestore, schoolId, studentFoundId);
+            const loans = await getStudentLibraryCheckouts(firestore, schoolId, studentFoundId, { libraryLocationId });
             setStudentLoans(loans);
             const sName = getStudentName(studentFoundId);
 
@@ -400,8 +414,12 @@ export function LibraryCheckoutDesk({
                 functions,
                 action: 'return',
                 allowCrossReturn: true,
+                libraryLocationId,
               });
 
+              if (result.action === 'wrong_library') {
+                throw new Error(describeWrongLibrary(result.libraryLocationId));
+              }
               if (result.action === 'not_found') throw new Error('Book barcode not recognized in catalog.');
               if (result.action === 'already_done') {
                 setMessage(`Already returned: ${foundItem.item.name}`);
@@ -460,7 +478,7 @@ export function LibraryCheckoutDesk({
               ].slice(0, 10));
 
               if (studentId) {
-                setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId));
+                setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId, { libraryLocationId }));
               }
               return;
             }
@@ -508,6 +526,8 @@ export function LibraryCheckoutDesk({
       students,
       pendingBook,
       executeCheckout,
+      libraryLocationId,
+      describeWrongLibrary,
     ],
   );
 

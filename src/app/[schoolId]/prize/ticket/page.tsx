@@ -5,9 +5,9 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { PrizeRedeemTicketPrintSheet } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
+import { useCanReadPrivateSchoolDocument } from '@/hooks/useCanReadSchoolRoster';
 import { applyThermalPrizePrintRootLocks, clearThermalPrizePrintRootLocks } from '@/lib/prizes/prizeThermalPrintDom';
 
 type TicketParams = {
@@ -65,13 +65,12 @@ export default function PrizeRedeemTicketPage() {
   const { schoolId } = useParams<{ schoolId: string }>();
   const [printRequested, setPrintRequested] = useState(false);
   const firestore = useFirestore();
-  const { loginState } = useAuth();
+  const canReadPrivateSchoolDoc = useCanReadPrivateSchoolDocument();
   const schoolRef = useMemoFirebase(() => {
     if (!schoolId || !firestore) return null;
-    const staff = loginState === 'teacher' || loginState === 'admin' || loginState === 'developer' || loginState === 'secretary' || loginState === 'prizeClerk';
-    if (staff) return doc(firestore, 'schools', schoolId);
+    if (canReadPrivateSchoolDoc) return doc(firestore, 'schools', schoolId);
     return schoolPublicDocRef(firestore, schoolId);
-  }, [firestore, schoolId, loginState]);
+  }, [firestore, schoolId, canReadPrivateSchoolDoc]);
   const { data: schoolData } = useDoc<{ name?: string; logoUrl?: string }>(schoolRef);
   const schoolName = (schoolData?.name ?? '').trim() || schoolId;
   const logoUrl = (schoolData?.logoUrl ?? '').trim() || null;

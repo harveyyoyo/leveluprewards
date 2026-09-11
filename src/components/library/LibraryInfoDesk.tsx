@@ -34,6 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { filterItemsForLibrary } from '@/lib/library/libraryLocations';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -59,6 +60,8 @@ export interface LibraryInfoDeskProps {
   schoolName?: string;
   initialScanCode?: string | null;
   onClearInitialScan?: () => void;
+  libraryLocationId?: string | null;
+  libraryLocations?: { id: string; name: string }[];
 }
 
 
@@ -90,6 +93,7 @@ export function LibraryInfoDesk({
   schoolName = 'School Library',
   initialScanCode,
   onClearInitialScan,
+  libraryLocationId,
 }: LibraryInfoDeskProps) {
   const { settings } = useSettings();
   const { formatName } = useLibraryStudentDisplay();
@@ -112,13 +116,17 @@ export function LibraryInfoDesk({
   const { toast } = useToast();
 
   const [shelfFilter, setShelfFilter] = useState<'all' | 'available' | 'checked_out' | 'overdue'>('all');
+  const scopedCatalog = useMemo(
+    () => (libraryLocationId ? filterItemsForLibrary(catalogItems, libraryLocationId) : catalogItems || []),
+    [catalogItems, libraryLocationId],
+  );
 
   // Search matches: books and students
   const searchMatches = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q || q.length < 2) return { books: [], students: [] };
 
-    const books = (catalogItems || [])
+    const books = scopedCatalog
       .filter(
         (b) =>
           b.name.toLowerCase().includes(q) ||
@@ -145,7 +153,7 @@ export function LibraryInfoDesk({
       .slice(0, 4);
 
     return { books, students: matchedStudents };
-  }, [searchQuery, catalogItems, students]);
+  }, [searchQuery, scopedCatalog, students]);
 
   // Handle barcode wedge scan in info mode -> look up item/student without checking out!
   const handleScanLookup = useCallback(
@@ -171,7 +179,7 @@ export function LibraryInfoDesk({
         normalizeLibraryUpc(clean),
         ...getIsbnLookupVariants(clean).map((code) => normalizeLibraryUpc(code)),
       ]);
-      const bookMatch = (catalogItems || []).find((b) => {
+      const bookMatch = scopedCatalog.find((b) => {
         const upc = normalizeLibraryUpc(b.upc || '');
         const isbn = b.isbn ? normalizeLibraryUpc(b.isbn) : '';
         return (upc && lookupCodes.has(upc)) || (isbn && lookupCodes.has(isbn));
@@ -198,7 +206,7 @@ export function LibraryInfoDesk({
       setSelectedStudent(null);
       setShowSuggestions(true);
     },
-    [students, catalogItems, functions, schoolId],
+    [students, scopedCatalog, functions, schoolId],
   );
 
   useEffect(() => {
@@ -235,9 +243,9 @@ export function LibraryInfoDesk({
 
   // If a student is selected, get their active loans
   const studentLoans = useMemo(() => {
-    if (!selectedStudent || !catalogItems) return [];
-    return catalogItems.filter((i) => i.checkedOutTo === selectedStudent.id);
-  }, [selectedStudent, catalogItems]);
+    if (!selectedStudent) return [];
+    return scopedCatalog.filter((i) => i.checkedOutTo === selectedStudent.id);
+  }, [selectedStudent, scopedCatalog]);
 
   const effectiveStudentLimit = useMemo(() => {
     return resolveStudentMaxCheckouts(selectedStudent, settings.libraryMaxCheckoutsPerStudent ?? 3);
@@ -1048,6 +1056,7 @@ export function LibraryInfoDesk({
               <LibraryStudentLoansSummary
                 items={studentLoans}
                 maxCheckouts={effectiveStudentLimit}
+                libraryLocationId={libraryLocationId}
                 staffActions={{
                   busyId: busyLoanId,
                   onRenew: (item) => void handleStaffRenew(item),

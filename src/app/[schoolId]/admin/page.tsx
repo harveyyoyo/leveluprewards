@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef, ChangeEvent, Suspense, type ComponentType } from 'react';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase, useFunctions } from '@/firebase';
@@ -13,9 +13,10 @@ import { useSchoolLogoUpload } from './hooks/useSchoolLogoUpload';
 import { useAuthFetch } from '@/lib/authFetch';
 import { getArcadeAiModelFromStorage } from '@/lib/aiModelPreference';
 import { collection, doc, updateDoc, setDoc, deleteDoc, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
+import { migrateIncentivesToCategoriesClient } from '@/lib/incentives/migrateIncentivesToCategories';
 import {
    Users, Gift, BookOpen, Trash2, Edit, UploadCloud, Printer, LayoutDashboard,
-   Settings, History, Award, CheckCircle, Tag, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
+   Settings, History, Award, CheckCircle, Trophy, ArrowRight, Loader2, Play, ShieldCheck,
    User, Upload, Download, Activity, Zap, Clock, Palette, Wand2,
    FileText, Bell, Target, Megaphone, Monitor, ChevronDown, X, Plug, GraduationCap, Home, Ticket, Dices,
 } from 'lucide-react';
@@ -134,11 +135,6 @@ import {
 } from '@/lib/schoolDataImport';
 import { SAMPLE_BADGES, getSampleCategoryBadges } from '@/lib/sampleBadges';
 
-// The Students and Library tabs are eager. Other admin tabs are
-// code-split with `next/dynamic` so its chunk is only fetched when the admin
-// actually clicks into it — this dramatically reduces the initial admin JS.
-import { AdminStudentsTab } from './sections/AdminStudentsTab';
-import { AdminLibraryTab } from './sections/AdminLibraryTab';
 import { budgetWindowKeyForDate } from '@/lib/teacherBudget';
 import { resolveIdCardPrintJobOptions } from '@/lib/idCardPrintCatalog';
 import {
@@ -160,18 +156,19 @@ import {
   AdminClassroomTab,
   AdminDisplaysTab,
   AdminGoalsTab,
-  AdminIncentivesTab,
   AdminHousesTab,
   AdminIntegrationsTab,
+  AdminLibraryTab,
   AdminNotificationsTab,
   AdminPrizesTab,
   AdminReportsTab,
   AdminStatsTab,
   AdminStudentPortalTab,
+  AdminStudentsTab,
   AdminTeachersTab,
 } from './adminTabDynamics';
 import { getReadableErrorMessage } from '@/lib/errorMessage';
-import { BulkRosterSetupDialog } from '@/components/admin/BulkRosterSetupDialog';
+import { BulkRosterSetupDialog, type BulkRosterTab } from '@/components/admin/BulkRosterSetupDialog';
 import { StudentCsvColumnMapDialog } from '@/components/student/StudentCsvColumnMapDialog';
 import { guessStudentCsvColumnMap, parseStudentCsvToMatrix } from '@/lib/students/studentCsvColumnMap';
 import { AdminPrizeDeskDashboard } from './AdminPrizeDeskDashboard';
@@ -314,6 +311,8 @@ function AdminDashboardInner() {
     ? params.schoolId.trim().toLowerCase()
     : ctxSchoolId;
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const functions = useFunctions();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -372,6 +371,38 @@ function AdminDashboardInner() {
     updateSettings,
   ]);
 
+  /** Incentives folded into the Coupons tab as a section — drop the retired standalone tab
+   * value from any pinned/order/hidden lists so it stops showing as a blank nav slot. */
+  const incentivesTabCleanupRef = useRef(false);
+  useEffect(() => {
+    if (incentivesTabCleanupRef.current) return;
+    const lists = {
+      adminPinnedAddOnTabs: settings.adminPinnedAddOnTabs || [],
+      adminMainTabOrder: settings.adminMainTabOrder || [],
+      adminHiddenAddOnTabs: settings.adminHiddenAddOnTabs || [],
+      teacherPinnedAddOnTabs: settings.teacherPinnedAddOnTabs || [],
+      teacherHiddenAddOnTabs: settings.teacherHiddenAddOnTabs || [],
+    };
+    const hadIncentivesTab = Object.values(lists).some((list) => list.includes('incentives'));
+    if (!hadIncentivesTab) {
+      incentivesTabCleanupRef.current = true;
+      return;
+    }
+    incentivesTabCleanupRef.current = true;
+    updateSettings(
+      Object.fromEntries(
+        Object.entries(lists).map(([key, list]) => [key, list.filter((v) => v !== 'incentives')]),
+      ),
+    );
+  }, [
+    settings.adminHiddenAddOnTabs,
+    settings.adminMainTabOrder,
+    settings.adminPinnedAddOnTabs,
+    settings.teacherHiddenAddOnTabs,
+    settings.teacherPinnedAddOnTabs,
+    updateSettings,
+  ]);
+
   // All Firestore reads the dashboard needs live in a single hook so this
   // component only has to worry about orchestration and UI state.
   const {
@@ -390,6 +421,20 @@ function AdminDashboardInner() {
     appConfigGlobal,
   } = useAdminDashboardData(schoolId, settings.payLibrary, settings.enableHouses);
 
+  const incentivesMigrationRef = useRef(false);
+  useEffect(() => {
+    if (incentivesMigrationRef.current) return;
+    if (!schoolId || !schoolData || !firestore) return;
+    if (schoolData.hasMigratedIncentivesToCategories) {
+      incentivesMigrationRef.current = true;
+      return;
+    }
+    incentivesMigrationRef.current = true;
+    void migrateIncentivesToCategoriesClient(firestore, schoolId).catch((err) => {
+      console.error('migrateIncentivesToCategories failed:', err);
+    });
+  }, [schoolId, schoolData, firestore]);
+
   // School logo state + upload/crop/remove pipeline (see hook for details).
   const {
     logoPreviewUrl,
@@ -401,6 +446,8 @@ function AdminDashboardInner() {
     handleLogoUpload,
     handleCropComplete,
     handleRemoveLogo,
+    isFixingLogoBackground,
+    handleFixLogoBackground,
   } = useSchoolLogoUpload({
     schoolId,
     schoolDocRef,
@@ -466,9 +513,24 @@ function AdminDashboardInner() {
 
   const [activeMainTab, setActiveMainTab] = useState('welcome');
 
+  // Keeps the URL in sync so each tab is deep-linkable/shareable and back/forward works.
+  const goToMainTab = useCallback((value: string) => {
+    setActiveMainTab(value);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === 'welcome') {
+      params.delete('tab');
+    } else {
+      params.set('tab', value);
+    }
+    // A section param only makes sense for the tab it was set on.
+    params.delete('section');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
+
   const handleIntroTourStaffTab = useCallback((tabValue: string) => {
-    setActiveMainTab(tabValue);
-  }, []);
+    goToMainTab(tabValue);
+  }, [goToMainTab]);
   useIntroTourStaffTabListener(handleIntroTourStaffTab);
 
   useEffect(() => {
@@ -555,19 +617,6 @@ function AdminDashboardInner() {
             displaysEnabled: false,
             adminHiddenAddOnTabs: removeHidden('displays'),
             adminPinnedAddOnTabs: removePinned('displays'),
-          }),
-      },
-      {
-        value: 'incentives',
-        label: 'Incentives',
-        icon: Tag,
-        isOn: (s) => staffPortalAdminAddOnIsOn(s, 'incentives'),
-        enable: () => updateSettings({ enableIncentives: true, adminHiddenAddOnTabs: removeHidden('incentives') }),
-        disable: () =>
-          updateSettings({
-            enableIncentives: false,
-            adminHiddenAddOnTabs: removeHidden('incentives'),
-            adminPinnedAddOnTabs: removePinned('incentives'),
           }),
       },
       {
@@ -773,13 +822,13 @@ function AdminDashboardInner() {
     if (!pinnedNow.includes(tabValue)) return;
     updateSettings({ adminPinnedAddOnTabs: pinnedNow.filter((x) => x !== tabValue) });
     if (activeMainTab === tabValue) {
-      setActiveMainTab('welcome');
+      goToMainTab('welcome');
     }
   };
 
   const handleMobileMainTabChange = (value: string) => {
     if (orderedMainTabs.some((t) => t.value === value)) {
-      setActiveMainTab(value);
+      goToMainTab(value);
       return;
     }
 
@@ -788,7 +837,7 @@ function AdminDashboardInner() {
       return;
     }
 
-    setActiveMainTab(value);
+    goToMainTab(value);
   };
 
   const persistMainTabOrder = (next: string[]) => {
@@ -882,7 +931,7 @@ function AdminDashboardInner() {
       Object.assign(patch, addOnTabEnablePatch(tabValue));
       
       updateSettings(patch);
-      setActiveMainTab(tabValue);
+      goToMainTab(tabValue);
     } else {
       patch.adminPinnedAddOnTabs = pinnedNow.filter((x) => x !== tabValue);
       let nextHidden = [...hiddenNow];
@@ -949,7 +998,7 @@ function AdminDashboardInner() {
       updateSettings(patch);
       
       if (activeMainTab === tabValue) {
-        setActiveMainTab('welcome');
+        goToMainTab('welcome');
       }
     }
   };
@@ -1094,15 +1143,21 @@ function AdminDashboardInner() {
     patch.adminHiddenAddOnTabs = nextHidden;
     updateSettings(patch);
 
-    if (offIds.has(activeMainTab)) setActiveMainTab('welcome');
+    if (offIds.has(activeMainTab)) goToMainTab('welcome');
   };
 
   useLayoutEffect(() => {
     const allowedTabs = new Set(orderedMainTabs.map((t) => t.value));
-    if (!allowedTabs.has(activeMainTab)) setActiveMainTab('welcome');
-  }, [activeMainTab, orderedMainTabs]);
+    if (!allowedTabs.has(activeMainTab)) goToMainTab('welcome');
+  }, [activeMainTab, orderedMainTabs, goToMainTab]);
 
   const [bulkRosterOpen, setBulkRosterOpen] = useState(false);
+  const [bulkRosterInitialTab, setBulkRosterInitialTab] = useState<BulkRosterTab>('csv');
+
+  const openBulkRoster = (tab: BulkRosterTab = 'csv') => {
+    setBulkRosterInitialTab(tab);
+    setBulkRosterOpen(true);
+  };
   const [isPreviousLogosOpen, setIsPreviousLogosOpen] = useState(false);
   const [idCardPrintJob, setIdCardPrintJob] = useState<{ students: Student[]; classes: Class[] } | null>(null);
   const [staffIdPrintJob, setStaffIdPrintJob] = useState<StaffIdCardSubject[] | null>(null);
@@ -1195,9 +1250,6 @@ function AdminDashboardInner() {
     toast,
   });
 
-  /** Show shell as soon as the default Students tab can render; other collections load in background. */
-  const isShellLoading = studentsLoading || classesLoading;
-
   const collectionErrors = [
     { name: 'Students', error: studentsError },
     { name: 'Classes', error: classesError },
@@ -1218,10 +1270,6 @@ function AdminDashboardInner() {
     const student = students?.find(s => s.id === studentId);
     return student ? `${student.firstName} ${student.lastName}` : `ID: ${studentId}`;
   };
-
-  if (isShellLoading) {
-    return <AdminDashboardSkeleton />;
-  }
 
   if (collectionErrors.length > 0) {
     return (
@@ -1637,8 +1685,8 @@ function AdminDashboardInner() {
     }
   };
 
-  const availableCoupons = coupons?.filter(c => !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
-  const redeemedCoupons = coupons?.filter(c => c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
+  const availableCoupons = coupons?.filter(c => c.kind !== 'incentive' && !c.used).sort((a, b) => b.createdAt - a.createdAt) || [];
+  const redeemedCoupons = coupons?.filter(c => c.kind !== 'incentive' && c.used).sort((a, b) => (b.usedAt ?? 0) - (a.usedAt ?? 0)) || [];
 
   if (schoolId && isMobileDisplayMode(settings.displayMode)) {
     return (
@@ -1749,7 +1797,7 @@ function AdminDashboardInner() {
                       key={t.value}
                       value={t.value}
                       isActive={isTabActive}
-                      onSelect={() => setActiveMainTab(t.value)}
+                      onSelect={() => goToMainTab(t.value)}
                       triggerClassName={
                         isColoredAddOn
                           ? cn(
@@ -1809,7 +1857,7 @@ function AdminDashboardInner() {
           <Tabs
             key={`admin-tabs-${schoolId ?? 'unknown'}`}
             value={activeMainTab}
-            onValueChange={setActiveMainTab}
+            onValueChange={goToMainTab}
             className={staffPortalWorkspaceMainClassName()}
           >
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
@@ -1819,9 +1867,8 @@ function AdminDashboardInner() {
             <StaffPortalWelcomeTab
               role="admin"
               settings={settings}
-              schoolId={schoolId}
-              onGoToTab={setActiveMainTab}
-              onBulkRoster={() => setBulkRosterOpen(true)}
+              onGoToTab={goToMainTab}
+              onBulkRoster={() => openBulkRoster('csv')}
               schoolName={schoolData?.name?.trim() || null}
               staffName={userName}
               welcomeStats={adminWelcomeStats}
@@ -1834,11 +1881,13 @@ function AdminDashboardInner() {
               settings={settings}
               classes={classes}
               students={students}
+              rosterLoading={studentsLoading || classesLoading}
               filteredStudents={filteredStudents}
               studentCsvInputRef={studentCsvInputRef}
               onStudentCsvFileChange={onStudentCsvFileChange}
               handleStudentCsvUpload={handleStudentCsvUpload}
               csvImportBusy={csvImportBusy}
+              onOpenAiImport={() => openBulkRoster('ai')}
               selectionMode={selectionMode}
               setSelectionMode={setSelectionMode}
               selectedStudentIds={selectedStudentIds}
@@ -2048,6 +2097,8 @@ function AdminDashboardInner() {
               redeemedCoupons={redeemedCoupons}
               getStudentName={getStudentName}
               onDeleteCoupon={deleteCoupon}
+              settings={settings}
+              updateSettings={updateSettings}
               onPurgeRedeemed={async () => {
                 const ids = redeemedCoupons.map((c) => c.id);
                 if (ids.length > 0) {
@@ -2141,14 +2192,6 @@ function AdminDashboardInner() {
             <AdminDisplaysTab
               schoolId={schoolId!}
               schoolLogoUrl={schoolData?.logoUrl ?? null}
-              settings={settings}
-              updateSettings={updateSettings}
-            />
-          </TabsContent>
-
-          <TabsContent value="incentives" className={scrollingAdminTabClassName}>
-            <AdminIncentivesTab
-              schoolId={schoolId!}
               settings={settings}
               updateSettings={updateSettings}
             />
@@ -2270,6 +2313,8 @@ function AdminDashboardInner() {
               handleLogoUpload={handleLogoUpload}
               handleRemoveLogo={handleRemoveLogo}
               isLogoUploading={isLogoUploading}
+              handleFixLogoBackground={handleFixLogoBackground}
+              isFixingLogoBackground={isFixingLogoBackground}
               toast={toast}
               playSound={(s: any) => playSound(s)}
             />
@@ -2283,6 +2328,7 @@ function AdminDashboardInner() {
         <BulkRosterSetupDialog
           open={bulkRosterOpen}
           onOpenChange={setBulkRosterOpen}
+          initialTab={bulkRosterInitialTab}
           aiClassNames={(classes || []).map((c) => c.name)}
           onClassesCsv={handleBulkClassesCsv}
           onTeachersCsv={handleBulkTeachersCsv}

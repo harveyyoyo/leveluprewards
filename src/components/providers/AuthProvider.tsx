@@ -32,6 +32,7 @@ import {
 } from '@/lib/auth/schoolLoginRedirect';
 import { canBypassSchoolAdminPasscode } from '@/lib/adminGoogleAccess';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { canReadPrivateSchoolDocument, isLeftoverCustomAuthUser } from '@/lib/hallOfFameAccess';
 import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { verifySchoolAccessViaApi } from '@/lib/auth/verifySchoolAccessClient';
@@ -176,13 +177,17 @@ function reportSessionSyncFailure(phase: 'firebase-session' | 'school-gate') {
 async function waitForReadableRole(
     roleRef: DocumentReference,
     expectedRole: string,
-    options: { quick?: boolean } = {},
+    options: { quick?: boolean; maxWaitMs?: number } = {},
 ) {
     const attempts = options.quick ? 50 : 24;
     const fastDelay = options.quick ? 80 : 150;
     const slowDelay = options.quick ? 80 : 350;
+    const deadline = typeof options.maxWaitMs === 'number' ? Date.now() + options.maxWaitMs : null;
 
     for (let i = 0; i < attempts; i++) {
+        if (deadline !== null && Date.now() >= deadline) {
+            return null;
+        }
         try {
             const roleDoc = await getDocFromServer(roleRef);
             const data = roleDoc.exists() ? roleDoc.data() : null;
@@ -192,7 +197,14 @@ async function waitForReadableRole(
         } catch {
             // Permission errors are expected for a moment while the role grant propagates.
         }
-        await wait(i < 10 ? fastDelay : slowDelay);
+        const delay = i < 10 ? fastDelay : slowDelay;
+        if (deadline !== null) {
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) return null;
+            await wait(Math.min(delay, remaining));
+        } else {
+            await wait(delay);
+        }
     }
 
     return null;
@@ -498,7 +510,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUserId(auth.currentUser.uid);
                 }
 
-                if (savedState === 'developer') {
+                if (savedState === 'developer' && isLeftoverCustomAuthUser(auth.currentUser)) {
+                    setLoginState('school');
+                    setIsAdmin(false);
+                    setIsTeacher(false);
+                    setIsSecretary(false);
+                    setIsPrizeClerk(false);
+                    setIsReports(false);
+                    setIsLibrarian(false);
+                    setIsOffice(false);
+                    setIsHouseCoordinator(false);
+                    setUserName(null);
+                    setTeacherDocId(null);
+                    localStorage.setItem('loginState', 'school');
+                    localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+                } else if (savedState === 'developer') {
                     setLoginState('developer');
                     setIsTeacher(false);
                     setIsSecretary(false);
@@ -687,6 +713,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setIsPrizeClerk(false);
                     setIsReports(false);
                 }
+            } else if (savedState === 'developer' && isLeftoverCustomAuthUser(auth.currentUser)) {
+                localStorage.removeItem('loginState');
+                localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
+                setLoginState('loggedOut');
+                setIsAdmin(false);
+                setIsTeacher(false);
+                setIsSecretary(false);
+                setIsPrizeClerk(false);
+                setIsReports(false);
+                setIsLibrarian(false);
+                setIsOffice(false);
+                setIsHouseCoordinator(false);
             } else if (savedState === 'developer') {
                 setLoginState('developer');
                 setIsAdmin(true);
@@ -791,6 +829,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const hasNext = Boolean(params.get('next'));
             if (!hasNext && !hasUrlSchoolLoginOfficeIntent(params)) return;
             const target = resolveSchoolLoginNextUrl(schoolParam);
+            // If edge middleware rejects the session cookie, it sends us back to
+            // `/login?next=`. Trying that jump again would loop forever.
+            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}`;
+            try {
+                if (sessionStorage.getItem(bounceKey) === '1') return;
+                sessionStorage.setItem(bounceKey, '1');
+            } catch {
+                // ignore
+            }
             window.location.assign(target);
         })();
         return () => {
@@ -876,17 +923,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         const sid = schoolId.trim().toLowerCase();
-        const isStaff =
-            loginState === 'admin' ||
-            loginState === 'developer' ||
-            loginState === 'teacher' ||
-            loginState === 'secretary' ||
-            loginState === 'prizeClerk' ||
-            loginState === 'reports' ||
-            loginState === 'librarian' ||
-            loginState === 'office' ||
-            loginState === 'houseCoordinator';
-        const metadataRef = isStaff
+        const canReadPrivateSchoolDoc = canReadPrivateSchoolDocument({
+            loginState,
+            isAdmin,
+            isTeacher,
+            isSecretary,
+            isPrizeClerk,
+            isReports,
+            isLibrarian,
+            isOffice,
+            isHouseCoordinator,
+            email: auth?.currentUser?.email,
+        });
+        const metadataRef = canReadPrivateSchoolDoc
             ? doc(firestore, 'schools', sid)
             : schoolPublicDocRef(firestore, sid);
         const applySnapshot = (snapshot: { metadata: { fromCache: boolean } }) => {
@@ -932,7 +981,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 window.removeEventListener('online', onBrowserOnline);
             }
         };
-    }, [firestore, schoolId, loginState]);
+    }, [
+        firestore,
+        schoolId,
+        loginState,
+        isAdmin,
+        isTeacher,
+        isSecretary,
+        isPrizeClerk,
+        isReports,
+        isLibrarian,
+        isOffice,
+        isHouseCoordinator,
+        auth?.currentUser?.email,
+    ]);
 
     const login = useCallback(
         async (
@@ -1118,6 +1180,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     const adminRoleRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
                     const roleData = await waitForReadableRole(adminRoleRef, 'admin', {
                         quick: isPublicSampleSchoolId(lowerSchoolId),
+                        // Don't stall first Admin open for several seconds if the role write is slow to read.
+                        maxWaitMs: 1200,
                     });
 
                     if (!roleData) {

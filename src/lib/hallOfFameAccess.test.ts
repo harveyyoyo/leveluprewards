@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { canAccessHallOfFameRoute, canReadSchoolRoster } from './hallOfFameAccess';
+import {
+  canAccessHallOfFameRoute,
+  canReadSchoolRoster,
+  isLeftoverCustomAuthUser,
+} from './hallOfFameAccess';
 
 describe('canAccessHallOfFameRoute', () => {
   it('allows staff login states and developer', () => {
@@ -25,5 +29,13 @@ describe('canReadSchoolRoster', () => {
     expect(canReadSchoolRoster({ loginState: 'developer' })).toBe(false);
     expect(canReadSchoolRoster({ loginState: 'developer', email: '   ' })).toBe(false);
     expect(canReadSchoolRoster({ loginState: 'developer', email: 'dev@example.com' })).toBe(true);
+  });
+});
+
+describe('isLeftoverCustomAuthUser', () => {
+  it('detects a custom-token user with no email and no providers', () => {
+    expect(isLeftoverCustomAuthUser({ email: null, providerData: [] })).toBe(true);
+    expect(isLeftoverCustomAuthUser({ email: 'dev@example.com', providerData: [] })).toBe(false);
+    expect(isLeftoverCustomAuthUser({ email: null, providerData: [{ providerId: 'google.com' }] })).toBe(false);
   });
 });

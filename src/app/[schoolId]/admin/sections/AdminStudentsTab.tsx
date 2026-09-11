@@ -5,11 +5,13 @@ import {
   Award,
   Cake,
   Edit,
+  FileSpreadsheet,
   History,
   IdCard,
   LayoutDashboard,
   Loader2,
   LogIn,
+  MoreHorizontal,
   Plus,
   Printer,
   ScanFace,
@@ -29,6 +31,7 @@ import {
   StaffPortalSectionCardHeader,
   StaffPortalSectionCardTitle,
 } from "@/components/staff/StaffPortalSection";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Checkbox } from "@/components/ui/checkbox";
 import { handleSelectableRowClick } from "@/lib/ui/selectableRowClick";
 import { Input } from "@/components/ui/input";
@@ -135,11 +138,13 @@ export function AdminStudentsTab({
   settings,
   classes,
   students,
+  rosterLoading = false,
   filteredStudents,
   studentCsvInputRef,
   onStudentCsvFileChange,
   handleStudentCsvUpload,
   csvImportBusy = false,
+  onOpenAiImport,
   selectionMode: _selectionMode,
   setSelectionMode: _setSelectionMode,
   selectedStudentIds,
@@ -175,11 +180,14 @@ export function AdminStudentsTab({
   };
   classes: Class[] | null | undefined;
   students: Student[] | null | undefined;
+  rosterLoading?: boolean;
   filteredStudents: Student[];
   studentCsvInputRef: React.RefObject<HTMLInputElement>;
   onStudentCsvFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleStudentCsvUpload: () => void;
   csvImportBusy?: boolean;
+  /** Opens bulk roster dialog on the AI import tab. */
+  onOpenAiImport?: () => void;
   selectionMode: boolean;
   setSelectionMode: (v: boolean) => void;
   selectedStudentIds: Set<string>;
@@ -362,16 +370,22 @@ export function AdminStudentsTab({
     ...(settings.enableFaceLogin ? (["Face"] as const) : []),
     "Sign in",
     "Theme",
-    "ID",
     "Act",
     ...(settings.enableBadges ? (["Badges"] as const) : []),
     "Purge",
     "Delete",
+    "More",
   ];
   const studentActionHeaderHints: Record<string, string> = {
     Pts: "Total points balance",
-    ID: "Preview student ID card",
+    Face: "Face login enrollment",
+    "Sign in": "Sign this student into the kiosk",
+    Theme: "Generate an AI theme for this student's ID card",
     Act: "Activity history",
+    Badges: "View badges for this student",
+    Purge: "Reset this student's points and badges",
+    Delete: "Delete this student",
+    More: "Preview this student's ID card",
     ...Object.fromEntries(
       studentKioskWelcomeToggleDefs.map((def) => [
         kioskToggleHeaderLabel(def),
@@ -425,10 +439,22 @@ export function AdminStudentsTab({
                   {csvImportBusy ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
-                    <Wand2 className="mr-2 h-4 w-4" />
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
                   )}
                   Import CSV
                 </Button>
+                {onOpenAiImport ? (
+                  <Button
+                    onClick={onOpenAiImport}
+                    variant="outline"
+                    disabled={csvImportBusy}
+                    className="rounded-xl px-4 border-ring/35 bg-background/70 hover:bg-secondary hover:text-secondary-foreground"
+                    type="button"
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Import with AI
+                  </Button>
+                ) : null}
                 <Button
                   onClick={() => {
                     onOpenIdPrintSetup({
@@ -466,6 +492,7 @@ export function AdminStudentsTab({
               <div className="relative min-w-0 flex-1">
                 <Input
                   placeholder="Search by name, nickname, or ID..."
+                  aria-label="Search students by name, nickname, or ID"
                   value={studentSearchTerm}
                   onChange={(e) => setStudentSearchTerm(e.target.value)}
                   className="rounded-full pl-10 h-11"
@@ -551,7 +578,13 @@ export function AdminStudentsTab({
 
           <AdminRecordListScroll>
             <ul className="flex w-full min-w-0 flex-col gap-1.5">
-              {filteredStudents.length === 0 ? (
+              {rosterLoading && filteredStudents.length === 0 ? (
+                <li
+                  className="animate-pulse h-64 w-full rounded-xl bg-muted/40"
+                  aria-busy="true"
+                  aria-label="Loading students"
+                />
+              ) : filteredStudents.length === 0 ? (
                 <li className="mb-2 rounded-xl border bg-secondary/60 p-4 text-sm text-muted-foreground">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
@@ -652,6 +685,7 @@ export function AdminStudentsTab({
                       handleSelectableRowClick(event, () => toggleStudentSelected(s.id))
                     }
                     onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
                         toggleStudentSelected(s.id);
@@ -853,15 +887,6 @@ export function AdminStudentsTab({
                         variant="outline"
                         size="icon"
                         className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
-                        onClick={() => previewIdCardStudent?.(s)}
-                        title="Preview ID Card"
-                      >
-                        <IdCard className="w-4 h-4 text-ring" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 min-h-0 min-w-0 rounded-full sm:justify-self-center"
                         onClick={() => handleOpenActivityModal?.(s)}
                         title="Activity history"
                       >
@@ -910,6 +935,18 @@ export function AdminStudentsTab({
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full sm:justify-self-center" aria-label={`More actions for ${s.firstName} ${s.lastName}`}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem onSelect={() => previewIdCardStudent?.(s)}>
+                            <IdCard className="mr-2 h-4 w-4" /> Preview ID card
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </li>
                 );

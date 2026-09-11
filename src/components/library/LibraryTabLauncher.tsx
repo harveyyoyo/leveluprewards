@@ -4,10 +4,12 @@ import { motion } from 'framer-motion';
 import { BookOpen, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useLibraryLocations } from '@/hooks/useLibraryLocations';
 import { isPillarOn } from '@/lib/productPillars';
 
 export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
   const { settings } = useSettings();
+  const { locations } = useLibraryLocations(schoolId);
   const libraryOn = isPillarOn(settings, 'payLibrary');
   const libraryUrl = `/${schoolId}/library`;
 
@@ -40,6 +42,11 @@ export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
           Library opens in its own dedicated space — book catalog, barcode scanning intake, library desk,
           student self-checkout kiosk, and return policies.
         </p>
+        {locations.length > 1 ? (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            This school has more than one library. After you open Library, you can switch libraries at the top.
+          </p>
+        ) : null}
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

@@ -47,10 +47,10 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
     [includeCategories, canReadRoster, firestore, schoolId],
   );
 
-  const { data: allStudents } = useCollection<Student>(studentsQuery);
-  const { data: allClasses } = useCollection<Class>(classesQuery);
+  const { data: allStudents, isLoading: studentsLoading } = useCollection<Student>(studentsQuery);
+  const { data: allClasses, isLoading: classesLoading } = useCollection<Class>(classesQuery);
   const { data: teachers } = useCollection<Teacher>(teachersQuery);
-  const { data: categories } = useCollection<Category>(categoriesQuery);
+  const { data: categories, isLoading: categoriesLoading } = useCollection<Category>(categoriesQuery);
 
   const activeTeacherId = teacherDocId || userId || '';
   const currentTeacher = teachers?.find((t) => t.id === activeTeacherId) ?? null;
@@ -76,10 +76,14 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
 
   return {
     loginState,
+    activeTeacherId,
+    currentTeacher,
     students,
+    studentsLoading,
     classes,
-    teachers,
+    classesLoading,
     categories: includeCategories ? categories : undefined,
+    categoriesLoading: includeCategories ? categoriesLoading : false,
     schoolWide,
     seatingScope: schoolWide ? 'admin' : activeTeacherId || 'staff',
     managerTeacherId: schoolWide ? undefined : activeTeacherId,

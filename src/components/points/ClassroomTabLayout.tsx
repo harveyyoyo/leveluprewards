@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { motion, useReducedMotion } from 'framer-motion';
 import { LayoutGrid, BookOpenCheck, Monitor, Dices } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -45,25 +46,49 @@ function ClassroomTabLayoutInner({
 }: ClassroomTabLayoutProps) {
   const reduceMotion = useReducedMotion();
   const activeDefault = sections.includes(defaultSection) ? defaultSection : sections[0];
-  const [section, setSection] = useState<ClassroomTabSection>(activeDefault);
+
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [section, setSectionState] = useState<ClassroomTabSection>(() => {
+    if (realmMode) return activeDefault;
+    const raw = searchParams.get('section');
+    return raw && sections.includes(raw as ClassroomTabSection) ? (raw as ClassroomTabSection) : activeDefault;
+  });
   const [mountedSections, setMountedSections] = useState<Set<ClassroomTabSection>>(
     () => new Set([activeDefault]),
   );
 
   const resolvedSection = sections.includes(section) ? section : sections[0];
 
+  // In realmMode the /classroom-realm/manage page owns section navigation via its own
+  // links (see classroomRealmManageHref), so skip writing ?section= here.
+  const setSection = useCallback((next: ClassroomTabSection) => {
+    setSectionState(next);
+    if (realmMode) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === activeDefault) {
+      params.delete('section');
+    } else {
+      params.set('section', next);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [activeDefault, pathname, realmMode, router, searchParams]);
+
   useEffect(() => {
     if (!realmMode) return;
     if (defaultSection && sections.includes(defaultSection)) {
       setSection(defaultSection);
     }
-  }, [realmMode, defaultSection, sections]);
+  }, [realmMode, defaultSection, sections, setSection]);
 
   useEffect(() => {
     if (!sections.includes(section)) {
       setSection(sections[0] ?? 'seating');
     }
-  }, [sections, section]);
+  }, [sections, section, setSection]);
 
   useEffect(() => {
     setMountedSections((prev) => {
@@ -90,7 +115,8 @@ function ClassroomTabLayoutInner({
 
   const contentCardClassName = cn(
     'w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm [contain:layout_paint]',
-    realmMode && 'border-white/12 bg-white/[0.06] text-white shadow-none',
+    realmMode &&
+      'classroom-realm-paper border-stone-300/80 bg-[#f7f4ee] text-foreground shadow-xl shadow-black/25',
   );
 
   const headerRow =

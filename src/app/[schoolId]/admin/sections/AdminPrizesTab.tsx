@@ -540,15 +540,18 @@ export function AdminPrizesTab({
                       />
                     </div>
                     <AutoCircularToggles
+                      restrictToDefs
+                      disabled={!canEditFull}
                       record={p}
                       defs={[
-                        { key: 'inStock', label: 'In Stock', shortLabel: 'Stk' },
-                        { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Vch' },
+                        { key: 'inStock', label: 'In Stock', shortLabel: 'Stock' },
+                        { key: 'offerPrintTicketOnRedeem', label: 'Offer print voucher', shortLabel: 'Voucher' },
                       ]}
                       wrap={false}
                       containerClassName="contents"
                       toggleButtonClassName="h-8 w-8 text-[9px] justify-self-center"
                       onToggle={(key, val) => {
+                        if (!canEditFull) return;
                         onUpdatePrize({ ...p, [key]: val });
                       }}
                     />

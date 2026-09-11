@@ -44,16 +44,20 @@ function pruneStale(items: PendingCouponRedemption[]): PendingCouponRedemption[]
   return filtered;
 }
 
-export function addPendingCouponRedemption(input: Omit<PendingCouponRedemption, 'id' | 'status'>) {
+export function addPendingCouponRedemption(
+  input: Omit<PendingCouponRedemption, 'id' | 'status'> & { reusable?: boolean },
+) {
   const items = pruneStale(loadAll());
   const code = input.couponCode.toUpperCase();
-  const dup = items.find(
-    (x) =>
-      x.schoolId === input.schoolId &&
-      x.couponCode.toUpperCase() === code &&
-      x.status !== 'rejected'
-  );
-  if (dup) return dup;
+  if (!input.reusable) {
+    const dup = items.find(
+      (x) =>
+        x.schoolId === input.schoolId &&
+        x.couponCode.toUpperCase() === code &&
+        x.status !== 'rejected'
+    );
+    if (dup) return dup;
+  }
   const next: PendingCouponRedemption = {
     id: `${Date.now()}_${crypto.randomUUID?.() ?? Math.random().toString(16).slice(2)}`,
     status: 'pending',

@@ -2,6 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import type { Coupon } from '@/lib/types';
+import { isReusableCoupon } from '@/lib/coupons/reusableCoupon';
 import { PrintIdCardScanCode } from '@/components/print/PrintIdCardScanCode';
 import { useSettings } from '@/components/providers/SettingsProvider';
 
@@ -159,6 +160,11 @@ export function MoneyBill({
         >
           {design.billTitle}
         </div>
+        {isReusableCoupon(coupon) ? (
+          <div className="w-full rounded-[0.08em] bg-amber-400 px-[0.15em] py-[0.06em] text-center text-[0.18em] font-black uppercase leading-tight tracking-wide text-black">
+            Warning: staff keep — do not throw away
+          </div>
+        ) : null}
 
         {/* Central denomination area */}
         <div className="flex items-center justify-center gap-[0.4em] w-full my-[0.05em]">

@@ -68,7 +68,16 @@ import {
   type LibraryOrganizationScheme,
   type BookPrimaryGroup,
 } from '@/lib/library/libraryOrganization';
+import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
+import {
+  DEFAULT_LIBRARY_LOCATION_ID,
+  filterItemsForLibrary,
+  itemLibraryLocationId,
+  libraryPath,
+} from '@/lib/library/libraryLocations';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
+import { LibraryLocationSwitcher } from './LibraryLocationSwitcher';
+import { LibraryLocationsCard } from './LibraryLocationsCard';
 import { LibraryTotalsStatCards } from './LibraryTotalsStatCards';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { LibraryBookCover } from './LibraryBookCover';
@@ -292,6 +301,24 @@ export function LibraryWorkspace({
     { reportPermissionErrors: false },
   );
 
+  const {
+    locations,
+    storedLocations,
+    createLocation,
+    renameLocation,
+    archiveLocation,
+    restoreLocation,
+  } = useLibraryLocations(schoolId);
+  const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
+  const scopedItems = useMemo(
+    () => filterItemsForLibrary(items, activeLibrary.id),
+    [activeLibrary.id, items],
+  );
+  const archivedLocations = useMemo(
+    () => storedLocations.filter((location) => location.archived && location.id !== DEFAULT_LIBRARY_LOCATION_ID),
+    [storedLocations],
+  );
+
   const studentsById = useMemo(() => new Map((students ?? []).map((s) => [s.id, s])), [students]);
   const studentNameMode = resolveLibraryStudentNameMode(
     settings.libraryStudentNameDisplayMode,
@@ -312,15 +339,15 @@ export function LibraryWorkspace({
   // Shelf locations list for filtering
   const availableShelves = useMemo(() => {
     const set = new Set<string>();
-    for (const item of items ?? []) {
+    for (const item of scopedItems) {
       if (item.shelfLocation?.trim()) set.add(item.shelfLocation.trim());
     }
     return Array.from(set).sort();
-  }, [items]);
+  }, [scopedItems]);
 
   // Filter catalog
   const filteredCatalog = useMemo(() => {
-    let list = filterLibraryCatalog(items ?? [], search, status, getName);
+    let list = filterLibraryCatalog(scopedItems, search, status, getName);
     if (shelfFilter !== 'all') {
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
     }
@@ -358,7 +385,7 @@ export function LibraryWorkspace({
     });
 
     return list;
-  }, [items, search, status, shelfFilter, labelFilter, catalogSort, getName]);
+  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName]);
 
   // Count of non-default 'More Filters' selections (search + sort excluded; those have their own visible controls)
   const activeFilterCount = useMemo(() => {
@@ -443,7 +470,7 @@ export function LibraryWorkspace({
   };
 
   // Metrics
-  const activeCopies = useMemo(() => (items ?? []).filter((i) => !i.archived), [items]);
+  const activeCopies = useMemo(() => scopedItems.filter((i) => !i.archived), [scopedItems]);
   const availableCopies = useMemo(
     () => activeCopies.filter((i) => i.status === 'available' && (!i.condition || i.condition === 'good')),
     [activeCopies],
@@ -473,8 +500,13 @@ export function LibraryWorkspace({
     });
   }, [loanSubTab, overdueLoans, activeLoans, classFilter, loanSearch, studentsById, getName, getClass]);
 
+  const scopedLoans = useMemo(
+    () => (loans ?? []).filter((l) => itemLibraryLocationId(l) === activeLibrary.id),
+    [activeLibrary.id, loans],
+  );
+
   const filteredHistory = useMemo(() => {
-    return (loans ?? []).filter((l) => {
+    return scopedLoans.filter((l) => {
       if (classFilter !== 'all') {
         const s = studentsById.get(l.studentId);
         if (s?.classId !== classFilter) return false;
@@ -488,13 +520,13 @@ export function LibraryWorkspace({
       }
       return true;
     });
-  }, [loans, classFilter, loanSearch, studentsById, getName, getClass]);
+  }, [scopedLoans, classFilter, loanSearch, studentsById, getName, getClass]);
 
   // Selected copies for batch actions
   const selectedItems = useMemo(() => {
-    const map = new Map((items ?? []).map((i) => [i.id, i]));
+    const map = new Map(scopedItems.map((i) => [i.id, i]));
     return Array.from(selected).map((id) => map.get(id)).filter(Boolean) as LibraryItem[];
-  }, [items, selected]);
+  }, [scopedItems, selected]);
 
   const selectAllCurrentPage = () => {
     const currentSlice = filteredCatalog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -568,6 +600,7 @@ export function LibraryWorkspace({
       itemId,
       item: input,
       input,
+      libraryLocationId: activeLibrary.id,
     });
     if (!itemId && result.items?.length) setAddedCopies(result.items);
     setEditOpen(false);
@@ -602,6 +635,7 @@ export function LibraryWorkspace({
         schoolId,
         item: input,
         input,
+        libraryLocationId: activeLibrary.id,
       });
       if (result.items?.length) setAddedCopies(result.items);
       toast({
@@ -718,7 +752,8 @@ export function LibraryWorkspace({
         currentTheme.classes.wrapper
       )}
     >
-      <div className={cn('w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3', currentTheme.classes.header)}>
+      <div className={cn('w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', currentTheme.classes.header)}>
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href={backToPortalHref}
@@ -779,6 +814,13 @@ export function LibraryWorkspace({
             <Settings className="h-4 w-4" />
           </button>
         </div>
+        <LibraryLocationSwitcher
+          locations={locations}
+          activeId={activeLibrary.id}
+          onChange={setActiveLibrary}
+          compact
+        />
+      </div>
 
       {/* Main Column: Top Bar + Content */}
       <div className={cn('flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
@@ -814,6 +856,8 @@ export function LibraryWorkspace({
               }}
               schoolId={schoolId}
               schoolName={schoolName}
+              libraryLocationId={activeLibrary.id}
+              libraryLocations={locations}
             />
           </div>
         )}
@@ -832,6 +876,8 @@ export function LibraryWorkspace({
                   initialStudentId={kioskHandoffStudentId}
                   onInitialStudentConsumed={() => setKioskHandoffStudentId(null)}
                   onExit={() => setHubHome(true)}
+                  libraryLocationId={activeLibrary.id}
+                  libraryLocations={locations}
                 />
               ) : (
                 <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -2000,8 +2046,8 @@ export function LibraryWorkspace({
               </p>
             </div>
             <LibraryReportsCard
-              items={items ?? []}
-              loans={loans ?? []}
+              items={scopedItems}
+              loans={scopedLoans}
               loansUnavailable={Boolean(historyError)}
               activeLoansCount={activeLoans.length}
               overdueLoansCount={overdueLoans.length}
@@ -2025,6 +2071,17 @@ export function LibraryWorkspace({
                 </TabsList>
               </div>
               <TabsContent value="policies" className="mt-0 space-y-6">
+                <LibraryLocationsCard
+                  locations={locations}
+                  classes={classes}
+                  activeId={activeLibrary.id}
+                  onSelect={setActiveLibrary}
+                  onCreate={createLocation}
+                  onRename={renameLocation}
+                  onArchive={archiveLocation}
+                  archivedLocations={archivedLocations}
+                  onRestore={restoreLocation}
+                />
                 <LibraryPolicySettingsCard categories={categories} />
               </TabsContent>
               <TabsContent value="theme" className="mt-0 space-y-6">
@@ -2040,14 +2097,13 @@ export function LibraryWorkspace({
           <div>
             Sunset Terrace · Story nook open till 4:30
           </div>
-          <button
-            type="button"
-            onClick={() => switchTab('kiosk')}
+          <Link
+            href={libraryPath(schoolId, '/kiosk', activeLibrary.id)}
             className="hover:text-slate-300 flex items-center gap-1.5 font-medium transition-colors"
           >
             <span>Open student kiosk</span>
             <Monitor className="h-3.5 w-3.5" />
-          </button>
+          </Link>
         </footer>
       )}
     </div>
@@ -2115,7 +2171,7 @@ export function LibraryWorkspace({
                 setIntakeOpen(false);
                 setTab('catalog');
               }}
-              libraryItems={items}
+              libraryItems={scopedItems}
               upcTaken={async (code) => !!(firestore && (await findLibraryItemByUpc(firestore, schoolId, code, { allowIsbn: false })))}
               initialScanCode={intakePrefillCode}
             />
@@ -2136,7 +2192,7 @@ export function LibraryWorkspace({
         isOpen={shelfAuditOpen}
         setIsOpen={setShelfAuditOpen}
         schoolId={schoolId}
-        items={items ?? []}
+        items={scopedItems}
       />
 
       {/* Safe Print Notice Dialog */}

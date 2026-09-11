@@ -4,10 +4,26 @@ import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
 import { pickDistinctCategoryColor } from '../utils';
 
+export type CategoryCreateInput = {
+  name: string;
+  points: number;
+  color?: string;
+  teacherId?: string;
+  rubricLevels?: CategoryRubricLevel[];
+  icon?: string;
+  imageUrl?: string;
+  countsForHousePoints?: boolean;
+  isGoldenTicket?: boolean;
+  description?: string;
+  showAsIncentive?: boolean;
+  displaySurfaces?: Category['displaySurfaces'];
+  currencyOverride?: Category['currencyOverride'];
+};
+
 export const addCategory = async (
   firestore: Firestore,
   schoolId: string,
-  categoryData: { name: string; points: number; color?: string; teacherId?: string; rubricLevels?: CategoryRubricLevel[] },
+  categoryData: CategoryCreateInput,
 ): Promise<Category> => {
   const newId = `cat_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   const newCategory: Category = { ...categoryData, id: newId, color: categoryData.color || pickDistinctCategoryColor() };

@@ -56,15 +56,19 @@ jobs:
               printf 'GEMINI_API_KEY=%s\n' "$GEMINI_API_KEY"
             fi
             printf 'NEXT_PUBLIC_ENABLE_DEV_LOGIN=false\n'
+            # Required until /api/auth/session cookies verify in middleware.
+            # Without this, /{school}/portal 307s to /login?next= and login auto-returns → loop.
+            printf 'DISABLE_AUTH_SESSION_EDGE=1\n'
             if [ -n "$AUTH_GATE_SIGNING_SECRET" ]; then
               printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
-            else
-              echo '::warning::AUTH_GATE_SIGNING_SECRET not set — school gate cookies will not mint in production.'
             fi
             printf 'OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'NEXT_PUBLIC_OFFICE_CANONICAL_HOST=office.leveluprewards.app\n'
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
           } > .env
+          if [ -z "$AUTH_GATE_SIGNING_SECRET" ]; then
+            echo '::warning::AUTH_GATE_SIGNING_SECRET not set — school gate cookies will not mint in production.'
+          fi
           if [ -n "$FIREBASE_SA_JSON" ]; then
             node -e "const fs=require('fs');const sa=process.env.FIREBASE_SA_JSON||'';if(sa){fs.appendFileSync('.env','SSR_SERVICE_ACCOUNT_JSON='+JSON.stringify(sa)+'\n');}"
           else

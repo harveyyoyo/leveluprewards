@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';

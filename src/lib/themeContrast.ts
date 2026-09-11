@@ -6,6 +6,10 @@
  * contrast ratio `(L1 + 0.05) / (L2 + 0.05)` where L1 is the lighter of
  * the two.
  *
+ *   - 7.0  = WCAG AAA for normal text — the floor this module enforces,
+ *            since student themes are AI-generated/untrusted and this
+ *            text renders directly on unpredictable gradient/pattern
+ *            backgrounds (no guaranteed solid backdrop to fall back on).
  *   - 4.5  = WCAG AA for normal text
  *   - 3.0  = WCAG AA for large/bold text and UI components
  *
@@ -35,6 +39,9 @@ export type StudentThemeCssVars = {
 
 const BLACK = '#020617';
 const WHITE = '#ffffff';
+
+/** WCAG AAA for normal text — the contrast floor student themes are held to. */
+const MAX_CLARITY_CONTRAST = 7;
 
 function clampHex(hex: string | undefined | null): string | null {
   if (!hex || typeof hex !== 'string') return null;
@@ -139,7 +146,7 @@ function hslToRgb(h: number, s: number, l: number) {
  * while preserving hue, falls back to pure black or pure white —
  * whichever gets closer.
  */
-export function ensureContrast(fg: string, bg: string, minRatio = 4.5): string {
+export function ensureContrast(fg: string, bg: string, minRatio = MAX_CLARITY_CONTRAST): string {
   const currentRatio = contrastRatio(fg, bg);
   if (currentRatio >= minRatio) return clampHex(fg) || fg;
   const rgb = hexToRgb(fg);
@@ -193,7 +200,7 @@ function minContrastAgainstSurfaces(fg: string, surfaces: string[]): number {
 export function ensureContrastAcrossSurfaces(
   fg: string,
   surfaces: string[],
-  minRatio = 4.5,
+  minRatio = MAX_CLARITY_CONTRAST,
 ): string {
   const validSurfaces = surfaces.map((s) => clampHex(s)).filter((s): s is string => !!s);
   if (validSurfaces.length === 0) return clampHex(fg) || fg;
@@ -282,7 +289,7 @@ export function normalizeStudentTheme(
 
   // --- text: needs to read over every surface the text renders on ---
   const currentText = clampHex(theme.text);
-  const textOk = currentText && worstContrast(currentText) >= 4.5;
+  const textOk = currentText && worstContrast(currentText) >= MAX_CLARITY_CONTRAST;
   if (!textOk) {
     // Try to preserve the intended hue if we have one; otherwise pick B/W.
     const startingHex = currentText || pickReadableOn(card);
@@ -292,23 +299,23 @@ export function normalizeStudentTheme(
       (worst, s) => (contrastRatio(startingHex, s) < contrastRatio(startingHex, worst) ? s : worst),
       card,
     );
-    let candidate = ensureContrast(startingHex, bindingSurface, 4.5);
-    if (worstContrast(candidate) < 4.5) {
-      candidate = ensureContrastAcrossSurfaces(startingHex, surfaces, 4.5);
+    let candidate = ensureContrast(startingHex, bindingSurface, MAX_CLARITY_CONTRAST);
+    if (worstContrast(candidate) < MAX_CLARITY_CONTRAST) {
+      candidate = ensureContrastAcrossSurfaces(startingHex, surfaces, MAX_CLARITY_CONTRAST);
     }
     out.text = candidate;
   }
 
   // --- primary: used for titles/icons on the card & as button bg ---
   const primary = clampHex(theme.primary);
-  if (primary && worstContrast(primary) < 4.5) {
-    out.primary = ensureContrastAcrossSurfaces(primary, surfaces, 4.5);
+  if (primary && worstContrast(primary) < MAX_CLARITY_CONTRAST) {
+    out.primary = ensureContrastAcrossSurfaces(primary, surfaces, MAX_CLARITY_CONTRAST);
   }
 
   // --- accent: same constraint as primary ---
   const accent = clampHex(theme.accent);
-  if (accent && worstContrast(accent) < 4.5) {
-    out.accent = ensureContrastAcrossSurfaces(accent, surfaces, 4.5);
+  if (accent && worstContrast(accent) < MAX_CLARITY_CONTRAST) {
+    out.accent = ensureContrastAcrossSurfaces(accent, surfaces, MAX_CLARITY_CONTRAST);
   }
 
   if (typeof out.fontScale !== 'number' || !(out.fontScale > 0)) {
@@ -359,8 +366,8 @@ export function getStudentThemeCssVars(
   const themeBg = clampHex(effective.background) || BLACK;
   const themeCard = clampHex(effective.cardBackground) || themeBg;
   const computedThemeText = clampHex(effective.text) || pickReadableOn(themeCard);
-  const computedThemePageText = ensureContrast(computedThemeText, themeBg, 4.5);
-  const computedThemeCardText = ensureContrast(computedThemeText, themeCard, 4.5);
+  const computedThemePageText = ensureContrast(computedThemeText, themeBg, MAX_CLARITY_CONTRAST);
+  const computedThemeCardText = ensureContrast(computedThemeText, themeCard, MAX_CLARITY_CONTRAST);
 
   return {
     effective,

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { BookOpenCheck, Dices, LayoutGrid, Monitor } from 'lucide-react';
+import { BookOpenCheck, Dices, LayoutGrid, Loader2, Monitor } from 'lucide-react';
 import { ClassroomRealmShell } from '@/components/classroom/ClassroomRealmShell';
 import { ClassroomRealmPageHeader } from '@/components/classroom/ClassroomRealmChrome';
 import { StaffClassroomTab } from '@/components/points/StaffClassroomTab';
@@ -54,6 +54,16 @@ export default function ClassroomRealmManagePage() {
     );
   }
 
+  if (roster.studentsLoading || roster.classesLoading) {
+    return (
+      <ClassroomRealmShell schoolId={schoolId}>
+        <div className="flex items-center justify-center p-16">
+          <Loader2 className="h-6 w-6 animate-spin text-white/60" aria-hidden />
+        </div>
+      </ClassroomRealmShell>
+    );
+  }
+
   const SectionIcon = SECTION_ICONS[initialSection];
 
   return (
@@ -64,6 +74,7 @@ export default function ClassroomRealmManagePage() {
           title={CLASSROOM_SECTION_LABELS[initialSection]}
           subtitle="Seating, notes, room display, and raffle — the tools you use between live sessions."
           icon={SectionIcon}
+          iconLayoutId={`classroom-realm-manage-${initialSection}`}
         />
 
         <motion.div

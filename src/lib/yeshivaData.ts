@@ -4,16 +4,16 @@ import { DEMO_STUDENT_THEMES_YESHIVA_ORDER } from './demoStudentThemes';
 import { withSampleCategoryColors } from './sampleCategoryColors';
 
 const YESHIVA_CLASSES = [
-  { id: 'yc1', name: 'Shiur Aleph' },
-  { id: 'yc2', name: 'Shiur Bet' },
-  { id: 'yc3', name: 'Shiur Gimmel' },
-  { id: 'yc4', name: 'Shiur Daled' },
-  { id: 'yc5', name: 'Shiur Hei' },
-  { id: 'yc6', name: 'Shiur Vov' },
-  { id: 'yc7', name: 'Shiur Zayin' },
-  { id: 'yc8', name: 'Shiur Ches' },
-  { id: 'yc9', name: 'Gan Aleph' },
-  { id: 'yc10', name: 'Gan Bet' },
+  { id: 'yc1', name: 'Shiur Aleph', primaryTeacherId: 'yt1' },
+  { id: 'yc2', name: 'Shiur Bet', primaryTeacherId: 'yt2' },
+  { id: 'yc3', name: 'Shiur Gimmel', primaryTeacherId: 'yt3' },
+  { id: 'yc4', name: 'Shiur Daled', primaryTeacherId: 'yt4' },
+  { id: 'yc5', name: 'Shiur Hei', primaryTeacherId: 'yt5' },
+  { id: 'yc6', name: 'Shiur Vov', primaryTeacherId: 'yt6' },
+  { id: 'yc7', name: 'Shiur Zayin', primaryTeacherId: 'yt7' },
+  { id: 'yc8', name: 'Shiur Ches', primaryTeacherId: 'yt8' },
+  { id: 'yc9', name: 'Gan Aleph', primaryTeacherId: 'yt9' },
+  { id: 'yc10', name: 'Gan Bet', primaryTeacherId: 'yt10' },
 ] as const;
 
 const YESHIVA_FIRST_NAMES = [

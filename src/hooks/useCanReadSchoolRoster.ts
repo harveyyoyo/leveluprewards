@@ -1,10 +1,10 @@
 'use client';
 
-import { useAppContext } from '@/components/AppProvider';
+import { useAuth } from '@/components/providers/AuthProvider';
 import { useFirebase } from '@/firebase';
 import { canReadSchoolRoster } from '@/lib/hallOfFameAccess';
 
-/** Gate class/student list reads so leftover custom tokens do not hit Firestore rules. */
+/** Gate private school-doc / roster reads so leftover custom tokens do not hit Firestore rules. */
 export function useCanReadSchoolRoster() {
   const { auth } = useFirebase();
   const {
@@ -17,7 +17,7 @@ export function useCanReadSchoolRoster() {
     isLibrarian,
     isHouseCoordinator,
     isOffice,
-  } = useAppContext();
+  } = useAuth();
 
   return canReadSchoolRoster({
     loginState,
@@ -32,3 +32,5 @@ export function useCanReadSchoolRoster() {
     email: auth?.currentUser?.email,
   });
 }
+
+export const useCanReadPrivateSchoolDocument = useCanReadSchoolRoster;

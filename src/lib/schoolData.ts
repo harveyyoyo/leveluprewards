@@ -4,16 +4,16 @@ import { DEMO_STUDENT_THEMES } from './demoStudentThemes';
 import { withSampleCategoryColors } from './sampleCategoryColors';
 
 const SCHOOL_ABC_CLASSES = [
-  { id: 'sc1', name: 'Grade 5' },
-  { id: 'sc2', name: 'Grade 6' },
-  { id: 'sc3', name: 'Grade 7' },
-  { id: 'sc4', name: 'Grade 8' },
-  { id: 'sc5', name: 'Grade 9' },
-  { id: 'sc6', name: 'Grade 10' },
-  { id: 'sc7', name: 'Grade 11' },
-  { id: 'sc8', name: 'Grade 12' },
-  { id: 'sc9', name: 'Kindergarten A' },
-  { id: 'sc10', name: 'Kindergarten B' },
+  { id: 'sc1', name: 'Grade 5', primaryTeacherId: 'st1' },
+  { id: 'sc2', name: 'Grade 6', primaryTeacherId: 'st2' },
+  { id: 'sc3', name: 'Grade 7', primaryTeacherId: 'st3' },
+  { id: 'sc4', name: 'Grade 8', primaryTeacherId: 'st4' },
+  { id: 'sc5', name: 'Grade 9', primaryTeacherId: 'st5' },
+  { id: 'sc6', name: 'Grade 10', primaryTeacherId: 'st6' },
+  { id: 'sc7', name: 'Grade 11', primaryTeacherId: 'st7' },
+  { id: 'sc8', name: 'Grade 12', primaryTeacherId: 'st8' },
+  { id: 'sc9', name: 'Kindergarten A', primaryTeacherId: 'st9' },
+  { id: 'sc10', name: 'Kindergarten B', primaryTeacherId: 'st10' },
 ] as const;
 
 const SCHOOL_ABC_FIRST_NAMES = [

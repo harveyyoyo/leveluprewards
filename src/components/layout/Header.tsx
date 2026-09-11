@@ -54,6 +54,9 @@ import {
 } from '@/lib/displayMode';
 // import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useTranslation } from '@/components/providers/LocaleProvider';
+import { motion } from 'framer-motion';
+import { springCinematic, staggerContainer, staggerItem } from '@/lib/animation';
+import { headerProductHref, type HeaderProductId } from '@/lib/headerProductLinks';
 
 function schoolNameCacheKey(schoolId: string) {
   return `levelup_school_name_${schoolId.trim().toLowerCase()}`;
@@ -268,6 +271,47 @@ export default function Header() {
       </nav>
     ) : null;
 
+  const paidProducts = useMemo(() => {
+    if (!schoolId) return [];
+    const items: Array<{ id: HeaderProductId; label: string; href: string }> = [];
+    if (isRewardsPillarOn(settings)) {
+      items.push({
+        id: 'rewards',
+        label: t('header.products.rewards'),
+        href: headerProductHref('rewards', schoolId, loginState),
+      });
+    }
+    if (isPillarOn(settings, 'payClassroom', pillarAccess)) {
+      items.push({
+        id: 'classroom',
+        label: t('header.products.classroom'),
+        href: headerProductHref('classroom', schoolId, loginState),
+      });
+    }
+    if (isPillarOn(settings, 'payAttendance', pillarAccess)) {
+      items.push({
+        id: 'attendance',
+        label: t('header.products.attendance'),
+        href: headerProductHref('attendance', schoolId, loginState),
+      });
+    }
+    if (isPillarOn(settings, 'payHomework', pillarAccess)) {
+      items.push({
+        id: 'homework',
+        label: t('header.products.homework'),
+        href: headerProductHref('homework', schoolId, loginState),
+      });
+    }
+    if (isPillarOn(settings, 'payLibrary', pillarAccess)) {
+      items.push({
+        id: 'library',
+        label: t('header.products.library'),
+        href: headerProductHref('library', schoolId, loginState),
+      });
+    }
+    return items.filter((item) => item.href);
+  }, [loginState, pillarAccess, schoolId, settings, t]);
+
   const host = typeof window !== 'undefined' ? window.location.host : '';
   if (shouldHideGlobalAppChrome(pathname, host)) {
     return null;
@@ -287,38 +331,36 @@ export default function Header() {
   const canLogout =
     loginState !== 'loggedOut' && loginState !== 'student' && !isSchoolGateSession;
 
-  const staffHome =
-    schoolId && loginState === 'teacher' ? `/${schoolId}/teacher` : schoolId ? `/${schoolId}/admin` : '';
-  const headerProductLinks: { id: string; label: string; href: string }[] = [];
-  if (schoolId) {
-    if (isRewardsPillarOn(settings)) {
-      headerProductLinks.push({ id: 'rewards', label: t('header.products.rewards'), href: staffHome });
-    }
-    if (isPillarOn(settings, 'payClassroom', pillarAccess)) {
-      headerProductLinks.push({
-        id: 'classroom',
-        label: t('header.products.classroom'),
-        href: `/${schoolId}/classroom-realm`,
-      });
-    }
-    if (isPillarOn(settings, 'payAttendance', pillarAccess)) {
-      headerProductLinks.push({
-        id: 'attendance',
-        label: t('header.products.attendance'),
-        href: `${staffHome}?tab=attendance`,
-      });
-    }
-    if (isPillarOn(settings, 'payHomework', pillarAccess)) {
-      headerProductLinks.push({
-        id: 'homework',
-        label: t('header.products.homework'),
-        href: `${staffHome}?tab=homework`,
-      });
-    }
-    if (isPillarOn(settings, 'payLibrary', pillarAccess)) {
-      headerProductLinks.push({ id: 'library', label: t('header.products.library'), href: `/${schoolId}/library` });
-    }
-  }
+  const paidProductsNav =
+    paidProducts.length > 0 ? (
+      <motion.nav
+        aria-label={t('header.products.nav')}
+        className="flex flex-wrap items-center justify-center text-xs font-bold uppercase tracking-wider text-muted-foreground sm:justify-start"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
+        {paidProducts.map((product, index) => (
+          <motion.span
+            key={product.id}
+            layoutId={`header-product-${product.id}`}
+            variants={staggerItem}
+            className="inline-flex items-center"
+            transition={springCinematic}
+          >
+            {index > 0 ? <span aria-hidden className="px-1">•</span> : null}
+            <Link
+              href={product.href}
+              className="rounded-sm transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              onClick={() => playSound('click')}
+            >
+              {product.label}
+            </Link>
+          </motion.span>
+        ))}
+      </motion.nav>
+    ) : null;
+
   const adminSideTabHeader =
     !!schoolId &&
     typeof pathname === 'string' &&
@@ -605,30 +647,15 @@ export default function Header() {
               <Logo className="h-10 w-auto" />
             )}
             </Link>
-            <div className="hidden flex-col sm:flex">
-              <Link href={logoLink} className="text-lg font-black tracking-widest uppercase text-primary hover:opacity-80">
+            <div className="hidden min-w-0 flex-col sm:flex">
+              <Link
+                href={logoLink}
+                className="text-lg font-black tracking-widest uppercase text-primary"
+                data-home-button="true"
+              >
                 levelUp EDU
               </Link>
-              {headerProductLinks.length > 0 ? (
-                <nav aria-label="School products" className="flex max-w-[16rem] flex-wrap items-center gap-x-1 leading-tight">
-                  {headerProductLinks.map((item, index) => (
-                    <span key={item.id} className="inline-flex items-center gap-x-1">
-                      {index > 0 ? (
-                        <span className="text-xs font-bold text-muted-foreground/45" aria-hidden>
-                          •
-                        </span>
-                      ) : null}
-                      <Link
-                        href={item.href}
-                        className="text-xs font-bold uppercase tracking-wider text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                      >
-                        {item.label}
-                      </Link>
-                    </span>
-                  ))}
-                </nav>
-              ) : null}
-            </div>
+              {paidProductsNav}
             </div>
         </div>
         </div>

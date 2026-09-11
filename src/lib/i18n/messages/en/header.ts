@@ -17,6 +17,7 @@ const header = {
     error: 'Firestore sync error; check the browser console for details.',
   },
   products: {
+    nav: 'School products',
     rewards: 'Rewards',
     classroom: 'Classroom',
     attendance: 'Attendance',

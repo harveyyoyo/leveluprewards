@@ -1,4 +1,5 @@
 import type { Coupon, CouponRedemptionScope, Student } from '../types';
+import { STAFF_REUSABLE_COUPON_PRINT_NOTE } from './reusableCoupon';
 
 export function normalizeRedemptionScope(
   coupon: Pick<Coupon, 'redemptionScope'>
@@ -89,33 +90,38 @@ export function buildRedemptionPrintNote(input: {
   classNamesInOrder: string[];
   teacherNamesInOrder: string[];
   maxLength?: number;
+  reusable?: boolean;
 }): string | undefined {
   /** Short enough to fit one line on the physical coupon (em-scaled cell). */
   const max = input.maxLength ?? 72;
-  if (input.scope === 'school') return undefined;
-
-  let s: string;
-  if (input.scope === 'creator') {
+  let scopeNote: string | undefined;
+  if (input.scope === 'school') {
+    scopeNote = undefined;
+  } else if (input.scope === 'creator') {
     const name = input.issuingTeacherDisplayName.trim() || 'Issuing teacher';
-    s = `Redeem only on ${name}'s roster.`;
+    scopeNote = `Redeem only on ${name}'s roster.`;
   } else if (input.scope === 'classes') {
     const names = input.classNamesInOrder.filter(Boolean);
-    if (names.length === 0) s = 'Redeem only in selected classes.';
+    if (names.length === 0) scopeNote = 'Redeem only in selected classes.';
     else {
       const lead = names.slice(0, 4).join(', ');
       const extra = names.length > 4 ? ` (+${names.length - 4} more)` : '';
-      s = `Redeem only if your class is: ${lead}${extra}`;
+      scopeNote = `Redeem only if your class is: ${lead}${extra}`;
     }
   } else {
     const names = input.teacherNamesInOrder.filter(Boolean);
-    if (names.length === 0) s = 'Redeem only for students of selected teachers.';
+    if (names.length === 0) scopeNote = 'Redeem only for students of selected teachers.';
     else {
       const lead = names.slice(0, 3).join(', ');
       const extra = names.length > 3 ? ` (+${names.length - 3} more)` : '';
-      s = `Redeem only if assigned to: ${lead}${extra}`;
+      scopeNote = `Redeem only if assigned to: ${lead}${extra}`;
     }
   }
 
+  const reusableLead = input.reusable ? STAFF_REUSABLE_COUPON_PRINT_NOTE : undefined;
+  const parts = [reusableLead, scopeNote].filter(Boolean);
+  if (parts.length === 0) return undefined;
+  const s = parts.join(' ');
   if (s.length <= max) return s;
   return `${s.slice(0, Math.max(0, max - 3))}...`;
 }

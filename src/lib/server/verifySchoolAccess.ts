@@ -1,9 +1,8 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
-import { verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
+import { schoolPasscodeConfigured, verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
 const APP_CONFIG_GLOBAL = 'global';
 
@@ -104,12 +103,14 @@ async function ensureAnonymousPortalSession(
   schoolId: string,
   uid: string,
 ): Promise<void> {
+  // Use a plain Date so Next.js SSR does not depend on FieldValue (can be
+  // stripped when firebase-admin is bundled). Readers only check `.exists`.
   await db
     .collection('schools')
     .doc(schoolId)
     .collection('anonymousPortalSessions')
     .doc(uid)
-    .set({ grantedAt: FieldValue.serverTimestamp() }, { merge: true });
+    .set({ grantedAt: new Date() }, { merge: true });
 }
 
 /** Server-side school access gate (mirrors `verifySchoolAccessPasscode` Cloud Function). */
@@ -158,7 +159,14 @@ export async function verifySchoolAccessServer(
       },
     ))
   ) {
-    if (!legacyExpected) {
+    // Hashed secrets live in schools/{id}/secrets; plaintext fields are deleted after migrate.
+    const configured = await schoolPasscodeConfigured(
+      db,
+      schoolId,
+      PASSCODE_SECRET_IDS.schoolAccess,
+      legacyExpected,
+    );
+    if (!configured) {
       throw new VerifySchoolAccessError(
         'failed-precondition',
         'This school has no access passcode configured. An administrator must set one before sign-in is possible.',

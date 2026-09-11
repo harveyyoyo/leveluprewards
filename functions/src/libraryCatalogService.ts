@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { HttpsError } from 'firebase-functions/v1/https';
 import { libraryId } from './libraryService';
 
+const DEFAULT_LIBRARY_LOCATION_ID = 'main';
 const fields = [
   'name',
   'upc',
@@ -20,10 +21,21 @@ const fields = [
   'series',
   'volume',
 ];
+
+function asLibraryLocationId(value: unknown): string {
+  if (value == null || value === '') return DEFAULT_LIBRARY_LOCATION_ID;
+  if (typeof value !== 'string' || !value.trim() || value.length > 80 || value.includes('/')) {
+    throw new HttpsError('invalid-argument', 'Invalid library.');
+  }
+  return value.trim();
+}
+
 export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: Record<string, any>, uid: string) {
   const school = db.collection('schools').doc(schoolId);
   const receiptRef = school.collection('libraryRequests').doc(`${uid}_${libraryId(data.requestId, 'request ID')}`);
-  const fingerprint = JSON.stringify([data.itemId ?? null, data.itemIds ?? null, data.item ?? null, data.patch ?? null]);
+  const fingerprint = JSON.stringify([
+    data.itemId ?? null, data.itemIds ?? null, data.item ?? null, data.patch ?? null, data.libraryLocationId ?? null,
+  ]);
   // All catalog writers share this lock, including legacy copies without reservations.
   const lock = school.collection('libraryMeta').doc('catalog');
   return db.runTransaction(async tx => {
@@ -42,7 +54,10 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
       for (const field of ['category', 'shelfLocation']) {
         if (typeof data.patch?.[field] === 'string') patch[field] = data.patch[field].trim().slice(0, 200) || null;
       }
-      if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Enter a shelf or category.');
+      if (typeof data.patch?.libraryLocationId === 'string' || typeof data.libraryLocationId === 'string') {
+        patch.libraryLocationId = asLibraryLocationId(data.patch?.libraryLocationId ?? data.libraryLocationId);
+      }
+      if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Enter a shelf, category, or library.');
       const docs = await Promise.all(ids.map(id => tx.get(school.collection('library').doc(id))));
       if (docs.some(d => !d.exists)) throw new HttpsError('not-found', 'A selected copy no longer exists.');
       for (const doc of docs) tx.update(doc.ref, patch);
@@ -63,6 +78,9 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
       payload.upc = payload.upc?.toUpperCase() ?? '';
       const existing = data.itemId ? await tx.get(school.collection('library').doc(libraryId(data.itemId, 'copy ID'))) : null;
       if (existing && !existing.exists) throw new HttpsError('not-found', 'Copy no longer exists.');
+      payload.libraryLocationId = asLibraryLocationId(
+        data.libraryLocationId ?? input.libraryLocationId ?? existing?.data()?.libraryLocationId,
+      );
       const requestedCode = payload.upc;
       const matching = requestedCode ? await tx.get(school.collection('library').where('upc', '==', requestedCode).limit(2)) : null;
       const taken = matching?.docs.some(d => d.id !== existing?.id);

@@ -454,6 +454,7 @@ export function StudentDashboardInner({
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
   const [flyPointsReason, setFlyPointsReason] = useState<string | null>(null);
+  const [flyReusableCoupon, setFlyReusableCoupon] = useState(false);
   const [celebrationMessage, setCelebrationMessage] = useState<string | null>(null);
   const celebrationQueueRef = useRef<string[]>([]);
   const celebrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -635,6 +636,7 @@ export function StudentDashboardInner({
         if (result.pointsAwarded > 0) {
           playSound('success');
           animationKey.current += 1;
+          setFlyReusableCoupon(false);
           setFlyPointsValue(result.pointsAwarded);
           setTimeout(() => { setFlyPointsValue(null); }, 1500);
         }
@@ -683,6 +685,7 @@ export function StudentDashboardInner({
                 }
                 playSound('success');
                 animationKey.current += 1;
+                setFlyReusableCoupon(false);
                 setFlyPointsValue(awarded);
                 setTimeout(() => { setFlyPointsValue(null); }, 2000);
             } catch (err) {
@@ -1053,6 +1056,7 @@ export function StudentDashboardInner({
         animationKey.current += 1;
         setFlyPointsValue(points);
         setFlyPointsReason(category);
+        setFlyReusableCoupon(result.reusable === true);
         setFlyCompliment(complimentsOn ? fallbackCouponRedeemCompliment(category) : null);
 
         if (complimentsOn && schoolId) {
@@ -1563,8 +1567,8 @@ export function StudentDashboardInner({
   const themeBg = effectiveTheme?.background || '#020617';
   const themeCard = effectiveTheme?.cardBackground || themeBg;
   const computedThemeText = effectiveTheme?.text || (getContrastColor(themeBg) === 'black' ? '#020617' : '#ffffff');
-  const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg, 4.5) : computedThemeText;
-  const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard, 4.5) : computedThemeText;
+  const computedThemePageText = effectiveTheme ? ensureContrast(computedThemeText, themeBg) : computedThemeText;
+  const computedThemeCardText = effectiveTheme ? ensureContrast(computedThemeText, themeCard) : computedThemeText;
   const primaryForeground = effectiveTheme ? primaryForegroundFor(effectiveTheme) : '#ffffff';
   const portalRaffleFooter = portalRaffleTickets ? (
     <div
@@ -1658,7 +1662,7 @@ export function StudentDashboardInner({
         className={cn(
           // Lock the dashboard to the viewport so inner panes scroll
           // (prevents Activity + CTA from falling below the fold).
-          "student-dashboard-shell w-full h-dvh min-h-dvh relative overflow-x-hidden overflow-y-hidden flex flex-col",
+          "student-dashboard-shell w-full flex-1 min-h-0 relative overflow-x-hidden overflow-y-hidden flex flex-col",
           !effectiveTheme && 'student-kiosk-warm-shell',
           firestoreSyncAlert
             ? birthdayToday
@@ -1714,7 +1718,8 @@ export function StudentDashboardInner({
               ? couponRedeemStudentMessage({
                   points: flyPointsValue,
                   compliment: flyCompliment,
-                  includeTrashReminder: true,
+                  includeTrashReminder: !flyReusableCoupon,
+                  reusable: flyReusableCoupon,
                 })
               : '')}
         </div>
@@ -1882,6 +1887,7 @@ export function StudentDashboardInner({
                       points={flyPointsValue}
                       category={flyPointsReason}
                       compliment={flyCompliment}
+                      reusable={flyReusableCoupon}
                     />
                   </div>
                 ) : null}

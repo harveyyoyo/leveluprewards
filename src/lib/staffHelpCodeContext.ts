@@ -53,10 +53,11 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['point', 'points', 'category', 'categories', 'coupon', 'coupons', 'print'],
+    keys: ['point', 'points', 'category', 'categories', 'coupon', 'coupons', 'print', 'reusable'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminCategoriesTab.tsx',
       'src/app/[schoolId]/admin/sections/AdminCouponsTab.tsx',
+      'src/components/coupons/CouponPrintPanel.tsx',
       'src/app/[schoolId]/teacher/page.tsx',
     ],
   },
@@ -75,11 +76,12 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
-    keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme'],
+    keys: ['library', 'book', 'checkout', 'barcode', 'upc', 'library theme', 'class library'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminLibraryTab.tsx',
       'src/components/library/LibraryWorkspace.tsx',
       'src/components/library/LibraryTabLauncher.tsx',
+      'src/components/library/LibraryLocationsCard.tsx',
       'src/components/library/LibraryThemeSettingsCard.tsx',
       'src/app/[schoolId]/librarian/page.tsx',
       'src/app/[schoolId]/library/self-checkout/page.tsx',
@@ -107,6 +109,8 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
   {
     keys: ['hall of fame', 'halloffame', 'leaderboard', 'podium'],
     paths: [
+      'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/components/displays/DisplaysTabLauncher.tsx',
       'src/app/[schoolId]/admin/sections/displays/HallOfFameSettingsPanel.tsx',
       'src/app/[schoolId]/displays/page.tsx',
     ],
@@ -122,14 +126,17 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     keys: ['bulletin', 'bulletin board', 'announcement'],
     paths: [
       'src/app/[schoolId]/admin/sections/AdminDisplaysTab.tsx',
+      'src/components/displays/DisplaysTabLauncher.tsx',
+      'src/components/displays/DisplayTvPairModal.tsx',
+      'src/app/[schoolId]/displays/page.tsx',
+      'src/app/[schoolId]/displays-realm/page.tsx',
       'src/app/[schoolId]/bulletin-board/page.tsx',
     ],
   },
   {
     keys: ['incentive', 'incentives', 'opportunities', 'earn points'],
     paths: [
-      'src/app/[schoolId]/admin/sections/AdminIncentivesTab.tsx',
-      'src/app/[schoolId]/admin/sections/displays/BulletinIncentivesPanel.tsx',
+      'src/components/admin/CategoryModal.tsx',
       'src/lib/incentives/incentiveSurfaces.ts',
     ],
   },
@@ -167,6 +174,14 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     ],
   },
   {
+    keys: ['classroom', 'class awards', 'live monitor', 'seating chart', 'all students'],
+    paths: [
+      'src/components/classroom/ClassroomLiveMonitor.tsx',
+      'src/components/points/ClassroomPointsPanel.tsx',
+      'src/lib/classroom/classroomTabSections.ts',
+    ],
+  },
+  {
     keys: ['setting', 'settings', 'gear', 'theme', 'tooltip', 'walkthrough', 'tour'],
     paths: ['src/components/providers/SettingsProvider.tsx'],
   },
@@ -199,6 +214,8 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/office\/billing/i, paths: ['src/app/[schoolId]/office/billing/page.tsx'] },
   { pattern: /\/office\/reports/i, paths: ['src/app/[schoolId]/office/reports/page.tsx'] },
   { pattern: /\/office(?:\/|$)/i, paths: ['src/app/[schoolId]/office/page.tsx'] },
+  { pattern: /\/classroom-realm/i, paths: ['src/components/classroom/ClassroomTabLauncher.tsx', 'src/components/classroom/ClassroomLiveMonitor.tsx'] },
+  { pattern: /\/classroom(?:\/|$)/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/librarian/i, paths: ['src/app/[schoolId]/librarian/page.tsx'] },
   { pattern: /\/secretary/i, paths: ['src/app/[schoolId]/secretary/page.tsx'] },
   { pattern: /\/prize-clerk/i, paths: ['src/app/[schoolId]/prize-clerk/page.tsx'] },
