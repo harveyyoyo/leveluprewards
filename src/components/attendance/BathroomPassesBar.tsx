@@ -10,6 +10,8 @@ type BathroomPassesBarProps = {
   maxMinutes: number;
   classStudentIds?: Set<string>;
   onReturn: (studentId: string) => void;
+  /** Keep the bar visible so teachers always see who's out — even when the room is full. */
+  alwaysShow?: boolean;
 };
 
 export function BathroomPassesBar({
@@ -17,13 +19,25 @@ export function BathroomPassesBar({
   maxMinutes,
   classStudentIds,
   onReturn,
+  alwaysShow = false,
 }: BathroomPassesBarProps) {
   const filtered =
     classStudentIds && classStudentIds.size > 0
       ? passes.filter((p) => classStudentIds.has(p.studentId))
       : passes;
 
-  if (filtered.length === 0) return null;
+  if (filtered.length === 0) {
+    if (!alwaysShow) return null;
+    return (
+      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3 py-2">
+        <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <Timer className="h-3.5 w-3.5" aria-hidden />
+          Who&apos;s out
+        </span>
+        <span className="text-xs font-semibold text-foreground/80">Everyone is in class</span>
+      </div>
+    );
+  }
 
   const now = Date.now();
 

@@ -7,6 +7,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { ClassroomRoomDisplayView } from '@/components/points/ClassroomRoomDisplayView';
+import { useClassroomRealmTheme } from '@/components/classroom/ClassroomRealmShell';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import { useCanReadSchoolRoster } from '@/hooks/useCanReadSchoolRoster';
 import type { Class } from '@/lib/types';
@@ -21,6 +22,7 @@ export default function ClassroomScreenPage() {
   const { isInitialized } = useAppContext();
   const { settings } = useSettings();
   const classroomOn = isClassroomPillarOn(settings);
+  useClassroomRealmTheme(true);
 
   const firestore = useFirestore();
   const canReadRoster = useCanReadSchoolRoster();

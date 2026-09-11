@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Clock, LayoutGrid, Loader2, MessageSquare, Trophy, Users } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -12,6 +13,8 @@ import {
 } from '@/lib/classroomScreen';
 import type { Student } from '@/lib/types';
 import { cn, getStudentNickname } from '@/lib/utils';
+
+const spring = { type: 'spring' as const, stiffness: 260, damping: 24 };
 
 function formatClock(now: Date) {
   return now.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -33,20 +36,25 @@ function ScreenSection({
   title?: string;
 }) {
   return (
-    <section
+    <motion.section
+      variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+      transition={spring}
       className={cn(
         'rounded-2xl border border-white/20 bg-white/[0.08] p-5 shadow-xl backdrop-blur-md sm:p-6',
         className,
       )}
     >
       {title && (
-        <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/60">
+        <p
+          className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/60"
+          style={{ color: 'var(--cr-accent-text, #6ee7b7)' }}
+        >
           {Icon && <Icon className="h-3.5 w-3.5" aria-hidden />}
           {title}
         </p>
       )}
       {children}
-    </section>
+    </motion.section>
   );
 }
 
@@ -140,7 +148,7 @@ export function ClassroomRoomDisplayView({
         )}
       >
         <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-emerald-400" />
+          <Loader2 className="mx-auto h-8 w-8 animate-spin" style={{ color: 'var(--cr-accent-text, #6ee7b7)' }} />
           <p className="mt-3 text-sm text-white/60">Loading classroom…</p>
         </div>
       </div>
@@ -150,26 +158,40 @@ export function ClassroomRoomDisplayView({
   return (
     <div
       className={cn(
-        'flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white',
+        'flex flex-col text-white',
         embedded ? 'h-full min-h-[280px] rounded-xl p-4' : 'fixed inset-0 z-20 p-6 sm:p-10',
         className,
       )}
+      style={{
+        backgroundImage:
+          'radial-gradient(ellipse 90% 70% at 50% -15%, var(--cr-glow-top, rgba(52,211,153,0.22)), transparent 62%), radial-gradient(ellipse 70% 50% at 100% 110%, var(--cr-glow-bottom, rgba(16,185,129,0.12)), transparent 60%), linear-gradient(180deg, var(--cr-grad-from, #0f172a), var(--cr-base, #020617))',
+        backgroundColor: 'var(--cr-base, #020617)',
+      }}
     >
-      {/* Header */}
       <header className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-white/15 pb-4 sm:mb-6 sm:pb-5">
         <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400/80 sm:text-xs">
+          <p
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] sm:text-xs"
+            style={{ color: 'var(--cr-accent-text, #6ee7b7)' }}
+          >
             <LayoutGrid className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden />
-            Classroom Display
+            Class screen
           </p>
-          <h1 className="mt-1.5 truncate text-2xl font-black tracking-tight text-white sm:text-4xl">
+          <motion.h1
+            layoutId={embedded ? undefined : 'classroom-tv-title'}
+            className="mt-1.5 truncate text-2xl font-black tracking-tight text-white sm:text-5xl"
+          >
             {title}
-          </h1>
+          </motion.h1>
         </div>
         {screen.modules.clock && (
           <div className="shrink-0 text-right">
             <p className="flex items-center justify-end gap-2 text-3xl font-black tabular-nums text-white sm:text-5xl">
-              <Clock className="h-7 w-7 text-emerald-400/70 sm:h-9 sm:w-9" aria-hidden />
+              <Clock
+                className="h-7 w-7 sm:h-9 sm:w-9"
+                style={{ color: 'var(--cr-accent-text, #6ee7b7)' }}
+                aria-hidden
+              />
               {formatClock(now)}
             </p>
             <p className="mt-1 text-sm font-medium text-white/60 sm:text-base">{formatDate(now)}</p>
@@ -177,8 +199,12 @@ export function ClassroomRoomDisplayView({
         )}
       </header>
 
-      {/* Content grid */}
-      <div className="grid min-h-0 flex-1 auto-rows-min content-start gap-4 overflow-y-auto sm:gap-5 lg:grid-cols-2">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.08 } } }}
+        className="grid min-h-0 flex-1 auto-rows-min content-start gap-4 overflow-y-auto sm:gap-5 lg:grid-cols-2"
+      >
         {!modulesEnabled ? (
           <ScreenSection className="lg:col-span-2">
             <p className="text-lg font-bold">No modules enabled</p>
@@ -286,7 +312,7 @@ export function ClassroomRoomDisplayView({
             )}
           </>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
