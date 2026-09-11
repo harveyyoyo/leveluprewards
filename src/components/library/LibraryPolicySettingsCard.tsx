@@ -704,9 +704,9 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
             <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
               <div>
-                <p className="text-xs font-bold">Show totals on Library Desk</p>
+                <p className="text-xs font-bold">Show totals on Catalog tab</p>
                 <p className="text-[11px] text-muted-foreground">
-                  On by default. Show the Total Catalog / On Shelf / Active Loans / Overdue stat cards at the top of the Library Desk.
+                  On by default. Show the Total Catalog / On Shelf / Active Loans / Overdue stat cards at the top of the Catalog tab.
                 </p>
               </div>
               <Switch
@@ -719,13 +719,26 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <div>
                 <p className="text-xs font-bold">Animate totals (count-up effect)</p>
                 <p className="text-[11px] text-muted-foreground">
-                  On by default. Numbers count up when the Library Desk loads. Turn off for plain static numbers.
+                  On by default. Numbers count up when the Catalog tab loads. Turn off for plain static numbers.
                 </p>
               </div>
               <Switch
                 checked={settings.libraryDeskTotalsAnimated ?? true}
                 disabled={(settings.libraryDeskShowTotals ?? true) === false}
                 onCheckedChange={(v) => updateSettings({ libraryDeskTotalsAnimated: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Navigation sound effects</p>
+                <p className="text-[11px] text-muted-foreground">
+                  On by default. Play a short click sound when staff switch between Librarian, Catalog, Loans, Kiosk, and Settings.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryNavSoundEffects ?? true}
+                onCheckedChange={(v) => updateSettings({ libraryNavSoundEffects: v })}
               />
             </div>
           </div>

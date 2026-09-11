@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Barcode, BookOpen, ChevronDown, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2 } from 'lucide-react';
+import { Barcode, BookOpen, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, User } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import {
@@ -47,6 +47,7 @@ import {
   getActiveLibraryGenres,
 } from '@/lib/library/libraryClassification';
 import { resolveBookPhysicalLocation } from '@/lib/library/libraryOrganization';
+import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
 
 export function LibraryItemModal({
   isOpen,
@@ -57,6 +58,7 @@ export function LibraryItemModal({
   onDelete,
   upcTaken,
   schoolId,
+  getStudentName,
 }: {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -66,6 +68,8 @@ export function LibraryItemModal({
   onDelete?: (item: LibraryItem) => Promise<void>;
   upcTaken?: (upc: string, excludeId?: string) => Promise<boolean>;
   schoolId?: string | null;
+  /** Resolves a student's display name from their ID — used to show who currently has this copy on loan. */
+  getStudentName?: (id?: string) => string;
 }) {
   const [name, setName] = useState('');
   const [upc, setUpc] = useState('');
@@ -91,6 +95,7 @@ export function LibraryItemModal({
   const [isSearchingTitle, setIsSearchingTitle] = useState(false);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [showMoreInfo, setShowMoreInfo] = useState(false);
   const titleSearchContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const playSound = useArcadeSound();
@@ -510,6 +515,87 @@ export function LibraryItemModal({
               </div>
             </div>
           </div>
+
+          {isEditing && item && (
+            <div
+              className={cn(
+                'mb-4 p-3.5 rounded-2xl border flex items-center justify-between gap-3',
+                item.status === 'checked_out'
+                  ? 'border-amber-400/60 bg-amber-50 dark:bg-amber-950/30'
+                  : 'border-emerald-400/60 bg-emerald-50 dark:bg-emerald-950/30',
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                {item.status === 'checked_out' ? (
+                  <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                )}
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                    Lending Status
+                  </p>
+                  {item.status === 'checked_out' ? (
+                    <p className="text-sm font-bold flex flex-wrap items-center gap-x-1.5">
+                      <span className="inline-flex items-center gap-1">
+                        <User className="h-3.5 w-3.5" />
+                        {getStudentName?.(item.checkedOutTo ?? undefined) || 'A student'}
+                      </span>
+                      {item.dueAt ? (
+                        <span className="text-muted-foreground font-medium">
+                          · Due {formatDueDate(item.dueAt)}
+                          {computeDaysOverdue(item.dueAt) > 0 && (
+                            <span className="text-destructive font-bold">
+                              {' '}({computeDaysOverdue(item.dueAt)}d overdue)
+                            </span>
+                          )}
+                        </span>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                      On the shelf — ready to borrow
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {isEditing && item && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => setShowMoreInfo((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-bold text-primary hover:underline"
+              >
+                <span>{showMoreInfo ? 'Hide' : 'More'} info</span>
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showMoreInfo && 'rotate-180')} />
+              </button>
+              {showMoreInfo && (
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs rounded-xl border bg-muted/20 p-3">
+                  <div>
+                    <span className="text-muted-foreground">Added:</span>{' '}
+                    <span className="font-semibold">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'Unknown'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Condition:</span>{' '}
+                    <span className="font-semibold capitalize">{item.condition || 'Good'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Label printed:</span>{' '}
+                    <span className="font-semibold">{item.labeled ? 'Yes' : 'Not yet'}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Copy #:</span>{' '}
+                    <span className="font-semibold">{item.copyNumber || '—'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1 sm:col-span-2 relative" ref={titleSearchContainerRef}>

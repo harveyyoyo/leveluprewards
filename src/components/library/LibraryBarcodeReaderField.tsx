@@ -81,6 +81,7 @@ export function LibraryBarcodeReaderField({
   hint,
   scanFeedback,
   className,
+  showIcon = true,
 }: {
   inputId?: string;
   inputRef: RefObject<HTMLInputElement | null>;
@@ -91,6 +92,7 @@ export function LibraryBarcodeReaderField({
   hint?: string;
   scanFeedback?: LibraryScanFeedback | null;
   className?: string;
+  showIcon?: boolean;
 }) {
   const feedbackMeta = scanFeedback ? STATUS_META[scanFeedback.status] : null;
 
@@ -98,14 +100,16 @@ export function LibraryBarcodeReaderField({
     <div className={cn('space-y-1.5', className)}>
       {/* Scanner Input Row */}
       <div className="relative flex items-center">
-        <div className="absolute left-2.5 flex items-center pointer-events-none text-muted-foreground z-10">
-          <AnimatedScannerLogo
-            size="sm"
-            active={active}
-            showLabel={false}
-            showStatusDot={false}
-          />
-        </div>
+        {showIcon && (
+          <div className="absolute left-2.5 flex items-center pointer-events-none text-muted-foreground z-10">
+            <AnimatedScannerLogo
+              size="sm"
+              active={active}
+              showLabel={false}
+              showStatusDot={false}
+            />
+          </div>
+        )}
         <Input
           id={inputId}
           ref={inputRef as RefObject<HTMLInputElement>}
@@ -120,7 +124,8 @@ export function LibraryBarcodeReaderField({
           }}
           placeholder={active ? 'Scan barcode with reader wedge or type code & press Enter…' : 'Reader paused — click Resume reader…'}
           className={cn(
-            'pl-8 pr-20 font-mono text-xs h-9 rounded-xl border transition-all',
+            showIcon ? 'pl-8' : 'pl-3',
+            'pr-20 font-mono text-xs h-9 rounded-xl border transition-all',
             active
               ? 'border-primary/50 bg-background shadow-xs focus-visible:ring-1 focus-visible:ring-primary'
               : 'border-muted bg-muted/40 text-muted-foreground',

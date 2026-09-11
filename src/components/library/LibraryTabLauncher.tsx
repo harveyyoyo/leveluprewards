@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BookOpen, ExternalLink, Monitor } from 'lucide-react';
+import { BookOpen, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isPillarOn } from '@/lib/productPillars';
@@ -10,7 +10,6 @@ export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
   const { settings } = useSettings();
   const libraryOn = isPillarOn(settings, 'payLibrary');
   const libraryUrl = `/${schoolId}/library`;
-  const kioskUrl = `/${schoolId}/library/kiosk`;
 
   if (!libraryOn) {
     return (
@@ -55,17 +54,6 @@ export function LibraryTabLauncher({ schoolId }: { schoolId: string }) {
           </a>
         </Button>
 
-        <Button
-          asChild
-          variant="outline"
-          size="lg"
-          className="min-w-[12rem] rounded-full px-6 text-base font-bold shadow-sm"
-        >
-          <a href={kioskUrl} target="_blank" rel="noopener noreferrer">
-            <Monitor className="mr-2 h-4 w-4" aria-hidden />
-            Open Student Kiosk
-          </a>
-        </Button>
       </div>
 
       <p className="text-xs text-muted-foreground">Opens in a new tab</p>

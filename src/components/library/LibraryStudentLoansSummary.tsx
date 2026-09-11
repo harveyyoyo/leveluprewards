@@ -50,35 +50,45 @@ export function LibraryStudentLoansSummary({
   return (
     <div
       className={cn(
-        'rounded-xl border bg-background/80 space-y-2',
-        compact ? 'px-3 py-2' : 'px-4 py-3',
+        'w-full rounded-2xl border-2 bg-background/90 shadow-sm space-y-2.5',
+        compact ? 'px-3 py-2' : 'px-4 py-3.5 sm:px-5 sm:py-4',
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-          <BookOpen className="h-3.5 w-3.5" aria-hidden />
+        <p
+          className={cn(
+            'font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5',
+            compact ? 'text-xs' : 'text-xs sm:text-sm',
+          )}
+        >
+          <BookOpen className={compact ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'} aria-hidden />
           Current checkouts
         </p>
-        <Badge variant="secondary" className="text-[10px] font-bold">
+        <Badge variant="secondary" className={cn('font-black', compact ? 'text-[10px]' : 'text-xs sm:text-sm px-2.5 py-1')}>
           {countLabel}
         </Badge>
       </div>
 
       {tierLines.length > 0 ? (
-        <p className="text-[11px] text-muted-foreground font-medium">{tierLines.join(' · ')}</p>
+        <p className={cn('text-muted-foreground font-medium', compact ? 'text-[11px]' : 'text-xs sm:text-sm')}>
+          {tierLines.join(' · ')}
+        </p>
       ) : null}
 
       {items.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No books checked out — scan a book barcode to borrow.</p>
+        <p className={cn('text-muted-foreground', compact ? 'text-xs' : 'text-sm sm:text-base py-1')}>
+          No books checked out — scan a book barcode to borrow.
+        </p>
       ) : (
-        <ul className={cn('space-y-1.5', compact ? 'max-h-28 overflow-y-auto' : 'max-h-40 overflow-y-auto')}>
+        <ul className={cn('space-y-2', compact ? 'max-h-28 overflow-y-auto' : 'max-h-64 overflow-y-auto')}>
           {items.map((item) => {
             const overdueDays = computeDaysOverdue(item.dueAt);
             return (
               <li
                 key={item.id}
                 className={cn(
-                  'rounded-lg border px-2.5 py-1.5 text-xs flex items-center gap-2',
+                  'rounded-xl border flex items-center gap-3',
+                  compact ? 'px-2.5 py-1.5 text-xs' : 'px-3 py-2.5 text-sm sm:text-base',
                   overdueDays > 0
                     ? 'border-amber-400/60 bg-amber-50/80 dark:bg-amber-950/30'
                     : 'border-border/60 bg-muted/20',
@@ -90,19 +100,27 @@ export function LibraryStudentLoansSummary({
                   title={item.name}
                   author={item.author}
                   aspect="thumb"
-                  className="h-9 w-6 shrink-0 rounded border shadow-xs"
+                  className={cn('shrink-0 rounded-lg border shadow-xs', compact ? 'h-9 w-6' : 'h-16 w-11 sm:h-20 sm:w-14')}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="font-semibold truncate">{item.name}</span>
+                    <span className="font-bold truncate">{item.name}</span>
                     {overdueDays > 0 ? (
-                      <Badge variant="destructive" className="shrink-0 text-[9px] px-1 py-0">
+                      <Badge
+                        variant="destructive"
+                        className={cn('shrink-0 font-bold', compact ? 'text-[9px] px-1 py-0' : 'text-xs px-1.5 py-0.5')}
+                      >
                         {overdueDays}d late
                       </Badge>
                     ) : null}
                   </div>
-                  <p className="mt-0.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Calendar className="h-2.5 w-2.5 shrink-0" aria-hidden />
+                  <p
+                    className={cn(
+                      'mt-0.5 flex items-center gap-1 text-muted-foreground',
+                      compact ? 'text-[10px]' : 'text-xs sm:text-sm',
+                    )}
+                  >
+                    <Calendar className={compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3.5 w-3.5 shrink-0'} aria-hidden />
                     {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
                   </p>
                 </div>

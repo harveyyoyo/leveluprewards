@@ -552,6 +552,8 @@ interface Settings {
     libraryKioskExitRequiresPasscode?: boolean;
     /** Play sound effects and audio chimes on scan / checkout / return. */
     libraryKioskSoundEffects?: boolean;
+    /** Play a short click/swoosh sound when staff switch stations (Librarian/Catalog/Loans/Kiosk/Settings). */
+    libraryNavSoundEffects?: boolean;
     /** Show book recommendations after checkout or return. */
     libraryKioskShowRecommendations?: boolean;
     /** Show active loans summary on student kiosk screen. */
@@ -812,6 +814,7 @@ const defaultSettings: Settings = {
     libraryKioskAutoResetSeconds: 8,
     libraryKioskExitRequiresPasscode: false,
     libraryKioskSoundEffects: true,
+    libraryNavSoundEffects: true,
     libraryKioskShowRecommendations: true,
     libraryKioskShowActiveLoans: true,
     libraryKioskShowBookCover: true,

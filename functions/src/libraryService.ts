@@ -19,10 +19,10 @@ const numeric = (value: unknown, fallback: number) =>
  * Request receipts make a retry after an uncertain network response safe. */
 export async function runLibraryOperation(db: Firestore, schoolId: string, data: Data, actor: LibraryActor) {
   const action = data.action;
-  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive', 'review'].includes(action)) {
+  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive', 'review', 'label', 'report_damage'].includes(action)) {
     throw new HttpsError('invalid-argument', 'Unknown library action.');
   }
-  if (!['checkout', 'return', 'review'].includes(action) && !actor.staff) {
+  if (!['checkout', 'return', 'review', 'report_damage'].includes(action) && !actor.staff) {
     throw new HttpsError('permission-denied', 'Library staff access required.');
   }
   const requestId = libraryId(data.requestId, 'request ID');
@@ -71,6 +71,27 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const itemSnap = await tx.get(itemRef);
     if (!itemSnap.exists) fail('Book not found.');
     const item = itemSnap.data()!;
+    if (action === 'label') {
+      // Printing a spine/barcode label marks the copy as fully processed — this is the only
+      // server-trusted path that can flip it, since clients cannot write library/{itemId} directly.
+      tx.update(itemRef, { labeled: true, labeledAt: now });
+      tx.set(school.collection('libraryEvents').doc(), {
+        itemId, title: item.name, action, actorUid: actor.uid, date: now,
+      });
+      return finish({ success: true, message: 'Copy marked as labeled.' });
+    }
+    if (action === 'report_damage') {
+      // Lets a student flag a copy as damaged right after returning it — the only condition
+      // change a non-staff actor may make, and only while the copy isn't out with someone else.
+      if (!studentId) fail('Select a student.');
+      if (item.status === 'checked_out') fail('This copy is still checked out — return it first.');
+      if (item.condition === 'damaged') return finish({ success: true, message: 'Already marked as damaged.' });
+      tx.update(itemRef, { condition: 'damaged' });
+      tx.set(school.collection('libraryEvents').doc(), {
+        itemId, title: item.name, action, condition: 'damaged', studentId, actorUid: actor.uid, date: now,
+      });
+      return finish({ success: true, message: 'Thanks for letting us know — a librarian will take a look.' });
+    }
     if (action === 'condition' || action === 'archive' || action === 'delete') {
       if (item.status === 'checked_out') fail('Return this copy before changing its condition, archiving, or deleting it.');
       if (action === 'delete') {
@@ -140,6 +161,7 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const loanDays = Math.max(1, numeric(settings.libraryLoanPeriodDays, 14));
     if (action === 'checkout') {
       if (item.archived || (item.condition && item.condition !== 'good')) fail('This copy is unavailable.');
+      if (!item.labeled || !item.shelfLocation) fail('This copy still needs processing (spine label + shelf location) before it can be checked out.');
       if (item.status === 'checked_out') {
         if (item.checkedOutTo === studentId) return finish({ action: 'already_done', itemId, item: { ...item, id: itemId } });
         return finish({ action: 'wrong_borrower', item: { ...item, id: itemId } });

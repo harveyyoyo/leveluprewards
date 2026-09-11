@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { doc, writeBatch } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFunctions } from '@/firebase';
+import { callLibrary } from '@/lib/library/libraryOperations';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,7 @@ export function LibraryPrintLabelsModal({
   const { setLibraryStickersToPrint } = usePrint();
   const { settings } = useSettings();
   const firestore = useFirestore();
+  const functions = useFunctions();
   const { toast } = useToast();
 
   const defaultFormat = (settings.libraryLabelFormat as LibraryLabelFormat) || 'sticker';
@@ -108,18 +109,21 @@ export function LibraryPrintLabelsModal({
       startOffset: selectedFormat === 'thermal' ? 0 : startOffset,
     });
 
-    if (firestore && schoolId && items.length > 0) {
-      const batch = writeBatch(firestore);
-      const now = Date.now();
+    // Only a trusted Cloud Function can flip "labeled" — firestore.rules blocks direct client
+    // writes to library/{itemId}. The catalog's live Firestore listener picks up the change once
+    // this resolves, so there's no need to (and no safe way to) optimistically mutate it here.
+    if (schoolId && items.length > 0) {
       for (const it of items) {
         if (it.id && it.id !== 'preview_sample') {
-          const itemRef = doc(firestore, 'schools', schoolId, 'library', it.id);
-          batch.update(itemRef, { labeled: true, labeledAt: now });
-          it.labeled = true;
-          it.labeledAt = now;
+          callLibrary(functions, 'libraryCirculation', { schoolId, itemId: it.id, action: 'label' }).catch(() => {
+            toast({
+              variant: 'destructive',
+              title: 'Label not saved',
+              description: `Couldn't mark "${it.name}" as labeled. It'll still show as unlabeled in the catalog.`,
+            });
+          });
         }
       }
-      batch.commit().catch(() => {});
     }
 
     toast({

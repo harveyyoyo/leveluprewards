@@ -289,6 +289,20 @@ export function isSuspiciousCatalogTitle(title: string | undefined | null): bool
   return BOT_OR_ERROR_TITLES.some((bad) => clean.includes(bad));
 }
 
+/** Decode HTML entities (numeric, hex, and the common named ones) left over from scraping
+ * isbnsearch.org's raw markup — titles/authors otherwise show literal "&#039;" etc. */
+export function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code, 10)))
+    .replace(/&#[xX]([0-9a-fA-F]+);/g, (_, code) => String.fromCharCode(parseInt(code, 16)))
+    .replace(/&amp;/g, '&')
+    .replace(/&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ');
+}
+
 /** Parse isbnsearch.org book page HTML (used by lookupIsbnSearchOrg and tests). */
 export function parseIsbnSearchOrgHtml(html: string, fallbackIsbn: string): LibraryCatalogHit | null {
   // A genuine isbnsearch.org book page contains a bookinfo container or explicit ISBN/author labels.
@@ -301,11 +315,11 @@ export function parseIsbnSearchOrgHtml(html: string, fallbackIsbn: string): Libr
     html.includes('<strong>Publisher:</strong>');
   if (!hasBookMarkers) return null;
 
-  const title = html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim();
+  const title = decodeHtmlEntities(html.match(/<h1[^>]*>([^<]+)<\/h1>/i)?.[1]?.trim() ?? '') || undefined;
   if (!title || isSuspiciousCatalogTitle(title)) return null;
 
-  const author = html.match(/<strong>Author:<\/strong>\s*([^<]+)/i)?.[1]?.trim();
-  const publisher = html.match(/<strong>Publisher:<\/strong>\s*([^<]+)/i)?.[1]?.trim();
+  const author = decodeHtmlEntities(html.match(/<strong>Author:<\/strong>\s*([^<]+)/i)?.[1]?.trim() ?? '') || undefined;
+  const publisher = decodeHtmlEntities(html.match(/<strong>Publisher:<\/strong>\s*([^<]+)/i)?.[1]?.trim() ?? '') || undefined;
   const publishedYear = html.match(/<strong>Published:<\/strong>\s*(\d{4})/i)?.[1]?.trim();
   const coverMatch = html.match(/<img[^>]+src=["'](https?:\/\/[^"']*(?:covers|images)[^"']*)["']/i)?.[1];
 
@@ -314,9 +328,9 @@ export function parseIsbnSearchOrgHtml(html: string, fallbackIsbn: string): Libr
 
   return {
     title,
-    author: author || undefined,
+    author,
     isbn: fallbackIsbn,
-    publisher: publisher || undefined,
+    publisher,
     publishedYear: publishedYear || undefined,
     coverUrl: coverMatch || undefined,
     source: 'isbnsearch',

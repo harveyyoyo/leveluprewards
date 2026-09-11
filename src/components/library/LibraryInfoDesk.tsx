@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
@@ -39,45 +40,14 @@ export interface LibraryInfoDeskProps {
   students?: Student[] | null;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
-  copiesCount?: number;
-  activeLoansCount?: number;
-  overdueLoansCount?: number;
-  onSwitchToKiosk: () => void;
+  onSwitchToKiosk: (studentId?: string) => void;
   onViewCatalog: (statusFilter?: 'available' | 'checked_out') => void;
-  onViewLoans?: (subTab: 'active' | 'overdue') => void;
   onOpenIntake?: (initialCode?: string) => void;
   onOpenBookDetails?: (book: LibraryItem) => void;
   schoolId: string | null;
   schoolName?: string;
 }
 
-
-// Count-up animation hook (matches the welcome page pattern)
-function useCountUp(target: number, duration = 900, enabled = true): number {
-  const [current, setCurrent] = useState(0);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    if (!enabled || hasAnimated.current || target === 0) {
-      setCurrent(target);
-      return;
-    }
-    hasAnimated.current = true;
-    const startTime = performance.now();
-    let rafId: number;
-    const animate = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCurrent(Math.round(eased * target));
-      if (progress < 1) rafId = requestAnimationFrame(animate);
-    };
-    rafId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafId);
-  }, [target, duration, enabled]);
-
-  return current;
-}
 
 // Elegant, subtle ambient scan sweep meant to sit inside the search bar's relative/overflow-hidden container
 function LibrarySearchScanOverlay() {
@@ -99,12 +69,8 @@ export function LibraryInfoDesk({
   students = [],
   categories = [],
   getStudentName,
-  copiesCount = 0,
-  activeLoansCount = 0,
-  overdueLoansCount = 0,
   onSwitchToKiosk,
   onViewCatalog,
-  onViewLoans,
   onOpenIntake,
   onOpenBookDetails,
   schoolId,
@@ -126,20 +92,6 @@ export function LibraryInfoDesk({
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
-
-  // Available copies calculation — must match the Catalog tab's "available" filter
-  // (status === 'available' AND good condition), otherwise lost/damaged copies inflate this stat.
-  const availableCopiesCount = useMemo(
-    () => (catalogItems ?? []).filter((i) => i.status === 'available' && (!i.condition || i.condition === 'good')).length,
-    [catalogItems],
-  );
-
-  // Count-up animated values for stat cards
-  const totalsAnimated = settings.libraryDeskTotalsAnimated ?? true;
-  const animCopies = useCountUp(copiesCount, 900, totalsAnimated);
-  const animAvailable = useCountUp(availableCopiesCount, 900, totalsAnimated);
-  const animLoans = useCountUp(activeLoansCount, 900, totalsAnimated);
-  const animOverdue = useCountUp(overdueLoansCount, 900, totalsAnimated);
 
   const [shelfFilter, setShelfFilter] = useState<'all' | 'available' | 'checked_out' | 'overdue'>('all');
 
@@ -299,167 +251,23 @@ export function LibraryInfoDesk({
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200" aria-label="Library Desk">
-      {/* 1. STATS OVERVIEW CARDS (LINK OUT TO CATALOG / LOANS) */}
-      {(settings.libraryDeskShowTotals ?? true) && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => onViewCatalog()}
-            className={cn(
-              'group rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between text-left transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer',
-              isNightDesk
-                ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 text-white'
-                : isReadingRoom
-                  ? 'border-stone-300 bg-stone-50/90 hover:border-stone-400 text-stone-900'
-                  : 'border-border/80 bg-card hover:border-blue-500/40',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">
-                Total Catalog
-              </span>
-              <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center transition-transform group-hover:scale-110">
-                <BookOpen className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-xl font-black tracking-tight">{animCopies}</div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5 font-medium">
-                <span>Physical books in library</span>
-                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onViewCatalog('available')}
-            className={cn(
-              'group rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between text-left transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer',
-              isNightDesk
-                ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 text-white'
-                : isReadingRoom
-                  ? 'border-stone-300 bg-stone-50/90 hover:border-stone-400 text-stone-900'
-                  : 'border-border/80 bg-card hover:border-emerald-500/40',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                On Shelf Today
-              </span>
-              <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center transition-transform group-hover:scale-110">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                {animAvailable}
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5 font-medium">
-                <span>Ready for immediate loan</span>
-                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onViewLoans?.('active')}
-            className={cn(
-              'group rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between text-left transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer',
-              isNightDesk
-                ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 text-white'
-                : isReadingRoom
-                  ? 'border-stone-300 bg-stone-50/90 hover:border-stone-400 text-stone-900'
-                  : 'border-border/80 bg-card hover:border-amber-500/40',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                Active Loans
-              </span>
-              <div className="h-6 w-6 sm:h-7 sm:w-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center transition-transform group-hover:scale-110">
-                <Clock className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="mt-1.5">
-              <div className="text-lg sm:text-xl font-black tracking-tight">{animLoans}</div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5 font-medium">
-                <span>Currently with students</span>
-                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
-              </div>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onViewLoans?.('overdue')}
-            className={cn(
-              'group rounded-xl border p-3 sm:p-3.5 flex flex-col justify-between text-left transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-pointer',
-              overdueLoansCount > 0
-                ? 'border-rose-500/30 bg-rose-500/5 hover:border-rose-500/50'
-                : isNightDesk
-                  ? 'border-slate-800 bg-slate-900/60 hover:border-slate-700 text-white'
-                  : isReadingRoom
-                    ? 'border-stone-300 bg-stone-50/90 hover:border-stone-400 text-stone-900'
-                    : 'border-border/80 bg-card hover:border-rose-500/40',
-            )}
-          >
-            <div className="flex items-center justify-between">
-              <span
-                className={cn(
-                  'text-[10px] font-black uppercase tracking-wider',
-                  overdueLoansCount > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground',
-                )}
-              >
-                Overdue
-              </span>
-              <div
-                className={cn(
-                  'h-6 w-6 sm:h-7 sm:w-7 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110',
-                  overdueLoansCount > 0
-                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                    : 'bg-muted text-muted-foreground',
-                )}
-              >
-                <AlertTriangle className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="mt-1.5">
-              <div
-                className={cn(
-                  'text-lg sm:text-xl font-black tracking-tight',
-                  overdueLoansCount > 0 ? 'text-rose-600 dark:text-rose-400' : '',
-                )}
-              >
-                {animOverdue}
-              </div>
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-0.5 font-medium">
-                <span>{overdueLoansCount > 0 ? 'Reminders needed' : 'All loans on schedule'}</span>
-                <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
-              </div>
-            </div>
-          </button>
-        </div>
-      )}
-
       {/* 2. INFO LOOKUP SEARCH BAR (READ ONLY LOOKUPS) — centered on the page while idle, moves to the top once a search/result appears */}
       <div
         className={cn(
-          'transition-all duration-300',
+          'flex flex-1 flex-col items-center transition-all duration-500 ease-out',
           !selectedBook && !selectedStudent
-            ? 'flex flex-1 flex-col items-center justify-center min-h-[42vh] sm:min-h-[48vh]'
-            : '',
+            ? 'justify-center min-h-[64vh] sm:min-h-[68vh]'
+            : 'justify-start min-h-0',
         )}
       >
       <div
         className={cn(
-          'w-full rounded-3xl border p-6 sm:p-8 shadow-lg space-y-5 relative transition-all',
+          'w-full max-w-2xl rounded-3xl border p-6 sm:p-8 shadow-lg space-y-5 relative transition-all',
           isNightDesk
             ? 'border-slate-800 bg-slate-900/90 text-white'
             : isReadingRoom
               ? 'border-stone-300 bg-white text-stone-900'
-              : 'border-border/80 bg-card',
+              : currentTheme.classes.card,
         )}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -899,7 +707,7 @@ export function LibraryInfoDesk({
               <Button
                 type="button"
                 size="sm"
-                onClick={onSwitchToKiosk}
+                onClick={() => onSwitchToKiosk()}
                 className="rounded-xl text-xs font-black gap-1.5 bg-primary text-primary-foreground shadow-xs"
               >
                 <Monitor className="h-3.5 w-3.5" />
@@ -916,20 +724,20 @@ export function LibraryInfoDesk({
         {selectedStudent && (
           <div
             className={cn(
-              'rounded-2xl border p-5 space-y-4 animate-in fade-in',
-              isNightDesk ? 'border-slate-800 bg-slate-950/60' : 'border-border/80 bg-muted/20',
+              'rounded-3xl border-2 p-5 sm:p-6 space-y-4 shadow-md animate-in fade-in zoom-in-95 duration-200',
+              isNightDesk ? 'border-slate-800 bg-slate-950/60' : currentTheme.classes.card,
             )}
           >
             <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-lg">
+              <div className="flex items-center gap-3.5">
+                <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-2xl sm:text-3xl shrink-0">
                   {selectedStudent.firstName?.[0] || 'S'}
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-foreground">
+                  <h4 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
                     {selectedStudent.firstName} {selectedStudent.lastName}
                   </h4>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Student ID: {selectedStudent.id}
                     {selectedStudent.classId ? ` · Class ${selectedStudent.classId}` : ''}
                   </p>
@@ -941,7 +749,7 @@ export function LibraryInfoDesk({
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedStudent(null)}
-                className="h-8 w-8 p-0 rounded-lg text-muted-foreground"
+                className="h-8 w-8 p-0 rounded-lg text-muted-foreground shrink-0"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -1065,71 +873,25 @@ export function LibraryInfoDesk({
               </div>
             </div>
 
-            {/* Student's Current Active Loans */}
-            <div className="space-y-2 pt-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-foreground">
-                  Current Active Loans ({studentLoans.length})
-                </span>
-                {selectedStudent.libraryFineBalance ? (
-                  <span className="text-rose-600 dark:text-rose-400 font-bold">
-                    Fine Balance: {selectedStudent.libraryFineBalance} units
-                  </span>
-                ) : null}
-              </div>
-
-              {studentLoans.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-2">
-                  No books currently on loan. Ready to borrow up to {effectiveStudentLimit === 0 ? 'unlimited' : effectiveStudentLimit} books.
+            {/* Student's Current Active Loans — same big, cover-thumbnail summary used in the Kiosk */}
+            <div className="space-y-1.5">
+              {selectedStudent.libraryFineBalance ? (
+                <p className="text-xs sm:text-sm font-bold text-rose-600 dark:text-rose-400">
+                  Fine Balance: {selectedStudent.libraryFineBalance} units
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {studentLoans.map((loan) => {
-                    const daysOverdue = computeDaysOverdue(loan.dueAt);
-                    const isLate = daysOverdue > 0;
-                    return (
-                      <div
-                        key={loan.id}
-                        className="flex items-center justify-between p-3 rounded-xl border bg-background text-xs"
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
-                          <div className="min-w-0">
-                            <div className="font-bold text-foreground truncate">{loan.name}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              Due: {formatDueDate(loan.dueAt)}
-                            </div>
-                          </div>
-                        </div>
-
-                        {isLate ? (
-                          <Badge variant="destructive" className="text-[10px] font-bold shrink-0">
-                            {daysOverdue}d Overdue
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground shrink-0">
-                            On Time
-                          </Badge>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              ) : null}
+              <LibraryStudentLoansSummary items={studentLoans} maxCheckouts={effectiveStudentLimit} />
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-border/40">
-              <Button
-                type="button"
-                size="sm"
-                onClick={onSwitchToKiosk}
-                className="rounded-xl text-xs font-black gap-1.5 bg-primary text-primary-foreground shadow-xs"
-              >
-                <Monitor className="h-3.5 w-3.5" />
-                <span>Open Kiosk for {selectedStudent.firstName}</span>
-                <ArrowRight className="h-3 w-3" />
-              </Button>
-            </div>
+            <Button
+              type="button"
+              onClick={() => onSwitchToKiosk(selectedStudent.id)}
+              className="w-full h-12 sm:h-14 rounded-2xl text-sm sm:text-base font-black gap-2 bg-primary text-primary-foreground shadow-md"
+            >
+              <Monitor className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>Open Kiosk for {selectedStudent.firstName}</span>
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </div>

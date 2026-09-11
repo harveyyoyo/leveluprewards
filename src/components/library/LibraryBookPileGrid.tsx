@@ -41,6 +41,8 @@ export interface LibraryBookPileGridProps {
   defaultShelf?: string;
   /** Show real book cover images. Defaults to true. */
   showCoverImages?: boolean;
+  /** Resolves a genre-coded hex color for a copy — shown as a thin "spine" accent on its card. */
+  getGenreColor?: (item: LibraryItem) => string;
 }
 
 export function LibraryBookPileGrid({
@@ -56,6 +58,7 @@ export function LibraryBookPileGrid({
   viewMode,
   defaultShelf,
   showCoverImages = true,
+  getGenreColor,
 }: LibraryBookPileGridProps) {
   if (viewMode === 'grid') {
     return (
@@ -69,11 +72,12 @@ export function LibraryBookPileGrid({
             const isChecked = selected.has(item.id);
             const isLoaned = item.status === 'checked_out';
             const isDamaged = item.condition === 'lost' || item.condition === 'damaged';
+            const needsProcessing = !item.labeled || !item.shelfLocation;
 
             return (
               <div
                 key={item.id}
-                onClick={() => onToggleSelect(item.id)}
+                onClick={() => onOpenDetails(item)}
                 className={cn(
                   'group relative flex flex-col border bg-background overflow-hidden cursor-pointer select-none transition-all duration-200',
                   currentTheme.uiClasses.cardRadius,
@@ -82,6 +86,13 @@ export function LibraryBookPileGrid({
                     : 'border-border/70 shadow-2xs hover:shadow-md hover:-translate-y-0.5',
                 )}
               >
+                {getGenreColor && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 w-1 z-20"
+                    style={{ backgroundColor: getGenreColor(item) }}
+                  />
+                )}
                 {/* Book Cover Container */}
                 <div className="relative aspect-[2/3] w-full overflow-hidden flex items-center justify-center bg-muted/20">
                   <LibraryBookCover
@@ -98,27 +109,38 @@ export function LibraryBookPileGrid({
                     )}
                   />
 
-                  {/* Select Checkbox */}
-                  <div className="absolute top-2 left-2 z-10">
+                  {/* Select Checkbox — its own click target, independent of the card's "open details" click */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleSelect(item.id);
+                    }}
+                    aria-label={isChecked ? 'Deselect book' : 'Select book'}
+                    className="absolute top-2 left-2 z-10"
+                  >
                     <div
                       className={cn(
-                        'flex h-5 w-5 items-center justify-center rounded-full transition-all shadow-md',
+                        'flex h-6 w-6 items-center justify-center rounded-full transition-all shadow-md',
                         isChecked
                           ? 'bg-primary text-primary-foreground ring-2 ring-white scale-110'
-                          : 'bg-background/80 text-transparent hover:text-muted-foreground/50 hover:bg-background',
+                          : 'bg-background/80 text-transparent hover:text-foreground hover:bg-background',
                       )}
                     >
-                      <Check className={cn('h-3 w-3', isChecked ? 'opacity-100' : 'opacity-0')} />
+                      <Check className={cn('h-3.5 w-3.5', isChecked ? 'opacity-100' : 'opacity-0')} />
                     </div>
-                  </div>
+                  </button>
 
                   {/* Status Ribbon */}
                   <div className="absolute top-2 right-2 z-10">
                     <Badge
-                      variant={isDamaged ? 'destructive' : isLoaned ? 'default' : 'secondary'}
-                      className="text-[9px] font-black px-1.5 py-0.5 shadow-md capitalize"
+                      variant={isDamaged ? 'destructive' : isLoaned ? 'default' : needsProcessing ? 'outline' : 'secondary'}
+                      className={cn(
+                        'text-[9px] font-black px-1.5 py-0.5 shadow-md capitalize',
+                        needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+                      )}
                     >
-                      {isDamaged ? item.condition : isLoaned ? 'On loan' : 'Available'}
+                      {isDamaged ? item.condition : isLoaned ? 'On loan' : needsProcessing ? 'Needs Processing' : 'Available'}
                     </Badge>
                   </div>
 
@@ -152,16 +174,6 @@ export function LibraryBookPileGrid({
                       <span className="font-mono text-muted-foreground truncate text-[9px]">
                         {item.upc}
                       </span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDetails(item);
-                        }}
-                        className="text-[10px] font-bold text-primary hover:underline"
-                      >
-                        Details
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -410,11 +422,12 @@ export function LibraryBookPileGrid({
                   const isChecked = selected.has(copy.id);
                   const isLoaned = copy.status === 'checked_out';
                   const isDamaged = copy.condition === 'lost' || copy.condition === 'damaged';
+                  const needsProcessing = !copy.labeled || !copy.shelfLocation;
 
                   return (
                     <div
                       key={copy.id}
-                      onClick={() => onToggleSelect(copy.id)}
+                      onClick={() => onOpenDetails(copy)}
                       className={cn(
                         'group relative flex flex-col border bg-card overflow-hidden cursor-pointer select-none transition-all duration-200',
                         currentTheme.uiClasses.cardRadius,
@@ -441,16 +454,22 @@ export function LibraryBookPileGrid({
 
                         {/* Top Left: Select Checkbox & Copy Number Badge */}
                         <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5">
-                          <div
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleSelect(copy.id);
+                            }}
+                            aria-label={isChecked ? 'Deselect book' : 'Select book'}
                             className={cn(
-                              'flex h-5 w-5 items-center justify-center rounded-full transition-all shadow-md',
+                              'flex h-6 w-6 items-center justify-center rounded-full transition-all shadow-md',
                               isChecked
                                 ? 'bg-primary text-primary-foreground ring-2 ring-white scale-110'
-                                : 'bg-background/80 text-transparent hover:text-muted-foreground/50 hover:bg-background',
+                                : 'bg-background/80 text-transparent hover:text-foreground hover:bg-background',
                             )}
                           >
-                            <Check className={cn('h-3 w-3', isChecked ? 'opacity-100' : 'opacity-0')} />
-                          </div>
+                            <Check className={cn('h-3.5 w-3.5', isChecked ? 'opacity-100' : 'opacity-0')} />
+                          </button>
                           <Badge variant="outline" className="bg-background/95 font-mono text-[9px] font-bold shadow-xs">
                             #{copy.copyNumber || copyIdx + 1}
                           </Badge>
@@ -459,10 +478,13 @@ export function LibraryBookPileGrid({
                         {/* Top Right: Status Ribbon */}
                         <div className="absolute top-2 right-2 z-10">
                           <Badge
-                            variant={isDamaged ? 'destructive' : isLoaned ? 'default' : 'secondary'}
-                            className="text-[9px] font-black px-1.5 py-0.5 shadow-md capitalize"
+                            variant={isDamaged ? 'destructive' : isLoaned ? 'default' : needsProcessing ? 'outline' : 'secondary'}
+                            className={cn(
+                              'text-[9px] font-black px-1.5 py-0.5 shadow-md capitalize',
+                              needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+                            )}
                           >
-                            {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : 'Available'}
+                            {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : needsProcessing ? 'Needs Processing' : 'Available'}
                           </Badge>
                         </div>
 
@@ -496,16 +518,6 @@ export function LibraryBookPileGrid({
                             <span className="font-semibold text-amber-600 dark:text-amber-400 text-[9px]">
                               Book {copyIdx + 1} of {pile.copies.length}
                             </span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onOpenDetails(copy);
-                              }}
-                              className="text-[10px] font-bold text-primary hover:underline"
-                            >
-                              Details
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -532,21 +544,23 @@ export function LibraryBookPileGrid({
           const isChecked = selected.has(item.id);
           const isLoaned = item.status === 'checked_out';
           const isDamaged = item.condition === 'lost' || item.condition === 'damaged';
+          const needsProcessing = !item.labeled || !item.shelfLocation;
 
           return (
             <div
               key={item.id}
-              onClick={() => onToggleSelect(item.id)}
+              onClick={() => onOpenDetails(item)}
               className={cn(
                 'flex items-center gap-3 p-2.5 hover:bg-muted/30 transition-colors cursor-pointer select-none',
                 isChecked && 'bg-primary/10 font-medium',
               )}
             >
-              <Checkbox
-                checked={isChecked}
-                onCheckedChange={() => onToggleSelect(item.id)}
-                className="shrink-0"
-              />
+              <span onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={() => onToggleSelect(item.id)}
+                />
+              </span>
               <div className="h-10 w-7 shrink-0 overflow-hidden rounded-md border shadow-2xs">
                 <LibraryBookCover
                   showImage={showCoverImages}
@@ -570,22 +584,14 @@ export function LibraryBookPileGrid({
                   {item.shelfLocation || defaultShelf || 'Main Stacks'}
                 </span>
                 <Badge
-                  variant={isDamaged ? 'destructive' : isLoaned ? 'default' : 'secondary'}
-                  className="text-[10px] capitalize font-bold"
+                  variant={isDamaged ? 'destructive' : isLoaned ? 'default' : needsProcessing ? 'outline' : 'secondary'}
+                  className={cn(
+                    'text-[10px] capitalize font-bold',
+                    needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+                  )}
                 >
-                  {isDamaged ? item.condition : isLoaned ? 'On loan' : 'Available'}
+                  {isDamaged ? item.condition : isLoaned ? 'On loan' : needsProcessing ? 'Needs Processing' : 'Available'}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenDetails(item);
-                  }}
-                  className="h-7 text-xs font-bold text-primary"
-                >
-                  Details
-                </Button>
               </div>
             </div>
           );
@@ -712,21 +718,23 @@ export function LibraryBookPileGrid({
                 const isChecked = selected.has(copy.id);
                 const isLoaned = copy.status === 'checked_out';
                 const isDamaged = copy.condition === 'lost' || copy.condition === 'damaged';
+                const needsProcessing = !copy.labeled || !copy.shelfLocation;
 
                 return (
                   <div
                     key={copy.id}
-                    onClick={() => onToggleSelect(copy.id)}
+                    onClick={() => onOpenDetails(copy)}
                     className={cn(
                       'flex items-center gap-3 py-2 px-2 hover:bg-background/80 rounded-lg transition-colors cursor-pointer select-none',
                       isChecked && 'bg-primary/10 font-medium',
                     )}
                   >
-                    <Checkbox
-                      checked={isChecked}
-                      onCheckedChange={() => onToggleSelect(copy.id)}
-                      className="shrink-0"
-                    />
+                    <span onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => onToggleSelect(copy.id)}
+                      />
+                    </span>
                     <Badge variant="outline" className="font-mono text-[9px] font-bold shrink-0">
                       Copy #{copy.copyNumber || copyIdx + 1}
                     </Badge>
@@ -735,22 +743,14 @@ export function LibraryBookPileGrid({
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge
-                        variant={isDamaged ? 'destructive' : isLoaned ? 'default' : 'secondary'}
-                        className="text-[10px] capitalize font-bold"
+                        variant={isDamaged ? 'destructive' : isLoaned ? 'default' : needsProcessing ? 'outline' : 'secondary'}
+                        className={cn(
+                          'text-[10px] capitalize font-bold',
+                          needsProcessing && !isDamaged && !isLoaned && 'border-amber-500/60 bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+                        )}
                       >
-                        {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : 'Available'}
+                        {isDamaged ? copy.condition : isLoaned ? (copy.checkedOutTo ? `Loan: ${getName(copy.checkedOutTo)}` : 'On loan') : needsProcessing ? 'Needs Processing' : 'Available'}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDetails(copy);
-                        }}
-                        className="h-6 text-xs font-bold text-primary"
-                      >
-                        Details
-                      </Button>
                     </div>
                   </div>
                 );

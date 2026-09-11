@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
 import {
@@ -17,8 +17,10 @@ import {
   Download,
   ExternalLink,
   FileSpreadsheet,
+  BarChart3,
   FolderTree,
   Grid,
+  Home,
   Info,
   Layers,
   LayoutGrid,
@@ -49,6 +51,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,6 +73,7 @@ import {
 } from '@/lib/library/libraryOrganization';
 import { LibraryCheckoutDesk } from './LibraryCheckoutDesk';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
+import { LibraryTotalsStatCards } from './LibraryTotalsStatCards';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { LibraryBookCover } from './LibraryBookCover';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
@@ -81,6 +85,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
+import { LibraryReportsCard } from './LibraryReportsCard';
 import LevelUpLogoMark from '@/components/logos/Logo';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
@@ -140,6 +145,15 @@ export function LibraryWorkspace({
 
   // Navigation & View State
   const [tab, setTab] = useState('desk');
+  const playSound = useArcadeSound();
+  const navSoundEnabled = settings.libraryNavSoundEffects !== false;
+  const switchTab = useCallback(
+    (next: string) => {
+      if (navSoundEnabled) playSound('click');
+      setTab(next);
+    },
+    [navSoundEnabled, playSound],
+  );
   const libraryLayoutStyle = (settings.libraryLayoutStyle as 'sidebar' | 'hub') || 'sidebar';
   const [hubHome, setHubHome] = useState(libraryLayoutStyle === 'hub');
   // Settings hydrate asynchronously (localStorage/Firestore read happens after first render), so
@@ -156,15 +170,37 @@ export function LibraryWorkspace({
 
   // Support deep-linking to a specific station via ?tab=, the same convention the admin
   // dashboard uses — e.g. /schoolabc/library?tab=catalog opens straight to the Catalog.
+  // Note: useSearchParams() returns a new object identity on every render (not just when the
+  // query string actually changes), so both effects below compare real values rather than
+  // relying on a "did I just apply this" ref flag — that pattern silently self-defeats here.
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   useEffect(() => {
     const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
-    if (['desk', 'catalog', 'loans', 'settings', 'kiosk'].includes(rawTab)) {
+    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk'].includes(rawTab) && rawTab !== tab) {
       setTab(rawTab);
       setHubHome(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // Keep the address bar in sync as staff switch stations — mirrors the rest of the site
+  // (e.g. the admin dashboard's ?tab=) so each section is a real, shareable, reloadable URL.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const nextTab = libraryLayoutStyle === 'hub' && hubHome ? null : tab;
+    if (nextTab) {
+      if (params.get('tab') === nextTab) return;
+      params.set('tab', nextTab);
+    } else {
+      if (!params.has('tab')) return;
+      params.delete('tab');
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, hubHome, libraryLayoutStyle]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
@@ -204,6 +240,7 @@ export function LibraryWorkspace({
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [kioskHandoffStudentId, setKioskHandoffStudentId] = useState<string | null>(null);
   const [intakePrefillCode, setIntakePrefillCode] = useState<string | null>(null);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [shelfAuditOpen, setShelfAuditOpen] = useState(false);
@@ -253,7 +290,7 @@ export function LibraryWorkspace({
   );
   const historyQuery = useMemoFirebase(
     () =>
-      firestore && schoolId && allowed && tab === 'loans' && loanSubTab === 'history'
+      firestore && schoolId && allowed && ((tab === 'loans' && loanSubTab === 'history') || tab === 'reports')
         ? query(collection(firestore, 'schools', schoolId, 'libraryLoans'), orderBy('checkedOutAt', 'desc'), limit(200))
         : null,
     [firestore, schoolId, allowed, tab, loanSubTab],
@@ -262,7 +299,12 @@ export function LibraryWorkspace({
   const { data: items, isLoading: catalogLoading, error: catalogError } = useCollection<LibraryItem>(catalogQuery);
   const { data: students, isLoading: studentsLoading, error: studentsError } = useCollection<Student>(studentsQuery);
   const { data: classes } = useCollection<Class>(classesQuery);
-  const { data: loans, isLoading: historyLoading } = useCollection<LibraryLoan>(historyQuery);
+  // Don't let a permission error here crash the whole page — Loans History and Reports both
+  // degrade gracefully (see their render branches below) instead of tripping the app error boundary.
+  const { data: loans, isLoading: historyLoading, error: historyError } = useCollection<LibraryLoan>(
+    historyQuery,
+    { reportPermissionErrors: false },
+  );
 
   const studentsById = useMemo(() => new Map((students ?? []).map((s) => [s.id, s])), [students]);
   const getName = useCallback(
@@ -296,9 +338,10 @@ export function LibraryWorkspace({
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
     }
     if (labelFilter === 'labeled') {
-      list = list.filter((i) => Boolean(i.labeled));
+      // "Fully cataloged" — matches the Catalog card's own "Needs Processing" badge definition.
+      list = list.filter((i) => Boolean(i.labeled) && Boolean(i.shelfLocation));
     } else if (labelFilter === 'unlabeled') {
-      list = list.filter((i) => !i.labeled);
+      list = list.filter((i) => !i.labeled || !i.shelfLocation);
     }
 
     // Sort catalog
@@ -414,6 +457,10 @@ export function LibraryWorkspace({
 
   // Metrics
   const activeCopies = useMemo(() => (items ?? []).filter((i) => !i.archived), [items]);
+  const availableCopies = useMemo(
+    () => activeCopies.filter((i) => i.status === 'available' && (!i.condition || i.condition === 'good')),
+    [activeCopies],
+  );
   const activeLoans = useMemo(() => activeCopies.filter((i) => i.status === 'checked_out'), [activeCopies]);
   const overdueLoans = useMemo(
     () => activeLoans.filter((i) => i.dueAt && computeDaysOverdue(i.dueAt) > 0),
@@ -665,12 +712,15 @@ export function LibraryWorkspace({
       <LibraryPortalHub
         schoolName={schoolName}
         overdueCount={overdueLoans.length}
+        catalogCount={activeCopies.length}
         backToPortalHref={backToPortalHref}
         onSelect={(nextTab) => {
+          if (navSoundEnabled) playSound('click');
           setTab(nextTab);
           setHubHome(false);
         }}
         onOpenSettings={() => {
+          if (navSoundEnabled) playSound('click');
           setTab('settings');
           setHubHome(false);
         }}
@@ -695,14 +745,28 @@ export function LibraryWorkspace({
       {libraryLayoutStyle === 'hub' ? (
         /* Compact back-bar replacing the sidebar/tab nav when using the Portal Hub layout:
            just the three destinations, centered and larger — active shown by color alone. */
-        <div className="w-full border-b border-border/70 bg-card/60 backdrop-blur-md px-3 sm:px-6 py-3 flex items-center justify-between gap-3">
-          <Link
-            href={backToPortalHref}
-            title="Back to LevelUp"
-            className="h-9 w-9 rounded-xl border border-border/70 flex items-center justify-center overflow-hidden p-1.5 transition-all hover:border-primary/50 shrink-0"
-          >
-            <LevelUpLogoMark className="h-full w-full" />
-          </Link>
+        <div className={cn('w-full border-b backdrop-blur-md px-3 sm:px-6 py-3 flex items-center justify-between gap-3', currentTheme.classes.header)}>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link
+              href={backToPortalHref}
+              title="Back to LevelUp"
+              className="h-9 w-9 rounded-xl border border-border/70 flex items-center justify-center overflow-hidden p-1.5 transition-all hover:border-primary/50 shrink-0"
+            >
+              <LevelUpLogoMark className="h-full w-full" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                if (navSoundEnabled) playSound('click');
+                setHubHome(true);
+              }}
+              title="Library Home"
+              aria-label="Library Home"
+              className="h-9 w-9 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground transition-all hover:border-primary/50 hover:text-primary shrink-0"
+            >
+              <Home className="h-4 w-4" />
+            </button>
+          </div>
 
           <div className="flex items-center gap-3 sm:gap-8">
             {(
@@ -715,7 +779,7 @@ export function LibraryWorkspace({
               <button
                 key={id}
                 type="button"
-                onClick={() => setTab(id)}
+                onClick={() => switchTab(id)}
                 className={cn(
                   'flex items-center gap-2 py-1.5 text-sm sm:text-base font-black tracking-tight transition-colors',
                   // Loans & Notices lives inside Catalog now, so keep Catalog lit up while viewing it.
@@ -730,7 +794,7 @@ export function LibraryWorkspace({
 
           <button
             type="button"
-            onClick={() => setTab('settings')}
+            onClick={() => switchTab('settings')}
             title="Policies & Settings"
             aria-label="Policies & Settings"
             className={cn(
@@ -778,7 +842,7 @@ export function LibraryWorkspace({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setTab('kiosk')}
+                onClick={() => switchTab('kiosk')}
                 className={cn(
                   'h-8 rounded-xl px-3.5 text-xs font-bold gap-1.5 shadow-xs transition-all',
                   tab === 'kiosk'
@@ -799,6 +863,7 @@ export function LibraryWorkspace({
                 { id: 'kiosk', label: 'Kiosk Mode' },
                 { id: 'catalog', label: 'Catalog' },
                 { id: 'loans', label: 'Loans & Notices', alertBadge: overdueLoans.length },
+                { id: 'reports', label: 'Reports' },
                 { id: 'settings', label: 'Policies & Settings' },
               ].map(({ id, label, alertBadge }) => {
                 const active = tab === id;
@@ -806,7 +871,7 @@ export function LibraryWorkspace({
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setTab(id)}
+                    onClick={() => switchTab(id)}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl transition-all',
                       active
@@ -869,7 +934,7 @@ export function LibraryWorkspace({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setTab('kiosk')}
+                onClick={() => switchTab('kiosk')}
                 className={cn(
                   'h-8 rounded-full px-3.5 text-xs font-black uppercase tracking-wider gap-1.5 shadow-xs transition-all font-serif',
                   tab === 'kiosk'
@@ -891,6 +956,7 @@ export function LibraryWorkspace({
                 { id: 'kiosk', label: 'KIOSK (CHECK IN / OUT)' },
                 { id: 'catalog', label: 'CATALOG' },
                 { id: 'loans', label: overdueLoans.length > 0 ? `LOANS & NOTICES (${overdueLoans.length})` : 'LOANS & NOTICES' },
+                { id: 'reports', label: 'REPORTS' },
                 { id: 'settings', label: 'POLICIES & SETTINGS' },
               ].map(({ id, label }) => {
                 const active = tab === id;
@@ -898,7 +964,7 @@ export function LibraryWorkspace({
                   <button
                     key={id}
                     type="button"
-                    onClick={() => setTab(id)}
+                    onClick={() => switchTab(id)}
                     className={cn(
                       'pb-3 pt-1 text-xs font-black uppercase tracking-wider transition-colors relative whitespace-nowrap',
                       active
@@ -963,6 +1029,7 @@ export function LibraryWorkspace({
                   { id: 'kiosk', label: 'Kiosk Mode', icon: Monitor },
                   { id: 'catalog', label: 'Catalog', icon: BookOpen },
                   { id: 'loans', label: 'Loans & Notices', alertBadge: overdueLoans.length, icon: Clock },
+                  { id: 'reports', label: 'Reports', icon: BarChart3 },
                   { id: 'settings', label: 'Policies & Settings', icon: Settings },
                 ].map(({ id, label, alertBadge, icon: StationIcon }) => {
                   const active = tab === id;
@@ -970,7 +1037,7 @@ export function LibraryWorkspace({
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setTab(id)}
+                      onClick={() => switchTab(id)}
                       className={cn(
                         'group relative flex items-center gap-3 px-3.5 py-2.5 text-left transition-all w-full text-xs font-bold rounded-xl',
                         active
@@ -1024,17 +1091,13 @@ export function LibraryWorkspace({
               students={students}
               categories={categories}
               getStudentName={getName}
-              copiesCount={activeCopies.length}
-              activeLoansCount={activeLoans.length}
-              overdueLoansCount={overdueLoans.length}
-              onSwitchToKiosk={() => setTab('kiosk')}
+              onSwitchToKiosk={(studentId) => {
+                setKioskHandoffStudentId(studentId ?? null);
+                setTab('kiosk');
+              }}
               onViewCatalog={(statusFilter) => {
                 if (statusFilter) setStatus(statusFilter);
                 setTab('catalog');
-              }}
-              onViewLoans={(subTab) => {
-                setLoanSubTab(subTab);
-                setTab('loans');
               }}
               onOpenIntake={(code) => {
                 setIntakePrefillCode(code ?? null);
@@ -1053,39 +1116,6 @@ export function LibraryWorkspace({
         {/* 2. KIOSK MODE TAB (Check-in & Check-out Station) */}
         {tab === 'kiosk' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                  <Monitor className="h-5 w-5" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-base text-foreground flex items-center gap-2">
-                    Circulation Kiosk Station
-                    <Badge variant="secondary" className="text-[10px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                      Active
-                    </Badge>
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Students scan badges, select their name, borrow books, or return items to the drop box.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  asChild
-                  className="rounded-xl h-9 gap-1.5 text-xs font-bold border-primary/30 text-primary hover:bg-primary/10"
-                >
-                  <Link href={`/${schoolId}/library/kiosk`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    <span>Launch Fullscreen Kiosk</span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
             <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden shadow-xs min-h-[640px]">
               {schoolId ? (
                 <LibraryStudentSelfCheckoutPortal
@@ -1094,6 +1124,8 @@ export function LibraryWorkspace({
                   getStudentName={getName}
                   students={students}
                   embedded
+                  initialStudentId={kioskHandoffStudentId}
+                  onInitialStudentConsumed={() => setKioskHandoffStudentId(null)}
                 />
               ) : (
                 <div className="flex items-center justify-center py-20 text-muted-foreground">
@@ -1108,6 +1140,26 @@ export function LibraryWorkspace({
         {/* 2. CATALOG & INVENTORY TAB */}
         {tab === 'catalog' && (
           <div className="space-y-4 animate-in fade-in duration-200">
+            {(settings.libraryDeskShowTotals ?? true) && (
+              <LibraryTotalsStatCards
+                copiesCount={activeCopies.length}
+                availableCopiesCount={availableCopies.length}
+                activeLoansCount={activeLoans.length}
+                overdueLoansCount={overdueLoans.length}
+                animated={settings.libraryDeskTotalsAnimated ?? true}
+                isNightDesk={isNightDesk}
+                isReadingRoom={isReadingRoom}
+                currentTheme={currentTheme}
+                onViewCatalog={(statusFilter) => {
+                  setStatus(statusFilter ?? 'all');
+                  setPage(1);
+                }}
+                onViewLoans={(subTab) => {
+                  setLoanSubTab(subTab);
+                  switchTab('loans');
+                }}
+              />
+            )}
             {/* Catalog Top Header Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
@@ -1127,7 +1179,7 @@ export function LibraryWorkspace({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setTab('loans')}
+                    onClick={() => switchTab('loans')}
                     className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -1137,6 +1189,17 @@ export function LibraryWorkspace({
                         {overdueLoans.length}
                       </Badge>
                     )}
+                  </Button>
+                )}
+                {libraryLayoutStyle === 'hub' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => switchTab('reports')}
+                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    <span>Reports</span>
                   </Button>
                 )}
                 <DropdownMenu>
@@ -1211,88 +1274,7 @@ export function LibraryWorkspace({
             )}
 
             {/* Consolidated Filter & View Toolbar */}
-            <div className="rounded-2xl border border-border/80 bg-card p-3.5 shadow-xs space-y-3">
-              {/* Top Row: View Mode Switcher + Search + Filters */}
-              <div className="flex flex-wrap items-center justify-between gap-2.5">
-                {/* Catalog Presentation Mode Switcher */}
-                <div className="inline-flex rounded-xl border border-border/80 bg-muted/40 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogPresentation('scheme');
-                      setPage(1);
-                    }}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                      catalogPresentation === 'scheme'
-                        ? 'bg-background text-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <FolderTree className="h-3.5 w-3.5 text-primary" />
-                    <span>Organized Hierarchy</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogPresentation('grouped');
-                      setPage(1);
-                    }}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                      catalogPresentation === 'grouped'
-                        ? 'bg-background text-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                    <span>Group Titles</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCatalogPresentation('copies');
-                      setPage(1);
-                    }}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                      catalogPresentation === 'copies'
-                        ? 'bg-background text-foreground shadow-xs'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <Layers className="h-3.5 w-3.5 text-emerald-600" />
-                    <span>All Copies</span>
-                  </button>
-                </div>
-
-                {/* Grid vs List toggle for copies/scheme views */}
-                <div className="flex items-center rounded-xl border border-border/70 p-0.5 bg-muted/40">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('grid')}
-                    title="Cover Showcase Grid"
-                    className={cn(
-                      'p-1.5 rounded-lg transition-all',
-                      viewMode === 'grid' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <Grid className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('list')}
-                    title="Detailed Data Table"
-                    className={cn(
-                      'p-1.5 rounded-lg transition-all',
-                      viewMode === 'list' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
-                    )}
-                  >
-                    <List className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
+            <div className={cn('rounded-2xl p-3.5 shadow-xs space-y-3 border', currentTheme.classes.card)}>
               {/* Filter controls row: search always visible, extra filters collapse behind "More filters" */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative min-w-52 flex-1">
@@ -1400,8 +1382,8 @@ export function LibraryWorkspace({
                     }}
                   >
                     <option value="all">All Labels</option>
-                    <option value="labeled">🏷️ Labeled</option>
-                    <option value="unlabeled">⚠️ Needs Label (Unlabeled)</option>
+                    <option value="labeled">🏷️ Fully Cataloged</option>
+                    <option value="unlabeled">⚠️ Needs Processing</option>
                   </select>
                 </div>
               )}
@@ -1479,7 +1461,7 @@ export function LibraryWorkspace({
                     <span className="text-muted-foreground/40">·</span>
                     <button
                       type="button"
-                      onClick={() => setTab('settings')}
+                      onClick={() => switchTab('settings')}
                       className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1"
                     >
                       <Settings className="h-3 w-3" />
@@ -1498,7 +1480,7 @@ export function LibraryWorkspace({
                   </div>
                 ) : (
                   <span className="italic hidden sm:inline text-muted-foreground/80">
-                    💡 Click any book card to select it and reveal options (Print Labels, Assign Shelf, Lend, Edit)
+                    💡 Click a book to view its details. Use the checkbox to select copies for Print Labels, Assign Shelf, or other bulk actions.
                   </span>
                 )}
                 <span>
@@ -1702,6 +1684,87 @@ export function LibraryWorkspace({
               </div>
             )}
 
+            {/* Book view switcher — placed just above the grid, per feedback that it was too high up */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
+              {/* Catalog Presentation Mode Switcher */}
+              <div className="inline-flex rounded-xl border border-border/80 bg-muted/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCatalogPresentation('scheme');
+                    setPage(1);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
+                    catalogPresentation === 'scheme'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <FolderTree className="h-3.5 w-3.5 text-primary" />
+                  <span>Organized Hierarchy</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCatalogPresentation('grouped');
+                    setPage(1);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
+                    catalogPresentation === 'grouped'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <BookOpen className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Group Titles</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCatalogPresentation('copies');
+                    setPage(1);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
+                    catalogPresentation === 'copies'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Layers className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>All Copies</span>
+                </button>
+              </div>
+
+              {/* Grid vs List toggle for copies/scheme views */}
+              <div className="flex items-center rounded-xl border border-border/70 p-0.5 bg-muted/40">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  title="Cover Showcase Grid"
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all',
+                    viewMode === 'grid' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Grid className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  title="Detailed Data Table"
+                  className={cn(
+                    'p-1.5 rounded-lg transition-all',
+                    viewMode === 'list' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
             {/* PRESENTATION MODE 1: ORGANIZED HIERARCHY SCHEME VIEW */}
             {catalogPresentation === 'scheme' && (
               <div className="space-y-6">
@@ -1720,7 +1783,8 @@ export function LibraryWorkspace({
                       <div
                         key={primaryGroup.key}
                         className={cn(
-                          'rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs space-y-0 transition-all',
+                          'overflow-hidden shadow-xs space-y-0 transition-all border',
+                          currentTheme.classes.card,
                           currentTheme.uiClasses.cardRadius
                         )}
                       >
@@ -1809,6 +1873,9 @@ export function LibraryWorkspace({
                                   currentTheme={currentTheme}
                                   viewMode={viewMode}
                                   defaultShelf={primaryGroup.shelfLocation}
+                                  getGenreColor={(item) =>
+                                    resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation).color
+                                  }
                                 />
                               </div>
                             ))}
@@ -1838,6 +1905,9 @@ export function LibraryWorkspace({
                 getName={getName}
                 currentTheme={currentTheme}
                 viewMode={viewMode}
+                getGenreColor={(item) =>
+                  resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation).color
+                }
               />
             )}
 
@@ -1850,7 +1920,7 @@ export function LibraryWorkspace({
                   return (
                     <div
                       key={group.key}
-                      className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm space-y-3 transition-all"
+                      className={cn('rounded-2xl p-4 shadow-sm space-y-3 transition-all border', currentTheme.classes.card)}
                     >
                       <div className="flex items-start gap-4">
                         <div className="h-20 w-14 shrink-0 overflow-hidden rounded-xl border shadow-xs">
@@ -2049,7 +2119,7 @@ export function LibraryWorkspace({
             </div>
 
             {/* Sub-Tabs & Filters Toolbar */}
-            <div className="rounded-2xl border border-border/80 bg-card p-3 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className={cn('rounded-2xl p-3 shadow-xs flex flex-wrap items-center justify-between gap-3 border', currentTheme.classes.card)}>
               <div className="inline-flex rounded-xl border border-border/70 bg-muted/30 p-0.5">
                 <button
                   type="button"
@@ -2117,7 +2187,7 @@ export function LibraryWorkspace({
 
             {/* Loans Table / Cards */}
             {loanSubTab !== 'history' ? (
-              <div className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm divide-y">
+              <div className={cn('rounded-3xl overflow-hidden shadow-sm divide-y border', currentTheme.classes.card)}>
                 {filteredLoans.length === 0 ? (
                   <div className="p-12 text-center text-sm text-muted-foreground space-y-2">
                     <Clock className="mx-auto h-8 w-8 opacity-40" />
@@ -2186,8 +2256,14 @@ export function LibraryWorkspace({
                 )}
               </div>
             ) : (
-              <div className="rounded-3xl border border-border/80 bg-card overflow-hidden shadow-sm divide-y">
-                {filteredHistory.length === 0 ? (
+              <div className={cn('rounded-3xl overflow-hidden shadow-sm divide-y border', currentTheme.classes.card)}>
+                {historyError ? (
+                  <div className="p-12 text-center text-sm text-muted-foreground space-y-1">
+                    <AlertCircle className="mx-auto h-8 w-8 opacity-40 text-amber-600" />
+                    <p className="font-semibold text-foreground">Couldn&rsquo;t load loan history.</p>
+                    <p>Your session may not currently have staff access — try signing in again.</p>
+                  </div>
+                ) : filteredHistory.length === 0 ? (
                   <div className="p-12 text-center text-sm text-muted-foreground">
                     No past loan history recorded yet.
                   </div>
@@ -2209,6 +2285,26 @@ export function LibraryWorkspace({
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Circulation Reports — stats + charts, read-only overview for the librarian */}
+        {tab === 'reports' && (
+          <div className="space-y-4 animate-in fade-in duration-200">
+            <div>
+              <h2 className="text-lg sm:text-xl font-black tracking-tight text-foreground">Reports &amp; Circulation</h2>
+              <p className="text-xs text-muted-foreground">
+                A visual overview of borrowing activity, cataloging progress, and what&rsquo;s popular right now.
+              </p>
+            </div>
+            <LibraryReportsCard
+              items={items ?? []}
+              loans={loans ?? []}
+              loansUnavailable={Boolean(historyError)}
+              activeLoansCount={activeLoans.length}
+              overdueLoansCount={overdueLoans.length}
+              genreDefinitions={settings.libraryGenreDefinitions}
+            />
           </div>
         )}
 
@@ -2262,6 +2358,7 @@ export function LibraryWorkspace({
           item={editing}
           onSave={save}
           onAddCopy={handleAddAnotherCopy}
+          getStudentName={getName}
           onDelete={async (itemToDelete) => {
             await itemAction(itemToDelete, 'delete');
           }}
