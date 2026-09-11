@@ -6,6 +6,12 @@ on:
       - main
   workflow_dispatch:
 
+# Preview channels update the same framework backend. Queue both workflows.
+concurrency:
+  group: firebase-frameworks-studio-1273073612-71183
+  cancel-in-progress: false
+  queue: max
+
 permissions:
   contents: read
   # Needed to upload firebase-debug.log when deploy fails.
@@ -94,6 +100,7 @@ jobs:
             --project studio-1273073612-71183 \
             --non-interactive \
             --force 2>&1 | tee firebase-debug.log
+          node scripts/assert-firebase-release.cjs firebase-debug.log
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
