@@ -74,6 +74,7 @@ export default function ClassroomRealmSetupPage() {
           title="Change the classroom look"
           subtitle="Tap a color card to restyle this space. The setup wizard below is only if you still need seating and awards."
           icon={Palette}
+          iconLayoutId="classroom-realm-manage-setup"
         />
 
         {!classroomOn ? (

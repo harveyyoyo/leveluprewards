@@ -50,6 +50,7 @@ import { endBathroomPass } from '@/lib/db/bathroom';
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import { buildClassroomFullscreenUrl } from '@/lib/classroomPointsUrl';
+import { buildClassroomPairPath } from '@/lib/classroom/classroomScreenPairUrl';
 import {
   CLASSROOM_REALM_THEMES,
   resolveClassroomRealmTheme,
@@ -246,7 +247,12 @@ export function ClassroomCommandCenter({
     audience: 'teacher',
   });
 
-  const studentMirrorUrl = `/${schoolId}/classroom-screen?classId=${encodeURIComponent(selectedClassId)}`;
+  const studentMirrorUrl = buildClassroomPairPath({
+    schoolId,
+    classId: selectedClassId,
+    scope: seatingScope,
+    target: 'mirror',
+  });
 
   const currentTheme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
 
@@ -558,6 +564,7 @@ export function ClassroomCommandCenter({
         schoolId={schoolId}
         classId={selectedClassId}
         classNameLabel={activeClass?.name || 'Classroom'}
+        scope={seatingScope}
       />
 
       {/* RANDOM STUDENT SPOTLIGHT MODAL */}

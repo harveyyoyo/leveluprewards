@@ -17,12 +17,14 @@ export function ClassroomRealmPageHeader({
   title,
   subtitle,
   icon: Icon,
+  iconLayoutId,
   children,
 }: {
   eyebrow?: string;
   title: string;
   subtitle?: string;
   icon?: LucideIcon;
+  iconLayoutId?: string;
   children?: ReactNode;
 }) {
   return (
@@ -41,12 +43,13 @@ export function ClassroomRealmPageHeader({
         </p>
         <div className="flex items-center gap-3">
           {Icon ? (
-            <div
+            <motion.div
+              layoutId={iconLayoutId}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-lg shadow-black/30"
               style={CLASSROOM_REALM_ACCENT_BUTTON}
             >
               <Icon className="h-5 w-5" aria-hidden />
-            </div>
+            </motion.div>
           ) : null}
           <motion.h1
             layoutId="classroom-realm-title"

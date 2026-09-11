@@ -1,10 +1,34 @@
 'use client';
 
-import { ClassroomCommandCenter, type ClassroomWorkbenchTab } from '@/components/classroom/ClassroomCommandCenter';
-import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
+import { useDeferredValue, useEffect, useMemo } from 'react';
+import { useAppContext } from '@/components/AppProvider';
+import { useFirebase, useFirestore } from '@/firebase';
+import { prefetchBehaviorNotes } from '@/lib/classroom/behaviorNotesClient';
+import { ensureDeveloperSchoolAccess } from '@/lib/classroom/ensureDeveloperSchoolAccess';
+import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import {
+  buildClassroomSections,
+  CLASSROOM_TAB_LABEL,
+  type ClassroomTabSection,
+} from '@/lib/classroom/classroomTabSections';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { isClassroomPillarOn, isParentPortalOn } from '@/lib/productPillars';
+import { ClassroomSetupWizardTrigger } from '@/app/[schoolId]/admin/sections/ClassroomSetupWizard';
+import { AdminRaffleTab } from '@/app/[schoolId]/admin/sections/AdminRaffleTab';
+import { ClassAwardsLiveSettingsSection } from '@/components/classroom/ClassAwardsLiveSettingsSection';
+import { ClassroomManagementHelpWizard } from '@/components/classroom/ClassroomManagementHelpWizard';
+import { ClassroomRoomDisplaySection } from '@/components/classroom/ClassroomRoomDisplaySection';
+import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
+import { Card, CardContent } from '@/components/ui/card';
+import { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
 import type { Category, Class, Student } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import type { StaffPointsTabVariant } from '@/components/points/StaffPointsTab';
-import type { ManualPointsAwardDialog } from '@/components/points/ManualPointsAwardDialog';
+import { ClassroomTabLayout } from '@/components/points/ClassroomTabLayout';
+import { BehaviorTimelinePanel } from '@/components/classroom/BehaviorTimelinePanel';
+
+const CLASSROOM_SECTION_CARD =
+  'w-full overflow-visible border-t-4 border-violet-500 bg-background shadow-md';
 
 export type StaffClassroomTabProps = {
   variant: StaffPointsTabVariant;
@@ -28,32 +52,165 @@ export type StaffClassroomTabProps = {
 export function StaffClassroomTab({
   variant,
   schoolId,
-  categories,
+  categories: _categories,
   classes,
   students,
   managerTeacherId,
-  initialSection,
+  schoolWideAccess: _schoolWideAccess = false,
+  isGraphic: _isGraphic,
   className,
+  manualAccentColor: _manualAccentColor,
+  manualBudgetOptions: _manualBudgetOptions,
+  initialSection,
+  canEditRaffleSettings = true,
+  raffleOperatorName,
+  realmMode = false,
 }: StaffClassroomTabProps) {
-  const mapSectionToTab: Record<ClassroomTabSection, ClassroomWorkbenchTab> = {
-    seating: 'seating',
-    behavior: 'behavior',
-    'room-display': 'display',
-    raffle: 'seating',
-  };
+  const deferredStudents = useDeferredValue(students ?? []);
+  const { loginState } = useAppContext();
+  const { user } = useFirebase();
+  const firestore = useFirestore();
+  const { settings, updateSettings } = useSettings();
+  const classroomOn = isClassroomPillarOn(settings);
+  const isAdminVariant = variant === 'admin';
+  const canEditClassroomSetup = classroomOn;
+  const canEnableClassroomPillar = isAdminVariant;
+  const parentPortalOn = isParentPortalOn(settings);
+  const principalTimelineOn = settings.enablePrincipalBehaviorTimeline === true;
 
-  const initialTab = initialSection ? mapSectionToTab[initialSection] : 'seating';
+  useEffect(() => {
+    if (!classroomOn || !schoolId) return;
+    if (loginState !== 'developer' && loginState !== 'admin') return;
+    if (!isAllowedDeveloperGoogleUser(user)) return;
+    void ensureDeveloperSchoolAccess(schoolId).catch(() => {
+      /* save path retries provisioning */
+    });
+  }, [classroomOn, loginState, schoolId, user]);
+
+  useEffect(() => {
+    if (!classroomOn || !schoolId) return;
+    prefetchBehaviorNotes(schoolId, firestore);
+  }, [classroomOn, schoolId, firestore]);
+
+  const sortedClasses = useMemo(
+    () => (classes ?? []).slice().sort((a, b) => a.name.localeCompare(b.name)),
+    [classes],
+  );
+  const seatingScope = managerTeacherId ?? (isAdminVariant ? 'admin' : 'staff');
+
+  const sections = useMemo(
+    () => buildClassroomSections(settings, isAdminVariant ? 'admin' : 'teacher'),
+    [settings, isAdminVariant],
+  );
+
+  const classAwardsLiveContent = useMemo(
+    () => (
+      <ClassAwardsLiveSettingsSection
+        schoolId={schoolId}
+        seatingScope={seatingScope}
+        classes={sortedClasses}
+        settings={settings}
+        updateSettings={updateSettings}
+        canEdit={canEditClassroomSetup}
+        parentPortalOn={parentPortalOn}
+        principalTimelineOn={principalTimelineOn}
+      />
+    ),
+    [
+      schoolId,
+      seatingScope,
+      sortedClasses,
+      settings,
+      updateSettings,
+      canEditClassroomSetup,
+      parentPortalOn,
+      principalTimelineOn,
+    ],
+  );
+
+  const behaviorContent = useMemo(
+    () => (
+      <BehaviorTimelinePanel
+        schoolId={schoolId}
+        refreshToken={0}
+        embedded
+        mode="behavior"
+      />
+    ),
+    [schoolId],
+  );
+
+  const roomDisplayContent = useMemo(
+    () => (
+      <ClassroomRoomDisplaySection
+        schoolId={schoolId}
+        scope={seatingScope}
+        classes={sortedClasses}
+        students={deferredStudents}
+      />
+    ),
+    [schoolId, seatingScope, sortedClasses, deferredStudents],
+  );
+
+  const raffleContent = useMemo(
+    () => (
+      <AdminRaffleTab
+        embedded
+        schoolId={schoolId}
+        students={deferredStudents}
+        classes={sortedClasses}
+        canEditSettings={canEditRaffleSettings}
+        operatorName={raffleOperatorName}
+      />
+    ),
+    [schoolId, deferredStudents, sortedClasses, canEditRaffleSettings, raffleOperatorName],
+  );
+
+  const defaultSection = useMemo(() => {
+    if (initialSection && sections.includes(initialSection)) return initialSection;
+    return 'seating';
+  }, [initialSection, sections]);
+
+  const headerAction = useMemo(
+    () => <ClassroomManagementHelpWizard sections={sections} />,
+    [sections],
+  );
+
+  if (!classroomOn) {
+    return (
+      <StaffPortalTabPanel tabValue="classroom" className={className}>
+        <Card className={cn(CLASSROOM_SECTION_CARD, 'rounded-2xl border border-border/60 border-t-0 shadow-sm')}>
+          <CardContent className="space-y-4 p-4 sm:p-6">
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              {canEnableClassroomPillar
+                ? `${CLASSROOM_TAB_LABEL} is not enabled. Run the setup wizard to turn on seating charts and quick awards for teachers.`
+                : `${CLASSROOM_TAB_LABEL} is not enabled for your school yet. Ask a school administrator to turn it on.`}
+            </p>
+            {canEnableClassroomPillar ? (
+              <ClassroomSetupWizardTrigger
+                schoolId={schoolId}
+                classes={sortedClasses}
+                students={students ?? []}
+                updateSettings={updateSettings}
+              />
+            ) : null}
+          </CardContent>
+        </Card>
+      </StaffPortalTabPanel>
+    );
+  }
 
   return (
-    <ClassroomCommandCenter
-      schoolId={schoolId}
-      categories={categories}
-      classes={classes}
-      students={students}
-      variant={variant === 'admin' ? 'admin' : 'teacher'}
-      activeTeacherId={managerTeacherId}
-      initialTab={initialTab}
+    <ClassroomTabLayout
       className={className}
+      defaultSection={defaultSection}
+      sections={sections}
+      headerAction={headerAction}
+      realmMode={realmMode}
+      seatingContent={classAwardsLiveContent}
+      behaviorContent={behaviorContent}
+      roomDisplayContent={roomDisplayContent}
+      raffleContent={raffleContent}
     />
   );
 }

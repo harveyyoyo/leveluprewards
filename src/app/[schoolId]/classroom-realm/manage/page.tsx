@@ -74,6 +74,7 @@ export default function ClassroomRealmManagePage() {
           title={CLASSROOM_SECTION_LABELS[initialSection]}
           subtitle="Seating, notes, room display, and raffle — the tools you use between live sessions."
           icon={SectionIcon}
+          iconLayoutId={`classroom-realm-manage-${initialSection}`}
         />
 
         <motion.div

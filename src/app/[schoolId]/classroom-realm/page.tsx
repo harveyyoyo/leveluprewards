@@ -12,9 +12,11 @@ import {
   ClassroomRealmPanel,
 } from '@/components/classroom/ClassroomRealmChrome';
 import { ClassroomRealmThemePicker } from '@/components/classroom/ClassroomRealmThemePicker';
+import { ClassroomTeachNowDock } from '@/components/classroom/ClassroomTeachNowDock';
 import { classroomRealmHref, classroomRealmManageHref } from '@/lib/classroomRealmUrl';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAppContext } from '@/components/AppProvider';
+import { useClassroomRealmRoster } from '@/hooks/useClassroomRealmRoster';
 import { isClassroomPillarOn } from '@/lib/productPillars';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import {
@@ -32,12 +34,14 @@ const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 
 const featured = [
   {
+    id: 'live',
     title: 'Live monitor',
     desc: 'Fullscreen awards on your projector or smart board. Tap a student, give points, keep teaching.',
     href: (schoolId: string) => classroomRealmHref(schoolId, 'live'),
     icon: LayoutGrid,
   },
   {
+    id: 'screen',
     title: 'Class screen',
     desc: 'The student-facing mirror — seating and points only, no behavior notes.',
     href: (schoolId: string) => classroomRealmHref(schoolId, 'class-screen'),
@@ -47,18 +51,21 @@ const featured = [
 
 const tools = [
   {
+    id: 'seating',
     title: 'Awards & seating',
     desc: 'Charts, quick awards, and live settings.',
     href: (schoolId: string) => classroomRealmManageHref(schoolId, 'seating'),
     icon: Monitor,
   },
   {
+    id: 'behavior',
     title: 'Behavior',
     desc: 'Notes and timeline for the class.',
     href: (schoolId: string) => classroomRealmManageHref(schoolId, 'behavior'),
     icon: BookOpenCheck,
   },
   {
+    id: 'setup',
     title: 'More setup',
     desc: 'Seating wizard and extra classroom options.',
     href: (schoolId: string) => classroomRealmHref(schoolId, 'setup'),
@@ -83,6 +90,7 @@ export default function ClassroomRealmHomePage() {
   const classroomOn = isClassroomPillarOn(settings);
   const theme = resolveClassroomRealmTheme(settings.classroomRealmTheme);
   const isStaff = canAccessHallOfFameRoute(loginState);
+  const roster = useClassroomRealmRoster(schoolId);
   const keepHubRef = useRef(false);
 
   if (shouldLatchClassroomRealmHub(classroomOn)) {
@@ -157,6 +165,26 @@ export default function ClassroomRealmHomePage() {
           </Button>
         </ClassroomRealmHero>
 
+        {isStaff && roster.canReadRoster ? (
+          <ClassroomTeachNowDock
+            schoolId={schoolId}
+            classes={roster.classes}
+            students={roster.students}
+            variant={roster.variant}
+            activeTeacherId={roster.activeTeacherId}
+            className="mb-8"
+          />
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={spring}
+            className="mx-auto mb-8 max-w-5xl px-6 text-center text-sm text-white/50"
+          >
+            Sign in as teacher or admin to pick a student, time bathroom passes, and pair a TV.
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -190,12 +218,13 @@ export default function ClassroomRealmHomePage() {
                   href={card.href(schoolId)}
                   className="group flex h-full flex-col rounded-3xl border border-white/12 bg-white/[0.06] p-7 backdrop-blur-md transition-transform hover:-translate-y-1 hover:border-white/25 hover:bg-white/[0.09]"
                 >
-                  <div
+                  <motion.div
+                    layoutId={`classroom-realm-launch-${card.id}`}
                     className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl shadow-lg"
                     style={CLASSROOM_REALM_ACCENT_BUTTON}
                   >
                     <Icon className="h-7 w-7" aria-hidden />
-                  </div>
+                  </motion.div>
                   <h2 className="mb-2 font-serif text-2xl font-bold text-white">{card.title}</h2>
                   <p className="mb-6 flex-1 text-sm leading-relaxed text-white/55">{card.desc}</p>
                   <span
@@ -228,7 +257,9 @@ export default function ClassroomRealmHomePage() {
                   href={card.href(schoolId)}
                   className="group flex h-full flex-col rounded-3xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur-md transition-transform hover:-translate-y-1 hover:border-white/20 hover:bg-white/[0.07]"
                 >
-                  <Icon className="mb-3 h-5 w-5" style={{ color: 'var(--cr-accent-text)' }} aria-hidden />
+                  <motion.span layoutId={`classroom-realm-manage-${card.id === 'setup' ? 'setup' : card.id}`}>
+                    <Icon className="mb-3 h-5 w-5" style={{ color: 'var(--cr-accent-text)' }} aria-hidden />
+                  </motion.span>
                   <h2 className="mb-1 font-serif text-lg font-bold text-white">{card.title}</h2>
                   <p className="text-sm leading-relaxed text-white/50">{card.desc}</p>
                 </Link>
