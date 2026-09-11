@@ -598,46 +598,6 @@
           document.documentElement.classList.add("embed");
       } catch (_) {}
     </script>
-    <style id="interactive-list-link-style">
-      .interactive-list-link {
-        position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 10000;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 9px 13px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(3, 6, 15, 0.86);
-        color: #eaf0ff;
-        font:
-          800 12px/1.1 system-ui,
-          -apple-system,
-          Segoe UI,
-          sans-serif;
-        letter-spacing: 0.01em;
-        text-decoration: none;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(14px);
-      }
-
-      .interactive-list-link:hover {
-        border-color: rgba(34, 211, 238, 0.5);
-        color: #ffffff;
-      }
-
-      html.embed .interactive-list-link {
-        display: none !important;
-      }
-
-      @media print {
-        .interactive-list-link {
-          display: none !important;
-        }
-      }
-    </style>
     <script>
       try {
         if (new URLSearchParams(location.search).has("embed"))
@@ -646,11 +606,7 @@
     </script>
   </head>
   <body class="has-sidebar theme-clean">
-    <a class="back-link no-print" href="/marketing/index.html" style="position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; background: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; color: #0f172a; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: all 0.2s;">&larr; Back to marketing flyers</a>
-
-    <a class="interactive-list-link" href="interactive.html"
-      >&larr; Interactive flyer list</a
-    >
+    <a class="back-link no-print" href="/marketing/index.html" style="position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; background: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; color: #0f172a; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: all 0.2s;">&larr; Back to flyer gallery</a>
     <aside
       class="control-sidebar no-print"
       role="complementary"
@@ -736,8 +692,8 @@
         </div>
       </div>
       <div class="sidebar-section">
-        <a class="sidebar-btn" href="interactive.html"
-          >Back to interactive flyers</a
+        <a class="sidebar-btn" href="/marketing/index.html"
+          >Back to flyer gallery</a
         >
         <button class="sidebar-btn primary" onclick="window.print()">
           Print flyer
