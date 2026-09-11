@@ -1877,7 +1877,6 @@ function AdminDashboardInner() {
             <StaffPortalWelcomeTab
               role="admin"
               settings={settings}
-              schoolId={schoolId}
               onGoToTab={goToMainTab}
               onBulkRoster={() => openBulkRoster('csv')}
               schoolName={schoolData?.name?.trim() || null}
