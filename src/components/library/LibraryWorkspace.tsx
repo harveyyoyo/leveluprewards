@@ -308,6 +308,7 @@ export function LibraryWorkspace({
     renameLocation,
     archiveLocation,
     restoreLocation,
+    deleteLocation,
   } = useLibraryLocations(schoolId);
   const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
   const scopedItems = useMemo(
@@ -2081,6 +2082,10 @@ export function LibraryWorkspace({
                   onArchive={archiveLocation}
                   archivedLocations={archivedLocations}
                   onRestore={restoreLocation}
+                  // Firestore rules only grant delete on this collection to admin/developer —
+                  // hide the button for other staff (librarian, teacher, secretary) so it never
+                  // shows an action that will just fail with a confusing "try again" toast.
+                  onDelete={loginState === 'admin' || loginState === 'developer' ? deleteLocation : undefined}
                 />
                 <LibraryPolicySettingsCard categories={categories} />
               </TabsContent>

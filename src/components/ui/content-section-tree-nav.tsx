@@ -48,7 +48,7 @@ export function ContentSectionTreeNav({
       <Tabs value={value} onValueChange={onValueChange} className="w-full">
         <TabsList
           className={cn(
-            '!flex h-auto w-full justify-stretch gap-1 rounded-xl border border-border/50 bg-muted/50 p-1 shadow-inner',
+            '!flex h-auto w-full flex-wrap justify-stretch gap-1 rounded-xl border border-border/50 bg-muted/50 p-1 shadow-inner',
             fullWidth ? 'max-w-none' : 'max-w-4xl',
           )}
         >
@@ -60,7 +60,7 @@ export function ContentSectionTreeNav({
                 value={item.id}
                 data-intro-tour={`section-tab-${item.id}`}
                 className={cn(
-                  'group flex min-h-10 min-w-[7.25rem] flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-2.5 py-2 text-center text-xs font-semibold leading-tight text-muted-foreground transition-[color,background-color,box-shadow,border-color] duration-200 sm:text-sm',
+                  'group flex min-h-10 min-w-fit flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-2.5 py-2 text-center text-xs font-semibold leading-tight text-muted-foreground transition-[color,background-color,box-shadow,border-color] duration-200 sm:text-sm',
                   'hover:border-border/60 hover:bg-background/70 hover:text-foreground',
                   'data-[state=active]:border-primary/30 data-[state=active]:bg-primary data-[state=active]:font-black data-[state=active]:text-primary-foreground data-[state=active]:shadow-md',
                 )}

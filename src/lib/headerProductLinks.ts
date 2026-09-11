@@ -50,6 +50,12 @@ export function headerProductHref(
       return `${root}/teacher?tab=homework`;
     case 'library':
       if (loginState === 'librarian') return `${root}/librarian`;
+      // Admins land on the Library tab (pick/manage libraries) rather than jumping straight
+      // into one specific library — prizeClerk/houseCoordinator get their own restricted
+      // dashboards with no such tab, so they keep going straight to the library workspace.
+      if (loginState === 'admin' || loginState === 'developer') {
+        return staffPortalTabHref(school, loginState, 'library');
+      }
       return `${root}/library`;
   }
 }
