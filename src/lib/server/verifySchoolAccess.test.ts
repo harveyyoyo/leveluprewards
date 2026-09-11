@@ -4,6 +4,7 @@ import { verifySchoolAccessServer, VerifySchoolAccessError } from './verifySchoo
 
 function mockDb(options: {
   schoolExists?: boolean;
+  schoolData?: Record<string, unknown>;
   secret?: { salt: string; hash: string } | null;
   sessionSet?: ReturnType<typeof vi.fn>;
 }) {
@@ -16,15 +17,20 @@ function mockDb(options: {
 
   const schoolGet = vi.fn().mockResolvedValue({
     exists: options.schoolExists !== false,
-    data: () => ({}),
+    data: () => options.schoolData ?? {},
   });
 
   const collectionForSchool = vi.fn((name: string) => {
     if (name === 'secrets') {
-      return { doc: vi.fn().mockReturnValue({ get: secretGet }) };
+      return { doc: vi.fn().mockReturnValue({ get: secretGet, set: vi.fn() }) };
     }
     if (name === 'anonymousPortalSessions') {
-      return { doc: vi.fn().mockReturnValue({ set: sessionSet, get: vi.fn() }) };
+      return {
+        doc: vi.fn().mockReturnValue({
+          set: sessionSet,
+          get: vi.fn().mockResolvedValue({ exists: false }),
+        }),
+      };
     }
     return { doc: vi.fn().mockReturnValue({ get: vi.fn().mockResolvedValue({ exists: false }) }) };
   });
@@ -56,7 +62,7 @@ describe('verifySchoolAccessServer', () => {
     ).rejects.toMatchObject({ name: 'VerifySchoolAccessError', code: 'not-found' });
   });
 
-  it('rejects a wrong passcode without writing a portal session', async () => {
+  it('throws permission-denied for the wrong hashed passcode', async () => {
     const { db, sessionSet } = mockDb({ secret: buildPasscodeSecretDoc('1234') });
     await expect(
       verifySchoolAccessServer(db, {
@@ -66,8 +72,40 @@ describe('verifySchoolAccessServer', () => {
         schoolId: 'yeshiva',
         passcode: '9999',
       }),
-    ).rejects.toBeInstanceOf(VerifySchoolAccessError);
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Invalid passcode.',
+    } satisfies Partial<VerifySchoolAccessError>);
     expect(sessionSet).not.toHaveBeenCalled();
+  });
+
+  it('throws permission-denied for the wrong legacy passcode', async () => {
+    const { db } = mockDb({ schoolData: { schoolAccessPasscode: '1234' } });
+    await expect(
+      verifySchoolAccessServer(db, {
+        uid: 'uid-test',
+        email: '',
+        firebase: undefined,
+        schoolId: 'schoolabc',
+        passcode: '0000',
+      }),
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: 'Invalid passcode.',
+    } satisfies Partial<VerifySchoolAccessError>);
+  });
+
+  it('throws failed-precondition when no school access passcode is configured', async () => {
+    const { db } = mockDb({ schoolData: {} });
+    await expect(
+      verifySchoolAccessServer(db, {
+        uid: 'uid-test',
+        email: '',
+        firebase: undefined,
+        schoolId: 'schoolabc',
+        passcode: '0000',
+      }),
+    ).rejects.toMatchObject({ code: 'failed-precondition' } satisfies Partial<VerifySchoolAccessError>);
   });
 
   it('writes the portal session after a correct passcode', async () => {
