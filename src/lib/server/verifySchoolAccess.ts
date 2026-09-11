@@ -1,5 +1,4 @@
 import type { Firestore } from 'firebase-admin/firestore';
-import { FieldValue } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
@@ -104,12 +103,14 @@ async function ensureAnonymousPortalSession(
   schoolId: string,
   uid: string,
 ): Promise<void> {
+  // Use a plain Date so Next.js SSR does not depend on FieldValue (can be
+  // stripped when firebase-admin is bundled). Readers only check `.exists`.
   await db
     .collection('schools')
     .doc(schoolId)
     .collection('anonymousPortalSessions')
     .doc(uid)
-    .set({ grantedAt: FieldValue.serverTimestamp() }, { merge: true });
+    .set({ grantedAt: new Date() }, { merge: true });
 }
 
 /** Server-side school access gate (mirrors `verifySchoolAccessPasscode` Cloud Function). */

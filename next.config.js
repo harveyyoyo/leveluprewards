@@ -73,7 +73,7 @@ const nextConfig = {
     ];
   },
   experimental: {
-    serverComponentsExternalPackages: ['pdf-parse', 'mammoth'],
+    serverComponentsExternalPackages: ['pdf-parse', 'mammoth', 'firebase-admin'],
     /** Faster dev compiles for barrel-import packages (tree-shaken imports). */
     optimizePackageImports: [
       'lucide-react',
