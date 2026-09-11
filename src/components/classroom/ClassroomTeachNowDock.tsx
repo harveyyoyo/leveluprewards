@@ -181,8 +181,14 @@ export function ClassroomTeachNowDock({
       <motion.div
         variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
         transition={spring}
-        className="rounded-3xl border border-white/12 bg-white/[0.06] p-4 shadow-xl shadow-black/20 backdrop-blur-md sm:p-5"
+        className="rounded-3xl border border-white/20 bg-black/35 p-4 shadow-xl shadow-black/30 backdrop-blur-md sm:p-5"
       >
+        <p
+          className="mb-3 text-[10px] font-black uppercase tracking-[0.28em]"
+          style={{ color: 'var(--cr-accent-text)' }}
+        >
+          Today&apos;s class
+        </p>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <div className="w-[180px] sm:w-[220px]">
