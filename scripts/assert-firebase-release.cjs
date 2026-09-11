@@ -1,7 +1,8 @@
 const { readFileSync } = require('node:fs');
 
 function assertFirebaseRelease(log) {
-  const plain = log.replace(/\x1b\[[0-9;]*m/g, '');
+  // gh log exports render ESC as ^[; accept both exports and the raw tee output.
+  const plain = log.replace(/(?:\x1b|\^\[)\[[0-9;]*m/g, '');
   if (/unable to queue the operation|failed to (?:update|create|deploy) function/i.test(plain)) {
     throw new Error('Firebase did not update the app backend. The CLI exit code alone is not a deployment confirmation.');
   }
