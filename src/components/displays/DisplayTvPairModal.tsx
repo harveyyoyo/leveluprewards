@@ -1,23 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import {
-  Check,
-  Copy,
-  ExternalLink,
-  Tv,
-} from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { Check, Copy, ExternalLink, Tv } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { BrandedQrCode } from '@/components/qr/BrandedQrCode';
-import { useToast } from '@/hooks/use-toast';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { BrandedQrCode } from "@/components/qr/BrandedQrCode";
 
 export interface DisplayTvPairModalProps {
   isOpen: boolean;
@@ -34,198 +28,153 @@ export function DisplayTvPairModal({
   screenId,
   screenName,
 }: DisplayTvPairModalProps) {
-  const { toast } = useToast();
   const [copied, setCopied] = useState(false);
-  const [activeGuideTab, setActiveGuideTab] = useState<'firetv' | 'googletv' | 'appletv' | 'smarttv' | 'kiosk'>('firetv');
+  const [copyError, setCopyError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const localOnly =
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+  const fullTvUrl = `${origin}/${encodeURIComponent(schoolId)}/displays?screen=${encodeURIComponent(screenId)}&fullscreen=1`;
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  const tvPath = `/${schoolId}/displays?screen=${encodeURIComponent(screenId)}&fullscreen=1`;
-  const fullTvUrl = `${origin}${tvPath}`;
+  useEffect(() => {
+    setCopied(false);
+    setCopyError(false);
+  }, [isOpen, screenId]);
+  useEffect(() => {
+    if (!copied) return;
+    const timer = setTimeout(() => setCopied(false), 2200);
+    return () => clearTimeout(timer);
+  }, [copied]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(fullTvUrl).then(() => {
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(fullTvUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast({
-        title: 'TV Link Copied',
-        description: 'Ready to paste into your smart TV or digital signage browser.',
-      });
-    });
+      setCopyError(false);
+    } catch {
+      setCopyError(true);
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-xl rounded-3xl p-6 sm:p-8">
-        <DialogHeader className="space-y-2 text-left">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Tv className="h-5 w-5" />
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-black tracking-tight sm:text-2xl">
-                Show on Hallway TV
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
-                Pair &quot;{screenName}&quot; to any TV, monitor, or projector in seconds
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <Tv className="h-5 w-5 text-primary" />
+            Show on TV
+          </DialogTitle>
+          <DialogDescription>
+            Open “{screenName}” on a TV, projector, or another screen.
+          </DialogDescription>
         </DialogHeader>
-
-        <div className="mt-4 space-y-6">
-          {/* QR Code & Direct URL Card */}
-          <div className="flex flex-col sm:flex-row items-center gap-6 rounded-2xl border-2 border-primary/20 bg-muted/40 p-5">
-            <div className="shrink-0 rounded-2xl bg-white p-3 shadow-lg border border-border/80">
-              <BrandedQrCode
-                value={fullTvUrl}
-                size={140}
-                renderSize={280}
-                hideCenterBadge
-              />
-            </div>
-
-            <div className="flex-1 min-w-0 space-y-3 w-full text-center sm:text-left">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-primary">
-                  Instant TV Setup
-                </p>
-                <p className="text-sm text-muted-foreground mt-0.5">
-                  Scan this QR code with your phone camera or TV browser to open this display fullscreen immediately.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Input
-                  readOnly
-                  value={fullTvUrl}
-                  className="font-mono text-xs bg-background h-9 select-all"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="h-9 shrink-0 gap-1.5 font-bold"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3.5 w-3.5" />
-                      Copy Link
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              <div className="flex items-center justify-center sm:justify-start gap-3">
-                <Button asChild size="sm" variant="default" className="h-8 gap-1.5 rounded-xl text-xs font-bold">
-                  <a href={fullTvUrl} target="_blank" rel="noopener noreferrer">
-                    Open in new tab
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </Button>
-              </div>
-            </div>
+        {localOnly && (
+          <p
+            role="note"
+            className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm"
+          >
+            This local preview link works only on this computer. For a separate
+            TV, copy the screen link from your school’s published app.
+          </p>
+        )}
+        <div className="space-y-2">
+          <label htmlFor="tv-screen-link" className="text-sm font-semibold">
+            Screen link
+          </label>
+          <div className="flex gap-2">
+            <Input
+              id="tv-screen-link"
+              ref={inputRef}
+              value={fullTvUrl}
+              readOnly
+              onFocus={(event) => event.target.select()}
+              className="min-w-0 text-xs"
+            />
+            <Button variant="outline" onClick={copy} className="shrink-0 gap-2">
+              {copied ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+              {copied ? "Copied" : "Copy link"}
+            </Button>
           </div>
-
-          {/* Device Setup Guide */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                Quick Setup Guides
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-              {[
-                { id: 'firetv', label: 'Amazon Fire TV' },
-                { id: 'googletv', label: 'Google TV / Chromecast' },
-                { id: 'appletv', label: 'Apple TV / AirPlay' },
-                { id: 'smarttv', label: 'Smart TV Browser' },
-                { id: 'kiosk', label: 'Mini PC / Pi' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveGuideTab(tab.id as any)}
-                  className={`rounded-xl px-3 py-1.5 font-bold whitespace-nowrap transition-colors ${
-                    activeGuideTab === tab.id
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="rounded-2xl border bg-card/60 p-4 text-xs sm:text-sm leading-relaxed text-muted-foreground space-y-2">
-              {activeGuideTab === 'firetv' && (
-                <div>
-                  <p className="font-bold text-foreground mb-1">Amazon Fire Stick / Fire TV:</p>
-                  <ol className="list-decimal pl-4 space-y-1">
-                    <li>Open the free <strong>Amazon Silk Browser</strong> from the Fire TV home screen.</li>
-                    <li>Enter the copied link or scan the QR code using your phone to push the URL.</li>
-                    <li>Press the <strong>Menu (3 horizontal lines)</strong> button on your remote and select <strong>Full Screen</strong>.</li>
-                    <li>Bookmark the page so it opens instantly next time!</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeGuideTab === 'googletv' && (
-                <div>
-                  <p className="font-bold text-foreground mb-1">Google TV / Chromecast / Android TV:</p>
-                  <ol className="list-decimal pl-4 space-y-1">
-                    <li>Download a browser like <strong>TV Bro</strong> or <strong>Chrome</strong> from the Google Play Store.</li>
-                    <li>Navigate to the TV link above and bookmark it.</li>
-                    <li>Enable Full Screen mode in the browser settings.</li>
-                    <li>Tip: You can also cast any Chrome tab from your laptop directly to the Chromecast!</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeGuideTab === 'appletv' && (
-                <div>
-                  <p className="font-bold text-foreground mb-1">Apple TV / AirPlay:</p>
-                  <ol className="list-decimal pl-4 space-y-1">
-                    <li>Open the TV link in Safari on any Mac, iPad, or iPhone.</li>
-                    <li>Click the <strong>AirPlay</strong> icon in Control Center.</li>
-                    <li>Select your <strong>Apple TV</strong> and enter Full Screen mode in Safari.</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeGuideTab === 'smarttv' && (
-                <div>
-                  <p className="font-bold text-foreground mb-1">Samsung (Tizen) or LG (webOS) Smart TV:</p>
-                  <ol className="list-decimal pl-4 space-y-1">
-                    <li>Open the built-in <strong>Web Browser</strong> on your TV.</li>
-                    <li>Type in the copied link and press enter.</li>
-                    <li>Select <strong>Full Screen</strong> in the browser toolbar to hide address bars.</li>
-                    <li>Pin the page to your TV home bar for one-click launch when powering on.</li>
-                  </ol>
-                </div>
-              )}
-
-              {activeGuideTab === 'kiosk' && (
-                <div>
-                  <p className="font-bold text-foreground mb-1">Raspberry Pi or Mini PC Chromebox Kiosk:</p>
-                  <ol className="list-decimal pl-4 space-y-1">
-                    <li>Configure Chrome/Chromium to launch on startup with kiosk mode:</li>
-                    <code className="block rounded-lg bg-black/80 text-emerald-400 p-2 my-1 font-mono text-[11px]">
-                      chromium-browser --kiosk --noerrdialogs --disable-infobars &quot;{fullTvUrl}&quot;
-                    </code>
-                    <li>The display will automatically reboot and stay alive 24/7 without screensavers.</li>
-                  </ol>
-                </div>
-              )}
-            </div>
-          </div>
+          <p role="status" className="text-xs text-muted-foreground">
+            {copyError
+              ? "Copy didn’t work. The link is selected so you can copy it manually."
+              : copied
+                ? "Link copied."
+                : "Keep this link bookmarked on the display device."}
+          </p>
         </div>
+        <ol className="space-y-4 text-sm">
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+              1
+            </span>
+            <div>
+              <p className="font-semibold">Open the link on your display</p>
+              <p className="mt-1 text-muted-foreground">
+                Use the TV’s web browser, or a computer connected to the TV or
+                projector.
+              </p>
+            </div>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+              2
+            </span>
+            <div>
+              <p className="font-semibold">Sign in if prompted</p>
+              <p className="mt-1 text-muted-foreground">
+                Use your school’s usual sign-in, including staff access when
+                requested.
+              </p>
+            </div>
+          </li>
+          <li className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+              3
+            </span>
+            <div>
+              <p className="font-semibold">Select Full Screen</p>
+              <p className="mt-1 text-muted-foreground">
+                Move the pointer to reveal the display controls. Saved changes
+                and school data update while the page is open.
+              </p>
+            </div>
+          </li>
+        </ol>
+        <Button asChild className="w-full gap-2">
+          <a href={fullTvUrl} target="_blank" rel="noopener noreferrer">
+            Open display in a new tab
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </Button>
+        {!localOnly && (
+          <details className="rounded-xl border p-3">
+            <summary className="cursor-pointer text-sm font-semibold">
+              Open the link on your phone
+            </summary>
+            <div className="mt-3 flex items-center gap-4">
+              <div className="shrink-0 rounded-xl bg-white p-2">
+                <BrandedQrCode
+                  value={fullTvUrl}
+                  size={112}
+                  renderSize={224}
+                  hideCenterBadge
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Scan to open the screen on your phone. This does not pair or
+                remotely control a TV.
+              </p>
+            </div>
+          </details>
+        )}
       </DialogContent>
     </Dialog>
   );
