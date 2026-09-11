@@ -4,6 +4,8 @@
 
 **Goal**: Multi-tenant gamification for schools: student rewards, credits, and levels.
 
+**Owner communication**: The owner is a beginner. Helpers must use everyday words in chat and never use technical terms. See `user-communication.md`.
+
 **Local folder**: The repo directory may still be named `studio` locally; the GitHub repo is `harveyyoyo/leveluprewards` and the product name is LevelUp Rewards.
 
 ## Stack

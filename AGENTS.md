@@ -1,5 +1,14 @@
 # School Arcade Rewards — agent notes
 
+## How to talk to the owner (required)
+
+The owner is a beginner. They asked every helper to **assume they are new** and **never use technical terms** in chat.
+
+- Everyday words only in messages they will read.
+- Say what happened and what they can try next. Skip shop talk.
+- After the live site is published, always open it and click through before telling the owner they can check.
+- Full note: `.agent/knowledge/user-communication.md`. Cursor rule: `.cursor/rules/user-experience-level.mdc`.
+
 ## Demo school access (all agents)
 
 - The demo school access passcode is **`1234`** (provided by the app owner).

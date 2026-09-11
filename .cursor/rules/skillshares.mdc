@@ -27,5 +27,6 @@ The `.agent` directory is the source of truth for AI-specific instructions.
 
 ## Shared Context
 - **Project Goal**: "School Arcade Rewards" - a system for managing student rewards in a school setting.
+- **Owner communication**: The owner is a beginner. Never use technical terms in user-facing chat. See `.agent/knowledge/user-communication.md`.
 - **Tech Stack**: Next.js, TypeScript, Tailwind CSS, Firebase/Firestore.
 - **UI Standard**: Modern, premium, theme-aware designs with high contrast ratios for accessibility.
