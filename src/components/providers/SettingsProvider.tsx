@@ -58,6 +58,7 @@ import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
     | 'default'
@@ -443,6 +444,8 @@ interface Settings {
      * back-compat reads of settings docs saved before the merge.
      */
     displaysEnabled?: boolean;
+    /** Saved Displays studio screens, keyed by screen id. */
+    modularDisplayScreens?: Record<string, ModularScreenConfig>;
 
     // Bulletin Board
     bulletinEnabled?: boolean;
@@ -1000,6 +1003,7 @@ const defaultSettings: Settings = {
     kioskSponsorIcon: '🎉',
     kioskSponsorSchedules: [],
 
+    modularDisplayScreens: {},
     bulletinEnabled: true,
     bulletinTitle: 'School Bulletin Board',
     bulletinTheme: 'default',

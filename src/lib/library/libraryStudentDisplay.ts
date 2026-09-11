@@ -41,7 +41,7 @@ export function resolveLibraryStudentNameMode(
 
 export function formatLibraryStudentName(
   student: { firstName?: string; lastName?: string; nickname?: string } | null | undefined,
-  mode: ResolvedLibraryStudentNameMode = DEFAULT_LIBRARY_STUDENT_NAME_DISPLAY_MODE,
+  mode: ResolvedLibraryStudentNameMode = 'preferred_full',
   fallback = 'Unknown student',
 ): string {
   if (!student) return fallback;

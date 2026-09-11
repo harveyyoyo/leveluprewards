@@ -9,6 +9,8 @@ import {
 const alex = { firstName: 'Alexander', lastName: 'Rivera', nickname: 'Alex' };
 const noNick = { firstName: 'Sam', lastName: 'Lee' };
 const theme: StudentTheme = {
+  background: '#eff6ff',
+  text: '#1e3a8a',
   primary: '#2563eb',
   cardBackground: '#eff6ff',
   accent: '#93c5fd',

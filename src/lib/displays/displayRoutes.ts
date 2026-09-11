@@ -94,3 +94,17 @@ export function buildDisplayHref(
   }
   return buildSmartScreenDisplayHref(schoolId, options);
 }
+
+/** Path to the standalone Displays studio (settings + fullscreen launch). */
+export function displaysRealmHref(schoolId: string): string {
+  return `/${schoolId.trim().toLowerCase()}/displays-realm`;
+}
+
+/** Opens Displays in a new tab — absolute URL when possible. */
+export function displaysRealmOpenHref(schoolId: string): string {
+  const href = displaysRealmHref(schoolId);
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${href}`;
+  }
+  return href;
+}

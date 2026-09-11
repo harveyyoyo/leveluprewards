@@ -6,6 +6,19 @@ import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import type { Category, Class, House, Prize, Student } from '@/lib/types';
 
+export type BulletinIncentive = {
+  id: string;
+  title?: string;
+  description?: string;
+  value?: number;
+  icon?: string;
+  currencyIcon?: string;
+  displaySurfaces?: { bulletinBoard?: boolean; smartScreen?: boolean };
+  createdAt?: number;
+  showAsIncentive?: boolean;
+  active?: boolean;
+};
+
 export type SmartScreenLocationInfo = {
   ok: boolean;
   source?: 'zip' | 'ip';

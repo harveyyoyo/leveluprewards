@@ -245,6 +245,20 @@ export function getBulletinBoardItemClassName(themeId: string | undefined): stri
 /** Used when `bulletinSubtitle` is empty in school settings. */
 export const DEFAULT_BULLETIN_SUBTITLE = 'Visual reminders and incentives for earning points!';
 
+/** Firestore bulletin incentive row used by Displays settings previews. */
+export type BulletinBoardIncentiveRecord = {
+  id: string;
+  title?: string;
+  description?: string;
+  value?: number;
+  icon?: string;
+  currencyIcon?: string;
+  displaySurfaces?: { bulletinBoard?: boolean; smartScreen?: boolean };
+  createdAt?: number;
+  showAsIncentive?: boolean;
+  active?: boolean;
+};
+
 export const BULLETIN_EMOJI_SUGGESTIONS = [
   '\u{1F389}',
   '\u{1F4C5}',
