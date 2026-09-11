@@ -1,5 +1,4 @@
-import { getFirebaseAdminAuth } from '@/lib/server/firebaseAdminAuth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 
 const APP_CONFIG_GLOBAL = 'global';
 
@@ -8,8 +7,7 @@ const APP_CONFIG_GLOBAL = 'global';
  * Mirrors client `SchoolSessionGate` expectations for edge enforcement.
  */
 export async function resolveSchoolGateScopes(uid: string, schoolId: string): Promise<string[]> {
-  await getFirebaseAdminAuth();
-  const db = getFirestore();
+  const db = await getFirebaseAdminFirestore();
   const sid = schoolId.trim().toLowerCase();
   const scopes = new Set<string>();
 
