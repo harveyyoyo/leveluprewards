@@ -528,6 +528,7 @@ export function LibraryCheckoutDesk({
       executeCheckout,
       libraryLocationId,
       describeWrongLibrary,
+      catalogItems,
     ],
   );
 

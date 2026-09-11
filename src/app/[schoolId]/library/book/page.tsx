@@ -61,7 +61,7 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
       setItem(found?.item ?? null);
       setLoading(false);
     });
-  }, [firestore, schoolId, code]);
+  }, [firestore, schoolId, code, libraryPolicy.allowIsbnCheckout, mode]);
 
   const processStudentCard = useCallback(
     async (badgeId: string) => {

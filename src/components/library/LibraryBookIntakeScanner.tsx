@@ -356,7 +356,7 @@ export function LibraryBookIntakeScanner({
         });
       }
     },
-    [toast, confirm, upsertRow, catalogIsbns, catalogScannedCodes],
+    [toast, confirm, upsertRow, libraryItems, settings.libraryDefaultShelf, settings.libraryGenreDefinitions],
   );
 
   const handleScan = useCallback(

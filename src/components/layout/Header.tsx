@@ -657,7 +657,8 @@ export default function Header() {
               </Link>
               {paidProductsNav}
             </div>
-        </div>
+            </div>
+          </div>
         </div>
 
         {/* Center: school name — in document flow so multi-line names expand the header */}

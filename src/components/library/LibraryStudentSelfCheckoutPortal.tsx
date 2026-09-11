@@ -327,7 +327,7 @@ export function LibraryStudentSelfCheckoutPortal({
     setMode(settings.libraryKioskDefaultMode ?? 'auto');
     setScanError(null);
     setPendingBookCode(null);
-  }, []);
+  }, [settings.libraryKioskDefaultMode]);
 
   // 0 means "disabled (manual tap only)" — the Library → Settings station auto-reset option.
   const autoResetSeconds = settings.libraryKioskAutoResetSeconds ?? 8;
@@ -746,7 +746,7 @@ export function LibraryStudentSelfCheckoutPortal({
         }
       })();
     },
-    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, playSound, toast],
+    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, playSound, toast, studentId],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, clearBuffer, focusReader } = useBarcodeReaderWedge({
