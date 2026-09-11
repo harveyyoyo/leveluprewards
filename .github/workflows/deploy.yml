@@ -95,12 +95,13 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
+          # Firebase deletes its own firebase-debug.log on success; keep tee output separate.
           npx firebase-tools@14.27.0 deploy \
             --only hosting \
             --project studio-1273073612-71183 \
             --non-interactive \
-            --force 2>&1 | tee firebase-debug.log
-          node scripts/assert-firebase-release.cjs firebase-debug.log
+            --force 2>&1 | tee firebase-deploy-output.log
+          node scripts/assert-firebase-release.cjs firebase-deploy-output.log
         env:
           FIREBASE_CLI_EXPERIMENTS: webframeworks
 
@@ -127,6 +128,7 @@ jobs:
         with:
           name: firebase-debug-log
           path: |
+            firebase-deploy-output.log
             firebase-debug.log
             .firebase/*.log
           if-no-files-found: ignore
