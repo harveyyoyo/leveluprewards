@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -41,12 +41,31 @@
       body {
         min-height: 100vh;
         margin: 0;
-        font-family: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-family:
+          "Outfit",
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
         color: var(--text);
         background:
-          radial-gradient(circle at 18% 8%, rgba(217, 70, 239, 0.24), transparent 32rem),
-          radial-gradient(circle at 86% 12%, rgba(6, 182, 212, 0.18), transparent 30rem),
-          radial-gradient(circle at 50% 88%, rgba(59, 130, 246, 0.14), transparent 34rem),
+          radial-gradient(
+            circle at 18% 8%,
+            rgba(217, 70, 239, 0.24),
+            transparent 32rem
+          ),
+          radial-gradient(
+            circle at 86% 12%,
+            rgba(6, 182, 212, 0.18),
+            transparent 30rem
+          ),
+          radial-gradient(
+            circle at 50% 88%,
+            rgba(59, 130, 246, 0.14),
+            transparent 34rem
+          ),
           linear-gradient(180deg, #060717 0%, #080b18 48%, #03040a 100%);
         line-height: 1.5;
         overflow-x: hidden;
@@ -60,9 +79,17 @@
         pointer-events: none;
         background-image:
           linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+          linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.035) 1px,
+            transparent 1px
+          );
         background-size: 56px 56px;
-        mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.65), transparent 72%);
+        mask-image: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.65),
+          transparent 72%
+        );
       }
 
       a {
@@ -107,7 +134,10 @@
         font-size: 0.9rem;
         font-weight: 700;
         text-decoration: none;
-        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+        transition:
+          transform 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease;
       }
 
       .back-link:hover,
@@ -150,7 +180,12 @@
       }
 
       .gradient-text {
-        background: linear-gradient(115deg, #ffffff 0%, #a5f3fc 48%, #f0abfc 100%);
+        background: linear-gradient(
+          115deg,
+          #ffffff 0%,
+          #a5f3fc 48%,
+          #f0abfc 100%
+        );
         -webkit-background-clip: text;
         background-clip: text;
         color: transparent;
@@ -167,7 +202,11 @@
         border: 1px solid rgba(255, 255, 255, 0.14);
         border-radius: 8px;
         padding: 20px;
-        background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.035));
+        background: linear-gradient(
+          145deg,
+          rgba(255, 255, 255, 0.1),
+          rgba(255, 255, 255, 0.035)
+        );
         box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
         backdrop-filter: blur(18px);
       }
@@ -227,12 +266,21 @@
         font-weight: 900;
         text-decoration: none;
         cursor: pointer;
-        transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+        transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease;
       }
 
       .button-primary {
         color: #ffffff;
-        background: linear-gradient(135deg, var(--purple), var(--blue) 56%, var(--cyan));
+        background: linear-gradient(
+          135deg,
+          var(--purple),
+          var(--blue) 56%,
+          var(--cyan)
+        );
         box-shadow: 0 14px 34px rgba(59, 130, 246, 0.26);
       }
 
@@ -304,18 +352,27 @@
         border: 1px solid rgba(255, 255, 255, 0.13);
         border-radius: 8px;
         background:
-          linear-gradient(145deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035)),
+          linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.09),
+            rgba(255, 255, 255, 0.035)
+          ),
           var(--panel);
         box-shadow: 0 18px 56px rgba(0, 0, 0, 0.28);
         backdrop-filter: blur(18px);
-        transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+        transition:
+          transform 180ms ease,
+          border-color 180ms ease,
+          box-shadow 180ms ease;
       }
 
       .card:hover,
       .card:focus-within {
         transform: translateY(-4px);
         border-color: color-mix(in srgb, var(--accent) 52%, white 18%);
-        box-shadow: 0 22px 70px rgba(0, 0, 0, 0.36), 0 0 34px color-mix(in srgb, var(--accent) 26%, transparent);
+        box-shadow:
+          0 22px 70px rgba(0, 0, 0, 0.36),
+          0 0 34px color-mix(in srgb, var(--accent) 26%, transparent);
       }
 
       .preview {
@@ -325,7 +382,11 @@
         overflow: hidden;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         background:
-          radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 58%),
+          radial-gradient(
+            circle at 50% 0%,
+            color-mix(in srgb, var(--accent) 22%, transparent),
+            transparent 58%
+          ),
           #070a12;
       }
 
@@ -565,18 +626,32 @@
       <header class="hero">
         <div>
           <span class="eyebrow">Marketing Flyers Portal</span>
-          <h1><span class="gradient-text">Interactive Flyer Customizers</span></h1>
+          <h1>
+            <span class="gradient-text">Interactive Flyer Customizers</span>
+          </h1>
           <p class="lead">
-            Premium flyer builders for school outreach, procurement conversations, staff rollout, and print-ready
-            leave-behinds. Toggle sections, edit copy on the page, swap themes, and resize layouts for clean PDFs.
+            Premium flyer builders for school outreach, procurement
+            conversations, staff rollout, and print-ready leave-behinds. Toggle
+            sections, edit copy on the page, swap themes, and resize layouts for
+            clean PDFs.
           </p>
           <div class="intro-actions">
-            <a class="button button-primary" href="#flyer-builders">Explore builders &rarr;</a>
-            <a class="button button-secondary" href="index.html">View all marketing flyers</a>
+            <a class="button button-primary" href="#flyer-builders"
+              >Explore builders &rarr;</a
+            >
+            <a class="button button-secondary" href="index.html"
+              >View all marketing flyers</a
+            >
           </div>
         </div>
-        <aside class="hero-panel" aria-label="Interactive flyer builder highlights">
-          <p>Built for live customization before a meeting, print run, or PDF handoff.</p>
+        <aside
+          class="hero-panel"
+          aria-label="Interactive flyer builder highlights"
+        >
+          <p>
+            Built for live customization before a meeting, print run, or PDF
+            handoff.
+          </p>
           <div class="hero-stats">
             <div class="stat">
               <strong>8</strong>
@@ -595,7 +670,10 @@
       </header>
 
       <section class="toolbar" aria-label="Customizer capabilities">
-        <p>Choose a builder below. Hover or focus a card to render the embedded preview.</p>
+        <p>
+          Choose a builder below. Hover or focus a card to render the embedded
+          preview.
+        </p>
         <div class="chips" aria-label="Common interactive features">
           <span class="chip">Section toggles</span>
           <span class="chip">Editable text</span>
@@ -604,11 +682,17 @@
         </div>
       </section>
 
-      <main id="flyer-builders" class="grid" aria-label="Interactive flyer customizer gallery"></main>
+      <main
+        id="flyer-builders"
+        class="grid"
+        aria-label="Interactive flyer customizer gallery"
+      ></main>
 
       <footer class="footer">
-        Static interactive gallery for LevelUp Rewards marketing assets. Serve locally with
-        <code>npm run serve:flyers</code> and open <code>/marketing/interactive.html</code>.
+        Static interactive gallery for LevelUp Rewards marketing assets. Serve
+        locally with
+        <code>npm run serve:flyers</code> and open
+        <code>/marketing/interactive.html</code>.
       </footer>
     </div>
 
@@ -622,7 +706,12 @@
           accent: "#d946ef",
           description:
             "A friendly public-event handout for families, staff, and school visitors that quickly explains how students earn points and redeem rewards.",
-          features: ["One-page Layout", "Editable Event Copy", "Theme Swapping", "Auto Print Scaling"]
+          features: [
+            "One-page Layout",
+            "Editable Event Copy",
+            "Theme Swapping",
+            "Auto Print Scaling",
+          ],
         },
         {
           title: "Teacher Companion Guide",
@@ -632,7 +721,12 @@
           accent: "#8b5cf6",
           description:
             "A classroom adoption guide for daily point awards, kiosk scans, raffle moments, teacher routines, and staff-facing rollout.",
-          features: ["Classroom Copy Edits", "Contact Form Fields", "Incentive Toggles", "Single/Double Page Fit"]
+          features: [
+            "Classroom Copy Edits",
+            "Contact Form Fields",
+            "Incentive Toggles",
+            "Single/Double Page Fit",
+          ],
         },
         {
           title: "Leadership & Principal Brief",
@@ -642,7 +736,12 @@
           accent: "#06b6d4",
           description:
             "A principal-ready brief covering PBIS consistency, live telemetry, compliance, rollout readiness, and budget alignment.",
-          features: ["Compliance Toggles", "Editable Signature", "Funding Copy Edits", "Adaptive Layout Reflow"]
+          features: [
+            "Compliance Toggles",
+            "Editable Signature",
+            "Funding Copy Edits",
+            "Adaptive Layout Reflow",
+          ],
         },
         {
           title: "Funding & Procurement Playbook",
@@ -652,7 +751,12 @@
           accent: "#22c55e",
           description:
             "A procurement guide for Title funding, NYS nonpublic options, state grant paths, vendor details, and FAMIS purchasing language.",
-          features: ["Funding Stream Toggles", "Checklist Editing", "Vendor Details", "Print-safe Refit"]
+          features: [
+            "Funding Stream Toggles",
+            "Checklist Editing",
+            "Vendor Details",
+            "Print-safe Refit",
+          ],
         },
         {
           title: "Staff Business Cards",
@@ -662,7 +766,12 @@
           accent: "#38bdf8",
           description:
             "A 10-up business card sheet for coordinators and staff with shared details, QR fields, role text, and visual themes.",
-          features: ["Unified Details Form", "Card Text Overrides", "QR Builder", "Theme Selector"]
+          features: [
+            "Unified Details Form",
+            "Card Text Overrides",
+            "QR Builder",
+            "Theme Selector",
+          ],
         },
         {
           title: "Rewards Basic Settings",
@@ -672,7 +781,12 @@
           accent: "#f59e0b",
           description:
             "An admin setup flyer for point values, rewards shop defaults, coupon printing, kiosk setup, and school-ready rules.",
-          features: ["Settings Copy Edits", "QR & Contact Fields", "Print Grayscale Option", "Kiosk Walkthrough"]
+          features: [
+            "Settings Copy Edits",
+            "QR & Contact Fields",
+            "Print Grayscale Option",
+            "Kiosk Walkthrough",
+          ],
         },
         {
           title: "Additional Features Showcase",
@@ -682,7 +796,12 @@
           accent: "#22d3ee",
           description:
             "A focused flyer for included additional features: houses, displays, incentives, theme creations, notifications, recess, raffles, and badges.",
-          features: ["Feature Toggles", "Own-page Checkmarks", "Screenshot Inserts", "Editable Expanded Pages"]
+          features: [
+            "Feature Toggles",
+            "Own-page Checkmarks",
+            "Screenshot Inserts",
+            "Editable Expanded Pages",
+          ],
         },
         {
           title: "Product Pillars",
@@ -692,8 +811,43 @@
           accent: "#34d399",
           description:
             "A companion interactive flyer for the four current pillars: Rewards, Attendance, Library, and Classroom.",
-          features: ["Pillar Toggles", "Own-page Checkmarks", "Expanded Pillar Pages", "Screenshot Inserts"]
-        }
+          features: [
+            "Pillar Toggles",
+            "Own-page Checkmarks",
+            "Expanded Pillar Pages",
+            "Screenshot Inserts",
+          ],
+        },
+        {
+          title: "Private School Pillar Proposal",
+          href: "flyer-private-school-pillar-proposal.html",
+          audience: "Private schools",
+          layout: "Proposal builder",
+          accent: "#059669",
+          description:
+            "An interactive 2-page proposal tool specifically designed for private school procurement, featuring dynamic sizing tiers and per-pillar cost breakdowns.",
+          features: [
+            "Dynamic Pricing Tiers",
+            "Flat vs Per-Student Options",
+            "Pillar Customization",
+            "School Name Personalization",
+          ],
+        },
+        {
+          title: "Private School Funding Sources",
+          href: "flyer-private-school-funding.html",
+          audience: "Private schools",
+          layout: "Proposal builder",
+          accent: "#d97706",
+          description:
+            "Government and state funding guide for private schools—Title I/II/IV, equitable services, MSR, NPSE, and procurement paths.",
+          features: [
+            "Funding Source Toggles",
+            "School Customization",
+            "Vendor Details",
+            "Dynamic Filtering",
+          ],
+        },
       ];
 
       const grid = document.getElementById("flyer-builders");
@@ -705,31 +859,55 @@
       }
 
       function renderCard(flyer, index) {
-        const features = flyer.features.map((feature) => "<li>" + feature + "</li>").join("");
+        const features = flyer.features
+          .map((feature) => "<li>" + feature + "</li>")
+          .join("");
         return createElementFromHTML(
-          '<article class="card" style="--accent: ' + flyer.accent + '">' +
-            '<div class="preview" tabindex="0" aria-label="Preview ' + flyer.title + '">' +
-              '<div class="preview-empty">' +
-                '<div><span>' + String(index + 1).padStart(2, "0") + '</span><strong>Live preview</strong><small>Loads on hover or focus</small></div>' +
-              '</div>' +
-              '<div class="preview-frame" hidden>' +
-                '<iframe data-src="' + flyer.href + '?embed=1" title="' + flyer.title + ' preview" loading="lazy" tabindex="-1"></iframe>' +
-              '</div>' +
-              '<button class="load-preview" type="button">Load preview</button>' +
-            '</div>' +
+          '<article class="card" style="--accent: ' +
+            flyer.accent +
+            '">' +
+            '<div class="preview" tabindex="0" aria-label="Preview ' +
+            flyer.title +
+            '">' +
+            '<div class="preview-empty">' +
+            "<div><span>" +
+            String(index + 1).padStart(2, "0") +
+            "</span><strong>Live preview</strong><small>Loads on hover or focus</small></div>" +
+            "</div>" +
+            '<div class="preview-frame" hidden>' +
+            '<iframe data-src="' +
+            flyer.href +
+            '?embed=1" title="' +
+            flyer.title +
+            ' preview" loading="lazy" tabindex="-1"></iframe>' +
+            "</div>" +
+            '<button class="load-preview" type="button">Load preview</button>' +
+            "</div>" +
             '<div class="card-body">' +
-              '<div class="meta">' +
-                '<span class="pill audience">' + flyer.audience + '</span>' +
-                '<span class="pill">' + flyer.layout + '</span>' +
-              '</div>' +
-              '<h2>' + flyer.title + '</h2>' +
-              '<p class="description">' + flyer.description + '</p>' +
-              '<ul class="features">' + features + '</ul>' +
-              '<div class="actions">' +
-                '<a class="button button-primary" href="' + flyer.href + '" target="_blank" rel="noopener noreferrer">Open Builder &amp; Customize &nearr;</a>' +
-              '</div>' +
-            '</div>' +
-          '</article>'
+            '<div class="meta">' +
+            '<span class="pill audience">' +
+            flyer.audience +
+            "</span>" +
+            '<span class="pill">' +
+            flyer.layout +
+            "</span>" +
+            "</div>" +
+            "<h2>" +
+            flyer.title +
+            "</h2>" +
+            '<p class="description">' +
+            flyer.description +
+            "</p>" +
+            '<ul class="features">' +
+            features +
+            "</ul>" +
+            '<div class="actions">' +
+            '<a class="button button-primary" href="' +
+            flyer.href +
+            '" target="_blank" rel="noopener noreferrer">Open Builder &amp; Customize &nearr;</a>' +
+            "</div>" +
+            "</div>" +
+            "</article>",
         );
       }
 
@@ -751,8 +929,12 @@
         const preview = card.querySelector(".preview");
         const button = card.querySelector(".load-preview");
 
-        preview.addEventListener("pointerenter", () => loadPreview(card), { once: true });
-        preview.addEventListener("focus", () => loadPreview(card), { once: true });
+        preview.addEventListener("pointerenter", () => loadPreview(card), {
+          once: true,
+        });
+        preview.addEventListener("focus", () => loadPreview(card), {
+          once: true,
+        });
         button.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();

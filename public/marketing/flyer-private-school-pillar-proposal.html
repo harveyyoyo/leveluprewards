@@ -1,28 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="flyer-generator">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>LevelUp EDU — Private School Pillar Proposal</title>
     <script src="/marketing/flyer-embed.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/marketing/tailwind.min.js"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
               brand: {
-                50: '#f0fdf4',
-                100: '#dcfce7',
-                500: '#059669',
-                600: '#047857',
-                700: '#064e3b',
-                gold: '#d97706',
-                goldLight: '#fef3c7',
+                50: "#f0fdf4",
+                100: "#dcfce7",
+                500: "#059669",
+                600: "#047857",
+                700: "#064e3b",
+                gold: "#d97706",
+                goldLight: "#fef3c7",
               },
             },
             fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif'],
+              sans: ["Inter", "system-ui", "sans-serif"],
             },
           },
         },
@@ -40,7 +40,7 @@
       }
 
       body {
-        font-family: 'Inter', sans-serif;
+        font-family: "Inter", sans-serif;
         background-color: #f8fafc;
       }
 
@@ -174,14 +174,17 @@
         font-size: 14pt !important;
       }
 
-      .print-sheet .text-xs,
+      .print-sheet .text-xs {
+        font-size: 11pt !important;
+      }
+
       .print-sheet .text-\[10px\] {
-        font-size: 12pt !important;
+        font-size: 9.5pt !important;
       }
 
       .print-sheet .text-\[9px\],
       .print-sheet .text-\[8px\] {
-        font-size: 11pt !important;
+        font-size: 8.5pt !important;
       }
 
       .print-sheet table {
@@ -190,7 +193,7 @@
 
       .print-sheet th,
       .print-sheet td {
-        padding: 0.09in 0.08in !important;
+        padding: 0.06in 0.08in !important;
       }
 
       .print-sheet table .text-base {
@@ -231,6 +234,28 @@
 
       .print-sheet .md\:text-right {
         text-align: right !important;
+      }
+
+      /* Scoped page-2 height and margin optimizations to prevent table cutoff */
+      .print-sheet.page-2 .mb-6 {
+        margin-bottom: 0.1in !important;
+      }
+      .print-sheet.page-2 .mb-8 {
+        margin-bottom: 0.12in !important;
+      }
+      .print-sheet.page-2 .border-b-2 {
+        padding-bottom: 0.1in !important;
+        margin-bottom: 0.12in !important;
+      }
+      .print-sheet.page-2 #proposal-summary-box {
+        padding: 0.14in !important;
+      }
+      .print-sheet.page-2 #vendor-box {
+        margin-bottom: 0.08in !important;
+        padding: 0.1in !important;
+      }
+      .print-sheet.page-2 td p {
+        line-height: 1.35 !important;
       }
 
       @media screen {
@@ -369,7 +394,7 @@
         }
 
         .print-sheet.page-2::before {
-          content: '';
+          content: "";
           position: absolute;
           top: -0.35rem;
           left: 0;
@@ -437,7 +462,7 @@
           border: none !important;
           border-radius: 0 !important;
           box-shadow: none !important;
-          overflow: hidden !important;
+          overflow: visible !important;
           page-break-inside: avoid !important;
           break-inside: avoid !important;
           justify-content: flex-start !important;
@@ -503,25 +528,31 @@
     >
       <div class="flex-1 min-h-0">
         <div class="flex items-center space-x-2.5 mb-3">
-          <div class="bg-brand-500 text-white p-2 rounded-lg shadow-md shadow-brand-500/20">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2.5"
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
+          <div
+            class="bg-brand-500 text-white p-2 rounded-lg shadow-md shadow-brand-500/20"
+          >
+            <img
+              src="/logo.png"
+              alt="LevelUp EDU logo"
+              class="w-5 h-5 rounded object-contain"
+            />
           </div>
           <div>
-            <h1 class="text-lg font-black text-brand-700 tracking-tight leading-tight">LevelUp EDU</h1>
-            <p class="text-[11px] text-slate-500 leading-tight">Private School Generator</p>
+            <h1
+              class="text-lg font-black text-brand-700 tracking-tight leading-tight"
+            >
+              LevelUp EDU
+            </h1>
+            <p class="text-[11px] text-slate-500 leading-tight">
+              Private School Generator
+            </p>
           </div>
         </div>
 
         <div>
           <div class="sidebar-section">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+            <label
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
               >Prepared For</label
             >
             <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-lg">
@@ -542,7 +573,10 @@
                 Generic
               </button>
             </div>
-            <p id="prepared-descriptor" class="sidebar-hint text-slate-500 italic">
+            <p
+              id="prepared-descriptor"
+              class="sidebar-hint text-slate-500 italic"
+            >
               Names the school on the flyer header.
             </p>
           </div>
@@ -563,89 +597,59 @@
           </div>
 
           <div class="sidebar-section">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
-              >Pricing Model</label
-            >
-            <div class="grid grid-cols-2 gap-1.5 bg-slate-100 p-1 rounded-lg">
-              <button
-                id="btn-method-student"
-                onclick="setPricingMethod('student')"
-                class="py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50"
-              >
-                Per-Student
-              </button>
-              <button
-                id="btn-method-flat"
-                onclick="setPricingMethod('flat')"
-                class="py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800"
-              >
-                Flat Campus
-              </button>
-            </div>
-            <p id="method-descriptor" class="sidebar-hint text-slate-500 italic">
-              Per-student scaling. Matches Title IV equitable services allotments.
-            </p>
-          </div>
-
-          <div id="enrollment-panel" class="sidebar-section">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
-              >Enrollment</label
-            >
-            <div class="space-y-2">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-medium text-slate-600">Student count</span>
-                <span
-                  id="enrollment-badge"
-                  class="text-xs bg-brand-100 text-brand-600 font-bold px-2 py-0.5 rounded"
-                  >250 Students</span
-                >
-              </div>
-              <input
-                type="range"
-                id="input-students"
-                min="50"
-                max="1200"
-                step="10"
-                value="250"
-                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-500"
-              />
-              <label
-                class="sidebar-card flex items-start gap-2 border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition"
-              >
-                <input
-                  type="checkbox"
-                  id="input-show-enrollment"
-                  checked
-                  class="mt-0.5 text-brand-500 focus:ring-brand-500 rounded"
-                />
-                <div>
-                  <p class="text-[11px] font-bold text-slate-800 leading-tight">Show enrollment on flyer</p>
-                  <p class="sidebar-hint text-slate-500">Print the student count in pricing tables.</p>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div id="flat-bracket-panel" class="sidebar-section hidden">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
-              >Campus Size Bracket</label
+            <label
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >School Size</label
             >
             <select
               id="input-flat-bracket"
               class="w-full px-3 py-1.5 border border-slate-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
             >
-              <option value="small" selected>Small campus</option>
-              <option value="medium">Medium campus</option>
-              <option value="large">Large campus</option>
+              <option value="small">Small (&lt;300 students)</option>
+              <option value="medium" selected>Medium (300–750 students)</option>
+              <option value="large">Large (750+ students)</option>
             </select>
-            <p class="sidebar-hint text-slate-500">Sets flat license tier. Student counts are not printed.</p>
+            <p class="sidebar-hint text-slate-500">
+              Sets annual license tier. Pricing scales with school size.
+            </p>
           </div>
 
           <div class="sidebar-section">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+            <label
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+              >Training &amp; Setup</label
+            >
+            <div class="flex items-center gap-2 mt-2">
+              <input
+                type="checkbox"
+                id="input-include-training"
+                checked
+                class="text-brand-500 focus:ring-brand-500 shrink-0 rounded"
+              />
+              <label
+                for="input-include-training"
+                class="text-xs font-bold text-slate-700 cursor-pointer"
+                >Include Staff Onboarding &amp; Training</label
+              >
+            </div>
+            <p class="sidebar-hint text-slate-400 mt-1.5">
+              Includes roster setup, platform configuration, and a full day of professional development for staff ($750 flat rate, Title II eligible).
+            </p>
+          </div>
+
+          <div class="sidebar-section">
+            <label
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
               >Pillars on Flyer</label
             >
             <div>
+              <button
+                type="button"
+                onclick="selectAllPillars()"
+                class="w-full mb-2 py-1.5 text-[11px] font-bold rounded-md bg-brand-500 text-white hover:bg-brand-600 transition flex items-center justify-center gap-1"
+              >
+                ⭐ Select All Pillars (Recommended)
+              </button>
               <label
                 class="sidebar-tier flex items-center border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition"
               >
@@ -657,8 +661,15 @@
                   class="pillar-checkbox text-brand-500 focus:ring-brand-500 mr-2.5 shrink-0 rounded"
                 />
                 <div class="min-w-0">
-                  <p class="text-[11px] font-bold text-slate-800 leading-tight">Rewards</p>
-                  <p id="badge-price-rewards" class="text-[10px] text-brand-600 font-bold leading-tight">$5.00/student</p>
+                  <p class="text-[11px] font-bold text-slate-800 leading-tight">
+                    Rewards
+                  </p>
+                  <p
+                    id="badge-price-rewards"
+                    class="text-[10px] text-brand-600 font-bold leading-tight"
+                  >
+                    $1,500 flat
+                  </p>
                 </div>
               </label>
               <label
@@ -672,8 +683,15 @@
                   class="pillar-checkbox text-brand-500 focus:ring-brand-500 mr-2.5 shrink-0 rounded"
                 />
                 <div class="min-w-0">
-                  <p class="text-[11px] font-bold text-slate-800 leading-tight">Classroom</p>
-                  <p id="badge-price-classroom" class="text-[10px] text-brand-600 font-bold leading-tight">$1.50/student</p>
+                  <p class="text-[11px] font-bold text-slate-800 leading-tight">
+                    Classroom
+                  </p>
+                  <p
+                    id="badge-price-classroom"
+                    class="text-[10px] text-brand-600 font-bold leading-tight"
+                  >
+                    $375 flat
+                  </p>
                 </div>
               </label>
               <label
@@ -687,8 +705,15 @@
                   class="pillar-checkbox text-brand-500 focus:ring-brand-500 mr-2.5 shrink-0 rounded"
                 />
                 <div class="min-w-0">
-                  <p class="text-[11px] font-bold text-slate-800 leading-tight">Attendance</p>
-                  <p id="badge-price-attendance" class="text-[10px] text-brand-600 font-bold leading-tight">$1.30/student</p>
+                  <p class="text-[11px] font-bold text-slate-800 leading-tight">
+                    Attendance
+                  </p>
+                  <p
+                    id="badge-price-attendance"
+                    class="text-[10px] text-brand-600 font-bold leading-tight"
+                  >
+                    $325 flat
+                  </p>
                 </div>
               </label>
               <label
@@ -702,33 +727,25 @@
                   class="pillar-checkbox text-brand-500 focus:ring-brand-500 mr-2.5 shrink-0 rounded"
                 />
                 <div class="min-w-0">
-                  <p class="text-[11px] font-bold text-slate-800 leading-tight">Library</p>
-                  <p id="badge-price-library" class="text-[10px] text-brand-600 font-bold leading-tight">$2.00/student</p>
+                  <p class="text-[11px] font-bold text-slate-800 leading-tight">
+                    Library
+                  </p>
+                  <p
+                    id="badge-price-library"
+                    class="text-[10px] text-brand-600 font-bold leading-tight"
+                  >
+                    $500 flat
+                  </p>
                 </div>
               </label>
             </div>
           </div>
 
           <div class="sidebar-section">
-            <label class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
+            <label
+              class="sidebar-label block font-bold uppercase tracking-wider text-slate-400"
               >Proposal Display</label
             >
-            <label
-              class="sidebar-card flex items-start gap-2 border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition"
-            >
-              <input
-                type="checkbox"
-                id="input-show-all-pricing"
-                checked
-                class="mt-0.5 text-brand-500 focus:ring-brand-500 rounded"
-              />
-              <div>
-                <p class="text-[11px] font-bold text-slate-800 leading-tight">Include all pricing models</p>
-                <p class="sidebar-hint text-slate-500">
-                  Per-student and flat campus rates for each included pillar.
-                </p>
-              </div>
-            </label>
             <label
               class="sidebar-card flex items-start gap-2 border border-slate-200 bg-white hover:border-brand-500 cursor-pointer transition mt-2"
             >
@@ -739,8 +756,12 @@
                 class="mt-0.5 text-brand-500 focus:ring-brand-500 rounded"
               />
               <div>
-                <p class="text-[11px] font-bold text-slate-800 leading-tight">NYC DOE vendor block</p>
-                <p id="vendor-sidebar-hint" class="sidebar-hint text-slate-500">Vendor code and company details.</p>
+                <p class="text-[11px] font-bold text-slate-800 leading-tight">
+                  NYC DOE vendor block
+                </p>
+                <p id="vendor-sidebar-hint" class="sidebar-hint text-slate-500">
+                  Vendor code and company details.
+                </p>
               </div>
             </label>
           </div>
@@ -752,7 +773,12 @@
           onclick="window.print()"
           class="w-full bg-brand-500 text-white font-bold text-xs py-2 px-3 rounded-lg shadow-md hover:bg-brand-600 active:translate-y-0.5 transform transition duration-100 flex items-center justify-center space-x-2"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -769,73 +795,150 @@
     </div>
 
     <div class="proposal-main flex-1 min-h-0">
-      <div id="flyer-page" class="text-slate-800 relative transition-all duration-150">
+      <div
+        id="flyer-page"
+        class="text-slate-800 relative transition-all duration-150"
+      >
         <div class="print-sheet page-content page-1 flex flex-col">
           <div class="print-sheet-body flex flex-col">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-brand-500/15 pb-6 mb-8">
-            <div class="flex items-center space-x-4">
-              <div class="bg-brand-500 text-white p-3 rounded-xl print:bg-brand-500">
-                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2.5"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+            <div
+              class="flex flex-col md:flex-row justify-between items-start md:items-center border-b-2 border-brand-500/15 pb-6 mb-8"
+            >
+              <div class="flex items-center space-x-4">
+                <img
+                  src="/logo.png"
+                  alt="LevelUp EDU logo"
+                  class="w-14 h-14 rounded-xl object-contain"
+                />
+                <div>
+                  <span
+                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-gold/10 text-brand-gold uppercase tracking-wider"
+                  >
+                    State & Federal Fund Eligible
+                  </span>
+                  <h2
+                    class="text-2xl md:text-3xl font-black text-brand-600 tracking-tight"
+                  >
+                    LevelUp EDU
+                  </h2>
+                  <p id="flyer-subtitle" class="text-xs text-slate-500 mt-0.5 font-medium">
+                    Modular School Platform Engineered for Private Academies
+                  </p>
+                </div>
               </div>
-              <div>
-                <span
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-brand-gold/10 text-brand-gold uppercase tracking-wider"
+              <div id="flyer-prepared-container" class="mt-4 md:mt-0 text-left md:text-right">
+                <p
+                  id="flyer-prepared-label"
+                  class="text-[10px] text-slate-400 font-bold tracking-wider uppercase"
                 >
-                  State & Federal Fund Eligible
-                </span>
-                <h2 class="text-2xl md:text-3xl font-black text-brand-600 tracking-tight">LevelUp EDU</h2>
-                <p class="text-xs text-slate-500 mt-0.5 font-medium">
-                  Modular School Platform Engineered for Private Academies
+                  Proposal Prepared For
+                </p>
+                <p
+                  id="flyer-school-name"
+                  class="text-base font-bold text-slate-800"
+                >
+                  St. Jude Academy
+                </p>
+                <p class="text-xs text-slate-500" id="flyer-date-string">
+                  June 2026
                 </p>
               </div>
             </div>
-            <div class="mt-4 md:mt-0 text-left md:text-right">
-              <p id="flyer-prepared-label" class="text-[10px] text-slate-400 font-bold tracking-wider uppercase">
-                Proposal Prepared For
-              </p>
-              <p id="flyer-school-name" class="text-base font-bold text-slate-800">St. Jude Academy</p>
-              <p class="text-xs text-slate-500" id="flyer-date-string">June 2026</p>
-            </div>
-          </div>
 
-          <div class="mb-8">
-            <h3 class="text-base font-extrabold text-slate-800 mb-2">Build Positive Culture with LevelUp EDU</h3>
-            <p class="text-xs text-slate-600 leading-relaxed mb-3">
-              LevelUp EDU is a modular school platform built around positive behavior, classroom operations, attendance,
-              and library checkout. The core experience starts with students earning and redeeming rewards, then expands
-              into daily teacher workflows through four product pillars you can mix and match.
-            </p>
-            <div class="bg-brand-goldLight/20 border-l-4 border-brand-gold p-3 rounded-r-lg text-xs">
-              <p class="font-bold text-brand-gold mb-1">⭐ Highlight: The Rewards Core Wedge</p>
-              <p class="text-slate-600">
-                Unlike rigid administrative utilities, our core system starts with students actively earning, saving, and
-                redeeming reward points. Your campus operations naturally flow into this gamified hub, building
-                unprecedented student buy-in and eliminating disjointed teacher subscriptions.
+            <div class="mb-8">
+              <h3 class="text-base font-extrabold text-slate-800 mb-2">
+                Build Positive Culture with LevelUp EDU
+              </h3>
+              <p class="text-xs text-slate-600 leading-relaxed mb-3">
+                LevelUp EDU is a modular school platform built around positive
+                behavior, classroom operations, attendance, and library
+                checkout. The core experience starts with students earning and
+                redeeming rewards, then expands into daily teacher workflows
+                through four product pillars you can mix and match.
+              </p>
+              <div
+                class="bg-brand-goldLight/20 border-l-4 border-brand-gold p-3 rounded-r-lg text-xs"
+              >
+                <p class="font-bold text-brand-gold mb-1">
+                  ⭐ Highlight: Student-First Engagement Hub
+                </p>
+                <p class="text-slate-600">
+                  Unlike rigid administrative utilities, our rewards system starts
+                  with students actively earning, saving, and redeeming reward
+                  points. Your campus operations naturally flow into this
+                  gamified hub, building unprecedented student buy-in and
+                  eliminating disjointed teacher subscriptions.
+                </p>
+              </div>
+            </div>
+
+            <div class="mb-8 print-fill-block flex-1">
+              <h4
+                class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3"
+              >
+                LevelUp EDU Product Pillars
+              </h4>
+              <div
+                class="border border-slate-200 rounded-xl overflow-hidden bg-white flex-1"
+              >
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                      <th class="py-3 px-4 font-bold text-slate-600 w-1/3">
+                        Product Pillar
+                      </th>
+                      <th class="py-3 px-4 font-bold text-slate-600">
+                        Capabilities
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="matrix-pillar-rows"
+                    class="divide-y divide-slate-150"
+                  ></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Recommended Complete Platform callout -->
+            <div id="complete-platform-callout" class="mt-3 hidden">
+              <div
+                class="bg-brand-500 text-white rounded-xl p-3 flex items-center justify-between"
+              >
+                <div>
+                  <p
+                    class="text-[10px] font-black uppercase tracking-widest text-white/70 mb-0.5"
+                  >
+                    ⭐ Recommended — Complete Platform
+                  </p>
+                  <p class="text-sm font-black leading-tight">
+                    All 4 Pillars · One Vendor · One Purchase Order
+                  </p>
+                  <p class="text-[10px] text-white/80 mt-0.5">
+                    Rewards · Classroom · Attendance · Library —
+                    <span id="callout-size-label">Small campus</span>
+                  </p>
+                </div>
+                <div class="text-right shrink-0 ml-4">
+                  <p
+                    class="text-[10px] text-white/70 font-bold uppercase tracking-wider"
+                  >
+                    Annual License
+                  </p>
+                  <p id="callout-bundle-total" class="text-xl font-black">
+                    $2,450
+                  </p>
+                  <p class="text-[10px] text-white/60">
+                    + training $750 flat · free 24/6 support
+                  </p>
+                </div>
+              </div>
+              <p class="text-[9px] text-slate-400 mt-1 leading-relaxed">
+                Implementation guarantee: if you're not fully up and running
+                within 30 days, we keep working with you at no additional cost
+                until you are.
               </p>
             </div>
-          </div>
-
-          <div class="mb-8 print-fill-block flex-1">
-            <h4 class="text-xs font-bold text-brand-600 uppercase tracking-widest mb-3">LevelUp EDU Product Pillars</h4>
-            <div class="border border-slate-200 rounded-xl overflow-hidden bg-white flex-1">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b border-slate-200">
-                    <th class="py-3 px-4 font-bold text-slate-600 w-1/3">Product Pillar</th>
-                    <th class="py-3 px-4 font-bold text-slate-600">Capabilities</th>
-                  </tr>
-                </thead>
-                <tbody id="matrix-pillar-rows" class="divide-y divide-slate-150"></tbody>
-              </table>
-            </div>
-          </div>
           </div>
 
           <div
@@ -848,130 +951,283 @@
 
         <div class="print-sheet page-content page-2 flex flex-col print-break">
           <div class="print-sheet-body flex flex-col flex-1">
-          <div class="border-b-2 border-brand-500/15 pb-4 mb-6">
-            <h3 id="page2-title" class="text-lg font-black text-brand-600 uppercase tracking-wider">Custom Cost Proposal</h3>
-            <p id="page2-subtitle" class="text-xs text-slate-500 mt-0.5">
-              Custom license values formulated specifically for your institution.
-            </p>
-          </div>
-
-          <div id="all-pricing-section" class="mb-6 hidden print-fill-block">
-            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Complete Pricing Models — <span id="all-pricing-school-label">Prepared for Private Schools</span>
-            </h4>
-            <p id="all-pricing-enrollment-note" class="text-[10px] text-slate-500 mb-3 leading-relaxed">
-              Standard rate structure for any private school campus. Per-student totals scale with enrollment and include
-              a $750 annual platform minimum where applicable.
-            </p>
-            <div class="border border-slate-200 rounded-xl overflow-hidden">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b border-slate-200">
-                    <th class="py-3 px-4 font-bold text-slate-600">Package</th>
-                    <th class="py-3 px-2 font-bold text-slate-600 text-right">Per-Student Rate</th>
-                    <th class="py-3 px-2 font-bold text-slate-600 text-right">Annual (Per-Student)</th>
-                    <th class="py-3 px-2 font-bold text-slate-600 text-right">Flat Bracket</th>
-                    <th class="py-3 px-2 font-bold text-slate-600 text-right">Annual (Flat Campus)</th>
-                  </tr>
-                </thead>
-                <tbody id="all-pricing-rows"></tbody>
-              </table>
+            <div class="border-b-2 border-brand-500/15 pb-4 mb-6">
+              <h3
+                id="page2-title"
+                class="text-lg font-black text-brand-600 uppercase tracking-wider"
+              >
+                Custom Cost Proposal
+              </h3>
+              <p id="page2-subtitle" class="text-xs text-slate-500 mt-0.5">
+                Custom license values formulated specifically for your
+                institution.
+              </p>
             </div>
-          </div>
 
-          <div class="mb-6 flex-1 print-fill-block flex flex-col min-h-0">
-            <h4 id="itemized-heading" class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
-              Itemized Platform Proposal
-            </h4>
-            <div class="border border-slate-200 rounded-xl overflow-hidden flex-1">
-              <table class="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b border-slate-200">
-                    <th class="py-3 px-4 font-bold text-slate-600">Module Description</th>
-                    <th class="py-3 px-4 font-bold text-slate-600 text-right">Pricing Model / Rate</th>
-                    <th id="billing-enrollment-header" class="py-3 px-4 font-bold text-slate-600 text-right">Enrollment</th>
-                    <th class="py-3 px-4 font-bold text-slate-600 text-right">Annual Cost</th>
-                  </tr>
-                </thead>
-                <tbody id="billing-tier-rows">
-                  <tr id="bill-tier-row" class="border-b border-slate-100 hover:bg-slate-50/50">
-                    <td class="py-4 px-4">
-                      <p id="bill-tier-title" class="font-bold text-slate-800">Classroom & Culture</p>
-                      <p id="bill-tier-desc" class="text-[10px] text-slate-500 mt-0.5">
-                        Rewards Foundation + Classroom Management + Attendance
-                      </p>
-                    </td>
-                    <td id="bill-tier-rate" class="py-4 px-4 text-right text-slate-600">—</td>
-                    <td id="bill-tier-qty" class="py-4 px-4 text-right text-slate-600">—</td>
-                    <td id="bill-tier-total" class="py-4 px-4 text-right font-bold text-slate-800">—</td>
-                  </tr>
-                </tbody>
-                <tbody>
-                  <tr class="bg-slate-50/30">
-                    <td class="py-4 px-4">
-                      <p class="font-bold text-slate-800 flex items-center">
-                        Implementation Training & System Integration
-                        <span
-                          class="ml-2 text-[8px] bg-brand-gold/15 text-brand-gold font-bold uppercase tracking-wider px-2 py-0.5 rounded"
-                        >
-                          100% Title II Funding Compliant
-                        </span>
-                      </p>
-                      <p class="text-[10px] text-slate-500 mt-0.5">
-                        Custom data ingestion (SIS Roster mapping), configuration check, 1-on-1 admin dashboard
-                        configuration, and complete teacher professional development onboarding workshops.
-                      </p>
-                    </td>
-                    <td class="py-4 px-4 text-right text-slate-600">—</td>
-                    <td id="bill-pd-enrollment" class="billing-enrollment-cell py-4 px-4 text-right text-slate-600">Flat Setup</td>
-                    <td id="bill-pd-total" class="py-4 px-4 text-right font-bold text-slate-800">$950.00</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div id="all-pricing-section" class="mb-6 hidden print-fill-block">
+              <h4
+                class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3"
+              >
+                Complete Pricing Models —
+                <span id="all-pricing-school-label"
+                  >Prepared for Private Schools</span
+                >
+              </h4>
+              <p
+                id="all-pricing-enrollment-note"
+                class="text-[10px] text-slate-500 mb-3 leading-relaxed"
+              >
+                Standard rate structure for any private school campus.
+                Per-student totals scale with enrollment and include a $750
+                annual platform minimum where applicable.
+              </p>
+              <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                      <th class="py-3 px-4 font-bold text-slate-600">
+                        Package
+                      </th>
+                      <th class="py-3 px-2 font-bold text-slate-600 text-right">
+                        Per-Student Rate
+                      </th>
+                      <th class="py-3 px-2 font-bold text-slate-600 text-right">
+                        Annual (Per-Student)
+                      </th>
+                      <th class="py-3 px-2 font-bold text-slate-600 text-right">
+                        Flat Bracket
+                      </th>
+                      <th class="py-3 px-2 font-bold text-slate-600 text-right">
+                        Annual (Flat Campus)
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="all-pricing-rows"></tbody>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <div id="summary-funding-grid" class="mb-8 flex-1 flex flex-col justify-end">
-            <div
-              id="proposal-summary-box"
-              class="bg-brand-50 p-5 rounded-xl border border-brand-100 flex flex-col justify-between max-w-md"
-            >
-              <div>
-                <h4 id="summary-heading" class="text-[10px] font-bold uppercase tracking-wider text-brand-600 mb-2">
-                  Proposal Summary
-                </h4>
-                <p id="summary-selected-note" class="text-[10px] text-slate-500 mb-2 hidden"></p>
-                <div id="summary-single" class="space-y-1.5 text-xs">
-                  <div class="flex justify-between text-slate-500">
-                    <span>Base Annual Contract:</span>
-                    <span id="sum-base" class="font-bold text-slate-800">$2,450.00</span>
-                  </div>
-                  <div class="flex justify-between text-slate-500">
-                    <span>Onboarding & Staff PD:</span>
-                    <span id="sum-pd" class="font-bold text-slate-800">$950.00</span>
+            <div class="mb-6 flex-1 print-fill-block flex flex-col min-h-0">
+              <h4
+                id="itemized-heading"
+                class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3"
+              >
+                Itemized Platform Proposal
+              </h4>
+              <!-- Complete platform bundle banner (shown when all 4 pillars selected) -->
+              <div
+                id="bundle-banner"
+                class="hidden mb-3 bg-brand-gold/10 border border-brand-gold/40 rounded-lg px-3 py-2 flex items-center justify-between"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-brand-gold font-black text-sm">⭐</span>
+                  <div>
+                    <p class="text-[11px] font-black text-brand-700">
+                      Complete Platform — All 4 Pillars
+                    </p>
+                    <p class="text-[9px] text-slate-500">
+                      One PO · One vendor · 30-day implementation guarantee
+                    </p>
                   </div>
                 </div>
+                <div class="text-right">
+                  <p
+                    class="text-[9px] text-slate-400 uppercase tracking-wider font-bold"
+                  >
+                    Annual Bundle
+                  </p>
+                  <p
+                    id="bundle-banner-total"
+                    class="text-base font-black text-brand-600"
+                  >
+                    $2,450
+                  </p>
+                </div>
               </div>
-              <div class="border-t border-brand-100 pt-3 mt-3 flex justify-between items-baseline">
-                <span id="sum-grand-label" class="text-xs font-bold text-slate-700">Annual Combined Budget:</span>
-                <span id="sum-grand-total" class="text-xl font-black text-brand-600">$3,400.00</span>
+              <div
+                class="border border-slate-200 rounded-xl overflow-hidden flex-1"
+              >
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200">
+                      <th class="py-3 px-4 font-bold text-slate-600">
+                        Module Description
+                      </th>
+                      <th class="py-3 px-4 font-bold text-slate-600 text-right">
+                        License Type
+                      </th>
+                      <th
+                        id="billing-enrollment-header"
+                        class="py-3 px-4 font-bold text-slate-600 text-right hidden"
+                      >
+                        Enrollment
+                      </th>
+                      <th class="py-3 px-4 font-bold text-slate-600 text-right">
+                        Annual Cost
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody id="billing-tier-rows">
+                    <tr
+                      id="bill-tier-row"
+                      class="border-b border-slate-100 hover:bg-slate-50/50"
+                    >
+                      <td class="py-4 px-4">
+                        <p
+                          id="bill-tier-title"
+                          class="font-bold text-slate-800"
+                        >
+                          Classroom & Culture
+                        </p>
+                        <p
+                          id="bill-tier-desc"
+                          class="text-[10px] text-slate-500 mt-0.5"
+                        >
+                          Rewards Foundation + Classroom Management + Attendance
+                        </p>
+                      </td>
+                      <td
+                        id="bill-tier-rate"
+                        class="py-4 px-4 text-right text-slate-600"
+                      >
+                        —
+                      </td>
+                      <td
+                        id="bill-tier-qty"
+                        class="py-4 px-4 text-right text-slate-600"
+                      >
+                        —
+                      </td>
+                      <td
+                        id="bill-tier-total"
+                        class="py-4 px-4 text-right font-bold text-slate-800"
+                      >
+                        —
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tbody id="bill-pd-section">
+                    <tr class="bg-slate-50/30">
+                      <td class="py-4 px-4">
+                        <p class="font-bold text-slate-800 flex items-center">
+                          Training &amp; Implementation
+                          <span
+                            class="ml-2 text-[8px] bg-brand-gold/15 text-brand-gold font-bold uppercase tracking-wider px-2 py-0.5 rounded"
+                          >
+                            Title II &amp; IV Eligible
+                          </span>
+                        </p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">
+                          Full day of hands-on staff professional development, system setup, roster imports, and admin configuration. Ongoing 24/6 customer & platform support is always free and included.
+                        </p>
+                      </td>
+                      <td
+                        class="py-4 px-4 text-right text-slate-600"
+                        id="bill-pd-rate"
+                      >
+                        $750.00 flat
+                      </td>
+                      <td
+                        id="bill-pd-enrollment"
+                        class="billing-enrollment-cell py-4 px-4 text-right text-slate-600"
+                      >
+                        Full day
+                      </td>
+                      <td
+                        id="bill-pd-total"
+                        class="py-4 px-4 text-right font-bold text-slate-800"
+                      >
+                        $750.00
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
-          </div>
 
-          <div
-            id="vendor-box"
-            class="mb-4 bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700 leading-relaxed"
-          >
-            <p class="font-bold text-brand-600 mb-0.5">NYC DOE Approved Vendor</p>
-            <p id="vendor-box-text"></p>
-          </div>
+            <div
+              id="summary-funding-grid"
+              class="mb-8 flex flex-col justify-end"
+            >
+              <div
+                id="proposal-summary-box"
+                class="bg-brand-50 p-5 rounded-xl border border-brand-100 flex flex-col justify-between max-w-md"
+              >
+                <div>
+                  <h4
+                    id="summary-heading"
+                    class="text-[10px] font-bold uppercase tracking-wider text-brand-600 mb-2"
+                  >
+                    Proposal Summary
+                  </h4>
+                  <p
+                    id="summary-selected-note"
+                    class="text-[10px] text-slate-500 mb-2 hidden"
+                  ></p>
+                  <p
+                    id="summary-rate-lock-note"
+                    class="hidden text-[9px] text-brand-600 font-bold mb-2"
+                  >
+                    ✅ Complete Platform — 30-day implementation guarantee
+                    included.
+                  </p>
+                  <div id="summary-single" class="space-y-1.5 text-xs">
+                    <div class="flex justify-between text-slate-500">
+                      <span>Base Annual Contract:</span>
+                      <span id="sum-base" class="font-bold text-slate-800"
+                        >$2,450.00</span
+                      >
+                    </div>
+                    <div class="flex justify-between text-slate-500">
+                      <span>Onboarding & Staff PD:</span>
+                      <span id="sum-pd" class="font-bold text-slate-800"
+                        >$950.00</span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="border-t border-brand-100 pt-3 mt-3 flex justify-between items-baseline"
+                >
+                  <span
+                    id="sum-grand-label"
+                    class="text-xs font-bold text-slate-700"
+                    >Annual Combined Budget:</span
+                  >
+                  <span
+                    id="sum-grand-total"
+                    class="text-xl font-black text-brand-600"
+                    >$3,400.00</span
+                  >
+                </div>
+                <p class="text-[9px] text-slate-400 mt-2 leading-relaxed">
+                  ⚠️ Software license only. Hardware (tablets, kiosks, ID card
+                  printers, scanners) is not included and may require separate
+                  procurement.
+                </p>
+                <p class="text-[9px] text-slate-400 mt-2 leading-relaxed">
+                  💰 <strong>Eligible Funding Sources:</strong> May qualify for Title I, Title II, Title III, Title IV, IDEA, EANS, and state-specific security grants.
+                </p>
+              </div>
+            </div>
+
+            <div
+              id="vendor-box"
+              class="mb-4 bg-brand-50 border border-brand-100 rounded-xl p-3 text-xs text-brand-700 leading-relaxed"
+            >
+              <p class="font-bold text-brand-600 mb-0.5">
+                NYC DOE Approved Vendor
+              </p>
+              <p id="vendor-box-text"></p>
+            </div>
           </div>
 
           <div
             class="print-sheet-footer border-t border-slate-150 pt-4 mt-4 flex justify-between items-center text-[10px] text-slate-400 font-semibold tracking-wider"
           >
-            <span id="page2-footer-left">LevelUp EDU Proposal • leveluprewards.app</span>
+            <span id="page2-footer-left"
+              >LevelUp EDU Proposal • leveluprewards.app</span
+            >
             <span>Page 2 of 2</span>
           </div>
         </div>
@@ -979,119 +1235,132 @@
     </div>
 
     <script>
-      const NYC_DOE_VENDOR_CODE = 'VS00109014';
-      const VENDOR_ENTITY = 'LevelUp EdTech Enterprises LLC';
-      const VENDOR_WEB = 'leveluprewards.app';
+      const NYC_DOE_VENDOR_CODE = "VS00109014";
+      const VENDOR_ENTITY = "LevelUp EdTech Enterprises LLC";
+      const VENDOR_WEB = "leveluprewards.app";
 
       function getVendorBlockHtml() {
         return (
-          'Vendor code <strong>' +
+          "Vendor code <strong>" +
           NYC_DOE_VENDOR_CODE +
-          '</strong> · ' +
+          "</strong> · " +
           VENDOR_ENTITY +
           ' · <span class="font-semibold">' +
           VENDOR_WEB +
-          '</span>'
+          "</span>"
         );
       }
 
-      const PILLAR_KEYS = ['rewards', 'classroom', 'attendance', 'library'];
+      const PILLAR_KEYS = ["rewards", "classroom", "attendance", "library"];
+      const ALL_PILLAR_FLAT_TOTALS = { small: 2700, medium: 4910, large: 7350 };
+      const FLAT_BRACKET_SIZE_LABELS = {
+        small: "Small campus (<300 students)",
+        medium: "Medium campus (300–750 students)",
+        large: "Large campus (750+ students)",
+      };
       const PILLAR_META = {
         rewards: {
-          label: 'Rewards',
-          core: true,
-          desc: 'Teachers award points, students redeem prizes/coupons, and admins configure the reward economy.',
-          studentRate: 5.0,
-          flat: { small: 1250, medium: 2250, large: 3750 },
+          label: "Rewards",
+          core: false,
+          desc: "Teachers award points, students redeem prizes/coupons, and admins configure the reward economy.",
+          primary: { small: 1500, medium: 2750, large: 3750 },
+          addon: { small: 400, medium: 720, large: 1200 },
         },
         classroom: {
-          label: 'Classroom',
+          label: "Classroom",
           core: false,
-          desc: 'Seating layouts, quick awards, classroom tools, room display, and teacher-facing daily management.',
-          studentRate: 1.5,
-          flat: { small: 375, medium: 675, large: 1125 },
+          desc: "Seating layouts, quick awards, classroom tools, room display, and teacher-facing daily management.",
+          primary: { small: 1500, medium: 2750, large: 3750 },
+          addon: { small: 400, medium: 720, large: 1200 },
         },
         attendance: {
-          label: 'Attendance',
+          label: "Attendance",
           core: false,
-          desc: 'Class sign-in, attendance logs, on-time rewards, schedules, and parent/staff attendance alerts.',
-          studentRate: 1.3,
-          flat: { small: 325, medium: 585, large: 975 },
+          desc: "Class sign-in, attendance logs, on-time rewards, schedules, and parent/staff attendance alerts.",
+          primary: { small: 1500, medium: 2750, large: 3750 },
+          addon: { small: 400, medium: 720, large: 1200 },
         },
         library: {
-          label: 'Library',
+          label: "Library",
           core: false,
-          desc: 'Catalog management, checkout scans, overdue tracking, library notifications, and optional student self-checkout.',
-          studentRate: 2.0,
-          flat: { small: 500, medium: 900, large: 1500 },
+          desc: "Catalog management, checkout scans, overdue tracking, library notifications, and optional student self-checkout.",
+          primary: { small: 1500, medium: 2750, large: 3750 },
+          addon: { small: 400, medium: 720, large: 1200 },
         },
       };
-      const FLAT_BRACKET_GUIDE = 'Small (<300) · Medium (300–750) · Large (750+)';
-      const PD_FEE_RANGE = '$950–$1,950';
-      const ALL_PRICING_ENROLLMENT_NOTE_STUDENT =
-        'Standard per-student rate structure. Totals scale with enrollment and include a $750 annual platform minimum where applicable.';
-      const ALL_PRICING_ENROLLMENT_NOTE_STUDENT_GENERIC =
-        'Standard per-student rate structure for any private school campus. Includes a $750 annual platform minimum where applicable.';
-      const ALL_PRICING_ENROLLMENT_NOTE_FLAT =
-        'Flat campus license brackets by school size tier. No per-student enrollment figures are required.';
       const FLAT_BRACKET_LABELS = {
-        small: 'Small campus',
-        medium: 'Medium campus',
-        large: 'Large campus',
+        small: "Small (&lt;300 students)",
+        medium: "Medium (300–750 students)",
+        large: "Large (750+ students)",
+      };
+      const FLAT_BRACKET_LABELS_PLAIN = {
+        small: "Small (<300 students)",
+        medium: "Medium (300–750 students)",
+        large: "Large (750+ students)",
       };
 
-      const inputSchoolName = document.getElementById('input-school-name');
-      const inputStudents = document.getElementById('input-students');
-      const inputShowEnrollment = document.getElementById('input-show-enrollment');
-      const inputShowAllPricing = document.getElementById('input-show-all-pricing');
-      const inputShowVendor = document.getElementById('input-show-vendor');
-      const inputFlatBracket = document.getElementById('input-flat-bracket');
-      const enrollmentPanel = document.getElementById('enrollment-panel');
-      const flatBracketPanel = document.getElementById('flat-bracket-panel');
-      const enrollmentBadge = document.getElementById('enrollment-badge');
-      const billingEnrollmentHeader = document.getElementById('billing-enrollment-header');
-      const flyerSchoolName = document.getElementById('flyer-school-name');
-      const flyerPreparedLabel = document.getElementById('flyer-prepared-label');
-      const flyerDateString = document.getElementById('flyer-date-string');
-      const page2Title = document.getElementById('page2-title');
-      const page2Subtitle = document.getElementById('page2-subtitle');
-      const proposalSummaryBox = document.getElementById('proposal-summary-box');
-      const summaryFundingGrid = document.getElementById('summary-funding-grid');
-      const billingTierRows = document.getElementById('billing-tier-rows');
-      const billPdTotal = document.getElementById('bill-pd-total');
-      const billPdEnrollment = document.getElementById('bill-pd-enrollment');
-      const sumBase = document.getElementById('sum-base');
-      const sumPd = document.getElementById('sum-pd');
-      const sumGrandTotal = document.getElementById('sum-grand-total');
-      const sumGrandLabel = document.getElementById('sum-grand-label');
-      const matrixPillarRows = document.getElementById('matrix-pillar-rows');
-      const pillarBadgeEls = Object.fromEntries(
-        PILLAR_KEYS.map((key) => [key, document.getElementById(`badge-price-${key}`)])
+      const inputSchoolName = document.getElementById("input-school-name");
+      const inputShowVendor = document.getElementById("input-show-vendor");
+      const inputFlatBracket = document.getElementById("input-flat-bracket");
+      const inputIncludeTraining = document.getElementById(
+        "input-include-training",
       );
-      const methodDescriptor = document.getElementById('method-descriptor');
-      const allPricingSection = document.getElementById('all-pricing-section');
-      const allPricingRows = document.getElementById('all-pricing-rows');
-      const allPricingSchoolLabel = document.getElementById('all-pricing-school-label');
-      const allPricingEnrollmentNote = document.getElementById('all-pricing-enrollment-note');
-      const itemizedHeading = document.getElementById('itemized-heading');
-      const summarySelectedNote = document.getElementById('summary-selected-note');
-      const summarySingle = document.getElementById('summary-single');
-      const schoolNamePanel = document.getElementById('school-name-panel');
-      const preparedDescriptor = document.getElementById('prepared-descriptor');
-      const vendorBox = document.getElementById('vendor-box');
-      const vendorBoxText = document.getElementById('vendor-box-text');
-      const vendorSidebarHint = document.getElementById('vendor-sidebar-hint');
-      const page2FooterLeft = document.getElementById('page2-footer-left');
+      const flyerSchoolName = document.getElementById("flyer-school-name");
+      const flyerPreparedLabel = document.getElementById(
+        "flyer-prepared-label",
+      );
+      const flyerDateString = document.getElementById("flyer-date-string");
+      const page2Title = document.getElementById("page2-title");
+      const page2Subtitle = document.getElementById("page2-subtitle");
+      const proposalSummaryBox = document.getElementById(
+        "proposal-summary-box",
+      );
+      const summaryFundingGrid = document.getElementById(
+        "summary-funding-grid",
+      );
+      const billingTierRows = document.getElementById("billing-tier-rows");
+      const billPdTotal = document.getElementById("bill-pd-total");
+      const billPdEnrollment = document.getElementById("bill-pd-enrollment");
+      const sumBase = document.getElementById("sum-base");
+      const sumPd = document.getElementById("sum-pd");
+      const sumGrandTotal = document.getElementById("sum-grand-total");
+      const sumGrandLabel = document.getElementById("sum-grand-label");
+      const matrixPillarRows = document.getElementById("matrix-pillar-rows");
+      const pillarBadgeEls = Object.fromEntries(
+        PILLAR_KEYS.map((key) => [
+          key,
+          document.getElementById(`badge-price-${key}`),
+        ]),
+      );
+      const itemizedHeading = document.getElementById("itemized-heading");
+      const summarySingle = document.getElementById("summary-single");
+      const summarySelectedNote = document.getElementById(
+        "summary-selected-note",
+      );
+      const schoolNamePanel = document.getElementById("school-name-panel");
+      const preparedDescriptor = document.getElementById("prepared-descriptor");
+      const vendorBox = document.getElementById("vendor-box");
+      const vendorBoxText = document.getElementById("vendor-box-text");
+      const vendorSidebarHint = document.getElementById("vendor-sidebar-hint");
+      const page2FooterLeft = document.getElementById("page2-footer-left");
 
-      let currentMethod = 'student';
-      let preparedMode = 'school';
+      let preparedMode = "generic";
 
       function formatMoney(amount) {
-        return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return (
+          "$" +
+          amount.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
       }
 
-      const options = { year: 'numeric', month: 'long' };
-      flyerDateString.textContent = new Date().toLocaleDateString('en-US', options);
+      const options = { year: "numeric", month: "long" };
+      flyerDateString.textContent = new Date().toLocaleDateString(
+        "en-US",
+        options,
+      );
       vendorBoxText.innerHTML = getVendorBlockHtml();
       vendorSidebarHint.textContent = `Vendor code ${NYC_DOE_VENDOR_CODE} and company details.`;
       page2FooterLeft.textContent = `LevelUp EDU Proposal • ${VENDOR_WEB} • NYC Vendor ${NYC_DOE_VENDOR_CODE}`;
@@ -1101,115 +1370,75 @@
         return {
           title: `${meta.label} Pillar`,
           desc: meta.desc,
-          rate: meta.studentRate,
         };
       }
 
-      function getSizeBracket(studentCount) {
-        if (studentCount > 750) return 'large';
-        if (studentCount >= 300) return 'medium';
-        return 'small';
-      }
+      function computeFlatAnnual(pillar, sizeBracket, includedPillars) {
+        if (!includedPillars) {
+          includedPillars = getIncludedPillars();
+        }
+        if (includedPillars.length === 0) return 0;
 
-      function computeStudentAnnual(pillar, studentCount) {
-        const rate = PILLAR_META[pillar].studentRate;
-        const raw = studentCount * rate;
-        const floor = pillar === 'rewards' ? 750 : 0;
-        return {
-          rate,
-          total: Math.max(raw, floor),
-          floorApplied: pillar === 'rewards' && raw < 750,
-        };
-      }
-
-      function computeFlatAnnual(pillar, sizeBracket) {
-        return PILLAR_META[pillar].flat[sizeBracket];
-      }
-
-      function computeIncludedAnnualTotal(pillars, studentCount, sizeBracket, method) {
-        return pillars.reduce((sum, pillar) => {
-          if (method === 'student') {
-            return sum + computeStudentAnnual(pillar, studentCount).total;
+        // Find which of the included pillars has the highest primary price
+        let primaryPillar = includedPillars[0];
+        let maxPrimaryPrice = -1;
+        for (const p of includedPillars) {
+          const price = PILLAR_META[p].primary[sizeBracket];
+          if (price > maxPrimaryPrice) {
+            maxPrimaryPrice = price;
+            primaryPillar = p;
           }
-          return sum + computeFlatAnnual(pillar, sizeBracket);
-        }, 0);
+        }
+
+        return pillar === primaryPillar
+          ? PILLAR_META[pillar].primary[sizeBracket]
+          : PILLAR_META[pillar].addon[sizeBracket];
       }
 
-      function computePdFee(studentCount) {
-        if (studentCount > 800) return 1950;
-        if (studentCount > 400) return 1450;
-        return 950;
+      function computeIncludedAnnualTotal(pillars, sizeBracket) {
+        return pillars.reduce(
+          (sum, pillar) => sum + computeFlatAnnual(pillar, sizeBracket, pillars),
+          0,
+        );
       }
 
-      function computePdFeeFromBracket(bracket) {
-        if (bracket === 'large') return 1950;
-        if (bracket === 'medium') return 1450;
-        return 950;
+      function isAllPillarsSelected() {
+        return PILLAR_KEYS.every(
+          (pillar) => document.getElementById(`input-pillar-${pillar}`).checked,
+        );
       }
 
       function getIncludedPillars() {
-        return PILLAR_KEYS.filter((pillar) => document.getElementById(`input-pillar-${pillar}`).checked);
+        return PILLAR_KEYS.filter(
+          (pillar) => document.getElementById(`input-pillar-${pillar}`).checked,
+        );
       }
 
-      function shouldShowEnrollmentOnFlyer() {
-        return currentMethod === 'student' && inputShowEnrollment.checked;
+      function selectAllPillars() {
+        PILLAR_KEYS.forEach((pillar) => {
+          document.getElementById(`input-pillar-${pillar}`).checked = true;
+        });
+        recalculatePricing();
       }
 
-      function getSizeBracketForPricing() {
-        if (currentMethod === 'flat') {
-          return inputFlatBracket.value;
-        }
-        return getSizeBracket(parseInt(inputStudents.value, 10));
+      function getSizeBracket() {
+        return inputFlatBracket.value;
       }
 
-      function getStudentCountForPricing() {
-        return parseInt(inputStudents.value, 10);
-      }
-
-      function getPdFee() {
-        if (currentMethod === 'flat') {
-          return computePdFeeFromBracket(inputFlatBracket.value);
-        }
-        return computePdFee(getStudentCountForPricing());
-      }
-
-      function getEnrollmentCellHtml(showAllPricing) {
-        if (currentMethod === 'flat') {
-          if (showAllPricing) {
-            return 'By campus bracket';
-          }
-          return FLAT_BRACKET_LABELS[getSizeBracketForPricing()];
-        }
-
-        if (!shouldShowEnrollmentOnFlyer()) {
-          if (showAllPricing) {
-            return 'Any school';
-          }
-          return 'Scaled to enrollment';
-        }
-
-        if (showAllPricing) {
-          return 'Any school';
-        }
-
-        return getStudentCountForPricing().toLocaleString();
+      function computePdFee() {
+        return inputIncludeTraining.checked ? 750 : 0;
       }
 
       function renderMatrixPillars(includedPillars) {
         matrixPillarRows.innerHTML = includedPillars
           .map((pillar) => {
             const meta = PILLAR_META[pillar];
-            const rowClass = meta.core
-              ? 'bg-brand-goldLight/10'
-              : 'hover:bg-slate-50/50';
-            const coreBadge = meta.core
-              ? '<span class="ml-1 text-[8px] bg-brand-gold text-white font-black uppercase px-1.5 py-0.5 rounded-full">Core</span>'
-              : '';
+            const rowClass = "hover:bg-slate-50/50";
 
             return `
               <tr class="${rowClass}">
-                <td class="py-3 px-4 ${meta.core ? 'border-l-4 border-brand-gold' : ''}">
-                  <p class="font-extrabold text-slate-800">${meta.label}${coreBadge}</p>
+                <td class="py-3 px-4">
+                  <p class="font-extrabold text-slate-800">${meta.label}</p>
                 </td>
                 <td class="py-3 px-4">
                   <p class="text-[10px] text-slate-500 leading-tight">${meta.desc}</p>
@@ -1217,35 +1446,48 @@
               </tr>
             `;
           })
-          .join('');
+          .join("");
       }
 
       function updatePillarBadges() {
+        const bracket = getSizeBracket();
+        const includedPillars = getIncludedPillars();
+
         PILLAR_KEYS.forEach((pillar) => {
-          const meta = PILLAR_META[pillar];
           const badge = pillarBadgeEls[pillar];
           if (!badge) return;
-          if (currentMethod === 'student') {
-            badge.textContent = `$${meta.studentRate.toFixed(2)}/student`;
+
+          const isChecked = document.getElementById(`input-pillar-${pillar}`).checked;
+
+          if (isChecked) {
+            // Show the actual price this pillar is contributing
+            const price = computeFlatAnnual(pillar, bracket, includedPillars);
+            badge.textContent = `${formatMoney(price)} / yr`;
           } else {
-            badge.textContent = `${formatMoney(meta.flat.small)} flat`;
+            // Show the marginal cost of checking this pillar
+            if (includedPillars.length === 0) {
+              const price = PILLAR_META[pillar].primary[bracket];
+              badge.textContent = `${formatMoney(price)} / yr`;
+            } else {
+              const price = PILLAR_META[pillar].addon[bracket];
+              badge.textContent = `+${formatMoney(price)} / yr`;
+            }
           }
         });
       }
 
       function updateBillingEnrollmentColumn() {
-        const showColumn = currentMethod === 'flat' || shouldShowEnrollmentOnFlyer();
-        billingEnrollmentHeader.classList.toggle('hidden', !showColumn);
-        document.querySelectorAll('.billing-enrollment-cell').forEach((cell) => {
-          cell.classList.toggle('hidden', !showColumn);
-        });
-        billingEnrollmentHeader.textContent =
-          currentMethod === 'flat' ? 'Campus Bracket' : 'Enrollment';
-      }
-
-      function updateSettingsVisibility() {
-        enrollmentPanel.classList.toggle('hidden', currentMethod !== 'student');
-        flatBracketPanel.classList.toggle('hidden', currentMethod !== 'flat');
+        const billingEnrollmentHeader = document.getElementById(
+          "billing-enrollment-header",
+        );
+        if (billingEnrollmentHeader) {
+          billingEnrollmentHeader.classList.add("hidden");
+        }
+        document
+          .querySelectorAll(".billing-enrollment-cell")
+          .forEach((cell) => {
+            cell.classList.add("hidden");
+          });
       }
 
       function enforceAtLeastOnePillar(changedInput) {
@@ -1256,22 +1498,22 @@
       }
 
       function formatRateCell(studentPricing, method) {
-        if (method === 'student') {
+        if (method === "student") {
           if (studentPricing.floorApplied) {
             return `$${studentPricing.rate.toFixed(2)} / std <span class="block text-[8px] text-brand-gold font-bold uppercase">(Floor applied)</span>`;
           }
-          return formatMoney(studentPricing.rate) + ' / std';
+          return formatMoney(studentPricing.rate) + " / std";
         }
-        return 'Flat campus rate';
+        return "Flat campus rate";
       }
 
       function formatFlatTierPrices(pillar) {
-        const prices = PILLAR_META[pillar].flat;
+        const prices = PILLAR_META[pillar].addon;
         return `${formatMoney(prices.small)} · ${formatMoney(prices.medium)} · ${formatMoney(prices.large)}`;
       }
 
       function getAllPricingEnrollmentNote() {
-        if (currentMethod === 'flat') {
+        if (currentMethod === "flat") {
           return ALL_PRICING_ENROLLMENT_NOTE_FLAT;
         }
         if (shouldShowEnrollmentOnFlyer()) {
@@ -1281,28 +1523,29 @@
       }
 
       function getPreparedAudienceLabel(schoolName) {
-        if (preparedMode === 'generic') {
-          return 'Prepared for Private Schools';
+        if (preparedMode === "generic") {
+          return "Prepared for Your School";
         }
-        return `Prepared for ${schoolName || 'Your Academy'}`;
+        return `Prepared for ${schoolName || "Your Academy"}`;
       }
 
       function renderAllPricingComparison(includedPillars, schoolName) {
-        allPricingSchoolLabel.textContent = getPreparedAudienceLabel(schoolName);
+        allPricingSchoolLabel.textContent =
+          getPreparedAudienceLabel(schoolName);
         allPricingEnrollmentNote.textContent = getAllPricingEnrollmentNote();
 
         allPricingRows.innerHTML = includedPillars
           .map((pillar) => {
             const meta = PILLAR_META[pillar];
-            const rowClass = 'hover:bg-slate-50/50';
+            const rowClass = "hover:bg-slate-50/50";
             const annualStudentCell =
-              pillar === 'rewards'
+              pillar === "rewards"
                 ? shouldShowEnrollmentOnFlyer()
-                  ? 'Rate × enrollment · $750 min.'
-                  : 'Per-student · $750 min.'
+                  ? "Rate × enrollment · $750 min."
+                  : "Per-student · $750 min."
                 : shouldShowEnrollmentOnFlyer()
-                  ? 'Rate × enrollment'
-                  : 'Per-student';
+                  ? "Rate × enrollment"
+                  : "Per-student";
 
             return `
             <tr class="${rowClass}">
@@ -1317,242 +1560,188 @@
             </tr>
           `;
           })
-          .join('');
+          .join("");
       }
 
-      function renderBillingRows(studentCount, sizeBracket, includedPillars, showAllPricing) {
-        const enrollmentCellClass = 'billing-enrollment-cell py-4 px-4 text-right text-slate-600';
-        const showEnrollmentColumn = currentMethod === 'flat' || shouldShowEnrollmentOnFlyer();
-        const enrollmentCell = showEnrollmentColumn
-          ? `<td class="${enrollmentCellClass}">${getEnrollmentCellHtml(showAllPricing)}</td>`
-          : '';
+      function renderBillingRows(sizeBracket, includedPillars) {
+        updateBillingEnrollmentColumn();
 
-        if (showAllPricing) {
-          billingTierRows.innerHTML = includedPillars
-            .map((pillar) => {
-              const pillarData = getPillarPricingCopy(pillar);
-              const rowClass = 'border-b border-slate-100 hover:bg-slate-50/50';
-
-              let rateHtml;
-              let costHtml;
-              if (currentMethod === 'student') {
-                rateHtml = `${formatMoney(pillarData.rate)} / std`;
-                costHtml =
-                  pillar === 'rewards'
-                    ? shouldShowEnrollmentOnFlyer()
-                      ? 'Rate × enrollment · $750 min.'
-                      : 'Per-student · $750 min.'
-                    : shouldShowEnrollmentOnFlyer()
-                      ? 'Rate × enrollment'
-                      : 'Per-student';
-              } else {
-                rateHtml = 'Flat campus brackets';
-                costHtml = formatFlatTierPrices(pillar);
-              }
-
-              return `
-              <tr class="${rowClass}">
-                <td class="py-4 px-4">
-                  <p class="font-bold text-slate-800">${pillarData.title}</p>
-                  <p class="text-[10px] text-slate-500 mt-0.5">${pillarData.desc}</p>
-                </td>
-                <td class="py-4 px-4 text-right text-slate-600">${rateHtml}</td>
-                ${enrollmentCell}
-                <td class="py-4 px-4 text-right font-bold text-slate-800">${costHtml}</td>
-              </tr>
-            `;
-            })
-            .join('');
-          return;
+        // Find primary pillar
+        let primaryPillar = includedPillars[0];
+        let maxPrimaryPrice = -1;
+        for (const p of includedPillars) {
+          const price = PILLAR_META[p].primary[sizeBracket];
+          if (price > maxPrimaryPrice) {
+            maxPrimaryPrice = price;
+            primaryPillar = p;
+          }
         }
 
         billingTierRows.innerHTML = includedPillars
           .map((pillar) => {
             const pillarData = getPillarPricingCopy(pillar);
-            const studentPricing = computeStudentAnnual(pillar, studentCount);
-            const flatTotal = computeFlatAnnual(pillar, sizeBracket);
-            const rowClass = 'border-b border-slate-100 hover:bg-slate-50/50';
+            const isPrimary = pillar === primaryPillar;
+            const total = isPrimary
+              ? PILLAR_META[pillar].primary[sizeBracket]
+              : PILLAR_META[pillar].addon[sizeBracket];
 
-            let total;
-            let rateHtml;
-            if (currentMethod === 'student') {
-              total = studentPricing.total;
-              rateHtml = formatRateCell(studentPricing, 'student');
-            } else {
-              total = flatTotal;
-              rateHtml = `${FLAT_BRACKET_LABELS[sizeBracket]} license`;
-            }
+            const badgeLabel = isPrimary ? "Primary License" : "Add-on License";
+            const badgeClass = isPrimary
+              ? "bg-brand-500/10 text-brand-700"
+              : "bg-slate-100 text-slate-600";
 
+            const rowClass = "border-b border-slate-100 hover:bg-slate-50/50";
             return `
               <tr class="${rowClass}">
                 <td class="py-4 px-4">
-                  <p class="font-bold text-slate-800">${pillarData.title}</p>
+                  <p class="font-bold text-slate-800 flex items-center gap-2">
+                    ${pillarData.title}
+                    <span class="text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${badgeClass}">
+                      ${badgeLabel}
+                    </span>
+                  </p>
                   <p class="text-[10px] text-slate-500 mt-0.5">${pillarData.desc}</p>
                 </td>
-                <td class="py-4 px-4 text-right text-slate-600">${rateHtml}</td>
-                ${enrollmentCell}
+                <td class="py-4 px-4 text-right text-slate-600">${FLAT_BRACKET_SIZE_LABELS[sizeBracket]}</td>
                 <td class="py-4 px-4 text-right font-bold text-slate-800">${formatMoney(total)}</td>
               </tr>
             `;
           })
-          .join('');
+          .join("");
       }
 
-      function renderSummary(studentCount, includedPillars, showAllPricing, pdFee, sizeBracket) {
-        const showSummary = !showAllPricing && includedPillars.length > 0;
-        proposalSummaryBox.classList.toggle('hidden', !showSummary);
+      function updateBundleCallouts(sizeBracket, includedPillars) {
+        const allSelected = isAllPillarsSelected();
+        const bundleTotal = ALL_PILLAR_FLAT_TOTALS[sizeBracket];
+        const callout = document.getElementById("complete-platform-callout");
+        const banner = document.getElementById("bundle-banner");
+        const rateLockNote = document.getElementById("summary-rate-lock-note");
+        const calloutSizeLabel = document.getElementById("callout-size-label");
+        const calloutTotal = document.getElementById("callout-bundle-total");
+        const bannerTotal = document.getElementById("bundle-banner-total");
 
-        if (!showSummary) {
-          return;
-        }
+        if (callout) callout.classList.toggle("hidden", !allSelected);
+        if (banner) banner.classList.toggle("hidden", !allSelected);
+        if (rateLockNote) rateLockNote.classList.toggle("hidden", !allSelected);
+        if (calloutSizeLabel)
+          calloutSizeLabel.textContent = FLAT_BRACKET_SIZE_LABELS[sizeBracket];
+        if (calloutTotal) calloutTotal.textContent = formatMoney(bundleTotal);
+        if (bannerTotal) bannerTotal.textContent = formatMoney(bundleTotal);
+      }
 
-        summarySingle.classList.remove('hidden');
-        summarySelectedNote.classList.add('hidden');
+      function renderSummary(includedPillars, pdFee, sizeBracket) {
+        const showSummary = includedPillars.length > 0;
+        proposalSummaryBox.classList.toggle("hidden", !showSummary);
+
+        if (!showSummary) return;
+
+        summarySingle.classList.remove("hidden");
+        summarySelectedNote.classList.add("hidden");
 
         const baseTotal = computeIncludedAnnualTotal(
           includedPillars,
-          studentCount,
           sizeBracket,
-          currentMethod
         );
         sumBase.textContent = formatMoney(baseTotal);
-        sumGrandLabel.textContent = 'Annual Combined Budget:';
+        sumGrandLabel.textContent = "Annual Combined Budget:";
         sumGrandTotal.textContent = formatMoney(baseTotal + pdFee);
         sumPd.textContent = formatMoney(pdFee);
       }
 
       function updatePreparedForHeader(schoolName) {
-        if (preparedMode === 'generic') {
-          flyerPreparedLabel.textContent = 'Prepared for Private Schools';
-          flyerSchoolName.textContent = 'Any private school campus';
+        const container = document.getElementById('flyer-prepared-container');
+        if (preparedMode === "generic") {
+          if (container) container.classList.add('hidden');
           return;
         }
 
-        flyerPreparedLabel.textContent = 'Proposal Prepared For';
-        flyerSchoolName.textContent = schoolName || 'Your Academy';
+        if (container) container.classList.remove('hidden');
+        flyerPreparedLabel.textContent = "Proposal Prepared For";
+        flyerSchoolName.textContent = schoolName || "Your Academy";
       }
 
-      function updatePage2Presentation(schoolName, showAllPricing) {
-        if (showAllPricing) {
-          page2Title.textContent = 'Private School Pricing Guide';
-          page2Subtitle.textContent =
-            preparedMode === 'generic'
-              ? 'Per-pillar pricing models for private school campuses.'
-              : `Per-pillar pricing models prepared for ${schoolName || 'your institution'}.`;
-          return;
-        }
-
-        page2Title.textContent = 'Custom Cost Proposal';
+      function updatePage2Presentation(schoolName) {
+        page2Title.textContent = "Custom Cost Proposal";
         page2Subtitle.textContent =
-          preparedMode === 'generic'
-            ? 'Custom license values for private school campuses.'
-            : 'Custom license values formulated specifically for your institution.';
+          preparedMode === "generic"
+            ? "Annual license costs by school size for any school campus."
+            : "Annual license costs formulated specifically for your institution.";
       }
 
       function setPreparedMode(mode) {
         preparedMode = mode;
 
-        const btnSchool = document.getElementById('btn-prepared-school');
-        const btnGeneric = document.getElementById('btn-prepared-generic');
+        const btnSchool = document.getElementById("btn-prepared-school");
+        const btnGeneric = document.getElementById("btn-prepared-generic");
         const activeBtn =
-          'py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50';
+          "py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50";
         const inactiveBtn =
-          'py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800';
+          "py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800";
 
-        if (mode === 'school') {
+        if (mode === "school") {
           btnSchool.className = activeBtn;
           btnGeneric.className = inactiveBtn;
-          schoolNamePanel.classList.remove('hidden');
-          preparedDescriptor.textContent = 'Names the school on the flyer header.';
+          schoolNamePanel.classList.remove("hidden");
+          preparedDescriptor.textContent =
+            "Names the school on the flyer header.";
+          document.getElementById('flyer-subtitle').textContent =
+            'Modular School Platform Engineered for Private Academies';
         } else {
           btnSchool.className = inactiveBtn;
           btnGeneric.className = activeBtn;
-          schoolNamePanel.classList.add('hidden');
-          preparedDescriptor.textContent = 'Generic header for any private school audience.';
+          schoolNamePanel.classList.add("hidden");
+          preparedDescriptor.textContent =
+            "Generic header for any school audience.";
+          document.getElementById('flyer-subtitle').textContent =
+            'Modular School Platform Engineered for Every Campus';
         }
 
-        recalculatePricing();
-      }
-
-      function setPricingMethod(method) {
-        currentMethod = method;
-
-        const btnStudent = document.getElementById('btn-method-student');
-        const btnFlat = document.getElementById('btn-method-flat');
-        const activeBtn =
-          'py-1.5 text-[11px] font-bold rounded-md transition-all bg-white text-brand-700 shadow-sm border border-slate-200/50';
-        const inactiveBtn =
-          'py-1.5 text-[11px] font-bold rounded-md transition-all text-slate-500 hover:text-slate-800';
-
-        if (method === 'student') {
-          btnStudent.className = activeBtn;
-          btnFlat.className = inactiveBtn;
-          methodDescriptor.textContent =
-            'Per-student scaling. Matches Title IV equitable services allotments.';
-        } else {
-          btnStudent.className = inactiveBtn;
-          btnFlat.className = activeBtn;
-          methodDescriptor.textContent =
-            'Flat campus license by size bracket. No student counts on the flyer.';
-        }
-
-        updatePillarBadges();
-        updateSettingsVisibility();
         recalculatePricing();
       }
 
       function recalculatePricing() {
-        const schoolName = inputSchoolName.value || 'Your Academy';
-        const studentCount = getStudentCountForPricing();
+        const schoolName = inputSchoolName.value || "Your Academy";
         const includedPillars = getIncludedPillars();
-        const showAllPricing = inputShowAllPricing.checked;
-        const sizeBracket = getSizeBracketForPricing();
-        const pdFee = getPdFee();
-
-        enrollmentBadge.textContent = `${studentCount.toLocaleString()} Students`;
+        const sizeBracket = getSizeBracket();
+        const pdFee = computePdFee();
+        const includeTraining = inputIncludeTraining.checked;
 
         updatePreparedForHeader(schoolName);
-        updatePage2Presentation(schoolName, showAllPricing);
-        updateSettingsVisibility();
+        updatePage2Presentation(schoolName);
         updatePillarBadges();
         renderMatrixPillars(includedPillars);
         updateBillingEnrollmentColumn();
 
-        document.getElementById('flyer-page').classList.toggle('flyer-all-pricing', showAllPricing);
-        allPricingSection.classList.toggle('hidden', !showAllPricing);
-        itemizedHeading.textContent = showAllPricing
-          ? 'Itemized Platform Options (Included Pillars)'
-          : 'Itemized Platform Proposal';
+        itemizedHeading.textContent = "Itemized Platform Proposal";
 
-        if (showAllPricing) {
-          renderAllPricingComparison(includedPillars, schoolName);
+        renderBillingRows(sizeBracket, includedPillars);
+        updateBundleCallouts(sizeBracket, includedPillars);
+
+        const pdSection = document.getElementById("bill-pd-section");
+        if (pdSection) {
+          pdSection.classList.toggle("hidden", !includeTraining);
         }
 
-        renderBillingRows(studentCount, sizeBracket, includedPillars, showAllPricing);
-        billPdTotal.textContent = showAllPricing ? PD_FEE_RANGE : formatMoney(pdFee);
-        billPdEnrollment.textContent =
-          currentMethod === 'flat' ? 'One-time setup' : 'Flat Setup';
-        renderSummary(studentCount, includedPillars, showAllPricing, pdFee, sizeBracket);
-        vendorBox.classList.toggle('hidden', !inputShowVendor.checked);
+        billPdTotal.textContent = formatMoney(pdFee);
+        billPdEnrollment.textContent = "Full day";
+        renderSummary(includedPillars, pdFee, sizeBracket);
+        vendorBox.classList.toggle("hidden", !inputShowVendor.checked);
       }
 
-      inputSchoolName.addEventListener('input', recalculatePricing);
-      inputSchoolName.addEventListener('change', recalculatePricing);
-      inputStudents.addEventListener('input', recalculatePricing);
-      inputShowEnrollment.addEventListener('change', recalculatePricing);
-      inputShowAllPricing.addEventListener('change', recalculatePricing);
-      inputShowVendor.addEventListener('change', recalculatePricing);
-      inputFlatBracket.addEventListener('change', recalculatePricing);
+      inputSchoolName.addEventListener("input", recalculatePricing);
+      inputSchoolName.addEventListener("change", recalculatePricing);
+      inputShowVendor.addEventListener("change", recalculatePricing);
+      inputFlatBracket.addEventListener("change", recalculatePricing);
+      inputIncludeTraining.addEventListener("change", recalculatePricing);
 
-      document.querySelectorAll('.pillar-checkbox').forEach((checkbox) => {
-        checkbox.addEventListener('change', (event) => {
+      document.querySelectorAll(".pillar-checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", (event) => {
           enforceAtLeastOnePillar(event.target);
           recalculatePricing();
         });
       });
 
-      updateSettingsVisibility();
-      recalculatePricing();
+      setPreparedMode("generic");
     </script>
   </body>
 </html>

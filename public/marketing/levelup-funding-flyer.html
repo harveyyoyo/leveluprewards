@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -29,7 +29,18 @@
         --pill-bg: rgba(255, 255, 255, 0.05);
         --pill-border: rgba(255, 255, 255, 0.12);
         --shell-bg: #03060f;
-        --page-gradient: radial-gradient(1200px 700px at 10% 10%, rgba(124, 58, 237, 0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6, 182, 212, 0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c);
+        --page-gradient:
+          radial-gradient(
+            1200px 700px at 10% 10%,
+            rgba(124, 58, 237, 0.3),
+            transparent 60%
+          ),
+          radial-gradient(
+            900px 600px at 90% 20%,
+            rgba(6, 182, 212, 0.25),
+            transparent 55%
+          ),
+          linear-gradient(180deg, #081022, #070b16 70%, #05060c);
       }
 
       * {
@@ -59,9 +70,17 @@
       @media screen {
         body {
           background-color: #03060f;
-          background-image: 
-            radial-gradient(at 0% 0%, rgba(124, 58, 237, 0.15) 0px, transparent 50%),
-            radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%);
+          background-image:
+            radial-gradient(
+              at 0% 0%,
+              rgba(124, 58, 237, 0.15) 0px,
+              transparent 50%
+            ),
+            radial-gradient(
+              at 100% 100%,
+              rgba(6, 182, 212, 0.1) 0px,
+              transparent 50%
+            );
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -105,31 +124,111 @@
           gap: 20px;
         }
 
-        .sidebar-header { display: flex; gap: 12px; align-items: center; }
-        .sidebar-logo { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(135deg, #2563eb, #14b8a6); color: #fff; font-weight: 900; }
-        .sidebar-title { margin: 0; color: #fff; font-size: 16px; }
-        .sidebar-subtitle, .sidebar-note { margin: 4px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.45; }
-        .sidebar-section { border-top: 1px solid rgba(148, 163, 184, 0.22); padding-top: 18px; }
-        .sidebar-label { display: block; margin-bottom: 8px; color: #cbd5e1; font-size: 11px; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
-        .sidebar-input, .sidebar-select { width: 100%; min-height: 42px; border-radius: 10px; border: 1px solid #334155; background: #111827; color: #fff; padding: 10px 12px; font: 700 13px/1.2 inherit; }
-        .sidebar-checkbox-group { display: grid; gap: 10px; }
-        .sidebar-checkbox-label { display: flex; align-items: center; gap: 8px; color: #e2e8f0; font-size: 13px; font-weight: 700; }
-        .sidebar-checkbox-label input { width: 16px; height: 16px; accent-color: #2563eb; }
-        .sidebar-btn { width: 100%; display: inline-flex; justify-content: center; align-items: center; min-height: 42px; margin-top: 10px; border: 0; border-radius: 12px; background: #1e293b; color: #fff; text-decoration: none; font: 900 13px/1 inherit; cursor: pointer; }
-        .sidebar-btn.primary { background: linear-gradient(135deg, #2563eb, #14b8a6); }
+        .sidebar-header {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+        .sidebar-logo {
+          width: 42px;
+          height: 42px;
+          border-radius: 14px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #2563eb, #14b8a6);
+          color: #fff;
+          font-weight: 900;
+        }
+        .sidebar-title {
+          margin: 0;
+          color: #fff;
+          font-size: 16px;
+        }
+        .sidebar-subtitle,
+        .sidebar-note {
+          margin: 4px 0 0;
+          color: #94a3b8;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+        .sidebar-section {
+          border-top: 1px solid rgba(148, 163, 184, 0.22);
+          padding-top: 18px;
+        }
+        .sidebar-label {
+          display: block;
+          margin-bottom: 8px;
+          color: #cbd5e1;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        .sidebar-input,
+        .sidebar-select {
+          width: 100%;
+          min-height: 42px;
+          border-radius: 10px;
+          border: 1px solid #334155;
+          background: #111827;
+          color: #fff;
+          padding: 10px 12px;
+          font: 700 13px/1.2 inherit;
+        }
+        .sidebar-checkbox-group {
+          display: grid;
+          gap: 10px;
+        }
+        .sidebar-checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #e2e8f0;
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .sidebar-checkbox-label input {
+          width: 16px;
+          height: 16px;
+          accent-color: #2563eb;
+        }
+        .sidebar-btn {
+          width: 100%;
+          display: inline-flex;
+          justify-content: center;
+          align-items: center;
+          min-height: 42px;
+          margin-top: 10px;
+          border: 0;
+          border-radius: 12px;
+          background: #1e293b;
+          color: #fff;
+          text-decoration: none;
+          font: 900 13px/1 inherit;
+          cursor: pointer;
+        }
+        .sidebar-btn.primary {
+          background: linear-gradient(135deg, #2563eb, #14b8a6);
+        }
 
         .page {
           width: 7.5in;
           height: 10in;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.1);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          box-shadow:
+            0 30px 60px -15px rgba(0, 0, 0, 0.7),
+            0 0 50px rgba(99, 102, 241, 0.1);
+          transition:
+            transform 0.3s ease,
+            box-shadow 0.3s ease;
         }
 
         .page:hover {
           transform: translateY(-2px);
-          box-shadow: 0 35px 70px -10px rgba(0, 0, 0, 0.8), 0 0 60px rgba(99, 102, 241, 0.15);
+          box-shadow:
+            0 35px 70px -10px rgba(0, 0, 0, 0.8),
+            0 0 60px rgba(99, 102, 241, 0.15);
           border-color: rgba(255, 255, 255, 0.15);
         }
 
@@ -340,7 +439,9 @@
         border-radius: 16px;
         padding: 14px;
         backdrop-filter: blur(10px);
-        transition: border-color 0.2s ease, background-color 0.2s ease;
+        transition:
+          border-color 0.2s ease,
+          background-color 0.2s ease;
       }
 
       @media screen {
@@ -514,8 +615,16 @@
       }
 
       .pro-tip-card {
-        background: color-mix(in srgb, var(--success) 8%, transparent) !important;
-        border-color: color-mix(in srgb, var(--success) 25%, transparent) !important;
+        background: color-mix(
+          in srgb,
+          var(--success) 8%,
+          transparent
+        ) !important;
+        border-color: color-mix(
+          in srgb,
+          var(--success) 25%,
+          transparent
+        ) !important;
       }
 
       .pro-tip-card h2 {
@@ -544,7 +653,11 @@
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(3, 6, 15, 0.86);
         color: #eaf0ff;
-        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
+        font:
+          800 12px/1.1 system-ui,
+          -apple-system,
+          Segoe UI,
+          sans-serif;
         letter-spacing: 0.01em;
         text-decoration: none;
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
@@ -568,22 +681,39 @@
     </style>
     <script>
       try {
-        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+        if (new URLSearchParams(location.search).has("embed"))
+          document.documentElement.classList.add("embed");
       } catch (_) {}
-    </script>  </head>
+    </script>
+  </head>
   <body class="has-sidebar print-theme">
-    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
-    <aside class="control-sidebar no-print" role="complementary" aria-label="Flyer controls">
+    <a class="back-link no-print" href="/marketing/index.html" style="position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; background: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; color: #0f172a; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: all 0.2s;">&larr; Back to marketing flyers</a>
+
+    <a class="interactive-list-link" href="interactive.html"
+      >&larr; Interactive flyer list</a
+    >
+    <aside
+      class="control-sidebar no-print"
+      role="complementary"
+      aria-label="Flyer controls"
+    >
       <div class="sidebar-header">
         <span class="sidebar-logo">LU</span>
         <div>
           <h2 class="sidebar-title">Funding Guide</h2>
-          <p class="sidebar-subtitle">Interactive controls for the double-sided funding and procurement flyer.</p>
+          <p class="sidebar-subtitle">
+            Interactive controls for the double-sided funding and procurement
+            flyer.
+          </p>
         </div>
       </div>
       <div class="sidebar-section">
         <label class="sidebar-label" for="theme-select">Print Theme</label>
-        <select id="theme-select" class="sidebar-select" onchange="applyFundingTheme(this.value)">
+        <select
+          id="theme-select"
+          class="sidebar-select"
+          onchange="applyFundingTheme(this.value)"
+        >
           <option value="light" selected>Light print (default)</option>
           <option value="light-sky">Light sky breeze</option>
           <option value="light-mint">Light mint garden</option>
@@ -594,28 +724,76 @@
           <option value="green">Emerald forest</option>
           <option value="gold">Quest gold</option>
         </select>
-        <p class="sidebar-note">Light themes are best for regular printers. Dark themes work well for screen presentations.</p>
+        <p class="sidebar-note">
+          Light themes are best for regular printers. Dark themes work well for
+          screen presentations.
+        </p>
       </div>
       <div class="sidebar-section">
         <label class="sidebar-label" for="school-input">Prepared for</label>
-        <input id="school-input" class="sidebar-input" type="text" placeholder="your school" oninput="updateFundingPreparedFor(this.value)" />
+        <input
+          id="school-input"
+          class="sidebar-input"
+          type="text"
+          placeholder="your school"
+          oninput="updateFundingPreparedFor(this.value)"
+        />
       </div>
       <div class="sidebar-section">
         <span class="sidebar-label">Toggle sections</span>
         <div class="sidebar-checkbox-group">
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".page:nth-of-type(1)" checked onchange="toggleFundingSection(this)" /> Front page</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".page:nth-of-type(2)" checked onchange="toggleFundingSection(this)" /> Back page</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".kpis" checked onchange="toggleFundingSection(this)" /> Funding highlights</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector="img" checked onchange="toggleFundingSection(this)" /> Screenshots</label>
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".page:nth-of-type(1)"
+              checked
+              onchange="toggleFundingSection(this)"
+            />
+            Front page</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".page:nth-of-type(2)"
+              checked
+              onchange="toggleFundingSection(this)"
+            />
+            Back page</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".kpis"
+              checked
+              onchange="toggleFundingSection(this)"
+            />
+            Funding highlights</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector="img"
+              checked
+              onchange="toggleFundingSection(this)"
+            />
+            Screenshots</label
+          >
         </div>
       </div>
       <div class="sidebar-section">
-        <a class="sidebar-btn" href="interactive.html">Back to interactive flyers</a>
-        <button class="sidebar-btn primary" onclick="window.print()">Print flyer</button>
+        <a class="sidebar-btn" href="interactive.html"
+          >Back to interactive flyers</a
+        >
+        <button class="sidebar-btn primary" onclick="window.print()">
+          Print flyer
+        </button>
       </div>
       <div class="sidebar-section">
         <span class="sidebar-label">Included sections</span>
-        <p class="sidebar-note">Funding language, procurement notes, vendor code, object codes, kiosk screenshot, and contact details.</p>
+        <p class="sidebar-note">
+          Funding language, procurement notes, vendor code, object codes, kiosk
+          screenshot, and contact details.
+        </p>
       </div>
     </aside>
     <!-- PRINT BANNER (Screen Only) -->
@@ -624,12 +802,19 @@
         <div class="banner-brand">
           <span class="banner-logo">⚡</span>
           <div class="banner-text">
-            <span class="banner-title">Interactive PBIS Funding & Procurement Guide</span>
-            <span class="banner-desc">Full preview of the double-sided cheat sheet. Ready to print or download.</span>
+            <span class="banner-title"
+              >Interactive PBIS Funding & Procurement Guide</span
+            >
+            <span class="banner-desc"
+              >Full preview of the double-sided cheat sheet. Ready to print or
+              download.</span
+            >
           </div>
         </div>
         <div class="banner-actions">
-          <button class="banner-btn secondary-btn" onclick="window.close()">Close Preview</button>
+          <button class="banner-btn secondary-btn" onclick="window.close()">
+            Close Preview
+          </button>
           <button class="banner-btn primary-btn" onclick="window.print()">
             🖨️ Print Flyer (Ctrl+P)
           </button>
@@ -641,29 +826,53 @@
     <section class="page" aria-label="Front of flyer">
       <header class="topbar">
         <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> Funding &amp; procurement playbook</div>
+          <div class="badge">
+            <span class="dot" aria-hidden="true"></span> Funding &amp;
+            procurement playbook
+          </div>
           <h1>Fund a schoolwide rewards launch</h1>
           <p class="subtitle">
-            A business-office-friendly overview of funding paths, vendor details, and purchasing conversations for LevelUp Rewards.
+            A business-office-friendly overview of funding paths, vendor
+            details, and purchasing conversations for LevelUp Rewards.
           </p>
         </div>
         <div class="right-meta">
-          <div><strong>To:</strong> Principals, Directors &amp; Business Managers</div>
+          <div>
+            <strong>To:</strong> Principals, Directors &amp; Business Managers
+          </div>
           <div><strong>From:</strong> LevelUp EdTech Enterprises LLC</div>
-          <div class="muted">NYC DOE Vendor Code: <strong>VS00109014</strong></div>
+          <div class="muted">
+            NYC DOE Vendor Code: <strong>VS00109014</strong>
+          </div>
           <div class="muted">NYS Education Law § 2-d ready</div>
         </div>
       </header>
 
       <div class="grid">
-        <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+        <div
+          class="card"
+          style="
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 8px;
+          "
+        >
           <div>
             <h2>The Challenge &amp; The Solution</h2>
-            <div class="card-text" style="margin-bottom: 8px;">
-              <strong>The Challenge:</strong> Managing student motivation, positive behavior incentives, and school culture milestones manually is exhausting for your staff. Counting physical tickets, tracking spreadsheets, and managing prize inventories eats up hours of instructional time.
+            <div class="card-text" style="margin-bottom: 8px">
+              <strong>The Challenge:</strong> Managing student motivation,
+              positive behavior incentives, and school culture milestones
+              manually is exhausting for your staff. Counting physical tickets,
+              tracking spreadsheets, and managing prize inventories eats up
+              hours of instructional time.
             </div>
             <div class="card-text">
-              <strong>The Solution:</strong> The LevelUp Rewards Kiosk is a plug-and-play physical hardware station paired with a powerful cloud-based backend. Students autonomously scan their custom barcodes to track achievement points, view reward tier eligibility, and redeem incentives effortlessly.
+              <strong>The Solution:</strong> The LevelUp Rewards Kiosk is a
+              plug-and-play physical hardware station paired with a powerful
+              cloud-based backend. Students autonomously scan their custom
+              barcodes to track achievement points, view reward tier
+              eligibility, and redeem incentives effortlessly.
             </div>
           </div>
 
@@ -671,16 +880,41 @@
             <h2>Federal funding paths</h2>
             <ul>
               <li>
-                <strong>Option 1: Federal Title IV, Part A Funds (SSAE)</strong><br />
-                <em>Meets Criteria:</em> Safe &amp; Healthy Students (PBIS) &amp; Effective Use of Technology (Integrated Hardware &amp; Cloud).<br />
-                <em>Justification:</em> Procuring touchscreens and automated behavioral technology to actively boost building-wide culture metrics.<br />
-                <em>NYC Process:</em> Publics allocate inside FAMIS under Code <strong>VS00109014</strong>. Yeshivas/Privates request their BNPSS coordinator map this vendor.
+                <strong>Option 1: Federal Title IV, Part A Funds (SSAE)</strong
+                ><br />
+                <em>Meets Criteria:</em> Safe &amp; Healthy Students (PBIS)
+                &amp; Effective Use of Technology (Integrated Hardware &amp;
+                Cloud).<br />
+                <em>Justification:</em> Procuring touchscreens and automated
+                behavioral technology to actively boost building-wide culture
+                metrics.<br />
+                <em>NYC Process:</em> Publics allocate inside FAMIS under Code
+                <strong>VS00109014</strong>. Yeshivas/Privates request their
+                BNPSS coordinator map this vendor.
               </li>
               <li>
-                <strong>Option 2: Federal Title I, Part A Funds (Engagement)</strong><br />
-                <em>Meets Criteria:</em> Targets student motivation, school climate improvements, and closing achievement gaps.<br />
-                <em>Justification:</em> Utilizing automated PBIS systems to incentivize attendance, effort, and positive citizenship among at-risk cohorts.<br />
-                <em>NYC Process:</em> Switch the funding source in FAMIS to Title I and enter standard quick-codes.
+                <strong
+                  >Option 2: Federal Title I, Part A Funds (Engagement)</strong
+                ><br />
+                <em>Meets Criteria:</em> Targets student motivation, school
+                climate improvements, and closing achievement gaps.<br />
+                <em>Justification:</em> Utilizing automated PBIS systems to
+                incentivize attendance, effort, and positive citizenship among
+                at-risk cohorts.<br />
+                <em>NYC Process:</em> Switch the funding source in FAMIS to
+                Title I and enter standard quick-codes.
+              </li>
+              <li>
+                <strong
+                  >Option 3: Federal Title II, Part A Funds (Professional
+                  Development)</strong
+                ><br />
+                <em>Meets Criteria:</em> High-quality, evidence-based training
+                for teachers to manage classrooms and analyze data.<br />
+                <em>Justification:</em> Implementation and PD hours for rolling
+                out the platform to staff.<br />
+                <em>NYC Process:</em> Allocate training hours through Title II
+                budgets.
               </li>
             </ul>
           </div>
@@ -701,31 +935,77 @@
           </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; flex-direction: column; gap: 14px">
           <!-- Real App Screenshot Panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 180px; position: relative;">
-            <img src="screenshots/admin-notifications.png" style="width: 100%; height: 100%; object-fit: contain;" alt="LevelUp Admin Telemetry Stats Screenshot" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+          <div
+            class="card"
+            style="
+              padding: 0;
+              overflow: hidden;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+              border-radius: 16px;
+              height: 180px;
+              position: relative;
+            "
+          >
+            <img
+              src="screenshots/admin-notifications.png"
+              style="width: 100%; height: 100%; object-fit: contain"
+              alt="LevelUp Admin Telemetry Stats Screenshot"
+            />
+            <div
+              style="
+                position: absolute;
+                bottom: 8px;
+                left: 8px;
+                background: rgba(0, 0, 0, 0.6);
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: #fff;
+              "
+            >
               School Culture Dashboard
             </div>
           </div>
-          
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+
+          <div
+            class="card"
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              gap: 8px;
+            "
+          >
             <div>
               <h2>Bypass the ShopDOE Bottleneck</h2>
-              <div class="callout" style="margin-bottom: 6px;">
+              <div class="callout" style="margin-bottom: 6px">
                 <p>
-                  LevelUp can be discussed as an <strong>Open-Market PO</strong> purchase path in FAMIS. Your business manager can use the quote and vendor details to choose the right process.
+                  LevelUp can be discussed as an
+                  <strong>Open-Market PO</strong> purchase path in FAMIS. Your
+                  business manager can use the quote and vendor details to
+                  choose the right process.
                 </p>
               </div>
               <ul class="card-text-sm">
-                <li><strong>Pilot-friendly quoting:</strong> Smaller pilots can be scoped clearly so the business office can review the correct purchasing path.</li>
+                <li>
+                  <strong>Pilot-friendly quoting:</strong> Smaller pilots can be
+                  scoped clearly so the business office can review the correct
+                  purchasing path.
+                </li>
               </ul>
             </div>
             <div>
               <h2>Security Compliance</h2>
               <ul class="card-text-sm">
-                <li><strong>NYS § 2-d ready:</strong> Student data privacy materials and DPA documentation can be provided for school review.</li>
+                <li>
+                  <strong>NYS § 2-d ready:</strong> Student data privacy
+                  materials and DPA documentation can be provided for school
+                  review.
+                </li>
               </ul>
             </div>
           </div>
@@ -734,9 +1014,17 @@
 
       <footer class="footer">
         <div>
-          <strong>LevelUp EdTech Enterprises LLC</strong> · Review funding paths, then request a quote and security packet.
+          <strong>LevelUp EdTech Enterprises LLC</strong> · Review funding
+          paths, then request a quote and security packet.
         </div>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end">
+        <div
+          style="
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+          "
+        >
           <span class="pill">NYC Vendor VS00109014</span>
           <span class="pill">Title I / IV-A Discussion</span>
           <span class="pill">NYS 2-d Ready</span>
@@ -749,10 +1037,13 @@
     <section class="page" aria-label="Back of flyer">
       <header class="topbar">
         <div class="brand">
-          <div class="badge"><span class="dot" aria-hidden="true"></span> Ordering workflow</div>
+          <div class="badge">
+            <span class="dot" aria-hidden="true"></span> Ordering workflow
+          </div>
           <h1>Procurement steps for school teams</h1>
           <p class="subtitle">
-            Use this page to guide the business-office conversation about quotes, vendor records, object codes, and approval paths.
+            Use this page to guide the business-office conversation about
+            quotes, vendor records, object codes, and approval paths.
           </p>
         </div>
         <div class="right-meta">
@@ -762,62 +1053,158 @@
       </header>
 
       <div class="grid">
-        <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 16px">
           <div class="card">
             <h2>🏛️ State Claims &amp; Discretionary Options</h2>
-            <ul class="card-text" style="gap: 10px; display: flex; flex-direction: column;">
+            <ul
+              class="card-text"
+              style="gap: 10px; display: flex; flex-direction: column"
+            >
               <li>
-                <strong>Option 3: NYS Nonpublic School Safety Equipment (NPSE) Grant</strong><br />
-                <em>Pillar:</em> Security, checkpoints, and student management technology.<br />
-                <em>Justification:</em> Entrance checkpoints and touch kiosks function as a robust student accountability and campus movement tracking system.<br />
-                <em>Process:</em> Review general supply or safety-equipment purchase paths with your business office before submitting any reimbursement claim.
+                <strong
+                  >Option 3: NYS Nonpublic School Safety Equipment (NPSE)
+                  Grant</strong
+                ><br />
+                <em>Pillar:</em> Security, checkpoints, and student management
+                technology.<br />
+                <em>Justification:</em> Entrance checkpoints and touch kiosks
+                function as a robust student accountability and campus movement
+                tracking system.<br />
+                <em>Process:</em> Review general supply or safety-equipment
+                purchase paths with your business office before submitting any
+                reimbursement claim.
               </li>
               <li>
-                <strong>Option 4: NYS Mandated Services Reimbursement (MSR)</strong><br />
-                <em>Pillar:</em> Covering administrative costs of mandated pupil tracking.<br />
-                <em>Justification:</em> Automated arrival scans, barcode logging, and pupil reporting sheets map directly under Mandated Service #1: Pupil Attendance Report (PAR).<br />
-                <em>Process:</em> Discuss whether ongoing software licensing can align with annual MSR documentation requirements.
+                <strong
+                  >Option 4: NYS Mandated Services Reimbursement (MSR)</strong
+                ><br />
+                <em>Pillar:</em> Covering administrative costs of mandated pupil
+                tracking.<br />
+                <em>Justification:</em> Automated arrival scans, barcode
+                logging, and pupil reporting sheets map directly under Mandated
+                Service #1: Pupil Attendance Report (PAR).<br />
+                <em>Process:</em> Discuss whether ongoing software licensing can
+                align with annual MSR documentation requirements.
               </li>
               <li>
-                <strong>Option 5: Discretionary Tax Levy &amp; Technology Fees</strong><br />
-                <em>Pillar:</em> Open, frictionless purchasing with zero administrative hurdles.<br />
-                <em>Process:</em> Direct open-market PO approval by the principal utilizing general supplies or student tech fee reserves.
+                <strong
+                  >Option 5: Discretionary Tax Levy &amp; Technology
+                  Fees</strong
+                ><br />
+                <em>Pillar:</em> Open, frictionless purchasing with zero
+                administrative hurdles.<br />
+                <em>Process:</em> Direct open-market PO approval by the
+                principal utilizing general supplies or student tech fee
+                reserves.
               </li>
             </ul>
           </div>
-          
-          <div class="card pro-tip-card" style="padding: 10px 14px;">
-            <h2 style="margin-bottom: 4px;">⚠️ Pro-Tip for Immediate Purchase</h2>
-            <p style="margin: 0; font-size: 11.5px; line-height: 1.35;">
-              Keep your initial pilot or hardware system order quote <strong>under $20,000</strong>. This may simplify review, but your business office should confirm the current purchasing threshold, approval path, and documentation needed.
+
+          <div class="card pro-tip-card" style="padding: 10px 14px">
+            <h2 style="margin-bottom: 4px">
+              ⚠️ Pro-Tip for Immediate Purchase
+            </h2>
+            <p style="margin: 0; font-size: 11.5px; line-height: 1.35">
+              Keep your initial pilot or hardware system order quote
+              <strong>under $20,000</strong>. This may simplify review, but your
+              business office should confirm the current purchasing threshold,
+              approval path, and documentation needed. &#9888;&#65039; Software
+              license and hardware equipment are quoted and procured separately.
             </p>
           </div>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; flex-direction: column; gap: 16px">
           <!-- Real Kiosk Screenshot Panel -->
-          <div class="card" style="padding: 0; overflow: hidden; border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; height: 160px; position: relative;">
-            <img src="screenshots/kiosk-welcome.png" style="width: 100%; height: 100%; object-fit: contain;" alt="LevelUp Kiosk Welcome Interface Screenshot" />
-            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 6px; font-size: 10px; border: 1px solid rgba(255,255,255,0.15); color: #fff;">
+          <div
+            class="card"
+            style="
+              padding: 0;
+              overflow: hidden;
+              border: 1px solid rgba(255, 255, 255, 0.15);
+              border-radius: 16px;
+              height: 160px;
+              position: relative;
+            "
+          >
+            <img
+              src="screenshots/kiosk-welcome.png"
+              style="width: 100%; height: 100%; object-fit: contain"
+              alt="LevelUp Kiosk Welcome Interface Screenshot"
+            />
+            <div
+              style="
+                position: absolute;
+                bottom: 8px;
+                left: 8px;
+                background: rgba(0, 0, 0, 0.6);
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: #fff;
+              "
+            >
               Student Check-In Kiosk
             </div>
           </div>
 
-          <div class="card" style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;">
+          <div
+            class="card"
+            style="
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              gap: 8px;
+            "
+          >
             <div>
               <h2>📝 FAMIS Open-Market Ordering Steps</h2>
-              <ol class="steps-list" style="margin: 0; padding-left: 14px; line-height: 1.35; display: flex; flex-direction: column; gap: 4px;">
-                <li><strong>1 · Log In:</strong> Log directly into the DOE central FAMIS Portal.</li>
-                <li><strong>2 · Create PO:</strong> Start a new Open-Market Purchase Order.</li>
-                <li><strong>3 · Vendor Code:</strong> Enter NYC Vendor Code <strong>VS00109014</strong> (LevelUp EdTech will pop up instantly).</li>
-                <li><strong>4 · Object Codes:</strong> Use <strong>0337</strong> for cloud software licensing and <strong>0338 / 0300</strong> for physical equipment.</li>
-                <li><strong>5 · Line Items:</strong> Manually enter the line items from your quote.</li>
+              <ol
+                class="steps-list"
+                style="
+                  margin: 0;
+                  padding-left: 14px;
+                  line-height: 1.35;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 4px;
+                "
+              >
+                <li>
+                  <strong>1 · Log In:</strong> Log directly into the DOE central
+                  FAMIS Portal.
+                </li>
+                <li>
+                  <strong>2 · Create PO:</strong> Start a new Open-Market
+                  Purchase Order.
+                </li>
+                <li>
+                  <strong>3 · Vendor Code:</strong> Enter NYC Vendor Code
+                  <strong>VS00109014</strong> (LevelUp EdTech will pop up
+                  instantly).
+                </li>
+                <li>
+                  <strong>4 · Object Codes:</strong> Use
+                  <strong>0337</strong> for cloud software licensing and
+                  <strong>0338 / 0300</strong> for physical equipment.
+                </li>
+                <li>
+                  <strong>5 · Line Items:</strong> Manually enter the line items
+                  from your quote.
+                </li>
               </ol>
             </div>
-            
-            <div class="card-divider contact-block" style="border-top: 1px solid var(--hair); padding-top: 8px;">
-              <h2 style="font-size: 11px; margin-bottom: 2px;">📞 Ready to Elevate Culture?</h2>
-              <p style="margin: 0; font-size: 10.5px; line-height: 1.3;">
+
+            <div
+              class="card-divider contact-block"
+              style="border-top: 1px solid var(--hair); padding-top: 8px"
+            >
+              <h2 style="font-size: 11px; margin-bottom: 2px">
+                📞 Ready to Elevate Culture?
+              </h2>
+              <p style="margin: 0; font-size: 10.5px; line-height: 1.3">
                 Contact: <strong>Dovid Teitelbaum</strong>, Founder &amp; MD<br />
                 Email: contact@leveluprewards.app<br />
                 Vendor: <strong>VS00109014</strong>
@@ -829,9 +1216,17 @@
 
       <footer class="footer">
         <div>
-          <strong>LevelUp EdTech Enterprises LLC</strong> · Contact: contact@leveluprewards.app · Vendor: VS00109014
+          <strong>LevelUp EdTech Enterprises LLC</strong> · Contact:
+          contact@leveluprewards.app · Vendor: VS00109014
         </div>
-        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end">
+        <div
+          style="
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+          "
+        >
           <span class="pill">FAMIS Code: VS00109014</span>
           <span class="pill">Object Code 0337/0338</span>
           <span class="pill">NPSE discussion path</span>
@@ -839,116 +1234,320 @@
       </footer>
     </section>
     <script>
-      const FUNDING_THEMES = {
-        light: {
-          '--bg': '#ffffff', '--panel': '#ffffff', '--text': '#334155', '--muted': '#64748b',
-          '--hair': '#e2e8f0', '--accent': '#2563eb', '--accent2': '#0891b2', '--success': '#16a34a',
-          '--strong': '#0f172a', '--heading-color': '#0891b2', '--card-border': '#dbeafe',
-          '--callout-bg': '#eff6ff', '--badge-bg': '#eff6ff', '--badge-border': '#bfdbfe',
-          '--pill-bg': '#f1f5f9', '--pill-border': '#cbd5e1', '--shell-bg': '#e5e7eb',
-          'page-gradient': 'linear-gradient(180deg, #f8fafc, #ffffff 65%, #f1f5f9)'
-        },
-        'light-sky': {
-          '--bg': '#ffffff', '--panel': '#ffffff', '--text': '#334155', '--muted': '#475569',
-          '--hair': '#bae6fd', '--accent': '#0284c7', '--accent2': '#0ea5e9', '--success': '#16a34a',
-          '--strong': '#0f172a', '--heading-color': '#0284c7', '--card-border': '#bae6fd',
-          '--callout-bg': '#e0f2fe', '--badge-bg': '#e0f2fe', '--badge-border': '#7dd3fc',
-          '--pill-bg': '#f0f9ff', '--pill-border': '#bae6fd', '--shell-bg': '#e0f2fe',
-          'page-gradient': 'linear-gradient(180deg, #ffffff, #f0f9ff 65%, #e0f2fe)'
-        },
-        'light-mint': {
-          '--bg': '#ffffff', '--panel': '#ffffff', '--text': '#14532d', '--muted': '#166534',
-          '--hair': '#bbf7d0', '--accent': '#16a34a', '--accent2': '#10b981', '--success': '#15803d',
-          '--strong': '#052e16', '--heading-color': '#16a34a', '--card-border': '#bbf7d0',
-          '--callout-bg': '#ecfdf5', '--badge-bg': '#ecfdf5', '--badge-border': '#86efac',
-          '--pill-bg': '#f0fdf4', '--pill-border': '#bbf7d0', '--shell-bg': '#dcfce7',
-          'page-gradient': 'linear-gradient(180deg, #ffffff, #f0fdf4 65%, #dcfce7)'
-        },
-        'light-amber': {
-          '--bg': '#ffffff', '--panel': '#ffffff', '--text': '#78350f', '--muted': '#92400e',
-          '--hair': '#fde68a', '--accent': '#b45309', '--accent2': '#d97706', '--success': '#16a34a',
-          '--strong': '#451a03', '--heading-color': '#b45309', '--card-border': '#fde68a',
-          '--callout-bg': '#fffbeb', '--badge-bg': '#fffbeb', '--badge-border': '#fcd34d',
-          '--pill-bg': '#fffbeb', '--pill-border': '#fde68a', '--shell-bg': '#fef3c7',
-          'page-gradient': 'linear-gradient(180deg, #ffffff, #fffbeb 65%, #fef3c7)'
-        },
-        'light-rose': {
-          '--bg': '#ffffff', '--panel': '#ffffff', '--text': '#881337', '--muted': '#9f1239',
-          '--hair': '#fecdd3', '--accent': '#be123c', '--accent2': '#e11d48', '--success': '#16a34a',
-          '--strong': '#4c0519', '--heading-color': '#be123c', '--card-border': '#fecdd3',
-          '--callout-bg': '#fff1f2', '--badge-bg': '#fff1f2', '--badge-border': '#fda4af',
-          '--pill-bg': '#fff1f2', '--pill-border': '#fecdd3', '--shell-bg': '#ffe4e6',
-          'page-gradient': 'linear-gradient(180deg, #ffffff, #fff1f2 65%, #ffe4e6)'
-        },
+      const THEMES = {
         navy: {
-          '--bg': '#0b1220', '--panel': 'rgba(255,255,255,0.05)', '--text': 'rgba(234,240,255,0.88)',
-          '--muted': 'rgba(234,240,255,0.78)', '--hair': 'rgba(234,240,255,0.15)', '--accent': '#7c3aed',
-          '--accent2': '#06b6d4', '--success': '#22c55e', '--strong': '#ffffff', '--heading-color': '#06b6d4',
-          '--card-border': 'rgba(255,255,255,0.1)', '--callout-bg': 'rgba(124,58,237,0.1)',
-          '--badge-bg': 'rgba(255,255,255,0.08)', '--badge-border': 'rgba(255,255,255,0.12)',
-          '--pill-bg': 'rgba(255,255,255,0.05)', '--pill-border': 'rgba(255,255,255,0.12)', '--shell-bg': '#03060f',
-          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(124,58,237,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6,182,212,0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c)'
-        },
-        sapphire: {
-          '--bg': '#0a0e1c', '--panel': 'rgba(255,255,255,0.05)', '--text': 'rgba(239,246,255,0.88)',
-          '--muted': 'rgba(239,246,255,0.78)', '--hair': 'rgba(239,246,255,0.15)', '--accent': '#3b82f6',
-          '--accent2': '#6366f1', '--success': '#10b981', '--strong': '#ffffff', '--heading-color': '#6366f1',
-          '--card-border': 'rgba(255,255,255,0.1)', '--callout-bg': 'rgba(59,130,246,0.12)',
-          '--badge-bg': 'rgba(255,255,255,0.08)', '--badge-border': 'rgba(255,255,255,0.12)',
-          '--pill-bg': 'rgba(255,255,255,0.05)', '--pill-border': 'rgba(255,255,255,0.12)', '--shell-bg': '#03060f',
-          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(59,130,246,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(99,102,241,0.25), transparent 55%), linear-gradient(180deg, #080b16, #04050a 70%, #010204)'
+          "--bg": "#0b1220",
+          "--accent": "#7c3aed",
+          "--accent2": "#06b6d4",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#eaf0ff",
+          "--muted": "rgba(234,240,255,0.78)",
+          "--hair": "rgba(234,240,255,0.15)",
+          "--success": "#22c55e",
+          "--black": "#0a0a0a",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(124,58,237,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6,182,212,0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c)",
         },
         green: {
-          '--bg': '#041d1a', '--panel': 'rgba(255,255,255,0.05)', '--text': 'rgba(236,253,245,0.88)',
-          '--muted': 'rgba(236,253,245,0.78)', '--hair': 'rgba(236,253,245,0.15)', '--accent': '#059669',
-          '--accent2': '#10b981', '--success': '#34d399', '--strong': '#ffffff', '--heading-color': '#10b981',
-          '--card-border': 'rgba(255,255,255,0.1)', '--callout-bg': 'rgba(5,150,105,0.12)',
-          '--badge-bg': 'rgba(255,255,255,0.08)', '--badge-border': 'rgba(255,255,255,0.12)',
-          '--pill-bg': 'rgba(255,255,255,0.05)', '--pill-border': 'rgba(255,255,255,0.12)', '--shell-bg': '#03060f',
-          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(5,150,105,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.25), transparent 55%), linear-gradient(180deg, #041a17, #02110e 70%, #010706)'
+          "--bg": "#041d1a",
+          "--accent": "#059669",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#ecfdf5",
+          "--muted": "rgba(236,253,245,0.78)",
+          "--hair": "rgba(236,253,245,0.15)",
+          "--success": "#34d399",
+          "--black": "#020d0c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(5,150,105,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.25), transparent 55%), linear-gradient(180deg, #041a17, #02110e 70%, #010706)",
+        },
+        sunset: {
+          "--bg": "#1a0b18",
+          "--accent": "#db2777",
+          "--accent2": "#f97316",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fdf2f8",
+          "--muted": "rgba(253,242,248,0.78)",
+          "--hair": "rgba(253,242,248,0.15)",
+          "--success": "#22c55e",
+          "--black": "#090208",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(219,39,119,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(249,115,22,0.25), transparent 55%), linear-gradient(180deg, #180916, #0e040d 70%, #060105)",
+        },
+        cyber: {
+          "--bg": "#08070d",
+          "--accent": "#d946ef",
+          "--accent2": "#f43f5e",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fae8ff",
+          "--muted": "rgba(250,232,255,0.78)",
+          "--hair": "rgba(250,232,255,0.15)",
+          "--success": "#10b981",
+          "--black": "#030205",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(217,70,239,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(244,63,94,0.25), transparent 55%), linear-gradient(180deg, #07060b, #040307 70%, #010103)",
+        },
+        crimson: {
+          "--bg": "#1e050b",
+          "--accent": "#e11d48",
+          "--accent2": "#fb7185",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fff1f2",
+          "--muted": "rgba(255,241,242,0.78)",
+          "--hair": "rgba(255,241,242,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0103",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(225,29,72,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251,113,133,0.25), transparent 55%), linear-gradient(180deg, #180308, #0e0104 70%, #050001)",
         },
         gold: {
-          '--bg': '#1a1206', '--panel': 'rgba(255,255,255,0.05)', '--text': 'rgba(254,243,199,0.9)',
-          '--muted': 'rgba(254,243,199,0.78)', '--hair': 'rgba(254,243,199,0.15)', '--accent': '#d97706',
-          '--accent2': '#fbbf24', '--success': '#10b981', '--strong': '#ffffff', '--heading-color': '#fbbf24',
-          '--card-border': 'rgba(255,255,255,0.1)', '--callout-bg': 'rgba(217,119,6,0.12)',
-          '--badge-bg': 'rgba(255,255,255,0.08)', '--badge-border': 'rgba(255,255,255,0.12)',
-          '--pill-bg': 'rgba(255,255,255,0.05)', '--pill-border': 'rgba(255,255,255,0.12)', '--shell-bg': '#03060f',
-          'page-gradient': 'radial-gradient(1200px 700px at 10% 10%, rgba(217,119,6,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251,191,36,0.25), transparent 55%), linear-gradient(180deg, #150e05, #0a0702 70%, #030201)'
-        }
+          "--bg": "#1a1206",
+          "--accent": "#d97706",
+          "--accent2": "#fbbf24",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fef3c7",
+          "--muted": "rgba(254,243,199,0.78)",
+          "--hair": "rgba(254,243,199,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0702",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(217,119,6,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251,191,36,0.25), transparent 55%), linear-gradient(180deg, #150e05, #0a0702 70%, #030201)",
+        },
+        aurora: {
+          "--bg": "#061318",
+          "--accent": "#06b6d4",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#ecfeff",
+          "--muted": "rgba(236,254,255,0.78)",
+          "--hair": "rgba(236,254,255,0.15)",
+          "--success": "#34d399",
+          "--black": "#020709",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(6,182,212,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.25), transparent 55%), linear-gradient(180deg, #051014, #02070a 70%, #010304)",
+        },
+        sapphire: {
+          "--bg": "#0a0e1c",
+          "--accent": "#3b82f6",
+          "--accent2": "#6366f1",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#eff6ff",
+          "--muted": "rgba(239,246,255,0.78)",
+          "--hair": "rgba(239,246,255,0.15)",
+          "--success": "#10b981",
+          "--black": "#04060c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(59,130,246,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(99,102,241,0.25), transparent 55%), linear-gradient(180deg, #080b16, #04050a 70%, #010204)",
+        },
+        obsidian: {
+          "--bg": "#0d0d0e",
+          "--accent": "#f3f4f6",
+          "--accent2": "#9ca3af",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#f9fafb",
+          "--muted": "rgba(249,250,251,0.78)",
+          "--hair": "rgba(249,250,251,0.15)",
+          "--success": "#10b981",
+          "--black": "#050506",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(243,244,246,0.15), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(156,163,175,0.12), transparent 55%), linear-gradient(180deg, #0b0b0c, #060607 70%, #020202)",
+        },
+        sand: {
+          "--bg": "#1a0f0a",
+          "--accent": "#ea580c",
+          "--accent2": "#f59e0b",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fff7ed",
+          "--muted": "rgba(255,247,237,0.78)",
+          "--hair": "rgba(255,247,237,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0604",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(234,88,12,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(245,158,11,0.25), transparent 55%), linear-gradient(180deg, #150c08, #0a0604 70%, #030201)",
+        },
+        light: {
+          "--bg": "#f8fafc",
+          "--accent": "#4f46e5",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(15,23,42,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#475569",
+          "--hair": "rgba(15,23,42,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#090d16",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(79,70,229,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14,165,233,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f1f5f9 70%, #e2e8f0)",
+        },
+        "light-sky": {
+          "--bg": "#f0f9ff",
+          "--accent": "#0284c7",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(2,132,199,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#334155",
+          "--hair": "rgba(2,132,199,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#031b2b",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(2,132,199,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14,165,233,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0f9ff 70%, #e0f2fe)",
+        },
+        "light-mint": {
+          "--bg": "#f0fdf4",
+          "--accent": "#16a34a",
+          "--accent2": "#10b981",
+          "--panel": "rgba(22,163,74,0.04)",
+          "--text": "#052e16",
+          "--muted": "#14532d",
+          "--hair": "rgba(22,163,74,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#022310",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(22,163,74,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0fdf4 70%, #dcfce7)",
+        },
+        "light-amber": {
+          "--bg": "#fffbeb",
+          "--accent": "#b45309",
+          "--accent2": "#d97706",
+          "--panel": "rgba(180,83,9,0.04)",
+          "--text": "#451a03",
+          "--muted": "#78350f",
+          "--hair": "rgba(180,83,9,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#270f02",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(180,83,9,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(217,119,6,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fffbeb 70%, #fef3c7)",
+        },
+        "light-rose": {
+          "--bg": "#fff1f2",
+          "--accent": "#be123c",
+          "--accent2": "#e11d48",
+          "--panel": "rgba(190,18,60,0.04)",
+          "--text": "#4c0519",
+          "--muted": "#9f1239",
+          "--hair": "rgba(190,18,60,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#27020a",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(190,18,60,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(225,29,72,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fff1f2 70%, #ffe4e6)",
+        },
+        "light-slate": {
+          "--bg": "#f8fafc",
+          "--accent": "#334155",
+          "--accent2": "#0f766e",
+          "--panel": "rgba(51,65,85,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#475569",
+          "--hair": "rgba(51,65,85,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#020617",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(51,65,85,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(15,118,110,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f8fafc 70%, #e2e8f0)",
+        },
       };
 
       function applyFundingTheme(themeKey) {
-        const theme = FUNDING_THEMES[themeKey] || FUNDING_THEMES.light;
+        const theme = THEMES[themeKey] || THEMES.light;
         const root = document.documentElement;
         for (const [key, value] of Object.entries(theme)) {
-          if (key === 'page-gradient') continue;
+          if (key === "page-gradient") continue;
           root.style.setProperty(key, value);
         }
-        document.querySelectorAll('.page').forEach((page) => {
-          page.style.background = theme['page-gradient'];
+        document.querySelectorAll(".page").forEach((page) => {
+          page.style.background = theme["page-gradient"];
         });
-        document.body.classList.toggle('print-theme', themeKey.startsWith('light'));
-        if (window.matchMedia('screen').matches) {
-          document.body.style.background = theme['--shell-bg'];
+        document.body.classList.toggle(
+          "print-theme",
+          themeKey.startsWith("light"),
+        );
+        if (window.matchMedia("screen").matches) {
+          document.body.style.background = theme["--shell-bg"];
         }
       }
 
       function updateFundingPreparedFor(value) {
         const name = value.trim();
-        const subtitle = document.querySelector('.subtitle');
+        const subtitle = document.querySelector(".subtitle");
         if (!subtitle) return;
         subtitle.textContent = name
-          ? 'Prepared for ' + name + ': automated Student Engagement, Positive Behavior (PBIS), and School Culture Infrastructure.'
-          : 'Automated Student Engagement, Positive Behavior (PBIS), & School Culture Infrastructure.';
+          ? "Prepared for " +
+            name +
+            ": automated Student Engagement, Positive Behavior (PBIS), and School Culture Infrastructure."
+          : "Automated Student Engagement, Positive Behavior (PBIS), & School Culture Infrastructure.";
       }
 
       function toggleFundingSection(input) {
-        document.querySelectorAll(input.dataset.toggleSelector).forEach((section) => {
-          section.style.display = input.checked ? '' : 'none';
-        });
+        document
+          .querySelectorAll(input.dataset.toggleSelector)
+          .forEach((section) => {
+            section.style.display = input.checked ? "" : "none";
+          });
       }
 
-      applyFundingTheme('light');
-    </script>  </body>
+      applyFundingTheme("light");
+    </script>
+  </body>
 </html>
