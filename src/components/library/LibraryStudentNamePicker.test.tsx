@@ -3,6 +3,16 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { LibraryStudentNamePicker } from './LibraryStudentNamePicker';
 import type { Student } from '@/lib/types';
 
+vi.mock('@/components/providers/SettingsProvider', () => ({
+  useSettings: () => ({
+    settings: {
+      libraryStudentNameDisplayMode: 'preferred_full',
+      libraryStudentThemeDisplay: 'emoji_and_color',
+      enableStudentThemes: true,
+    },
+  }),
+}));
+
 const mockStudents: Student[] = [
   {
     id: 'stu-1',
