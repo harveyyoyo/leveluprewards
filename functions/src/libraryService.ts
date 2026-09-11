@@ -19,7 +19,7 @@ const numeric = (value: unknown, fallback: number) =>
  * Request receipts make a retry after an uncertain network response safe. */
 export async function runLibraryOperation(db: Firestore, schoolId: string, data: Data, actor: LibraryActor) {
   const action = data.action;
-  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive', 'review', 'label', 'report_damage'].includes(action)) {
+  if (!['checkout', 'return', 'renew', 'condition', 'archive', 'delete', 'waive', 'review', 'label', 'report_damage', 'update_student'].includes(action)) {
     throw new HttpsError('invalid-argument', 'Unknown library action.');
   }
   if (!['checkout', 'return', 'review', 'report_damage'].includes(action) && !actor.staff) {
@@ -28,14 +28,15 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
   const requestId = libraryId(data.requestId, 'request ID');
   const school = db.collection('schools').doc(schoolId);
   const receiptRef = school.collection('libraryRequests').doc(`${actor.uid}_${requestId}`);
-  const itemId = action === 'waive' ? '' : libraryId(data.itemId, 'copy ID');
+  const itemId = action === 'waive' || action === 'update_student' ? '' : libraryId(data.itemId, 'copy ID');
   const studentId = data.studentId ? libraryId(data.studentId, 'student ID') : '';
   if (!actor.staff && actor.studentId && actor.studentId !== studentId) {
     throw new HttpsError('permission-denied', 'Use your own student account.');
   }
   const fingerprint = JSON.stringify([action, itemId, studentId, data.expectedLoanId ?? null,
     data.expectedCheckedOutAt ?? null, data.condition ?? null, data.amount ?? null, data.reason ?? null,
-    data.rating ?? null, data.reviewText ?? null]);
+    data.rating ?? null, data.reviewText ?? null, data.override ?? null,
+    data.libraryMaxCheckouts ?? null, data.libraryBlocked ?? null]);
   return db.runTransaction(async tx => {
     const receipt = await tx.get(receiptRef);
     if (receipt.exists) {
@@ -66,6 +67,30 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
         action, studentId, amount, reason, actorUid: actor.uid, date: now,
       });
       return finish({ success: true, message: `${amount} fine units waived.` });
+    }
+    if (action === 'update_student') {
+      if (!studentId) fail('Select a student.');
+      const ref = school.collection('students').doc(studentId);
+      const snap = await tx.get(ref);
+      if (!snap.exists) fail('Student not found.');
+      const updates: Data = { libraryUpdatedAt: now };
+      if ('libraryMaxCheckouts' in data) {
+        if (data.libraryMaxCheckouts === null || data.libraryMaxCheckouts === '') {
+          updates.libraryMaxCheckouts = null;
+        } else {
+          updates.libraryMaxCheckouts = Math.max(0, Math.floor(numeric(data.libraryMaxCheckouts, 0)));
+        }
+      }
+      if (typeof data.libraryBlocked === 'boolean') {
+        updates.libraryBlocked = data.libraryBlocked;
+      }
+      if (Object.keys(updates).length <= 1) fail('Choose a library account change to save.');
+      tx.update(ref, updates);
+      tx.set(school.collection('libraryEvents').doc(), {
+        action, studentId, libraryMaxCheckouts: updates.libraryMaxCheckouts ?? null,
+        libraryBlocked: updates.libraryBlocked ?? null, actorUid: actor.uid, date: now,
+      });
+      return finish({ success: true, message: 'Student library account updated.', ...updates });
     }
     const itemRef = school.collection('library').doc(itemId);
     const itemSnap = await tx.get(itemRef);
@@ -175,12 +200,16 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
         if (item.checkedOutTo === studentId) return finish({ action: 'already_done', itemId, item: { ...item, id: itemId } });
         return finish({ action: 'wrong_borrower', item: { ...item, id: itemId } });
       }
+      const staffOverride = actor.staff && data.override === true;
+      if (student.libraryBlocked === true && !staffOverride) {
+        fail('This student\'s library account is paused. A librarian can turn borrowing back on.');
+      }
       const loans = await tx.get(school.collection('library').where('checkedOutTo', '==', studentId));
       const count = loans.docs.filter(d => d.data().status === 'checked_out').length;
       const defaultMax = numeric(settings.libraryMaxCheckoutsPerStudent, 3);
       const studentCustomMax = student.libraryMaxCheckouts != null ? numeric(student.libraryMaxCheckouts, -1) : -1;
       const max = studentCustomMax >= 0 ? studentCustomMax : defaultMax;
-      if (max > 0 && count >= max) return finish({ action: 'limit_reached', currentCount: count, max });
+      if (max > 0 && count >= max && !staffOverride) return finish({ action: 'limit_reached', currentCount: count, max });
       const loanRef = school.collection('libraryLoans').doc();
       const dueAt = now + loanDays * DAY;
       const changes = { status: 'checked_out', checkedOutTo: studentId, checkedOutAt: now, dueAt, activeLoanId: loanRef.id };
@@ -208,8 +237,9 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       const maxRenewals = numeric(settings.libraryMaxRenewals, 2);
       const allowRenewIfOverdue = settings.libraryAllowRenewIfOverdue === true;
       const currentRenewals = numeric(loan.renewalCount, 0);
-      if (!allowRenewIfOverdue && item.dueAt && now > item.dueAt) fail('This loan is overdue. Return it or ask a librarian to renew it.');
-      if (maxRenewals > 0 && currentRenewals >= maxRenewals) fail(`This copy has already been renewed ${currentRenewals} time${currentRenewals === 1 ? '' : 's'}.`);
+      const staffOverride = actor.staff && data.override === true;
+      if (!staffOverride && !allowRenewIfOverdue && item.dueAt && now > item.dueAt) fail('This loan is overdue. Return it or ask a librarian to renew it.');
+      if (!staffOverride && maxRenewals > 0 && currentRenewals >= maxRenewals) fail(`This copy has already been renewed ${currentRenewals} time${currentRenewals === 1 ? '' : 's'}.`);
       const dueAt = Math.max(now, numeric(item.dueAt, now)) + renewalDays * DAY;
       tx.update(itemRef, { dueAt, activeLoanId: loanRef.id });
       tx.update(studentRef, { libraryUpdatedAt: now });

@@ -305,6 +305,8 @@ export interface Student {
    * - `N > 0`: Custom limit of N books
    */
   libraryMaxCheckouts?: number | null;
+  /** When true, the student cannot borrow at the kiosk until a librarian turns borrowing back on. */
+  libraryBlocked?: boolean;
   classId?: string;
   houseId?: string;
   nfcId: string;

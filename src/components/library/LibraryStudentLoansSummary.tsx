@@ -2,6 +2,7 @@
 
 import { BookOpen, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { computeDaysOverdue, formatDueDate, type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
 import type { LibraryItem } from '@/lib/types';
 import { LibraryBookCover } from './LibraryBookCover';
@@ -15,6 +16,7 @@ export function LibraryStudentLoansSummary({
   libraryFineBalance,
   categoryPoints,
   compact = false,
+  staffActions,
 }: {
   items: LibraryItem[];
   maxCheckouts?: number;
@@ -23,6 +25,11 @@ export function LibraryStudentLoansSummary({
   libraryFineBalance?: number;
   categoryPoints?: number;
   compact?: boolean;
+  staffActions?: {
+    busyId?: string | null;
+    onRenew?: (item: LibraryItem) => void;
+    onReturn?: (item: LibraryItem) => void;
+  };
 }) {
   const isUnlimited = maxCheckouts === 0;
   const max = maxCheckouts && maxCheckouts > 0 ? maxCheckouts : null;
@@ -123,6 +130,30 @@ export function LibraryStudentLoansSummary({
                     <Calendar className={compact ? 'h-2.5 w-2.5 shrink-0' : 'h-3.5 w-3.5 shrink-0'} aria-hidden />
                     {overdueDays > 0 ? `Was due ${formatDueDate(item.dueAt)}` : `Due ${formatDueDate(item.dueAt)}`}
                   </p>
+                  {staffActions && !compact ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={staffActions.busyId === item.id}
+                        onClick={() => staffActions.onRenew?.(item)}
+                        className="h-7 rounded-lg px-2.5 text-[11px] font-bold"
+                      >
+                        Give more time
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={staffActions.busyId === item.id}
+                        onClick={() => staffActions.onReturn?.(item)}
+                        className="h-7 rounded-lg px-2.5 text-[11px] font-bold"
+                      >
+                        Return now
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );

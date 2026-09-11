@@ -248,6 +248,49 @@ export async function deleteLibraryCatalogItem(
   return callLibrary(functions, 'libraryCirculation', { schoolId, action: 'delete', itemId });
 }
 
+export async function updateStudentLibraryAccount(
+  functions: Functions | null | undefined,
+  schoolId: string,
+  studentId: string,
+  patch: { libraryMaxCheckouts?: number | null; libraryBlocked?: boolean },
+) {
+  return callLibrary<{ success: boolean; message?: string; libraryMaxCheckouts?: number | null; libraryBlocked?: boolean }>(
+    functions,
+    'libraryCirculation',
+    { schoolId, action: 'update_student', studentId, ...patch },
+  );
+}
+
+export async function waiveLibraryFine(
+  functions: Functions | null | undefined,
+  schoolId: string,
+  studentId: string,
+  amount: number,
+  reason: string,
+) {
+  return callLibrary<{ success: boolean; message?: string }>(functions, 'libraryCirculation', {
+    schoolId, action: 'waive', studentId, amount, reason,
+  });
+}
+
+export async function renewLibraryItem(
+  functions: Functions | null | undefined,
+  schoolId: string,
+  item: LibraryItem,
+  options?: { override?: boolean },
+) {
+  if (!item.checkedOutTo) throw new Error('This copy is not on loan.');
+  return callLibrary<{ success: boolean; dueAt?: number; message?: string }>(functions, 'libraryCirculation', {
+    schoolId,
+    action: 'renew',
+    itemId: item.id,
+    studentId: item.checkedOutTo,
+    expectedLoanId: item.activeLoanId ?? null,
+    expectedCheckedOutAt: item.checkedOutAt ?? null,
+    override: options?.override === true,
+  });
+}
+
 export async function forceReturnLibraryItem(
   _firestore: Firestore, schoolId: string, item: LibraryItem,
   options?: { policy?: LibraryPolicySettings; functions?: Functions | null },
