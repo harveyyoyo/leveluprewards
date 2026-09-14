@@ -53,6 +53,10 @@ import { motion } from 'framer-motion';
 
 export interface LibraryInfoDeskProps {
   catalogItems?: LibraryItem[] | null;
+  /** Every copy the school owns, across every library location — unlike `catalogItems` (which is
+   * scoped to the currently active library), this is used to find a student's full set of current
+   * checkouts so a book borrowed from another room never appears to be missing. */
+  allCatalogItems?: LibraryItem[] | null;
   students?: Student[] | null;
   categories?: Category[] | null;
   getStudentName: (id?: string) => string;
@@ -87,6 +91,7 @@ function LibrarySearchScanOverlay() {
 
 export function LibraryInfoDesk({
   catalogItems = [],
+  allCatalogItems,
   students = [],
   categories = [],
   getStudentName,
@@ -162,11 +167,16 @@ export function LibraryInfoDesk({
   }, [searchQuery, scopedCatalog, students]);
 
   // Handle barcode wedge scan in info mode -> look up item/student without checking out!
+  // `clearAfterScan` is set for actual barcode scans (wedge reader / camera) so the search
+  // bar empties itself and is ready for the next scan; manual Enter-key searches keep their text.
   const handleScanLookup = useCallback(
-    (raw: string) => {
+    (raw: string, opts?: { clearAfterScan?: boolean }) => {
       const clean = raw.trim();
       if (!clean) return;
       setSearchQuery(clean);
+      const finishLookup = () => {
+        if (opts?.clearAfterScan) setSearchQuery('');
+      };
 
       // Check if student
       const studentMatch = (students || []).find(
@@ -177,6 +187,7 @@ export function LibraryInfoDesk({
         setSelectedBook(null);
         setUnrecognizedCode(null);
         setShowSuggestions(false);
+        finishLookup();
         return;
       }
 
@@ -208,6 +219,7 @@ export function LibraryInfoDesk({
             })
             .catch(() => {});
         }
+        finishLookup();
         return;
       }
 
@@ -220,19 +232,20 @@ export function LibraryInfoDesk({
       setSelectedBook(null);
       setSelectedStudent(null);
       setShowSuggestions(true);
+      finishLookup();
     },
     [students, scopedCatalog, functions, schoolId, toast],
   );
 
   useEffect(() => {
     if (!initialScanCode?.trim()) return;
-    handleScanLookup(initialScanCode.trim());
+    handleScanLookup(initialScanCode.trim(), { clearAfterScan: true });
     onClearInitialScan?.();
   }, [initialScanCode, handleScanLookup, onClearInitialScan]);
 
   const reader = useBarcodeReaderWedge({
     active: true,
-    onScan: handleScanLookup,
+    onScan: (code: string) => handleScanLookup(code, { clearAfterScan: true }),
   });
 
   // Close dropdown on outside click
@@ -256,11 +269,13 @@ export function LibraryInfoDesk({
     );
   }, [selectedBook, settings.libraryGenreDefinitions]);
 
-  // If a student is selected, get their active loans
+  // If a student is selected, get their active loans — across every library location, since a
+  // book checked out from another room shouldn't disappear just because this desk is scoped
+  // to a different library right now.
   const studentLoans = useMemo(() => {
     if (!selectedStudent) return [];
-    return scopedCatalog.filter((i) => i.checkedOutTo === selectedStudent.id);
-  }, [selectedStudent, scopedCatalog]);
+    return (allCatalogItems ?? catalogItems ?? []).filter((i) => i.checkedOutTo === selectedStudent.id);
+  }, [selectedStudent, allCatalogItems, catalogItems]);
 
   const effectiveStudentLimit = useMemo(() => {
     return resolveStudentMaxCheckouts(selectedStudent, settings.libraryMaxCheckoutsPerStudent ?? 3);
@@ -408,7 +423,8 @@ export function LibraryInfoDesk({
       >
       <div
         className={cn(
-          'w-full max-w-2xl rounded-3xl border p-4 sm:p-8 space-y-4 sm:space-y-5 relative transition-all',
+          'w-full rounded-3xl border p-4 sm:p-8 space-y-4 sm:space-y-5 relative transition-all',
+          selectedBook || selectedStudent ? 'max-w-6xl' : 'max-w-2xl',
           isNightDesk
             ? 'border-slate-800 bg-slate-900/90 text-white'
             : isReadingRoom
@@ -749,7 +765,7 @@ export function LibraryInfoDesk({
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 380, damping: 32 }}
             className={cn(
-              'w-full max-w-2xl rounded-3xl border-2 p-6 sm:p-8 space-y-4',
+              'w-full max-w-6xl rounded-3xl border-2 p-6 sm:p-8 space-y-4',
               isNightDesk ? 'border-slate-800 bg-slate-950/80' : currentTheme.classes.card,
               'shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)]',
             )}
@@ -897,7 +913,7 @@ export function LibraryInfoDesk({
         {selectedStudent && (
           <div
             className={cn(
-              'w-full max-w-2xl rounded-3xl border-2 p-4 sm:p-8 space-y-4 animate-in fade-in zoom-in-95 duration-200',
+              'w-full max-w-6xl rounded-3xl border-2 p-4 sm:p-8 space-y-4 animate-in fade-in zoom-in-95 duration-200',
               isNightDesk ? 'border-slate-800 bg-slate-950/60' : currentTheme.classes.card,
               'shadow-[0_28px_70px_-16px_rgba(15,23,42,0.45),0_10px_28px_-8px_rgba(15,23,42,0.25)]',
             )}

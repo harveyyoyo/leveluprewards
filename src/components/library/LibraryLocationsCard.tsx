@@ -2,13 +2,12 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, ExternalLink, EyeOff, Library, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, ExternalLink, Library, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
-  DEFAULT_LIBRARY_LOCATION_ID,
   libraryLocationKindLabel,
   type LibraryLocation,
   type LibraryLocationKind,
@@ -25,7 +24,6 @@ export function LibraryLocationsCard({
   getHref,
   onCreate,
   onRename,
-  onArchive,
   archivedLocations = [],
   onRestore,
   onDelete,
@@ -40,7 +38,6 @@ export function LibraryLocationsCard({
   getHref?: (id: string) => string;
   onCreate: (input: { name: string; kind: LibraryLocationKind; classId?: string | null }) => Promise<string>;
   onRename: (id: string, name: string) => Promise<void>;
-  onArchive: (id: string) => Promise<void>;
   archivedLocations?: LibraryLocation[];
   onRestore?: (id: string) => Promise<void>;
   /** Permanently remove a hidden library. Shown as "Delete" next to "Show again" when provided. */
@@ -147,26 +144,6 @@ export function LibraryLocationsCard({
               ) : onSelect && location.id !== activeId ? (
                 <Button type="button" variant="outline" size="sm" onClick={() => onSelect(location.id)}>
                   Open
-                </Button>
-              ) : null}
-              {location.id !== DEFAULT_LIBRARY_LOCATION_ID ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={() => {
-                    void onArchive(location.id).catch((error) => {
-                      toast({
-                        variant: 'destructive',
-                        title: 'Could not remove library',
-                        description: error instanceof Error ? error.message : 'Please try again.',
-                      });
-                    });
-                  }}
-                >
-                  <EyeOff className="mr-1 h-3.5 w-3.5" />
-                  Hide
                 </Button>
               ) : null}
             </div>

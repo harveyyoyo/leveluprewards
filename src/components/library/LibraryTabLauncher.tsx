@@ -24,7 +24,6 @@ export function LibraryTabLauncher({ schoolId, classes }: { schoolId: string; cl
     createFirstLibrary,
     createLocation,
     renameLocation,
-    archiveLocation,
     restoreLocation,
     deleteLocation,
   } = useLibraryLocations(schoolId);
@@ -113,7 +112,6 @@ export function LibraryTabLauncher({ schoolId, classes }: { schoolId: string; cl
               getHref={getLibraryHref}
               onCreate={createLocation}
               onRename={renameLocation}
-              onArchive={archiveLocation}
               archivedLocations={archivedLocations}
               onRestore={restoreLocation}
               onDelete={deleteLocation}

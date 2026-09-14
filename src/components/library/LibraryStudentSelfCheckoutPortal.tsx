@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AlertTriangle,
@@ -62,6 +62,7 @@ import { computeStudentLibraryStanding } from '@/lib/library/libraryBehavior';
 import type { Category, LibraryBookReview, LibraryItem, Student } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
@@ -69,7 +70,6 @@ import { LibraryBookCover } from './LibraryBookCover';
 import { LibraryStaffExitDialog } from './LibraryStaffExitDialog';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { LibraryStudentBehaviorBadge } from './LibraryStudentBehaviorBadge';
-import { LibraryRecommendationsCard } from './LibraryRecommendationsCard';
 import { LibraryBookDiscoveryModal } from './LibraryBookDiscoveryModal';
 import { LibraryBookReviewDialog } from './LibraryBookReviewDialog';
 import { AnimatedScannerLogo } from './AnimatedScannerLogo';
@@ -166,6 +166,10 @@ export function LibraryStudentSelfCheckoutPortal({
   const [lastBookItem, setLastBookItem] = useState<LibraryItem | null>(null);
   const [damageReported, setDamageReported] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  /** "Help me choose a book" while no student is signed in: ask whether to scan a card for
+   * personalized picks, or just show general picks without signing in. */
+  const [discoveryChoiceOpen, setDiscoveryChoiceOpen] = useState(false);
+  const [awaitingDiscoveryScan, setAwaitingDiscoveryScan] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewStudentId, setReviewStudentId] = useState<string | null>(null);
   const [reviewedThisReturn, setReviewedThisReturn] = useState(false);
@@ -188,6 +192,15 @@ export function LibraryStudentSelfCheckoutPortal({
     if (initialMode) setMode(initialMode);
   }, [initialMode]);
   const [scanError, setScanError] = useState<string | null>(null);
+  // Scan problems stay visible inline (a kiosk isn't always watched closely) but should also pop
+  // up as a toast like every other kiosk error, instead of only some of them doing that.
+  const reportScanError = useCallback(
+    (message: string) => {
+      setScanError(message);
+      toast({ variant: 'destructive', title: 'Scan problem', description: message });
+    },
+    [toast],
+  );
   const [exitOpenInternal, setExitOpenInternal] = useState(false);
   const exitOpen = exitOpenProp ?? exitOpenInternal;
   const setExitOpen = onExitOpenChange ?? setExitOpenInternal;
@@ -466,12 +479,10 @@ export function LibraryStudentSelfCheckoutPortal({
         setStudentLoans([]);
         return;
       }
-      const items = await getStudentLibraryCheckouts(firestore, schoolId, id, {
-        libraryLocationId: resolvedLibraryId,
-      });
+      const items = await getStudentLibraryCheckouts(firestore, schoolId, id);
       setStudentLoans(items);
     },
-    [firestore, resolvedLibraryId, schoolId],
+    [firestore, schoolId],
   );
 
   const processBook = useCallback(
@@ -607,7 +618,7 @@ export function LibraryStudentSelfCheckoutPortal({
       if (!firestore || !schoolId) return;
       if (bookItem.status !== 'checked_out') {
         playSound('error');
-        setScanError('Already in the library. Scan the next book.');
+        reportScanError('Already in the library. Scan the next book.');
         return;
       }
       try {
@@ -616,6 +627,7 @@ export function LibraryStudentSelfCheckoutPortal({
           functions,
         });
         playSound('success');
+        toast({ title: 'Book returned', description: `"${bookItem.name}" is back in the library. Thanks!` });
         setScanError(null);
         setLastBookTitle(null);
         setLastBookItem(null);
@@ -628,10 +640,10 @@ export function LibraryStudentSelfCheckoutPortal({
         setStep('student');
       } catch (err) {
         playSound('error');
-        setScanError((err as Error).message || 'Could not return this book. Try the next one, or tell a librarian.');
+        reportScanError((err as Error).message || 'Could not return this book. Try the next one, or tell a librarian.');
       }
     },
-    [firestore, schoolId, libraryPolicy, functions, playSound],
+    [firestore, schoolId, libraryPolicy, functions, playSound, toast, reportScanError],
   );
 
   const processStudent = useCallback(
@@ -685,6 +697,15 @@ export function LibraryStudentSelfCheckoutPortal({
     [firestore, schoolId, refreshStudentLoans, settings.libraryKioskSoundEffects, playSound, toast],
   );
 
+  // Once a student who scanned their card to get personalized picks is actually signed in,
+  // open the discovery modal for them (covers every sign-in path: typed name, scanned ID, etc.).
+  useEffect(() => {
+    if (awaitingDiscoveryScan && studentId) {
+      setAwaitingDiscoveryScan(false);
+      setDiscoveryOpen(true);
+    }
+  }, [awaitingDiscoveryScan, studentId]);
+
   // A student already chosen elsewhere (e.g. "Open Kiosk for {name}" on the Library Desk) —
   // log them straight in instead of showing the student-picker step. Mount-only: this component
   // remounts fresh each time the kiosk tab is reopened, so there's nothing to guard against re-firing.
@@ -733,7 +754,7 @@ export function LibraryStudentSelfCheckoutPortal({
                   await selectStudent(exact.id);
                   return;
                 }
-                setScanError('Tap your name in the list, or keep typing.');
+                reportScanError('Tap your name in the list, or keep typing.');
                 return;
               }
             }
@@ -758,7 +779,7 @@ export function LibraryStudentSelfCheckoutPortal({
 
             if (mode === 'return') {
               playSound('error');
-              setScanError(
+              reportScanError(
                 found
                   ? 'This book is already in the library. Scan the next book.'
                   : 'Book not found. Scan the next book.',
@@ -796,7 +817,7 @@ export function LibraryStudentSelfCheckoutPortal({
             throw new Error('Book not in the catalog. Ask library staff for help.');
           }
         } catch (e) {
-          setScanError((e as Error).message || 'Could not save the scan. Please try again.');
+          reportScanError((e as Error).message || 'Could not save the scan. Please try again.');
           playSound('error');
         } finally {
           scanLock.current = false;
@@ -809,7 +830,7 @@ export function LibraryStudentSelfCheckoutPortal({
         }
       })();
     },
-    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, playSound, toast, studentId],
+    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, playSound, toast, studentId, reportScanError],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, clearBuffer, focusReader } = useBarcodeReaderWedge({
@@ -867,7 +888,7 @@ export function LibraryStudentSelfCheckoutPortal({
         matchKioskTheme && libraryTheme.tone === 'dark' ? 'dark' : '',
         'border shadow-lg',
         matchKioskTheme ? libraryTheme.classes.card : 'border-border/70 bg-card',
-        embedded && !isFullscreen && 'mx-auto max-w-2xl',
+        embedded && !isFullscreen && (step === 'student' ? 'mx-auto max-w-2xl' : 'mx-auto max-w-6xl'),
         isFullscreen && 'min-h-[100dvh] rounded-none',
       )}
     >
@@ -963,7 +984,12 @@ export function LibraryStudentSelfCheckoutPortal({
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col items-center justify-start gap-3 sm:gap-4 overflow-y-auto p-3 sm:p-6 md:p-8">
+      <main
+        className={cn(
+          'relative z-10 mx-auto flex min-h-0 w-full flex-1 flex-col items-center justify-start gap-3 sm:gap-4 overflow-y-auto p-3 sm:p-6 md:p-8',
+          step === 'student' ? 'max-w-3xl' : 'max-w-6xl',
+        )}
+      >
 
         {/* Student Session Header */}
         <div className="w-full space-y-1 text-center">
@@ -1061,14 +1087,14 @@ export function LibraryStudentSelfCheckoutPortal({
               variant="outline"
               size="sm"
               className="h-11 gap-1.5 rounded-xl border-2 px-5 font-bold bg-background shadow-sm hover:bg-muted"
-              onClick={() => setDiscoveryOpen(true)}
+              onClick={() => (studentId ? setDiscoveryOpen(true) : setDiscoveryChoiceOpen(true))}
             >
               <Compass className="h-4 w-4 text-primary" />
               {studentId
                 ? studentFirstName
                   ? `Picks for ${studentFirstName}`
                   : 'Picks for you'
-                : 'Help me pick a book'}
+                : 'Help me choose a book'}
             </Button>
             {studentId ? (
               <p className="max-w-sm text-center text-[11px] font-semibold text-muted-foreground">
@@ -1364,19 +1390,20 @@ export function LibraryStudentSelfCheckoutPortal({
                 className="relative flex flex-wrap items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-3 py-4 text-center sm:px-4 sm:py-6 bg-background border-border/80 text-foreground"
                 role="status"
                 aria-live="polite"
+                style={{ '--scanner-color': scanPrimary } as CSSProperties}
               >
                 <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+                  <div className="scanner-beam" aria-hidden />
                   <div
-                    className="student-kiosk-scan-line absolute left-4 right-4 h-3 rounded-full"
-                    style={{
-                      background: `linear-gradient(180deg, transparent, color-mix(in srgb, ${scanPrimary} 35%, transparent) 50%, transparent)`,
-                      filter: 'blur(3px)',
-                    }}
+                    className="absolute inset-x-0 top-0 h-6 rounded-t-[inherit] border-2 border-b-0"
+                    style={{ borderColor: 'color-mix(in oklab, var(--scanner-color) 45%, transparent)' }}
+                    aria-hidden
                   />
-                  <span className="absolute left-2 top-2 h-4 w-4 rounded-tl border-l-2 border-t-2 border-foreground/15" aria-hidden />
-                  <span className="absolute right-2 top-2 h-4 w-4 rounded-tr border-r-2 border-t-2 border-foreground/15" aria-hidden />
-                  <span className="absolute bottom-2 left-2 h-4 w-4 rounded-bl border-b-2 border-l-2 border-foreground/15" aria-hidden />
-                  <span className="absolute bottom-2 right-2 h-4 w-4 rounded-br border-b-2 border-r-2 border-foreground/15" aria-hidden />
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-6 rounded-b-[inherit] border-2 border-t-0"
+                    style={{ borderColor: 'color-mix(in oklab, var(--scanner-color) 45%, transparent)' }}
+                    aria-hidden
+                  />
                 </div>
                 <div className="relative z-[1] flex w-full flex-col items-center justify-center gap-2.5">
                   <div className="relative w-full max-w-md">
@@ -1509,16 +1536,6 @@ export function LibraryStudentSelfCheckoutPortal({
           </div>
         )}
 
-        {/* Recommended Books For Student */}
-        {studentId && step !== 'student' && recommendations.length > 0 && (
-          <LibraryRecommendationsCard
-            recommendations={recommendations}
-            studentFirstName={studentFirstName}
-            hasPersonalHistory={hasPersonalHistory}
-            className="mt-1"
-          />
-        )}
-
         {/* Idle Countdown Alert Banner */}
         {studentId && step === 'book' && autoResetSeconds > 0 && idleRemaining <= 5 && (
           <div
@@ -1577,6 +1594,44 @@ export function LibraryStudentSelfCheckoutPortal({
           finishStaffExit();
         }}
       />
+
+      <Dialog open={discoveryChoiceOpen} onOpenChange={setDiscoveryChoiceOpen}>
+        <DialogContent className="sm:max-w-sm text-center">
+          <DialogHeader>
+            <DialogTitle className="text-center">Help you choose a book</DialogTitle>
+            <DialogDescription className="text-center">
+              Scan your library card for picks made just for you, or skip that and see general picks.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button
+              type="button"
+              className="h-11 gap-2 rounded-xl font-bold"
+              onClick={() => {
+                setDiscoveryChoiceOpen(false);
+                setAwaitingDiscoveryScan(true);
+                focusReader();
+                toast({ title: 'Scan your card', description: "We'll show your picks as soon as you scan." });
+              }}
+            >
+              <ScanBarcode className="h-4 w-4" />
+              Scan my card for picks just for me
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 gap-2 rounded-xl border-2 font-bold"
+              onClick={() => {
+                setDiscoveryChoiceOpen(false);
+                setDiscoveryOpen(true);
+              }}
+            >
+              <Compass className="h-4 w-4" />
+              Just show me general picks
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <LibraryBookDiscoveryModal
         isOpen={discoveryOpen}

@@ -1,6 +1,6 @@
 'use client';
 
-import type { ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
 import { Library, BookOpen, Monitor, ArrowRight, Stamp } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,8 @@ type HubCard = {
   spine: string;
   tint: string;
   iconColor: string;
-  tilt: string;
+  /** Resting tilt in degrees on large screens — straightens out on hover. */
+  tiltDeg: number;
 };
 
 const HUB_CARDS: HubCard[] = [
@@ -28,7 +29,7 @@ const HUB_CARDS: HubCard[] = [
     spine: 'bg-[#38bdf8]',
     tint: 'bg-[#38bdf8]/10',
     iconColor: 'text-[#0369a1]',
-    tilt: 'lg:-rotate-2',
+    tiltDeg: -2,
   },
   {
     id: 'catalog',
@@ -36,7 +37,7 @@ const HUB_CARDS: HubCard[] = [
     spine: 'bg-[#6b9080]',
     tint: 'bg-[#6b9080]/10',
     iconColor: 'text-[#3f6552]',
-    tilt: 'lg:rotate-1',
+    tiltDeg: 1,
   },
   {
     id: 'kiosk',
@@ -44,9 +45,23 @@ const HUB_CARDS: HubCard[] = [
     spine: 'bg-[#f5b942]',
     tint: 'bg-[#f5b942]/10',
     iconColor: 'text-[#92400e]',
-    tilt: 'lg:-rotate-1',
+    tiltDeg: -1,
   },
 ];
+
+/** Cards only tilt on large screens (matches the old `lg:` Tailwind breakpoint) — framer-motion
+ * can't express that in the className itself since it owns `transform` once animated. */
+function useIsLargeScreen() {
+  const [isLarge, setIsLarge] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia('(min-width: 1024px)');
+    setIsLarge(mql.matches);
+    const onChange = () => setIsLarge(mql.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+  return isLarge;
+}
 
 export interface LibraryPortalHubProps {
   schoolName?: string;
@@ -55,6 +70,7 @@ export interface LibraryPortalHubProps {
   backToPortalHref: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
+  onOpenSetup?: () => void;
 }
 
 /**
@@ -69,10 +85,12 @@ export function LibraryPortalHub({
   backToPortalHref,
   onSelect,
   onOpenSettings,
+  onOpenSetup,
 }: LibraryPortalHubProps) {
   const { settings } = useSettings();
   const theme = resolveLibraryTheme(settings.libraryTheme as LibraryThemeId, settings.libraryBoxOpacity);
   const copy = resolveLibraryHubCopy(settings.libraryHubCopy);
+  const isLargeScreen = useIsLargeScreen();
 
   const cardText = {
     desk: {
@@ -156,18 +174,18 @@ export function LibraryPortalHub({
                 layoutId={`library-hub-${card.id}`}
                 onClick={() => onSelect(card.id)}
                 variants={{
-                  hidden: { opacity: 0, y: 18 },
+                  hidden: { opacity: 0, y: 18, rotate: 0 },
                   show: {
                     opacity: 1,
                     y: 0,
+                    rotate: isLargeScreen ? card.tiltDeg : 0,
                     transition: { type: 'spring', stiffness: 280, damping: 24 },
                   },
                 }}
+                whileHover={{ y: -8, rotate: 0, transition: { duration: 0.3 } }}
                 className={cn(
-                  'group relative rounded-[22px] border-2 p-1 text-left shadow-lg transition-transform duration-300',
+                  'group relative rounded-[22px] border-2 p-1 text-left shadow-lg',
                   theme.classes.card,
-                  card.tilt,
-                  'hover:-translate-y-2 lg:hover:rotate-0',
                 )}
               >
                 <span aria-hidden className={cn('absolute inset-y-5 left-0 w-2 rounded-full', card.spine)} />
@@ -212,6 +230,16 @@ export function LibraryPortalHub({
             );
           })}
         </motion.div>
+
+        {onOpenSetup ? (
+          <button
+            type="button"
+            onClick={onOpenSetup}
+            className="mt-8 lg:mt-12 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
+          >
+            New here? Run the setup wizard
+          </button>
+        ) : null}
 
         {copy.footer ? (
           <p className="mt-10 lg:mt-16 px-2 text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] opacity-45">{copy.footer}</p>

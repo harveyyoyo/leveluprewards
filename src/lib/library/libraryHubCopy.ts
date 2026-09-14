@@ -4,7 +4,7 @@ export const DEFAULT_LIBRARY_HUB_COPY = {
   /** Blank means show the school name. */
   eyebrow: '',
   welcomeLead: 'Welcome to',
-  welcomeHighlight: 'the Library',
+  welcomeHighlight: 'Our Library',
   intro: 'Choose a place to begin. We’ll take good care of the rest.',
   footer: 'Quiet voices, happy readers',
   enterLabel: 'Visit',

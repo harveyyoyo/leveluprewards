@@ -198,7 +198,7 @@ export function LibraryCheckoutDesk({
         ...prev,
       ].slice(0, 10));
 
-      setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, targetStudentId, { libraryLocationId }));
+      setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, targetStudentId));
     },
     [describeWrongLibrary, firestore, functions, getStudentName, libraryLocationId, playSound, policy, schoolId],
   );
@@ -208,7 +208,7 @@ export function LibraryCheckoutDesk({
     locked.current = true;
     setBusy(true);
     try {
-      const loans = await getStudentLibraryCheckouts(firestore, schoolId, id, { libraryLocationId });
+      const loans = await getStudentLibraryCheckouts(firestore, schoolId, id);
       setStudentId(id);
       setStudentLoans(loans);
       const sName = getStudentName(id);
@@ -328,7 +328,7 @@ export function LibraryCheckoutDesk({
       playSound('success');
       toast({ title: 'Loan renewed', description: `Renewed "${item.name}" for ${policy.renewalDays} days.` });
       if (studentId && firestore) {
-        setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId, { libraryLocationId }));
+        setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId));
       }
     } catch (e) {
       toast({ variant: 'destructive', title: 'Renewal failed', description: (e as Error).message });
@@ -383,7 +383,7 @@ export function LibraryCheckoutDesk({
           // 1. STUDENT BADGE SCANNED
           if (studentFoundId && !foundItem) {
             setStudentId(studentFoundId);
-            const loans = await getStudentLibraryCheckouts(firestore, schoolId, studentFoundId, { libraryLocationId });
+            const loans = await getStudentLibraryCheckouts(firestore, schoolId, studentFoundId);
             setStudentLoans(loans);
             const sName = getStudentName(studentFoundId);
 
@@ -497,7 +497,7 @@ export function LibraryCheckoutDesk({
               ].slice(0, 10));
 
               if (studentId) {
-                setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId, { libraryLocationId }));
+                setStudentLoans(await getStudentLibraryCheckouts(firestore, schoolId, studentId));
               }
               return;
             }
