@@ -21,6 +21,8 @@ import {
   SlidersHorizontal,
   Plus,
   X,
+  Camera,
+  CameraOff,
 } from 'lucide-react';
 import { useFirestore, useFunctions } from '@/firebase';
 import {
@@ -45,6 +47,8 @@ import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryT
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { formatDueDate, computeDaysOverdue, resolveStudentMaxCheckouts } from '@/lib/library/libraryPolicy';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import type { Category, LibraryItem, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { LibraryBookCover } from './LibraryBookCover';
@@ -247,6 +251,16 @@ export function LibraryInfoDesk({
     active: true,
     onScan: (code: string) => handleScanLookup(code, { clearAfterScan: true }),
   });
+
+  // Camera lookup — same "Enable camera scanning" school setting the kiosk uses.
+  const cameraSettingEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [cameraActive, setCameraActive] = useState(false);
+  const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
+    cameraSettingEnabled && cameraActive,
+    (code) => handleScanLookup(code, { clearAfterScan: true }),
+    undefined,
+    { cameraEnabled: cameraSettingEnabled && cameraActive },
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -527,6 +541,36 @@ export function LibraryInfoDesk({
               </kbd>
             )}
           </div>
+
+          {/* Camera Lookup (Enabled via Library Settings) */}
+          {cameraSettingEnabled && (
+            <div className="space-y-2 pt-1.5">
+              <div className="flex items-center justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs font-semibold"
+                  onClick={() => setCameraActive((v) => !v)}
+                >
+                  {cameraActive ? <CameraOff className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+                  {cameraActive ? 'Hide camera' : 'Show camera'}
+                </Button>
+              </div>
+              {cameraActive && (
+                <div className="overflow-hidden rounded-2xl border-2 border-primary/20 bg-muted/30 p-2 shadow-inner">
+                  <BarcodeScannerCameraView
+                    videoRef={videoRef}
+                    hasCameraPermission={hasCameraPermission}
+                    zoom={zoom}
+                    onZoomChange={setZoom}
+                    viewportClassName="aspect-video max-h-48 sm:max-h-56 rounded-xl overflow-hidden shadow-inner"
+                    hintText="Align a book or student ID barcode in frame"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Quick Query Chips (opt-in via Library Settings, off by default) */}
           {(settings.libraryDeskShowQuickFilters || shelfFilter !== 'all' || searchQuery || selectedBook || selectedStudent) && (

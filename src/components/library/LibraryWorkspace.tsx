@@ -8,6 +8,8 @@ import {
   AlertCircle,
   BookOpen,
   BookOpenCheck,
+  Camera,
+  CameraOff,
   Check,
   ChevronDown,
   ChevronRight,
@@ -46,6 +48,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { Button } from '@/components/ui/button';
@@ -91,7 +95,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
-import { LibrarySetupWizard } from './LibrarySetupWizard';
+import { LibraryGettingStarted } from './LibraryGettingStarted';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -212,6 +216,25 @@ export function LibraryWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
   const [search, setSearch] = useState('');
+  // Camera lookup for the Catalog search box — same "Enable camera scanning" school setting the
+  // kiosk and librarian desk use. A decoded barcode just becomes the search term (it already
+  // matches on UPC/ISBN, not just title) so the existing filter does the rest.
+  const catalogCameraSettingEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [catalogCameraActive, setCatalogCameraActive] = useState(false);
+  const {
+    videoRef: catalogVideoRef,
+    hasCameraPermission: catalogHasCameraPermission,
+    zoom: catalogCameraZoom,
+    setZoom: setCatalogCameraZoom,
+  } = useBarcodeScanner(
+    catalogCameraSettingEnabled && catalogCameraActive,
+    (code) => {
+      setSearch(code);
+      setPage(1);
+    },
+    undefined,
+    { cameraEnabled: catalogCameraSettingEnabled && catalogCameraActive },
+  );
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
@@ -834,10 +857,14 @@ export function LibraryWorkspace({
           transition={{ type: 'spring', stiffness: 280, damping: 26 }}
           className="space-y-5 sm:space-y-6"
         >
-        {/* 0. FIRST-TIME SETUP WIZARD — name the library, add books, invite a librarian */}
+        {/* 0. GETTING STARTED — name the library, see real book count, learn how to add staff */}
         {tab === 'setup' && schoolId && (
           <div className="animate-in fade-in duration-200">
-            <LibrarySetupWizard schoolId={schoolId} onFinish={() => setHubHome(true)} />
+            <LibraryGettingStarted
+              schoolId={schoolId}
+              catalogCount={activeCopies.length}
+              onFinish={() => setHubHome(true)}
+            />
           </div>
         )}
 
@@ -1172,7 +1199,33 @@ export function LibraryWorkspace({
                   <option value="unlabeled">⚠️ Needs Processing</option>
                   <option value="shared_number">Same number as another book</option>
                 </select>
+
+                {catalogCameraSettingEnabled && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold"
+                    onClick={() => setCatalogCameraActive((v) => !v)}
+                  >
+                    {catalogCameraActive ? <CameraOff className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+                    {catalogCameraActive ? 'Hide camera' : 'Show camera'}
+                  </Button>
+                )}
               </div>
+
+              {catalogCameraActive && (
+                <div className="overflow-hidden rounded-2xl border-2 border-primary/20 bg-muted/30 p-2 shadow-inner">
+                  <BarcodeScannerCameraView
+                    videoRef={catalogVideoRef}
+                    hasCameraPermission={catalogHasCameraPermission}
+                    zoom={catalogCameraZoom}
+                    onZoomChange={setCatalogCameraZoom}
+                    viewportClassName="aspect-video max-h-48 sm:max-h-56 rounded-xl overflow-hidden shadow-inner"
+                    hintText="Align a book barcode in frame to search for it"
+                  />
+                </div>
+              )}
 
               {sharedNumberIds.size > 0 && (
                 <motion.div

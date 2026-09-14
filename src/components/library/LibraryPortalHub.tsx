@@ -237,7 +237,7 @@ export function LibraryPortalHub({
             onClick={onOpenSetup}
             className="mt-8 lg:mt-12 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
           >
-            New here? Run the setup wizard
+            Getting started
           </button>
         ) : null}
 
