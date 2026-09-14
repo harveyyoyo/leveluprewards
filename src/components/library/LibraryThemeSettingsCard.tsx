@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { Check, Palette, Sparkles, Monitor, Type, RotateCcw } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+import { Check, ImageIcon, Loader2, Palette, Sparkles, Monitor, Type, RotateCcw, Trash2 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -9,11 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
 import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useAppContext } from '@/components/AppProvider';
+import { useFunctions } from '@/firebase';
 import {
   LIBRARY_THEME_IDS,
   LIBRARY_THEMES,
@@ -29,6 +32,15 @@ import {
   resolveLibraryHubCopy,
   type LibraryHubCopyField,
 } from '@/lib/library/libraryHubCopy';
+import {
+  LIBRARY_BACKGROUND_DIM_DEFAULT,
+  clampLibraryBackgroundDim,
+  sanitizeLibraryBackgroundImageUrl,
+} from '@/lib/library/libraryBackground';
+import {
+  clearLibraryBackgroundImage,
+  uploadLibraryBackgroundImage,
+} from '@/lib/library/libraryBackgroundUpload';
 
 const STYLE_FILTERS: { id: 'all' | LibraryStyleCategory; label: string; icon: string }[] = [
   { id: 'all', label: 'All Themes', icon: '🎨' },
@@ -41,10 +53,17 @@ const STYLE_FILTERS: { id: 'all' | LibraryStyleCategory; label: string; icon: st
 export function LibraryThemeSettingsCard() {
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
+  const { schoolId } = useAppContext();
+  const functions = useFunctions();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | LibraryStyleCategory>('all');
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
+  const [backgroundUrlDraft, setBackgroundUrlDraft] = useState('');
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
   const currentTheme = resolveLibraryTheme(currentThemeId);
   const matchKiosk = settings.libraryThemeMatchKiosk !== false;
+  const backgroundUrl = sanitizeLibraryBackgroundImageUrl(settings.libraryBackgroundImageUrl);
+  const backgroundDim = clampLibraryBackgroundDim(settings.libraryBackgroundDim);
 
   const handleSelectTheme = (themeId: LibraryThemeId) => {
     updateSettings({ libraryTheme: themeId });
@@ -266,6 +285,205 @@ export function LibraryThemeSettingsCard() {
               </p>
             </div>
             <Switch checked={matchKiosk} onCheckedChange={handleToggleKioskMatch} />
+          </div>
+        </AccordionContent>
+      </AccordionItem>
+
+      <AccordionItem value="background-photo" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
+        <div className="flex items-center gap-2 pr-3">
+          <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
+            <div className="flex items-center gap-2.5 text-left">
+              <div className="rounded-xl bg-primary/10 p-2 text-primary shrink-0">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-base font-bold">Background picture</div>
+                <p className="text-xs sm:text-sm text-muted-foreground font-normal mt-0.5">
+                  Put a photo behind the library pages — like wallpaper on a wall. Words stay on top so they stay easy to read.
+                </p>
+              </div>
+            </div>
+          </AccordionTrigger>
+          <StaffPortalTabInfoPopover
+            sections={[
+              staffPortalTabInfoSection(
+                'Pick a photo of your library, a mural, or any calm picture. We fade your theme color over it so names and buttons stay clear.',
+              ),
+              staffPortalTabInfoSection(
+                'The same picture shows on the library home, the desk, the catalog, and the student station when kiosk matching is on.',
+              ),
+            ]}
+            ariaLabel="About the library background picture"
+          />
+        </div>
+        <AccordionContent className="px-4 space-y-4">
+          <div
+            className={cn(
+              'relative overflow-hidden border shadow-sm',
+              currentTheme.uiClasses.cardRadius,
+            )}
+            style={{ backgroundColor: currentTheme.swatches.bg, color: currentTheme.swatches.text }}
+          >
+            <div className="relative aspect-[16/7] w-full">
+              {backgroundUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={backgroundUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center text-xs font-semibold opacity-60">
+                  No picture yet
+                </div>
+              )}
+              <div
+                className="absolute inset-0"
+                style={{ backgroundColor: currentTheme.swatches.bg, opacity: backgroundDim / 100 }}
+              />
+              <div className="absolute inset-x-0 bottom-0 p-3">
+                <p className="text-sm font-black drop-shadow-sm">Library preview</p>
+                <p className="text-[11px] font-semibold opacity-80">This is how the picture sits behind the page.</p>
+              </div>
+            </div>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/jpg"
+            className="sr-only"
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (!file) return;
+              if (!schoolId || !functions) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not add the picture',
+                  description: 'Please refresh the page and try again.',
+                });
+                return;
+              }
+              try {
+                setIsUploadingBackground(true);
+                const imageUrl = await uploadLibraryBackgroundImage(functions, schoolId, file);
+                updateSettings({ libraryBackgroundImageUrl: imageUrl });
+                toast({
+                  title: 'Background picture saved',
+                  description: 'You will see it on the library pages.',
+                });
+              } catch (error) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Could not add the picture',
+                  description: error instanceof Error ? error.message : 'Please try a smaller photo.',
+                });
+              } finally {
+                setIsUploadingBackground(false);
+              }
+            }}
+          />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              className="rounded-xl font-bold"
+              disabled={isUploadingBackground || !schoolId}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploadingBackground ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+              {backgroundUrl ? 'Choose a new picture' : 'Choose a picture'}
+            </Button>
+            {backgroundUrl ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl font-bold"
+                disabled={isUploadingBackground}
+                onClick={async () => {
+                  try {
+                    setIsUploadingBackground(true);
+                    if (schoolId && functions) {
+                      try {
+                        await clearLibraryBackgroundImage(functions, schoolId);
+                      } catch {
+                        // Local clear still works if the live saver is not ready.
+                      }
+                    }
+                    updateSettings({ libraryBackgroundImageUrl: '' });
+                    toast({
+                      title: 'Background picture removed',
+                      description: 'The library pages use the plain theme color again.',
+                    });
+                  } finally {
+                    setIsUploadingBackground(false);
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Remove picture
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="library-background-url" className="text-xs font-bold">
+              Or paste a picture link
+            </Label>
+            <Input
+              id="library-background-url"
+              value={backgroundUrlDraft || backgroundUrl || ''}
+              onChange={(event) => setBackgroundUrlDraft(event.target.value)}
+              onBlur={() => {
+                const typed = backgroundUrlDraft.trim();
+                if (!typed) {
+                  if (backgroundUrl) updateSettings({ libraryBackgroundImageUrl: '' });
+                  setBackgroundUrlDraft('');
+                  return;
+                }
+                const next = sanitizeLibraryBackgroundImageUrl(typed);
+                if (!next) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'That link will not work',
+                    description: 'Please use a regular web picture link that starts with https.',
+                  });
+                  return;
+                }
+                updateSettings({ libraryBackgroundImageUrl: next });
+                setBackgroundUrlDraft('');
+                toast({
+                  title: 'Background picture saved',
+                  description: 'You will see it on the library pages.',
+                });
+              }}
+              placeholder="https://..."
+              className="rounded-xl font-mono text-xs"
+            />
+          </div>
+
+          <div className="space-y-2 rounded-2xl border bg-muted/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="library-background-dim" className="text-sm font-bold">
+                Keep words easy to read
+              </Label>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {backgroundDim >= 60 ? 'Strong fade' : backgroundDim >= 45 ? 'Balanced' : 'More picture'}
+              </span>
+            </div>
+            <Slider
+              id="library-background-dim"
+              min={30}
+              max={80}
+              step={1}
+              value={[backgroundDim]}
+              onValueChange={([value]) => {
+                updateSettings({
+                  libraryBackgroundDim: clampLibraryBackgroundDim(value ?? LIBRARY_BACKGROUND_DIM_DEFAULT),
+                });
+              }}
+              aria-label="How strongly to fade the background picture"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Slide right if names look hard to read. Slide left to show more of the photo.
+            </p>
           </div>
         </AccordionContent>
       </AccordionItem>

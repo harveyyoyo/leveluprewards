@@ -64,6 +64,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { LibraryBarcodeReaderField } from './LibraryBarcodeReaderField';
 import { LibraryBookCover } from './LibraryBookCover';
+import { LibraryImageBackdrop } from './LibraryImageBackdrop';
 import { LibraryStaffExitDialog } from './LibraryStaffExitDialog';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { LibraryStudentBehaviorBadge } from './LibraryStudentBehaviorBadge';
@@ -810,14 +811,22 @@ export function LibraryStudentSelfCheckoutPortal({
       ref={kioskRootRef}
       className={cn(
         embedded
-          ? 'relative flex w-full flex-1 flex-col overflow-hidden transition-colors rounded-2xl min-h-[min(640px,calc(100dvh-7rem))] md:min-h-[640px]'
-          : 'relative flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden transition-colors',
+          ? 'relative isolate flex w-full flex-1 flex-col overflow-hidden transition-colors rounded-2xl min-h-[min(640px,calc(100dvh-7rem))] md:min-h-[640px]'
+          : 'relative isolate flex h-[100dvh] min-h-[100dvh] w-full flex-1 flex-col overflow-hidden transition-colors',
         matchKioskTheme && libraryTheme.tone === 'dark' ? 'dark' : '',
         'bg-gradient-to-b from-primary/10 via-background to-background',
         isFullscreen && 'min-h-[100dvh] rounded-none',
       )}
       style={matchKioskTheme ? { backgroundColor: libraryTheme.swatches.bg } : undefined}
     >
+      {matchKioskTheme ? (
+        <LibraryImageBackdrop
+          imageUrl={settings.libraryBackgroundImageUrl}
+          overlayColor={libraryTheme.swatches.bg}
+          dim={settings.libraryBackgroundDim}
+          layoutId="library-kiosk-backdrop"
+        />
+      ) : null}
       <header
         className={cn(
           'sticky top-0 z-40 flex shrink-0 items-center justify-between gap-1.5 sm:gap-2 border-b border-border/80 bg-background/90 px-2 sm:px-3 py-2 sm:py-2.5 shadow-sm backdrop-blur-md supports-[padding:max(0px)]:pt-[max(0.5rem,env(safe-area-inset-top))]',

@@ -146,14 +146,21 @@ export function LibraryBookCover({
 
   if (showImage && !hasError && currentSrc) {
     return (
-      <div className={cn('relative overflow-hidden bg-muted/30 select-none', aspectClass, className)}>
+      <div
+        className={cn(
+          'relative overflow-hidden bg-gradient-to-b select-none',
+          gradientClass,
+          aspectClass,
+          className,
+        )}
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={currentSrc}
           alt={title || 'Book cover'}
           onError={handleError}
           referrerPolicy="no-referrer"
-          className={cn('h-full w-full object-cover transition-opacity duration-200', imgClassName)}
+          className={cn('h-full w-full object-contain transition-opacity duration-200', imgClassName)}
           loading="lazy"
         />
         {/* Subtle book spine edge highlight */}

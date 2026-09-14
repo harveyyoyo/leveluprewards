@@ -8,6 +8,7 @@ import LevelUpLogoMark from '@/components/logos/Logo';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import { LibraryImageBackdrop } from './LibraryImageBackdrop';
 
 type HubCardId = 'desk' | 'catalog' | 'kiosk';
 
@@ -97,7 +98,12 @@ export function LibraryPortalHub({
   } as const;
 
   return (
-    <div className={cn('relative min-h-dvh w-full overflow-x-hidden', theme.classes.wrapper)}>
+    <div className={cn('relative isolate min-h-dvh w-full overflow-x-hidden', theme.classes.wrapper)}>
+      <LibraryImageBackdrop
+        imageUrl={settings.libraryBackgroundImageUrl}
+        overlayColor={theme.swatches.bg}
+        dim={settings.libraryBackgroundDim}
+      />
       <div className="relative z-10 mx-auto flex max-w-4xl items-center justify-between px-4 sm:px-6 pt-6 sm:pt-8">
         <Link href={backToPortalHref} title="Back to LevelUp" className="flex items-center gap-3 group">
           <span

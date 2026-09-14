@@ -1443,6 +1443,122 @@ exports.uploadSchoolLogo = functions.https.onCall(
   }
 );
 
+const LIBRARY_BACKGROUND_MAX_BYTES = 8 * 1024 * 1024;
+const LIBRARY_BACKGROUND_ALLOWED_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+async function requireLibraryBackgroundStaff(
+  schoolId: string,
+  context: functions.https.CallableContext
+): Promise<void> {
+  requireAuth(context);
+  requireString(schoolId, "schoolId");
+  const allowed =
+    (await hasSchoolRole(schoolId, context.auth!.uid, ["admin", "teacher", "librarian"])) ||
+    (await isDeveloper(context));
+  if (!allowed) {
+    throw new functions.https.HttpsError(
+      "permission-denied",
+      "You need library access to change the library background picture."
+    );
+  }
+}
+
+async function patchLibraryBackgroundUrl(schoolId: string, imageUrl: string | null): Promise<void> {
+  const db = admin.firestore();
+  const schoolRef = db.collection("schools").doc(schoolId);
+  const publicRef = db.collection("schoolPublic").doc(schoolId);
+  const value = imageUrl ?? FieldValue.delete();
+  await schoolRef.set(
+    {
+      updatedAt: Date.now(),
+    },
+    { merge: true }
+  );
+  await schoolRef.update({
+    "appSettings.libraryBackgroundImageUrl": value,
+    updatedAt: Date.now(),
+  });
+  const publicSnap = await publicRef.get();
+  if (publicSnap.exists) {
+    await publicRef.update({
+      "appSettings.libraryBackgroundImageUrl": value,
+      active: true,
+      updatedAt: Date.now(),
+    });
+  } else if (imageUrl) {
+    await publicRef.set({
+      active: true,
+      updatedAt: Date.now(),
+      appSettings: { libraryBackgroundImageUrl: imageUrl },
+    });
+  }
+}
+
+exports.uploadLibraryBackground = functions.https.onCall(
+  async (data: any, context: functions.https.CallableContext) => {
+    try {
+      requireString(data.schoolId, "schoolId");
+      const schoolId = String(data.schoolId).trim().toLowerCase();
+      await requireLibraryBackgroundStaff(schoolId, context);
+
+      if (data.remove === true) {
+        await patchLibraryBackgroundUrl(schoolId, null);
+        return { imageUrl: null };
+      }
+
+      if (typeof data.imageBase64 !== "string" || data.imageBase64.length === 0) {
+        throw new functions.https.HttpsError("invalid-argument", "imageBase64 is required.");
+      }
+      const contentType =
+        typeof data.contentType === "string" ? data.contentType.trim().toLowerCase() : "";
+      if (!LIBRARY_BACKGROUND_ALLOWED_TYPES.includes(contentType)) {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "contentType must be image/png, image/jpeg, or image/webp."
+        );
+      }
+
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(data.imageBase64, "base64");
+      } catch {
+        throw new functions.https.HttpsError("invalid-argument", "Invalid base64 image data.");
+      }
+      if (buffer.length > LIBRARY_BACKGROUND_MAX_BYTES) {
+        throw new functions.https.HttpsError("invalid-argument", "Image must be under 8MB.");
+      }
+
+      const bucket = admin.storage().bucket();
+      const timestamp = Date.now();
+      const path = `library-backgrounds/${schoolId}-${timestamp}`;
+      const file = bucket.file(path);
+      const downloadToken = crypto.randomUUID();
+      await file.save(buffer, {
+        metadata: {
+          contentType,
+          metadata: {
+            firebaseStorageDownloadTokens: downloadToken,
+          },
+        },
+        validation: false,
+      });
+
+      const encodedPath = encodeURIComponent(path);
+      const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+      await patchLibraryBackgroundUrl(schoolId, imageUrl);
+      return { imageUrl };
+    } catch (e: any) {
+      if (e instanceof functions.https.HttpsError) throw e;
+      console.error("uploadLibraryBackground: unexpected error", e);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Unexpected error while uploading the library background.",
+        { originalMessage: String(e?.message || e) }
+      );
+    }
+  }
+);
+
 // ========================================================================
 // Callable: Upload app-wide logo (for all schools)
 // ========================================================================

@@ -58,6 +58,10 @@ import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import {
+    clampLibraryBackgroundDim,
+    sanitizeLibraryBackgroundImageUrl,
+} from '@/lib/library/libraryBackground';
 import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
@@ -116,6 +120,10 @@ interface Settings {
     libraryTheme?: LibraryThemeId;
     /** When on, student self-checkout kiosk matches the selected library theme. */
     libraryThemeMatchKiosk?: boolean;
+    /** Optional wallpaper photo shown behind the library home, desk, catalog, and student station. */
+    libraryBackgroundImageUrl?: string;
+    /** How strongly the theme color washes over the wallpaper (30–80). Higher is easier to read. */
+    libraryBackgroundDim?: number;
     /**
      * How student names appear in the library. Default `preferred_full` uses nickname
      * (or first name) + last name. `follow_school` uses `privacyStudentNameDisplayMode`.
@@ -811,6 +819,7 @@ const defaultSettings: Settings = {
     classroomRealmTheme: 'chalkboard',
     libraryTheme: 'classic_oak',
     libraryThemeMatchKiosk: true,
+    libraryBackgroundDim: 58,
     libraryStudentNameDisplayMode: 'preferred_full',
     libraryStudentThemeDisplay: 'emoji_and_color',
     libraryAutoDetectCirculation: true,
@@ -1166,6 +1175,10 @@ const SettingsContext = createContext<SettingsContextType | null>(null);
 const AppearanceContext = createContext<Pick<SettingsContextType, 'settings' | 'updateSettings'> | null>(null);
 const FeaturesContext = createContext<Pick<SettingsContextType, 'settings' | 'updateSettings' | 'isFeatureAllowed' | 'pillarAccess' | 'isPillarAvailable'> | null>(null);
 
+function canFlushSchoolAppSettings(loginState: string | null | undefined): boolean {
+    return loginState === 'admin' || loginState === 'developer' || loginState === 'teacher' || loginState === 'librarian';
+}
+
 /** Per-browser settings: kiosk, teacher, and staff keep separate theme and UI prefs on shared devices. */
 function getLocalArcadeSettingsKey(
     schoolId: string | null,
@@ -1507,6 +1520,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 const hubCopy = sanitizeLibraryHubCopy(parsed.libraryHubCopy);
                 if (hubCopy) parsed.libraryHubCopy = hubCopy;
                 else delete (parsed as Partial<Settings>).libraryHubCopy;
+                const backgroundUrl = sanitizeLibraryBackgroundImageUrl(parsed.libraryBackgroundImageUrl);
+                if (backgroundUrl) parsed.libraryBackgroundImageUrl = backgroundUrl;
+                else delete (parsed as Partial<Settings>).libraryBackgroundImageUrl;
+                parsed.libraryBackgroundDim = clampLibraryBackgroundDim(parsed.libraryBackgroundDim);
                 parsed.displayMode = normalizeDisplayModePreference(parsed.displayMode);
                 parsed.mainPortalCards = resolveMainPortalCards(parsed.mainPortalCards);
                 if (parsed.studentDisplayMode !== undefined) {
@@ -1668,7 +1685,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const flushAppSettingsToFirestore = useCallback((next: Settings, sid: string) => {
         const fs = firestoreRef.current;
         const ls = loginStateRef.current;
-        if (!sid || !fs || (ls !== 'admin' && ls !== 'developer' && ls !== 'teacher')) return;
+        if (!sid || !fs || !canFlushSchoolAppSettings(ls)) return;
         const schoolWritePayload = removeUndefinedDeep({
             appSettings: next,
             updatedAt: Date.now(),
@@ -1700,7 +1717,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
                 pending &&
                 flushSid &&
                 flushSid === capturedSid &&
-                (ls === 'admin' || ls === 'developer' || ls === 'teacher')
+                canFlushSchoolAppSettings(ls)
             ) {
                 flushAppSettingsToFirestore(pending, flushSid);
             }
@@ -1730,7 +1747,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(settingsKey, JSON.stringify(persisted));
             latestForFirestoreRef.current = persisted;
 
-            if (schoolId && firestore && canReadPrivateSchoolDoc && (loginState === 'admin' || loginState === 'developer' || loginState === 'teacher')) {
+            if (schoolId && firestore && canReadPrivateSchoolDoc && canFlushSchoolAppSettings(loginState)) {
                 const flushSid = schoolId.trim().toLowerCase();
                 lastScheduledFlushSchoolIdRef.current = flushSid;
                 if (firestoreFlushTimerRef.current) {

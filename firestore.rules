@@ -198,7 +198,7 @@ service cloud.firestore {
       allow list: if false;
       allow create, update: if isAdmin(schoolId) || isDeveloper()
         || (
-          isTeacher(schoolId)
+          (isTeacher(schoolId) || isLibrarian(schoolId))
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['appSettings', 'updatedAt', 'active'])
         );
@@ -220,10 +220,10 @@ service cloud.firestore {
       allow read: if isDeveloper() || isAdmin(schoolId) || isTeacher(schoolId) || isSecretary(schoolId) || isPrizeClerk(schoolId) || isReports(schoolId) || isLibrarian(schoolId) || isOffice(schoolId) || isHouseCoordinator(schoolId);
       allow create: if isDeveloper();
       allow delete: if isAdmin(schoolId) || isDeveloper();
-      // Teachers may adjust raffle knobs (stored in appSettings) without full admin rights.
+      // Teachers and librarians may adjust school appSettings (library look, raffle knobs) without full admin rights.
       allow update: if isAdmin(schoolId) || isDeveloper()
         || (
-          isTeacher(schoolId)
+          (isTeacher(schoolId) || isLibrarian(schoolId))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['appSettings', 'updatedAt'])
         );
 

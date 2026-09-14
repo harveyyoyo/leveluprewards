@@ -30,6 +30,11 @@ service firebase.storage {
       allow read: if true;
       allow write: if false;
     }
+    // Library wallpaper photos — public read; writes via Cloud Functions.
+    match /library-backgrounds/{fileName} {
+      allow read: if true;
+      allow write: if false;
+    }
     match /backups/{allPaths=**} {
       // Backups are managed exclusively through Cloud Functions (admin SDK).
       // No direct client access is needed or permitted.

@@ -21,6 +21,21 @@ vi.mock('@/hooks/use-toast', () => ({
   }),
 }));
 
+vi.mock('@/components/AppProvider', () => ({
+  useAppContext: () => ({ schoolId: 'schoolabc' }),
+}));
+
+vi.mock('@/firebase', () => ({
+  useFunctions: () => null,
+}));
+
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+
 /** The theme picker now lives behind a collapsed accordion trigger; open it first. */
 function openThemeAccordion() {
   fireEvent.click(screen.getByText('Ambiance & Reading Themes'));
@@ -60,5 +75,18 @@ describe('LibraryThemeSettingsCard', () => {
     fireEvent.click(switchBtn);
 
     expect(mockUpdateSettings).toHaveBeenCalledWith({ libraryThemeMatchKiosk: false });
+  });
+
+  it('saves a pasted https picture link', () => {
+    render(<LibraryThemeSettingsCard />);
+    fireEvent.click(screen.getByText('Background picture'));
+
+    const linkBox = screen.getByLabelText('Or paste a picture link');
+    fireEvent.change(linkBox, { target: { value: 'https://example.com/library.jpg' } });
+    fireEvent.blur(linkBox);
+
+    expect(mockUpdateSettings).toHaveBeenCalledWith({
+      libraryBackgroundImageUrl: 'https://example.com/library.jpg',
+    });
   });
 });

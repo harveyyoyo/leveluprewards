@@ -75,6 +75,7 @@ import {
   itemLibraryLocationId,
   libraryPath,
 } from '@/lib/library/libraryLocations';
+import { LibraryImageBackdrop } from './LibraryImageBackdrop';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
 import { LibraryLocationSwitcher } from './LibraryLocationSwitcher';
 import { LibraryLocationsCard } from './LibraryLocationsCard';
@@ -744,7 +745,7 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        'min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))]',
+        'relative isolate min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))]',
         isNightDesk
           ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
@@ -753,7 +754,12 @@ export function LibraryWorkspace({
         currentTheme.classes.wrapper
       )}
     >
-      <div className={cn('w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', currentTheme.classes.header)}>
+      <LibraryImageBackdrop
+        imageUrl={settings.libraryBackgroundImageUrl}
+        overlayColor={currentTheme.swatches.bg}
+        dim={settings.libraryBackgroundDim}
+      />
+      <div className={cn('relative z-10 w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', currentTheme.classes.header)}>
         <div className="flex items-center justify-between gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 shrink-0">
             <Link
