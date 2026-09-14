@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
+import { BookOpen, Check, ChevronsUpDown, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -13,6 +13,8 @@ import {
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
@@ -39,6 +41,7 @@ export function AdminClassesTab({
 }) {
   const [expandedClassIds, setExpandedClassIds] = useState<Set<string>>(new Set());
   const [studentIdByClassId, setStudentIdByClassId] = useState<Record<string, string>>({});
+  const [openStudentPickerClassId, setOpenStudentPickerClassId] = useState<string | null>(null);
 
   const toggleExpand = (classId: string) => {
     const next = new Set(expandedClassIds);
@@ -85,7 +88,9 @@ export function AdminClassesTab({
                 return byLast || a.firstName.localeCompare(b.firstName);
               });
             const selectedStudentId = studentIdByClassId[c.id] || '';
+            const selectedStudent = availableStudents.find((s) => s.id === selectedStudentId);
             const isExpanded = expandedClassIds.has(c.id);
+            const isPickerOpen = openStudentPickerClassId === c.id;
 
             return (
               <li
@@ -149,22 +154,59 @@ export function AdminClassesTab({
                         <span>Add existing student</span>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Select
-                          value={selectedStudentId}
-                          onValueChange={(value) => setStudentIdByClassId((prev) => ({ ...prev, [c.id]: value }))}
-                          disabled={availableStudents.length === 0}
+                        <Popover
+                          open={isPickerOpen}
+                          onOpenChange={(open) => setOpenStudentPickerClassId(open ? c.id : null)}
                         >
-                          <SelectTrigger className="h-9 w-full rounded-lg bg-background text-xs sm:w-[260px]">
-                            <SelectValue placeholder={availableStudents.length === 0 ? 'No students available' : 'Choose a student...'} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableStudents.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>
-                                {s.lastName}, {s.firstName}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={isPickerOpen}
+                              disabled={availableStudents.length === 0}
+                              className="h-9 w-full justify-between rounded-lg bg-background text-xs font-normal sm:w-[260px]"
+                            >
+                              <span className="truncate">
+                                {availableStudents.length === 0
+                                  ? 'No students available'
+                                  : selectedStudent
+                                    ? `${selectedStudent.lastName}, ${selectedStudent.firstName}`
+                                    : 'Choose a student...'}
+                              </span>
+                              <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[260px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search students..." className="text-xs" />
+                              <CommandList>
+                                <CommandEmpty>No student found.</CommandEmpty>
+                                <CommandGroup>
+                                  {availableStudents.map((s) => (
+                                    <CommandItem
+                                      key={s.id}
+                                      value={`${s.firstName} ${s.lastName}`}
+                                      onSelect={() => {
+                                        setStudentIdByClassId((prev) => ({ ...prev, [c.id]: s.id }));
+                                        setOpenStudentPickerClassId(null);
+                                      }}
+                                      className="text-xs"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-3.5 w-3.5',
+                                          selectedStudentId === s.id ? 'opacity-100' : 'opacity-0'
+                                        )}
+                                      />
+                                      {s.lastName}, {s.firstName}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                         <Button
                           type="button"
                           size="sm"
