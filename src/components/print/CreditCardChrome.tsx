@@ -35,10 +35,10 @@ export function CreditCardChip() {
 export function CreditCardContactless() {
   return (
     <div className="credit-card-contactless" aria-hidden>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4.5 16.5c2-2.5 5.5-2.5 7.5 0" />
-        <path d="M7 11.5c3.5-4 9.5-4 13 0" />
-        <path d="M9.5 6.5c5.5-6 14.5-6 20 0" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round">
+        <path d="M3 15A6 6 0 0 1 9 21" />
+        <path d="M3 9.5A11.5 11.5 0 0 1 14.5 21" />
+        <path d="M3 4A17 17 0 0 1 20 21" />
       </svg>
     </div>
   );
