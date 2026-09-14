@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getFirebaseAdminFirestore } from './firebaseAdminAuth';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -17,21 +18,8 @@ export async function assertPrizeAiSurpriseAllowedForSchool(schoolId: string): P
     return null;
   }
   try {
-    const mod = await import('firebase-admin');
-    const admin = mod.default ?? mod;
-    if (!admin.apps?.length) {
-      const projectId =
-        process.env.FIREBASE_ADMIN_PROJECT_ID ||
-        process.env.GOOGLE_CLOUD_PROJECT ||
-        process.env.GCLOUD_PROJECT ||
-        process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-      if (projectId) {
-        admin.initializeApp({ projectId });
-      } else {
-        admin.initializeApp();
-      }
-    }
-    const snap = await admin.firestore().collection('schools').doc(sid).get();
+    const db = await getFirebaseAdminFirestore();
+    const snap = await db.collection('schools').doc(sid).get();
     if (!snap.exists) {
       return NextResponse.json({ error: 'School not found.' }, { status: 404 });
     }

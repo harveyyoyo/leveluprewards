@@ -443,12 +443,12 @@ export function ShowcaseLanding() {
             {/* Soft decorative background glow behind images */}
             <div className="absolute top-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-[#c9a227]/10 filter blur-[40px] animate-pulse pointer-events-none" />
 
-            <div className="relative w-full">
+            <div className="relative flex w-full flex-col items-center gap-6 sm:flex-row sm:items-end sm:justify-center">
               {/* Primary mockup */}
-              <motion.figure 
+              <motion.figure
                 whileHover={{ rotate: 0, scale: 1.03, y: -5 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="relative z-10 rotate-[-2.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/80 p-4 shadow-[12px_16px_36px_rgba(26,46,66,0.12)] backdrop-blur-md cursor-pointer"
+                className="relative z-10 w-full max-w-sm rotate-[-2.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/80 p-4 shadow-[12px_16px_36px_rgba(26,46,66,0.12)] backdrop-blur-md cursor-pointer sm:w-1/2"
               >
                 <div className="overflow-hidden rounded-xl bg-[#e8e4dc] border border-[#1a2e42]/10">
                   <Image
@@ -466,11 +466,11 @@ export function ShowcaseLanding() {
                 </figcaption>
               </motion.figure>
 
-              {/* Overlapping secondary mockup */}
-              <motion.figure 
+              {/* Secondary mockup, staggered but not overlapping */}
+              <motion.figure
                 whileHover={{ rotate: 0, scale: 1.05, y: -8 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="absolute -bottom-10 -right-6 z-20 w-[80%] rotate-[3.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/95 p-3.5 shadow-[16px_20px_48px_rgba(201,162,39,0.18)] cursor-pointer"
+                className="relative z-10 w-full max-w-sm rotate-[3.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/95 p-3.5 shadow-[16px_20px_48px_rgba(201,162,39,0.18)] cursor-pointer sm:w-1/2"
               >
                 <div className="overflow-hidden rounded-xl bg-[#e8e4dc] border border-[#1a2e42]/10">
                   <Image

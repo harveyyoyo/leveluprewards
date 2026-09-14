@@ -86,7 +86,7 @@ export function StudentIdCard({
   const { settings } = useSettings();
 
   const resolvedCornerStyle = cornerStyle ?? settings.idCardCornerStyle ?? 'rounded';
-  const resolvedLayout = overrideLayout ?? settings.idCardLayout ?? 'classic';
+  const resolvedLayout = overrideLayout ?? student.theme?.idCardLayout ?? settings.idCardLayout ?? 'classic';
 
   const studentThemesOn = forceStudentThemePreview || settings.enableStudentThemes;
 
