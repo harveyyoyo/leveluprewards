@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 
@@ -27,6 +27,23 @@ function openThemeAccordion() {
 }
 
 describe('LibraryThemeSettingsCard', () => {
+  beforeEach(() => {
+    mockUpdateSettings.mockReset();
+    mockToast.mockReset();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('renders themes and current selection', () => {
     render(<LibraryThemeSettingsCard />);
     openThemeAccordion();
