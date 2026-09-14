@@ -43,18 +43,20 @@ describe('displayMode', () => {
     expect(isCompactDisplayMode('web')).toBe(false);
   });
 
-  it('limits mobile portal and dock destinations', () => {
-    expect(isPortalAreaOnDisplayMode('admin', 'mobile')).toBe(false);
+  it('keeps admin with teacher and student essentials on mobile', () => {
+    expect(isPortalAreaOnDisplayMode('admin', 'mobile')).toBe(true);
     expect(isPortalAreaOnDisplayMode('print', 'mobile')).toBe(true);
     expect(isPortalAreaOnDisplayMode('redeem', 'mobile')).toBe(true);
-    expect(isDockItemOnDisplayMode('admin', 'mobile')).toBe(false);
+    expect(isPortalAreaOnDisplayMode('parent', 'mobile')).toBe(false);
+    expect(isDockItemOnDisplayMode('admin', 'mobile')).toBe(true);
     expect(isDockItemOnDisplayMode('print', 'app')).toBe(true);
   });
 
-  it('limits mobile teacher tabs and blocks admin tabs', () => {
+  it('limits mobile teacher tabs and keeps admin tabs', () => {
     expect(isStaffPortalTabOnDisplayMode('welcome', 'teacher', 'mobile')).toBe(false);
     expect(isStaffPortalTabOnDisplayMode('coupons', 'teacher', 'mobile')).toBe(true);
-    expect(isStaffPortalTabOnDisplayMode('students', 'admin', 'mobile')).toBe(false);
+    expect(isStaffPortalTabOnDisplayMode('students', 'admin', 'mobile')).toBe(true);
+    expect(isStaffPortalTabOnDisplayMode('settings', 'admin', 'mobile')).toBe(true);
     expect(isStaffPortalTabOnDisplayMode('coupons', 'secretary', 'mobile')).toBe(true);
   });
 

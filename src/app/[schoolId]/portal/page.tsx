@@ -460,7 +460,7 @@ export default function PortalPage() {
                     >
                         {mobileDisplay ? (
                             <p className="mb-2 max-w-md text-xs font-semibold leading-snug text-emerald-700 dark:text-emerald-300">
-                                Mobile mode — teacher and student essentials only. Switch to Web or App in Settings for admin tools.
+                                Mobile mode — admin, teacher, and student tools stay available.
                             </p>
                         ) : null}
                         <div className="pointer-events-none w-full max-w-6xl text-center shrink-0 overflow-visible">

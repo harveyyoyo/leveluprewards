@@ -109,7 +109,7 @@ export function useStaffPortalTabs(options: UseStaffPortalTabsOptions): UseStaff
       resolvedDisplayMode,
     ).map((t) => t.value);
     const defaultTab =
-      resolvedDisplayMode === 'mobile'
+      resolvedDisplayMode === 'mobile' && role !== 'admin'
         ? staffPortalMobileDefaultTab(role, allTabValues)
         : staffPortalDefaultTab(role, settings);
 

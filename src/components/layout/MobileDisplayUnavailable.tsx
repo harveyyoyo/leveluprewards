@@ -7,15 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 type MobileDisplayUnavailableProps = {
   schoolId: string;
-  area: 'admin' | 'parent';
+  area: 'parent';
 };
 
-export function MobileDisplayUnavailable({ schoolId, area }: MobileDisplayUnavailableProps) {
-  const title = area === 'admin' ? 'Admin needs a larger screen' : 'Parent portal needs a larger screen';
+export function MobileDisplayUnavailable({ schoolId }: MobileDisplayUnavailableProps) {
+  const title = 'Parent portal needs a larger screen';
   const description =
-    area === 'admin'
-      ? 'Mobile mode keeps only teacher and student essentials. Switch to Web or App in Settings, or open Admin on a tablet or computer.'
-      : 'Mobile mode focuses on teacher and student tasks. Switch to Web or App in Settings to open the parent portal.';
+    'Mobile mode focuses on teacher, admin, and student tasks. Switch to Web or App in Settings to open the parent portal.';
 
   return (
     <div className="mx-auto flex min-h-[min(70vh,640px)] w-full max-w-lg flex-col items-center justify-center px-4 py-10">
