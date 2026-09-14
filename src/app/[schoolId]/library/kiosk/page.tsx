@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { collection } from 'firebase/firestore';
 import { useAppContext } from '@/components/AppProvider';
@@ -17,6 +17,9 @@ export default function LibraryKioskPage() {
   const params = useParams<{ schoolId: string }>();
   const schoolId = (params.schoolId || '').trim().toLowerCase();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dropBoxMode = searchParams.get('mode')?.trim().toLowerCase();
+  const initialMode = dropBoxMode === 'dropbox' || dropBoxMode === 'return' ? 'return' : undefined;
   const { settings } = useSettings();
   const { isInitialized, loginState } = useAppContext();
   const firestore = useFirestore();
@@ -87,6 +90,7 @@ export default function LibraryKioskPage() {
       categories={categories}
       getStudentName={getStudentName}
       students={students}
+      initialMode={initialMode}
     />
   );
 }

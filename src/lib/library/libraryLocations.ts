@@ -111,6 +111,22 @@ export function libraryPath(
   return `${base}${base.includes('?') ? '&' : '?'}library=${encodeURIComponent(id)}`;
 }
 
+function withQuery(path: string, extra: Record<string, string>): string {
+  const joiner = path.includes('?') ? '&' : '?';
+  const params = new URLSearchParams(extra).toString();
+  return params ? `${path}${joiner}${params}` : path;
+}
+
+/** Librarian desk → kiosk tab locked to Drop Box (return only). */
+export function libraryDropBoxPath(schoolId: string, libraryLocationId?: string | null): string {
+  return withQuery(libraryPath(schoolId, '', libraryLocationId), { tab: 'kiosk', mode: 'dropbox' });
+}
+
+/** Full-screen student kiosk locked to Drop Box (return only). */
+export function libraryKioskDropBoxPath(schoolId: string, libraryLocationId?: string | null): string {
+  return withQuery(libraryPath(schoolId, '/kiosk', libraryLocationId), { mode: 'dropbox' });
+}
+
 export function libraryLocationStorageKey(schoolId: string): string {
   return `lur.libraryLocation.${schoolId}`;
 }

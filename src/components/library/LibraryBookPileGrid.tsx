@@ -19,8 +19,10 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { LibraryBookCover } from './LibraryBookCover';
 import type { LibraryItem } from '@/lib/types';
+import { libraryCopyNeedsProcessing } from '@/lib/library/libraryWorkspace';
 import type { BookPile } from '@/lib/library/bookPiles';
 import { cn } from '@/lib/utils';
+import { libraryPileGridClass, type LibraryCoverSize } from '@/lib/library/libraryCatalogView';
 
 function loanedToLabel(item: LibraryItem, getName: (id?: string) => string) {
   const who = item.checkedOutTo ? getName(item.checkedOutTo).trim() : '';
@@ -54,6 +56,7 @@ export interface LibraryBookPileGridProps {
     };
   };
   viewMode: 'grid' | 'list';
+  coverSize?: LibraryCoverSize;
   defaultShelf?: string;
   /** Show real book cover images. Defaults to true. */
   showCoverImages?: boolean;
@@ -72,13 +75,14 @@ export function LibraryBookPileGrid({
   getName,
   currentTheme,
   viewMode,
+  coverSize = 'small',
   defaultShelf,
   showCoverImages = true,
   getGenreColor,
 }: LibraryBookPileGridProps) {
   if (viewMode === 'grid') {
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className={libraryPileGridClass(coverSize)}>
         {piles.map((pile) => {
           const isUnstacked = unstackedPileKeys.has(pile.pileKey);
 
@@ -88,7 +92,7 @@ export function LibraryBookPileGrid({
             const isChecked = selected.has(item.id);
             const isLoaned = item.status === 'checked_out';
             const isDamaged = item.condition === 'lost' || item.condition === 'damaged';
-            const needsProcessing = !item.labeled || !item.shelfLocation;
+            const needsProcessing = libraryCopyNeedsProcessing(item);
 
             return (
               <div
@@ -119,10 +123,7 @@ export function LibraryBookPileGrid({
                     author={item.author}
                     aspect="portrait"
                     className="h-full w-full"
-                    imgClassName={cn(
-                      'transition-transform duration-300',
-                      isChecked ? 'scale-105' : 'group-hover:scale-105',
-                    )}
+                    imgClassName="object-contain"
                   />
 
                   {/* Select Checkbox — its own click target, independent of the card's "open details" click */}
@@ -257,7 +258,7 @@ export function LibraryBookPileGrid({
                       author={pile.author}
                       aspect="portrait"
                       className="h-full w-full"
-                      imgClassName="transition-transform duration-300 group-hover:scale-105"
+                      imgClassName="object-contain"
                     />
 
                     {/* Top Left Pile Badge */}
@@ -300,7 +301,9 @@ export function LibraryBookPileGrid({
                         className="text-[9px] font-black px-1.5 py-0.5 shadow-md capitalize bg-background/95 text-foreground border"
                       >
                         {pile.availableCount > 0
-                          ? `${pile.availableCount} avail`
+                          ? pile.availableCount === 1
+                            ? 'Available'
+                            : `${pile.availableCount} avail`
                           : pileLoanBorrowers(pile, getName).length === 1
                             ? `On loan to ${pileLoanBorrowers(pile, getName)[0]}`
                             : `${pile.loanCount} on loan`}
@@ -394,7 +397,9 @@ export function LibraryBookPileGrid({
                         Pile broken up into {pile.copies.length} individual books
                       </Badge>
                       <Badge variant="outline" className="text-[10px] font-semibold">
-                        {pile.availableCount} available · {pile.loanCount} on loan
+                        {pile.availableCount === 1 ? 'Available' : `${pile.availableCount} available`}
+                        {' · '}
+                        {pile.loanCount} on loan
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
@@ -451,12 +456,12 @@ export function LibraryBookPileGrid({
               </div>
 
               {/* Individual Book Cards Grid inside Broken-up Tray */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3.5">
+              <div className={libraryPileGridClass(coverSize)}>
                 {pile.copies.map((copy, copyIdx) => {
                   const isChecked = selected.has(copy.id);
                   const isLoaned = copy.status === 'checked_out';
                   const isDamaged = copy.condition === 'lost' || copy.condition === 'damaged';
-                  const needsProcessing = !copy.labeled || !copy.shelfLocation;
+                  const needsProcessing = libraryCopyNeedsProcessing(copy);
 
                   return (
                     <div
@@ -480,10 +485,7 @@ export function LibraryBookPileGrid({
                           author={copy.author}
                           aspect="portrait"
                           className="h-full w-full"
-                          imgClassName={cn(
-                            'transition-transform duration-300',
-                            isChecked ? 'scale-105' : 'group-hover:scale-105',
-                          )}
+                          imgClassName="object-contain"
                         />
 
                         {/* Top Left: Select Checkbox & Copy Number Badge */}
@@ -578,7 +580,7 @@ export function LibraryBookPileGrid({
           const isChecked = selected.has(item.id);
           const isLoaned = item.status === 'checked_out';
           const isDamaged = item.condition === 'lost' || item.condition === 'damaged';
-          const needsProcessing = !item.labeled || !item.shelfLocation;
+          const needsProcessing = libraryCopyNeedsProcessing(item);
 
           return (
             <div
@@ -687,7 +689,7 @@ export function LibraryBookPileGrid({
                   {pile.shelfLocation || defaultShelf || 'Main Stacks'}
                 </span>
                 <Badge variant="outline" className="text-[10px] font-semibold">
-                  {pile.availableCount} avail
+                  {pile.availableCount === 1 ? 'Available' : `${pile.availableCount} avail`}
                 </Badge>
                 <Button
                   variant="outline"
@@ -752,7 +754,7 @@ export function LibraryBookPileGrid({
                 const isChecked = selected.has(copy.id);
                 const isLoaned = copy.status === 'checked_out';
                 const isDamaged = copy.condition === 'lost' || copy.condition === 'damaged';
-                const needsProcessing = !copy.labeled || !copy.shelfLocation;
+                const needsProcessing = libraryCopyNeedsProcessing(copy);
 
                 return (
                   <div

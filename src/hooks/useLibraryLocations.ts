@@ -1,13 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, query, setDoc, where } from 'firebase/firestore';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { LibraryLocation, LibraryLocationKind } from '@/lib/library/libraryLocations';
 import {
   DEFAULT_LIBRARY_LOCATION_ID,
-  DEFAULT_LIBRARY_LOCATION_NAME,
   activeLibraryLocations,
   defaultLibraryLocation,
   isValidLibraryLocationId,
@@ -20,31 +19,41 @@ import {
 
 export function useLibraryLocations(schoolId: string | null | undefined) {
   const firestore = useFirestore();
-  const ensuredRef = useRef(false);
   const queryRef = useMemoFirebase(
     () => (firestore && schoolId ? collection(firestore, 'schools', schoolId, 'libraries') : null),
     [firestore, schoolId],
   );
   const { data, isLoading, error } = useCollection<LibraryLocation>(queryRef);
   const locations = useMemo(() => activeLibraryLocations(data), [data]);
+  const storedLocations = useMemo(() => data ?? [], [data]);
+  // useCollection's `isLoading` starts out false and only flips true once its effect runs, so the
+  // very first render (before that effect fires) looks identical to "confirmed empty" — latch once
+  // we've actually seen a real loading pass, so that first render can never look like first-run.
+  const hasSeenLoadingRef = useRef(false);
+  if (isLoading) hasSeenLoadingRef.current = true;
+  /** True once we know for certain this school has never named a library yet (no docs at all).
+   * Requires a real, error-free query that has actually started — a permission hiccup, a
+   * not-yet-initialized Firestore client, or the transient pre-effect render must never be
+   * mistaken for "no libraries yet". */
+  const isFirstLibrary =
+    Boolean(firestore && schoolId) && hasSeenLoadingRef.current && !isLoading && !error && storedLocations.length === 0;
 
-  useEffect(() => {
-    if (!firestore || !schoolId || isLoading || ensuredRef.current) return;
-    const hasMain = (data ?? []).some((location) => location.id === DEFAULT_LIBRARY_LOCATION_ID);
-    ensuredRef.current = true;
-    if (hasMain) return;
-    void setDoc(
-      doc(firestore, 'schools', schoolId, 'libraries', DEFAULT_LIBRARY_LOCATION_ID),
-      {
-        name: DEFAULT_LIBRARY_LOCATION_NAME,
-        kind: 'school',
-        createdAt: Date.now(),
-      },
-      { merge: true },
-    ).catch(() => {
-      ensuredRef.current = false;
-    });
-  }, [data, firestore, isLoading, schoolId]);
+  /** First-run only: name the school's very first library instead of silently calling it "School Library". */
+  const createFirstLibrary = useCallback(
+    async (name: string) => {
+      if (!firestore || !schoolId) throw new Error('Library is not ready yet.');
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error('Enter a library name.');
+      // merge:true so a stale/false-positive first-run state can never wipe out a library that
+      // already exists — worst case it just relabels it instead of losing its other fields.
+      await setDoc(
+        doc(firestore, 'schools', schoolId, 'libraries', DEFAULT_LIBRARY_LOCATION_ID),
+        { name: trimmed, kind: 'school', createdAt: Date.now() },
+        { merge: true },
+      );
+    },
+    [firestore, schoolId],
+  );
 
   const createLocation = useCallback(
     async (input: { name: string; kind: LibraryLocationKind; classId?: string | null }) => {
@@ -97,15 +106,43 @@ export function useLibraryLocations(schoolId: string | null | undefined) {
     [firestore, schoolId],
   );
 
+  /** Permanently remove a hidden library. Only allowed once it's already hidden and empty, as a safety rail. */
+  const deleteLocation = useCallback(
+    async (id: string) => {
+      if (!firestore || !schoolId) throw new Error('Library is not ready yet.');
+      if (id === DEFAULT_LIBRARY_LOCATION_ID) {
+        throw new Error('The school library cannot be deleted.');
+      }
+      const current = (data ?? []).find((location) => location.id === id);
+      if (!current?.archived) {
+        throw new Error('Hide a library before deleting it.');
+      }
+      const catalogQuery = query(
+        collection(firestore, 'schools', schoolId, 'library'),
+        where('libraryLocationId', '==', id),
+        limit(1),
+      );
+      const catalogSnapshot = await getDocs(catalogQuery);
+      if (!catalogSnapshot.empty) {
+        throw new Error('This library still has books in it. Move them to another library first.');
+      }
+      await deleteDoc(doc(firestore, 'schools', schoolId, 'libraries', id));
+    },
+    [data, firestore, schoolId],
+  );
+
   return {
     locations,
-    storedLocations: data ?? [],
+    storedLocations,
     isLoading,
+    isFirstLibrary,
     error,
+    createFirstLibrary,
     createLocation,
     renameLocation,
     archiveLocation,
     restoreLocation,
+    deleteLocation,
   };
 }
 

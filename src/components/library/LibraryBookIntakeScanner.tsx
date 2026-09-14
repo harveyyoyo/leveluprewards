@@ -16,11 +16,14 @@ import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import {
   catalogIsbnSet,
+  isLikelyStoreProductBarcode,
   isRetailIsbnBarcode,
   primaryIsbnVariant,
   isSuspiciousCatalogTitle,
+  pickBestTitleHit,
 } from '@/lib/library/libraryCatalogLookup';
 import {
+  allocateNextGenreBarcode,
   catalogScannedCodeSet,
   createScanDeduper,
   fetchCatalogHitByIsbn,
@@ -28,7 +31,17 @@ import {
   resolveIntakeCheckoutUpc,
   isBlockedLibraryIntakeBarcode,
   normalizeIntakeScanCode,
+  type IsbnLookupPhase,
 } from '@/lib/library/libraryIntakeHelpers';
+import {
+  LIBRARY_ISBN_AI_LOOKUP,
+  LIBRARY_ISBN_LIST_LOOKUP,
+  LIBRARY_STORE_BARCODE_BODY,
+  LIBRARY_STORE_BARCODE_MANUAL_HINT,
+  LIBRARY_STORE_BARCODE_SCAN_ISBN,
+  LIBRARY_STORE_BARCODE_TITLE,
+  LIBRARY_STORE_BARCODE_TYPE_MANUAL,
+} from '@/lib/library/libraryCatalogingCopy';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
 import {
   LibraryBarcodeReaderField,
@@ -36,8 +49,9 @@ import {
 } from './LibraryBarcodeReaderField';
 import { LibraryBookCover } from './LibraryBookCover';
 import {
-  resolveBookClassification,
   DEFAULT_LIBRARY_PLACEMENT_ZONES,
+  getActiveLibraryGenres,
+  resolveBookClassification,
 } from '@/lib/library/libraryClassification';
 
 type IntakeRowStatus =
@@ -90,6 +104,7 @@ export function LibraryBookIntakeScanner({
   onComplete,
   upcTaken,
   libraryItems,
+  reservedCodes,
   className,
   initialScanCode,
 }: {
@@ -97,6 +112,7 @@ export function LibraryBookIntakeScanner({
   onComplete?: () => void;
   upcTaken: (upc: string) => Promise<boolean>;
   libraryItems?: LibraryItem[] | null;
+  reservedCodes?: Set<string>;
   className?: string;
   /** A barcode/ISBN already scanned before this scanner opened (e.g. from the Library Desk's
    * "Book Not Found" prompt) — queued automatically so the staff member doesn't re-scan it. */
@@ -109,12 +125,19 @@ export function LibraryBookIntakeScanner({
     settings.libraryPlacementZones && settings.libraryPlacementZones.length > 0
       ? settings.libraryPlacementZones
       : DEFAULT_LIBRARY_PLACEMENT_ZONES;
+  const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
+  const defaultGenre = resolveBookClassification(
+    settings.libraryDefaultCategory,
+    settings.libraryGenreDefinitions,
+  ).genre;
   const [scanning, setScanning] = useState(true);
   const [rows, setRows] = useState<IntakeRow[]>([]);
   const rowsRef = useRef<IntakeRow[]>(rows);
   rowsRef.current = rows;
   const [registering, setRegistering] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<LibraryScanFeedback | null>(null);
+  const [lookupPhase, setLookupPhase] = useState<IsbnLookupPhase | null>(null);
+  const [findingTitleId, setFindingTitleId] = useState<string | null>(null);
   const [isBatchOpen, setIsBatchOpen] = useState(false);
   const [batchInput, setBatchInput] = useState('');
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
@@ -133,36 +156,47 @@ export function LibraryBookIntakeScanner({
     async (rowId: string, title: string) => {
       const trimmed = title.trim();
       if (!trimmed) return;
+      setFindingTitleId(rowId);
       try {
         const hits = await fetchCatalogHitsByTitle(trimmed);
-        if (hits.length > 0) {
-          const hit = hits[0];
+        const hit = pickBestTitleHit(trimmed, hits) ?? hits[0] ?? null;
+        if (hit) {
+          const classification = resolveBookClassification(hit.category, settings.libraryGenreDefinitions);
+          const isAiGuess = hit.source === 'ai';
           upsertRow({
             id: rowId,
             title: hit.title,
             author: hit.author || undefined,
+            isbn: hit.isbn ?? '',
             coverUrl: hit.coverUrl || undefined,
-            category: hit.category || undefined,
-            status: 'ready',
+            description: hit.description || undefined,
+            pageCount: hit.pageCount,
+            publishedYear: hit.publishedYear,
+            readingLevel: hit.readingLevel,
+            category: classification.genre.label,
+            shelfLocation: classification.shelfLocation,
+            status: isAiGuess ? 'ai_review' : 'ready',
             error: undefined,
           });
           playSound('success');
           toast({
-            title: 'Details autofilled',
+            title: isAiGuess ? 'AI found a match — please check it' : 'Details filled in',
             description: `Loaded details for "${hit.title}"${hit.author ? ` by ${hit.author}` : ''}.`,
           });
         } else {
           toast({
             variant: 'destructive',
             title: 'No match found',
-            description: `Could not find book details online for "${trimmed}".`,
+            description: `Could not find book details online for "${trimmed}". Type the author yourself.`,
           });
         }
       } catch (e) {
         toast({ variant: 'destructive', title: 'Lookup error', description: (e as Error).message });
+      } finally {
+        setFindingTitleId(null);
       }
     },
-    [upsertRow, playSound, toast],
+    [upsertRow, playSound, toast, settings.libraryGenreDefinitions],
   );
 
   const addScanToQueue = useCallback(
@@ -184,7 +218,49 @@ export function LibraryBookIntakeScanner({
         return;
       }
 
-      const isIsbn = isRetailIsbnBarcode(trimmed);
+      if (isLikelyStoreProductBarcode(trimmed)) {
+        const scanBookNumberInstead = await confirm({
+          title: LIBRARY_STORE_BARCODE_TITLE,
+          description: LIBRARY_STORE_BARCODE_BODY,
+          confirmLabel: LIBRARY_STORE_BARCODE_SCAN_ISBN,
+          cancelLabel: LIBRARY_STORE_BARCODE_TYPE_MANUAL,
+        });
+        if (scanBookNumberInstead) {
+          setScanFeedback({
+            code: trimmed,
+            status: 'blocked',
+            message: 'Look inside the front cover for the book number, then scan that.',
+          });
+          return;
+        }
+
+        const id = newRowId();
+        setRows((prev) => [
+          {
+            id,
+            isbn: '',
+            title: '',
+            author: '',
+            category: defaultGenre.label,
+            shelfLocation: defaultGenre.defaultShelf,
+            status: 'needs_title',
+            copies: 1,
+          },
+          ...prev,
+        ]);
+        setScanFeedback({
+          code: trimmed,
+          status: 'needs_title',
+          message: LIBRARY_STORE_BARCODE_MANUAL_HINT,
+        });
+        toast({
+          title: 'Type this book in',
+          description: LIBRARY_STORE_BARCODE_MANUAL_HINT,
+        });
+        return;
+      }
+
+      const isIsbn = isLikelyStoreProductBarcode(trimmed) ? false : isRetailIsbnBarcode(trimmed);
       const scannedCode = isIsbn ? primaryIsbnVariant(trimmed) : trimmed;
       const codeKey = scannedCode.toUpperCase();
 
@@ -246,7 +322,10 @@ export function LibraryBookIntakeScanner({
             isbn: scannedCode,
             title: existingCatalogItem.name,
             author: existingCatalogItem.author ?? '',
-            category: existingCatalogItem.category ?? '',
+            category: resolveBookClassification(
+              existingCatalogItem.category,
+              settings.libraryGenreDefinitions,
+            ).genre.label,
             shelfLocation: existingCatalogItem.shelfLocation ?? '',
             coverUrl: existingCatalogItem.coverUrl,
             description: existingCatalogItem.description,
@@ -279,16 +358,23 @@ export function LibraryBookIntakeScanner({
           isbn: scannedCode,
           title: '',
           author: '',
-          category: '',
+          category: defaultGenre.label,
+          shelfLocation: defaultGenre.defaultShelf,
           status: isIsbn ? ('lookup' as const) : ('needs_title' as const),
           copies: 1,
         },
         ...prev,
       ]);
 
-      setScanFeedback({ code: scannedCode, status: 'looking_up' });
+      setLookupPhase('catalog');
+      setScanFeedback({
+        code: scannedCode,
+        status: 'looking_up',
+        message: LIBRARY_ISBN_LIST_LOOKUP,
+      });
 
       if (!isIsbn) {
+        setLookupPhase(null);
         setScanFeedback({
           code: scannedCode,
           status: 'needs_title',
@@ -298,7 +384,17 @@ export function LibraryBookIntakeScanner({
       }
 
       try {
-        const { hit, meta } = await fetchCatalogHitByIsbn(scannedCode);
+        const { hit, meta } = await fetchCatalogHitByIsbn(scannedCode, {
+          onPhase: (phase) => {
+            setLookupPhase(phase);
+            setScanFeedback({
+              code: scannedCode,
+              status: 'looking_up',
+              message: phase === 'ai' ? LIBRARY_ISBN_AI_LOOKUP : LIBRARY_ISBN_LIST_LOOKUP,
+            });
+          },
+        });
+        setLookupPhase(null);
         if (hit?.title && !isSuspiciousCatalogTitle(hit.title)) {
           const isAiGuess = hit.source === 'ai';
           const classification = resolveBookClassification(hit.category, settings.libraryGenreDefinitions);
@@ -308,7 +404,7 @@ export function LibraryBookIntakeScanner({
             id,
             title: hit.title,
             author: hit.author ?? '',
-            category: hit.category ?? classification.genre.label,
+            category: classification.genre.label,
             shelfLocation: initialShelf,
             status: isAiGuess ? 'ai_review' : 'ready',
             coverUrl: hit.coverUrl,
@@ -354,9 +450,11 @@ export function LibraryBookIntakeScanner({
           status: 'error',
           message: e instanceof Error ? e.message : 'Lookup failed — type a title manually.',
         });
+      } finally {
+        setLookupPhase(null);
       }
     },
-    [toast, confirm, upsertRow, libraryItems, settings.libraryDefaultShelf, settings.libraryGenreDefinitions],
+    [toast, confirm, upsertRow, libraryItems, defaultGenre, settings.libraryDefaultShelf, settings.libraryGenreDefinitions],
   );
 
   const handleScan = useCallback(
@@ -455,18 +553,35 @@ export function LibraryBookIntakeScanner({
     setRegistering(true);
     let saved = 0;
     let savedCopies = 0;
+    const reserved = reservedCodes ?? new Set<string>();
     for (const row of toSave) {
       upsertRow({ id: row.id, status: 'lookup' });
-      const upc = row.isbn;
+      const classification = resolveBookClassification(row.category, settings.libraryGenreDefinitions);
       const copiesToSave = row.copies ?? 1;
       try {
+        const upc = await allocateNextGenreBarcode({
+          category: classification.genre.label,
+          scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+          customGenres: settings.libraryGenreDefinitions,
+          upcTaken,
+          reserved,
+          existingUpcs: (libraryItems ?? []).map((item) => item.upc),
+        });
+        if (!upc) {
+          upsertRow({
+            id: row.id,
+            status: 'error',
+            error: 'Could not make a genre code for this book.',
+          });
+          continue;
+        }
         await onRegister({
           name: row.title.trim(),
           upc,
-          copies: copiesToSave,
+          copies: 1,
           author: row.author.trim() || undefined,
           isbn: row.isbn,
-          category: row.category.trim() || undefined,
+          category: classification.genre.label,
           shelfLocation: row.shelfLocation?.trim() || undefined,
           coverUrl: row.coverUrl,
           description: row.description,
@@ -474,6 +589,31 @@ export function LibraryBookIntakeScanner({
           readingLevel: row.readingLevel,
           publishedYear: row.publishedYear,
         });
+        for (let extra = 1; extra < copiesToSave; extra++) {
+          const extraUpc = await allocateNextGenreBarcode({
+            category: classification.genre.label,
+            scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+            customGenres: settings.libraryGenreDefinitions,
+            upcTaken,
+            reserved,
+            existingUpcs: (libraryItems ?? []).map((item) => item.upc),
+          });
+          if (!extraUpc) throw new Error('Could not make a genre code for an extra copy.');
+          await onRegister({
+            name: row.title.trim(),
+            upc: extraUpc,
+            copies: 1,
+            author: row.author.trim() || undefined,
+            isbn: row.isbn,
+            category: classification.genre.label,
+            shelfLocation: row.shelfLocation?.trim() || undefined,
+            coverUrl: row.coverUrl,
+            description: row.description,
+            pageCount: row.pageCount,
+            readingLevel: row.readingLevel,
+            publishedYear: row.publishedYear,
+          });
+        }
         upsertRow({ id: row.id, status: 'saved' });
         saved += 1;
         savedCopies += copiesToSave;
@@ -634,6 +774,7 @@ export function LibraryBookIntakeScanner({
         )}
 
         {scanning ? (
+          <>
           <LibraryBarcodeReaderField
             inputId="library-intake-reader"
             inputRef={inputRef}
@@ -644,6 +785,12 @@ export function LibraryBookIntakeScanner({
             scanFeedback={scanFeedback}
             hint="Scan any barcode on the book (ISBN, UPC, or internal code)."
           />
+          {lookupPhase === 'ai' ? (
+            <p className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-2 text-xs text-violet-900">
+              {LIBRARY_ISBN_AI_LOOKUP}
+            </p>
+          ) : null}
+          </>
         ) : (
           <p className="text-xs text-muted-foreground rounded-lg border border-dashed bg-background/60 px-3 py-1.5 text-center">
             Press <strong className="text-foreground">Resume reader</strong> {cameraEnabled ? 'or Camera Scan ' : ''}to register books.
@@ -715,24 +862,31 @@ export function LibraryBookIntakeScanner({
                           error: undefined,
                         })
                       }
-                      placeholder={!row.title.trim() ? '⚠️ Enter book title here…' : 'Book Title'}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && row.title.trim().length >= 2 && row.status !== 'saved' && row.status !== 'lookup') {
+                          e.preventDefault();
+                          void autofillRowFromTitle(row.id, row.title);
+                        }
+                      }}
+                      placeholder={!row.title.trim() ? 'Type the book name…' : 'Book Title'}
                       disabled={row.status === 'saved' || row.status === 'lookup'}
                       className={cn(
                         'h-7 text-xs font-semibold rounded-lg flex-1 transition-all',
                         !row.title.trim() && 'border-amber-500 bg-amber-500/10 placeholder:text-amber-700/70 dark:placeholder:text-amber-300/70 focus-visible:ring-amber-500',
                       )}
                     />
-                    {row.status !== 'saved' && row.status !== 'lookup' && row.title.trim().length >= 2 && !row.author && (
+                    {row.status !== 'saved' && row.status !== 'lookup' && row.title.trim().length >= 2 && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-[10px] font-bold text-violet-600 dark:text-violet-400 gap-1 rounded-lg shrink-0 hover:bg-violet-500/10"
+                        disabled={findingTitleId === row.id}
                         onClick={() => void autofillRowFromTitle(row.id, row.title)}
-                        title="Autofill author, cover and details from title"
+                        title="Look up this book name and fill in the rest"
                       >
-                        <Sparkles className="h-3 w-3" />
-                        <span>Autofill</span>
+                        {findingTitleId === row.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        <span>Find this book</span>
                       </Button>
                     )}
                     <Badge
@@ -786,16 +940,21 @@ export function LibraryBookIntakeScanner({
                       </Button>
                     )}
                   </div>
+                  {!row.title.trim() && row.status !== 'saved' ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Type the book name, then tap Find this book. We will fill in the rest.
+                    </p>
+                  ) : null}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground shrink-0 font-medium">Copies:</span>
-                      <div className="flex items-center border rounded-md overflow-hidden bg-background h-6.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-semibold text-muted-foreground">Copies</span>
+                      <div className="flex items-center border rounded-md overflow-hidden bg-background h-7">
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-6.5 w-4 rounded-none text-muted-foreground hover:text-foreground px-0 shrink-0"
+                          className="h-7 w-6 rounded-none text-muted-foreground hover:text-foreground px-0 shrink-0"
                           disabled={row.status === 'saved' || registering || (row.copies ?? 1) <= 1}
                           onClick={() => upsertRow({ id: row.id, copies: Math.max(1, (row.copies ?? 1) - 1) })}
                           aria-label="Decrease copies"
@@ -812,13 +971,13 @@ export function LibraryBookIntakeScanner({
                           onChange={(event) =>
                             upsertRow({ id: row.id, copies: Math.min(25, Math.max(1, Number(event.target.value) || 1)) })
                           }
-                          className="h-6.5 w-7 text-xs rounded-none border-0 text-center font-bold px-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          className="h-7 w-8 text-xs rounded-none border-0 text-center font-bold px-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-6.5 w-4 rounded-none text-muted-foreground hover:text-foreground px-0 shrink-0"
+                          className="h-7 w-6 rounded-none text-muted-foreground hover:text-foreground px-0 shrink-0"
                           disabled={row.status === 'saved' || registering || (row.copies ?? 1) >= 25}
                           onClick={() => upsertRow({ id: row.id, copies: Math.min(25, (row.copies ?? 1) + 1) })}
                           aria-label="Increase copies"
@@ -827,47 +986,76 @@ export function LibraryBookIntakeScanner({
                         </Button>
                       </div>
                     </div>
-                    <Input
-                      value={row.author}
-                      onChange={(e) => upsertRow({ id: row.id, author: e.target.value })}
-                      placeholder="Author"
-                      disabled={row.status === 'saved' || row.status === 'lookup'}
-                      className="h-6.5 text-xs rounded-md"
-                    />
-                    <Input
-                      value={row.category}
-                      onChange={(e) => {
-                        const newCat = e.target.value;
-                        const res = resolveBookClassification(newCat);
-                        upsertRow({
-                          id: row.id,
-                          category: newCat,
-                          shelfLocation: row.shelfLocation || res.shelfLocation,
-                        });
-                      }}
-                      placeholder="Genre"
-                      disabled={row.status === 'saved' || row.status === 'lookup'}
-                      className="h-6.5 text-xs rounded-md"
-                    />
-                    <Input
-                      value={row.shelfLocation ?? ''}
-                      list="intake-shelf-options"
-                      onChange={(e) => upsertRow({ id: row.id, shelfLocation: e.target.value })}
-                      placeholder="Shelf placement"
-                      disabled={row.status === 'saved' || row.status === 'lookup'}
-                      className="h-6.5 text-xs rounded-md"
-                    />
-                    <datalist id="intake-shelf-options">
-                      {placementZones.map((zone) => (
-                        <option key={zone} value={zone} />
-                      ))}
-                    </datalist>
-                    <Input
-                      value={row.isbn}
-                      readOnly
-                      className="h-6.5 text-xs font-mono bg-muted/50 rounded-md"
-                      aria-label={isRetailIsbnBarcode(row.isbn) ? 'ISBN' : 'Barcode'}
-                    />
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-semibold text-muted-foreground">Author</span>
+                      <Input
+                        value={row.author}
+                        onChange={(e) => upsertRow({ id: row.id, author: e.target.value })}
+                        placeholder="Who wrote it"
+                        disabled={row.status === 'saved' || row.status === 'lookup'}
+                        className="h-7 text-xs rounded-md"
+                      />
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-semibold text-muted-foreground">Genre</span>
+                      <select
+                        aria-label="Genre"
+                        value={resolveBookClassification(row.category, settings.libraryGenreDefinitions).genre.id}
+                        disabled={row.status === 'saved' || row.status === 'lookup'}
+                        onChange={(event) => {
+                          const picked = genres.find((genre) => genre.id === event.target.value);
+                          if (!picked) return;
+                          const res = resolveBookClassification(picked.label, settings.libraryGenreDefinitions);
+                          upsertRow({
+                            id: row.id,
+                            category: picked.label,
+                            shelfLocation: res.shelfLocation,
+                          });
+                        }}
+                        className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs font-medium"
+                      >
+                        {genres.map((genre) => (
+                          <option key={genre.id} value={genre.id}>
+                            {genre.label} ({genre.callPrefix})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-semibold text-muted-foreground">Shelving location</span>
+                      <select
+                        aria-label="Shelving location"
+                        value={
+                          (row.shelfLocation &&
+                            (placementZones.includes(row.shelfLocation) || row.shelfLocation.trim())
+                            ? row.shelfLocation
+                            : placementZones[0]) || 'Main Stacks'
+                        }
+                        disabled={row.status === 'saved' || row.status === 'lookup'}
+                        onChange={(event) => upsertRow({ id: row.id, shelfLocation: event.target.value })}
+                        className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs font-medium"
+                      >
+                        {row.shelfLocation && !placementZones.includes(row.shelfLocation) ? (
+                          <option value={row.shelfLocation}>{row.shelfLocation}</option>
+                        ) : null}
+                        {placementZones.map((zone) => (
+                          <option key={zone} value={zone}>
+                            {zone}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-semibold text-muted-foreground">
+                        {isRetailIsbnBarcode(row.isbn) ? 'ISBN' : 'Barcode'}
+                      </span>
+                      <Input
+                        value={row.isbn}
+                        readOnly
+                        className="h-7 text-xs font-mono bg-muted/50 rounded-md"
+                        aria-label={isRetailIsbnBarcode(row.isbn) ? 'ISBN' : 'Barcode'}
+                      />
+                    </div>
                   </div>
 
                   {row.error && <p className="text-[10px] font-medium text-destructive">{row.error}</p>}

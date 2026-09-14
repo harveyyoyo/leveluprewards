@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,11 +13,9 @@ import {
   CheckCircle2,
   Coins,
   Edit2,
-  Layers,
   Library,
   MapPin,
   MessageSquare,
-  Palette,
   Play,
   Plus,
   Printer,
@@ -37,20 +36,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   DEFAULT_LIBRARY_GENRES,
   DEFAULT_LIBRARY_PLACEMENT_ZONES,
+  furnitureNameForShelf,
+  genresLookLegacy,
   getActiveLibraryGenres,
   generateGenreBarcode,
+  migrateFurnitureOnlySetup,
+  placementLooksLegacy,
   type LibraryGenreConfig,
   type BarcodeNumberScheme,
 } from '@/lib/library/libraryClassification';
 import {
   LIBRARY_ORGANIZATION_SCHEMES,
+  resolveLibraryOrganizationScheme,
   type LibraryOrganizationScheme,
 } from '@/lib/library/libraryOrganization';
 import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
-import { LIBRARY_LABEL_OPTIONS, getLibraryLabelOption, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import { getLibraryLabelOption, LIBRARY_LABEL_OPTIONS, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import {
+  enabledLibraryLabelFormats,
+  enabledLibraryLabelOptions,
+  LIBRARY_LABEL_FIELD_COPY,
+  LIBRARY_LABEL_FIELD_IDS,
+  resolveDefaultLibraryLabelFormat,
+  resolveLibraryLabelFields,
+  type LibraryLabelFieldId,
+} from '@/lib/library/libraryLabelSettings';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -84,8 +97,40 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const [testingSound, setTestingSound] = useState<string | null>(null);
+  const enabledLabelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
+  const enabledLabelFormats = enabledLibraryLabelFormats(settings.libraryLabelFormatsEnabled);
+  const defaultLabelFormat = resolveDefaultLibraryLabelFormat(
+    settings.libraryLabelFormat,
+    settings.libraryLabelFormatsEnabled,
+  );
+  const labelFields = resolveLibraryLabelFields(settings.libraryLabelFields);
+
+  const toggleLabelFormat = (id: LibraryLabelFormat, on: boolean) => {
+    const current = enabledLibraryLabelFormats(settings.libraryLabelFormatsEnabled);
+    const nextIds = on
+      ? LIBRARY_LABEL_OPTIONS.map((option) => option.id).filter((format) => current.includes(format) || format === id)
+      : current.filter((format) => format !== id);
+    if (!nextIds.length) {
+      toast({ title: 'Keep at least one sticker type' });
+      return;
+    }
+    updateSettings({
+      libraryLabelFormatsEnabled: nextIds,
+      libraryLabelFormat: resolveDefaultLibraryLabelFormat(settings.libraryLabelFormat, nextIds),
+    });
+  };
+
+  const toggleLabelField = (id: LibraryLabelFieldId, on: boolean) => {
+    updateSettings({
+      libraryLabelFields: {
+        ...labelFields,
+        [id]: on,
+      },
+    });
+  };
   const categoryList = categories ?? [];
   const rewardMode = resolveLibraryRewardMode(settings);
+  const boxStyle = { backgroundColor: `hsl(var(--card) / ${settings.libraryBoxOpacity ?? 80}%)` };
 
   const handleTestSound = (soundId: LibraryReturnSoundOnTimeId | LibraryReturnSoundLateId) => {
     setTestingSound(soundId);
@@ -141,7 +186,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const milestonesOn = settings.libraryReadingMilestonesEnabled !== false;
 
   const barcodeScheme: BarcodeNumberScheme = settings.libraryBarcodeNumberScheme ?? 'genre_code';
-  const orgScheme: LibraryOrganizationScheme = settings.libraryOrganizationScheme ?? 'genre_then_author';
+  const orgScheme: LibraryOrganizationScheme = resolveLibraryOrganizationScheme(settings.libraryOrganizationScheme);
   const placementZones: string[] =
     settings.libraryPlacementZones && settings.libraryPlacementZones.length > 0
       ? settings.libraryPlacementZones
@@ -149,11 +194,28 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
   const [newShelfName, setNewShelfName] = useState('');
   const [isAddingShelf, setIsAddingShelf] = useState(false);
+  const [showShelfExtras, setShowShelfExtras] = useState(false);
   const [editingShelfIndex, setEditingShelfIndex] = useState<number | null>(null);
   const [editingShelfValue, setEditingShelfValue] = useState('');
+  const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
+  const furnitureMigratedRef = useRef(false);
+
+  useEffect(() => {
+    if (furnitureMigratedRef.current) return;
+    const zonesNeedFix = placementLooksLegacy(settings.libraryPlacementZones);
+    const genresNeedFix = genresLookLegacy(settings.libraryGenreDefinitions ?? genres);
+    if (!zonesNeedFix && !genresNeedFix) return;
+    furnitureMigratedRef.current = true;
+    const next = migrateFurnitureOnlySetup(placementZones, genres);
+    updateSettings({
+      libraryPlacementZones: next.zones,
+      libraryGenreDefinitions: next.genres,
+      libraryDefaultShelf: furnitureNameForShelf(settings.libraryDefaultShelf || next.zones[0] || 'Main Stacks'),
+    });
+  }, [genres, placementZones, settings.libraryDefaultShelf, settings.libraryGenreDefinitions, settings.libraryPlacementZones, updateSettings]);
 
   const handleAddShelf = () => {
-    const trimmed = newShelfName.trim();
+    const trimmed = furnitureNameForShelf(newShelfName);
     if (!trimmed) return;
     if (placementZones.some((z) => z.toLowerCase() === trimmed.toLowerCase())) {
       toast({
@@ -171,31 +233,52 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   };
 
   const handleSaveShelfEdit = (index: number) => {
-    const trimmed = editingShelfValue.trim();
+    const trimmed = furnitureNameForShelf(editingShelfValue);
     if (!trimmed) return;
+    const oldName = placementZones[index];
     const next = [...placementZones];
     next[index] = trimmed;
-    updateSettings({ libraryPlacementZones: next });
+    const nextGenres = genres.map((genre) =>
+      genre.defaultShelf === oldName ? { ...genre, defaultShelf: trimmed } : genre,
+    );
+    updateSettings({
+      libraryPlacementZones: next,
+      libraryGenreDefinitions: nextGenres,
+      ...(settings.libraryDefaultShelf === oldName ? { libraryDefaultShelf: trimmed } : {}),
+    });
     setEditingShelfIndex(null);
     setEditingShelfValue('');
-    toast({ title: 'Shelf location updated' });
+    toast({ title: 'Place name updated' });
   };
 
   const handleRemoveShelf = (index: number) => {
     const removed = placementZones[index];
     const next = placementZones.filter((_, i) => i !== index);
+    const fallback = next[0] || DEFAULT_LIBRARY_PLACEMENT_ZONES[0];
+    const nextGenres = genres.map((genre) =>
+      genre.defaultShelf === removed ? { ...genre, defaultShelf: fallback } : genre,
+    );
     updateSettings({
       libraryPlacementZones: next.length > 0 ? next : DEFAULT_LIBRARY_PLACEMENT_ZONES,
+      libraryGenreDefinitions: nextGenres,
+      ...(settings.libraryDefaultShelf === removed ? { libraryDefaultShelf: fallback } : {}),
     });
-    toast({ title: `Removed "${removed}" from shelves` });
+    toast({ title: `Removed "${removed}"` });
   };
 
   const handleResetShelves = () => {
-    updateSettings({ libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES });
-    toast({ title: 'Reset to standard library shelf locations' });
+    const remapped = genres.map((genre) => ({
+      ...genre,
+      defaultShelf: furnitureNameForShelf(genre.defaultShelf),
+    }));
+    updateSettings({
+      libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES,
+      libraryGenreDefinitions: remapped,
+      libraryDefaultShelf: 'Main Stacks',
+    });
+    toast({ title: 'Places reset to simple furniture names' });
   };
 
-  const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
   const [newGenreName, setNewGenreName] = useState('');
   const [newGenrePrefix, setNewGenrePrefix] = useState('');
   const [newGenreColor, setNewGenreColor] = useState('#2563EB');
@@ -235,7 +318,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       callPrefix: cleanPrefix,
       dewey: '100',
       color: newGenreColor || '#2563EB',
-      defaultShelf: newGenreShelf.trim() || 'Main Stacks',
+      defaultShelf: newGenreShelf.trim() || placementZones[0] || 'Main Stacks',
     };
     const next = [...genres, newGenre];
     updateSettings({ libraryGenreDefinitions: next });
@@ -254,16 +337,16 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
   const handleResetGenres = () => {
     updateSettings({
-      libraryGenreDefinitions: undefined,
+      libraryGenreDefinitions: DEFAULT_LIBRARY_GENRES,
       libraryBarcodeNumberScheme: 'genre_code',
     });
-    toast({ title: 'Reset to standard library genres & colors' });
+    toast({ title: 'Kinds of books reset' });
   };
 
   return (
     <Accordion type="multiple" className="space-y-3">
       {/* 1. Circulation & Loan Policies */}
-      <AccordionItem value="circulation" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="circulation" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -433,7 +516,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       </AccordionItem>
 
       {/* Sync with LevelUp App — one place to decide what connects to the main app */}
-      <AccordionItem value="sync" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="sync" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -556,7 +639,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       </AccordionItem>
 
       {/* 2. Self-Checkout Station & Hardware Scanning */}
-      <AccordionItem value="hardware" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="hardware" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -651,6 +734,19 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <Switch
                 checked={allowSelfReturnOn}
                 onCheckedChange={(v) => updateSettings({ libraryKioskAllowSelfReturn: v })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
+              <div>
+                <p className="text-xs font-bold">Ask students to rate books they return</p>
+                <p className="text-[11px] text-muted-foreground">
+                  After a student returns a book, they can tap stars (or say they did not get a chance to read it). Helps pick books for them later.
+                </p>
+              </div>
+              <Switch
+                checked={settings.libraryStudentRatingsEnabled !== false}
+                onCheckedChange={(v) => updateSettings({ libraryStudentRatingsEnabled: v })}
               />
             </div>
 
@@ -800,7 +896,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       </AccordionItem>
 
       {/* 3. Return Audio Sounds & Student Responses */}
-      <AccordionItem value="audio" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="audio" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -1093,7 +1189,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       </AccordionItem>
 
       {/* 4. Fines, Rewards & Point Balances */}
-      <AccordionItem value="fines" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="fines" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -1253,7 +1349,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
       </AccordionItem>
 
       {/* 4. Cataloging & Label Printing Defaults */}
-      <AccordionItem value="cataloging" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="cataloging" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -1265,7 +1361,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                   Cataloging &amp; Spine Label Printing
                 </div>
                 <p className="text-sm text-muted-foreground font-normal">
-                  Set default book shelves, genres, barcode formats, and automatic catalog lookup.
+                  Set default book shelves, which sticker types people can print, and what goes on each label.
                 </p>
               </div>
             </div>
@@ -1273,7 +1369,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           <StaffPortalTabInfoPopover
             sections={[
               staffPortalTabInfoSection(
-                'Streamline book intake by pre-populating shelf locations and choosing how stickers and spine labels are printed.',
+                'Choose the sticker types offered when someone prints the catalog, and turn pieces on or off on each label.',
               ),
             ]}
             ariaLabel="About cataloging defaults"
@@ -1311,24 +1407,52 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <Label htmlFor="lib-default-shelf" className="text-xs font-bold">
                 Default shelf location
               </Label>
-              <Input
+              <select
                 id="lib-default-shelf"
-                placeholder="e.g. Main Stacks, Fiction"
-                value={settings.libraryDefaultShelf ?? ''}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold"
+                value={
+                  settings.libraryDefaultShelf &&
+                  (placementZones.includes(settings.libraryDefaultShelf) || Boolean(settings.libraryDefaultShelf))
+                    ? settings.libraryDefaultShelf
+                    : placementZones[0] ?? ''
+                }
                 onChange={(e) => updateSettings({ libraryDefaultShelf: e.target.value })}
-              />
+              >
+                {settings.libraryDefaultShelf && !placementZones.includes(settings.libraryDefaultShelf) ? (
+                  <option value={settings.libraryDefaultShelf}>{settings.libraryDefaultShelf}</option>
+                ) : null}
+                {placementZones.map((zone) => (
+                  <option key={zone} value={zone}>
+                    {zone}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="lib-default-category" className="text-xs font-bold">
                 Default genre / category
               </Label>
-              <Input
+              <select
                 id="lib-default-category"
-                placeholder="e.g. General, Graphic Novel"
-                value={settings.libraryDefaultCategory ?? 'General'}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold"
+                value={
+                  genres.some((genre) => genre.label === (settings.libraryDefaultCategory ?? 'General'))
+                    ? settings.libraryDefaultCategory ?? 'General'
+                    : genres[0]?.label ?? 'General'
+                }
                 onChange={(e) => updateSettings({ libraryDefaultCategory: e.target.value })}
-              />
+              >
+                {settings.libraryDefaultCategory &&
+                !genres.some((genre) => genre.label === settings.libraryDefaultCategory) ? (
+                  <option value={settings.libraryDefaultCategory}>{settings.libraryDefaultCategory}</option>
+                ) : null}
+                {genres.map((genre) => (
+                  <option key={genre.id} value={genre.label}>
+                    {genre.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -1336,7 +1460,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 Default label format
               </Label>
               <Select
-                value={settings.libraryLabelFormat ?? 'sticker'}
+                value={defaultLabelFormat}
                 onValueChange={(v) =>
                   updateSettings({ libraryLabelFormat: v as LibraryLabelFormat })
                 }
@@ -1345,7 +1469,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {LIBRARY_LABEL_OPTIONS.map((opt) => (
+                  {enabledLabelOptions.map((opt) => (
                     <SelectItem key={opt.id} value={opt.id} className="text-xs">
                       {opt.shortName}
                     </SelectItem>
@@ -1353,7 +1477,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 </SelectContent>
               </Select>
               <p className="text-[10.5px] text-muted-foreground">
-                {getLibraryLabelOption(settings.libraryLabelFormat ?? 'sticker').dimensions} · {getLibraryLabelOption(settings.libraryLabelFormat ?? 'sticker').badge}
+                {getLibraryLabelOption(defaultLabelFormat).dimensions} · {getLibraryLabelOption(defaultLabelFormat).badge}
               </p>
             </div>
 
@@ -1377,11 +1501,65 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </Select>
             </div>
           </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
+            <div>
+              <p className="text-xs font-bold">Sticker types people can print</p>
+              <p className="text-[11px] text-muted-foreground">
+                Turn on only the sticker sizes you want to see when printing.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {LIBRARY_LABEL_OPTIONS.map((option) => (
+                <label
+                  key={option.id}
+                  className="flex items-start justify-between gap-3 rounded-lg border bg-background/80 px-3 py-2"
+                >
+                  <span>
+                    <span className="block text-xs font-semibold">{option.shortName}</span>
+                    <span className="block text-[11px] text-muted-foreground">{option.badge}</span>
+                  </span>
+                  <Switch
+                    checked={enabledLabelFormats.includes(option.id)}
+                    onCheckedChange={(on) => toggleLabelFormat(option.id, on)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 rounded-xl border bg-muted/20 p-3">
+            <div>
+              <p className="text-xs font-bold">What goes on each sticker</p>
+              <p className="text-[11px] text-muted-foreground">
+                Choose the pieces that print on the sticker.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {LIBRARY_LABEL_FIELD_IDS.map((fieldId) => (
+                <label
+                  key={fieldId}
+                  className="flex items-start justify-between gap-3 rounded-lg border bg-background/80 px-3 py-2"
+                >
+                  <span>
+                    <span className="block text-xs font-semibold">{LIBRARY_LABEL_FIELD_COPY[fieldId].label}</span>
+                    <span className="block text-[11px] text-muted-foreground">
+                      {LIBRARY_LABEL_FIELD_COPY[fieldId].hint}
+                    </span>
+                  </span>
+                  <Switch
+                    checked={labelFields[fieldId]}
+                    onCheckedChange={(on) => toggleLabelField(fieldId, on)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
         </AccordionContent>
       </AccordionItem>
 
       {/* 5. Book Shelving Hierarchy, Physical Locations & Genre Classification */}
-      <AccordionItem value="genre" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="genre" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -1389,14 +1567,9 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 <Library className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-base font-medium flex items-center gap-2">
-                  <span>Book Organization Hierarchy &amp; Physical Shelves</span>
-                  <Badge variant="outline" className="text-xs font-normal">
-                    {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.shortLabel ?? 'Genre → Author'}
-                  </Badge>
-                </div>
+                <div className="text-base font-medium">Genres &amp; shelves</div>
                 <p className="text-sm text-muted-foreground font-normal">
-                  Choose whether to organize by Genre then Author or Author then Genre, manage physical shelves (&quot;Where in the library books are&quot;), and color-code genres.
+                  Name the places in your room, then give each kind of book a color and a home shelf.
                 </p>
               </div>
             </div>
@@ -1412,155 +1585,34 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             }}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            Reset All Standards
+            Reset
           </Button>
         </div>
 
-        <AccordionContent className="px-4 space-y-6 pt-1">
-          {/* A. Book Shelving & Organization Hierarchy */}
-          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
-            <div className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  <Layers className="h-4 w-4 text-primary" />
-                  Book Organization &amp; Filing Hierarchy
-                </Label>
-                <Badge variant="secondary" className="text-[10px] font-semibold">
-                  Active: {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.shortLabel}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                How books are shelved physically in the library, browsed in the catalog, and guided on the self-checkout return screen.
+        <AccordionContent className="px-4 space-y-5 pt-1">
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-bold">Step 1 · Name the furniture</p>
+              <p className="text-[11px] text-muted-foreground">
+                Only the real spots in the room — not the kind of book. Example: Aisle 1, North Wall.
               </p>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => {
-                const s = LIBRARY_ORGANIZATION_SCHEMES[key];
-                const isSelected = orgScheme === key;
-                return (
-                  <div
-                    key={key}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => updateSettings({ libraryOrganizationScheme: key })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        updateSettings({ libraryOrganizationScheme: key });
-                      }
-                    }}
-                    className={cn(
-                      'rounded-xl border-2 p-3.5 cursor-pointer transition-all text-left flex flex-col justify-between space-y-2 select-none',
-                      isSelected
-                        ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
-                        : 'border-border/70 hover:border-primary/50 hover:bg-muted/30 bg-background',
-                    )}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-1.5">
-                        <span className="font-bold text-xs sm:text-sm text-foreground">{s.label}</span>
-                        {isSelected && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground leading-snug">{s.description}</p>
-                    </div>
-                    <div className="pt-2 border-t border-border/40 flex items-center justify-between gap-1 text-[10px] font-mono text-primary font-semibold">
-                      <span>{s.example}</span>
-                      {key === 'genre_then_author' && (
-                        <span className="rounded bg-primary/15 px-1.5 py-0.2 text-[9px] uppercase font-bold text-primary">
-                          Standard
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Live Filing Guide Explainer Box */}
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-                <div>
-                  <span className="font-bold text-foreground">Active Shelving Guide: </span>
-                  <span className="text-muted-foreground">
-                    {orgScheme === 'genre_then_author'
-                      ? 'Books are housed in Genre bays (e.g. Fiction, Science), then filed A-Z by author surname.'
-                      : orgScheme === 'author_then_genre'
-                        ? 'Books are filed strictly by Author (A-Z), with sub-clustering by Genre within each author.'
-                        : 'Books are organized by physical library shelf/room location, then by Author.'}
-                  </span>
-                </div>
-              </div>
-              <Badge variant="outline" className="font-mono text-[11px] shrink-0 self-start sm:self-auto bg-background">
-                {orgScheme === 'genre_then_author'
-                  ? 'Sign: [Fiction Bay] · Shelf: [C - Canin, Ethan]'
-                  : orgScheme === 'author_then_genre'
-                    ? 'Sign: [Canin, Ethan] · Shelf: [Fiction]'
-                    : 'Sign: [Aisle 1 - Fiction Bays] · Shelf: [Canin, Ethan]'}
-              </Badge>
-            </div>
-          </div>
-
-          {/* B. Physical Shelves & Library Locations Manager ("Where in the library a book is") */}
-          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  Where Books Are in the Library (Physical Shelves &amp; Locations)
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Customize physical bookcases, aisles, spinner racks, and quiet nooks. Available in copy dropdowns and return guidance.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+              <Label className="text-xs font-bold">Places in the room</Label>
+              <div className="flex items-center gap-1.5">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="rounded-xl gap-1.5 text-xs"
+                  className="h-7 rounded-lg gap-1 text-xs"
                   onClick={() => setIsAddingShelf(!isAddingShelf)}
                 >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Shelf / Location
+                  <Plus className="h-3 w-3" />
+                  Add place
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="rounded-xl text-xs text-muted-foreground"
-                  onClick={handleResetShelves}
-                  title="Reset to standard school library placement zones"
-                >
-                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                <Button size="sm" variant="ghost" className="h-7 rounded-lg text-xs text-muted-foreground" onClick={handleResetShelves}>
                   Reset
                 </Button>
               </div>
-            </div>
-
-            {/* School Default Shelf Location */}
-            <div className="rounded-xl border bg-background p-3 flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-foreground">Default Library Shelf for New Books</span>
-                <p className="text-[11px] text-muted-foreground">
-                  Pre-populates new intake books when no specific shelf is entered.
-                </p>
-              </div>
-              <Select
-                value={settings.libraryDefaultShelf || 'Main Stacks'}
-                onValueChange={(v) => updateSettings({ libraryDefaultShelf: v })}
-              >
-                <SelectTrigger className="w-[280px] rounded-xl text-xs font-medium">
-                  <SelectValue placeholder="Select default shelf..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Main Stacks">Main Stacks (Default)</SelectItem>
-                  {placementZones.map((zone) => (
-                    <SelectItem key={zone} value={zone}>
-                      {zone}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Add Shelf Input */}
@@ -1568,7 +1620,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               <div className="rounded-xl border border-primary/40 bg-primary/5 p-3 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
                 <MapPin className="h-4 w-4 text-primary shrink-0" />
                 <Input
-                  placeholder="e.g. Aisle 4 - Graphic Novels, Reading Nook Low Bin..."
+                  placeholder="e.g. Aisle 4, North Wall, Front Spinner"
                   value={newShelfName}
                   onChange={(e) => setNewShelfName(e.target.value)}
                   onKeyDown={(e) => {
@@ -1665,291 +1717,237 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             </div>
           </div>
 
-          {/* Barcode Numbering Scheme */}
-          <div className="rounded-2xl border bg-muted/20 p-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="lib-barcode-scheme" className="text-sm font-bold flex items-center gap-2">
-                  <ScanBarcode className="h-4 w-4 text-primary" />
-                  Barcode Numbering Scheme
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Format copy barcodes so numbers reflect the genre and Dewey category.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Select
-                  value={barcodeScheme}
-                  onValueChange={(v) =>
-                    updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })
-                  }
-                >
-                  <SelectTrigger id="lib-barcode-scheme" className="w-[280px] rounded-xl font-medium">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="genre_code">
-                      Genre Code (e.g. FIC-823-0001) · Recommended
-                    </SelectItem>
-                    <SelectItem value="dewey_numeric">
-                      Dewey Decimal (e.g. 823-0001)
-                    </SelectItem>
-                    <SelectItem value="prefix_genre">
-                      School Prefix (e.g. LIB-FIC-0001)
-                    </SelectItem>
-                    <SelectItem value="classic_random">
-                      Classic Random (e.g. LIB8A3F9B2C)
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-2">
+            <div>
+              <p className="text-xs font-bold">Step 2 · Send each kind of book to a place</p>
+              <p className="text-[11px] text-muted-foreground">
+                Pick a color, a short code, and which furniture it lives on. Move Fiction to Aisle 4 later without renaming the aisle.
+              </p>
             </div>
-
-            {/* Scheme Visual Sample */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border/50 text-xs">
-              <span className="text-muted-foreground font-medium">Live format sample:</span>
-              <Badge
-                variant="outline"
-                className="font-mono text-xs px-2 py-0.5"
-                style={{
-                  borderColor: '#2563EB',
-                  backgroundColor: '#2563EB15',
-                  color: '#2563EB',
-                }}
-              >
-                {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 142 })}
-              </Badge>
-              <span className="text-muted-foreground">· Fiction</span>
-
-              <Badge
-                variant="outline"
-                className="font-mono text-xs px-2 py-0.5 ml-2"
-                style={{
-                  borderColor: '#059669',
-                  backgroundColor: '#05966915',
-                  color: '#059669',
-                }}
-              >
-                {generateGenreBarcode({ category: 'Science', scheme: barcodeScheme, sequenceNumber: 88 })}
-              </Badge>
-              <span className="text-muted-foreground">· Science</span>
-
-              <Badge
-                variant="outline"
-                className="font-mono text-xs px-2 py-0.5 ml-2"
-                style={{
-                  borderColor: '#EA580C',
-                  backgroundColor: '#EA580C15',
-                  color: '#EA580C',
-                }}
-              >
-                {generateGenreBarcode({ category: 'Graphic Novel', scheme: barcodeScheme, sequenceNumber: 23 })}
-              </Badge>
-              <span className="text-muted-foreground">· Graphic Novels</span>
-            </div>
-          </div>
-
-          {/* Genre & Shelving Placement Table */}
-          <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-bold flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  Library Placement &amp; Genre Colors
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Assign each genre a distinct visual color and physical library location. When books are returned, the screen will route them to this shelf!
-                </p>
-              </div>
+              <Label className="text-xs font-bold">Kinds of books</Label>
               <Button
                 size="sm"
                 variant="outline"
-                className="rounded-xl gap-1.5 text-xs"
+                className="h-7 rounded-lg gap-1 text-xs"
                 onClick={() => setIsAddingGenre(!isAddingGenre)}
               >
-                <Plus className="h-3.5 w-3.5" />
-                Add Genre
+                <Plus className="h-3 w-3" />
+                Add kind
               </Button>
             </div>
 
-            {/* Add Genre Form */}
             {isAddingGenre && (
-              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                <div className="font-semibold text-xs text-primary flex items-center gap-1.5">
-                  <Plus className="h-3.5 w-3.5" />
-                  Create New Library Genre &amp; Shelf Location
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <Label className="text-xs">Genre Name</Label>
-                    <Input
-                      placeholder="e.g. Manga, Coding, Poetry"
-                      value={newGenreName}
-                      onChange={(e) => setNewGenreName(e.target.value)}
-                      className="rounded-xl mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Call Prefix (2-4 letters)</Label>
-                    <Input
-                      placeholder="e.g. MAN, COD, POE"
-                      value={newGenrePrefix}
-                      onChange={(e) => setNewGenrePrefix(e.target.value.toUpperCase())}
-                      className="rounded-xl mt-1 uppercase"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Shelf / Placement Location</Label>
-                    <Input
-                      placeholder="e.g. Room 204 - Shelf B"
-                      value={newGenreShelf}
-                      onChange={(e) => setNewGenreShelf(e.target.value)}
-                      className="rounded-xl mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Accent Color</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div
-                        className="h-9 w-9 rounded-xl border shadow-inner shrink-0"
-                        style={{ backgroundColor: newGenreColor }}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                className="rounded-xl border bg-muted/20 p-3 grid gap-2 sm:grid-cols-4"
+              >
+                <Input
+                  placeholder="Name, like Manga"
+                  value={newGenreName}
+                  onChange={(e) => setNewGenreName(e.target.value)}
+                  className="rounded-lg text-xs"
+                />
+                <Input
+                  placeholder="Code, like MNG"
+                  value={newGenrePrefix}
+                  onChange={(e) => setNewGenrePrefix(e.target.value.toUpperCase())}
+                  className="rounded-lg text-xs font-mono uppercase"
+                  maxLength={5}
+                />
+                <Select
+                  value={newGenreShelf || placementZones[0] || 'Main Stacks'}
+                  onValueChange={setNewGenreShelf}
+                >
+                  <SelectTrigger className="rounded-lg text-xs">
+                    <SelectValue placeholder="Home shelf" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {placementZones.map((zone) => (
+                      <SelectItem key={zone} value={zone} className="text-xs">
+                        {zone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-1 flex-1">
+                    {GENRE_COLOR_PALETTE.slice(0, 6).map((hex) => (
+                      <button
+                        key={hex}
+                        type="button"
+                        onClick={() => setNewGenreColor(hex)}
+                        className={cn(
+                          'h-5 w-5 rounded-full border',
+                          newGenreColor === hex ? 'ring-2 ring-primary ring-offset-1' : 'border-black/10',
+                        )}
+                        style={{ backgroundColor: hex }}
+                        aria-label={`Color ${hex}`}
                       />
-                      <div className="flex flex-wrap gap-1 flex-1">
-                        {GENRE_COLOR_PALETTE.slice(0, 6).map((hex) => (
-                          <button
-                            key={hex}
-                            type="button"
-                            onClick={() => setNewGenreColor(hex)}
-                            className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-125"
-                            style={{ backgroundColor: hex }}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </div>
-                <div className="flex justify-end gap-2 pt-1">
-                  <Button size="sm" variant="ghost" onClick={() => setIsAddingGenre(false)}>
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleAddGenre} disabled={!newGenreName.trim()}>
-                    Save Genre
+                  <Button size="sm" className="h-8 rounded-lg text-xs" onClick={handleAddGenre} disabled={!newGenreName.trim()}>
+                    Save
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* Genres List */}
-            <div className="rounded-2xl border divide-y overflow-hidden bg-card">
+            <motion.div
+              className="rounded-xl border divide-y overflow-hidden bg-card"
+              initial="hidden"
+              animate="show"
+              variants={{
+                hidden: { opacity: 0 },
+                show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+              }}
+            >
               {genres.map((g) => {
-                const sampleBarcode = generateGenreBarcode({
-                  category: g.label,
-                  customGenres: genres,
-                  scheme: barcodeScheme,
-                  sequenceNumber: 1,
-                });
-
+                const shelfValue = placementZones.includes(g.defaultShelf)
+                  ? g.defaultShelf
+                  : g.defaultShelf || placementZones[0] || 'Main Stacks';
                 return (
-                  <div
+                  <motion.div
                     key={g.id}
-                    className="p-3.5 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-muted/15 transition-colors"
+                    variants={{
+                      hidden: { opacity: 0, y: 6 },
+                      show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } },
+                    }}
+                    className="flex flex-col gap-2 p-2.5 sm:flex-row sm:items-center"
                   >
-                    {/* Left: Color dot, Name, Prefix */}
-                    <div className="flex items-center gap-3 min-w-[220px]">
-                      {/* Color Picker Dropdown / Palette */}
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
                       <div className="relative group shrink-0">
-                        <div
-                          className="h-7 w-7 rounded-lg border shadow-sm flex items-center justify-center text-white text-[9px] font-black cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                        <button
+                          type="button"
+                          className="h-7 w-7 rounded-full border shadow-sm"
                           style={{ backgroundColor: g.color }}
-                          title="Click to pick color"
-                        >
-                          {g.callPrefix.slice(0, 2)}
-                        </div>
-                        {/* Quick Color Swatch Hover Bar */}
-                        <div className="absolute left-0 top-9 hidden group-hover:flex z-50 p-1.5 bg-popover border rounded-xl shadow-xl gap-1">
+                          title="Pick a color"
+                          aria-label={`Color for ${g.label}`}
+                        />
+                        <div className="absolute left-0 top-8 z-50 hidden group-hover:flex gap-1 rounded-xl border bg-popover p-1.5 shadow-xl">
                           {GENRE_COLOR_PALETTE.map((hex) => (
                             <button
                               key={hex}
                               type="button"
                               onClick={() => handleUpdateGenre(g.id, { color: hex })}
-                              className="h-5 w-5 rounded-full border border-black/10 transition-transform hover:scale-125"
+                              className="h-5 w-5 rounded-full border border-black/10"
                               style={{ backgroundColor: hex }}
+                              aria-label={`Use color ${hex}`}
                             />
                           ))}
                         </div>
                       </div>
-
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1.5 font-bold text-sm">
-                          <span>{g.label}</span>
-                          <Badge
-                            variant="outline"
-                            className="font-mono text-[10px] px-1.5 py-0"
-                            style={{
-                              borderColor: `${g.color}60`,
-                              backgroundColor: `${g.color}15`,
-                              color: g.color,
-                            }}
-                          >
-                            {g.callPrefix}
-                          </Badge>
-                        </div>
-                        <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1">
-                          <span>Barcode: {sampleBarcode}</span>
-                        </div>
-                      </div>
+                      <span className="truncate text-sm font-semibold">{g.label}</span>
+                      <Input
+                        value={g.callPrefix}
+                        maxLength={5}
+                        onChange={(e) =>
+                          handleUpdateGenre(g.id, { callPrefix: e.target.value.toUpperCase() }, { silent: true })
+                        }
+                        className="h-7 w-16 shrink-0 rounded-md px-1.5 font-mono text-[10px] uppercase"
+                        aria-label={`Short code for ${g.label}`}
+                      />
                     </div>
-
-                    {/* Middle: Physical Shelf Placement */}
-                    <div className="flex-1 max-w-md">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <Input
-                          value={g.defaultShelf}
-                          placeholder="Placement location in library..."
-                          onChange={(e) => handleUpdateGenre(g.id, { defaultShelf: e.target.value }, { silent: true })}
-                          className="h-8 text-xs rounded-xl bg-background"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Right: Preview badge & Delete */}
-                    <div className="flex items-center justify-between md:justify-end gap-2 shrink-0">
-                      <div
-                        className="px-2 py-1 rounded-md text-[11px] font-bold border shrink-0 flex items-center gap-1"
-                        style={{
-                          backgroundColor: `${g.color}15`,
-                          borderColor: `${g.color}40`,
-                          color: g.color,
-                        }}
+                    <Select
+                      value={shelfValue}
+                      onValueChange={(v) => handleUpdateGenre(g.id, { defaultShelf: v })}
+                    >
+                      <SelectTrigger className="h-8 w-full rounded-lg text-xs sm:max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!placementZones.includes(g.defaultShelf) && g.defaultShelf ? (
+                          <SelectItem value={g.defaultShelf} className="text-xs">
+                            {g.defaultShelf}
+                          </SelectItem>
+                        ) : null}
+                        {placementZones.map((zone) => (
+                          <SelectItem key={zone} value={zone} className="text-xs">
+                            {zone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {genres.length > 3 ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveGenre(g.id)}
+                        title="Remove this kind"
                       >
-                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
-                        <span>{g.defaultShelf.split('-')[0]?.trim() || 'Shelf'}</span>
-                      </div>
-
-                      {genres.length > 3 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleRemoveGenre(g.id)}
-                          title="Remove genre"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
+          </div>
+
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-0 text-xs text-muted-foreground"
+              onClick={() => setShowShelfExtras((open) => !open)}
+            >
+              {showShelfExtras ? 'Hide extra lineup options' : 'More · lineup and number style'}
+            </Button>
+            {showShelfExtras ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="lib-org-scheme" className="text-xs font-bold">How books are lined up</Label>
+                  <Select
+                    value={orgScheme}
+                    onValueChange={(v) => updateSettings({ libraryOrganizationScheme: v as LibraryOrganizationScheme })}
+                  >
+                    <SelectTrigger id="lib-org-scheme" className="rounded-xl text-xs font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => (
+                        <SelectItem key={key} value={key} className="text-xs">
+                          {LIBRARY_ORGANIZATION_SCHEMES[key].label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold">How new book numbers look</Label>
+                  <Select
+                    value={barcodeScheme}
+                    onValueChange={(v) => updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })}
+                  >
+                    <SelectTrigger id="lib-barcode-scheme" className="rounded-xl text-xs font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="genre_code" className="text-xs">Genre code (FIC-823-0001)</SelectItem>
+                      <SelectItem value="dewey_numeric" className="text-xs">Dewey number (823-0001)</SelectItem>
+                      <SelectItem value="prefix_genre" className="text-xs">School prefix (LIB-FIC-0001)</SelectItem>
+                      <SelectItem value="classic_random" className="text-xs">Random school number</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Example:{' '}
+                    <span className="font-mono font-semibold text-foreground">
+                      {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 1 })}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
         </AccordionContent>
       </AccordionItem>
 
       {/* 6. Alerts & Behavior Feedback */}
-      <AccordionItem value="alerts" className="rounded-xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="alerts" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">

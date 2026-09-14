@@ -91,4 +91,57 @@ describe('libraryRecommendations', () => {
     const names = recs.map((r) => r.name);
     expect(names).not.toContain('The Hobbit');
   });
+
+  it('boosts another book by an author the student rated highly', () => {
+    const catalog = [
+      ...mockCatalog,
+      {
+        id: 'book-8',
+        name: 'The Two Towers',
+        upc: 'UPC8',
+        author: 'J.R.R. Tolkien',
+        category: 'Fantasy',
+        status: 'available' as const,
+      },
+    ];
+    const recs = getLibraryBookRecommendations(catalog, {
+      reviews: [{ itemId: 'book-1', rating: 5, bookTitle: 'The Hobbit' }],
+    });
+    expect(recs[0].name).toBe('The Two Towers');
+    expect(recs[0].reason).toContain('Tolkien');
+  });
+
+  it('does not recommend a title the student already rated', () => {
+    const recs = getLibraryBookRecommendations(mockCatalog, {
+      reviews: [{ itemId: 'book-2', rating: 5, bookTitle: 'Harry Potter' }],
+    });
+    expect(recs.map((r) => r.name)).not.toContain('Harry Potter');
+  });
+
+  it('does not treat unread returns as a liked category', () => {
+    const recs = getLibraryBookRecommendations(mockCatalog, {
+      reviews: [{ itemId: 'book-3', rating: 0, bookTitle: 'Cosmos', didNotRead: true }],
+    });
+    expect(recs[0]?.name).not.toBe('Cosmos');
+    expect(recs[0]?.reason ?? '').not.toContain('Science');
+  });
+
+  it('boosts books in a category the student liked', () => {
+    const catalog = [
+      ...mockCatalog,
+      {
+        id: 'book-9',
+        name: 'A Brief History of Time',
+        upc: 'UPC9',
+        author: 'Stephen Hawking',
+        category: 'Science',
+        status: 'available' as const,
+      },
+    ];
+    const recs = getLibraryBookRecommendations(catalog, {
+      reviews: [{ itemId: 'book-3', rating: 5, bookTitle: 'Cosmos' }],
+    });
+    expect(recs[0].name).toBe('A Brief History of Time');
+    expect(recs[0].reason).toContain('Science');
+  });
 });

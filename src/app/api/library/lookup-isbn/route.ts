@@ -14,24 +14,37 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Invalid ISBN barcode' }, { status: 400 });
   }
 
+  const phase = searchParams.get('phase') === 'ai' ? 'ai' : 'catalog';
   const aiConfigured = isAiIsbnLookupConfigured();
-  const hit = await lookupBookByIsbn(isbn);
-  if (hit) {
-    return NextResponse.json({ hit, meta: { aiConfigured, catalogHit: true } });
+
+  // Catalog-only first so the page can say when the slower AI step starts.
+  if (phase === 'catalog') {
+    const hit = await lookupBookByIsbn(isbn);
+    return NextResponse.json({
+      hit,
+      meta: { aiConfigured, catalogHit: Boolean(hit) },
+    });
   }
 
-  // Free catalogs (Open Library, Google Books, isbnsearch.org) don't index every
-  // book — e.g. niche/specialty publishers. Fall back to an AI best-effort guess
-  // that the client surfaces as unconfirmed for the librarian to verify.
-  const aiOutcome = aiConfigured
-    ? await lookupBookByIsbnAi(getIsbnLookupVariants(isbn))
-    : { hit: null, status: 'not_configured' as const };
+  if (!aiConfigured) {
+    return NextResponse.json({
+      hit: null,
+      meta: {
+        aiConfigured: false,
+        catalogHit: false,
+        aiAttempted: false,
+        aiStatus: 'not_configured' as const,
+      },
+    });
+  }
+
+  const aiOutcome = await lookupBookByIsbnAi(getIsbnLookupVariants(isbn));
   return NextResponse.json({
     hit: aiOutcome.hit,
     meta: {
       aiConfigured,
       catalogHit: false,
-      aiAttempted: aiConfigured,
+      aiAttempted: true,
       aiStatus: aiOutcome.status,
       aiError: aiOutcome.error,
     },

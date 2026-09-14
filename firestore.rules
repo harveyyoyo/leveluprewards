@@ -422,6 +422,11 @@ service cloud.firestore {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isLibrarian(schoolId) || isDeveloper();
         allow write: if false;
       }
+      match /libraryReviews/{reviewId} {
+        allow read: if isSchoolMember(schoolId)
+          || (hasStudentPortalSession(schoolId) && resource.data.studentId == request.auth.uid);
+        allow write: if false;
+      }
       match /libraryRequests/{requestId} { allow read, write: if false; }
       match /libraryMeta/{metaId} { allow read, write: if false; }
 

@@ -32,7 +32,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useToast } from '@/hooks/use-toast';
-import { isSchoolLibraryBarcode, LIBRARY_LABEL_OPTIONS, getLibraryLabelOption, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import { isSchoolLibraryBarcode, getLibraryLabelOption, type LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import { enabledLibraryLabelOptions, resolveDefaultLibraryLabelFormat } from '@/lib/library/libraryLabelSettings';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
 import { useAppContext } from '@/components/AppProvider';
@@ -72,7 +74,9 @@ export function LibraryManagementPanel({
   upcTaken?: (upc: string) => Promise<boolean>;
 }) {
   const { setLibraryStickersToPrint } = usePrint();
+  const { settings } = useSettings();
   const { toast } = useToast();
+  const labelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
   const confirm = useConfirm();
   const { schoolId: ctxSchoolId } = useAppContext();
   const resolvedSchoolId = (schoolId ?? ctxSchoolId ?? '').trim() || null;
@@ -165,10 +169,14 @@ export function LibraryManagementPanel({
     [setLibraryStickersToPrint, toast, resolvedSchoolId],
   );
 
-  const handlePrintAll = () => printItems(sortedItems, labelFormat);
-  const handlePrintSelected = () => printItems(selectedItems, labelFormat);
-  const handlePrintOne = (item: LibraryItem) => printItems([item], labelFormat);
-  const handlePrintLibStickers = () => printItems(libStickerItems, labelFormat);
+  const activeLabelFormat = resolveDefaultLibraryLabelFormat(
+    labelFormat,
+    settings.libraryLabelFormatsEnabled,
+  );
+  const handlePrintAll = () => printItems(sortedItems, activeLabelFormat);
+  const handlePrintSelected = () => printItems(selectedItems, activeLabelFormat);
+  const handlePrintOne = (item: LibraryItem) => printItems([item], activeLabelFormat);
+  const handlePrintLibStickers = () => printItems(libStickerItems, activeLabelFormat);
 
   const handleConfirmedDelete = async (item: LibraryItem) => {
     const ok = await confirm({
@@ -477,12 +485,15 @@ export function LibraryManagementPanel({
                   <span className="text-xs font-bold text-primary">Choose label format &amp; print:</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Select value={labelFormat} onValueChange={(v) => setLabelFormat(v as LibraryLabelFormat)}>
+                  <Select
+                    value={resolveDefaultLibraryLabelFormat(labelFormat, settings.libraryLabelFormatsEnabled)}
+                    onValueChange={(v) => setLabelFormat(v as LibraryLabelFormat)}
+                  >
                     <SelectTrigger className="w-[180px] rounded-xl h-9 bg-background text-xs font-bold border-primary/25">
                       <SelectValue placeholder="Label format" />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
-                      {LIBRARY_LABEL_OPTIONS.map((opt) => (
+                      {labelOptions.map((opt) => (
                         <SelectItem key={opt.id} value={opt.id}>
                           <span className="font-semibold text-xs">{opt.shortName}</span>
                           <span className="text-[10px] text-muted-foreground ml-1.5 font-mono">({opt.dimensions})</span>

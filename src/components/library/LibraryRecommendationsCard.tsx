@@ -1,5 +1,6 @@
 import React from 'react';
-import { BookOpen, Compass, MapPin, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { BookOpen, MapPin, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { BookRecommendation } from '@/lib/library/libraryRecommendations';
@@ -8,12 +9,17 @@ import { cn } from '@/lib/utils';
 
 export function LibraryRecommendationsCard({
   recommendations,
+  studentFirstName,
+  hasPersonalHistory,
   className,
 }: {
   recommendations: BookRecommendation[];
+  studentFirstName?: string;
+  hasPersonalHistory?: boolean;
   className?: string;
 }) {
   if (!recommendations.length) return null;
+  const heading = studentFirstName ? `Picks for ${studentFirstName}` : 'Recommended for You';
 
   return (
     <Card className={cn('w-full overflow-hidden border-2 border-primary/20 bg-card/80 shadow-md backdrop-blur-sm', className)}>
@@ -21,18 +27,41 @@ export function LibraryRecommendationsCard({
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm sm:text-base font-black tracking-tight flex items-center gap-1.5 text-foreground">
             <Sparkles className="h-4 w-4 text-amber-500 shrink-0" aria-hidden />
-            <span>Recommended for You</span>
+            <span>{heading}</span>
           </CardTitle>
           <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
             Available Now
           </span>
         </div>
+        {studentFirstName ? (
+          <p className="text-[11px] font-semibold text-muted-foreground pt-1">
+            {hasPersonalHistory
+              ? 'Based on what you read and how you rated them, we think these would be good for you.'
+              : 'A few books on the shelf now. Rate the ones you finish and these picks get better.'}
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="px-4 pb-3 pt-0">
-        <div className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin">
+        <motion.div
+          className="flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: {},
+            show: { transition: { staggerChildren: 0.08 } },
+          }}
+        >
           {recommendations.map((rec) => (
-            <div
+            <motion.div
               key={rec.id}
+              variants={{
+                hidden: { opacity: 0, y: 10 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: { type: 'spring', stiffness: 380, damping: 28 },
+                },
+              }}
               className="flex w-44 shrink-0 flex-col justify-between rounded-xl border border-border/80 bg-background/90 p-3 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
             >
               <div className="space-y-1.5">
@@ -74,9 +103,9 @@ export function LibraryRecommendationsCard({
                   </span>
                 ) : null}
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </CardContent>
     </Card>
   );

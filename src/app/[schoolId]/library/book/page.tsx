@@ -19,6 +19,8 @@ import { lookupStudentId } from '@/lib/db/lookup';
 import { findLibraryItemByUpc, performLibraryCheckoutOrReturn } from '@/lib/library/libraryOperations';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import type { LibraryItem } from '@/lib/types';
+import { LibraryBookReviewDialog } from '@/components/library/LibraryBookReviewDialog';
+import { shouldAskStudentToRateReturnedBook } from '@/lib/library/libraryStudentRating';
 
 function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
   const router = useRouter();
@@ -46,6 +48,8 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
   const scanLock = useRef(false);
   const [mode, setMode] = useState<'checkout' | 'return'>(searchParams.get('action') === 'return' ? 'return' : 'checkout');
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [reviewStudentId, setReviewStudentId] = useState<string | null>(null);
   const cardBuffer = useRef('');
   const cardTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -103,6 +107,17 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
             title: 'Returned',
             description: result.pointsMessage || result.item.name,
           });
+          if (
+            shouldAskStudentToRateReturnedBook({
+              actor: 'student',
+              studentId,
+              itemId: result.item.id,
+              enabled: settings.libraryStudentRatingsEnabled !== false,
+            })
+          ) {
+            setReviewStudentId(studentId);
+            setReviewOpen(true);
+          }
         } else if (result.action === 'already_done') {
           toast({ title: 'Already scanned', description: mode === 'checkout' ? 'This copy is already checked out to you.' : 'This copy is already returned.' });
         } else if (result.action === 'wrong_borrower') {
@@ -264,6 +279,17 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
             </Button>
           </CardContent>
         </Card>
+        {reviewStudentId && item ? (
+          <LibraryBookReviewDialog
+            isOpen={reviewOpen}
+            setIsOpen={setReviewOpen}
+            schoolId={schoolId}
+            studentId={reviewStudentId}
+            itemId={item.id}
+            bookTitle={item.name}
+            coverUrl={item.coverUrl}
+          />
+        ) : null}
       </div>
     </div>
   );

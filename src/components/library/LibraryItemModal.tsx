@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Barcode, BookOpen, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, User } from 'lucide-react';
-import { useFunctions } from '@/firebase';
-import { callLibrary } from '@/lib/library/libraryOperations';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { BookOpen, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,25 +22,49 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useConfirm } from '@/components/providers/ConfirmProvider';
 import type { LibraryItem, LibraryItemInput } from '@/lib/types';
+import { libraryCopyNeedsProcessing } from '@/lib/library/libraryWorkspace';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
-import { generateUniqueLibraryUpc, fetchCatalogHitByIsbn, fetchCatalogHitsByTitle } from '@/lib/library/libraryIntakeHelpers';
+import {
+  allocateNextGenreBarcode,
+  copyNeedsGenreBarcode,
+  fetchCatalogHitByIsbn,
+  fetchCatalogHitsByTitle,
+} from '@/lib/library/libraryIntakeHelpers';
 import {
   isSchoolLibraryBarcode,
   normalizeLibraryUpc,
-  LIBRARY_LABEL_OPTIONS,
   getLibraryLabelOption,
   type LibraryLabelFormat,
 } from '@/lib/library/libraryScanCode';
+import { enabledLibraryLabelOptions, resolveDefaultLibraryLabelFormat } from '@/lib/library/libraryLabelSettings';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { LibraryCatalogHit } from '@/lib/library/libraryCatalogLookup';
+import {
+  isLikelyStoreProductBarcode,
+  isRetailIsbnBarcode,
+  pickBestTitleHit,
+  unwrapRepeatedBookScan,
+  type LibraryCatalogHit,
+} from '@/lib/library/libraryCatalogLookup';
+import { type IsbnLookupPhase } from '@/lib/library/libraryIntakeHelpers';
 import { LibraryBookCover } from './LibraryBookCover';
+import { LibraryCatalogingStepsNote } from './LibraryCatalogingStepsNote';
+import {
+  LIBRARY_CATALOGING_SHORT,
+  LIBRARY_ISBN_AI_LOOKUP,
+  LIBRARY_ISBN_LIST_LOOKUP,
+  LIBRARY_STORE_BARCODE_BODY,
+  LIBRARY_STORE_BARCODE_MANUAL_HINT,
+  LIBRARY_STORE_BARCODE_SCAN_ISBN,
+  LIBRARY_STORE_BARCODE_TITLE,
+  LIBRARY_STORE_BARCODE_TYPE_MANUAL,
+} from '@/lib/library/libraryCatalogingCopy';
 import { resolveCoverByIsbn } from '@/lib/library/libraryCoverResolver';
 import {
-  generateGenreBarcode,
   resolveBookClassification,
   DEFAULT_LIBRARY_PLACEMENT_ZONES,
   getActiveLibraryGenres,
@@ -57,6 +80,8 @@ export function LibraryItemModal({
   onAddCopy,
   onDelete,
   upcTaken,
+  existingUpcs,
+  reservedCodes,
   schoolId,
   getStudentName,
 }: {
@@ -67,6 +92,8 @@ export function LibraryItemModal({
   onAddCopy?: (item: LibraryItem) => Promise<void>;
   onDelete?: (item: LibraryItem) => Promise<void>;
   upcTaken?: (upc: string, excludeId?: string) => Promise<boolean>;
+  existingUpcs?: Iterable<string | null | undefined>;
+  reservedCodes?: Set<string>;
   schoolId?: string | null;
   /** Resolves a student's display name from their ID — used to show who currently has this copy on loan. */
   getStudentName?: (id?: string) => string;
@@ -89,8 +116,8 @@ export function LibraryItemModal({
   const [volume, setVolume] = useState('');
   const [saving, setSaving] = useState(false);
   const [addingCopy, setAddingCopy] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [lookingUpIsbn, setLookingUpIsbn] = useState(false);
+  const [isbnLookupPhase, setIsbnLookupPhase] = useState<IsbnLookupPhase | null>(null);
   const [titleSuggestions, setTitleSuggestions] = useState<LibraryCatalogHit[]>([]);
   const [isSearchingTitle, setIsSearchingTitle] = useState(false);
   const [showTitleSuggestions, setShowTitleSuggestions] = useState(false);
@@ -98,9 +125,9 @@ export function LibraryItemModal({
   const [showMoreInfo, setShowMoreInfo] = useState(false);
   const titleSearchContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const confirm = useConfirm();
   const playSound = useArcadeSound();
   const { setLibraryStickersToPrint } = usePrint();
-  const functions = useFunctions();
   const isEditing = !!item;
 
   useEffect(() => {
@@ -111,12 +138,19 @@ export function LibraryItemModal({
     }
     setCopies(1);
     if (item) {
+      const resolved = resolveBookClassification(
+        item.category,
+        settings.libraryGenreDefinitions,
+        item.shelfLocation,
+      );
       setName(item.name);
-      setUpc(item.upc);
       setAuthor(item.author ?? '');
-      setIsbn(item.isbn ?? '');
-      setCategory(item.category ?? '');
-      setShelfLocation(item.shelfLocation ?? '');
+      setIsbn(
+        item.isbn?.trim() ||
+          (isRetailIsbnBarcode(item.upc) ? item.upc : ''),
+      );
+      setCategory(resolved.genre.label);
+      setShelfLocation(item.shelfLocation?.trim() || resolved.shelfLocation);
       setCopyNumber(item.copyNumber ?? '');
       setNotes(item.notes ?? '');
       setCoverUrl(item.coverUrl ?? '');
@@ -131,13 +165,35 @@ export function LibraryItemModal({
       setPublishedYear(item.publishedYear ?? '');
       setSeries(item.series ?? '');
       setVolume(item.volume ?? '');
+      const usedByOther = [...(existingUpcs ?? [])].some(
+        (code) => normalizeLibraryUpc(code ?? '') === normalizeLibraryUpc(item.upc),
+      );
+      if ((copyNeedsGenreBarcode(item.upc) || usedByOther) && upcTaken) {
+        setUpc('');
+        void allocateNextGenreBarcode({
+          category: resolved.genre.label,
+          scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+          customGenres: settings.libraryGenreDefinitions,
+          existingUpcs,
+          reserved: reservedCodes,
+          upcTaken: (code) => upcTaken(code, item.id),
+        }).then((next) => {
+          if (next) setUpc(next);
+        });
+      } else {
+        setUpc(item.upc);
+      }
     } else {
+      const resolved = resolveBookClassification(
+        settings.libraryDefaultCategory,
+        settings.libraryGenreDefinitions,
+      );
       setName('');
       setUpc('');
       setAuthor('');
       setIsbn('');
-      setCategory('');
-      setShelfLocation('');
+      setCategory(resolved.genre.label);
+      setShelfLocation(resolved.shelfLocation);
       setCopyNumber('');
       setNotes('');
       setCoverUrl('');
@@ -147,6 +203,18 @@ export function LibraryItemModal({
       setPublishedYear('');
       setSeries('');
       setVolume('');
+      if (upcTaken) {
+        void allocateNextGenreBarcode({
+          category: resolved.genre.label,
+          scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+          customGenres: settings.libraryGenreDefinitions,
+          existingUpcs,
+          reserved: reservedCodes,
+          upcTaken: (code) => upcTaken(code),
+        }).then((next) => {
+          if (next) setUpc(next);
+        });
+      }
     }
   }, [item, isOpen]);
 
@@ -198,6 +266,11 @@ export function LibraryItemModal({
   const { settings } = useSettings();
   const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
   const classification = resolveBookClassification(category, settings.libraryGenreDefinitions, shelfLocation);
+  const typedCodeTaken = useMemo(() => {
+    const code = normalizeLibraryUpc(upc);
+    if (!code || copyNeedsGenreBarcode(code)) return false;
+    return [...(existingUpcs ?? [])].some((other) => normalizeLibraryUpc(other ?? '') === code);
+  }, [upc, existingUpcs]);
   const placementZones =
     settings.libraryPlacementZones && settings.libraryPlacementZones.length > 0
       ? settings.libraryPlacementZones
@@ -218,30 +291,25 @@ export function LibraryItemModal({
     if (hit.readingLevel) setReadingLevel(hit.readingLevel);
     if (hit.series) setSeries(hit.series);
 
-    // Genre / classification and default shelf placement
-    if (hit.category) {
-      setCategory(hit.category);
-      const resolved = resolveBookClassification(hit.category, settings.libraryGenreDefinitions);
-      if (!shelfLocation.trim() && resolved.shelfLocation) {
-        setShelfLocation(resolved.shelfLocation);
-      }
+    const resolved = resolveBookClassification(
+      hit.category || category,
+      settings.libraryGenreDefinitions,
+    );
+    setCategory(resolved.genre.label);
+    if (!shelfLocation.trim() && resolved.shelfLocation) {
+      setShelfLocation(resolved.shelfLocation);
     }
 
-    // Auto-generate barcode if empty
-    if (!upc.trim() && upcTaken) {
-      const candidate = generateGenreBarcode({
-        category: hit.category?.trim() || undefined,
+    if (copyNeedsGenreBarcode(upc) && upcTaken) {
+      const next = await allocateNextGenreBarcode({
+        category: resolved.genre.label,
         scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
         customGenres: settings.libraryGenreDefinitions,
-        sequenceNumber: 1,
+        existingUpcs,
+        reserved: reservedCodes,
+        upcTaken: (code) => upcTaken(code, item?.id),
       });
-      const taken = await upcTaken(candidate, item?.id);
-      if (!taken) {
-        setUpc(candidate);
-      } else {
-        const unique = await generateUniqueLibraryUpc((code) => upcTaken(code, item?.id));
-        if (unique) setUpc(unique);
-      }
+      if (next) setUpc(next);
     }
 
     setShowTitleSuggestions(false);
@@ -252,59 +320,34 @@ export function LibraryItemModal({
     });
   };
 
+  const assignGenreBarcode = async (genreName?: string) => {
+    if (!upcTaken) return null;
+    return allocateNextGenreBarcode({
+      category: (genreName ?? category).trim() || undefined,
+      scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+      customGenres: settings.libraryGenreDefinitions,
+      existingUpcs,
+      reserved: reservedCodes,
+      upcTaken: (code) => upcTaken(code, item?.id),
+    });
+  };
+
   const handleCategoryChange = (newCat: string) => {
     setCategory(newCat);
-    // If shelf location is empty, auto-populate the default shelf location for this genre
     const resolved = resolveBookClassification(newCat, settings.libraryGenreDefinitions);
     if (!shelfLocation.trim() && resolved.shelfLocation) {
       setShelfLocation(resolved.shelfLocation);
     }
+    void assignGenreBarcode(newCat).then((next) => {
+      if (next) setUpc(next);
+    });
   };
 
-  const handleGenerateBarcode = async () => {
-    if (!upcTaken) {
-      toast({
-        variant: 'destructive',
-        title: 'Cannot generate barcode',
-        description: 'Barcode uniqueness check is not available on this screen.',
-      });
-      return;
-    }
-    setGenerating(true);
-    try {
-      let candidate = '';
-      let seq = 1;
-      let attempts = 0;
-      do {
-        candidate = generateGenreBarcode({
-          category: category.trim() || undefined,
-          scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
-          customGenres: settings.libraryGenreDefinitions,
-          sequenceNumber: seq,
-        });
-        const taken = await upcTaken(candidate, item?.id);
-        if (!taken) break;
-        seq++;
-        attempts++;
-      } while (attempts < 500);
-
-      if (!candidate) {
-        playSound('error');
-        toast({ variant: 'destructive', title: 'Could not generate a unique barcode' });
-        return;
-      }
-      setUpc(candidate);
-      playSound('success');
-      toast({
-        title: 'Barcode generated',
-        description: `${candidate} — formatted for ${classification.genre.label}`,
-      });
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const defaultLabelFormat = (settings.libraryLabelFormat as LibraryLabelFormat) || 'sticker';
+  const labelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
+  const defaultLabelFormat = resolveDefaultLibraryLabelFormat(
+    settings.libraryLabelFormat as LibraryLabelFormat | undefined,
+    settings.libraryLabelFormatsEnabled,
+  );
 
   const handlePrintLabel = (format: LibraryLabelFormat = defaultLabelFormat) => {
     const trimmedName = name.trim();
@@ -336,29 +379,59 @@ export function LibraryItemModal({
       createdAt: Date.now(),
     };
     setLibraryStickersToPrint([printItem], { format, schoolId: sid });
-    if (functions && sid && item?.id && item.id !== 'draft-label') {
-      callLibrary(functions, 'libraryCirculation', { schoolId: sid, itemId: item.id, action: 'label' }).catch(() => {});
-    }
     const opt = getLibraryLabelOption(format);
-    toast({ title: `Printing ${opt.shortName}`, description: normalizedUpc });
+    toast({
+      title: `Printing ${opt.shortName}`,
+      description: LIBRARY_CATALOGING_SHORT,
+    });
   };
 
   const handleLookupIsbn = async () => {
-    const trimmedIsbn = isbn.trim();
+    const trimmedIsbn = unwrapRepeatedBookScan(isbn.trim());
+    if (trimmedIsbn !== isbn.trim()) setIsbn(trimmedIsbn);
     if (!trimmedIsbn) {
       toast({ variant: 'destructive', title: 'Enter an ISBN first' });
       return;
     }
+    if (isLikelyStoreProductBarcode(trimmedIsbn)) {
+      const scanBookNumberInstead = await confirm({
+        title: LIBRARY_STORE_BARCODE_TITLE,
+        description: LIBRARY_STORE_BARCODE_BODY,
+        confirmLabel: LIBRARY_STORE_BARCODE_SCAN_ISBN,
+        cancelLabel: LIBRARY_STORE_BARCODE_TYPE_MANUAL,
+      });
+      if (scanBookNumberInstead) return;
+      toast({
+        title: 'Type this book in',
+        description: LIBRARY_STORE_BARCODE_MANUAL_HINT,
+      });
+      return;
+    }
     setLookingUpIsbn(true);
+    setIsbnLookupPhase('catalog');
     try {
-      const { hit } = await fetchCatalogHitByIsbn(trimmedIsbn);
+      const { hit } = await fetchCatalogHitByIsbn(trimmedIsbn, {
+        onPhase: (phase) => setIsbnLookupPhase(phase),
+      });
       if (hit?.title) {
         setName((prev) => prev.trim() || hit.title);
         if (hit.author) setAuthor((prev) => prev.trim() || hit.author || '');
-        if (hit.category) {
-          setCategory((prev) => prev.trim() || hit.category || '');
-          const res = resolveBookClassification(hit.category, settings.libraryGenreDefinitions);
-          if (!shelfLocation.trim() && res.shelfLocation) setShelfLocation(res.shelfLocation);
+        const res = resolveBookClassification(
+          hit.category || category,
+          settings.libraryGenreDefinitions,
+        );
+        setCategory(res.genre.label);
+        if (!shelfLocation.trim() && res.shelfLocation) setShelfLocation(res.shelfLocation);
+        if (upcTaken) {
+          const next = await allocateNextGenreBarcode({
+            category: res.genre.label,
+            scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+            customGenres: settings.libraryGenreDefinitions,
+            existingUpcs,
+            reserved: reservedCodes,
+            upcTaken: (code) => upcTaken(code, item?.id),
+          });
+          if (next) setUpc(next);
         }
         if (hit.coverUrl) setCoverUrl((prev) => prev.trim() || hit.coverUrl || '');
         if (hit.description) setDescription((prev) => prev.trim() || hit.description || '');
@@ -379,6 +452,7 @@ export function LibraryItemModal({
       toast({ variant: 'destructive', title: 'Lookup error', description: (err as Error).message });
     } finally {
       setLookingUpIsbn(false);
+      setIsbnLookupPhase(null);
     }
   };
 
@@ -390,18 +464,24 @@ export function LibraryItemModal({
       toast({ variant: 'destructive', title: 'Title is required' });
       return;
     }
-    if (!normalizedUpc && upcTaken) {
-      normalizedUpc = (await generateUniqueLibraryUpc((code) => upcTaken(code, item?.id))) ?? '';
+    const requestedCode = normalizedUpc;
+    const requestedWasTaken =
+      Boolean(requestedCode) &&
+      !copyNeedsGenreBarcode(requestedCode) &&
+      (typedCodeTaken || (upcTaken ? await upcTaken(requestedCode, item?.id) : false));
+    if (copyNeedsGenreBarcode(normalizedUpc) || requestedWasTaken) {
+      normalizedUpc = (await assignGenreBarcode()) ?? normalizedUpc;
     }
     if (!normalizedUpc) {
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Barcode required',
-        description: 'Generate a LIB barcode or enter an existing scan code.',
+        title: 'Could not make a genre code',
+        description: 'Try again, or type a barcode if you already have one.',
       });
       return;
     }
+    const gaveNextNumber = requestedWasTaken && normalizedUpc !== requestedCode;
 
     const payload: LibraryItemInput = {
       copies,
@@ -431,6 +511,11 @@ export function LibraryItemModal({
           title: isEditing ? 'Item updated' : 'Item added',
           description: `${normalizedUpc} — print a LIB sticker from the catalog or use Print label below.`,
         });
+      } else if (gaveNextNumber) {
+        toast({
+          title: isEditing ? 'Item updated' : 'Item added',
+          description: `That number was already used. This book got ${normalizedUpc} instead.`,
+        });
       } else {
         toast({ title: isEditing ? 'Item updated' : 'Item added' });
       }
@@ -448,6 +533,7 @@ export function LibraryItemModal({
   };
 
   const normalizedUpc = normalizeLibraryUpc(upc);
+  const canPrintLabel = Boolean(name.trim() && normalizedUpc && schoolId);
   const showLibPrint = Boolean(normalizedUpc && isSchoolLibraryBarcode(normalizedUpc) && schoolId);
 
   return (
@@ -459,7 +545,7 @@ export function LibraryItemModal({
         <DialogHeader className="border-b px-6 pb-4 pt-6">
           <DialogTitle>{isEditing ? 'Edit library item' : 'Add library item'}</DialogTitle>
           <DialogDescription>
-            Items without a barcode can generate a LIB code. Books scanned on the Book Intake tab use their own ISBN/barcode for checkout when possible.
+            {isEditing ? 'Change the details for this book.' : 'Add this book to the library.'}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">
@@ -513,17 +599,30 @@ export function LibraryItemModal({
             </div>
           </div>
 
+          {(!isEditing || (item && !item.labeled)) && (
+            <LibraryCatalogingStepsNote
+              className="mb-4"
+              onPrint={() => handlePrintLabel(defaultLabelFormat)}
+              printDisabled={!canPrintLabel}
+              printHint={
+                canPrintLabel
+                  ? undefined
+                  : 'Save the book first so it gets a barcode, then print the sticker.'
+              }
+            />
+          )}
+
           {isEditing && item && (
             <div
               className={cn(
                 'mb-4 p-3.5 rounded-2xl border flex items-center justify-between gap-3',
-                item.status === 'checked_out'
+                item.status === 'checked_out' || libraryCopyNeedsProcessing(item)
                   ? 'border-amber-400/60 bg-amber-50 dark:bg-amber-950/30'
                   : 'border-emerald-400/60 bg-emerald-50 dark:bg-emerald-950/30',
               )}
             >
               <div className="flex items-center gap-2.5">
-                {item.status === 'checked_out' ? (
+                {item.status === 'checked_out' || libraryCopyNeedsProcessing(item) ? (
                   <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
                 ) : (
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -549,6 +648,17 @@ export function LibraryItemModal({
                         </span>
                       ) : null}
                     </p>
+                  ) : libraryCopyNeedsProcessing(item) ? (
+                    <div>
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                        Needs processing
+                      </p>
+                      {item.labeled && !item.shelfLocation?.trim() ? (
+                        <p className="text-xs font-medium text-muted-foreground">
+                          Add where this book lives on the shelf.
+                        </p>
+                      ) : null}
+                    </div>
                   ) : (
                     <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
                       On the shelf — ready to borrow
@@ -582,7 +692,7 @@ export function LibraryItemModal({
                     <span className="font-semibold capitalize">{item.condition || 'Good'}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground">Label printed:</span>{' '}
+                    <span className="text-muted-foreground">Officially cataloged:</span>{' '}
                     <span className="font-semibold">{item.labeled ? 'Yes' : 'Not yet'}</span>
                   </div>
                   <div>
@@ -610,8 +720,16 @@ export function LibraryItemModal({
                       setIsSearchingTitle(true);
                       try {
                         const hits = await fetchCatalogHitsByTitle(name);
-                        if (hits.length > 0) {
-                          await applyBookAutofill(hits[0]);
+                        const best = pickBestTitleHit(name, hits);
+                        if (best) {
+                          await applyBookAutofill(best);
+                        } else if (hits.length > 0) {
+                          setTitleSuggestions(hits);
+                          setShowTitleSuggestions(true);
+                          toast({
+                            title: 'Pick the matching book',
+                            description: 'The first online result was a different book. Tap the right one from the list.',
+                          });
                         } else {
                           toast({
                             variant: 'destructive',
@@ -629,7 +747,7 @@ export function LibraryItemModal({
                     ) : (
                       <Sparkles className="h-3 w-3" />
                     )}
-                    <span>Autofill details</span>
+                    <span>Find this book</span>
                   </Button>
                 )}
               </div>
@@ -732,35 +850,30 @@ export function LibraryItemModal({
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="lib-upc">Barcode / UPC</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="lib-upc"
-                  value={upc}
-                  onChange={(e) => setUpc(e.target.value)}
-                  placeholder="Scan code or generate LIB"
-                  className="font-mono"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 rounded-lg gap-1"
-                  disabled={generating || saving || !upcTaken}
-                  onClick={() => void handleGenerateBarcode()}
-                  title="Generate a unique LIB barcode"
+              <Label htmlFor="lib-upc">Genre code</Label>
+              <Input
+                id="lib-upc"
+                value={upc}
+                onChange={(e) => setUpc(e.target.value)}
+                placeholder="Made from the book’s genre"
+                className={cn('font-mono', typedCodeTaken && 'border-amber-500 focus-visible:ring-amber-500')}
+              />
+              {typedCodeTaken ? (
+                <motion.p
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  className="text-[11px] font-semibold text-amber-800 dark:text-amber-200"
                 >
-                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Barcode className="h-4 w-4" />}
-                  Generate
-                </Button>
-              </div>
-              {!upc.trim() ? (
+                  Another book already has this number. Save will give this book the next free one.
+                </motion.p>
+              ) : (
                 <p className="text-[11px] text-muted-foreground">
-                  Leave blank to auto-generate a LIB barcode on save, or tap Generate now.
+                  {copyNeedsGenreBarcode(upc)
+                    ? 'This will become a genre code like FIC-823-0001 from the book’s genre.'
+                    : `Sticker code from this book’s genre (${classification.genre.callPrefix}).`}
                 </p>
-              ) : showLibPrint ? (
-                <p className="text-[11px] text-muted-foreground">LIB sticker barcode — print a label after saving.</p>
-              ) : null}
+              )}
             </div>
             {!isEditing && <div className="space-y-1">
               <Label htmlFor="lib-quantity">Number of copies</Label>
@@ -792,18 +905,21 @@ export function LibraryItemModal({
                   </Badge>
                 ) : null}
               </div>
-              <Input
+              <select
                 id="lib-category"
-                list="lib-genre-options"
-                value={category}
-                onChange={(e) => handleCategoryChange(e.target.value)}
-                placeholder="Fiction, STEM, History, etc."
-              />
-              <datalist id="lib-genre-options">
+                value={classification.genre.id}
+                onChange={(e) => {
+                  const picked = genres.find((genre) => genre.id === e.target.value);
+                  if (picked) handleCategoryChange(picked.label);
+                }}
+                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+              >
                 {genres.map((g) => (
-                  <option key={g.id} value={g.label} />
+                  <option key={g.id} value={g.id}>
+                    {g.label} ({g.callPrefix})
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
             <div className="space-y-1">
               <div className="flex items-center justify-between">
@@ -821,6 +937,11 @@ export function LibraryItemModal({
                 </Button>
               </div>
               <Input id="lib-isbn" value={isbn} onChange={(e) => setIsbn(e.target.value)} className="font-mono" placeholder="10 or 13-digit ISBN" />
+              {lookingUpIsbn ? (
+                <p className="text-[11px] text-violet-800">
+                  {isbnLookupPhase === 'ai' ? LIBRARY_ISBN_AI_LOOKUP : LIBRARY_ISBN_LIST_LOOKUP}
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -839,7 +960,7 @@ export function LibraryItemModal({
                 list="lib-shelf-options"
                 value={shelfLocation}
                 onChange={(e) => setShelfLocation(e.target.value)}
-                placeholder="Aisle 1 - Fiction Bays, Science Stacks..."
+                placeholder="Aisle 1, North Wall, Front Spinner…"
               />
               <datalist id="lib-shelf-options">
                 {placementZones.map((zone) => (
@@ -904,7 +1025,11 @@ export function LibraryItemModal({
             {isEditing && item ? (
               <div className="sm:col-span-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
                 <span className="font-semibold text-foreground">Status: </span>
-                {item.status === 'checked_out' ? 'Checked out' : 'Available'}
+                {item.status === 'checked_out'
+                  ? 'Checked out'
+                  : libraryCopyNeedsProcessing(item)
+                    ? 'Needs processing'
+                    : 'Available'}
                 {item.status === 'checked_out' && item.checkedOutAt
                   ? ` · since ${new Date(item.checkedOutAt).toLocaleString()}`
                   : null}
@@ -952,7 +1077,7 @@ export function LibraryItemModal({
               </Button>
             )}
 
-            {showLibPrint && (
+            {canPrintLabel && (
               <div className="flex items-center">
                 <Button
                   type="button"
@@ -977,7 +1102,7 @@ export function LibraryItemModal({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56 rounded-xl">
-                    {LIBRARY_LABEL_OPTIONS.map((opt) => (
+                    {labelOptions.map((opt) => (
                       <DropdownMenuItem
                         key={opt.id}
                         onClick={() => handlePrintLabel(opt.id)}

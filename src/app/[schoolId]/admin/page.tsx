@@ -2202,6 +2202,7 @@ function AdminDashboardInner() {
               libraryItems={library}
               students={students}
               categories={categories}
+              classes={classes}
               schoolId={schoolId}
               getStudentName={getStudentName}
               onAddLibraryItem={handleAddLibraryItem}

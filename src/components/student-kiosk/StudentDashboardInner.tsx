@@ -63,6 +63,8 @@ import {
 } from '@/lib/library/libraryPolicy';
 import { listStudentLibraryBooksRead } from '@/lib/library/libraryStudentHistory';
 import { StudentLibraryCheckoutsCard } from '@/components/student-kiosk/StudentLibraryCheckoutsCard';
+import { LibraryBookReviewDialog } from '@/components/library/LibraryBookReviewDialog';
+import { shouldAskStudentToRateReturnedBook } from '@/lib/library/libraryStudentRating';
 import { StudentKioskRecessCheckoutCard } from '@/components/student-kiosk/StudentKioskRecessCheckoutCard';
 import {
   isRecessStudentKioskEnabled,
@@ -451,6 +453,12 @@ export function StudentDashboardInner({
   });
 
   const [couponCode, setCouponCode] = useState('');
+  const [libraryReviewOpen, setLibraryReviewOpen] = useState(false);
+  const [libraryReviewBook, setLibraryReviewBook] = useState<{
+    itemId: string;
+    bookTitle: string;
+    coverUrl?: string;
+  } | null>(null);
   const [flyPointsValue, setFlyPointsValue] = useState<number | null>(null);
   const [flyCompliment, setFlyCompliment] = useState<string | null>(null);
   const [flyPointsReason, setFlyPointsReason] = useState<string | null>(null);
@@ -1007,6 +1015,22 @@ export function StudentDashboardInner({
               result.pointsMessage ||
               `Thank you for returning "${result.item.name}".`,
           });
+          if (
+            schoolId &&
+            shouldAskStudentToRateReturnedBook({
+              actor: 'student',
+              studentId: student.id,
+              itemId: result.item.id,
+              enabled: settings.libraryStudentRatingsEnabled !== false,
+            })
+          ) {
+            setLibraryReviewBook({
+              itemId: result.item.id,
+              bookTitle: result.item.name,
+              coverUrl: result.item.coverUrl,
+            });
+            setLibraryReviewOpen(true);
+          }
           setCouponCode('');
           return;
         }
@@ -2360,6 +2384,18 @@ export function StudentDashboardInner({
         )}
         </div>
       </div>
+      {schoolId && libraryReviewBook ? (
+        <LibraryBookReviewDialog
+          isOpen={libraryReviewOpen}
+          setIsOpen={setLibraryReviewOpen}
+          schoolId={schoolId}
+          studentId={student.id}
+          studentName={`${student.firstName ?? ''} ${student.lastName ?? ''}`.trim()}
+          itemId={libraryReviewBook.itemId}
+          bookTitle={libraryReviewBook.bookTitle}
+          coverUrl={libraryReviewBook.coverUrl}
+        />
+      ) : null}
       {birthdayToday ? (
         <>
           <div

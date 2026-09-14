@@ -20,6 +20,8 @@ export interface LibraryItem {
   libraryLocationId?: string | null;
   checkedOutTo?: string | null;
   checkedOutAt?: number | null;
+  /** Last student who returned this copy. Used for reviews and reading history. */
+  lastCheckedOutTo?: string | null;
   addedBy?: string;
   createdAt?: number;
   /** Optional catalog fields for shelving and reporting. */
@@ -61,8 +63,7 @@ export interface LibraryItem {
 /** Primary organization hierarchy for library book shelving and catalog grouping. */
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_genre'
-  | 'shelf_then_author';
+  | 'author_then_title';
 
 
 export type LibraryItemInput = Pick<
@@ -87,10 +88,11 @@ export type LibraryItemInput = Pick<
 export interface LibraryBookReview {
   id: string;
   itemId: string;
-  bookTitle: string;
+  bookTitle?: string;
   studentId: string;
   studentName?: string;
-  rating: number; // 1 to 5
+  rating: number; // 1 to 5, or 0 if they did not read it
+  didNotRead?: boolean;
   tags?: string[];
   reviewText?: string;
   createdAt: number;

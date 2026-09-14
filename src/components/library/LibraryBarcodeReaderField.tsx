@@ -176,7 +176,7 @@ export function LibraryBarcodeReaderField({
       {scanFeedback && feedbackMeta && (
         <div
           className={cn(
-            'flex items-center justify-between gap-2 rounded-lg border px-2.5 py-1 text-xs transition-all shadow-2xs animate-in fade-in-50 duration-150',
+            'flex flex-col items-stretch gap-1 rounded-lg border px-2.5 py-1.5 text-xs transition-all shadow-2xs animate-in fade-in-50 duration-150',
             feedbackMeta.className,
           )}
           role="status"
@@ -189,10 +189,13 @@ export function LibraryBarcodeReaderField({
             {scanFeedback.title && (
               <span className="font-semibold truncate">· &quot;{scanFeedback.title}&quot;</span>
             )}
-            {scanFeedback.message && !scanFeedback.title && (
+            {scanFeedback.message && !scanFeedback.title && scanFeedback.status !== 'looking_up' && (
               <span className="text-[11px] opacity-90 truncate">· {scanFeedback.message}</span>
             )}
           </div>
+          {scanFeedback.status === 'looking_up' && scanFeedback.message ? (
+            <p className="w-full text-[11px] leading-snug opacity-90">{scanFeedback.message}</p>
+          ) : null}
         </div>
       )}
     </div>

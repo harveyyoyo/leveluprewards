@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { firstHit, isSuspiciousCatalogTitle, parseIsbnSearchOrgHtml } from './libraryCatalogLookup';
+import {
+  firstHit,
+  isLikelyIsbnBookNumber,
+  isLikelyStoreProductBarcode,
+  isSuspiciousCatalogTitle,
+  parseIsbnSearchOrgHtml,
+  pickBestTitleHit,
+  titleMatchScore,
+  unwrapRepeatedBookScan,
+} from './libraryCatalogLookup';
 
 function delayed<T>(ms: number, value: T): () => Promise<T> {
   return () => new Promise((resolve) => setTimeout(() => resolve(value), ms));
@@ -75,6 +84,52 @@ describe('firstHit', () => {
 
   it('resolves null immediately for an empty task list', async () => {
     expect(await firstHit([])).toBeNull();
+  });
+});
+
+describe('pickBestTitleHit', () => {
+  it('skips the first result when a later hit is the actual title', () => {
+    const best = pickBestTitleHit('Harry Potter and the Philosopher\'s Stone', [
+      { title: 'Harry Potter Movie Magic', author: 'Brian Sibley', source: 'google' },
+      { title: 'Harry Potter and the Philosopher\'s Stone', author: 'J. K. Rowling', source: 'google' },
+    ]);
+    expect(best?.title).toBe('Harry Potter and the Philosopher\'s Stone');
+    expect(best?.author).toBe('J. K. Rowling');
+  });
+
+  it('returns null when no online title is close enough', () => {
+    expect(
+      pickBestTitleHit('Hoot', [
+        { title: 'How to Train Your Dragon', author: 'Cressida Cowell', source: 'google' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('scores an exact title higher than a partial match', () => {
+    expect(titleMatchScore('Hoot', 'Hoot')).toBe(1);
+    expect(titleMatchScore('Hoot', 'How to Train Your Dragon')).toBeLessThan(0.5);
+  });
+});
+
+describe('unwrapRepeatedBookScan', () => {
+  it('keeps one copy when the same ISBN is scanned twice stuck together', () => {
+    expect(unwrapRepeatedBookScan('97814197002319781419700231')).toBe('9781419700231');
+  });
+
+  it('leaves a normal ISBN alone', () => {
+    expect(unwrapRepeatedBookScan('9781419700231')).toBe('9781419700231');
+  });
+});
+
+describe('store vs book barcodes', () => {
+  it('treats ISBN-13 as a book number', () => {
+    expect(isLikelyIsbnBookNumber('9781419700231')).toBe(true);
+    expect(isLikelyStoreProductBarcode('9781419700231')).toBe(false);
+  });
+
+  it('treats a 12-digit store UPC as a store barcode', () => {
+    expect(isLikelyStoreProductBarcode('012345678905')).toBe(true);
+    expect(isLikelyIsbnBookNumber('012345678905')).toBe(false);
   });
 });
 

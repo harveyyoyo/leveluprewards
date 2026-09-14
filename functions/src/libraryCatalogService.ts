@@ -22,6 +22,25 @@ const fields = [
   'volume',
 ];
 
+function randomLibUpc() {
+  return `LIB${randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()}`;
+}
+
+/** Next unused FIC-823-0001-style code, or empty if this is not that kind of code. */
+function nextUnusedSequentialUpc(requested: string, used: Set<string>): string {
+  const match = requested.match(/^(.*-)(\d+)$/);
+  if (!match) return '';
+  const prefix = match[1];
+  const width = match[2].length;
+  let seq = parseInt(match[2], 10);
+  for (let i = 0; i < 500; i++) {
+    const candidate = `${prefix}${String(seq).padStart(width, '0')}`;
+    if (!used.has(candidate)) return candidate;
+    seq += 1;
+  }
+  return '';
+}
+
 function asLibraryLocationId(value: unknown): string {
   if (value == null || value === '') return DEFAULT_LIBRARY_LOCATION_ID;
   if (typeof value !== 'string' || !value.trim() || value.length > 80 || value.includes('/')) {
@@ -76,20 +95,40 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
         }
       }
       payload.upc = payload.upc?.toUpperCase() ?? '';
+      const upcDigits = String(payload.upc || '').replace(/\D/g, '');
+      const requestedLooksLikeStoreIsbn = upcDigits.length === 10 || upcDigits.length === 13;
+      if (requestedLooksLikeStoreIsbn) payload.upc = '';
       const existing = data.itemId ? await tx.get(school.collection('library').doc(libraryId(data.itemId, 'copy ID'))) : null;
       if (existing && !existing.exists) throw new HttpsError('not-found', 'Copy no longer exists.');
       payload.libraryLocationId = asLibraryLocationId(
         data.libraryLocationId ?? input.libraryLocationId ?? existing?.data()?.libraryLocationId,
       );
       const requestedCode = payload.upc;
-      const matching = requestedCode ? await tx.get(school.collection('library').where('upc', '==', requestedCode).limit(2)) : null;
-      const taken = matching?.docs.some(d => d.id !== existing?.id);
-      if (existing && taken) throw new HttpsError('already-exists', 'Another copy uses this barcode.');
+      const used = new Set<string>();
+      const prefixMatch = requestedCode.match(/^(.*-)\d+$/);
+      if (prefixMatch) {
+        const prefix = prefixMatch[1];
+        const siblings = await tx.get(
+          school.collection('library').where('upc', '>=', prefix).where('upc', '<', `${prefix}\uf8ff`).limit(400),
+        );
+        for (const doc of siblings.docs) {
+          if (existing && doc.id === existing.id) continue;
+          const code = String(doc.data()?.upc || '').toUpperCase();
+          if (code) used.add(code);
+        }
+      } else if (requestedCode) {
+        const matching = await tx.get(school.collection('library').where('upc', '==', requestedCode).limit(2));
+        for (const doc of matching.docs) {
+          if (existing && doc.id === existing.id) continue;
+          used.add(String(doc.data()?.upc || '').toUpperCase());
+        }
+      }
       const plans: { ref: FirebaseFirestore.DocumentReference; item: Record<string, any> }[] = [];
       for (let index = 0; index < copies; index++) {
-        const useRequested = requestedCode && !taken && index === 0 && copies === 1;
-        const upc = useRequested ? requestedCode : `LIB${randomUUID().replace(/-/g, '').slice(0, 16).toUpperCase()}`;
-        if (!useRequested) {
+        let upc = requestedCode ? nextUnusedSequentialUpc(requestedCode, used) : '';
+        if (!upc) upc = randomLibUpc();
+        used.add(upc);
+        if (!requestedCode || !/^.+-\d+$/.test(upc)) {
           const collision = await tx.get(school.collection('library').where('upc', '==', upc).limit(1));
           if (!collision.empty) throw new HttpsError('aborted', 'Please retry barcode generation.');
         }
@@ -100,7 +139,7 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
       for (const plan of plans) {
         if (existing) tx.update(plan.ref, plan.item);
         else tx.set(plan.ref, { ...plan.item, status: 'available', condition: 'good', archived: false,
-          checkedOutTo: null, checkedOutAt: null, dueAt: null, createdAt: now, addedBy: uid });
+          labeled: false, checkedOutTo: null, checkedOutAt: null, dueAt: null, createdAt: now, addedBy: uid });
       }
       result = { success: true, count: plans.length, items: plans.map(p => ({ id: p.ref.id, ...p.item })) };
     }

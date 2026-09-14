@@ -18,11 +18,9 @@ import {
   BarChart3,
   FolderTree,
   Grid,
-  Home,
   Info,
   Layers,
   LayoutGrid,
-  Library,
   List,
   Loader2,
   MapPin,
@@ -58,13 +56,16 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import type { LibraryItem, LibraryItemInput, Student, Class, Category } from '@/lib/types';
+import type { LibraryItem, LibraryItemInput, Student, Class, Category, LibraryBookReview } from '@/lib/types';
 import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib/library/libraryOperations';
+import { allocateNextGenreBarcode, duplicateCheckoutItemIds, isCatalogCheckoutCodeTaken } from '@/lib/library/libraryIntakeHelpers';
+import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
-import { filterLibraryCatalog, downloadLibraryCsv, type LibraryLoan } from '@/lib/library/libraryWorkspace';
+import { filterLibraryCatalog, downloadLibraryCsv, libraryCopyNeedsProcessing, type LibraryLoan } from '@/lib/library/libraryWorkspace';
 import {
   groupBooksByOrganizationScheme,
   LIBRARY_ORGANIZATION_SCHEMES,
+  resolveLibraryOrganizationScheme,
   type LibraryOrganizationScheme,
   type BookPrimaryGroup,
 } from '@/lib/library/libraryOrganization';
@@ -75,13 +76,15 @@ import {
   itemLibraryLocationId,
   libraryPath,
 } from '@/lib/library/libraryLocations';
+import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
-import { LibraryLocationSwitcher } from './LibraryLocationSwitcher';
 import { LibraryLocationsCard } from './LibraryLocationsCard';
 import { LibraryTotalsStatCards } from './LibraryTotalsStatCards';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { LibraryBookCover } from './LibraryBookCover';
 import { LibraryBookIntakeScanner } from './LibraryBookIntakeScanner';
+import { LibraryCatalogingStepsNote } from './LibraryCatalogingStepsNote';
+import { LIBRARY_CATALOGING_SHORT } from '@/lib/library/libraryCatalogingCopy';
 import { LibraryItemModal } from './LibraryItemModal';
 import { LibraryCsvImportDialog } from './LibraryCsvImportDialog';
 import { LibraryShelfAuditDialog } from './LibraryShelfAuditDialog';
@@ -91,7 +94,7 @@ import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryReportsCard } from './LibraryReportsCard';
-import LevelUpLogoMark from '@/components/logos/Logo';
+import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { groupBooksIntoPiles, getBookPileKey, type BookPile } from '@/lib/library/bookPiles';
@@ -99,8 +102,15 @@ import { LibraryBookPileGrid } from './LibraryBookPileGrid';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatLibraryStudentName, resolveLibraryStudentNameMode } from '@/lib/library/libraryStudentDisplay';
-
-const PAGE_SIZE = 36;
+import {
+  LIBRARY_COVER_SIZE_LABELS,
+  LIBRARY_COVER_SIZE_STORAGE_KEY,
+  LIBRARY_COVER_SIZES,
+  libraryCatalogPageSize,
+  libraryTitleGridClass,
+  parseLibraryCoverSize,
+  type LibraryCoverSize,
+} from '@/lib/library/libraryCatalogView';
 const nativeSelect = 'h-10 rounded-xl border border-border/80 bg-background px-3 text-xs font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-primary';
 
 type MasterTitleGroup = {
@@ -142,7 +152,7 @@ export function LibraryWorkspace({
   const schoolName = schoolData?.name?.trim();
   const { settings, updateSettings } = useSettings();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
-  const currentTheme = resolveLibraryTheme(currentThemeId);
+  const currentTheme = resolveLibraryTheme(currentThemeId, settings.libraryBoxOpacity);
   const firestore = useFirestore();
   const functions = useFunctions();
   const { toast } = useToast();
@@ -171,14 +181,20 @@ export function LibraryWorkspace({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const rawTabParam = searchParams.get('tab')?.trim().toLowerCase() || '';
+  const rawModeParam = searchParams.get('mode')?.trim().toLowerCase() || '';
   useEffect(() => {
-    const rawTab = searchParams.get('tab')?.trim().toLowerCase() || '';
-    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk'].includes(rawTab) && rawTab !== tab) {
-      setTab(rawTab);
+    if (rawModeParam === 'dropbox' || rawModeParam === 'return') {
+      setKioskInitialMode('return');
+      setTab('kiosk');
+      setHubHome(false);
+      return;
+    }
+    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk'].includes(rawTabParam)) {
+      setTab((current) => (current === rawTabParam ? current : rawTabParam));
       setHubHome(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [rawTabParam, rawModeParam]);
 
   // Keep the address bar in sync as staff switch stations — mirrors the rest of the site
   // (e.g. the admin dashboard's ?tab=) so each section is a real, shareable, reloadable URL.
@@ -199,17 +215,18 @@ export function LibraryWorkspace({
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
-  const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled'>('all');
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'shelf'>('newest');
+  const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
+  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'shelf'>('title_asc');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [catalogPresentation, setCatalogPresentation] = useState<'scheme' | 'grouped' | 'copies'>('copies');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [coverSize, setCoverSize] = useState<LibraryCoverSize>('small');
+  const [coverSizeReady, setCoverSizeReady] = useState(false);
+  const [catalogView, setCatalogView] = useState<'scheme' | 'grouped'>('grouped');
+  const pageSize = libraryCatalogPageSize(viewMode, coverSize);
   const [activeScheme, setActiveScheme] = useState<LibraryOrganizationScheme>(
-    (settings.libraryOrganizationScheme as LibraryOrganizationScheme) || 'genre_then_author',
+    resolveLibraryOrganizationScheme(settings.libraryOrganizationScheme),
   );
   const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<Set<string>>(new Set());
-  const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
   const [unstackedPileKeys, setUnstackedPileKeys] = useState<Set<string>>(new Set());
 
   const togglePile = useCallback((pileKey: string) => {
@@ -227,15 +244,33 @@ export function LibraryWorkspace({
 
   // Sync activeScheme when settings change
   useEffect(() => {
-    if (settings.libraryOrganizationScheme) {
-      setActiveScheme(settings.libraryOrganizationScheme as LibraryOrganizationScheme);
-    }
+    setActiveScheme(resolveLibraryOrganizationScheme(settings.libraryOrganizationScheme));
   }, [settings.libraryOrganizationScheme]);
+
+  useEffect(() => {
+    try {
+      setCoverSize(parseLibraryCoverSize(window.localStorage.getItem(LIBRARY_COVER_SIZE_STORAGE_KEY)));
+    } catch {
+      /* keep medium */
+    }
+    setCoverSizeReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!coverSizeReady) return;
+    try {
+      window.localStorage.setItem(LIBRARY_COVER_SIZE_STORAGE_KEY, coverSize);
+    } catch {
+      /* ignore */
+    }
+  }, [coverSize, coverSizeReady]);
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [kioskHandoffStudentId, setKioskHandoffStudentId] = useState<string | null>(null);
+  const [kioskInitialMode, setKioskInitialMode] = useState<'auto' | 'checkout' | 'return' | null>(null);
   const [intakePrefillCode, setIntakePrefillCode] = useState<string | null>(null);
   const [csvImportOpen, setCsvImportOpen] = useState(false);
   const [shelfAuditOpen, setShelfAuditOpen] = useState(false);
@@ -247,6 +282,7 @@ export function LibraryWorkspace({
   const [category, setCategory] = useState('');
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const reservedGenreCodesRef = useRef(new Set<string>());
   const [loanSearch, setLoanSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [loanSubTab, setLoanSubTab] = useState<'active' | 'overdue' | 'history'>('active');
@@ -286,9 +322,16 @@ export function LibraryWorkspace({
   const historyQuery = useMemoFirebase(
     () =>
       firestore && schoolId && allowed && ((tab === 'loans' && loanSubTab === 'history') || tab === 'reports')
-        ? query(collection(firestore, 'schools', schoolId, 'libraryLoans'), orderBy('checkedOutAt', 'desc'), limit(200))
+        ? query(collection(firestore, 'schools', schoolId, 'libraryLoans'), orderBy('checkedOutAt', 'desc'), limit(500))
         : null,
     [firestore, schoolId, allowed, tab, loanSubTab],
+  );
+  const reviewsQuery = useMemoFirebase(
+    () =>
+      firestore && schoolId && allowed && tab === 'reports'
+        ? query(collection(firestore, 'schools', schoolId, 'libraryReviews'), limit(200))
+        : null,
+    [firestore, schoolId, allowed, tab],
   );
 
   const { data: items, isLoading: catalogLoading, error: catalogError } = useCollection<LibraryItem>(catalogQuery);
@@ -300,6 +343,9 @@ export function LibraryWorkspace({
     historyQuery,
     { reportPermissionErrors: false },
   );
+  const { data: libraryReviews, error: reviewsError } = useCollection<LibraryBookReview>(reviewsQuery, {
+    reportPermissionErrors: false,
+  });
 
   const {
     locations,
@@ -308,12 +354,26 @@ export function LibraryWorkspace({
     renameLocation,
     archiveLocation,
     restoreLocation,
+    deleteLocation,
   } = useLibraryLocations(schoolId);
   const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
   const scopedItems = useMemo(
     () => filterItemsForLibrary(items, activeLibrary.id),
     [activeLibrary.id, items],
   );
+  const sharedNumberIds = useMemo(() => duplicateCheckoutItemIds(scopedItems), [scopedItems]);
+  const isLibraryUpcTaken = useCallback(async (code: string, excludeId?: string) => {
+    const normalized = normalizeLibraryUpc(code);
+    if (!normalized) return false;
+    if (isCatalogCheckoutCodeTaken(scopedItems, normalized, excludeId)) return true;
+    if (!firestore || !schoolId) return false;
+    try {
+      const found = await findLibraryItemByUpc(firestore, schoolId, normalized, { allowIsbn: false });
+      return !!(found && found.item.id !== excludeId);
+    } catch {
+      return true;
+    }
+  }, [firestore, schoolId, scopedItems]);
   const archivedLocations = useMemo(
     () => storedLocations.filter((location) => location.archived && location.id !== DEFAULT_LIBRARY_LOCATION_ID),
     [storedLocations],
@@ -352,10 +412,11 @@ export function LibraryWorkspace({
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
     }
     if (labelFilter === 'labeled') {
-      // "Fully cataloged" — matches the Catalog card's own "Needs Processing" badge definition.
-      list = list.filter((i) => Boolean(i.labeled) && Boolean(i.shelfLocation));
+      list = list.filter((i) => !libraryCopyNeedsProcessing(i));
     } else if (labelFilter === 'unlabeled') {
-      list = list.filter((i) => !i.labeled || !i.shelfLocation);
+      list = list.filter((i) => libraryCopyNeedsProcessing(i));
+    } else if (labelFilter === 'shared_number') {
+      list = list.filter((i) => sharedNumberIds.has(i.id));
     }
 
     // Sort catalog
@@ -385,30 +446,21 @@ export function LibraryWorkspace({
     });
 
     return list;
-  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName]);
+  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds]);
 
-  // Count of non-default 'More Filters' selections (search + sort excluded; those have their own visible controls)
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (status !== 'all') count += 1;
-    if (shelfFilter !== 'all') count += 1;
-    if (labelFilter !== 'all') count += 1;
-    return count;
-  }, [status, shelfFilter, labelFilter]);
-
-  // Organized Scheme Grouping (Genre -> Author, Author -> Genre, Shelf -> Author)
+  // Organized scheme grouping (Genre → Author, or Author → Title)
   const organizedGroups = useMemo<BookPrimaryGroup[]>(() => {
-    if (catalogPresentation !== 'scheme') return [];
+    if (catalogView !== 'scheme') return [];
     return groupBooksByOrganizationScheme(
       filteredCatalog,
       activeScheme,
       settings.libraryGenreDefinitions,
     );
-  }, [catalogPresentation, filteredCatalog, activeScheme, settings.libraryGenreDefinitions]);
+  }, [catalogView, filteredCatalog, activeScheme, settings.libraryGenreDefinitions]);
 
   // Master Title Grouping
   const catalogGroups = useMemo<MasterTitleGroup[]>(() => {
-    if (catalogPresentation !== 'grouped') return [];
+    if (catalogView !== 'grouped') return [];
     const map = new Map<string, MasterTitleGroup>();
     for (const item of filteredCatalog) {
       const normTitle = (item.name || '').trim().toLowerCase();
@@ -443,7 +495,7 @@ export function LibraryWorkspace({
       else group.availableCount++;
     }
     return Array.from(map.values());
-  }, [catalogPresentation, filteredCatalog]);
+  }, [catalogView, filteredCatalog]);
 
   const togglePrimaryCollapse = (key: string) => {
     setCollapsedGroupKeys((prev) => {
@@ -458,15 +510,6 @@ export function LibraryWorkspace({
   const collapseAllPrimaryGroups = () => {
     const allKeys = new Set(organizedGroups.map((g) => g.key));
     setCollapsedGroupKeys(allKeys);
-  };
-
-  const toggleGroupExpand = (key: string) => {
-    setExpandedGroupKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   };
 
   // Metrics
@@ -529,7 +572,7 @@ export function LibraryWorkspace({
   }, [scopedItems, selected]);
 
   const selectAllCurrentPage = () => {
-    const currentSlice = filteredCatalog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    const currentSlice = filteredCatalog.slice((page - 1) * pageSize, page * pageSize);
     setSelected((prev) => {
       const allSelected = currentSlice.every((i) => prev.has(i.id));
       const next = new Set(prev);
@@ -611,15 +654,23 @@ export function LibraryWorkspace({
     }
     toast({
       title: itemId ? 'Copy updated' : `${result.count} copies added`,
-      description: itemId ? undefined : 'Print labels for the new copies before lending.',
+      description: itemId ? undefined : LIBRARY_CATALOGING_SHORT,
     });
   };
 
   const handleAddAnotherCopy = async (item: LibraryItem) => {
     await run(async () => {
+      const upc = await allocateNextGenreBarcode({
+        category: item.category,
+        scheme: settings.libraryBarcodeNumberScheme ?? 'genre_code',
+        customGenres: settings.libraryGenreDefinitions,
+        existingUpcs: scopedItems.map((copy) => copy.upc),
+        reserved: reservedGenreCodesRef.current,
+        upcTaken: (code) => isLibraryUpcTaken(code),
+      });
       const input: LibraryItemInput = {
         name: item.name,
-        upc: '',
+        upc: upc ?? '',
         author: item.author,
         isbn: item.isbn,
         category: item.category,
@@ -640,7 +691,7 @@ export function LibraryWorkspace({
       if (result.items?.length) setAddedCopies(result.items);
       toast({
         title: 'Additional copy created',
-        description: `Added another copy of "${item.name}". Print a barcode label before shelving.`,
+        description: LIBRARY_CATALOGING_SHORT,
       });
     });
   };
@@ -709,11 +760,11 @@ export function LibraryWorkspace({
   const pageCount = Math.max(
     1,
     Math.ceil(
-      (catalogPresentation === 'grouped' ? catalogGroups.length : filteredCatalog.length) / PAGE_SIZE
+      (catalogView === 'grouped' ? catalogGroups.length : filteredCatalog.length) / pageSize
     ),
   );
-  const currentCatalogSlice = filteredCatalog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const currentGroupSlice = catalogGroups.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const currentCatalogSlice = filteredCatalog.slice((page - 1) * pageSize, page * pageSize);
+  const currentGroupSlice = catalogGroups.slice((page - 1) * pageSize, page * pageSize);
 
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
@@ -743,7 +794,7 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        'min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))]',
+        'library-readable relative min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300',
         isNightDesk
           ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
@@ -752,82 +803,43 @@ export function LibraryWorkspace({
         currentTheme.classes.wrapper
       )}
     >
-      <div className={cn('w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', currentTheme.classes.header)}>
-        <div className="flex items-center justify-between gap-2 sm:gap-3">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Link
-              href={backToPortalHref}
-              title="Back to LevelUp"
-              className="h-9 w-9 rounded-xl border border-border/70 flex items-center justify-center overflow-hidden p-1.5 transition-all hover:border-primary/50 shrink-0"
-            >
-              <LevelUpLogoMark className="h-full w-full" />
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                if (navSoundEnabled) playSound('click');
-                setHubHome(true);
-              }}
-              title="Library Home"
-              aria-label="Library Home"
-              className="h-9 w-9 rounded-xl border border-border/70 flex items-center justify-center text-muted-foreground transition-all hover:border-primary/50 hover:text-primary shrink-0"
-            >
-              <Home className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="flex min-w-0 flex-1 items-center justify-center gap-1 sm:gap-4 md:gap-8">
-            {(
-              [
-                { id: 'desk', label: 'Librarian', icon: Library, activeClass: 'text-blue-600 dark:text-blue-400' },
-                { id: 'catalog', label: 'Catalog', icon: BookOpen, activeClass: 'text-emerald-600 dark:text-emerald-400' },
-                { id: 'kiosk', label: 'Kiosk', icon: Monitor, activeClass: 'text-amber-600 dark:text-amber-400' },
-              ] as const
-            ).map(({ id, label, icon: SwitchIcon, activeClass }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => switchTab(id)}
-                aria-label={label}
-                className={cn(
-                  'flex items-center gap-1.5 sm:gap-2 py-1.5 px-2 sm:px-0 text-sm sm:text-base font-black tracking-tight transition-colors',
-                  // Loans & Notices lives inside Catalog now, so keep Catalog lit up while viewing it.
-                  (tab === id || (id === 'catalog' && tab === 'loans')) ? activeClass : 'text-muted-foreground/40 hover:text-muted-foreground',
-                )}
-              >
-                <SwitchIcon className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
-                <span className="hidden sm:inline">{label}</span>
-              </button>
-            ))}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => switchTab('settings')}
-            title="Policies & Settings"
-            aria-label="Policies & Settings"
-            className={cn(
-              'h-9 w-9 rounded-xl border flex items-center justify-center text-muted-foreground transition-all hover:border-primary/50 hover:text-primary shrink-0',
-              tab === 'settings' && 'border-primary/50 text-primary bg-primary/5',
-            )}
-          >
-            <Settings className="h-4 w-4" />
-          </button>
-        </div>
-        <LibraryLocationSwitcher
-          locations={locations}
-          activeId={activeLibrary.id}
-          onChange={setActiveLibrary}
-          compact
-        />
-      </div>
+      <LibraryBackdrop theme={currentTheme} />
+      <LibraryHeaderBar
+        theme={currentTheme}
+        schoolName={schoolName || 'School Library'}
+        backToPortalHref={backToPortalHref}
+        activeTab={
+          tab === 'settings'
+            ? 'settings'
+            : tab === 'loans'
+              ? 'catalog'
+              : tab === 'reports'
+                ? 'reports'
+                : (tab as 'desk' | 'catalog' | 'kiosk')
+        }
+        onNavigate={switchTab}
+        onHome={() => {
+          if (navSoundEnabled) playSound('click');
+          setHubHome(true);
+        }}
+        onOpenSettings={() => switchTab('settings')}
+      />
 
       {/* Main Column: Top Bar + Content */}
-      <div className={cn('flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
+      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
 
 
         {/* Main Workstation View Area */}
-        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
+        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+          className="space-y-5 sm:space-y-6"
+        >
         {/* 1. LIBRARY DESK — lookup only; borrow/return happens on the Kiosk */}
         {tab === 'desk' && (
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -840,6 +852,7 @@ export function LibraryWorkspace({
               onClearInitialScan={() => setPendingScanCode(null)}
               onSwitchToKiosk={(studentId) => {
                 setKioskHandoffStudentId(studentId ?? null);
+                setKioskInitialMode(null);
                 setTab('kiosk');
               }}
               onViewCatalog={(statusFilter) => {
@@ -854,6 +867,7 @@ export function LibraryWorkspace({
                 setEditing(book);
                 setEditOpen(true);
               }}
+              onOpenReports={() => switchTab('reports')}
               schoolId={schoolId}
               schoolName={schoolName}
               libraryLocationId={activeLibrary.id}
@@ -865,27 +879,26 @@ export function LibraryWorkspace({
         {/* 2. KIOSK MODE TAB (Check-in & Check-out Station) */}
         {tab === 'kiosk' && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="rounded-2xl border border-border/70 bg-card/60 overflow-hidden shadow-xs min-h-[min(640px,calc(100dvh-7rem))] md:min-h-[640px]">
-              {schoolId ? (
-                <LibraryStudentSelfCheckoutPortal
-                  schoolId={schoolId}
-                  categories={categories}
-                  getStudentName={getName}
-                  students={students}
-                  embedded
-                  initialStudentId={kioskHandoffStudentId}
-                  onInitialStudentConsumed={() => setKioskHandoffStudentId(null)}
-                  onExit={() => setHubHome(true)}
-                  libraryLocationId={activeLibrary.id}
-                  libraryLocations={locations}
-                />
-              ) : (
-                <div className="flex items-center justify-center py-20 text-muted-foreground">
-                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                  <span>Loading kiosk...</span>
-                </div>
-              )}
-            </div>
+            {schoolId ? (
+              <LibraryStudentSelfCheckoutPortal
+                schoolId={schoolId}
+                categories={categories}
+                getStudentName={getName}
+                students={students}
+                embedded
+                initialStudentId={kioskHandoffStudentId}
+                onInitialStudentConsumed={() => setKioskHandoffStudentId(null)}
+                initialMode={kioskInitialMode ?? undefined}
+                onExit={() => setHubHome(true)}
+                libraryLocationId={activeLibrary.id}
+                libraryLocations={locations}
+              />
+            ) : (
+              <div className="rounded-3xl border bg-card/60 flex items-center justify-center py-20 text-muted-foreground min-h-[min(460px,calc(100dvh-7rem))] md:min-h-[460px]">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                <span>Loading kiosk...</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -954,7 +967,7 @@ export function LibraryWorkspace({
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => switchTab('reports')} className="gap-2 text-xs">
                           <BarChart3 className="h-4 w-4 text-primary" />
-                          <span>Reports</span>
+                          <span>Reports &amp; Analytics</span>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                       </>
@@ -993,6 +1006,26 @@ export function LibraryWorkspace({
                 </DropdownMenu>
 
                 <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const queue =
+                      selected.size > 0
+                        ? selectedItems
+                        : filteredCatalog.filter((item) => libraryCopyNeedsProcessing(item));
+                    if (queue.length) print(queue);
+                  }}
+                  disabled={
+                    selected.size === 0 &&
+                    !filteredCatalog.some((item) => libraryCopyNeedsProcessing(item))
+                  }
+                  className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print Labels</span>
+                </Button>
+
+                <Button
                   size="sm"
                   onClick={() => setIntakeOpen(true)}
                   className="h-9 gap-1.5 rounded-xl text-xs font-bold shadow-xs"
@@ -1005,32 +1038,57 @@ export function LibraryWorkspace({
 
             {/* Added Copies Notification */}
             {addedCopies.length > 0 && (
-              <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/40 bg-primary/10 p-3.5 animate-in fade-in">
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-primary">
-                  <Check className="h-4 w-4 shrink-0" />
-                  <span>{addedCopies.length} new copies onboarded and ready for barcodes.</span>
+              <motion.div
+                role="status"
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                className="library-notice-banner relative z-20 flex flex-col gap-3 rounded-2xl border-2 border-amber-500 bg-amber-50 p-4 text-stone-900 shadow-lg sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-700 text-white shadow-sm">
+                    <Check className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-base font-semibold leading-snug text-stone-900">
+                      {addedCopies.length} new {addedCopies.length === 1 ? 'copy' : 'copies'} added
+                    </p>
+                    <p className="text-sm leading-relaxed text-stone-700">
+                      Next: {LIBRARY_CATALOGING_SHORT}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={() => print(addedCopies)} className="h-8 rounded-xl font-bold text-xs">
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => print(addedCopies)}
+                    className="h-10 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800"
+                  >
+                    <Printer className="h-4 w-4" />
                     Print Labels
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setAddedCopies([])} className="h-8 rounded-xl text-xs">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAddedCopies([])}
+                    className="h-10 rounded-xl border-stone-400 bg-white px-4 text-sm font-semibold text-stone-800 hover:bg-stone-100"
+                  >
                     Dismiss
                   </Button>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Consolidated Filter & View Toolbar */}
             <div className={cn('rounded-2xl p-3.5 shadow-xs space-y-3 border', currentTheme.classes.card)}>
-              {/* Filter controls row: search always visible, extra filters collapse behind "More filters" */}
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative min-w-52 flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     className="pl-9 h-9 rounded-xl border-border/70 text-xs shadow-none"
                     aria-label="Search catalog"
-                    placeholder="Search title, author, ISBN, barcode, shelf location..."
+                    placeholder="Search by title…"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -1047,98 +1105,115 @@ export function LibraryWorkspace({
                   )}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setFiltersExpanded((v) => !v)}
-                  className={cn(
-                    'h-9 shrink-0 inline-flex items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-all',
-                    filtersExpanded || activeFilterCount > 0
-                      ? 'border-primary/50 bg-primary/10 text-primary'
-                      : 'border-border/70 bg-background text-muted-foreground hover:text-foreground',
-                  )}
+                <select
+                  aria-label="Sort catalog"
+                  className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-semibold text-foreground shadow-xs"
+                  value={catalogSort}
+                  onChange={(e) => {
+                    setCatalogSort(e.target.value as any);
+                    setPage(1);
+                  }}
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>More Filters</span>
-                  {activeFilterCount > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-black">
-                      {activeFilterCount}
-                    </Badge>
-                  )}
-                  <ChevronDown className={cn('h-3.5 w-3.5 opacity-60 transition-transform', filtersExpanded && 'rotate-180')} />
-                </button>
+                  <option value="title_asc">Title (A–Z)</option>
+                  <option value="newest">✨ Sort: Newest Added</option>
+                  <option value="title_desc">Title (Z–A)</option>
+                  <option value="author_asc">Author (A–Z)</option>
+                  <option value="author_desc">Author (Z–A)</option>
+                  <option value="shelf">Shelf Location</option>
+                </select>
+
+                <select
+                  aria-label="Filter status"
+                  className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
+                  value={status}
+                  onChange={(e) => {
+                    setStatus(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="available">Available Now</option>
+                  <option value="checked_out">On Loan</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="lost">Lost</option>
+                  <option value="damaged">Damaged</option>
+                </select>
+
+                <select
+                  aria-label="Filter shelf"
+                  className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
+                  value={shelfFilter}
+                  onChange={(e) => {
+                    setShelfFilter(e.target.value);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Shelves / Locations</option>
+                  {availableShelves.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  aria-label="Filter by label status"
+                  className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
+                  value={labelFilter}
+                  onChange={(e) => {
+                    setLabelFilter(e.target.value as any);
+                    setPage(1);
+                  }}
+                >
+                  <option value="all">All Labels</option>
+                  <option value="labeled">🏷️ Fully Cataloged</option>
+                  <option value="unlabeled">⚠️ Needs Processing</option>
+                  <option value="shared_number">Same number as another book</option>
+                </select>
               </div>
 
-              {filtersExpanded && (
-                <div className="flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <select
-                    aria-label="Sort catalog"
-                    className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-semibold text-foreground shadow-xs"
-                    value={catalogSort}
-                    onChange={(e) => {
-                      setCatalogSort(e.target.value as any);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="newest">✨ Sort: Newest Added</option>
-                    <option value="title_asc">Title (A–Z)</option>
-                    <option value="title_desc">Title (Z–A)</option>
-                    <option value="author_asc">Author (A–Z)</option>
-                    <option value="author_desc">Author (Z–A)</option>
-                    <option value="shelf">Shelf Location</option>
-                  </select>
-
-                  <select
-                    aria-label="Filter status"
-                    className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
-                    value={status}
-                    onChange={(e) => {
-                      setStatus(e.target.value);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="available">Available Now</option>
-                    <option value="checked_out">On Loan</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="lost">Lost</option>
-                    <option value="damaged">Damaged</option>
-                  </select>
-
-                  <select
-                    aria-label="Filter shelf"
-                    className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
-                    value={shelfFilter}
-                    onChange={(e) => {
-                      setShelfFilter(e.target.value);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="all">All Shelves / Locations</option>
-                    {availableShelves.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    aria-label="Filter by label status"
-                    className="h-9 rounded-xl border border-border/70 bg-background px-3 text-xs font-medium"
-                    value={labelFilter}
-                    onChange={(e) => {
-                      setLabelFilter(e.target.value as any);
-                      setPage(1);
-                    }}
-                  >
-                    <option value="all">All Labels</option>
-                    <option value="labeled">🏷️ Fully Cataloged</option>
-                    <option value="unlabeled">⚠️ Needs Processing</option>
-                  </select>
-                </div>
+              {sharedNumberIds.size > 0 && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/60 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+                >
+                  <p className="font-semibold">
+                    {sharedNumberIds.size} {sharedNumberIds.size === 1 ? 'book' : 'books'} share a number with another book.
+                  </p>
+                  {labelFilter === 'shared_number' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-xl text-xs font-bold"
+                      onClick={() => {
+                        setLabelFilter('all');
+                        setPage(1);
+                      }}
+                    >
+                      Show all books
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 rounded-xl text-xs font-bold"
+                      onClick={() => {
+                        setLabelFilter('shared_number');
+                        setPage(1);
+                      }}
+                    >
+                      Show them
+                    </Button>
+                  )}
+                </motion.div>
               )}
 
               {/* Dedicated Hierarchy Bar when in Scheme Presentation Mode */}
-              {catalogPresentation === 'scheme' && (
+              {catalogView === 'scheme' && (
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-border/60 bg-muted/20 -mx-3.5 -mb-3.5 p-3 rounded-b-2xl">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
@@ -1230,7 +1305,7 @@ export function LibraryWorkspace({
                     onCheckedChange={selectAllCurrentPage}
                     className="h-3.5 w-3.5"
                   />
-                  <span>Select page</span>
+                  <span>Select books</span>
                 </label>
                 <span className="text-[11px] text-muted-foreground">
                   {filteredCatalog.length} {filteredCatalog.length === 1 ? 'copy' : 'copies'}
@@ -1423,33 +1498,16 @@ export function LibraryWorkspace({
 
             {/* Book view switcher — placed just above the grid, per feedback that it was too high up */}
             <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
-              {/* Catalog Presentation Mode Switcher */}
               <div className="inline-flex rounded-xl border border-border/80 bg-muted/40 p-0.5">
                 <button
                   type="button"
                   onClick={() => {
-                    setCatalogPresentation('scheme');
+                    setCatalogView('grouped');
                     setPage(1);
                   }}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                    catalogPresentation === 'scheme'
-                      ? 'bg-background text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <FolderTree className="h-3.5 w-3.5 text-primary" />
-                  <span>Shelves</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCatalogPresentation('grouped');
-                    setPage(1);
-                  }}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                    catalogPresentation === 'grouped'
+                    catalogView === 'grouped'
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
@@ -1460,51 +1518,87 @@ export function LibraryWorkspace({
                 <button
                   type="button"
                   onClick={() => {
-                    setCatalogPresentation('copies');
+                    setCatalogView('scheme');
                     setPage(1);
                   }}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all',
-                    catalogPresentation === 'copies'
+                    catalogView === 'scheme'
                       ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <Layers className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Copies</span>
+                  <FolderTree className="h-3.5 w-3.5 text-primary" />
+                  <span>Shelves</span>
                 </button>
               </div>
 
-              {/* Grid vs List toggle for copies/scheme views */}
-              <div className="flex items-center rounded-xl border border-border/70 p-0.5 bg-muted/40">
-                <button
-                  type="button"
-                  onClick={() => setViewMode('grid')}
-                  title="Cover Showcase Grid"
-                  className={cn(
-                    'p-1.5 rounded-lg transition-all',
-                    viewMode === 'grid' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <Grid className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode('list')}
-                  title="Detailed Data Table"
-                  className={cn(
-                    'p-1.5 rounded-lg transition-all',
-                    viewMode === 'list' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
-                  )}
-                >
-                  <List className="h-4 w-4" />
-                </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {viewMode === 'grid' ? (
+                  <motion.div
+                    className="inline-flex items-center rounded-xl border border-border/70 bg-muted/40 p-0.5"
+                    initial="hidden"
+                    animate="show"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: { opacity: 1, transition: { staggerChildren: 0.05 } },
+                    }}
+                  >
+                    {LIBRARY_COVER_SIZES.map((size) => (
+                      <motion.button
+                        key={size}
+                        type="button"
+                        title={LIBRARY_COVER_SIZE_LABELS[size].title}
+                        onClick={() => {
+                          setCoverSize(size);
+                          setPage(1);
+                        }}
+                        variants={{
+                          hidden: { opacity: 0, y: 4 },
+                          show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } },
+                        }}
+                        className={cn(
+                          'px-2.5 py-1.5 text-[11px] font-bold rounded-lg transition-all',
+                          coverSize === size
+                            ? 'bg-background shadow-xs text-foreground'
+                            : 'text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        {LIBRARY_COVER_SIZE_LABELS[size].label}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                ) : null}
+                <div className="flex items-center rounded-xl border border-border/70 p-0.5 bg-muted/40">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('grid')}
+                    title="Cover Showcase Grid"
+                    className={cn(
+                      'p-1.5 rounded-lg transition-all',
+                      viewMode === 'grid' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <Grid className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('list')}
+                    title="Detailed Data Table"
+                    className={cn(
+                      'p-1.5 rounded-lg transition-all',
+                      viewMode === 'list' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
             <AnimatePresence mode="wait">
             <motion.div
-              key={`${catalogPresentation}-${status}`}
+              key={`${catalogView}-${status}-${viewMode}-${coverSize}`}
               layoutId="library-catalog-results"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1512,7 +1606,7 @@ export function LibraryWorkspace({
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
             >
             {/* PRESENTATION MODE 1: ORGANIZED HIERARCHY SCHEME VIEW */}
-            {catalogPresentation === 'scheme' && (
+            {catalogView === 'scheme' && (
               <div className="space-y-6">
                 {organizedGroups.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center space-y-3 bg-muted/10">
@@ -1546,10 +1640,8 @@ export function LibraryWorkspace({
                             >
                               {activeScheme === 'genre_then_author' ? (
                                 <Tag className="h-4 w-4" />
-                              ) : activeScheme === 'author_then_genre' ? (
-                                primaryGroup.label.charAt(0).toUpperCase()
                               ) : (
-                                <MapPin className="h-4 w-4" />
+                                primaryGroup.label.charAt(0).toUpperCase()
                               )}
                             </div>
                             <div className="min-w-0">
@@ -1618,6 +1710,7 @@ export function LibraryWorkspace({
                                   getName={getName}
                                   currentTheme={currentTheme}
                                   viewMode={viewMode}
+                                  coverSize={coverSize}
                                   defaultShelf={primaryGroup.shelfLocation}
                                   getGenreColor={(item) =>
                                     resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation).color
@@ -1634,67 +1727,79 @@ export function LibraryWorkspace({
               </div>
             )}
 
-            {/* PRESENTATION MODE 2: COPIES VIEW (Clustered into piles for multiple copies) */}
-            {catalogPresentation === 'copies' && (
-              <LibraryBookPileGrid
-                showCoverImages={settings.libraryCatalogShowCoverImages ?? true}
-                piles={groupBooksIntoPiles(currentCatalogSlice)}
-                unstackedPileKeys={unstackedPileKeys}
-                onTogglePile={togglePile}
-                selected={selected}
-                onToggleSelect={toggleSelect}
-                onOpenDetails={(item) => {
-                  setEditing(item);
-                  setEditOpen(true);
-                }}
-                onAddCopy={handleAddAnotherCopy}
-                getName={getName}
-                currentTheme={currentTheme}
-                viewMode={viewMode}
-                getGenreColor={(item) =>
-                  resolveBookClassification(item.category, settings.libraryGenreDefinitions, item.shelfLocation).color
-                }
-              />
-            )}
-
             {/* PRESENTATION MODE 3: GROUPED TITLES VIEW (Master Title Cards) */}
-            {catalogPresentation === 'grouped' && (
-              <div className="space-y-3">
+            {catalogView === 'grouped' && (
+              <motion.div
+                className={cn(
+                  viewMode === 'grid' ? libraryTitleGridClass(coverSize) : 'space-y-3',
+                )}
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: { opacity: 1, transition: { staggerChildren: 0.04 } },
+                }}
+              >
                 {currentGroupSlice.map((group) => {
-                  const isExpanded = expandedGroupKeys.has(group.key);
                   const totalCopies = group.copies.length;
+                  const primaryCopy = group.copies[0];
+                  const isGrid = viewMode === 'grid';
                   return (
-                    <div
+                    <motion.button
+                      type="button"
                       key={group.key}
-                      className={cn('rounded-2xl p-4 shadow-sm space-y-3 transition-all border', currentTheme.classes.card)}
+                      variants={{
+                        hidden: { opacity: 0, y: 8 },
+                        show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } },
+                      }}
+                      onClick={() => {
+                        if (!primaryCopy) return;
+                        setEditing(primaryCopy);
+                        setEditOpen(true);
+                      }}
+                      className={cn(
+                        'text-left shadow-sm transition-all border',
+                        currentTheme.classes.card,
+                        isGrid ? 'flex flex-col gap-2.5 rounded-2xl p-2.5' : 'w-full rounded-2xl p-4',
+                      )}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="h-20 w-14 shrink-0 overflow-hidden rounded-xl border shadow-xs">
+                      <div className={cn(isGrid ? 'flex flex-col gap-2.5' : 'flex items-start gap-4')}>
+                        <div
+                          className={cn(
+                            'rounded-xl border bg-muted/20 shadow-xs',
+                            isGrid ? 'aspect-[2/3] w-full' : 'h-20 w-14 shrink-0',
+                          )}
+                        >
                           <LibraryBookCover
                             coverUrl={group.coverUrl}
                             isbn={group.isbn}
                             title={group.name}
                             author={group.author}
                             aspect="portrait"
-                            className="h-full w-full"
+                            fit="contain"
+                            className="h-full w-full rounded-xl"
                           />
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-base font-black text-foreground truncate">{group.name}</h3>
+                            <h3 className={cn('font-black text-foreground', isGrid ? 'text-sm line-clamp-2' : 'text-base truncate')}>
+                              {group.name}
+                            </h3>
                             <Badge variant="secondary" className="font-bold text-xs">
                               {totalCopies} {totalCopies === 1 ? 'copy' : 'copies'}
                             </Badge>
                           </div>
-                          <p className="text-xs text-muted-foreground">{group.author || 'Author not recorded'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{group.author || 'Author not recorded'}</p>
                           <div className="flex flex-wrap items-center gap-2 pt-1">
-                            <Badge variant="outline" className="text-xs font-semibold">
-                              {group.shelfLocation || 'General Stacks'}
-                            </Badge>
+                            {!isGrid && (
+                              <Badge variant="outline" className="text-xs font-semibold">
+                                {group.shelfLocation || 'General Stacks'}
+                              </Badge>
+                            )}
                             {group.availableCount > 0 && (
                               <Badge className="bg-emerald-600 text-white font-bold text-xs">
-                                {group.availableCount} Available
+                                {group.availableCount === 1 ? 'Available' : `${group.availableCount} Available`}
                               </Badge>
                             )}
                             {group.loanCount > 0 && (
@@ -1709,75 +1814,11 @@ export function LibraryWorkspace({
                             )}
                           </div>
                         </div>
-
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleGroupExpand(group.key)}
-                          className="gap-1 rounded-xl text-xs font-bold shrink-0"
-                        >
-                          <span>{isExpanded ? 'Hide copies' : 'Show all copies'}</span>
-                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </Button>
                       </div>
-
-                      {/* Expanded Copies Sub-list */}
-                      {isExpanded && (
-                        <div className="border-t pt-3 space-y-2 pl-4 border-l-2 border-primary/20">
-                          {group.copies.map((copy: LibraryItem) => (
-                            <div
-                              key={copy.id}
-                              className="flex items-center justify-between gap-3 rounded-xl border bg-background p-2.5 text-xs"
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <Checkbox
-                                  checked={selected.has(copy.id)}
-                                  onCheckedChange={() => toggleSelect(copy.id)}
-                                />
-                                <span className="font-mono font-bold">{copy.upc}</span>
-                                {copy.copyNumber && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    Copy #{copy.copyNumber}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <Badge
-                                  variant={
-                                    copy.condition === 'lost' || copy.condition === 'damaged'
-                                      ? 'destructive'
-                                      : copy.status === 'checked_out'
-                                        ? 'default'
-                                        : 'secondary'
-                                  }
-                                  className="text-[10px] capitalize font-bold"
-                                >
-                                  {copy.condition && copy.condition !== 'good'
-                                    ? copy.condition
-                                    : copy.status === 'checked_out'
-                                      ? `On loan to ${getName(copy.checkedOutTo || undefined)}`
-                                      : 'Available'}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditing(copy);
-                                    setEditOpen(true);
-                                  }}
-                                  className="h-7 text-xs font-semibold"
-                                >
-                                  Edit
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    </motion.button>
                   );
                 })}
-              </div>
+              </motion.div>
             )}
             </motion.div>
             </AnimatePresence>
@@ -2038,20 +2079,30 @@ export function LibraryWorkspace({
 
         {/* Circulation Reports — stats + charts, read-only overview for the librarian */}
         {tab === 'reports' && (
-          <div className="space-y-4 animate-in fade-in duration-200">
+          <div className="space-y-4">
             <div>
-              <h2 className="text-lg sm:text-xl font-black tracking-tight text-foreground">Reports &amp; Circulation</h2>
+              <motion.h2 layoutId="library-hub-reports" className="text-lg sm:text-xl font-black tracking-tight text-foreground">
+                Reports &amp; Analytics
+              </motion.h2>
               <p className="text-xs text-muted-foreground">
-                A visual overview of borrowing activity, cataloging progress, and what&rsquo;s popular right now.
+                Overdue books, popular titles, top readers, and lists you can print or download.
               </p>
             </div>
             <LibraryReportsCard
               items={scopedItems}
               loans={scopedLoans}
               loansUnavailable={Boolean(historyError)}
-              activeLoansCount={activeLoans.length}
-              overdueLoansCount={overdueLoans.length}
+              loansLoading={historyLoading}
+              reviews={libraryReviews}
+              reviewsUnavailable={Boolean(reviewsError)}
               genreDefinitions={settings.libraryGenreDefinitions}
+              getStudentName={getName}
+              getClassName={getClass}
+              onViewOverdue={() => {
+                setStatus('overdue');
+                setPage(1);
+                switchTab('catalog');
+              }}
             />
           </div>
         )}
@@ -2081,6 +2132,7 @@ export function LibraryWorkspace({
                   onArchive={archiveLocation}
                   archivedLocations={archivedLocations}
                   onRestore={restoreLocation}
+                  onDelete={loginState === 'admin' || loginState === 'developer' ? deleteLocation : undefined}
                 />
                 <LibraryPolicySettingsCard categories={categories} />
               </TabsContent>
@@ -2090,6 +2142,8 @@ export function LibraryWorkspace({
             </Tabs>
           </div>
         )}
+        </motion.div>
+        </AnimatePresence>
       </main>
 
       {isNightDesk && (
@@ -2121,11 +2175,9 @@ export function LibraryWorkspace({
             await itemAction(itemToDelete, 'delete');
           }}
           schoolId={schoolId}
-          upcTaken={async (code, excludeId) => {
-            if (!firestore) return false;
-            const found = await findLibraryItemByUpc(firestore, schoolId, code, { allowIsbn: false });
-            return !!(found && found.item.id !== excludeId);
-          }}
+          existingUpcs={scopedItems.filter((copy) => copy.id !== editing?.id).map((copy) => copy.upc)}
+          reservedCodes={reservedGenreCodesRef.current}
+          upcTaken={isLibraryUpcTaken}
         />
       )}
 
@@ -2138,16 +2190,35 @@ export function LibraryWorkspace({
         }}
       >
         <DialogContent
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => {
+            const el = e.target as HTMLElement | null;
+            if (el?.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')) return;
+            e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            const el = e.target as HTMLElement | null;
+            if (el?.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')) return;
+            e.preventDefault();
+          }}
           className="max-w-4xl w-[95vw] p-4 sm:p-4 flex flex-col max-h-[92vh] overflow-hidden"
         >
           <DialogHeader className="flex flex-row items-center justify-between gap-4 pb-2 border-b border-border/60 shrink-0">
-            <div>
+            <div className="min-w-0 space-y-2">
               <DialogTitle className="text-base sm:text-lg font-black">Add Books to Catalog</DialogTitle>
               <DialogDescription className="text-xs">
                 Scan book ISBN barcodes or paste an ISBN list. Online catalog details and covers are fetched automatically.
               </DialogDescription>
+              <LibraryCatalogingStepsNote
+                onPrint={() => {
+                  if (addedCopies.length) print(addedCopies);
+                }}
+                printDisabled={!addedCopies.length}
+                printHint={
+                  addedCopies.length
+                    ? undefined
+                    : 'Add the book first, then print its barcode sticker.'
+                }
+              />
             </div>
             <Button
               type="button"
@@ -2172,7 +2243,8 @@ export function LibraryWorkspace({
                 setTab('catalog');
               }}
               libraryItems={scopedItems}
-              upcTaken={async (code) => !!(firestore && (await findLibraryItemByUpc(firestore, schoolId, code, { allowIsbn: false })))}
+              reservedCodes={reservedGenreCodesRef.current}
+              upcTaken={isLibraryUpcTaken}
               initialScanCode={intakePrefillCode}
             />
           </div>
