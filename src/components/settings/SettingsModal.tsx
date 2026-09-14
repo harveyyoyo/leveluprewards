@@ -1317,7 +1317,7 @@ export function SettingsModal() {
                                          })}
                                      </div>
                                      <p className="text-[10px] text-muted-foreground font-medium leading-snug px-1">
-                                         Auto uses mobile on phones, app on tablets, and web on larger screens. Mobile keeps only teacher and student essentials.
+                                         Auto uses mobile on phones, app on tablets, and web on larger screens. Mobile keeps admin, teacher, and student tools.
                                      </p>
                                      {normalizeDisplayModePreference(
                                          interfaceRole === 'student'
