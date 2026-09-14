@@ -8,6 +8,8 @@ import {
   AlertCircle,
   BookOpen,
   BookOpenCheck,
+  Camera,
+  CameraOff,
   Check,
   ChevronDown,
   ChevronRight,
@@ -46,6 +48,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useConfirm } from '@/components/providers/ConfirmProvider';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { Button } from '@/components/ui/button';
@@ -91,7 +95,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
-import { LibrarySetupWizard } from './LibrarySetupWizard';
+import { LibraryGettingStarted } from './LibraryGettingStarted';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -212,6 +216,59 @@ export function LibraryWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchAutoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const focusSearchField = useCallback(() => {
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, []);
+
+  // Keep the search box focused (and its old text selected) while on Catalog, so a barcode
+  // scan — which is really just fast typing — always lands here instead of being picked up by
+  // the global scan listener below, which would otherwise jump away to the Librarian desk.
+  useEffect(() => {
+    if (tab !== 'catalog') return;
+    const t = setTimeout(() => focusSearchField(), 80);
+    return () => clearTimeout(t);
+  }, [tab, focusSearchField]);
+
+  // After a scan resolves, clear the search a moment later so the next book can be scanned
+  // straight into an empty box instead of getting appended after the last code.
+  const scheduleSearchClear = useCallback(() => {
+    if (searchAutoClearRef.current) clearTimeout(searchAutoClearRef.current);
+    searchAutoClearRef.current = setTimeout(() => {
+      setSearch('');
+      focusSearchField();
+    }, 1500);
+  }, [focusSearchField]);
+
+  useEffect(() => {
+    return () => {
+      if (searchAutoClearRef.current) clearTimeout(searchAutoClearRef.current);
+    };
+  }, []);
+
+  // Camera lookup for the Catalog search box — same "Enable camera scanning" school setting the
+  // kiosk and librarian desk use. A decoded barcode just becomes the search term (it already
+  // matches on UPC/ISBN, not just title) so the existing filter does the rest.
+  const catalogCameraSettingEnabled = Boolean(settings.libraryCameraScanEnabled);
+  const [catalogCameraActive, setCatalogCameraActive] = useState(false);
+  const {
+    videoRef: catalogVideoRef,
+    hasCameraPermission: catalogHasCameraPermission,
+    zoom: catalogCameraZoom,
+    setZoom: setCatalogCameraZoom,
+  } = useBarcodeScanner(
+    catalogCameraSettingEnabled && catalogCameraActive,
+    (code) => {
+      setSearch(code);
+      setPage(1);
+      scheduleSearchClear();
+    },
+    undefined,
+    { cameraEnabled: catalogCameraSettingEnabled && catalogCameraActive },
+  );
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
@@ -295,10 +352,19 @@ export function LibraryWorkspace({
   const [addedCopies, setAddedCopies] = useState<LibraryItem[]>([]);
   const [pendingScanCode, setPendingScanCode] = useState<string | null>(null);
 
-  // Global barcode listener: if scanning occurs on catalog or settings tabs,
-  // switch to Library Info desk to view details. Kiosk handles its own scans natively.
+  // Global barcode listener: if scanning occurs on settings or other non-catalog tabs,
+  // switch to Library Info desk to view details. Catalog and Kiosk handle their own scans
+  // natively — Catalog keeps its own search box focused (see above) so scans land there.
   useBarcodeReaderWedge({
-    active: tab !== 'desk' && tab !== 'kiosk' && !editOpen && !intakeOpen && !csvImportOpen && !shelfAuditOpen && !printSlipsOpen,
+    active:
+      tab !== 'desk' &&
+      tab !== 'kiosk' &&
+      tab !== 'catalog' &&
+      !editOpen &&
+      !intakeOpen &&
+      !csvImportOpen &&
+      !shelfAuditOpen &&
+      !printSlipsOpen,
     onScan: (code) => {
       setPendingScanCode(code);
       setTab('desk');
@@ -834,10 +900,14 @@ export function LibraryWorkspace({
           transition={{ type: 'spring', stiffness: 280, damping: 26 }}
           className="space-y-5 sm:space-y-6"
         >
-        {/* 0. FIRST-TIME SETUP WIZARD — name the library, add books, invite a librarian */}
+        {/* 0. GETTING STARTED — name the library, see real book count, learn how to add staff */}
         {tab === 'setup' && schoolId && (
           <div className="animate-in fade-in duration-200">
-            <LibrarySetupWizard schoolId={schoolId} onFinish={() => setHubHome(true)} />
+            <LibraryGettingStarted
+              schoolId={schoolId}
+              catalogCount={activeCopies.length}
+              onFinish={() => setHubHome(true)}
+            />
           </div>
         )}
 
@@ -1088,6 +1158,7 @@ export function LibraryWorkspace({
                 <div className="relative min-w-52 flex-1">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
+                    ref={searchInputRef}
                     className="pl-9 h-9 rounded-xl border-border/70 text-xs shadow-none"
                     aria-label="Search catalog"
                     placeholder="Search by title…"
@@ -1095,6 +1166,14 @@ export function LibraryWorkspace({
                     onChange={(e) => {
                       setSearch(e.target.value);
                       setPage(1);
+                    }}
+                    onKeyDown={(e) => {
+                      // A barcode scanner types like a fast keyboard and ends with Enter —
+                      // clear the box shortly after so the next book can be scanned fresh.
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        scheduleSearchClear();
+                      }
                     }}
                   />
                   {search && (
@@ -1172,7 +1251,33 @@ export function LibraryWorkspace({
                   <option value="unlabeled">⚠️ Needs Processing</option>
                   <option value="shared_number">Same number as another book</option>
                 </select>
+
+                {catalogCameraSettingEnabled && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-9 gap-1.5 rounded-xl text-xs font-semibold"
+                    onClick={() => setCatalogCameraActive((v) => !v)}
+                  >
+                    {catalogCameraActive ? <CameraOff className="h-3.5 w-3.5" /> : <Camera className="h-3.5 w-3.5" />}
+                    {catalogCameraActive ? 'Hide camera' : 'Show camera'}
+                  </Button>
+                )}
               </div>
+
+              {catalogCameraActive && (
+                <div className="overflow-hidden rounded-2xl border-2 border-primary/20 bg-muted/30 p-2 shadow-inner">
+                  <BarcodeScannerCameraView
+                    videoRef={catalogVideoRef}
+                    hasCameraPermission={catalogHasCameraPermission}
+                    zoom={catalogCameraZoom}
+                    onZoomChange={setCatalogCameraZoom}
+                    viewportClassName="aspect-video max-h-48 sm:max-h-56 rounded-xl overflow-hidden shadow-inner"
+                    hintText="Align a book barcode in frame to search for it"
+                  />
+                </div>
+              )}
 
               {sharedNumberIds.size > 0 && (
                 <motion.div

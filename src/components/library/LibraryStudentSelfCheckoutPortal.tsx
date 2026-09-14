@@ -164,6 +164,19 @@ export function LibraryStudentSelfCheckoutPortal({
   const [studentLoans, setStudentLoans] = useState<LibraryItem[]>([]);
   const [lastBookTitle, setLastBookTitle] = useState<string | null>(null);
   const [lastBookItem, setLastBookItem] = useState<LibraryItem | null>(null);
+  // A quick, non-final confirmation shown right under the scan box — a held-for-borrow book
+  // waiting on the student's ID, or a book just dropped in the box — distinct from the full
+  // "success" screen below (which only applies once a checkout/return has actually completed).
+  const [bookFlash, setBookFlash] = useState<{
+    item: LibraryItem;
+    headline: string;
+    subline: string;
+    kind: 'borrow' | 'return';
+  } | null>(null);
+  const [flashDamageReported, setFlashDamageReported] = useState(false);
+  useEffect(() => {
+    setFlashDamageReported(false);
+  }, [bookFlash]);
   const [damageReported, setDamageReported] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   /** "Help me choose a book" while no student is signed in: ask whether to scan a card for
@@ -416,6 +429,7 @@ export function LibraryStudentSelfCheckoutPortal({
     setLastReturnBorrower(null);
     setLastReturnFeedback(null);
     setLastReturnPlacement(null);
+    setBookFlash(null);
     setReviewOpen(false);
     setReviewStudentId(null);
     setReviewedThisReturn(false);
@@ -432,7 +446,7 @@ export function LibraryStudentSelfCheckoutPortal({
     autoResetSeconds > 0 &&
     !busy &&
     !isModalActive &&
-    (!!studentId || step === 'success');
+    (!!studentId || step === 'success' || !!pendingBookCode);
 
   const idleRemaining = useLibraryIdleReset(
     idleActive,
@@ -635,6 +649,12 @@ export function LibraryStudentSelfCheckoutPortal({
         setLastReturnFeedback(null);
         setLastReturnPlacement(null);
         setLastReturnBorrower(null);
+        setBookFlash({
+          item: bookItem,
+          headline: 'Book returned!',
+          subline: `"${bookItem.name}" is back in the library. Thanks!`,
+          kind: 'return',
+        });
         setReviewOpen(false);
         setReviewStudentId(null);
         setStep('student');
@@ -728,6 +748,7 @@ export function LibraryStudentSelfCheckoutPortal({
       scanLock.current = true;
       if (mode !== 'return') setBusy(true);
       setScanError(null);
+      setBookFlash(null);
       void (async () => {
         try {
           const found = await findLibraryItemByUpc(firestore, schoolId, code, {
@@ -797,8 +818,22 @@ export function LibraryStudentSelfCheckoutPortal({
               // Auto/Borrow: hold the book and wait for the student card — either order works.
               setPendingBookCode(code);
               setMode('checkout');
+              setBookFlash({
+                item: borrowCandidate.item,
+                headline: 'Ready to borrow!',
+                subline: 'Now scan your student ID card to finish borrowing.',
+                kind: 'borrow',
+              });
               playSound('success');
               toast({ title: 'Book ready to borrow', description: 'Now scan your student ID card to finish borrowing.' });
+              return;
+            }
+
+            // A book-shaped barcode (ISBN) that matched nothing above is a book that isn't in
+            // this school's catalog — not a student ID, even though it also didn't match one.
+            if (isRetailIsbnBarcode(code)) {
+              playSound('error');
+              reportScanError('Book not in the catalog. Ask library staff for help.');
               return;
             }
 
@@ -1469,6 +1504,82 @@ export function LibraryStudentSelfCheckoutPortal({
           );
         })()}
         </div>
+
+        {bookFlash ? (
+          <div className="flex flex-col items-center justify-center gap-3 pt-1 animate-in zoom-in-90 fade-in duration-300">
+            <LibraryBookCover
+              coverUrl={bookFlash.item.coverUrl}
+              isbn={bookFlash.item.isbn}
+              title={bookFlash.item.name}
+              author={bookFlash.item.author}
+              aspect="portrait"
+              className="h-36 w-24 sm:h-44 sm:w-28 shrink-0 rounded-2xl shadow-xl border-2 border-white/60 ring-1 ring-black/5"
+            />
+            <div className="text-center space-y-0.5">
+              <p className="text-xl font-black text-primary sm:text-2xl leading-tight">{bookFlash.headline}</p>
+              <p className="text-sm font-bold text-foreground">{bookFlash.item.name}</p>
+              {bookFlash.item.author && (
+                <p className="text-xs text-muted-foreground">{bookFlash.item.author}</p>
+              )}
+              <p className="text-xs text-muted-foreground">{bookFlash.subline}</p>
+            </div>
+            {bookFlash.kind === 'borrow' && autoResetSeconds > 0 && (
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-xs transition-colors',
+                  idleRemaining <= 5
+                    ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200 animate-pulse'
+                    : 'border-border/60 bg-muted/50 text-muted-foreground',
+                )}
+                role="timer"
+                aria-live="polite"
+              >
+                <RotateCcw
+                  className={cn('h-3 w-3 text-primary', idleRemaining <= 5 && 'text-amber-600 animate-spin')}
+                />
+                <span>
+                  Auto-reset in <strong className="font-mono font-bold text-foreground">{idleRemaining}s</strong>
+                </span>
+              </div>
+            )}
+            {bookFlash.kind === 'return' && (
+              <button
+                type="button"
+                disabled={flashDamageReported}
+                onClick={async () => {
+                  if (!bookFlash.item.id || !schoolId) return;
+                  try {
+                    await callLibrary(functions, 'libraryCirculation', {
+                      schoolId,
+                      itemId: bookFlash.item.id,
+                      // Drop-box returns are anonymous — no one is signed in — but the server
+                      // needs to know who just returned it. The item itself still remembers
+                      // (it hasn't been refetched since the return), so use that borrower.
+                      studentId: (studentId ?? bookFlash.item.checkedOutTo) || undefined,
+                      action: 'report_damage',
+                    });
+                    setFlashDamageReported(true);
+                    playSound('click');
+                    toast({
+                      title: 'Thanks for letting us know',
+                      description: 'A librarian will take a look at this book.',
+                    });
+                  } catch (e) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Could not report damage',
+                      description: (e as Error).message || 'Please tell a librarian directly.',
+                    });
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 underline decoration-dotted underline-offset-4 opacity-80 transition-opacity hover:opacity-100 disabled:opacity-60 dark:text-rose-300"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {flashDamageReported ? 'Reported — thanks!' : 'Report damage'}
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {scanError && (
           <p
