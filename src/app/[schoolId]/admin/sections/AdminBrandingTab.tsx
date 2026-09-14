@@ -37,6 +37,7 @@ import { Label } from '@/components/ui/label';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { useSettings, type Settings, type KioskProfile } from '@/components/providers/SettingsProvider';
+import { faceLoginBlockMessage, isFaceLoginBlockedForSchool, resolveSchoolState } from '@/lib/faceLoginPolicy';
 import { ThemeGeneratorModal } from '@/components/themes/ThemeGeneratorModal';
 import { StudentIdCard } from '@/components/student/StudentIdCard';
 import { normalizeStudentTheme } from '@/lib/themeContrast';
@@ -90,6 +91,7 @@ export function AdminBrandingTab({
 }) {
   const currentLogo = logoPreviewUrl ?? schoolData?.logoUrl;
   const { settings, updateSettings } = useSettings();
+  const faceLoginBlocked = isFaceLoginBlockedForSchool(settings);
   const [isDefaultThemeModalOpen, setIsDefaultThemeModalOpen] = useState(false);
   const [newSponsorDate, setNewSponsorDate] = useState('');
   const [newSponsorMessage, setNewSponsorMessage] = useState('');
@@ -1674,7 +1676,7 @@ export function AdminBrandingTab({
                       graphicMode: 'graphics' as const,
                       colorScheme: 'sapphire' as const,
                       kioskLoginTabScanEnabled: true,
-                      kioskLoginTabFaceEnabled: true,
+                      kioskLoginTabFaceEnabled: !isFaceLoginBlockedForSchool(settings),
                       kioskLoginTabCardEnabled: true,
                       kioskLoginTabTypeEnabled: true,
                       soundEnabled: true,
@@ -1827,17 +1829,28 @@ export function AdminBrandingTab({
                   />
                 </div>
 
-                <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">
-                  <span className="font-bold">Face Login (Camera)</span>
-                  <Switch
-                    checked={editingProfileSettings.kioskLoginTabFaceEnabled !== false}
-                    onCheckedChange={(val) =>
-                      setEditingProfileSettings((prev) => ({
-                        ...prev,
-                        kioskLoginTabFaceEnabled: val,
-                      }))
-                    }
-                  />
+                <div className="flex flex-col gap-2 border rounded-2xl p-3 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold">Face Login (Camera)</span>
+                    <Switch
+                      checked={!faceLoginBlocked && editingProfileSettings.kioskLoginTabFaceEnabled === true}
+                      onCheckedChange={(val) => {
+                        if (faceLoginBlocked) return;
+                        setEditingProfileSettings((prev) => ({
+                          ...prev,
+                          kioskLoginTabFaceEnabled: val,
+                          enableFaceLogin: val,
+                        }));
+                      }}
+                      disabled={faceLoginBlocked}
+                      aria-label="Face sign-in"
+                    />
+                  </div>
+                  {faceLoginBlocked ? (
+                    <p className="text-[11px] leading-snug text-muted-foreground">
+                      {faceLoginBlockMessage(resolveSchoolState(settings))}
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex items-center justify-between border rounded-2xl p-3 text-xs">

@@ -239,6 +239,15 @@ export function buildSettingsSearchItems(input: {
       keywords: ['repeat', 'signin', 'cooldown'],
     }),
     item({
+      id: 'schoolState',
+      view: 'general',
+      sectionId: 'settings-general-kiosk',
+      group: 'general',
+      adminOnly: true,
+      label: 'School state',
+      keywords: ['state', 'location', 'face', 'biometric', 'illinois', 'texas'],
+    }),
+    item({
       id: 'kioskLoginTabs',
       view: 'general',
       sectionId: 'settings-general-kiosk',
