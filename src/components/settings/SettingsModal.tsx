@@ -34,7 +34,7 @@ import {
     BarChart3, MessageSquare, ShoppingBag, ShieldCheck, Star,
     Users, Printer, LayoutDashboard, History, HelpCircle,
     Cpu, Cog, Lock, Sparkles, Trash2, RotateCcw, Smile, BookOpen,
-    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages, Megaphone
+    Layers, UsersRound, Ticket, Loader2, PanelTop, ScanFace, Languages, Megaphone, MapPin
 } from 'lucide-react';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { SchoolLanguageSetting } from '@/components/i18n/SchoolLanguageSetting';
@@ -45,6 +45,12 @@ import {
 } from '@/lib/i18n/settingsNav';
 import { useSettings, colorSchemes, type ColorScheme, type Settings as AppSettings } from '../providers/SettingsProvider';
 import { displayModeLabel, normalizeDisplayModePreference } from '@/lib/displayMode';
+import {
+    faceLoginBlockMessage,
+    isFaceLoginBlockedForSchool,
+    resolveSchoolState,
+} from '@/lib/faceLoginPolicy';
+import { US_STATE_OPTIONS } from '@/lib/usStates';
 import {
     MAIN_PORTAL_CARD_ORDER,
     resolveMainPortalCards,
@@ -132,6 +138,8 @@ export function SettingsModal() {
     const [showComingSoonFeatures, setShowComingSoonFeatures] = useState(false);
     const [selectedProfileId, setSelectedProfileId] = useState('');
     const local = draft ?? settings;
+    const faceLoginBlock = resolveSchoolState(local);
+    const faceLoginBlocked = faceLoginBlock.blocked;
     const unavailablePillarHint = (pillar: ProductPillarKey) =>
         isPillarAvailable(pillar) ? undefined : 'Not included for this school';
     const pathname = usePathname();
@@ -1636,6 +1644,48 @@ export function SettingsModal() {
                                     </div>
 
                                     <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
+                                        <p className="text-sm font-bold">School state</p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            Pick the school’s state. Face sign-in turns off in states that do not allow it. Card scan stays on.
+                                        </p>
+                                        <Select
+                                            value={local.schoolState || '__none__'}
+                                            onValueChange={(val) => {
+                                                const nextState = val === '__none__' ? '' : val;
+                                                handleToggle('schoolState', nextState);
+                                                if (isFaceLoginBlockedForSchool({
+                                                    schoolState: nextState,
+                                                    smartScreenLocationZip: local.smartScreenLocationZip,
+                                                })) {
+                                                    handleToggle('kioskLoginTabFaceEnabled', false);
+                                                    handleToggle('enableFaceLogin', false);
+                                                }
+                                            }}
+                                            disabled={!canManageSchoolSettings}
+                                        >
+                                            <SelectTrigger className="h-11 rounded-xl" aria-label="School state">
+                                                <span className="flex items-center gap-2">
+                                                    <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                                                    <SelectValue placeholder="Choose a state" />
+                                                </span>
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[290] max-h-72">
+                                                <SelectItem value="__none__">Not set</SelectItem>
+                                                {US_STATE_OPTIONS.map((state) => (
+                                                    <SelectItem key={state.code} value={state.code}>
+                                                        {state.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {faceLoginBlocked ? (
+                                            <p className="text-[11px] font-medium leading-snug text-amber-800 dark:text-amber-200">
+                                                {faceLoginBlockMessage(faceLoginBlock)}
+                                            </p>
+                                        ) : null}
+                                    </div>
+
+                                    <div className="space-y-2 border-t border-slate-200/60 dark:border-slate-700/50 pt-4">
                                         <p className="text-sm font-bold">Student kiosk sign-in tabs</p>
                                         <p className="text-[11px] text-muted-foreground">
                                             Choose which login methods appear on the student kiosk sign-in screen.
@@ -1698,8 +1748,9 @@ export function SettingsModal() {
                                             <div className="flex items-center justify-between gap-3">
                                                 <span className="text-xs font-bold">Face</span>
                                                 <Switch
-                                                    checked={local.kioskLoginTabFaceEnabled === true}
+                                                    checked={!faceLoginBlocked && local.kioskLoginTabFaceEnabled === true}
                                                     onCheckedChange={(checked) => {
+                                                        if (faceLoginBlocked) return;
                                                         handleToggle('kioskLoginTabFaceEnabled', checked);
                                                         handleToggle('enableFaceLogin', checked);
                                                         const nextCard = local.kioskLoginTabCardEnabled !== false;
@@ -1710,15 +1761,21 @@ export function SettingsModal() {
                                                             handleToggle('kioskLoginTabCardEnabled', true);
                                                         }
                                                     }}
-                                                    disabled={!canManageSchoolSettings}
+                                                    disabled={!canManageSchoolSettings || faceLoginBlocked}
+                                                    aria-label="Face sign-in"
                                                 />
                                             </div>
                                         </div>
+                                        {faceLoginBlocked ? (
+                                            <p className="text-[11px] text-muted-foreground">
+                                                Face is locked for this school’s state. Scan still works for cards and coupons.
+                                            </p>
+                                        ) : null}
                                         {!canManageSchoolSettings ? (
                                             <p className="text-[11px] text-muted-foreground">Admin only.</p>
                                         ) : null}
 
-                                        {canManageSchoolSettings && local.kioskLoginTabFaceEnabled === true ? (
+                                        {canManageSchoolSettings && !faceLoginBlocked && local.kioskLoginTabFaceEnabled === true ? (
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -2592,7 +2649,13 @@ export function SettingsModal() {
                 )}
 
                 {!isSearchingSettings && view === 'faceEnrollments' && canManageSchoolSettings ? (
-                    <SettingsFaceEnrollmentsPanel />
+                    faceLoginBlocked ? (
+                        <p className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-6 text-sm font-medium leading-relaxed text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+                            {faceLoginBlockMessage(faceLoginBlock)}
+                        </p>
+                    ) : (
+                        <SettingsFaceEnrollmentsPanel />
+                    )
                 ) : null}
 
                 {!isSearchingSettings && view === 'device' && (

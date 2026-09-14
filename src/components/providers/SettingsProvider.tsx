@@ -36,6 +36,8 @@ import {
     type DisplayModePreference,
     type ResolvedDisplayMode,
 } from '@/lib/displayMode';
+import { applyFaceLoginPolicy } from '@/lib/faceLoginPolicy';
+import { normalizeUsState } from '@/lib/usStates';
 import { resolveMainPortalCards, type MainPortalCardId } from '@/lib/portalHub';
 import type { ClassroomCelebrationEffect } from '@/lib/classroomSeatingChart';
 import {
@@ -314,6 +316,8 @@ interface Settings {
     studentPortalPortraitDisplay?: boolean;
     enableClassSignIn: boolean;
     enableFaceLogin: boolean;
+    /** Two-letter US state for the school (used to lock Face sign-in where required). */
+    schoolState?: string;
     /** Welcome styles picker on the kiosk (`/student/welcome`). Gated by `STUDENT_WELCOME_STYLES_LIVE` until shipped. */
     enableStudentWelcome: boolean;
     /** Short "welcome back" splash when a student lands on the kiosk dashboard. Can be turned off per student. */
@@ -935,6 +939,7 @@ const defaultSettings: Settings = {
     kioskPortraitDisplay: false,
     enableClassSignIn: false,
     enableFaceLogin: false,
+    schoolState: '',
     enableStudentWelcome: false,
     enableStudentWelcomeBackScreen: true,
     studentWelcomeBackDurationSec: 2,
@@ -1310,7 +1315,8 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
             next.payHomework = false;
             next.enableHomework = false;
         }
-        return next;
+        next.schoolState = normalizeUsState(next.schoolState);
+        return applyFaceLoginPolicy(next);
     }, [pillarAccess]);
 
     const latestForFirestoreRef = useRef<Settings | null>(null);
