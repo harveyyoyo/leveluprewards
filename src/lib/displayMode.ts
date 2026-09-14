@@ -10,11 +10,11 @@ export type DisplayModeViewport = {
   isTabletOrMobile: boolean;
 };
 
-/** Portal hub cards kept in mobile display (on-the-go staff + student kiosk). */
-export const MOBILE_PORTAL_IDS = new Set(['print', 'redeem']);
+/** Portal hub cards kept in mobile display (admin + on-the-go staff + student kiosk). */
+export const MOBILE_PORTAL_IDS = new Set(['admin', 'print', 'redeem']);
 
 /** Bottom dock destinations kept in mobile display. */
-export const MOBILE_DOCK_IDS = new Set(['print', 'redeem']);
+export const MOBILE_DOCK_IDS = new Set(['admin', 'print', 'redeem']);
 
 /** Teacher portal tabs kept in mobile display (daily on-the-go tools). */
 export const MOBILE_TEACHER_TAB_VALUES = new Set([
@@ -54,7 +54,7 @@ export function isStaffPortalTabOnDisplayMode(
   mode: ResolvedDisplayMode,
 ): boolean {
   if (!isMobileDisplayMode(mode)) return true;
-  if (role === 'admin') return false;
+  if (role === 'admin') return true;
   if (role === 'secretary') return tabValue === 'coupons';
   return MOBILE_TEACHER_TAB_VALUES.has(tabValue);
 }
