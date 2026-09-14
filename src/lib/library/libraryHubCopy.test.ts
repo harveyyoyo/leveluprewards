@@ -8,7 +8,7 @@ import {
 
 describe('libraryHubCopy', () => {
   it('uses the built-in welcome wording when nothing is saved', () => {
-    expect(resolveLibraryHubCopy(undefined).welcomeHighlight).toBe('the Library');
+    expect(resolveLibraryHubCopy(undefined).welcomeHighlight).toBe('Our Library');
     expect(resolveLibraryHubCopy({}).deskTitle).toBe('Librarian');
     expect(resolveLibraryHubCopy({}).reportsTitle).toBe('Reports');
   });

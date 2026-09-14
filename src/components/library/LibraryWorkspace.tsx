@@ -71,14 +71,12 @@ import {
 } from '@/lib/library/libraryOrganization';
 import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
 import {
-  DEFAULT_LIBRARY_LOCATION_ID,
   filterItemsForLibrary,
   itemLibraryLocationId,
   libraryPath,
 } from '@/lib/library/libraryLocations';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryInfoDesk } from './LibraryInfoDesk';
-import { LibraryLocationsCard } from './LibraryLocationsCard';
 import { LibraryTotalsStatCards } from './LibraryTotalsStatCards';
 import { LibraryStudentSelfCheckoutPortal } from './LibraryStudentSelfCheckoutPortal';
 import { LibraryBookCover } from './LibraryBookCover';
@@ -93,6 +91,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
+import { LibrarySetupWizard } from './LibrarySetupWizard';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -190,7 +189,7 @@ export function LibraryWorkspace({
       setHubHome(false);
       return;
     }
-    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk'].includes(rawTabParam)) {
+    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk', 'setup'].includes(rawTabParam)) {
       setTab((current) => (current === rawTabParam ? current : rawTabParam));
       setHubHome(false);
     }
@@ -347,15 +346,7 @@ export function LibraryWorkspace({
     reportPermissionErrors: false,
   });
 
-  const {
-    locations,
-    storedLocations,
-    createLocation,
-    renameLocation,
-    archiveLocation,
-    restoreLocation,
-    deleteLocation,
-  } = useLibraryLocations(schoolId);
+  const { locations } = useLibraryLocations(schoolId);
   const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
   const scopedItems = useMemo(
     () => filterItemsForLibrary(items, activeLibrary.id),
@@ -374,10 +365,6 @@ export function LibraryWorkspace({
       return true;
     }
   }, [firestore, schoolId, scopedItems]);
-  const archivedLocations = useMemo(
-    () => storedLocations.filter((location) => location.archived && location.id !== DEFAULT_LIBRARY_LOCATION_ID),
-    [storedLocations],
-  );
 
   const studentsById = useMemo(() => new Map((students ?? []).map((s) => [s.id, s])), [students]);
   const studentNameMode = resolveLibraryStudentNameMode(
@@ -787,6 +774,11 @@ export function LibraryWorkspace({
           setTab('settings');
           setHubHome(false);
         }}
+        onOpenSetup={() => {
+          if (navSoundEnabled) playSound('click');
+          setTab('setup');
+          setHubHome(false);
+        }}
       />
     );
   }
@@ -815,7 +807,9 @@ export function LibraryWorkspace({
               ? 'catalog'
               : tab === 'reports'
                 ? 'reports'
-                : (tab as 'desk' | 'catalog' | 'kiosk')
+                : tab === 'setup'
+                  ? 'hub'
+                  : (tab as 'desk' | 'catalog' | 'kiosk')
         }
         onNavigate={switchTab}
         onHome={() => {
@@ -840,11 +834,19 @@ export function LibraryWorkspace({
           transition={{ type: 'spring', stiffness: 280, damping: 26 }}
           className="space-y-5 sm:space-y-6"
         >
+        {/* 0. FIRST-TIME SETUP WIZARD — name the library, add books, invite a librarian */}
+        {tab === 'setup' && schoolId && (
+          <div className="animate-in fade-in duration-200">
+            <LibrarySetupWizard schoolId={schoolId} onFinish={() => setHubHome(true)} />
+          </div>
+        )}
+
         {/* 1. LIBRARY DESK — lookup only; borrow/return happens on the Kiosk */}
         {tab === 'desk' && (
           <div className="space-y-6 animate-in fade-in duration-200">
             <LibraryInfoDesk
               catalogItems={activeCopies}
+              allCatalogItems={items}
               students={students}
               categories={categories}
               getStudentName={getName}
@@ -2111,7 +2113,7 @@ export function LibraryWorkspace({
         {tab === 'settings' && (
           <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-200">
             <Tabs defaultValue="policies" className="w-full space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border bg-background p-4 sm:p-5">
                 <div>
                   <h2 className="text-lg sm:text-xl font-black text-foreground">Library Settings &amp; Configuration</h2>
                   <p className="text-xs text-muted-foreground">Manage circulation limits, shelving zones, fines, and visual themes.</p>
@@ -2122,21 +2124,6 @@ export function LibraryWorkspace({
                 </TabsList>
               </div>
               <TabsContent value="policies" className="mt-0 space-y-6">
-                <LibraryLocationsCard
-                  locations={locations}
-                  classes={classes}
-                  activeId={activeLibrary.id}
-                  onSelect={setActiveLibrary}
-                  onCreate={createLocation}
-                  onRename={renameLocation}
-                  onArchive={archiveLocation}
-                  archivedLocations={archivedLocations}
-                  onRestore={restoreLocation}
-                  // Firestore rules only grant delete on this collection to admin/developer —
-                  // hide the button for other staff (librarian, teacher, secretary) so it never
-                  // shows an action that will just fail with a confusing "try again" toast.
-                  onDelete={loginState === 'admin' || loginState === 'developer' ? deleteLocation : undefined}
-                />
                 <LibraryPolicySettingsCard categories={categories} />
               </TabsContent>
               <TabsContent value="theme" className="mt-0 space-y-6">

@@ -153,7 +153,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
       cardHighlight: 'border-emerald-500/40 bg-emerald-500/10 ring-2 ring-emerald-400/30',
       badge: 'border-emerald-300 bg-emerald-100 text-emerald-950 font-bold',
       accent: 'text-emerald-700',
-      button: 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-emerald-700/20 shadow-md',
+      button: 'bg-amber-300 text-amber-950 hover:bg-amber-400 shadow-amber-600/10 shadow-sm',
     },
   },
   sunset_terrace: {

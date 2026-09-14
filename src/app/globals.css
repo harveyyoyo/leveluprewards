@@ -5554,16 +5554,17 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 }
 
-/* Classy scanner beam for the Circulation Desk card */
+/* Classy scanner beam for the Circulation Desk card — `--scanner-color` lets a caller (e.g. the
+ * library kiosk, which themes this per Library Theme) override the color; defaults to --primary. */
 .scanner-beam {
   position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--scanner-color, hsl(var(--primary))), transparent);
   box-shadow:
-    0 0 10px color-mix(in oklab, hsl(var(--primary)) 70%, transparent),
-    0 0 22px color-mix(in oklab, hsl(var(--primary)) 35%, transparent);
+    0 0 10px color-mix(in oklab, var(--scanner-color, hsl(var(--primary))) 70%, transparent),
+    0 0 22px color-mix(in oklab, var(--scanner-color, hsl(var(--primary))) 35%, transparent);
   opacity: 0.85;
   animation: scanner-sweep 2.8s ease-in-out infinite;
   pointer-events: none;
@@ -5573,42 +5574,43 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 @keyframes scanner-sweep {
   0%,
   100% {
-    top: 18%;
+    left: 18%;
     opacity: 0.35;
   }
   50% {
-    top: 82%;
+    left: 82%;
     opacity: 0.95;
   }
 }
 
 .scanner-frame {
   position: relative;
+  overflow: hidden;
 }
 
 .scanner-frame::before,
 .scanner-frame::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 24px;
+  left: 0;
+  right: 0;
+  height: 24px;
   pointer-events: none;
-  border: 2px solid color-mix(in oklab, hsl(var(--primary)) 45%, transparent);
+  border: 2px solid color-mix(in oklab, var(--scanner-color, hsl(var(--primary))) 45%, transparent);
   transition: border-color 0.3s ease;
   z-index: 3;
 }
 
 .scanner-frame::before {
-  left: 0;
-  border-right: 0;
-  border-radius: 16px 0 0 16px;
+  top: 0;
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
 }
 
 .scanner-frame::after {
-  right: 0;
-  border-left: 0;
-  border-radius: 0 16px 16px 0;
+  bottom: 0;
+  border-top: 0;
+  border-radius: 0 0 16px 16px;
 }
 
 .scanner-success {
@@ -5617,7 +5619,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
 @keyframes scanner-success-flash {
   0% {
-    background-color: color-mix(in oklab, hsl(var(--primary)) 18%, transparent);
+    background-color: color-mix(in oklab, var(--scanner-color, hsl(var(--primary))) 18%, transparent);
   }
   100% {
     background-color: transparent;

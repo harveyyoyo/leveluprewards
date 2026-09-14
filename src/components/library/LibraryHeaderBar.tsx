@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Home, Library, BookOpen, Monitor, Settings, BarChart3 } from 'lucide-react';
+import { Home, Library, BookOpen, Monitor, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LevelUpLogoMark from '@/components/logos/Logo';
 import type { LibraryTheme } from '@/lib/library/libraryThemes';
@@ -10,11 +10,11 @@ import type { LibraryTheme } from '@/lib/library/libraryThemes';
 export type LibraryHeaderTab = 'hub' | 'desk' | 'catalog' | 'kiosk' | 'reports' | 'settings';
 export type LibraryHeaderNavTab = 'desk' | 'catalog' | 'kiosk' | 'reports';
 
+// Reports isn't a top-nav tab — it's opened from a link on the Librarian page.
 const NAV_TABS = [
   { id: 'desk', label: 'Librarian', icon: Library, activeColor: '#2563eb' },
   { id: 'catalog', label: 'Catalog', icon: BookOpen, activeColor: '#059669' },
   { id: 'kiosk', label: 'Kiosk', icon: Monitor, activeColor: '#d97706' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, activeColor: '#7c3aed' },
 ] as const;
 
 /**
@@ -76,7 +76,7 @@ export function LibraryHeaderBar({
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
           </button>
-          {NAV_TABS.filter((tab) => !(activeTab === 'hub' && tab.id === 'reports')).map(({ id, label, icon: TabIcon, activeColor }) => (
+          {NAV_TABS.map(({ id, label, icon: TabIcon, activeColor }) => (
             <button
               key={id}
               type="button"

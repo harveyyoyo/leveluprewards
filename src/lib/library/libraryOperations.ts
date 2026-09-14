@@ -133,22 +133,20 @@ export async function findLibraryItemByUpc(
   return null;
 }
 
+// A student's currently-borrowed books always show in full, no matter which library location's
+// kiosk or desk is asking — a book checked out from one room shouldn't disappear from view (or
+// from limit counting) just because a different room's screen happens to be active right now.
 export async function getStudentLibraryCheckouts(
   firestore: Firestore,
   schoolId: string,
   studentId: string,
-  options?: { libraryLocationId?: string | null },
 ): Promise<LibraryItem[]> {
   const snap = await getDocs(
     query(collection(firestore, 'schools', schoolId, 'library'), where('checkedOutTo', '==', studentId)),
   );
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as LibraryItem)
-    .filter((item) => {
-      if (item.status !== 'checked_out') return false;
-      if (!options?.libraryLocationId) return true;
-      return itemBelongsToLibrary(item, options.libraryLocationId);
-    });
+    .filter((item) => item.status === 'checked_out');
 }
 
 export async function countStudentLibraryCheckouts(
