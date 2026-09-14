@@ -76,7 +76,10 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
       if (typeof data.patch?.libraryLocationId === 'string' || typeof data.libraryLocationId === 'string') {
         patch.libraryLocationId = asLibraryLocationId(data.patch?.libraryLocationId ?? data.libraryLocationId);
       }
-      if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Enter a shelf, category, or library.');
+      if (typeof data.patch?.condition === 'string' && ['good', 'lost', 'damaged'].includes(data.patch.condition)) {
+        patch.condition = data.patch.condition;
+      }
+      if (!Object.keys(patch).length) throw new HttpsError('invalid-argument', 'Enter a shelf, category, condition, or library.');
       const docs = await Promise.all(ids.map(id => tx.get(school.collection('library').doc(id))));
       if (docs.some(d => !d.exists)) throw new HttpsError('not-found', 'A selected copy no longer exists.');
       for (const doc of docs) tx.update(doc.ref, patch);

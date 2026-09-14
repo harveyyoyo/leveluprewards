@@ -167,7 +167,16 @@ export function LibraryStudentSelfCheckoutPortal({
   // A quick, non-final confirmation shown right under the scan box — a held-for-borrow book
   // waiting on the student's ID, or a book just dropped in the box — distinct from the full
   // "success" screen below (which only applies once a checkout/return has actually completed).
-  const [bookFlash, setBookFlash] = useState<{ item: LibraryItem; headline: string; subline: string } | null>(null);
+  const [bookFlash, setBookFlash] = useState<{
+    item: LibraryItem;
+    headline: string;
+    subline: string;
+    kind: 'borrow' | 'return';
+  } | null>(null);
+  const [flashDamageReported, setFlashDamageReported] = useState(false);
+  useEffect(() => {
+    setFlashDamageReported(false);
+  }, [bookFlash]);
   const [damageReported, setDamageReported] = useState(false);
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   /** "Help me choose a book" while no student is signed in: ask whether to scan a card for
@@ -644,6 +653,7 @@ export function LibraryStudentSelfCheckoutPortal({
           item: bookItem,
           headline: 'Book returned!',
           subline: `"${bookItem.name}" is back in the library. Thanks!`,
+          kind: 'return',
         });
         setReviewOpen(false);
         setReviewStudentId(null);
@@ -812,6 +822,7 @@ export function LibraryStudentSelfCheckoutPortal({
                 item: borrowCandidate.item,
                 headline: 'Ready to borrow!',
                 subline: 'Now scan your student ID card to finish borrowing.',
+                kind: 'borrow',
               });
               playSound('success');
               toast({ title: 'Book ready to borrow', description: 'Now scan your student ID card to finish borrowing.' });
@@ -1155,27 +1166,6 @@ export function LibraryStudentSelfCheckoutPortal({
             </div>
           ) : null}
 
-          {bookFlash ? (
-            <div className="flex flex-col items-center justify-center gap-3 pt-2 animate-in zoom-in-90 fade-in duration-300">
-              <LibraryBookCover
-                coverUrl={bookFlash.item.coverUrl}
-                isbn={bookFlash.item.isbn}
-                title={bookFlash.item.name}
-                author={bookFlash.item.author}
-                aspect="portrait"
-                className="h-36 w-24 sm:h-44 sm:w-28 shrink-0 rounded-2xl shadow-xl border-2 border-white/60 ring-1 ring-black/5"
-              />
-              <div className="text-center space-y-0.5">
-                <p className="text-xl font-black text-primary sm:text-2xl leading-tight">{bookFlash.headline}</p>
-                <p className="text-sm font-bold text-foreground">{bookFlash.item.name}</p>
-                {bookFlash.item.author && (
-                  <p className="text-xs text-muted-foreground">{bookFlash.item.author}</p>
-                )}
-                <p className="text-xs text-muted-foreground">{bookFlash.subline}</p>
-              </div>
-            </div>
-          ) : null}
-
           {step === 'success' && lastAction === 'return' && lastReturnFeedback && (
             <div
               className={cn(
@@ -1514,6 +1504,63 @@ export function LibraryStudentSelfCheckoutPortal({
           );
         })()}
         </div>
+
+        {bookFlash ? (
+          <div className="flex flex-col items-center justify-center gap-3 pt-1 animate-in zoom-in-90 fade-in duration-300">
+            <LibraryBookCover
+              coverUrl={bookFlash.item.coverUrl}
+              isbn={bookFlash.item.isbn}
+              title={bookFlash.item.name}
+              author={bookFlash.item.author}
+              aspect="portrait"
+              className="h-36 w-24 sm:h-44 sm:w-28 shrink-0 rounded-2xl shadow-xl border-2 border-white/60 ring-1 ring-black/5"
+            />
+            <div className="text-center space-y-0.5">
+              <p className="text-xl font-black text-primary sm:text-2xl leading-tight">{bookFlash.headline}</p>
+              <p className="text-sm font-bold text-foreground">{bookFlash.item.name}</p>
+              {bookFlash.item.author && (
+                <p className="text-xs text-muted-foreground">{bookFlash.item.author}</p>
+              )}
+              <p className="text-xs text-muted-foreground">{bookFlash.subline}</p>
+            </div>
+            {bookFlash.kind === 'return' && (
+              <button
+                type="button"
+                disabled={flashDamageReported}
+                onClick={async () => {
+                  if (!bookFlash.item.id || !schoolId) return;
+                  try {
+                    await callLibrary(functions, 'libraryCirculation', {
+                      schoolId,
+                      itemId: bookFlash.item.id,
+                      // Drop-box returns are anonymous — no one is signed in — but the server
+                      // needs to know who just returned it. The item itself still remembers
+                      // (it hasn't been refetched since the return), so use that borrower.
+                      studentId: (studentId ?? bookFlash.item.checkedOutTo) || undefined,
+                      action: 'report_damage',
+                    });
+                    setFlashDamageReported(true);
+                    playSound('click');
+                    toast({
+                      title: 'Thanks for letting us know',
+                      description: 'A librarian will take a look at this book.',
+                    });
+                  } catch (e) {
+                    toast({
+                      variant: 'destructive',
+                      title: 'Could not report damage',
+                      description: (e as Error).message || 'Please tell a librarian directly.',
+                    });
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 underline decoration-dotted underline-offset-4 opacity-80 transition-opacity hover:opacity-100 disabled:opacity-60 dark:text-rose-300"
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {flashDamageReported ? 'Reported — thanks!' : 'Report damage'}
+              </button>
+            )}
+          </div>
+        ) : null}
 
         {scanError && (
           <p
