@@ -39,6 +39,7 @@ import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { useBarcodeReaderWedge } from '@/hooks/useBarcodeReaderWedge';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { BarcodeScannerCameraView } from '@/components/barcode/BarcodeScannerCameraView';
+import { LibraryScannerStage } from './LibraryScannerStage';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { lookupStudentId } from '@/lib/db/lookup';
 import {
@@ -47,6 +48,7 @@ import {
   getStudentLibraryCheckouts,
   forceReturnLibraryItem,
   callLibrary,
+  catalogCopyByScan,
 } from '@/lib/library/libraryOperations';
 import { formatDueDate, computeDaysOverdue, getLibraryPolicyFromSettings } from '@/lib/library/libraryPolicy';
 import {
@@ -107,7 +109,7 @@ export function LibraryCheckoutDesk({
   const functions = useFunctions();
   const { settings } = useSettings();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
-  const currentTheme = resolveLibraryTheme(currentThemeId);
+  const currentTheme = resolveLibraryTheme(currentThemeId, settings.libraryBoxOpacity);
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const [mode, setMode] = useState<'auto' | 'checkout' | 'return'>('auto');
@@ -123,6 +125,8 @@ export function LibraryCheckoutDesk({
   const [cameraActive, setCameraActive] = useState(false);
   const [lastScannedItem, setLastScannedItem] = useState<LibraryItem | null>(null);
   const [lastAction, setLastAction] = useState<'checkout' | 'return' | null>(null);
+  const [scanFlash, setScanFlash] = useState(false);
+  const wasBusyRef = useRef(false);
   const [returnPlacement, setReturnPlacement] = useState<{
     title: string;
     shelf: string;
@@ -397,6 +401,21 @@ export function LibraryCheckoutDesk({
 
           // 2. BOOK SCANNED
           if (foundItem) {
+            if (!foundItem.item.labeled) {
+              try {
+                const cataloged = await catalogCopyByScan(functions, schoolId, foundItem.item, cleanRaw);
+                if (cataloged) {
+                  foundItem.item.labeled = true;
+                  toast({
+                    title: 'Officially cataloged',
+                    description: `"${foundItem.item.name}" is now in the catalog.`,
+                  });
+                }
+              } catch {
+                // Keep going so a catalog write failure still lets staff look up the copy.
+              }
+            }
+
             let effectiveAction: 'checkout' | 'return' =
               mode === 'auto' ? (foundItem.item.status === 'checked_out' ? 'return' : 'checkout') : mode;
 
@@ -529,6 +548,7 @@ export function LibraryCheckoutDesk({
       libraryLocationId,
       describeWrongLibrary,
       catalogItems,
+      toast,
     ],
   );
 
@@ -538,6 +558,22 @@ export function LibraryCheckoutDesk({
       onClearInitialScan?.();
     }
   }, [initialScanCode, handleScan, onClearInitialScan]);
+
+  useEffect(() => {
+    if (busy) {
+      wasBusyRef.current = true;
+      setScanFlash(false);
+      return;
+    }
+    if (wasBusyRef.current) {
+      wasBusyRef.current = false;
+      if (!error) {
+        setScanFlash(true);
+        const timer = window.setTimeout(() => setScanFlash(false), 1400);
+        return () => window.clearTimeout(timer);
+      }
+    }
+  }, [busy, error]);
 
   const reader = useBarcodeReaderWedge({ active: true, disabled: busy, onScan: handleScan });
 
@@ -790,7 +826,7 @@ export function LibraryCheckoutDesk({
 
           {/* 3 Metric Cards Grid matching Concept B */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36">
+            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36 shadow-sm">
               <BookOpen className="h-5 w-5 text-slate-400" />
               <div>
                 <div className="text-3xl font-black text-white">{copiesCount ?? 0}</div>
@@ -800,7 +836,7 @@ export function LibraryCheckoutDesk({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36">
+            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36 shadow-sm">
               <Users className="h-5 w-5 text-slate-400" />
               <div>
                 <div className="text-3xl font-black text-white">{activeLoansCount ?? 0}</div>
@@ -810,7 +846,7 @@ export function LibraryCheckoutDesk({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36">
+            <div className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-6 flex flex-col justify-between h-36 shadow-sm">
               <AlertTriangle className={cn("h-5 w-5", (overdueLoansCount ?? 0) > 0 ? "text-rose-400" : "text-slate-400")} />
               <div>
                 <div className={cn("text-3xl font-black", (overdueLoansCount ?? 0) > 0 ? "text-rose-400" : "text-white")}>
@@ -1142,19 +1178,11 @@ export function LibraryCheckoutDesk({
             </div>
           )}
 
-          {/* Big Dashed Barcode Stage matching Lovable */}
-          <div className="rounded-3xl border-2 border-dashed border-border/80 bg-muted/10 p-8 sm:p-14 flex flex-col items-center justify-center text-center">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/80 text-muted-foreground/80 mb-3 border border-border/40 shadow-inner">
-              <ScanBarcode className="h-7 w-7 text-muted-foreground/70" />
-            </div>
-            <h4 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
-              Ready to scan
-            </h4>
-            <p className="text-xs text-muted-foreground mt-1">
-              Position barcode in front of camera or scanner
-            </p>
-
-            <div className="w-full max-w-xl mt-6 relative" ref={deskSearchRef}>
+          <LibraryScannerStage
+            status={busy ? 'scanning' : scanFlash ? 'success' : 'idle'}
+            className="w-full sm:p-14"
+          >
+            <div className="relative" ref={deskSearchRef}>
               <Input
                 id="library-desk-reader"
                 ref={reader.inputRef as any}
@@ -1177,28 +1205,18 @@ export function LibraryCheckoutDesk({
               />
               {renderDeskSuggestions()}
             </div>
-
-            <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-              {busy ? (
-                <>
-                  <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                  <span>PROCESSING BARCODE…</span>
-                </>
-              ) : error ? (
-                <>
-                  <AlertCircle className="h-3 w-3 text-destructive" />
-                  <span className="text-destructive font-semibold">{message}</span>
-                </>
-              ) : lastAction === 'return' ? (
-                <>
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{message}</span>
-                </>
-              ) : (
-                <span>WAITING FOR INPUT · · ·</span>
-              )}
-            </div>
-          </div>
+            {error ? (
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-destructive">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {message}
+              </p>
+            ) : lastAction === 'return' && !busy ? (
+              <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-700">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {message}
+              </p>
+            ) : null}
+          </LibraryScannerStage>
 
           {/* Quick Patron Name Search below the stage (when no student selected) */}
           {!studentId && (

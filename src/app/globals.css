@@ -295,6 +295,8 @@ html[data-office-portal] .office-content-pane {
   .student-kiosk-scan-beam-horizontal,
   .student-kiosk-scan-beam-core,
   .student-kiosk-scan-flash,
+  .student-kiosk-scan-glow,
+  .student-kiosk-scan-line,
   .rk-dot,
   .rk-rise,
   .rk-title {
@@ -354,6 +356,27 @@ html[data-office-portal] .office-content-pane {
   }
 }
 
+@keyframes rk-scan-line {
+  0% {
+    top: -6%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  45% {
+    top: 106%;
+    opacity: 1;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    top: 106%;
+    opacity: 0;
+  }
+}
+
 @keyframes rk-scan-flash {
   0%,
   44%,
@@ -363,6 +386,16 @@ html[data-office-portal] .office-content-pane {
   }
   50% {
     opacity: 0.28;
+  }
+}
+
+@keyframes rk-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
@@ -430,6 +463,15 @@ html[data-office-portal] .office-content-pane {
 
 .student-kiosk-scan-flash {
   animation: rk-scan-flash 1.05s linear infinite;
+}
+
+.student-kiosk-scan-glow {
+  animation: rk-glow-pulse 1.8s ease-in-out infinite;
+}
+
+.student-kiosk-scan-line {
+  animation: rk-scan-line 6s ease-in-out infinite;
+  will-change: top, opacity;
 }
 
 .rk-title {
@@ -5510,4 +5552,115 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     opacity: 0.9 !important;
     transform: none !important;
   }
+}
+
+/* Classy scanner beam for the Circulation Desk card */
+.scanner-beam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, hsl(var(--primary)), transparent);
+  box-shadow:
+    0 0 10px color-mix(in oklab, hsl(var(--primary)) 70%, transparent),
+    0 0 22px color-mix(in oklab, hsl(var(--primary)) 35%, transparent);
+  opacity: 0.85;
+  animation: scanner-sweep 2.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@keyframes scanner-sweep {
+  0%,
+  100% {
+    top: 18%;
+    opacity: 0.35;
+  }
+  50% {
+    top: 82%;
+    opacity: 0.95;
+  }
+}
+
+.scanner-frame {
+  position: relative;
+}
+
+.scanner-frame::before,
+.scanner-frame::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  border: 2px solid color-mix(in oklab, hsl(var(--primary)) 45%, transparent);
+  transition: border-color 0.3s ease;
+  z-index: 3;
+}
+
+.scanner-frame::before {
+  left: 0;
+  border-right: 0;
+  border-radius: 16px 0 0 16px;
+}
+
+.scanner-frame::after {
+  right: 0;
+  border-left: 0;
+  border-radius: 0 16px 16px 0;
+}
+
+.scanner-success {
+  animation: scanner-success-flash 0.55s ease-out;
+}
+
+@keyframes scanner-success-flash {
+  0% {
+    background-color: color-mix(in oklab, hsl(var(--primary)) 18%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanner-beam,
+  .scanner-success {
+    animation: none;
+  }
+}
+
+/* Keep library success notices readable over themed / decorative page fonts. */
+.library-notice-banner,
+.library-notice-banner p,
+.library-notice-banner span,
+.library-notice-banner button {
+  font-family: ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+  word-spacing: 0.04em;
+}
+
+/* Plain letters on library pages — no fancy font, no grey ghost outline. */
+.library-readable,
+.library-readable :where(h1, h2, h3, h4, h5, p, span, button, label, a) {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.library-header-nav,
+.library-header-nav button,
+.library-header-nav span {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  letter-spacing: 0 !important;
+  text-shadow: none !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.library-readable :where(h1, h2, h3, h4, h5, p, span, label).font-black,
+.library-readable :where(h1, h2, h3, h4, h5, p, span, label).font-bold,
+.library-readable :where(h1, h2, h3, h4, h5, p, span, label).font-extrabold {
+  color: inherit;
 }

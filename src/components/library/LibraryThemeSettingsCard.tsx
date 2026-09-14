@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
-import { Check, Palette, Sparkles, Monitor, Type, RotateCcw } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Check, Palette, Sparkles, Monitor, Type, RotateCcw, SquareDashedBottom } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import {
   StaffPortalTabInfoPopover,
@@ -43,8 +44,16 @@ export function LibraryThemeSettingsCard() {
   const { toast } = useToast();
   const [activeFilter, setActiveFilter] = useState<'all' | LibraryStyleCategory>('all');
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
-  const currentTheme = resolveLibraryTheme(currentThemeId);
+  const boxOpacity = settings.libraryBoxOpacity ?? 65;
+  const [previewBoxOpacity, setPreviewBoxOpacity] = useState(boxOpacity);
+  useEffect(() => setPreviewBoxOpacity(boxOpacity), [boxOpacity]);
+  const currentTheme = resolveLibraryTheme(currentThemeId, previewBoxOpacity);
   const matchKiosk = settings.libraryThemeMatchKiosk !== false;
+  const boxStyle = { backgroundColor: `hsl(var(--card) / ${previewBoxOpacity}%)` };
+
+  const handleCommitBoxOpacity = (value: number) => {
+    updateSettings({ libraryBoxOpacity: value });
+  };
 
   const handleSelectTheme = (themeId: LibraryThemeId) => {
     updateSettings({ libraryTheme: themeId });
@@ -72,7 +81,7 @@ export function LibraryThemeSettingsCard() {
 
   return (
     <Accordion type="single" collapsible className="space-y-3">
-      <AccordionItem value="theme" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="theme" className="rounded-2xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2.5 text-left">
@@ -267,10 +276,32 @@ export function LibraryThemeSettingsCard() {
             </div>
             <Switch checked={matchKiosk} onCheckedChange={handleToggleKioskMatch} />
           </div>
+
+          {/* Box Transparency Slider */}
+          <div className="rounded-2xl border bg-muted/30 p-4 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <SquareDashedBottom className="h-4 w-4 text-primary" />
+                <p className="text-sm font-bold">Box transparency</p>
+              </div>
+              <span className="text-xs font-mono font-bold text-muted-foreground">{previewBoxOpacity}%</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              How solid the cards and info boxes look across the library. Lower it to let the background picture show through more.
+            </p>
+            <Slider
+              value={[previewBoxOpacity]}
+              min={40}
+              max={100}
+              step={5}
+              onValueChange={([value]) => setPreviewBoxOpacity(value)}
+              onValueCommit={([value]) => handleCommitBoxOpacity(value)}
+            />
+          </div>
         </AccordionContent>
       </AccordionItem>
 
-      <AccordionItem value="hub-copy" className="rounded-2xl border border-dashed bg-card shadow-sm overflow-hidden">
+      <AccordionItem value="hub-copy" className="rounded-2xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2.5 text-left">
@@ -495,6 +526,40 @@ function LibraryHubCopyFields() {
           value={settings.libraryHubCopy?.kioskDescription ?? ''}
           placeholder={DEFAULT_LIBRARY_HUB_COPY.kioskDescription}
           onChange={(v) => setField('kioskDescription', v)}
+        />
+      </HubCopyGroup>
+
+      <HubCopyGroup title="Reports card">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <HubCopyInput
+            id="hub-reports-title"
+            label="Title"
+            value={settings.libraryHubCopy?.reportsTitle ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsTitle}
+            onChange={(v) => setField('reportsTitle', v)}
+          />
+          <HubCopyInput
+            id="hub-reports-tagline"
+            label="Small line under the title"
+            value={settings.libraryHubCopy?.reportsTagline ?? ''}
+            placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsTagline}
+            onChange={(v) => setField('reportsTagline', v)}
+          />
+        </div>
+        <HubCopyInput
+          id="hub-reports-badge"
+          label="Corner badge"
+          value={settings.libraryHubCopy?.reportsBadge ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsBadge}
+          onChange={(v) => setField('reportsBadge', v)}
+        />
+        <HubCopyInput
+          id="hub-reports-desc"
+          label="Description"
+          multiline
+          value={settings.libraryHubCopy?.reportsDescription ?? ''}
+          placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsDescription}
+          onChange={(v) => setField('reportsDescription', v)}
         />
       </HubCopyGroup>
     </div>

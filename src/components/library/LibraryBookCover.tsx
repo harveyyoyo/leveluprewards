@@ -22,6 +22,8 @@ export type LibraryBookCoverProps = {
   className?: string;
   imgClassName?: string;
   aspect?: 'portrait' | 'square' | 'thumb';
+  /** contain keeps the whole cover visible; cover fills the box and may crop. */
+  fit?: 'cover' | 'contain';
   showTitleInFallback?: boolean;
   /** When false, always render the stylized placeholder instead of resolving/loading a real cover image. Defaults to true. */
   showImage?: boolean;
@@ -57,6 +59,7 @@ export function LibraryBookCover({
   className,
   imgClassName,
   aspect = 'portrait',
+  fit = 'contain',
   showTitleInFallback = true,
   showImage = true,
   onCoverResolved,
@@ -146,14 +149,18 @@ export function LibraryBookCover({
 
   if (showImage && !hasError && currentSrc) {
     return (
-      <div className={cn('relative overflow-hidden bg-muted/30 select-none', aspectClass, className)}>
+      <div className={cn('relative flex items-center justify-center overflow-hidden bg-muted/30 select-none', aspectClass, className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={currentSrc}
           alt={title || 'Book cover'}
           onError={handleError}
           referrerPolicy="no-referrer"
-          className={cn('h-full w-full object-cover transition-opacity duration-200', imgClassName)}
+          className={cn(
+            'h-full w-full object-center transition-opacity duration-200',
+            fit === 'contain' ? 'object-contain' : 'object-cover',
+            imgClassName,
+          )}
           loading="lazy"
         />
         {/* Subtle book spine edge highlight */}

@@ -11,10 +11,12 @@ import {
   AlertTriangle,
   User,
   Monitor,
+  Inbox,
   ExternalLink,
   Sparkles,
   ArrowRight,
   Info,
+  BarChart3,
   Calendar,
   SlidersHorizontal,
   Plus,
@@ -23,6 +25,7 @@ import {
 import { useFirestore, useFunctions } from '@/firebase';
 import {
   callLibrary,
+  catalogCopyByScan,
   forceReturnLibraryItem,
   renewLibraryItem,
   updateStudentLibraryAccount,
@@ -34,7 +37,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { filterItemsForLibrary } from '@/lib/library/libraryLocations';
+import { filterItemsForLibrary, libraryDropBoxPath } from '@/lib/library/libraryLocations';
+import { libraryCopyNeedsProcessing, libraryCopyProcessingReason } from '@/lib/library/libraryWorkspace';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -56,6 +60,7 @@ export interface LibraryInfoDeskProps {
   onViewCatalog: (statusFilter?: 'all' | 'available' | 'checked_out' | 'overdue') => void;
   onOpenIntake?: (initialCode?: string) => void;
   onOpenBookDetails?: (book: LibraryItem) => void;
+  onOpenReports?: () => void;
   schoolId: string | null;
   schoolName?: string;
   initialScanCode?: string | null;
@@ -89,6 +94,7 @@ export function LibraryInfoDesk({
   onViewCatalog,
   onOpenIntake,
   onOpenBookDetails,
+  onOpenReports,
   schoolId,
   schoolName = 'School Library',
   initialScanCode,
@@ -99,7 +105,7 @@ export function LibraryInfoDesk({
   const { formatName } = useLibraryStudentDisplay();
   const functions = useFunctions();
   const currentThemeId = (settings.libraryTheme as LibraryThemeId) || 'classic_oak';
-  const currentTheme = resolveLibraryTheme(currentThemeId);
+  const currentTheme = resolveLibraryTheme(currentThemeId, settings.libraryBoxOpacity);
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
 
@@ -190,8 +196,17 @@ export function LibraryInfoDesk({
         setUnrecognizedCode(null);
         setShowSuggestions(false);
 
-        if (functions && schoolId && bookMatch.labeled === false) {
-          callLibrary(functions, 'libraryCirculation', { schoolId, itemId: bookMatch.id, action: 'label' }).catch(() => {});
+        if (!bookMatch.labeled) {
+          void catalogCopyByScan(functions, schoolId, bookMatch, clean)
+            .then((cataloged) => {
+              if (cataloged) {
+                toast({
+                  title: 'Officially cataloged',
+                  description: `"${bookMatch.name}" is now in the catalog.`,
+                });
+              }
+            })
+            .catch(() => {});
         }
         return;
       }
@@ -206,7 +221,7 @@ export function LibraryInfoDesk({
       setSelectedStudent(null);
       setShowSuggestions(true);
     },
-    [students, scopedCatalog, functions, schoolId],
+    [students, scopedCatalog, functions, schoolId, toast],
   );
 
   useEffect(() => {
@@ -393,12 +408,13 @@ export function LibraryInfoDesk({
       >
       <div
         className={cn(
-          'w-full max-w-2xl rounded-3xl border p-4 sm:p-8 shadow-lg space-y-4 sm:space-y-5 relative transition-all',
+          'w-full max-w-2xl rounded-3xl border p-4 sm:p-8 space-y-4 sm:space-y-5 relative transition-all',
           isNightDesk
             ? 'border-slate-800 bg-slate-900/90 text-white'
             : isReadingRoom
               ? 'border-stone-300 bg-white text-stone-900'
               : currentTheme.classes.card,
+          'shadow-[0_10px_28px_-10px_rgba(15,23,42,0.18),0_3px_10px_-4px_rgba(15,23,42,0.08)]',
         )}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -418,12 +434,39 @@ export function LibraryInfoDesk({
               Search or scan any barcode to check live availability, borrower details, and shelf bay.
             </p>
           </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onOpenReports ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold"
+                aria-label="Open reports"
+                onClick={() => onOpenReports()}
+              >
+                <BarChart3 className="h-4 w-4 text-violet-600" />
+                Reports
+              </Button>
+            ) : null}
+            {schoolId ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold"
+                asChild
+              >
+                <Link href={libraryDropBoxPath(schoolId, libraryLocationId)}>
+                  <Inbox className="h-4 w-4 text-emerald-600" />
+                  Drop Box
+                </Link>
+              </Button>
+            ) : null}
+          </div>
         </div>
 
         <div className="relative" ref={searchContainerRef}>
           <div
             className={cn(
-              'relative flex items-center gap-3 rounded-2xl border p-3 focus-within:ring-2 transition-all shadow-xs overflow-hidden',
+              'relative flex items-center gap-3 rounded-2xl border p-3 focus-within:ring-2 transition-all shadow-md overflow-hidden',
               isNightDesk
                 ? 'bg-slate-950 border-slate-800 focus-within:border-amber-500/80 focus-within:ring-amber-500/20'
                 : 'bg-background border-border/80 focus-within:border-primary/80 focus-within:ring-primary/20',
@@ -645,7 +688,7 @@ export function LibraryInfoDesk({
 
         {/* Unrecognized Book Prompt Card */}
         {unrecognizedCode && !selectedBook && !selectedStudent && (
-          <div className="rounded-2xl border border-dashed border-amber-500/50 bg-amber-500/10 p-4 sm:p-5 space-y-3 animate-in fade-in">
+          <div className="rounded-2xl border border-dashed border-amber-500/50 bg-amber-500/10 p-4 sm:p-5 space-y-3 shadow-sm animate-in fade-in">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
@@ -734,12 +777,18 @@ export function LibraryInfoDesk({
                       variant={selectedBook.status === 'available' ? 'default' : 'destructive'}
                       className={cn(
                         'text-xs font-bold',
-                        selectedBook.status === 'available'
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-amber-600 text-white',
+                        selectedBook.status === 'checked_out'
+                          ? 'bg-amber-600 text-white'
+                          : libraryCopyNeedsProcessing(selectedBook)
+                            ? 'bg-amber-500 text-white'
+                            : 'bg-emerald-600 text-white',
                       )}
                     >
-                      {selectedBook.status === 'available' ? 'Available on Shelf' : 'Currently On Loan'}
+                      {selectedBook.status === 'checked_out'
+                        ? 'Currently On Loan'
+                        : libraryCopyNeedsProcessing(selectedBook)
+                          ? 'Needs Processing'
+                          : 'Available on Shelf'}
                     </Badge>
                   </div>
 
@@ -775,7 +824,7 @@ export function LibraryInfoDesk({
 
             {/* Location & Loan Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-xs">
-              <div className="rounded-xl border bg-background/80 p-3 space-y-1">
+              <div className="rounded-xl border bg-background/80 p-3 space-y-1 shadow-sm">
                 <div className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                   <MapPin className="h-3.5 w-3.5 text-primary" />
                   <span>Physical Shelf Location</span>
@@ -788,7 +837,7 @@ export function LibraryInfoDesk({
                 </p>
               </div>
 
-              <div className="rounded-xl border bg-background/80 p-3 space-y-1">
+              <div className="rounded-xl border bg-background/80 p-3 space-y-1 shadow-sm">
                 <div className="flex items-center gap-1.5 text-muted-foreground font-semibold">
                   <Clock className="h-3.5 w-3.5 text-primary" />
                   <span>Circulation Status</span>
@@ -800,6 +849,15 @@ export function LibraryInfoDesk({
                     </div>
                     <p className="text-[10.5px] text-muted-foreground">
                       Due: {formatDueDate(selectedBook.dueAt)}
+                    </p>
+                  </div>
+                ) : libraryCopyNeedsProcessing(selectedBook) ? (
+                  <div>
+                    <div className="font-bold text-amber-700 dark:text-amber-300 text-sm">
+                      Needs processing
+                    </div>
+                    <p className="text-[10.5px] text-muted-foreground">
+                      {libraryCopyProcessingReason(selectedBook)}
                     </p>
                   </div>
                 ) : (
@@ -830,31 +888,7 @@ export function LibraryInfoDesk({
                     <span>Book Details</span>
                   </Button>
                 )}
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onViewCatalog()}
-                  className="rounded-xl text-xs font-bold gap-1.5"
-                >
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span>View in Catalog</span>
-                </Button>
               </div>
-
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => onSwitchToKiosk()}
-                className="rounded-xl text-xs font-black gap-1.5 bg-primary text-primary-foreground shadow-xs"
-              >
-                <Monitor className="h-3.5 w-3.5" />
-                <span>
-                  {selectedBook.status === 'checked_out' ? 'Return this Book in Kiosk' : 'Borrow in Kiosk'}
-                </span>
-                <ArrowRight className="h-3 w-3" />
-              </Button>
             </div>
           </motion.div>
         )}
@@ -865,7 +899,7 @@ export function LibraryInfoDesk({
             className={cn(
               'w-full max-w-2xl rounded-3xl border-2 p-4 sm:p-8 space-y-4 animate-in fade-in zoom-in-95 duration-200',
               isNightDesk ? 'border-slate-800 bg-slate-950/60' : currentTheme.classes.card,
-              'shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)]',
+              'shadow-[0_28px_70px_-16px_rgba(15,23,42,0.45),0_10px_28px_-8px_rgba(15,23,42,0.25)]',
             )}
           >
             <div className="flex items-start justify-between gap-4">
@@ -900,7 +934,7 @@ export function LibraryInfoDesk({
 
             {/* Student Borrowing Limit & Custom Privileges */}
             <div className={cn(
-              'rounded-xl border p-3.5 space-y-3',
+              'rounded-xl border p-3.5 space-y-3 shadow-sm',
               isNightDesk ? 'border-slate-800 bg-slate-900/60' : 'border-primary/20 bg-primary/5',
             )}>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">

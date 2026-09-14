@@ -6,6 +6,8 @@ import {
   generateGenreBarcode,
   extractGenreFromBarcode,
   getActiveLibraryGenres,
+  furnitureNameForShelf,
+  migrateFurnitureOnlySetup,
 } from './libraryClassification';
 
 describe('libraryClassification', () => {
@@ -22,7 +24,7 @@ describe('libraryClassification', () => {
     const fic = resolveBookClassification('Fiction');
     expect(fic.genre.callPrefix).toBe('FIC');
     expect(fic.color).toBe('#2563EB');
-    expect(fic.shelfLocation).toContain('Fiction');
+    expect(fic.shelfLocation).toBe('Aisle 1');
 
     const sci = resolveBookClassification('Science');
     expect(sci.genre.callPrefix).toBe('SCI');
@@ -114,5 +116,23 @@ describe('libraryClassification', () => {
       scheme: 'genre_code',
     });
     expect(code).toBe('COD-005-0001');
+  });
+
+  it('keeps furniture names free of book topics', () => {
+    for (const zone of DEFAULT_LIBRARY_PLACEMENT_ZONES) {
+      expect(zone).not.toMatch(/Fiction|Science|History|Graphic|Biography|Judaica/i);
+    }
+  });
+
+  it('maps old topic-in-the-name places to furniture only', () => {
+    expect(furnitureNameForShelf('Aisle 1 - Fiction Bays A-M')).toBe('Aisle 1');
+    expect(furnitureNameForShelf('Aisle 4 - Graphic Novels')).toBe('Aisle 4');
+    expect(furnitureNameForShelf('Graphic Novel Spinner Towers')).toBe('Front Spinner');
+    const migrated = migrateFurnitureOnlySetup(
+      ['Aisle 2 - Science & Nature Stacks', 'Aisle 2 - Science & Nature Stacks'],
+      [{ ...DEFAULT_LIBRARY_GENRES[1], defaultShelf: 'Aisle 2 - Science & Nature Stacks' }],
+    );
+    expect(migrated.zones).toEqual(['Aisle 2']);
+    expect(migrated.genres[0]?.defaultShelf).toBe('Aisle 2');
   });
 });

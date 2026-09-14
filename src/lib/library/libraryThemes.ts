@@ -6,6 +6,7 @@
  */
 
 export const LIBRARY_THEME_IDS = [
+  'grand_athenaeum',
   'arcade_adventure',
   'storybook_meadow',
   'sunset_terrace',
@@ -21,7 +22,7 @@ export const LIBRARY_THEME_IDS = [
 
 export type LibraryThemeId = (typeof LIBRARY_THEME_IDS)[number];
 
-export const DEFAULT_LIBRARY_THEME: LibraryThemeId = 'classic_oak';
+export const DEFAULT_LIBRARY_THEME: LibraryThemeId = 'grand_athenaeum';
 
 export type LibraryStyleCategory = 'fun' | 'pro' | 'classic' | 'cyber';
 
@@ -59,6 +60,38 @@ export interface LibraryTheme {
 }
 
 export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
+  grand_athenaeum: {
+    id: 'grand_athenaeum',
+    label: 'Grand Athenaeum',
+    tagline: 'Sunlit Gothic Reading Hall',
+    description: 'Warm honey-oak shelves, gilded accents, and soft sunlit parchment tones inspired by a grand vaulted reading room.',
+    icon: '🕯️',
+    tone: 'light',
+    styleCategory: 'classic',
+    styleName: 'Classic & Cozy',
+    swatches: {
+      primary: '#a3651f',
+      secondary: '#c98a2c',
+      bg: '#fbf3e2',
+      text: '#3a2410',
+    },
+    uiClasses: {
+      cardRadius: 'rounded-2xl',
+      buttonRadius: 'rounded-xl',
+      badgeRadius: 'rounded-lg px-2.5 py-0.5',
+      cardShadow: 'shadow-sm hover:shadow-md',
+      greeting: 'Welcome to the Grand Reading Hall 🕯️',
+    },
+    classes: {
+      wrapper: 'bg-[#fbf3e2] text-[#3a2410]',
+      header: 'bg-[#fbf3e2]/70 border-[#e9d3a3]',
+      card: 'bg-white/90 border-[#e9d3a3] shadow-amber-900/5',
+      cardHighlight: 'border-amber-600/40 bg-amber-600/10 ring-2 ring-amber-600/30',
+      badge: 'border-amber-300 bg-amber-100/80 text-amber-950',
+      accent: 'text-amber-800',
+      button: 'bg-amber-800 text-white hover:bg-amber-900',
+    },
+  },
   arcade_adventure: {
     id: 'arcade_adventure',
     label: 'Arcade Adventure',
@@ -83,7 +116,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#faf5ff] text-[#2e1065]',
-      header: 'bg-white/90 border-purple-200',
+      header: 'bg-white/70 border-purple-200',
       card: 'bg-white/95 border-purple-200/80 shadow-purple-900/5',
       cardHighlight: 'border-purple-500/40 bg-purple-500/10 ring-2 ring-purple-400/30',
       badge: 'border-purple-300 bg-purple-100 text-purple-950 font-bold',
@@ -115,7 +148,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#fefce8] text-[#14532d]',
-      header: 'bg-white/90 border-emerald-200',
+      header: 'bg-white/70 border-emerald-200',
       card: 'bg-white/95 border-emerald-200/80 shadow-emerald-900/5',
       cardHighlight: 'border-emerald-500/40 bg-emerald-500/10 ring-2 ring-emerald-400/30',
       badge: 'border-emerald-300 bg-emerald-100 text-emerald-950 font-bold',
@@ -147,7 +180,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#fdf6f0] text-[#361608]',
-      header: 'bg-white/90 border-orange-200',
+      header: 'bg-white/70 border-orange-200',
       card: 'bg-white/95 border-orange-200/80 shadow-orange-900/5',
       cardHighlight: 'border-orange-500/40 bg-orange-500/10 ring-2 ring-orange-400/30',
       badge: 'border-orange-300 bg-orange-100 text-orange-950 font-bold',
@@ -179,7 +212,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#faf7fd] text-[#241038]',
-      header: 'bg-white/90 border-purple-200',
+      header: 'bg-white/70 border-purple-200',
       card: 'bg-white/95 border-purple-200/80 shadow-purple-900/5',
       cardHighlight: 'border-purple-500/40 bg-purple-500/10 ring-2 ring-purple-400/30',
       badge: 'border-purple-300 bg-purple-100 text-purple-950 font-bold',
@@ -211,7 +244,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#f4f8fd] text-[#0b1f3a]',
-      header: 'bg-white/90 border-blue-100',
+      header: 'bg-white/70 border-blue-100',
       card: 'bg-white/90 border-blue-100 shadow-blue-900/5',
       cardHighlight: 'border-blue-500/30 bg-blue-500/5 ring-1 ring-blue-500/30',
       badge: 'border-blue-200 bg-blue-100 text-blue-950',
@@ -243,7 +276,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#f8fafc] text-[#0f172a]',
-      header: 'bg-white/90 border-slate-200',
+      header: 'bg-white/70 border-slate-200',
       card: 'bg-white/90 border-slate-200 shadow-slate-900/5',
       cardHighlight: 'border-sky-500/30 bg-sky-500/5 ring-1 ring-sky-500/30',
       badge: 'border-sky-200 bg-sky-100 text-sky-950',
@@ -275,7 +308,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#fbf8f2] text-[#291809]',
-      header: 'bg-[#f8f2e6]/90 border-[#e8ddc9]',
+      header: 'bg-[#f8f2e6]/70 border-[#e8ddc9]',
       card: 'bg-white/90 border-[#e8ddc9] shadow-amber-900/5',
       cardHighlight: 'border-amber-500/30 bg-amber-500/5 ring-1 ring-amber-500/30',
       badge: 'border-amber-300 bg-amber-100/80 text-amber-950',
@@ -307,7 +340,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#f2f8f4] text-[#092615]',
-      header: 'bg-white/90 border-emerald-100',
+      header: 'bg-white/70 border-emerald-100',
       card: 'bg-white/90 border-emerald-100 shadow-emerald-900/5',
       cardHighlight: 'border-emerald-500/30 bg-emerald-500/5 ring-1 ring-emerald-500/30',
       badge: 'border-emerald-200 bg-emerald-100 text-emerald-950',
@@ -339,7 +372,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#0b1120] text-[#f8fafc] dark',
-      header: 'bg-[#0f172a]/90 border-slate-800',
+      header: 'bg-[#0f172a]/70 border-slate-800',
       card: 'bg-[#0f172a]/90 border-slate-800 shadow-black/40',
       cardHighlight: 'border-sky-500/30 bg-sky-500/10 ring-1 ring-sky-500/30',
       badge: 'border-sky-700 bg-sky-950 text-sky-200',
@@ -371,7 +404,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#0b1324] text-[#f8fafc] dark',
-      header: 'bg-[#0f172a]/95 border-slate-800',
+      header: 'bg-[#0f172a]/75 border-slate-800',
       card: 'bg-[#0f172a]/95 border-slate-800 shadow-black/50',
       cardHighlight: 'border-amber-500/40 bg-amber-500/10 ring-2 ring-amber-500/30',
       badge: 'border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold',
@@ -403,7 +436,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
     },
     classes: {
       wrapper: 'bg-[#fafaf9] text-[#0f172a]',
-      header: 'bg-white/95 border-b border-stone-200',
+      header: 'bg-white/75 border-b border-stone-200',
       card: 'bg-white border border-stone-200 shadow-stone-900/5',
       cardHighlight: 'border-blue-600/40 bg-blue-50/50 ring-1 ring-blue-500/30',
       badge: 'border-stone-300 bg-stone-100 text-stone-900 font-semibold',
@@ -415,9 +448,27 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
 
 const THEME_SET = new Set<string>(LIBRARY_THEME_IDS);
 
-export function resolveLibraryTheme(themeId?: string | null): LibraryTheme {
-  if (themeId && THEME_SET.has(themeId)) {
-    return LIBRARY_THEMES[themeId as LibraryThemeId];
-  }
-  return LIBRARY_THEMES[DEFAULT_LIBRARY_THEME];
+/** Rewrites a theme class string's card background opacity (e.g. `bg-white/90` -> `bg-white/65`). */
+function withBoxOpacity(cardClasses: string, opacityPercent: number): string {
+  const clamped = Math.max(20, Math.min(100, Math.round(opacityPercent)));
+  return cardClasses.replace(/^bg-(white|black|\[[^\]]+\])(?:\/(\d{1,3}))?/, `bg-$1/${clamped}`);
+}
+
+/**
+ * Resolve a library theme by id, optionally overriding how solid its card/box
+ * backgrounds are (see Settings → Theme & Atmosphere → Box transparency).
+ */
+export function resolveLibraryTheme(themeId?: string | null, boxOpacityPercent?: number | null): LibraryTheme {
+  const theme =
+    themeId && THEME_SET.has(themeId) ? LIBRARY_THEMES[themeId as LibraryThemeId] : LIBRARY_THEMES[DEFAULT_LIBRARY_THEME];
+
+  if (boxOpacityPercent == null) return theme;
+
+  return {
+    ...theme,
+    classes: {
+      ...theme.classes,
+      card: withBoxOpacity(theme.classes.card, boxOpacityPercent),
+    },
+  };
 }

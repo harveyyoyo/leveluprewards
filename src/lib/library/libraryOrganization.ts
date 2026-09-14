@@ -8,8 +8,7 @@ import {
 
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_genre'
-  | 'shelf_then_author';
+  | 'author_then_title';
 
 export interface SchemeMeta {
   id: LibraryOrganizationScheme;
@@ -25,26 +24,24 @@ export const LIBRARY_ORGANIZATION_SCHEMES: Record<LibraryOrganizationScheme, Sch
     label: 'Genre, then by Author (A–Z)',
     shortLabel: 'Genre → Author',
     description:
-      'Books are shelved in Genre sections (Fiction, Science, History…), and alphabetized by Author’s last name within each section.',
-    example: 'Fiction Bay → [C] Canin, Ethan',
+      'Books are lined up by kind (Fiction, Science, History…), then by the author’s last name.',
+    example: 'Fiction → [C] Canin, Ethan',
   },
-  author_then_genre: {
-    id: 'author_then_genre',
-    label: 'Author (A–Z), then by Genre',
-    shortLabel: 'Author → Genre',
+  author_then_title: {
+    id: 'author_then_title',
+    label: 'Author (A–Z), then by Title',
+    shortLabel: 'Author → Title',
     description:
-      'Books are alphabetized primarily by Author (A-Z). Within each author’s section, books are grouped by Genre.',
-    example: '[C] Canin, Ethan → Fiction',
-  },
-  shelf_then_author: {
-    id: 'shelf_then_author',
-    label: 'Where in Library (Shelf / Location), then Author',
-    shortLabel: 'Shelf → Author',
-    description:
-      'Books are organized by their physical room and shelf placement in the library, then by Author.',
-    example: 'Aisle 1 - Fiction Bays → [C] Canin, Ethan',
+      'Books are lined up by the author’s last name, then by title A–Z for that author.',
+    example: '[C] Canin, Ethan → A Doubter’s Almanac',
   },
 };
+
+/** Map old saved choices onto the two lineup options. */
+export function resolveLibraryOrganizationScheme(value: unknown): LibraryOrganizationScheme {
+  if (value === 'author_then_title' || value === 'author_then_genre') return 'author_then_title';
+  return 'genre_then_author';
+}
 
 /**
  * Split and format author name into "Last, First" for library shelf sorting.
@@ -125,10 +122,12 @@ export interface BookPrimaryGroup {
  */
 export function groupBooksByOrganizationScheme(
   items: LibraryItem[],
-  scheme: LibraryOrganizationScheme = 'genre_then_author',
+  scheme: LibraryOrganizationScheme | string | null | undefined = 'genre_then_author',
   customGenres?: LibraryGenreConfig[] | null,
 ): BookPrimaryGroup[] {
-  if (scheme === 'genre_then_author') {
+  const resolved = resolveLibraryOrganizationScheme(scheme);
+
+  if (resolved === 'genre_then_author') {
     // Top Level: Genre -> Sub Level: Author
     const genreMap = new Map<string, { genre: LibraryGenreConfig; authorMap: Map<string, LibraryItem[]> }>();
 
@@ -181,108 +180,47 @@ export function groupBooksByOrganizationScheme(
     return groups.sort((a, b) => a.label.localeCompare(b.label));
   }
 
-  if (scheme === 'author_then_genre') {
-    // Top Level: Author -> Sub Level: Genre
-    const authorMap = new Map<string, { filingName: string; genreMap: Map<string, { genre: LibraryGenreConfig; books: LibraryItem[] }> }>();
-
-    for (const item of items) {
-      const { filingName } = formatAuthorForFiling(item.author);
-      let entry = authorMap.get(filingName);
-      if (!entry) {
-        entry = { filingName, genreMap: new Map() };
-        authorMap.set(filingName, entry);
-      }
-
-      const classification = resolveBookClassification(item.category, customGenres, item.shelfLocation);
-      const g = classification.genre;
-      let gEntry = entry.genreMap.get(g.id);
-      if (!gEntry) {
-        gEntry = { genre: g, books: [] };
-        entry.genreMap.set(g.id, gEntry);
-      }
-      gEntry.books.push(item);
-    }
-
-    const groups: BookPrimaryGroup[] = [];
-    const sortedAuthors = Array.from(authorMap.keys()).sort((a, b) => a.localeCompare(b));
-
-    for (const author of sortedAuthors) {
-      const { genreMap } = authorMap.get(author)!;
-      const subGroups: BookSubGroup[] = [];
-      let total = 0;
-
-      for (const [, { genre, books }] of genreMap.entries()) {
-        total += books.length;
-        books.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        subGroups.push({
-          subKey: genre.id,
-          subLabel: genre.label,
-          badgeText: genre.callPrefix,
-          color: genre.color,
-          books,
-        });
-      }
-
-      // Sort sub-genres by label
-      subGroups.sort((a, b) => a.subLabel.localeCompare(b.subLabel));
-
-      groups.push({
-        key: author,
-        label: author,
-        secondaryLabel: `${subGroups.length} ${subGroups.length === 1 ? 'genre' : 'genres'}`,
-        badgeText: author.charAt(0).toUpperCase(),
-        totalCopies: total,
-        subGroups,
-      });
-    }
-
-    return groups;
-  }
-
-  // shelf_then_author
-  const shelfMap = new Map<string, Map<string, LibraryItem[]>>();
+  const authorMap = new Map<string, Map<string, LibraryItem[]>>();
 
   for (const item of items) {
-    const loc = resolveBookPhysicalLocation(item, customGenres);
-    const shelf = loc.shelfLocation;
-    let aMap = shelfMap.get(shelf);
-    if (!aMap) {
-      aMap = new Map();
-      shelfMap.set(shelf, aMap);
+    const { filingName } = formatAuthorForFiling(item.author);
+    let titleMap = authorMap.get(filingName);
+    if (!titleMap) {
+      titleMap = new Map();
+      authorMap.set(filingName, titleMap);
     }
-    const { filingName } = loc;
-    const list = aMap.get(filingName) ?? [];
+    const title = (item.name || 'Untitled').trim() || 'Untitled';
+    const list = titleMap.get(title) ?? [];
     list.push(item);
-    aMap.set(filingName, list);
+    titleMap.set(title, list);
   }
 
   const groups: BookPrimaryGroup[] = [];
-  const sortedShelves = Array.from(shelfMap.keys()).sort((a, b) => a.localeCompare(b));
+  const sortedAuthors = Array.from(authorMap.keys()).sort((a, b) => a.localeCompare(b));
 
-  for (const shelf of sortedShelves) {
-    const aMap = shelfMap.get(shelf)!;
+  for (const author of sortedAuthors) {
+    const titleMap = authorMap.get(author)!;
     const subGroups: BookSubGroup[] = [];
     let total = 0;
 
-    const sortedAuthors = Array.from(aMap.keys()).sort((a, b) => a.localeCompare(b));
-    for (const author of sortedAuthors) {
-      const books = aMap.get(author) ?? [];
+    const sortedTitles = Array.from(titleMap.keys()).sort((a, b) => a.localeCompare(b));
+    for (const title of sortedTitles) {
+      const books = titleMap.get(title) ?? [];
       total += books.length;
       books.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       subGroups.push({
-        subKey: author,
-        subLabel: author,
-        badgeText: `${books.length} copies`,
+        subKey: `${author}::${title}`,
+        subLabel: title,
+        badgeText: `${books.length} ${books.length === 1 ? 'copy' : 'copies'}`,
         books,
       });
     }
 
     groups.push({
-      key: shelf,
-      label: shelf,
-      secondaryLabel: `${subGroups.length} authors`,
-      badgeText: 'Shelf',
-      shelfLocation: shelf,
+      key: author,
+      label: author,
+      secondaryLabel: `${subGroups.length} ${subGroups.length === 1 ? 'title' : 'titles'}`,
+      badgeText: author.charAt(0).toUpperCase(),
       totalCopies: total,
       subGroups,
     });

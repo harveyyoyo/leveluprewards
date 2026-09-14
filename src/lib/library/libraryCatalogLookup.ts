@@ -22,6 +22,33 @@ export function normalizeIsbnDigits(raw: string): string {
   return raw.replace(/\D/g, '');
 }
 
+/** If the scanner pasted the same book number twice, keep one copy. */
+export function unwrapRepeatedBookScan(raw: string): string {
+  const trimmed = raw.trim();
+  const digits = normalizeIsbnDigits(trimmed);
+  if (digits.length >= 20 && digits.length % 2 === 0) {
+    const half = digits.length / 2;
+    if (digits.slice(0, half) === digits.slice(half)) return digits.slice(0, half);
+  }
+  return trimmed;
+}
+
+/** True for a real book number (ISBN-10 or ISBN-13 starting 978/979). */
+export function isLikelyIsbnBookNumber(raw: string): boolean {
+  const digits = normalizeIsbnDigits(unwrapRepeatedBookScan(raw));
+  if (digits.length === 13 && (digits.startsWith('978') || digits.startsWith('979'))) return true;
+  if (digits.length === 12 && (digits.startsWith('978') || digits.startsWith('979'))) return true;
+  if (digits.length === 10) return true;
+  return false;
+}
+
+/** Store shelf barcode (UPC), not the book’s ISBN. */
+export function isLikelyStoreProductBarcode(raw: string): boolean {
+  const digits = normalizeIsbnDigits(unwrapRepeatedBookScan(raw));
+  if (!digits || isLikelyIsbnBookNumber(digits)) return false;
+  return digits.length >= 8 && digits.length <= 14;
+}
+
 /** Append EAN-13 check digit when a scanner omits the last digit (12-digit bookland code). */
 function appendEan13CheckDigit(twelve: string): string | null {
   if (twelve.length !== 12 || (!twelve.startsWith('978') && !twelve.startsWith('979'))) return null;
@@ -67,7 +94,7 @@ export function isbn10ToIsbn13(isbn10: string): string | null {
  * (12-digit US book barcodes are often EAN-13 without the leading 0.)
  */
 export function getIsbnLookupVariants(raw: string): string[] {
-  const d = normalizeIsbnDigits(raw);
+  const d = normalizeIsbnDigits(unwrapRepeatedBookScan(raw));
   const variants = new Set<string>();
 
   const add = (code: string) => {
@@ -406,25 +433,87 @@ async function lookupGoogleBooks(variants: string[]): Promise<LibraryCatalogHit 
   return firstHit(variants.map((isbn) => () => lookupGoogleBooksVariant(isbn, apiKey)));
 }
 
+const JUNK_CATALOG_CATEGORIES = new Set([
+  'accessible book',
+  'protected daisy',
+  'in library',
+  'internet archive',
+  'overdrive',
+  'large type books',
+  'large print books',
+]);
+
+function sanitizeCatalogHit(hit: LibraryCatalogHit): LibraryCatalogHit {
+  const category = hit.category?.trim();
+  if (!category || JUNK_CATALOG_CATEGORIES.has(category.toLowerCase())) {
+    return { ...hit, category: undefined };
+  }
+  return hit;
+}
+
+function normalizeTitleKey(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+/** 0–1 score for how closely an online title matches what the librarian typed. */
+export function titleMatchScore(query: string, title: string): number {
+  const q = normalizeTitleKey(query);
+  const t = normalizeTitleKey(title);
+  if (!q || !t) return 0;
+  if (q === t) return 1;
+  if (t.startsWith(q) || q.startsWith(t)) return 0.85;
+  if (t.includes(q) || q.includes(t)) return 0.7;
+  const qTokens = q.split(' ').filter(Boolean);
+  const tTokens = new Set(t.split(' ').filter(Boolean));
+  if (!qTokens.length) return 0;
+  const overlap = qTokens.filter((token) => tTokens.has(token)).length;
+  return overlap / qTokens.length;
+}
+
+/**
+ * Pick the online result that actually matches the typed title.
+ * The first Google/Open Library hit is often a different book with a similar word.
+ */
+export function pickBestTitleHit(query: string, hits: LibraryCatalogHit[]): LibraryCatalogHit | null {
+  let best: LibraryCatalogHit | null = null;
+  let bestScore = 0;
+  for (const hit of hits) {
+    if (isSuspiciousCatalogTitle(hit.title)) continue;
+    const score = titleMatchScore(query, hit.title);
+    if (score > bestScore) {
+      best = hit;
+      bestScore = score;
+    }
+  }
+  if (!best || bestScore < 0.5) return null;
+  return sanitizeCatalogHit(best);
+}
+
 /**
  * Lookup title/author/category from the internet using ISBN-10/13 (and common EAN)
- * barcodes. All catalog sources (and, within each, all ISBN variants) are queried
- * concurrently — the first one to report a hit wins, so total latency is bounded by
- * the slowest single request instead of the sum of every source's round-trip.
+ * barcodes. Sources are tried in reliability order (exact ISBN records first) so a
+ * fast but loose search result cannot beat a slower correct match.
  */
 export async function lookupBookByIsbn(isbnRaw: string): Promise<LibraryCatalogHit | null> {
   const variants = getIsbnLookupVariants(isbnRaw);
   if (!variants.length) return null;
 
-  const hit = await firstHit<LibraryCatalogHit>([
+  const sources = [
     () => lookupOpenLibrary(variants),
-    () => lookupOpenLibrarySearch(variants),
     () => lookupGoogleBooks(variants),
+    () => lookupOpenLibrarySearch(variants),
     () => lookupIsbnSearchOrg(variants),
-  ]);
+  ];
 
-  if (!hit || isSuspiciousCatalogTitle(hit.title)) return null;
-  return hit;
+  for (const source of sources) {
+    try {
+      const hit = await source();
+      if (hit && !isSuspiciousCatalogTitle(hit.title)) return sanitizeCatalogHit(hit);
+    } catch {
+      // Try the next catalog if this one is down or rate-limited.
+    }
+  }
+  return null;
 }
 
 /** Build a set of normalized ISBNs already in the school catalog. */

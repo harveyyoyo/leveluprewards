@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useFirestore, useFunctions } from '@/firebase';
-import { callLibrary } from '@/lib/library/libraryOperations';
+import { LIBRARY_CATALOGING_SHORT } from '@/lib/library/libraryCatalogingCopy';
 import {
   Dialog,
   DialogContent,
@@ -16,16 +15,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  LIBRARY_LABEL_OPTIONS,
   getLibraryLabelOption,
   type LibraryLabelFormat,
 } from '@/lib/library/libraryScanCode';
+import { enabledLibraryLabelOptions, resolveDefaultLibraryLabelFormat } from '@/lib/library/libraryLabelSettings';
 import { LibraryBarcodeSticker } from '@/components/print/LibraryBarcodeSticker';
 import { usePrint } from '@/components/providers/PrintProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import type { LibraryItem } from '@/lib/types';
 import { Printer, Check, Copy, ChevronLeft, ChevronRight, Layers, Sparkles } from 'lucide-react';
+import { LibraryCatalogingStepsNote } from './LibraryCatalogingStepsNote';
 import { cn } from '@/lib/utils';
 
 interface LibraryPrintLabelsModalProps {
@@ -45,12 +45,18 @@ export function LibraryPrintLabelsModal({
 }: LibraryPrintLabelsModalProps) {
   const { setLibraryStickersToPrint } = usePrint();
   const { settings } = useSettings();
-  const firestore = useFirestore();
-  const functions = useFunctions();
   const { toast } = useToast();
 
-  const defaultFormat = (settings.libraryLabelFormat as LibraryLabelFormat) || 'sticker';
+  const labelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
+  const defaultFormat = resolveDefaultLibraryLabelFormat(
+    settings.libraryLabelFormat as LibraryLabelFormat | undefined,
+    settings.libraryLabelFormatsEnabled,
+  );
   const [selectedFormat, setSelectedFormat] = useState<LibraryLabelFormat>(defaultFormat);
+  const activeFormat = labelOptions.some((option) => option.id === selectedFormat)
+    ? selectedFormat
+    : defaultFormat;
+  const currentOption = getLibraryLabelOption(activeFormat);
   const [copies, setCopies] = useState<number>(1);
   const [startOffset, setStartOffset] = useState<number>(0);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
@@ -77,11 +83,10 @@ export function LibraryPrintLabelsModal({
   );
 
   const activeItem = items[previewIndex] || items[0] || sampleItem;
-  const currentOption = getLibraryLabelOption(selectedFormat);
 
   const totalLabels = (items.length || 1) * copies;
   const sheetsNeeded =
-    selectedFormat === 'thermal'
+    activeFormat === 'thermal'
       ? totalLabels
       : Math.ceil((totalLabels + startOffset) / currentOption.itemsPerPage);
 
@@ -105,30 +110,13 @@ export function LibraryPrintLabelsModal({
 
     setLibraryStickersToPrint(finalItems, {
       schoolId,
-      format: selectedFormat,
-      startOffset: selectedFormat === 'thermal' ? 0 : startOffset,
+      format: activeFormat,
+      startOffset: activeFormat === 'thermal' ? 0 : startOffset,
     });
-
-    // Only a trusted Cloud Function can flip "labeled" — firestore.rules blocks direct client
-    // writes to library/{itemId}. The catalog's live Firestore listener picks up the change once
-    // this resolves, so there's no need to (and no safe way to) optimistically mutate it here.
-    if (schoolId && items.length > 0) {
-      for (const it of items) {
-        if (it.id && it.id !== 'preview_sample') {
-          callLibrary(functions, 'libraryCirculation', { schoolId, itemId: it.id, action: 'label' }).catch(() => {
-            toast({
-              variant: 'destructive',
-              title: 'Label not saved',
-              description: `Couldn't mark "${it.name}" as labeled. It'll still show as unlabeled in the catalog.`,
-            });
-          });
-        }
-      }
-    }
 
     toast({
       title: 'Printing Library Labels',
-      description: `${finalItems.length} label(s) sent to print (${currentOption.shortName}).`,
+      description: LIBRARY_CATALOGING_SHORT,
     });
 
     setIsOpen(false);
@@ -136,9 +124,9 @@ export function LibraryPrintLabelsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-2xl border-border/80 shadow-2xl">
-        <DialogHeader className="p-6 pb-4 bg-muted/30 border-b">
-          <div className="flex items-center justify-between">
+      <DialogContent className="flex max-h-[min(92vh,calc(100dvh-2rem))] max-w-4xl flex-col gap-0 overflow-hidden rounded-2xl border-border/80 p-0 shadow-2xl">
+        <DialogHeader className="shrink-0 border-b bg-muted/30 p-6 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                 <Printer className="h-5 w-5" />
@@ -148,31 +136,40 @@ export function LibraryPrintLabelsModal({
                   Print Library Labels &amp; Barcodes
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Choose your sticker sheet format, specify copies, or skip already peeled labels.
+                  Choose a sticker size, then print.
                 </DialogDescription>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="font-bold text-xs bg-background">
                 {items.length || 1} Book{items.length === 1 ? '' : 's'}
               </Badge>
               <Badge variant="secondary" className="font-bold text-xs">
                 {totalLabels} Total Label{totalLabels === 1 ? '' : 's'}
               </Badge>
+              <Button
+                type="button"
+                onClick={handlePrint}
+                className="h-9 rounded-xl px-4 text-xs font-bold shadow-md"
+              >
+                <Printer className="h-4 w-4" />
+                Print {totalLabels} label{totalLabels === 1 ? '' : 's'}
+              </Button>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 max-h-[72vh] overflow-y-auto divide-y md:divide-y-0 md:divide-x divide-border">
+        <div className="grid min-h-0 flex-1 grid-cols-1 divide-y divide-border overflow-y-auto md:grid-cols-12 md:divide-x md:divide-y-0">
           {/* Left Column: Format Picker & Print Options */}
           <div className="md:col-span-7 p-6 space-y-5">
+            <LibraryCatalogingStepsNote onPrint={handlePrint} />
             <div>
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2.5 block">
-                Select Label Format ({LIBRARY_LABEL_OPTIONS.length} sizes)
+                Select Label Format ({labelOptions.length} sizes)
               </Label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {LIBRARY_LABEL_OPTIONS.map((opt) => {
-                  const isSelected = selectedFormat === opt.id;
+                {labelOptions.map((opt) => {
+                  const isSelected = activeFormat === opt.id;
                   return (
                     <button
                       key={opt.id}
@@ -257,7 +254,7 @@ export function LibraryPrintLabelsModal({
                 </p>
               </div>
 
-              {selectedFormat !== 'thermal' && (
+              {activeFormat !== 'thermal' && (
                 <div className="space-y-1.5">
                   <Label htmlFor="label-offset" className="text-xs font-bold flex items-center gap-1.5">
                     <Layers className="h-3.5 w-3.5 text-muted-foreground" />
@@ -335,7 +332,7 @@ export function LibraryPrintLabelsModal({
                   <LibraryBarcodeSticker
                     item={activeItem}
                     schoolName={schoolName}
-                    format={selectedFormat}
+                    format={activeFormat}
                   />
                 </div>
               </div>
@@ -354,7 +351,7 @@ export function LibraryPrintLabelsModal({
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Sheets Needed:</span>
                   <span className="font-bold text-primary">
-                    {sheetsNeeded} {selectedFormat === 'thermal' ? 'Label(s)' : 'Page(s)'}
+                    {sheetsNeeded} {activeFormat === 'thermal' ? 'Label(s)' : 'Page(s)'}
                   </span>
                 </div>
               </div>

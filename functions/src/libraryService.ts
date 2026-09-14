@@ -108,13 +108,13 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     if (!itemSnap.exists) fail('Book not found.');
     const item = itemSnap.data()!;
     if (action === 'label') {
-      // Printing a spine/barcode label marks the copy as fully processed — this is the only
-      // server-trusted path that can flip it, since clients cannot write library/{itemId} directly.
+      // Scanning the printed barcode at the desk officially catalogs the copy.
+      // Printing a sticker is not enough. Clients cannot write library/{itemId} directly.
       tx.update(itemRef, { labeled: true, labeledAt: now });
       tx.set(school.collection('libraryEvents').doc(), {
         itemId, title: item.name, action, actorUid: actor.uid, date: now,
       });
-      return finish({ success: true, message: 'Copy marked as labeled.' });
+      return finish({ success: true, message: 'Book officially cataloged.' });
     }
     if (action === 'report_damage') {
       // Lets a student flag a copy as damaged right after returning it — the only condition
@@ -153,8 +153,11 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     const student = studentSnap.data()!;
 
     if (action === 'review') {
-      const rating = Math.min(5, Math.max(1, Math.round(numeric(data.rating, 5))));
-      const reviewText = String(data.reviewText ?? '').trim().slice(0, 500);
+      const didNotRead = data.didNotRead === true;
+      const rating = didNotRead ? 0 : Math.min(5, Math.max(1, Math.round(numeric(data.rating, 5))));
+      const reviewText = didNotRead
+        ? "I didn't get a chance to read it"
+        : String(data.reviewText ?? '').trim().slice(0, 500);
       const studentName = data.studentName ? String(data.studentName).slice(0, 100) : `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim();
       const reviewRef = school.collection('libraryReviews').doc(`${studentId}_${itemId}`);
       const existingReview = await tx.get(reviewRef);
@@ -167,12 +170,18 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
       tx.set(reviewRef, {
         itemId,
         isbn: item.isbn || '',
+        bookTitle: item.name || '',
         studentId,
         studentName,
         rating,
+        didNotRead,
         reviewText,
         createdAt: now,
       });
+      if (didNotRead) {
+        tx.update(studentRef, { libraryUpdatedAt: now });
+        return finish({ success: true, didNotRead: true, message: 'Saved. We will not count this as a rating.' });
+      }
       const count = numeric(item.ratingCount, 0);
       const oldAvg = numeric(item.ratingAvg, 0);
       const newCount = count + 1;
@@ -206,7 +215,7 @@ export async function runLibraryOperation(db: Firestore, schoolId: string, data:
     if (action === 'checkout') {
       if (item.archived || (item.condition && item.condition !== 'good')) fail('This copy is unavailable.');
       // Only copies explicitly marked not-ready are blocked. Older catalog rows have no `labeled` field.
-      if (item.labeled === false) fail('This copy still needs a spine label before it can be checked out.');
+      if (item.labeled === false) fail('Scan the printed barcode at the Librarian desk before this copy can be checked out.');
       if (item.status === 'checked_out') {
         if (item.checkedOutTo === studentId) return finish({ action: 'already_done', itemId, item: { ...item, id: itemId } });
         return finish({ action: 'wrong_borrower', item: { ...item, id: itemId } });

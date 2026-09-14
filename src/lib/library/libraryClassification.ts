@@ -11,7 +11,7 @@ export interface LibraryGenreConfig {
   color: string; // Hex color (e.g. #2563EB)
   callPrefix: string; // 3-letter abbreviation (e.g. FIC, SCI, HIS)
   dewey: string; // Dewey base code (e.g. 823, 500, 900)
-  defaultShelf: string; // Physical library placement (e.g. "Aisle 1 - Fiction Bays A-M")
+  defaultShelf: string; // Furniture-only place name (e.g. "Aisle 1")
   description?: string;
   badgeClass?: string; // Optional custom styling
 }
@@ -29,7 +29,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#2563EB',
     callPrefix: 'FIC',
     dewey: '823',
-    defaultShelf: 'Aisle 1 - Fiction Bays A-M',
+    defaultShelf: 'Aisle 1',
     description: 'Novels, chapter books, short stories, and literature.',
   },
   {
@@ -38,7 +38,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#059669',
     callPrefix: 'SCI',
     dewey: '500',
-    defaultShelf: 'Aisle 2 - Science & Nature Stacks',
+    defaultShelf: 'Aisle 2',
     description: 'Biology, astronomy, physics, nature, coding, and inventions.',
   },
   {
@@ -47,7 +47,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#D97706',
     callPrefix: 'HIS',
     dewey: '900',
-    defaultShelf: 'Aisle 3 - World History & Geography',
+    defaultShelf: 'Aisle 3',
     description: 'Ancient worlds, world wars, civilizations, and geography.',
   },
   {
@@ -56,7 +56,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#6366F1',
     callPrefix: 'MYS',
     dewey: '813',
-    defaultShelf: 'Mystery & Whodunit Nook',
+    defaultShelf: 'Aisle 1',
     description: 'Detective stories, puzzles, mysteries, and thrillers.',
   },
   {
@@ -65,7 +65,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#9333EA',
     callPrefix: 'FAN',
     dewey: '823',
-    defaultShelf: 'Fantasy & Adventure Bay (Aisle 1B)',
+    defaultShelf: 'Aisle 1',
     description: 'Magical realms, space exploration, and futuristic adventures.',
   },
   {
@@ -74,7 +74,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#0D9488',
     callPrefix: 'BIO',
     dewey: '920',
-    defaultShelf: 'Biography Wall (North Bay)',
+    defaultShelf: 'North Wall',
     description: 'Life stories of leaders, scientists, artists, and heroes.',
   },
   {
@@ -83,7 +83,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#EA580C',
     callPrefix: 'GRA',
     dewey: '741',
-    defaultShelf: 'Graphic Novel Spinner Towers',
+    defaultShelf: 'Front Spinner',
     description: 'Illustrated narratives, comics, and manga.',
   },
   {
@@ -92,7 +92,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#E11D48',
     callPrefix: 'ART',
     dewey: '700',
-    defaultShelf: 'Fine Arts & Creativity Bay',
+    defaultShelf: 'Aisle 3',
     description: 'Visual arts, music, architecture, sports, and hobbies.',
   },
   {
@@ -101,7 +101,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#CA8A04',
     callPrefix: 'PIC',
     dewey: '100',
-    defaultShelf: 'Early Reader Low Bins (Carpet Area)',
+    defaultShelf: 'Low Bins',
     description: 'Picture books, beginner readers, and alphabet/counting.',
   },
   {
@@ -110,7 +110,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#475569',
     callPrefix: 'REF',
     dewey: '030',
-    defaultShelf: 'Reference Desk & Study Island',
+    defaultShelf: 'Reference Desk',
     description: 'Encyclopedias, atlases, dictionaries, and research guides.',
   },
   {
@@ -119,7 +119,7 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
     color: '#0284C7',
     callPrefix: 'HEB',
     dewey: '296',
-    defaultShelf: 'Judaica & Heritage Stacks',
+    defaultShelf: 'Aisle 3',
     description: 'Hebrew literature, Jewish history, holidays, and ethics.',
   },
   {
@@ -133,20 +133,74 @@ export const DEFAULT_LIBRARY_GENRES: LibraryGenreConfig[] = [
   },
 ];
 
+/** Furniture only — no book topics in the name. */
 export const DEFAULT_LIBRARY_PLACEMENT_ZONES: string[] = [
-  'Aisle 1 - Fiction Bays A-M',
-  'Aisle 1B - Fantasy & Adventure',
-  'Aisle 2 - Science & Nature Stacks',
-  'Aisle 3 - World History & Geography',
-  'Graphic Novel Spinner Towers',
-  'Biography Wall (North Bay)',
-  'Early Reader Low Bins',
-  'Reference Desk & Study Island',
-  'Judaica & Heritage Stacks',
+  'Aisle 1',
+  'Aisle 2',
+  'Aisle 3',
+  'North Wall',
+  'Front Spinner',
+  'Low Bins',
+  'Reference Desk',
   'Main Stacks',
-  'Front Display Carousel',
-  'Return Drop Box (Sorting Cart)',
 ];
+
+/** Older place names that mixed a topic into the furniture. */
+export const LEGACY_SHELF_TO_FURNITURE: Record<string, string> = {
+  'Aisle 1 - Fiction Bays A-M': 'Aisle 1',
+  'Aisle 1B - Fantasy & Adventure': 'Aisle 1',
+  'Fantasy & Adventure Bay (Aisle 1B)': 'Aisle 1',
+  'Aisle 2 - Science & Nature Stacks': 'Aisle 2',
+  'Aisle 3 - World History & Geography': 'Aisle 3',
+  'Graphic Novel Spinner Towers': 'Front Spinner',
+  'Front Display Carousel': 'Front Spinner',
+  'Biography Wall (North Bay)': 'North Wall',
+  'Early Reader Low Bins': 'Low Bins',
+  'Early Reader Low Bins (Carpet Area)': 'Low Bins',
+  'Reference Desk & Study Island': 'Reference Desk',
+  'Judaica & Heritage Stacks': 'Aisle 3',
+  'Mystery & Whodunit Nook': 'Aisle 1',
+  'Fine Arts & Creativity Bay': 'Aisle 3',
+  'Return Drop Box (Sorting Cart)': 'Main Stacks',
+};
+
+export function furnitureNameForShelf(name: string): string {
+  const trimmed = name.trim();
+  if (LEGACY_SHELF_TO_FURNITURE[trimmed]) return LEGACY_SHELF_TO_FURNITURE[trimmed];
+  if (trimmed.includes(' - ')) return trimmed.split(' - ')[0]!.trim();
+  return trimmed;
+}
+
+export function placementLooksLegacy(zones: string[] | null | undefined): boolean {
+  return Boolean(
+    zones?.some((zone) => zone in LEGACY_SHELF_TO_FURNITURE || zone.includes(' - ')),
+  );
+}
+
+export function genresLookLegacy(genres: LibraryGenreConfig[] | null | undefined): boolean {
+  return Boolean(
+    genres?.some(
+      (genre) => genre.defaultShelf in LEGACY_SHELF_TO_FURNITURE || genre.defaultShelf.includes(' - '),
+    ),
+  );
+}
+
+/** Turn old topic-in-the-name places into furniture-only names. */
+export function migrateFurnitureOnlySetup(
+  zones: string[] | null | undefined,
+  genres: LibraryGenreConfig[] | null | undefined,
+): { zones: string[]; genres: LibraryGenreConfig[] } {
+  const mappedZones = (zones?.length ? zones : DEFAULT_LIBRARY_PLACEMENT_ZONES).map(furnitureNameForShelf);
+  const nextZones = [...new Set(mappedZones.filter(Boolean))];
+  const sourceGenres = genres?.length ? genres : DEFAULT_LIBRARY_GENRES;
+  return {
+    zones: nextZones.length > 0 ? nextZones : [...DEFAULT_LIBRARY_PLACEMENT_ZONES],
+    genres: sourceGenres.map((genre) => ({
+      ...genre,
+      defaultShelf: furnitureNameForShelf(genre.defaultShelf),
+    })),
+  };
+}
 
 export interface ResolvedGenreClassification {
   genre: LibraryGenreConfig;

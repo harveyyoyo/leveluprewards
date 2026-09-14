@@ -7,7 +7,7 @@ export const DEFAULT_LIBRARY_HUB_COPY = {
   welcomeHighlight: 'the Library',
   intro: 'Choose a place to begin. We’ll take good care of the rest.',
   footer: 'Quiet voices, happy readers',
-  enterLabel: 'Come in',
+  enterLabel: 'Visit',
   deskTitle: 'Librarian',
   deskTagline: 'Answers at the desk',
   deskDescription:
@@ -22,6 +22,10 @@ export const DEFAULT_LIBRARY_HUB_COPY = {
   kioskTagline: 'Borrow and return',
   kioskDescription: 'Students scan their own card to borrow and return — quietly and independently.',
   kioskBadge: 'Self-checkout',
+  reportsTitle: 'Reports',
+  reportsTagline: 'How the library is doing',
+  reportsDescription: 'See overdue books, popular titles, top readers, and download lists you can print.',
+  reportsBadge: 'Analytics',
 } as const;
 
 export type LibraryHubCopyField = keyof typeof DEFAULT_LIBRARY_HUB_COPY;

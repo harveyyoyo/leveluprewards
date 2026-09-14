@@ -178,6 +178,29 @@ export async function callLibrary<T>(functions: Functions | null | undefined, en
   }
 }
 
+/** True when this scan is the printed sticker barcode, not an ISBN or title lookup. */
+export function scanMatchesPrintedBarcode(
+  item: Pick<LibraryItem, 'upc'>,
+  scannedCode: string,
+): boolean {
+  const scanned = normalizeLibraryUpc(scannedCode);
+  const upc = normalizeLibraryUpc(item.upc || '');
+  return Boolean(scanned && upc && scanned === upc);
+}
+
+/** Scan of a printed sticker finishes cataloging. Printing alone does not. */
+export async function catalogCopyByScan(
+  functions: Functions | null | undefined,
+  schoolId: string | null | undefined,
+  item: Pick<LibraryItem, 'id' | 'labeled' | 'upc'>,
+  scannedCode: string,
+): Promise<boolean> {
+  if (!functions || !schoolId || !item.id || item.labeled) return false;
+  if (!scanMatchesPrintedBarcode(item, scannedCode)) return false;
+  await callLibrary(functions, 'libraryCirculation', { schoolId, itemId: item.id, action: 'label' });
+  return true;
+}
+
 export async function performLibraryCheckoutOrReturn(
   firestore: Firestore, schoolId: string, studentId: string, rawCode: string,
   options?: {

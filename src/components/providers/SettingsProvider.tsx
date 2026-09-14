@@ -58,6 +58,8 @@ import type { HousesRealmThemeId } from '@/lib/houses/housesRealmThemes';
 import type { ClassroomRealmThemeId } from '@/lib/classroom/classroomRealmThemes';
 import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
+import type { LibraryLabelFieldId } from '@/lib/library/libraryLabelSettings';
 import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
@@ -116,6 +118,8 @@ interface Settings {
     libraryTheme?: LibraryThemeId;
     /** When on, student self-checkout kiosk matches the selected library theme. */
     libraryThemeMatchKiosk?: boolean;
+    /** How solid the library's card/box backgrounds are (0-100). Lower lets the background picture show through more. Default 90. */
+    libraryBoxOpacity?: number;
     /**
      * How student names appear in the library. Default `preferred_full` uses nickname
      * (or first name) + last name. `follow_school` uses `privacyStudentNameDisplayMode`.
@@ -562,6 +566,8 @@ interface Settings {
     libraryKioskDefaultMode?: 'auto' | 'checkout' | 'return';
     /** Allow students to self-return books at the library kiosk station. */
     libraryKioskAllowSelfReturn?: boolean;
+    /** After a student returns a book, ask them to rate it. On by default. */
+    libraryStudentRatingsEnabled?: boolean;
     /** Enable Quick Return / Drop Box mode (return books without student ID card). */
     libraryKioskAllowDropBoxReturn?: boolean;
     /** Auto-reset countdown seconds for kiosk session after scan (0 = manual). */
@@ -585,12 +591,16 @@ interface Settings {
     /** Default genre / category for new books. */
     libraryDefaultCategory?: string;
     /** Default print format for copy barcode labels. */
-    libraryLabelFormat?: 'sticker' | 'spine' | 'spine_square' | 'large_plate' | 'thermal' | 'pocket';
+    libraryLabelFormat?: LibraryLabelFormat;
+    /** Sticker types offered on the print screen. Empty or missing means every type. */
+    libraryLabelFormatsEnabled?: LibraryLabelFormat[];
+    /** Pieces to print on each sticker. Missing keys stay on. */
+    libraryLabelFields?: Partial<Record<LibraryLabelFieldId, boolean>>;
     /** Barcode standard on printed labels: CODE128 or QR. */
     libraryBarcodeFormat?: 'CODE128' | 'QR';
     /** Barcode numbering scheme: 'genre_code' (FIC-823-0001), 'dewey_numeric' (823-0001), 'prefix_genre' (LIB-FIC-0001), or 'classic_random'. */
     libraryBarcodeNumberScheme?: BarcodeNumberScheme;
-    /** Primary book shelving hierarchy: 'genre_then_author' (default), 'author_then_genre', or 'shelf_then_author'. */
+    /** Primary book lineup: 'genre_then_author' (default) or 'author_then_title'. */
     libraryOrganizationScheme?: LibraryOrganizationScheme;
     /** Configured library genres with colors, call prefixes, and shelf placement. */
     libraryGenreDefinitions?: LibraryGenreConfig[];
@@ -809,8 +819,9 @@ const defaultSettings: Settings = {
     enableHouses: false,
     housesRealmTheme: 'cosmic',
     classroomRealmTheme: 'chalkboard',
-    libraryTheme: 'classic_oak',
+    libraryTheme: 'grand_athenaeum',
     libraryThemeMatchKiosk: true,
+    libraryBoxOpacity: 65,
     libraryStudentNameDisplayMode: 'preferred_full',
     libraryStudentThemeDisplay: 'emoji_and_color',
     libraryAutoDetectCirculation: true,
@@ -830,6 +841,7 @@ const defaultSettings: Settings = {
     libraryCameraScanEnabled: false,
     libraryKioskDefaultMode: 'auto',
     libraryKioskAllowSelfReturn: true,
+    libraryStudentRatingsEnabled: true,
     libraryKioskAllowDropBoxReturn: true,
     libraryKioskAutoResetSeconds: 8,
     libraryKioskExitRequiresPasscode: false,

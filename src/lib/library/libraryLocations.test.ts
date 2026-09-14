@@ -5,6 +5,8 @@ import {
   filterItemsForLibrary,
   itemBelongsToLibrary,
   itemLibraryLocationId,
+  libraryDropBoxPath,
+  libraryKioskDropBoxPath,
   libraryPath,
   normalizeLibraryLocationId,
   pickLibraryLocation,
@@ -47,6 +49,10 @@ describe('libraryLocations', () => {
   it('builds library links and unique ids', () => {
     expect(libraryPath('demo', '', 'main')).toBe('/demo/library');
     expect(libraryPath('demo', '/kiosk', 'room-12')).toBe('/demo/library/kiosk?library=room-12');
+    expect(libraryDropBoxPath('demo', 'main')).toBe('/demo/library?tab=kiosk&mode=dropbox');
+    expect(libraryKioskDropBoxPath('demo', 'room-12')).toBe(
+      '/demo/library/kiosk?library=room-12&mode=dropbox',
+    );
     expect(suggestLibraryLocationId('Room 12 Class Library', ['room-12-class-library'])).toBe(
       'room-12-class-library-2',
     );
