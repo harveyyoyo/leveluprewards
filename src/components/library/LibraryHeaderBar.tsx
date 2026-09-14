@@ -76,7 +76,7 @@ export function LibraryHeaderBar({
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
           </button>
-          {NAV_TABS.map(({ id, label, icon: TabIcon, activeColor }) => (
+          {NAV_TABS.filter((tab) => !(activeTab === 'hub' && tab.id === 'reports')).map(({ id, label, icon: TabIcon, activeColor }) => (
             <button
               key={id}
               type="button"
