@@ -2,7 +2,7 @@
 
 import type { ComponentType } from 'react';
 import { motion } from 'framer-motion';
-import { Library, BookOpen, Monitor, ArrowRight, Stamp, BarChart3 } from 'lucide-react';
+import { Library, BookOpen, Monitor, ArrowRight, Stamp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -10,10 +10,10 @@ import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
 
-type HubCardId = LibraryHeaderNavTab;
+type HubDoorId = Exclude<LibraryHeaderNavTab, 'reports'>;
 
 type HubCard = {
-  id: HubCardId;
+  id: HubDoorId;
   icon: ComponentType<{ className?: string }>;
   spine: string;
   tint: string;
@@ -46,14 +46,6 @@ const HUB_CARDS: HubCard[] = [
     iconColor: 'text-[#92400e]',
     tilt: 'lg:-rotate-1',
   },
-  {
-    id: 'reports',
-    icon: BarChart3,
-    spine: 'bg-[#a78bfa]',
-    tint: 'bg-[#a78bfa]/10',
-    iconColor: 'text-[#6d28d9]',
-    tilt: 'lg:rotate-2',
-  },
 ];
 
 export interface LibraryPortalHubProps {
@@ -61,13 +53,13 @@ export interface LibraryPortalHubProps {
   overdueCount?: number;
   catalogCount?: number;
   backToPortalHref: string;
-  onSelect: (tab: HubCardId) => void;
+  onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
 }
 
 /**
  * The Library Portal Hub landing screen — storybook "doors" into the Librarian desk,
- * Catalog, Student Kiosk, and Reports. Colors come from the Ambiance theme; wording comes from
+ * Catalog, and Student Kiosk. Colors come from the Ambiance theme; wording comes from
  * Settings → Theme & Atmosphere → Front page wording.
  */
 export function LibraryPortalHub({
@@ -101,12 +93,6 @@ export function LibraryPortalHub({
       tagline: copy.kioskTagline,
       description: copy.kioskDescription,
       badge: copy.kioskBadge,
-    },
-    reports: {
-      title: copy.reportsTitle,
-      tagline: copy.reportsTagline,
-      description: copy.reportsDescription,
-      badge: overdueCount > 0 ? `${overdueCount} overdue` : copy.reportsBadge,
     },
   } as const;
 
@@ -152,7 +138,7 @@ export function LibraryPortalHub({
         ) : null}
 
         <motion.div
-          className="mt-16 lg:mt-24 grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-4 lg:gap-4"
+          className="mt-16 lg:mt-24 grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4"
           initial="hidden"
           animate="show"
           variants={{
@@ -198,7 +184,7 @@ export function LibraryPortalHub({
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 lg:py-1 text-[10px] font-bold uppercase tracking-widest',
-                        (card.id === 'desk' || card.id === 'reports') && overdueCount > 0
+                        card.id === 'desk' && overdueCount > 0
                           ? 'border-rose-300 bg-rose-100 text-rose-700'
                           : theme.classes.badge,
                       )}

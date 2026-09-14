@@ -528,40 +528,6 @@ function LibraryHubCopyFields() {
           onChange={(v) => setField('kioskDescription', v)}
         />
       </HubCopyGroup>
-
-      <HubCopyGroup title="Reports card">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <HubCopyInput
-            id="hub-reports-title"
-            label="Title"
-            value={settings.libraryHubCopy?.reportsTitle ?? ''}
-            placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsTitle}
-            onChange={(v) => setField('reportsTitle', v)}
-          />
-          <HubCopyInput
-            id="hub-reports-tagline"
-            label="Small line under the title"
-            value={settings.libraryHubCopy?.reportsTagline ?? ''}
-            placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsTagline}
-            onChange={(v) => setField('reportsTagline', v)}
-          />
-        </div>
-        <HubCopyInput
-          id="hub-reports-badge"
-          label="Corner badge"
-          value={settings.libraryHubCopy?.reportsBadge ?? ''}
-          placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsBadge}
-          onChange={(v) => setField('reportsBadge', v)}
-        />
-        <HubCopyInput
-          id="hub-reports-desc"
-          label="Description"
-          multiline
-          value={settings.libraryHubCopy?.reportsDescription ?? ''}
-          placeholder={DEFAULT_LIBRARY_HUB_COPY.reportsDescription}
-          onChange={(v) => setField('reportsDescription', v)}
-        />
-      </HubCopyGroup>
     </div>
   );
 }
