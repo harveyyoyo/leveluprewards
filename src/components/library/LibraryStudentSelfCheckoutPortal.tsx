@@ -446,7 +446,7 @@ export function LibraryStudentSelfCheckoutPortal({
     autoResetSeconds > 0 &&
     !busy &&
     !isModalActive &&
-    (!!studentId || step === 'success');
+    (!!studentId || step === 'success' || !!pendingBookCode);
 
   const idleRemaining = useLibraryIdleReset(
     idleActive,
@@ -1523,6 +1523,25 @@ export function LibraryStudentSelfCheckoutPortal({
               )}
               <p className="text-xs text-muted-foreground">{bookFlash.subline}</p>
             </div>
+            {bookFlash.kind === 'borrow' && autoResetSeconds > 0 && (
+              <div
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold shadow-xs transition-colors',
+                  idleRemaining <= 5
+                    ? 'border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-200 animate-pulse'
+                    : 'border-border/60 bg-muted/50 text-muted-foreground',
+                )}
+                role="timer"
+                aria-live="polite"
+              >
+                <RotateCcw
+                  className={cn('h-3 w-3 text-primary', idleRemaining <= 5 && 'text-amber-600 animate-spin')}
+                />
+                <span>
+                  Auto-reset in <strong className="font-mono font-bold text-foreground">{idleRemaining}s</strong>
+                </span>
+              </div>
+            )}
             {bookFlash.kind === 'return' && (
               <button
                 type="button"
