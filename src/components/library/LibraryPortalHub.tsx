@@ -151,10 +151,6 @@ export function LibraryPortalHub({
             </span>
           ) : null}
         </h1>
-        {copy.intro ? (
-          <p className="mx-auto mt-6 lg:mt-10 max-w-md text-base opacity-70">{copy.intro}</p>
-        ) : null}
-
         <motion.div
           className="mt-16 lg:mt-24 grid w-full gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4"
           initial="hidden"
@@ -241,9 +237,6 @@ export function LibraryPortalHub({
           </button>
         ) : null}
 
-        {copy.footer ? (
-          <p className="mt-10 lg:mt-16 px-2 text-xs uppercase tracking-[0.2em] sm:tracking-[0.3em] opacity-45">{copy.footer}</p>
-        ) : null}
       </main>
     </div>
   );
