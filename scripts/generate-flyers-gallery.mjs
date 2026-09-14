@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Static flyers hub for local viewing without Next.js dev.
- * Generated: public/marketing/index.html — open via `npx serve public` → /marketing/
+ * Generated: public/marketing/index.html — open via `npm run serve:flyers` → /marketing/
  *
  * Usage: node scripts/generate-flyers-gallery.mjs
  */
@@ -236,6 +236,12 @@ function renderHtml(catalog) {
         border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(15,23,42,0.8);
         text-decoration: none; color: inherit;
       }
+      .snap-unavailable .snap-inner {
+        align-items: center; background: linear-gradient(145deg, rgba(15,23,42,0.92), rgba(30,41,59,0.72));
+      }
+      .snap-unavailable-message { max-width: 13rem; padding: 1rem; text-align: center; }
+      .snap-unavailable-message strong { display: block; color: #fef3c7; font-size: 0.875rem; }
+      .snap-unavailable-message span { display: block; margin-top: 0.375rem; color: var(--muted); font-size: 0.75rem; }
       .snap-inner {
         position: relative; margin: 0 auto; overflow: hidden;
         display: flex; align-items: flex-start; justify-content: center; padding: 0.75rem 0;
@@ -311,9 +317,9 @@ function renderHtml(catalog) {
         </div>
       </header>
       <div class="sections" id="gallery"></div>
-      <p class="footer">
-        Static gallery — regenerate with <code>npm run generate:flyers-gallery</code>.
-        Serve locally: <code>npx serve public -p 3456</code> → <code>/marketing/</code>
+        <p class="footer">
+          Static gallery — regenerate with <code>npm run generate:flyers-gallery</code>.
+        Serve locally: <code>npm run serve:flyers</code> → <code>/marketing/</code>
       </p>
     </div>
     <script id="flyers-data" type="application/json">${dataJson}</script>
@@ -363,21 +369,32 @@ function renderHtml(catalog) {
         );
       }
 
+      function renderUnavailablePreview(flyer) {
+        return (
+          '<div class="snap snap-unavailable" role="img" aria-label="No original style is available for ' + flyer.name + '">' +
+            '<div class="snap-inner" style="height:' + (scaledH + 24) + 'px">' +
+              '<div class="snap-unavailable-message"><strong>Bold Navy only</strong><span>This flyer does not have an archived original layout.</span></div>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+
       function renderCard(flyer) {
         const href = resolveHref(flyer);
         const classicOnly = theme === 'classic';
         const hasClassicLayout = hasClassic(flyer.href);
-        const dim = classicOnly && !hasClassicLayout;
+        const originalUnavailable = classicOnly && !hasClassicLayout;
+        const dim = originalUnavailable;
         const themeLabel = classicOnly && hasClassicLayout ? 'Original styles' : 'Bold Navy';
 
         let actions;
-        if (classicOnly && !hasClassicLayout) {
+        if (originalUnavailable) {
           actions = '<span class="btn btn-disabled">Not available in original style</span>';
         } else {
           actions = '<a class="btn btn-primary" href="' + href + '" target="_blank" rel="noopener noreferrer">Open &amp; print ↗</a>';
         }
 
-        const warn = classicOnly && !hasClassicLayout
+        const warn = originalUnavailable
           ? '<p class="warn">Original layout not archived — Bold Navy only.</p>'
           : '';
 
@@ -385,7 +402,7 @@ function renderHtml(catalog) {
 
         return (
           '<article class="card' + (dim ? ' dim' : '') + '" style="--card-border:' + borderColor(flyer.preview.border) + '">' +
-            renderPreview(flyer, href) +
+            (originalUnavailable ? renderUnavailablePreview(flyer) : renderPreview(flyer, href)) +
             '<div class="card-body">' +
               '<div class="card-title-row">' +
                 '<h3 class="card-title">' + flyer.name + '</h3>' +
@@ -486,7 +503,7 @@ function main() {
   const html = renderHtml(catalog);
   fs.writeFileSync(outPath, html, 'utf8');
   console.log('Wrote', outPath);
-  console.log('Open: http://localhost:3456/marketing/ (with npx serve public -p 3456)');
+  console.log('Open: http://127.0.0.1:3456/marketing/ (with npm run serve:flyers)');
 }
 
 main();

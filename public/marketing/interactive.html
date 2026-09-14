@@ -390,7 +390,7 @@
           #070a12;
       }
 
-      .preview:focus {
+      .preview:focus-within {
         outline: 2px solid color-mix(in srgb, var(--accent) 70%, white);
         outline-offset: -2px;
       }
@@ -654,7 +654,7 @@
           </p>
           <div class="hero-stats">
             <div class="stat">
-              <strong>8</strong>
+              <strong id="builder-count">0</strong>
               <span>premium builders</span>
             </div>
             <div class="stat">
@@ -671,8 +671,7 @@
 
       <section class="toolbar" aria-label="Customizer capabilities">
         <p>
-          Choose a builder below. Hover or focus a card to render the embedded
-          preview.
+          Choose a builder below, then load a preview only when you want one.
         </p>
         <div class="chips" aria-label="Common interactive features">
           <span class="chip">Section toggles</span>
@@ -866,13 +865,11 @@
           '<article class="card" style="--accent: ' +
             flyer.accent +
             '">' +
-            '<div class="preview" tabindex="0" aria-label="Preview ' +
-            flyer.title +
-            '">' +
+            '<div class="preview">' +
             '<div class="preview-empty">' +
             "<div><span>" +
             String(index + 1).padStart(2, "0") +
-            "</span><strong>Live preview</strong><small>Loads on hover or focus</small></div>" +
+            "</span><strong>Live preview</strong><small>Load it when you are ready</small></div>" +
             "</div>" +
             '<div class="preview-frame" hidden>' +
             '<iframe data-src="' +
@@ -926,15 +923,8 @@
 
       flyers.forEach((flyer, index) => {
         const card = renderCard(flyer, index);
-        const preview = card.querySelector(".preview");
         const button = card.querySelector(".load-preview");
 
-        preview.addEventListener("pointerenter", () => loadPreview(card), {
-          once: true,
-        });
-        preview.addEventListener("focus", () => loadPreview(card), {
-          once: true,
-        });
         button.addEventListener("click", (event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -943,6 +933,8 @@
 
         grid.appendChild(card);
       });
+
+      document.getElementById("builder-count").textContent = flyers.length;
     </script>
   </body>
 </html>

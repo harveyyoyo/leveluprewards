@@ -37,7 +37,13 @@
       body {
         width: 8.5in;
         min-height: 11in;
-        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font-family:
+          Inter,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
         background: #f1f5f9;
         color: var(--navy);
         -webkit-print-color-adjust: exact;
@@ -399,7 +405,11 @@
           align-items: flex-start;
           padding: 32px 24px 32px 332px;
           background:
-            radial-gradient(circle at 0% 0%, rgba(26, 54, 93, 0.12), transparent 38%),
+            radial-gradient(
+              circle at 0% 0%,
+              rgba(26, 54, 93, 0.12),
+              transparent 38%
+            ),
             linear-gradient(135deg, #eef4ff 0%, #f8fafc 55%, #eefdfa 100%);
         }
 
@@ -423,107 +433,201 @@
           color: #fff;
         }
 
-        .sidebar-header { display: flex; align-items: center; gap: 12px; }
+        .sidebar-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
         .sidebar-logo {
-          width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
-          background: linear-gradient(135deg, #f59e0b, #38bdf8); color: #0f2744; font-weight: 900;
+          width: 38px;
+          height: 38px;
+          border-radius: 12px;
+          display: grid;
+          place-items: center;
+          background: linear-gradient(135deg, #f59e0b, #38bdf8);
+          color: #0f2744;
+          font-weight: 900;
         }
-        .sidebar-title { margin: 0; font-size: 16px; color: #fff; }
-        .sidebar-subtitle { margin: 2px 0 0; font-size: 11px; color: rgba(255,255,255,.66); line-height: 1.35; }
-        .sidebar-section { padding-top: 16px; border-top: 1px solid rgba(255,255,255,.12); }
+        .sidebar-title {
+          margin: 0;
+          font-size: 16px;
+          color: #fff;
+        }
+        .sidebar-subtitle {
+          margin: 2px 0 0;
+          font-size: 11px;
+          color: rgba(255, 255, 255, 0.66);
+          line-height: 1.35;
+        }
+        .sidebar-section {
+          padding-top: 16px;
+          border-top: 1px solid rgba(255, 255, 255, 0.12);
+        }
         .sidebar-label {
-          display: block; margin-bottom: 8px; font-size: 10px; font-weight: 900;
-          letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.6);
+          display: block;
+          margin-bottom: 8px;
+          font-size: 10px;
+          font-weight: 900;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.6);
         }
-        .sidebar-select, .sidebar-input, .sidebar-btn {
-          width: 100%; border-radius: 12px; border: 1px solid rgba(255,255,255,.16); font: inherit;
-        }
-        .sidebar-select, .sidebar-input {
-          padding: 11px 12px; background: rgba(255,255,255,.08); color: #fff; font-size: 13px; font-weight: 750;
-        }
-        .sidebar-select option { color: #111827; }
+        .sidebar-select,
+        .sidebar-input,
         .sidebar-btn {
-          display: inline-flex; justify-content: center; align-items: center; gap: 8px;
-          padding: 12px 14px; margin-top: 9px; cursor: pointer; background: rgba(255,255,255,.08);
-          color: rgba(255,255,255,.92); font-size: 13px; font-weight: 850; text-decoration: none;
+          width: 100%;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          font: inherit;
         }
-        .sidebar-btn.primary { background: linear-gradient(135deg, #f59e0b, #2563eb); border-color: transparent; color: #fff; }
-        .sidebar-note { margin: 8px 0 0; color: rgba(255,255,255,.62); font-size: 11px; line-height: 1.45; }
-        .sidebar-checkbox-group { display: grid; gap: 9px; }
-        .sidebar-checkbox-label { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,.86); font-size: 12px; font-weight: 800; }
-        .sidebar-checkbox-label input { width: 16px; height: 16px; accent-color: #38bdf8; }
-        body.theme-clean .shape-navy, body.theme-clean .shape-blob { display: none; }
-        body.theme-blue { --navy: #0f3b75; --navy-deep: #155eaa; --gold-bg: #dbeafe; --gold-text: #1d4ed8; --blob: #bfdbfe; }
-        body.theme-mint { --navy: #14532d; --navy-deep: #166534; --gold-bg: #dcfce7; --gold-text: #15803d; --blob: #bbf7d0; --border: #bbf7d0; }
-        body.theme-warm { --navy: #7c2d12; --navy-deep: #9a3412; --gold-bg: #ffedd5; --gold-text: #c2410c; --blob: #fed7aa; --border: #fdba74; }
-        body.theme-slate { --navy: #1e293b; --navy-deep: #0f172a; --gold-bg: #e2e8f0; --gold-text: #334155; --blob: #cbd5e1; --border: #cbd5e1; }
-        body.theme-forest { --navy: #064e3b; --navy-deep: #065f46; --gold-bg: #d1fae5; --gold-text: #047857; --blob: #a7f3d0; --border: #6ee7b7; }
+        .sidebar-select,
+        .sidebar-input {
+          padding: 11px 12px;
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+          font-size: 13px;
+          font-weight: 750;
+        }
+        .sidebar-select option {
+          color: #111827;
+        }
+        .sidebar-btn {
+          display: inline-flex;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 14px;
+          margin-top: 9px;
+          cursor: pointer;
+          background: rgba(255, 255, 255, 0.08);
+          color: rgba(255, 255, 255, 0.92);
+          font-size: 13px;
+          font-weight: 850;
+          text-decoration: none;
+        }
+        .sidebar-btn.primary {
+          background: linear-gradient(135deg, #f59e0b, #2563eb);
+          border-color: transparent;
+          color: #fff;
+        }
+        .sidebar-note {
+          margin: 8px 0 0;
+          color: rgba(255, 255, 255, 0.62);
+          font-size: 11px;
+          line-height: 1.45;
+        }
+        .sidebar-checkbox-group {
+          display: grid;
+          gap: 9px;
+        }
+        .sidebar-checkbox-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: rgba(255, 255, 255, 0.86);
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .sidebar-checkbox-label input {
+          width: 16px;
+          height: 16px;
+          accent-color: #38bdf8;
+        }
+        body.theme-clean .shape-navy,
+        body.theme-clean .shape-blob {
+          display: none;
+        }
+        body.theme-blue {
+          --navy: #0f3b75;
+          --navy-deep: #155eaa;
+          --gold-bg: #dbeafe;
+          --gold-text: #1d4ed8;
+          --blob: #bfdbfe;
+        }
+        body.theme-mint {
+          --navy: #14532d;
+          --navy-deep: #166534;
+          --gold-bg: #dcfce7;
+          --gold-text: #15803d;
+          --blob: #bbf7d0;
+          --border: #bbf7d0;
+        }
+        body.theme-warm {
+          --navy: #7c2d12;
+          --navy-deep: #9a3412;
+          --gold-bg: #ffedd5;
+          --gold-text: #c2410c;
+          --blob: #fed7aa;
+          --border: #fdba74;
+        }
+        body.theme-slate {
+          --navy: #1e293b;
+          --navy-deep: #0f172a;
+          --gold-bg: #e2e8f0;
+          --gold-text: #334155;
+          --blob: #cbd5e1;
+          --border: #cbd5e1;
+        }
+        body.theme-forest {
+          --navy: #064e3b;
+          --navy-deep: #065f46;
+          --gold-bg: #d1fae5;
+          --gold-text: #047857;
+          --blob: #a7f3d0;
+          --border: #6ee7b7;
+        }
 
         @media (max-width: 1080px) {
-          body { flex-direction: column; align-items: center; padding: 16px; gap: 20px; }
-          .control-sidebar { position: static; width: min(100%, 8.5in); border-radius: 18px; }
+          body {
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+            gap: 20px;
+          }
+          .control-sidebar {
+            position: static;
+            width: min(100%, 8.5in);
+            border-radius: 18px;
+          }
         }
       }
     </style>
     <script>
       try {
-        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+        if (new URLSearchParams(location.search).has("embed"))
+          document.documentElement.classList.add("embed");
       } catch (_) {}
     </script>
-    <style id="interactive-list-link-style">
-      .interactive-list-link {
-        position: fixed;
-        top: 14px;
-        left: 14px;
-        z-index: 10000;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 9px 13px;
-        border-radius: 999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(3, 6, 15, 0.86);
-        color: #eaf0ff;
-        font: 800 12px/1.1 system-ui, -apple-system, Segoe UI, sans-serif;
-        letter-spacing: 0.01em;
-        text-decoration: none;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(14px);
-      }
-
-      .interactive-list-link:hover {
-        border-color: rgba(34, 211, 238, 0.5);
-        color: #ffffff;
-      }
-
-      html.embed .interactive-list-link {
-        display: none !important;
-      }
-
-      @media print {
-        .interactive-list-link {
-          display: none !important;
-        }
-      }
-    </style>
     <script>
       try {
-        if (new URLSearchParams(location.search).has('embed')) document.documentElement.classList.add('embed');
+        if (new URLSearchParams(location.search).has("embed"))
+          document.documentElement.classList.add("embed");
       } catch (_) {}
-    </script>  </head>
+    </script>
+  </head>
   <body class="has-sidebar theme-clean">
-    <a class="interactive-list-link" href="interactive.html">&larr; Interactive flyer list</a>
-    <aside class="control-sidebar no-print" role="complementary" aria-label="Flyer controls">
+    <a class="back-link no-print" href="/marketing/index.html" style="position: fixed; top: 1.5rem; left: 1.5rem; z-index: 100; background: white; padding: 0.5rem 1rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 600; color: #0f172a; text-decoration: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; transition: all 0.2s;">&larr; Back to flyer gallery</a>
+    <aside
+      class="control-sidebar no-print"
+      role="complementary"
+      aria-label="Flyer controls"
+    >
       <div class="sidebar-header">
         <span class="sidebar-logo">LU</span>
         <div>
           <h2 class="sidebar-title">Admin Setup Guide</h2>
-          <p class="sidebar-subtitle">Interactive controls for the rewards setup quick guide.</p>
+          <p class="sidebar-subtitle">
+            Interactive controls for the rewards setup quick guide.
+          </p>
         </div>
       </div>
       <div class="sidebar-section">
         <label class="sidebar-label" for="theme-select">Print Theme</label>
-        <select id="theme-select" class="sidebar-select" onchange="applyBasicSettingsTheme(this.value)">
+        <select
+          id="theme-select"
+          class="sidebar-select"
+          onchange="applyBasicSettingsTheme(this.value)"
+        >
           <option value="clean" selected>Clean printer friendly</option>
           <option value="blue">Soft blue accent</option>
           <option value="mint">Mint garden</option>
@@ -531,34 +635,84 @@
           <option value="slate">Slate professional</option>
           <option value="forest">Forest green</option>
         </select>
-        <p class="sidebar-note">This flyer is already light so it prints well on a regular printer.</p>
+        <p class="sidebar-note">
+          This flyer is already light so it prints well on a regular printer.
+        </p>
       </div>
       <div class="sidebar-section">
         <label class="sidebar-label" for="school-input">Prepared for</label>
-        <input id="school-input" class="sidebar-input" type="text" placeholder="your school" oninput="updateBasicPreparedFor(this.value)" />
+        <input
+          id="school-input"
+          class="sidebar-input"
+          type="text"
+          placeholder="your school"
+          oninput="updateBasicPreparedFor(this.value)"
+        />
         <p class="sidebar-note">Adds the school name to the flyer headline.</p>
       </div>
       <div class="sidebar-section">
         <span class="sidebar-label">Toggle sections</span>
         <div class="sidebar-checkbox-group">
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".shots" checked onchange="toggleBasicSection(this)" /> Screenshots</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".features" checked onchange="toggleBasicSection(this)" /> Settings cards</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".how" checked onchange="toggleBasicSection(this)" /> How it works</label>
-          <label class="sidebar-checkbox-label"><input type="checkbox" data-toggle-selector=".cta-block" checked onchange="toggleBasicSection(this)" /> Footer / contact block</label>
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".shots"
+              checked
+              onchange="toggleBasicSection(this)"
+            />
+            Screenshots</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".features"
+              checked
+              onchange="toggleBasicSection(this)"
+            />
+            Settings cards</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".how"
+              checked
+              onchange="toggleBasicSection(this)"
+            />
+            How it works</label
+          >
+          <label class="sidebar-checkbox-label"
+            ><input
+              type="checkbox"
+              data-toggle-selector=".cta-block"
+              checked
+              onchange="toggleBasicSection(this)"
+            />
+            Footer / contact block</label
+          >
         </div>
       </div>
       <div class="sidebar-section">
-        <a class="sidebar-btn" href="interactive.html">Back to interactive flyers</a>
-        <button class="sidebar-btn primary" onclick="window.print()">Print flyer</button>
+        <a class="sidebar-btn" href="/marketing/index.html"
+          >Back to flyer gallery</a
+        >
+        <button class="sidebar-btn primary" onclick="window.print()">
+          Print flyer
+        </button>
       </div>
       <div class="sidebar-section">
         <span class="sidebar-label">Included sections</span>
-        <p class="sidebar-note">Kiosk sign-in, rewards shop screenshots, point categories, coupon printing, school rules, and launch steps.</p>
+        <p class="sidebar-note">
+          Kiosk sign-in, rewards shop screenshots, point categories, coupon
+          printing, school rules, and launch steps.
+        </p>
       </div>
     </aside>
     <p class="hint">Ctrl+P → Letter · Margins: None · Background graphics on</p>
 
-    <article class="flyer" aria-label="LevelUp Rewards basic settings admin flyer">
+    <article
+      class="flyer"
+      aria-label="LevelUp Rewards basic settings admin flyer"
+    >
       <div class="shape-navy" aria-hidden="true"></div>
       <div class="shape-blob" aria-hidden="true"></div>
 
@@ -566,8 +720,9 @@
         <div class="badge" aria-hidden="true">Admin setup quick guide</div>
         <h1>Set up rewards.<br />Launch with confidence.</h1>
         <p class="lead">
-          Configure the essentials once in Admin: point categories, prize costs, coupon rules, and kiosk access,
-          so teachers can award points and students can redeem without confusion.
+          Configure the essentials once in Admin: point categories, prize costs,
+          coupon rules, and kiosk access, so teachers can award points and
+          students can redeem without confusion.
         </p>
       </header>
 
@@ -597,20 +752,37 @@
       <section class="features" aria-label="Basic settings overview">
         <div class="feature">
           <div class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path
+                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"
+              />
               <circle cx="12" cy="12" r="3" />
             </svg>
           </div>
           <div>
             <h3>Point categories</h3>
-            <p>Name behaviors (participation, kindness) and set default values for printed coupons.</p>
+            <p>
+              Name behaviors (participation, kindness) and set default values
+              for printed coupons.
+            </p>
           </div>
         </div>
 
         <div class="feature">
           <div class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
               <path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8" />
               <path d="M4 8h16M12 4v16" />
               <rect x="8" y="2" width="8" height="4" rx="1" />
@@ -618,33 +790,56 @@
           </div>
           <div>
             <h3>Rewards shop</h3>
-            <p>Add prizes with point cost, stock counts, and who can see each item (school-wide or by class).</p>
+            <p>
+              Add prizes with point cost, stock counts, and who can see each
+              item (school-wide or by class).
+            </p>
           </div>
         </div>
 
         <div class="feature">
           <div class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
               <rect x="3" y="4" width="18" height="16" rx="2" />
               <path d="M7 8h10M7 12h6" />
             </svg>
           </div>
           <div>
             <h3>Coupon printing</h3>
-            <p>Print 10- or 30-code sheets from Admin → Points. Students scan codes at the kiosk to bank points.</p>
+            <p>
+              Print 10- or 30-code sheets from Admin → Points. Students scan
+              codes at the kiosk to bank points.
+            </p>
           </div>
         </div>
 
         <div class="feature">
           <div class="icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
               <circle cx="12" cy="12" r="3" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              <path
+                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+              />
             </svg>
           </div>
           <div>
             <h3>School rules</h3>
-            <p>Turn on raffle tickets, kiosk timeouts, shop categories, and notifications from Settings.</p>
+            <p>
+              Turn on raffle tickets, kiosk timeouts, shop categories, and
+              notifications from Settings.
+            </p>
           </div>
         </div>
       </section>
@@ -655,17 +850,26 @@
           <div class="step">
             <div class="step-num" aria-hidden="true">1</div>
             <h4>Categories</h4>
-            <p>Open <strong>Admin → Points</strong>. Create categories and default point values teachers use daily.</p>
+            <p>
+              Open <strong>Admin → Points</strong>. Create categories and
+              default point values teachers use daily.
+            </p>
           </div>
           <div class="step">
             <div class="step-num" aria-hidden="true">2</div>
             <h4>Prizes</h4>
-            <p>Open <strong>Admin → Rewards Shop</strong>. Set cost, stock, and print shelf cards for the desk.</p>
+            <p>
+              Open <strong>Admin → Rewards Shop</strong>. Set cost, stock, and
+              print shelf cards for the desk.
+            </p>
           </div>
           <div class="step">
             <div class="step-num" aria-hidden="true">3</div>
             <h4>Go live</h4>
-            <p>Teachers award points or print coupons. Students use kiosk sign-in, then scan coupon codes and redeem prizes.</p>
+            <p>
+              Teachers award points or print coupons. Students use kiosk
+              sign-in, then scan coupon codes and redeem prizes.
+            </p>
           </div>
         </div>
       </section>
@@ -684,7 +888,9 @@
           <div class="cta-center">
             <p class="eyebrow">Student kiosk</p>
             <h2>Launch the student flow</h2>
-            <p class="sub">Kiosk sign-in, rewards shop, and coupon redemption in one place.</p>
+            <p class="sub">
+              Kiosk sign-in, rewards shop, and coupon redemption in one place.
+            </p>
           </div>
           <div class="cta-stat">
             <div class="big">5 min</div>
@@ -698,41 +904,351 @@
             <span>Teacher-friendly</span>
             <span>School-wide control</span>
           </div>
-          <a class="url" href="https://leveluprewards.app">Set up your launch: leveluprewards.app · contact@leveluprewards.app</a>
+          <a class="url" href="https://leveluprewards.app"
+            >Set up your launch: leveluprewards.app ·
+            contact@leveluprewards.app</a
+          >
         </div>
       </footer>
     </article>
     <script>
-      const defaultBasicHeadline = 'Set up rewards.<br />Launch with confidence.';
+      const defaultBasicHeadline =
+        "Set up rewards.<br />Launch with confidence.";
 
       function escapeBasicHtml(value) {
-        return value.replace(/[&<>"']/g, (char) => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#039;',
-        }[char]));
+        return value.replace(
+          /[&<>"']/g,
+          (char) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#039;",
+            })[char],
+        );
       }
 
-      function applyBasicSettingsTheme(theme) {
-        document.body.classList.remove('theme-clean', 'theme-blue', 'theme-mint', 'theme-warm', 'theme-slate', 'theme-forest');
-        document.body.classList.add('theme-' + (theme || 'clean'));
+      
+      const THEMES = {
+        navy: {
+          "--bg": "#0b1220",
+          "--accent": "#7c3aed",
+          "--accent2": "#06b6d4",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#eaf0ff",
+          "--muted": "rgba(234,240,255,0.78)",
+          "--hair": "rgba(234,240,255,0.15)",
+          "--success": "#22c55e",
+          "--black": "#0a0a0a",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(124,58,237,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(6,182,212,0.25), transparent 55%), linear-gradient(180deg, #081022, #070b16 70%, #05060c)",
+        },
+        green: {
+          "--bg": "#041d1a",
+          "--accent": "#059669",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#ecfdf5",
+          "--muted": "rgba(236,253,245,0.78)",
+          "--hair": "rgba(236,253,245,0.15)",
+          "--success": "#34d399",
+          "--black": "#020d0c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(5,150,105,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.25), transparent 55%), linear-gradient(180deg, #041a17, #02110e 70%, #010706)",
+        },
+        sunset: {
+          "--bg": "#1a0b18",
+          "--accent": "#db2777",
+          "--accent2": "#f97316",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fdf2f8",
+          "--muted": "rgba(253,242,248,0.78)",
+          "--hair": "rgba(253,242,248,0.15)",
+          "--success": "#22c55e",
+          "--black": "#090208",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(219,39,119,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(249,115,22,0.25), transparent 55%), linear-gradient(180deg, #180916, #0e040d 70%, #060105)",
+        },
+        cyber: {
+          "--bg": "#08070d",
+          "--accent": "#d946ef",
+          "--accent2": "#f43f5e",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fae8ff",
+          "--muted": "rgba(250,232,255,0.78)",
+          "--hair": "rgba(250,232,255,0.15)",
+          "--success": "#10b981",
+          "--black": "#030205",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(217,70,239,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(244,63,94,0.25), transparent 55%), linear-gradient(180deg, #07060b, #040307 70%, #010103)",
+        },
+        crimson: {
+          "--bg": "#1e050b",
+          "--accent": "#e11d48",
+          "--accent2": "#fb7185",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fff1f2",
+          "--muted": "rgba(255,241,242,0.78)",
+          "--hair": "rgba(255,241,242,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0103",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(225,29,72,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251,113,133,0.25), transparent 55%), linear-gradient(180deg, #180308, #0e0104 70%, #050001)",
+        },
+        gold: {
+          "--bg": "#1a1206",
+          "--accent": "#d97706",
+          "--accent2": "#fbbf24",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fef3c7",
+          "--muted": "rgba(254,243,199,0.78)",
+          "--hair": "rgba(254,243,199,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0702",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(217,119,6,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(251,191,36,0.25), transparent 55%), linear-gradient(180deg, #150e05, #0a0702 70%, #030201)",
+        },
+        aurora: {
+          "--bg": "#061318",
+          "--accent": "#06b6d4",
+          "--accent2": "#10b981",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#ecfeff",
+          "--muted": "rgba(236,254,255,0.78)",
+          "--hair": "rgba(236,254,255,0.15)",
+          "--success": "#34d399",
+          "--black": "#020709",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(6,182,212,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.25), transparent 55%), linear-gradient(180deg, #051014, #02070a 70%, #010304)",
+        },
+        sapphire: {
+          "--bg": "#0a0e1c",
+          "--accent": "#3b82f6",
+          "--accent2": "#6366f1",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#eff6ff",
+          "--muted": "rgba(239,246,255,0.78)",
+          "--hair": "rgba(239,246,255,0.15)",
+          "--success": "#10b981",
+          "--black": "#04060c",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(59,130,246,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(99,102,241,0.25), transparent 55%), linear-gradient(180deg, #080b16, #04050a 70%, #010204)",
+        },
+        obsidian: {
+          "--bg": "#0d0d0e",
+          "--accent": "#f3f4f6",
+          "--accent2": "#9ca3af",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#f9fafb",
+          "--muted": "rgba(249,250,251,0.78)",
+          "--hair": "rgba(249,250,251,0.15)",
+          "--success": "#10b981",
+          "--black": "#050506",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(243,244,246,0.15), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(156,163,175,0.12), transparent 55%), linear-gradient(180deg, #0b0b0c, #060607 70%, #020202)",
+        },
+        sand: {
+          "--bg": "#1a0f0a",
+          "--accent": "#ea580c",
+          "--accent2": "#f59e0b",
+          "--panel": "rgba(255,255,255,0.05)",
+          "--text": "#fff7ed",
+          "--muted": "rgba(255,247,237,0.78)",
+          "--hair": "rgba(255,247,237,0.15)",
+          "--success": "#10b981",
+          "--black": "#0a0604",
+          "--strong": "#ffffff",
+          "--heading-color": "var(--accent2)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(255,255,255,0.08)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(234,88,12,0.3), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(245,158,11,0.25), transparent 55%), linear-gradient(180deg, #150c08, #0a0604 70%, #030201)",
+        },
+        light: {
+          "--bg": "#f8fafc",
+          "--accent": "#4f46e5",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(15,23,42,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#475569",
+          "--hair": "rgba(15,23,42,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#090d16",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(79,70,229,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14,165,233,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f1f5f9 70%, #e2e8f0)",
+        },
+        "light-sky": {
+          "--bg": "#f0f9ff",
+          "--accent": "#0284c7",
+          "--accent2": "#0ea5e9",
+          "--panel": "rgba(2,132,199,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#334155",
+          "--hair": "rgba(2,132,199,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#031b2b",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(2,132,199,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(14,165,233,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0f9ff 70%, #e0f2fe)",
+        },
+        "light-mint": {
+          "--bg": "#f0fdf4",
+          "--accent": "#16a34a",
+          "--accent2": "#10b981",
+          "--panel": "rgba(22,163,74,0.04)",
+          "--text": "#052e16",
+          "--muted": "#14532d",
+          "--hair": "rgba(22,163,74,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#022310",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(22,163,74,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(16,185,129,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f0fdf4 70%, #dcfce7)",
+        },
+        "light-amber": {
+          "--bg": "#fffbeb",
+          "--accent": "#b45309",
+          "--accent2": "#d97706",
+          "--panel": "rgba(180,83,9,0.04)",
+          "--text": "#451a03",
+          "--muted": "#78350f",
+          "--hair": "rgba(180,83,9,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#270f02",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(180,83,9,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(217,119,6,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fffbeb 70%, #fef3c7)",
+        },
+        "light-rose": {
+          "--bg": "#fff1f2",
+          "--accent": "#be123c",
+          "--accent2": "#e11d48",
+          "--panel": "rgba(190,18,60,0.04)",
+          "--text": "#4c0519",
+          "--muted": "#9f1239",
+          "--hair": "rgba(190,18,60,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#27020a",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(190,18,60,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(225,29,72,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #fff1f2 70%, #ffe4e6)",
+        },
+        "light-slate": {
+          "--bg": "#f8fafc",
+          "--accent": "#334155",
+          "--accent2": "#0f766e",
+          "--panel": "rgba(51,65,85,0.04)",
+          "--text": "#0f172a",
+          "--muted": "#475569",
+          "--hair": "rgba(51,65,85,0.12)",
+          "--success": "#16a34a",
+          "--black": "#ffffff",
+          "--strong": "#020617",
+          "--heading-color": "var(--accent)",
+          "--featured-border": "var(--accent2)",
+          "--featured-bg": "rgba(0,0,0,0.03)",
+          "page-gradient":
+            "radial-gradient(1200px 700px at 10% 10%, rgba(51,65,85,0.08), transparent 60%), radial-gradient(900px 600px at 90% 20%, rgba(15,118,110,0.08), transparent 55%), linear-gradient(180deg, #ffffff, #f8fafc 70%, #e2e8f0)",
+        },
+      };
+
+      function applyBasicSettingsTheme(themeKey) {
+        // Fallback or use standard logic
+        const theme = THEMES[themeKey] || THEMES.light;
+        const root = document.body;
+        
+        // Remove old theme classes (theme-clean, theme-blue, etc)
+        root.className = root.className.replace(/theme-[\w-]+/g, '').trim();
+        root.classList.add('theme-' + themeKey);
+
+        // Map standard theme variables to the basic-settings specific variables
+        // if they don't explicitly exist.
+        // basic-settings uses: --navy, --navy-deep, --gold-bg, --gold-text, --blob, --border
+        root.style.setProperty('--navy', theme['--strong'] || theme['--text'] || '#1e293b');
+        root.style.setProperty('--navy-deep', theme['--text'] || '#0f172a');
+        root.style.setProperty('--gold-bg', theme['--panel'] || theme['--callout-bg'] || '#f1f5f9');
+        root.style.setProperty('--gold-text', theme['--accent'] || '#334155');
+        root.style.setProperty('--blob', theme['--hair'] || theme['--badge-border'] || '#e2e8f0');
+        root.style.setProperty('--border', theme['--hair'] || theme['--card-border'] || '#cbd5e1');
+
+        // It also hides shape-navy and shape-blob on light/clean mode
+        const shapes = document.querySelectorAll('.shape-navy, .shape-blob');
+        if (themeKey.startsWith('light') || themeKey === 'clean') {
+           shapes.forEach(el => el.style.display = 'none');
+        } else {
+           shapes.forEach(el => el.style.display = 'block');
+        }
       }
+
 
       function updateBasicPreparedFor(value) {
         const name = value.trim();
-        const headline = document.querySelector('.hero h1');
+        const headline = document.querySelector(".hero h1");
         if (!headline) return;
         headline.innerHTML = name
-          ? 'Set up rewards.<br />Launch at ' + escapeBasicHtml(name) + '.'
+          ? "Set up rewards.<br />Launch at " + escapeBasicHtml(name) + "."
           : defaultBasicHeadline;
       }
 
       function toggleBasicSection(input) {
-        document.querySelectorAll(input.dataset.toggleSelector).forEach((section) => {
-          section.style.display = input.checked ? '' : 'none';
-        });
+        document
+          .querySelectorAll(input.dataset.toggleSelector)
+          .forEach((section) => {
+            section.style.display = input.checked ? "" : "none";
+          });
       }
     </script>
   </body>

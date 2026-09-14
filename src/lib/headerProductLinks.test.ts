@@ -16,8 +16,17 @@ describe('headerProductHref', () => {
 
   it('opens dedicated classroom and library pages', () => {
     expect(headerProductHref('classroom', 'yeshiva', 'teacher')).toBe('/yeshiva/classroom-realm');
-    expect(headerProductHref('library', 'yeshiva', 'admin')).toBe('/yeshiva/library');
     expect(headerProductHref('library', 'yeshiva', 'librarian')).toBe('/yeshiva/librarian');
+    expect(headerProductHref('library', 'yeshiva', 'teacher')).toBe('/yeshiva/library');
+    expect(headerProductHref('library', 'yeshiva', 'secretary')).toBe('/yeshiva/library');
+  });
+
+  it('sends admins to the Library tab instead of straight into one library', () => {
+    expect(headerProductHref('library', 'yeshiva', 'admin')).toBe('/yeshiva/admin?tab=library');
+    expect(headerProductHref('library', 'yeshiva', 'developer')).toBe('/yeshiva/admin?tab=library');
+    // Restricted dashboards have no Library tab, so they keep the direct link.
+    expect(headerProductHref('library', 'yeshiva', 'prizeClerk')).toBe('/yeshiva/library');
+    expect(headerProductHref('library', 'yeshiva', 'houseCoordinator')).toBe('/yeshiva/library');
   });
 
   it('opens attendance and homework in the matching staff portal', () => {
