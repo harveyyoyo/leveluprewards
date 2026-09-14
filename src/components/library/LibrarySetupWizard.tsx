@@ -63,6 +63,7 @@ export function LibrarySetupWizard({
       } else if (trimmed !== currentName) {
         await renameLocation(DEFAULT_LIBRARY_LOCATION_ID, trimmed);
       }
+      setName(trimmed);
       goNext();
     } catch (error) {
       toast({
