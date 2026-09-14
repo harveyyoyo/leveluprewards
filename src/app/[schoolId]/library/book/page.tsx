@@ -145,7 +145,7 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
         setBusy(false);
       }
     },
-    [firestore, schoolId, code, mode, playSound, toast, libraryPolicy, functions],
+    [firestore, schoolId, code, mode, playSound, toast, libraryPolicy, functions, settings.libraryStudentRatingsEnabled],
   );
 
   const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(

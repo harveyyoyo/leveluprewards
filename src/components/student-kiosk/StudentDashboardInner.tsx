@@ -1127,6 +1127,7 @@ export function StudentDashboardInner({
     recessMaxMinutes,
     settings.enableGoals,
     settings.enableCouponRedeemCompliments,
+    settings.libraryStudentRatingsEnabled,
     authFetch,
     firestore,
     schoolId,

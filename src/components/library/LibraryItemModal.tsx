@@ -216,6 +216,8 @@ export function LibraryItemModal({
         });
       }
     }
+  // Reset fields when the dialog opens or the copy changes — not on every catalog tick.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- opening the dialog is the intended trigger
   }, [item, isOpen]);
 
   // Live title autocomplete debounced search when entering book name manually
