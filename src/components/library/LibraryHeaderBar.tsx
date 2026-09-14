@@ -47,35 +47,37 @@ export function LibraryHeaderBar({
   return (
     <div className={cn('relative z-10 w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', theme.classes.header)}>
       <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <Link href={backToPortalHref} title="Back to LevelUp" className="flex items-center gap-2 sm:gap-3 shrink-0 group">
-          <span
-            className={cn(
-              'grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl border-2 p-1 shadow-sm transition-transform group-hover:-translate-y-0.5',
-              theme.classes.card,
-            )}
-          >
-            <LevelUpLogoMark className="h-full w-full" />
-          </span>
-          <span className="hidden sm:flex flex-col leading-tight">
-            <span className="font-black text-base">{schoolName}</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
-          </span>
-        </Link>
-
-        <div className="library-header-nav library-readable flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto sm:gap-3 md:gap-6">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={onHome}
             title="Library Home"
             aria-label="Library Home"
             className={cn(
-              'flex items-center gap-1.5 sm:gap-2 py-1.5 px-2 sm:px-0 text-sm sm:text-base font-black tracking-tight transition-colors',
+              'flex items-center py-1.5 px-2 sm:px-0 transition-colors',
               activeTab === 'hub' && 'text-primary',
             )}
             style={{ color: activeTab === 'hub' ? theme.swatches.primary : theme.swatches.text }}
           >
             <Home className="h-5 w-5 sm:h-6 sm:w-6 shrink-0" />
           </button>
+          <Link href={backToPortalHref} title="Back to LevelUp" className="flex items-center gap-2 sm:gap-3 shrink-0 group">
+            <span
+              className={cn(
+                'grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl border-2 p-1 shadow-sm transition-transform group-hover:-translate-y-0.5',
+                theme.classes.card,
+              )}
+            >
+              <LevelUpLogoMark className="h-full w-full" />
+            </span>
+            <span className="hidden sm:flex flex-col leading-tight">
+              <span className="font-black text-base">{schoolName}</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
+            </span>
+          </Link>
+        </div>
+
+        <div className="library-header-nav library-readable flex min-w-0 flex-1 items-center justify-center gap-1 overflow-x-auto sm:gap-3 md:gap-6">
           {NAV_TABS.map(({ id, label, icon: TabIcon, activeColor }) => (
             <button
               key={id}

@@ -89,7 +89,7 @@ export const LIBRARY_THEMES: Record<LibraryThemeId, LibraryTheme> = {
       cardHighlight: 'border-amber-600/40 bg-amber-600/10 ring-2 ring-amber-600/30',
       badge: 'border-amber-300 bg-amber-100/80 text-amber-950',
       accent: 'text-amber-800',
-      button: 'bg-amber-800 text-white hover:bg-amber-900',
+      button: 'bg-amber-300 text-amber-950 hover:bg-amber-400 shadow-amber-600/10 shadow-sm',
     },
   },
   arcade_adventure: {
