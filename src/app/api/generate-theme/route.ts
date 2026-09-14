@@ -29,6 +29,28 @@ type ThemeResponse = {
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 const SAFE_BACKGROUND = /^(?:(?:repeating-)?linear-gradient|radial-gradient)\([#0-9a-zA-Z.,%\s-]+\)$/;
 
+/**
+ * Fonts the AI may choose from. Every entry keeps clear, even letterforms at
+ * small ID-card sizes and in ALL CAPS (a full school name printed on a card),
+ * unlike heavy/condensed display faces (e.g. "Alfa Slab One") that can turn
+ * dense text into an illegible block. Never let the AI's raw font choice
+ * through unchecked — fall back to a legible default instead.
+ */
+const LEGIBLE_THEME_FONTS = [
+    'Inter', 'Poppins', 'Montserrat', 'Nunito', 'Quicksand', 'Baloo 2', 'Fredoka',
+    'Rubik', 'Comfortaa', 'Manrope', 'Work Sans', 'DM Sans', 'Outfit', 'Sora',
+    'Space Grotesk', 'Kanit', 'Urbanist', 'Bebas Neue', 'Oswald', 'Staatliches',
+    'Righteous', 'Archivo Black', 'Anton', 'Orbitron',
+];
+const DEFAULT_THEME_FONT = 'Poppins';
+
+function resolveLegibleFont(candidate: string): string {
+    const match = LEGIBLE_THEME_FONTS.find(
+        (font) => font.toLowerCase() === candidate.trim().toLowerCase(),
+    );
+    return match || DEFAULT_THEME_FONT;
+}
+
 function asString(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
@@ -77,7 +99,7 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const data = raw as Record<string, unknown>;
     const backgroundStyle = asString(data.backgroundStyle);
-    const fontFamily = asString(data.fontFamily).replace(/[^\w\s-]/g, '').slice(0, 80);
+    const fontFamily = resolveLegibleFont(asString(data.fontFamily).replace(/[^\w\s-]/g, '').slice(0, 80));
     const emoji = asString(data.emoji);
 
     return {
@@ -87,7 +109,7 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
         cardBackground: requireHex(data.cardBackground, '#111827'),
         accent: requireHex(data.accent, '#22c55e'),
         emoji: emoji ? Array.from(emoji)[0] : '⭐',
-        fontFamily: fontFamily || 'Inter',
+        fontFamily,
         backgroundStyle: backgroundStyle && SAFE_BACKGROUND.test(backgroundStyle) ? backgroundStyle : null,
     };
 }
@@ -182,7 +204,7 @@ export async function POST(req: NextRequest) {
 
 DESIGN PHILOSOPHY:
 - Be creative and adventurous: avoid generic "safe" choices. Surprise the user with unexpected but cohesive combinations. Clarity always wins over novelty, though — see the legibility rules below.
-- Fonts: Choose Google Fonts that have strong personality and match the theme's vibe, but stay legible at small ID-card sizes and for numerals (points balance, class number, barcode digits). Favor distinctive display, slab, rounded, or thematic fonts that are still easy to scan (e.g. "Bangers", "Lobster", "Righteous", "Orbitron", "Permanent Marker", "Bungee", "Archivo Black", "Abril Fatface", "Playfair Display", "Oswald", "Anton", "Rubik Mono One", "Fugaz One", "Luckiest Guy", "Staatliches", "Bebas Neue", "Alfa Slab One"). Avoid fonts that sacrifice legibility for style — no dripping/horror scripts, ultra-thin neon-tube styles, or anything with broken/disconnected letterforms. Avoid bland system-like fonts unless the prompt explicitly asks for minimalism.
+- Fonts: You MUST pick \`fontFamily\` from exactly this list (any other value will be replaced with "${DEFAULT_THEME_FONT}"): ${LEGIBLE_THEME_FONTS.map((f) => `"${f}"`).join(', ')}. Every one of these stays legible at small ID-card sizes, in ALL CAPS (a full school name), and for numerals (points balance, class number, barcode digits). Pick whichever from that list best matches the theme's vibe — condensed/display choices like "Bebas Neue", "Oswald", "Anton", or "Staatliches" read as bold and distinctive; rounded ones like "Fredoka", "Baloo 2", or "Quicksand" read as playful; "Inter", "Manrope", or "Work Sans" read as clean/minimal.
 - Background: Prefer a patterned or multi-color background when it fits the prompt. Use CSS that can be set as the \`background\` property: linear-gradient, radial-gradient, or repeating patterns (e.g. repeating-linear-gradient, subtle stripes/dots). If a solid color fits better, use \`background\` only and leave \`backgroundStyle\` null. If you use a pattern or gradient, keep it low-detail enough that a color sampled from any point still contrasts with the text color.
 - Clarity is the top priority: text, primary, and accent colors must be clearly readable against the background/card in every part of the theme — treat this like designing for accessibility (WCAG AAA, 7:1 contrast) even though the exact math will be double-checked and corrected server-side. Prefer palettes that are unambiguously readable over ones that are merely "technically passing."
 
