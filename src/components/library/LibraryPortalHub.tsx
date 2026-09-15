@@ -212,7 +212,6 @@ export function LibraryPortalHub({
 
                   <h3 className="mt-1 lg:mt-3 text-base lg:text-2xl font-black">{text.title}</h3>
                   <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] opacity-50">{text.tagline}</p>
-                  <p className="mt-0.5 lg:mt-2 text-xs lg:text-sm leading-relaxed opacity-75 lg:line-clamp-2">{text.description}</p>
 
                   <span
                     className={cn(
