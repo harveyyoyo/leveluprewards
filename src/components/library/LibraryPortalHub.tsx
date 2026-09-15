@@ -128,7 +128,8 @@ export function LibraryPortalHub({
         onOpenSettings={onOpenSettings}
       />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center justify-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
+        <div className="m-auto w-full">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
           <span className="block sm:inline">{copy.welcomeLead}</span>
           {copy.welcomeHighlight ? (
@@ -236,7 +237,7 @@ export function LibraryPortalHub({
           <Compass className="h-3.5 w-3.5" />
           Take a quick tour
         </button>
-
+        </div>
       </main>
       <SiteFooter />
     </div>
