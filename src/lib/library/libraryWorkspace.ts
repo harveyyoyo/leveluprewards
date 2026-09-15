@@ -1,5 +1,6 @@
 import type { LibraryItem } from '@/lib/types';
 import { computeDaysOverdue } from '@/lib/library/libraryPolicy';
+import { resolveBookClassification, type LibraryGenreConfig } from '@/lib/library/libraryClassification';
 
 export interface LibraryLoan {
   id: string;
@@ -45,11 +46,18 @@ function matchesCatalogStatus(item: LibraryItem, status: string) {
   return item.condition === status;
 }
 
-export function filterLibraryCatalog(items: LibraryItem[], search: string, status: string, borrower: (id?: string) => string) {
+export function filterLibraryCatalog(
+  items: LibraryItem[],
+  search: string,
+  status: string,
+  borrower: (id?: string) => string,
+  genreDefinitions?: LibraryGenreConfig[] | null,
+) {
   const term = search.trim().toLowerCase();
   return items.filter(item => !item.archived &&
     matchesCatalogStatus(item, status) &&
     (!term || [item.name, item.author, item.upc, item.isbn, item.category, item.shelfLocation, item.copyNumber,
+      resolveBookClassification(item.category, genreDefinitions, item.shelfLocation).genre.label,
       item.checkedOutTo ? borrower(item.checkedOutTo) : ''].join(' ').toLowerCase().includes(term)))
     .sort((a, b) => a.name.localeCompare(b.name) || a.upc.localeCompare(b.upc));
 }

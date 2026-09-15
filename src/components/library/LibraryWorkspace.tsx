@@ -273,7 +273,7 @@ export function LibraryWorkspace({
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'shelf'>('title_asc');
+  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'genre_asc' | 'genre_desc' | 'shelf'>('title_asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [coverSize, setCoverSize] = useState<LibraryCoverSize>('small');
@@ -464,7 +464,7 @@ export function LibraryWorkspace({
 
   // Filter catalog
   const filteredCatalog = useMemo(() => {
-    let list = filterLibraryCatalog(scopedItems, search, status, getName);
+    let list = filterLibraryCatalog(scopedItems, search, status, getName, settings.libraryGenreDefinitions);
     if (shelfFilter !== 'all') {
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
     }
@@ -496,6 +496,11 @@ export function LibraryWorkspace({
       if (catalogSort === 'author_desc') {
         return (b.author || '').localeCompare(a.author || '');
       }
+      if (catalogSort === 'genre_asc' || catalogSort === 'genre_desc') {
+        const genreA = resolveBookClassification(a.category, settings.libraryGenreDefinitions, a.shelfLocation).genre.label;
+        const genreB = resolveBookClassification(b.category, settings.libraryGenreDefinitions, b.shelfLocation).genre.label;
+        return catalogSort === 'genre_asc' ? genreA.localeCompare(genreB) : genreB.localeCompare(genreA);
+      }
       if (catalogSort === 'shelf') {
         return (a.shelfLocation || 'ZZZ').localeCompare(b.shelfLocation || 'ZZZ');
       }
@@ -503,7 +508,7 @@ export function LibraryWorkspace({
     });
 
     return list;
-  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds]);
+  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds, settings.libraryGenreDefinitions]);
 
   // Organized scheme grouping (Genre → Author, or Author → Title)
   const organizedGroups = useMemo<BookPrimaryGroup[]>(() => {
@@ -1168,7 +1173,7 @@ export function LibraryWorkspace({
                     ref={searchInputRef}
                     className="pl-9 h-9 rounded-xl border-border/70 text-xs shadow-none"
                     aria-label="Search catalog"
-                    placeholder="Search by title…"
+                    placeholder="Search by title, author, or genre…"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -1207,6 +1212,8 @@ export function LibraryWorkspace({
                   <option value="title_desc">Title (Z–A)</option>
                   <option value="author_asc">Author (A–Z)</option>
                   <option value="author_desc">Author (Z–A)</option>
+                  <option value="genre_asc">Genre (A–Z)</option>
+                  <option value="genre_desc">Genre (Z–A)</option>
                   <option value="shelf">Shelf Location</option>
                 </select>
 
@@ -1333,28 +1340,10 @@ export function LibraryWorkspace({
                     <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                       <Tag className="h-3.5 w-3.5 text-primary" />
                       <span>Shelving Hierarchy:</span>
+                      <span className="font-semibold text-foreground normal-case tracking-normal">
+                        {LIBRARY_ORGANIZATION_SCHEMES[activeScheme].shortLabel}
+                      </span>
                     </span>
-                    <div className="inline-flex rounded-xl border border-border/70 bg-background p-0.5">
-                      {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((schemeKey) => {
-                        const isSelected = activeScheme === schemeKey;
-                        const meta = LIBRARY_ORGANIZATION_SCHEMES[schemeKey];
-                        return (
-                          <button
-                            key={schemeKey}
-                            type="button"
-                            onClick={() => setActiveScheme(schemeKey)}
-                            className={cn(
-                              'px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all',
-                              isSelected
-                                ? 'bg-primary text-primary-foreground shadow-xs'
-                                : 'text-muted-foreground hover:text-foreground',
-                            )}
-                          >
-                            {meta.shortLabel}
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
