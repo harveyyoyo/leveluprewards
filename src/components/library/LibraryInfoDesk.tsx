@@ -23,6 +23,7 @@ import {
   X,
   Camera,
   CameraOff,
+  Users,
 } from 'lucide-react';
 import { useFirestore, useFunctions } from '@/firebase';
 import {
@@ -39,6 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { filterItemsForLibrary, libraryDropBoxPath } from '@/lib/library/libraryLocations';
 import { libraryCopyNeedsProcessing, libraryCopyProcessingReason } from '@/lib/library/libraryWorkspace';
 import { LibraryStudentLoansSummary } from './LibraryStudentLoansSummary';
@@ -126,6 +128,8 @@ export function LibraryInfoDesk({
   const [savingLimit, setSavingLimit] = useState(false);
   const [busyLoanId, setBusyLoanId] = useState<string | null>(null);
   const [customLimitInput, setCustomLimitInput] = useState('');
+  const [showAllStudents, setShowAllStudents] = useState(false);
+  const [allStudentsFilter, setAllStudentsFilter] = useState('');
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -169,6 +173,26 @@ export function LibraryInfoDesk({
 
     return { books, students: matchedStudents };
   }, [searchQuery, scopedCatalog, students]);
+
+  // Every student at the school, alphabetized, for the "View all students" browser — separate
+  // from searchMatches.students above, which only ever shows a handful of live search hits.
+  const allStudentsSorted = useMemo(() => {
+    return [...(students ?? [])].sort((a, b) => {
+      const nameA = `${a.firstName ?? ''} ${a.lastName ?? ''}`.trim().toLowerCase();
+      const nameB = `${b.firstName ?? ''} ${b.lastName ?? ''}`.trim().toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }, [students]);
+
+  const allStudentsFiltered = useMemo(() => {
+    const q = allStudentsFilter.trim().toLowerCase();
+    if (!q) return allStudentsSorted;
+    return allStudentsSorted.filter((s) => {
+      const full = `${s.firstName ?? ''} ${s.lastName ?? ''}`.toLowerCase();
+      const nickname = (s.nickname ?? '').toLowerCase();
+      return full.includes(q) || nickname.includes(q);
+    });
+  }, [allStudentsSorted, allStudentsFilter]);
 
   // Handle barcode wedge scan in info mode -> look up item/student without checking out!
   // `clearAfterScan` is set for actual barcode scans (wedge reader / camera) so the search
@@ -465,6 +489,16 @@ export function LibraryInfoDesk({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0 gap-1.5 rounded-xl border-2 font-bold"
+              aria-label="View all students"
+              onClick={() => setShowAllStudents(true)}
+            >
+              <Users className="h-4 w-4 text-primary" />
+              All Students
+            </Button>
             {onOpenReports ? (
               <Button
                 type="button"
@@ -1171,6 +1205,57 @@ export function LibraryInfoDesk({
           </div>
         )}
       </div>
+
+      <Dialog
+        open={showAllStudents}
+        onOpenChange={(open) => {
+          setShowAllStudents(open);
+          if (!open) setAllStudentsFilter('');
+        }}
+      >
+        <DialogContent className="max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>All Students ({allStudentsSorted.length})</DialogTitle>
+            <DialogDescription>Pick a student to look up their account and current loans.</DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            value={allStudentsFilter}
+            onChange={(e) => setAllStudentsFilter(e.target.value)}
+            placeholder="Filter by name…"
+            className="rounded-xl"
+          />
+          <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-1">
+            {allStudentsFiltered.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No students match that name.</p>
+            ) : (
+              allStudentsFiltered.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedStudent(s);
+                    setSelectedBook(null);
+                    setShowAllStudents(false);
+                    setAllStudentsFilter('');
+                  }}
+                  className="w-full text-left p-2.5 rounded-xl hover:bg-muted/80 flex items-center gap-2.5 transition-colors text-sm"
+                >
+                  <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                    {s.firstName?.[0] || 'S'}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold truncate">{formatName(s)}</div>
+                    {s.classId ? (
+                      <div className="text-[11px] text-muted-foreground truncate">Class {s.classId}</div>
+                    ) : null}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
