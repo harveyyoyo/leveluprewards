@@ -96,7 +96,6 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
-import { LibraryGettingStarted } from './LibraryGettingStarted';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -195,7 +194,7 @@ export function LibraryWorkspace({
       setHubHome(false);
       return;
     }
-    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk', 'setup'].includes(rawTabParam)) {
+    if (['desk', 'catalog', 'loans', 'reports', 'settings', 'kiosk'].includes(rawTabParam)) {
       setTab((current) => (current === rawTabParam ? current : rawTabParam));
       setHubHome(false);
     }
@@ -859,11 +858,6 @@ export function LibraryWorkspace({
           setTab('settings');
           setHubHome(false);
         }}
-        onOpenSetup={() => {
-          if (navSoundEnabled) playSound('click');
-          setTab('setup');
-          setHubHome(false);
-        }}
       />
     );
   }
@@ -895,9 +889,7 @@ export function LibraryWorkspace({
               ? 'catalog'
               : tab === 'reports'
                 ? 'reports'
-                : tab === 'setup'
-                  ? 'hub'
-                  : (tab as 'desk' | 'catalog' | 'kiosk')
+                : (tab as 'desk' | 'catalog' | 'kiosk')
         }
         onNavigate={switchTab}
         onHome={() => {
@@ -922,17 +914,6 @@ export function LibraryWorkspace({
           transition={{ type: 'spring', stiffness: 280, damping: 26 }}
           className="space-y-5 sm:space-y-6"
         >
-        {/* 0. GETTING STARTED — name the library, see real book count, learn how to add staff */}
-        {tab === 'setup' && schoolId && (
-          <div className="animate-in fade-in duration-200">
-            <LibraryGettingStarted
-              schoolId={schoolId}
-              catalogCount={activeCopies.length}
-              onFinish={() => setHubHome(true)}
-            />
-          </div>
-        )}
-
         {/* 1. LIBRARY DESK — lookup only; borrow/return happens on the Kiosk */}
         {tab === 'desk' && (
           <div className="space-y-6 animate-in fade-in duration-200">
@@ -1424,32 +1405,7 @@ export function LibraryWorkspace({
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
-                <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
-                    <Checkbox
-                      checked={selectionMode}
-                      onCheckedChange={(checked) => {
-                        const on = checked === true;
-                        setSelectionMode(on);
-                        if (!on) setSelected(new Set());
-                      }}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span>Select books</span>
-                  </label>
-                  {selectionMode && (
-                    <button
-                      type="button"
-                      onClick={selectAllCurrentPage}
-                      className="text-[11px] font-semibold text-primary hover:underline"
-                    >
-                      {currentCatalogSlice.length > 0 && currentCatalogSlice.every((i) => selected.has(i.id))
-                        ? 'Deselect all'
-                        : 'Select all on this page'}
-                    </button>
-                  )}
-                </div>
+              <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-border/50">
                 <span className="text-[11px] text-muted-foreground">
                   {filteredCatalog.length} {filteredCatalog.length === 1 ? 'copy' : 'copies'}
                 </span>
@@ -1458,7 +1414,7 @@ export function LibraryWorkspace({
 
             {/* Selection actions only appear after a book is checked */}
             {selected.size > 0 && (
-              <div className="sticky top-16 z-20 -mx-1 my-2">
+              <div className="sticky top-0 z-20 -mx-1 my-2">
                 <div
                   className={cn(
                     'flex flex-wrap items-center justify-between gap-3 p-3.5 sm:px-5 border bg-background/95 backdrop-blur-md shadow-xl animate-in slide-in-from-top-4 duration-200 ring-2 ring-primary/20',
@@ -1674,6 +1630,32 @@ export function LibraryWorkspace({
                   <FolderTree className="h-3.5 w-3.5 text-primary" />
                   <span>Shelves</span>
                 </button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
+                  <Checkbox
+                    checked={selectionMode}
+                    onCheckedChange={(checked) => {
+                      const on = checked === true;
+                      setSelectionMode(on);
+                      if (!on) setSelected(new Set());
+                    }}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span>Select books</span>
+                </label>
+                {selectionMode && (
+                  <button
+                    type="button"
+                    onClick={selectAllCurrentPage}
+                    className="text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {currentCatalogSlice.length > 0 && currentCatalogSlice.every((i) => selected.has(i.id))
+                      ? 'Deselect all'
+                      : 'Select all on this page'}
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

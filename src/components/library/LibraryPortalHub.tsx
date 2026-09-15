@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
-import { Library, BookOpen, Monitor, ArrowRight, Stamp } from 'lucide-react';
+import { Library, BookOpen, Monitor, ArrowRight, Stamp, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -71,7 +72,6 @@ export interface LibraryPortalHubProps {
   backToPortalHref: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
-  onOpenSetup?: () => void;
 }
 
 /**
@@ -86,9 +86,8 @@ export function LibraryPortalHub({
   backToPortalHref,
   onSelect,
   onOpenSettings,
-  onOpenSetup,
 }: LibraryPortalHubProps) {
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const theme = resolveLibraryTheme(settings.libraryTheme as LibraryThemeId, settings.libraryBoxOpacity);
   const copy = resolveLibraryHubCopy(settings.libraryHubCopy);
   const isLargeScreen = useIsLargeScreen();
@@ -169,6 +168,7 @@ export function LibraryPortalHub({
                 key={card.id}
                 type="button"
                 layoutId={`library-hub-${card.id}`}
+                data-intro-tour={`library-hub-${card.id}`}
                 onClick={() => onSelect(card.id)}
                 variants={{
                   hidden: { opacity: 0, y: 18, rotate: 0 },
@@ -228,15 +228,14 @@ export function LibraryPortalHub({
           })}
         </motion.div>
 
-        {onOpenSetup ? (
-          <button
-            type="button"
-            onClick={onOpenSetup}
-            className="mt-8 lg:mt-12 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
-          >
-            Getting started
-          </button>
-        ) : null}
+        <button
+          type="button"
+          onClick={() => activateLibraryTour(updateSettings)}
+          className="mt-8 lg:mt-12 inline-flex items-center gap-1.5 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <Compass className="h-3.5 w-3.5" />
+          Take a quick tour
+        </button>
 
       </main>
       <SiteFooter />
