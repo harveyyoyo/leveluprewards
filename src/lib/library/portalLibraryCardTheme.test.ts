@@ -27,9 +27,15 @@ describe('portalLibraryCardTheme', () => {
     expect(portalLibraryCardIconForeground(resolveLibraryTheme('classic_oak'))).toBe('#ffffff');
   });
 
+  it('keeps a lighter wash on cozy themes so the hall picture can show through', () => {
+    const wash = portalLibraryCardWash(resolveLibraryTheme('grand_athenaeum'));
+    expect(wash).toMatch(/#[0-9a-f]{6}59/i);
+    expect(wash).toContain('transparent');
+  });
+
   it('washes dark themes more heavily so the light photo does not wash them out', () => {
     const midnight = resolveLibraryTheme('midnight_archive');
     expect(portalLibraryCardWash(midnight)).toContain(midnight.swatches.bg);
-    expect(portalLibraryCardWash(midnight).length).toBeGreaterThan(40);
+    expect(portalLibraryCardWash(midnight)).toMatch(/#[0-9a-f]{6}ee/i);
   });
 });

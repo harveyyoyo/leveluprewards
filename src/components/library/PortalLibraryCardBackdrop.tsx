@@ -9,8 +9,11 @@ export function PortalLibraryCardBackdrop({ theme }: { theme: LibraryTheme }) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
       <div
-        className="portal-library-card-photo absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: `url(${LIBRARY_HUB_BACKGROUND_SRC})` }}
+        className="portal-library-card-photo absolute inset-0 bg-cover"
+        style={{
+          backgroundImage: `url(${LIBRARY_HUB_BACKGROUND_SRC})`,
+          backgroundPosition: '52% 38%',
+        }}
       />
       <div className="absolute inset-0" style={{ background: portalLibraryCardWash(theme) }} />
       <span
