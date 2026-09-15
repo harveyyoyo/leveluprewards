@@ -3,7 +3,9 @@ import {
   consumeSchoolLoginOfficeIntent,
   markSchoolLoginOfficeIntent,
   resolveSchoolLoginNextUrl,
+  retargetLibraryLoginPath,
   schoolLoginNextPath,
+  schoolLoginPageStateFromSearch,
   schoolLoginRedirectHref,
 } from './schoolLoginRedirect';
 
@@ -11,6 +13,7 @@ describe('schoolLoginRedirect', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
     vi.restoreAllMocks();
+    sessionStorage.clear();
   });
 
   it('uses absolute office URL for next when on office host', () => {
@@ -98,5 +101,86 @@ describe('schoolLoginRedirect', () => {
         search: '?school=yeshiva&office=1',
       }),
     ).toBe('https://office.leveluprewards.app/yeshiva');
+  });
+
+  it('leaves the school box blank on the shareable library sign-in link', () => {
+    expect(schoolLoginPageStateFromSearch('?library=1')).toEqual({
+      school: '',
+      blankSchoolBox: true,
+      libraryIntent: true,
+    });
+    expect(schoolLoginPageStateFromSearch('?school=yeshiva&library=1')).toEqual({
+      school: '',
+      blankSchoolBox: true,
+      libraryIntent: true,
+    });
+    expect(schoolLoginPageStateFromSearch('?school=yeshiva')).toEqual({
+      school: 'yeshiva',
+      blankSchoolBox: false,
+      libraryIntent: false,
+    });
+  });
+
+  it('opens the typed school library after library sign-in, even if the old school name is in next', () => {
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      pathname: '/login',
+    } as Location);
+
+    expect(
+      resolveSchoolLoginNextUrl('schoolabc', {
+        search: '?library=1',
+      }),
+    ).toBe('/schoolabc/library');
+
+    expect(
+      resolveSchoolLoginNextUrl('schoolabc', {
+        search: '?school=yeshiva&next=%2Fyeshiva%2Flibrary',
+      }),
+    ).toBe('/schoolabc/library');
+
+    expect(
+      resolveSchoolLoginNextUrl('schoolabc', {
+        search: '?next=%2Fyeshiva%2Flibrary%2Fkiosk&library=1',
+      }),
+    ).toBe('/schoolabc/library/kiosk');
+  });
+
+  it('sends library page visitors to a blank library sign-in, not a filled school portal login', () => {
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      pathname: '/yeshiva/library',
+    } as Location);
+
+    expect(schoolLoginRedirectHref('yeshiva', { pathname: '/yeshiva/library' })).toBe(
+      '/login?changeSchool=1&library=1&next=%2Fyeshiva%2Flibrary',
+    );
+    expect(
+      schoolLoginRedirectHref('yeshiva', { pathname: '/yeshiva/library/kiosk' }),
+    ).toBe('/login?changeSchool=1&library=1&next=%2Fyeshiva%2Flibrary%2Fkiosk');
+  });
+
+  it('rewrites a library next path onto the school that was typed', () => {
+    expect(retargetLibraryLoginPath('/yeshiva/library', 'schoolabc')).toBe('/schoolabc/library');
+    expect(retargetLibraryLoginPath('/yeshiva/library?tab=catalog', 'schoolabc')).toBe(
+      '/schoolabc/library?tab=catalog',
+    );
+    expect(retargetLibraryLoginPath('/yeshiva/teacher', 'schoolabc')).toBeNull();
+  });
+
+  it('does not send a mismatched teacher next path to the library', () => {
+    vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      pathname: '/login',
+    } as Location);
+
+    expect(
+      resolveSchoolLoginNextUrl('schoolabc', {
+        search: '?next=%2Fyeshiva%2Fteacher',
+      }),
+    ).toBe('/schoolabc/portal');
   });
 });

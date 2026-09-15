@@ -27,6 +27,7 @@ import {
     clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import {
+  hasUrlSchoolLoginLibraryIntent,
   hasUrlSchoolLoginOfficeIntent,
   resolveSchoolLoginNextUrl,
 } from '@/lib/auth/schoolLoginRedirect';
@@ -827,11 +828,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const schoolParam = (params.get('school') || schoolId || '').trim().toLowerCase();
             if (!schoolParam) return;
             const hasNext = Boolean(params.get('next'));
-            if (!hasNext && !hasUrlSchoolLoginOfficeIntent(params)) return;
+            if (
+              !hasNext &&
+              !hasUrlSchoolLoginOfficeIntent(params) &&
+              !hasUrlSchoolLoginLibraryIntent(params)
+            ) {
+              return;
+            }
             const target = resolveSchoolLoginNextUrl(schoolParam);
             // If edge middleware rejects the session cookie, it sends us back to
             // `/login?next=`. Trying that jump again would loop forever.
-            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}`;
+            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}:${params.get('library') || ''}`;
             try {
                 if (sessionStorage.getItem(bounceKey) === '1') return;
                 sessionStorage.setItem(bounceKey, '1');
