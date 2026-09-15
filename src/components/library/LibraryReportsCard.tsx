@@ -304,7 +304,7 @@ export function LibraryReportsCard({
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border bg-muted/15 p-4 space-y-3">
+          <div className="rounded-2xl border bg-card/80 p-4 space-y-3">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
               <TrendingUp className="h-4 w-4 text-primary" />
               Checkouts — {rangeDays == null ? 'last 30 days' : rangeLabel.toLowerCase()}
@@ -324,7 +324,7 @@ export function LibraryReportsCard({
             )}
           </div>
 
-          <div className="rounded-2xl border bg-muted/15 p-4 space-y-3">
+          <div className="rounded-2xl border bg-card/80 p-4 space-y-3">
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
               <BookOpen className="h-4 w-4 text-primary" />
               Checkouts by genre
@@ -371,7 +371,7 @@ export function LibraryReportsCard({
         </div>
       )}
 
-      <div className="rounded-2xl border bg-muted/15 p-4 space-y-2.5">
+      <div className="rounded-2xl border bg-card/80 p-4 space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
             <AlertTriangle className="h-4 w-4 text-rose-500" />
@@ -388,7 +388,7 @@ export function LibraryReportsCard({
         ) : (
           <ol className="space-y-1.5">
             {overdueRows.slice(0, 12).map((row) => (
-              <li key={row.itemId} className="flex items-center gap-3 rounded-xl border bg-card/60 px-3 py-2 text-sm">
+              <li key={row.itemId} className="flex items-center gap-3 rounded-xl border bg-card/95 px-3 py-2 text-sm">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{row.title}</span>
                   <span className="block truncate text-xs text-muted-foreground">
@@ -411,7 +411,7 @@ export function LibraryReportsCard({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border bg-muted/15 p-4 space-y-2.5">
+        <div className="rounded-2xl border bg-card/80 p-4 space-y-2.5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
             <Clock className="h-4 w-4 text-primary" />
             Most borrowed
@@ -421,7 +421,7 @@ export function LibraryReportsCard({
           ) : (
             <ol className="space-y-1.5">
               {topBooks.map((book, i) => (
-                <li key={book.itemId + book.title} className="flex items-center gap-3 rounded-xl border bg-card/60 px-3 py-2 text-sm">
+                <li key={book.itemId + book.title} className="flex items-center gap-3 rounded-xl border bg-card/95 px-3 py-2 text-sm">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">
                     {i + 1}
                   </span>
@@ -435,7 +435,7 @@ export function LibraryReportsCard({
           )}
         </div>
 
-        <div className="rounded-2xl border bg-muted/15 p-4 space-y-2.5">
+        <div className="rounded-2xl border bg-card/80 p-4 space-y-2.5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
             <Users className="h-4 w-4 text-primary" />
             Top readers
@@ -445,7 +445,7 @@ export function LibraryReportsCard({
           ) : (
             <ol className="space-y-1.5">
               {readers.map((reader, i) => (
-                <li key={reader.studentId} className="flex items-center gap-3 rounded-xl border bg-card/60 px-3 py-2 text-sm">
+                <li key={reader.studentId} className="flex items-center gap-3 rounded-xl border bg-card/95 px-3 py-2 text-sm">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary">
                     {i + 1}
                   </span>
@@ -466,7 +466,7 @@ export function LibraryReportsCard({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border bg-muted/15 p-4 space-y-2">
+        <div className="rounded-2xl border bg-card/80 p-4 space-y-2">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
             <Star className="h-4 w-4 text-amber-500" />
             How students rated books
@@ -491,7 +491,7 @@ export function LibraryReportsCard({
           )}
         </div>
 
-        <div className="rounded-2xl border bg-muted/15 p-4 space-y-2.5">
+        <div className="rounded-2xl border bg-card/80 p-4 space-y-2.5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
             <Tag className="h-4 w-4 text-primary" />
             Copies still needing a sticker or shelf
@@ -501,7 +501,7 @@ export function LibraryReportsCard({
           ) : (
             <ul className="space-y-1.5">
               {processingRows.slice(0, 8).map((row) => (
-                <li key={row.itemId} className="rounded-xl border bg-card/60 px-3 py-2 text-sm">
+                <li key={row.itemId} className="rounded-xl border bg-card/95 px-3 py-2 text-sm">
                   <span className="block truncate font-semibold">{row.title}</span>
                   <span className="block text-xs text-muted-foreground">{row.reason}</span>
                 </li>

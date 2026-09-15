@@ -641,8 +641,8 @@ export function LibraryBookIntakeScanner({
   };
 
   const statusLabel: Record<IntakeRowStatus, string> = {
-    lookup: 'Looking up…',
-    ready: 'Ready',
+    lookup: 'Processing…',
+    ready: 'Processed',
     ai_review: 'Confirm AI guess',
     needs_title: 'Identify item',
     duplicate_catalog: 'In catalog',
