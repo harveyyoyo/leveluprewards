@@ -11,7 +11,7 @@ export type DisplayModeViewport = {
 };
 
 /** Portal hub cards kept in mobile display (admin + on-the-go staff + student kiosk). */
-export const MOBILE_PORTAL_IDS = new Set(['admin', 'print', 'redeem']);
+export const MOBILE_PORTAL_IDS = new Set(['admin', 'print', 'redeem', 'library']);
 
 /** Bottom dock destinations kept in mobile display. */
 export const MOBILE_DOCK_IDS = new Set(['admin', 'print', 'redeem']);

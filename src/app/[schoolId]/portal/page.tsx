@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -36,6 +36,7 @@ import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isMobileDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
 import {
+    isLibraryPortalHubCardVisible,
     isMainPortalCardEnabled,
     portalHubCardPaddingClass,
     portalHubGapClass,
@@ -51,6 +52,13 @@ import {
     type PortalTourId,
 } from '@/lib/tours/startPortalTour';
 import { PortalAreaTourButton } from '@/lib/tours/PortalAreaTourButton';
+import { PortalLibraryCardBackdrop } from '@/components/library/PortalLibraryCardBackdrop';
+import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
+import {
+    portalLibraryCardAccent,
+    portalLibraryCardIconForeground,
+    portalLibraryCardTrim,
+} from '@/lib/library/portalLibraryCardTheme';
 
 type PortalArea = {
     id: string;
@@ -173,7 +181,11 @@ export default function PortalPage() {
         schoolId,
         autoLogin: false,
     });
-    const { settings, updateSettings } = useSettings();
+    const { settings, updateSettings, pillarAccess } = useSettings();
+    const libraryTheme = useMemo(
+        () => resolveLibraryTheme(settings.libraryTheme as LibraryThemeId),
+        [settings.libraryTheme],
+    );
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
     const { toast } = useToast();
@@ -331,6 +343,17 @@ export default function PortalPage() {
               },
             ]
           : []),
+        ...(isLibraryPortalHubCardVisible(settings, pillarAccess)
+          ? [
+              {
+                  id: 'library',
+                  href: `/${schoolId}/library`,
+                  title: t('portal.library.title'),
+                  description: t('portal.library.description'),
+                  icon: BookOpen,
+              },
+            ]
+          : []),
         ...(settings.enableStudentPortal === true && isRewardsPillarOn(settings)
           ? [
               {
@@ -354,11 +377,11 @@ export default function PortalPage() {
             ]
           : []),
     ];
-    const visiblePortals = portals.filter(
-        (area) =>
-            isMainPortalCardEnabled(settings.mainPortalCards, area.id) &&
-            isPortalAreaOnDisplayMode(area.id, settings.displayMode),
-    );
+    const visiblePortals = portals.filter((area) => {
+        const allowedOnDisplay = isPortalAreaOnDisplayMode(area.id, settings.displayMode);
+        if (area.id === 'library') return allowedOnDisplay;
+        return isMainPortalCardEnabled(settings.mainPortalCards, area.id) && allowedOnDisplay;
+    });
     const hubCardCount = visiblePortals.length;
     const hubDenseLayout = hubCardCount >= 4;
     const showWelcomeTourFooter = settings.enableHelperMode === true;
@@ -519,8 +542,17 @@ export default function PortalPage() {
                         >
                     {visiblePortals.map((area, index) => {
                         const Icon = area.icon;
-                        const portalPrimaryColor = rainbowForPortalId(area.id, settings.colorScheme);
-                        const portalTrimColor = complementForPortalId(area.id, settings.colorScheme);
+                        const isLibraryCard = area.id === 'library';
+                        const portalPrimaryColor = isLibraryCard
+                            ? portalLibraryCardAccent(libraryTheme)
+                            : rainbowForPortalId(area.id, settings.colorScheme);
+                        const portalTrimColor = isLibraryCard
+                            ? portalLibraryCardTrim(libraryTheme)
+                            : complementForPortalId(area.id, settings.colorScheme);
+                        const libraryIconColor = isLibraryCard
+                            ? portalLibraryCardIconForeground(libraryTheme)
+                            : undefined;
+                        const libraryBodyColor = isLibraryCard ? libraryTheme.swatches.text : undefined;
                         const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin && !canBypassAdminPasscode;
                         // School gate, admins, and developers can pick staff (or continue as admin); signed-in teachers go straight through.
@@ -531,7 +563,8 @@ export default function PortalPage() {
                                 <motion.div
                                     variants={prefersReducedMotion ? undefined : staggerItem}
                                     className={cn(
-                                        'portal-choose-card relative overflow-hidden rounded-2xl border-2 bg-card',
+                                        'portal-choose-card relative overflow-hidden rounded-2xl border-2',
+                                        isLibraryCard ? 'portal-choose-card--library' : 'bg-card',
                                         compactDisplay ? 'text-left' : 'text-center',
                                         portalCardHoverEffects &&
                                             'transition-[transform,box-shadow,border-color] duration-200 ease-out group-hover:-translate-y-1 group-active:translate-y-0',
@@ -539,6 +572,7 @@ export default function PortalPage() {
                                         portalHubCardPaddingClass(hubCardCount, compactDisplay),
                                     )}
                                 >
+                                    {isLibraryCard ? <PortalLibraryCardBackdrop theme={libraryTheme} /> : null}
                                     {compactDisplay ? (
                                     <div className="relative z-10 flex w-full items-center gap-3 sm:gap-4">
                                         <div
@@ -552,7 +586,10 @@ export default function PortalPage() {
                                             }}
                                             aria-hidden
                                         >
-                                            <Icon className="h-7 w-7 text-white sm:h-8 sm:w-8" />
+                                            <Icon
+                                                className={cn('h-7 w-7 sm:h-8 sm:w-8', !isLibraryCard && 'text-white')}
+                                                style={libraryIconColor ? { color: libraryIconColor } : undefined}
+                                            />
                                         </div>
                                         <div className="min-w-0 flex-1 space-y-1 pr-1">
                                             <h3
@@ -563,7 +600,13 @@ export default function PortalPage() {
                                             </h3>
                                             {!mobileDisplay ? (
                                                 <>
-                                                    <p className="text-sm font-medium leading-snug text-muted-foreground sm:text-base">
+                                                    <p
+                                                        className={cn(
+                                                            'text-sm font-medium leading-snug sm:text-base',
+                                                            !isLibraryCard && 'text-muted-foreground',
+                                                        )}
+                                                        style={libraryBodyColor ? { color: libraryBodyColor } : undefined}
+                                                    >
                                                         {area.description}
                                                     </p>
                                                     {settings.enableHelperMode ? (
@@ -600,13 +643,22 @@ export default function PortalPage() {
                                                     ['--portal-icon-accent' as string]: portalPrimaryColor,
                                                 }}
                                             >
-                                                <Icon className="h-8 w-8 text-white md:h-9 md:w-9" />
+                                                <Icon
+                                                    className={cn('h-8 w-8 md:h-9 md:w-9', !isLibraryCard && 'text-white')}
+                                                    style={libraryIconColor ? { color: libraryIconColor } : undefined}
+                                                />
                                             </motion.div>
                                             <div className="min-w-0 max-w-prose space-y-1.5 px-0.5 z-20">
-                                                <h3 className="text-base font-black leading-tight tracking-tight text-foreground sm:text-lg md:text-xl pointer-events-none">
+                                                <h3 className="text-base font-black leading-tight tracking-tight sm:text-lg md:text-xl pointer-events-none">
                                                     <span style={{ color: portalPrimaryColor }}>{area.title}</span>
                                                 </h3>
-                                                <p className="text-xs font-semibold leading-snug text-muted-foreground/85 sm:text-sm md:text-base pointer-events-none">
+                                                <p
+                                                    className={cn(
+                                                        'text-xs font-semibold leading-snug sm:text-sm md:text-base pointer-events-none',
+                                                        !isLibraryCard && 'text-muted-foreground/85',
+                                                    )}
+                                                    style={libraryBodyColor ? { color: libraryBodyColor } : undefined}
+                                                >
                                                     {area.description}
                                                 </p>
                                                 {settings.enableHelperMode ? (

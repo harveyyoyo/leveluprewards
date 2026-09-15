@@ -1,3 +1,4 @@
+import { isPillarOn, type PillarSettings, type ProductPillarAccess } from '@/lib/productPillars';
 import { portalChooseTitleClass } from '@/lib/kioskPortraitLayout';
 
 /** Portal hub card ids on the main `/{schoolId}/portal` chooser screen. */
@@ -38,6 +39,14 @@ export function isMainPortalCardEnabled(
   portalId: string,
 ): boolean {
   return resolveMainPortalCards(cards).includes(portalId as MainPortalCardId);
+}
+
+/** Library card on `/{school}/portal` — follows the Library product switch, not the hub-card checklist. */
+export function isLibraryPortalHubCardVisible(
+  settings: PillarSettings | null | undefined,
+  pillarAccess?: ProductPillarAccess | null,
+): boolean {
+  return isPillarOn(settings, 'payLibrary', pillarAccess);
 }
 
 export function toggleMainPortalCard(
@@ -113,6 +122,7 @@ export const PORTAL_HUB_PREFETCH_SEGMENTS = [
   'admin',
   'admin-sign-in',
   'prize',
+  'library',
   'student-home',
   'parent',
 ] as const;
