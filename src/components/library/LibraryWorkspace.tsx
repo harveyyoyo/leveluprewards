@@ -217,6 +217,8 @@ export function LibraryWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
   const [search, setSearch] = useState('');
+  // The book a scan/search found, kept on screen after the search box auto-clears.
+  const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchAutoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -235,7 +237,8 @@ export function LibraryWorkspace({
   }, [tab, focusSearchField]);
 
   // After a scan resolves, clear the search a moment later so the next book can be scanned
-  // straight into an empty box instead of getting appended after the last code.
+  // straight into an empty box instead of getting appended after the last code. The book that
+  // was found stays pinned on screen — only the typed text goes away.
   const scheduleSearchClear = useCallback(() => {
     if (searchAutoClearRef.current) clearTimeout(searchAutoClearRef.current);
     searchAutoClearRef.current = setTimeout(() => {
@@ -265,7 +268,7 @@ export function LibraryWorkspace({
     (code) => {
       setSearch(code);
       setPage(1);
-      scheduleSearchClear();
+      pinMatchAndScheduleClear(code);
     },
     undefined,
     { cameraEnabled: catalogCameraSettingEnabled && catalogCameraActive },
@@ -445,12 +448,27 @@ export function LibraryWorkspace({
     (id?: string) => formatLibraryStudentName(studentsById.get(id ?? ''), studentNameMode),
     [studentsById, studentNameMode],
   );
+  // Reports always show just the student's first name, regardless of the desk/kiosk name setting.
+  const getReportName = useCallback(
+    (id?: string) => formatLibraryStudentName(studentsById.get(id ?? ''), 'preferred_only'),
+    [studentsById],
+  );
   const getClass = useCallback(
     (id?: string) => {
       const s = studentsById.get(id ?? '');
       return classes?.find((c) => c.id === s?.classId)?.name ?? '';
     },
     [studentsById, classes],
+  );
+
+  // Look up what the just-typed/scanned term matches, pin that book on screen, then clear the box.
+  const pinMatchAndScheduleClear = useCallback(
+    (term: string) => {
+      const matches = filterLibraryCatalog(scopedItems, term, status, getName, settings.libraryGenreDefinitions);
+      setPinnedItemId(matches[0]?.id ?? null);
+      scheduleSearchClear();
+    },
+    [scopedItems, status, getName, settings.libraryGenreDefinitions, scheduleSearchClear],
   );
 
   // Shelf locations list for filtering
@@ -464,6 +482,12 @@ export function LibraryWorkspace({
 
   // Filter catalog
   const filteredCatalog = useMemo(() => {
+    // Once the search box auto-clears, keep showing the book it just found instead of
+    // snapping back to the whole catalog.
+    if (!search.trim() && pinnedItemId) {
+      const pinned = scopedItems.find((i) => i.id === pinnedItemId);
+      if (pinned) return [pinned];
+    }
     let list = filterLibraryCatalog(scopedItems, search, status, getName, settings.libraryGenreDefinitions);
     if (shelfFilter !== 'all') {
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
@@ -508,7 +532,7 @@ export function LibraryWorkspace({
     });
 
     return list;
-  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds, settings.libraryGenreDefinitions]);
+  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds, settings.libraryGenreDefinitions, pinnedItemId]);
 
   // Organized scheme grouping (Genre → Author, or Author → Title)
   const organizedGroups = useMemo<BookPrimaryGroup[]>(() => {
@@ -1177,20 +1201,25 @@ export function LibraryWorkspace({
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
+                      setPinnedItemId(null);
                       setPage(1);
                     }}
                     onKeyDown={(e) => {
                       // A barcode scanner types like a fast keyboard and ends with Enter —
                       // clear the box shortly after so the next book can be scanned fresh.
+                      // The book that was found stays on screen even after the box clears.
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        scheduleSearchClear();
+                        pinMatchAndScheduleClear(search);
                       }
                     }}
                   />
                   {search && (
                     <button
-                      onClick={() => setSearch('')}
+                      onClick={() => {
+                        setSearch('');
+                        setPinnedItemId(null);
+                      }}
                       className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
@@ -2284,7 +2313,7 @@ export function LibraryWorkspace({
               reviews={libraryReviews}
               reviewsUnavailable={Boolean(reviewsError)}
               genreDefinitions={settings.libraryGenreDefinitions}
-              getStudentName={getName}
+              getStudentName={getReportName}
               getClassName={getClass}
               onViewOverdue={() => {
                 setStatus('overdue');
