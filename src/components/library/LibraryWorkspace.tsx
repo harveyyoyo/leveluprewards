@@ -96,6 +96,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
+import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -217,6 +218,8 @@ export function LibraryWorkspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
   const [search, setSearch] = useState('');
+  // The book a scan/search found, kept on screen after the search box auto-clears.
+  const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchAutoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -235,7 +238,8 @@ export function LibraryWorkspace({
   }, [tab, focusSearchField]);
 
   // After a scan resolves, clear the search a moment later so the next book can be scanned
-  // straight into an empty box instead of getting appended after the last code.
+  // straight into an empty box instead of getting appended after the last code. The book that
+  // was found stays pinned on screen — only the typed text goes away.
   const scheduleSearchClear = useCallback(() => {
     if (searchAutoClearRef.current) clearTimeout(searchAutoClearRef.current);
     searchAutoClearRef.current = setTimeout(() => {
@@ -265,7 +269,7 @@ export function LibraryWorkspace({
     (code) => {
       setSearch(code);
       setPage(1);
-      scheduleSearchClear();
+      pinMatchAndScheduleClear(code);
     },
     undefined,
     { cameraEnabled: catalogCameraSettingEnabled && catalogCameraActive },
@@ -273,7 +277,12 @@ export function LibraryWorkspace({
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'shelf'>('title_asc');
+  // Changing a filter (e.g. Reports' "View overdue" jumping here with status=overdue) means the
+  // user wants to browse that list, not keep looking at whatever book was previously pinned.
+  useEffect(() => {
+    setPinnedItemId(null);
+  }, [status, shelfFilter, labelFilter]);
+  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'genre_asc' | 'genre_desc' | 'shelf'>('title_asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [coverSize, setCoverSize] = useState<LibraryCoverSize>('small');
@@ -417,7 +426,11 @@ export function LibraryWorkspace({
   });
 
   const { locations } = useLibraryLocations(schoolId);
-  const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
+  const { active: activeLibrary, setActive: setActiveLibrary, needsChoice: needsLibraryChoice } = useActiveLibraryLocation(
+    schoolId,
+    locations,
+    { requireExplicitChoice: true, ignoreStoredChoice: true },
+  );
   const scopedItems = useMemo(
     () => filterItemsForLibrary(items, activeLibrary.id),
     [activeLibrary.id, items],
@@ -445,12 +458,35 @@ export function LibraryWorkspace({
     (id?: string) => formatLibraryStudentName(studentsById.get(id ?? ''), studentNameMode),
     [studentsById, studentNameMode],
   );
+  // Reports always show just the student's first name, regardless of the desk/kiosk name setting.
+  const getReportName = useCallback(
+    (id?: string) => formatLibraryStudentName(studentsById.get(id ?? ''), 'preferred_only'),
+    [studentsById],
+  );
   const getClass = useCallback(
     (id?: string) => {
       const s = studentsById.get(id ?? '');
       return classes?.find((c) => c.id === s?.classId)?.name ?? '';
     },
     [studentsById, classes],
+  );
+
+  // Look up what the just-typed/scanned term matches. Only when it lands on exactly one book —
+  // the normal case for a barcode/ISBN scan — do we pin that book and clear the box a moment
+  // later; a term that matches several books (or none) just stays in the box so the user can
+  // see the narrowed list. The lookup ignores the current status/shelf/label filters on purpose:
+  // if you scan a specific book, you want to see that book, not have it hidden by an unrelated
+  // filter like "Available Now".
+  const pinMatchAndScheduleClear = useCallback(
+    (term: string) => {
+      const matches = filterLibraryCatalog(scopedItems, term, 'all', getName, settings.libraryGenreDefinitions);
+      if (matches.length === 1) {
+        setPinnedItemId(matches[0].id);
+        setPage(1);
+        scheduleSearchClear();
+      }
+    },
+    [scopedItems, getName, settings.libraryGenreDefinitions, scheduleSearchClear],
   );
 
   // Shelf locations list for filtering
@@ -464,7 +500,13 @@ export function LibraryWorkspace({
 
   // Filter catalog
   const filteredCatalog = useMemo(() => {
-    let list = filterLibraryCatalog(scopedItems, search, status, getName);
+    // Once the search box auto-clears, keep showing the book it just found instead of
+    // snapping back to the whole catalog.
+    if (!search.trim() && pinnedItemId) {
+      const pinned = scopedItems.find((i) => i.id === pinnedItemId);
+      if (pinned) return [pinned];
+    }
+    let list = filterLibraryCatalog(scopedItems, search, status, getName, settings.libraryGenreDefinitions);
     if (shelfFilter !== 'all') {
       list = list.filter((i) => (i.shelfLocation || 'Unassigned') === shelfFilter);
     }
@@ -496,6 +538,11 @@ export function LibraryWorkspace({
       if (catalogSort === 'author_desc') {
         return (b.author || '').localeCompare(a.author || '');
       }
+      if (catalogSort === 'genre_asc' || catalogSort === 'genre_desc') {
+        const genreA = resolveBookClassification(a.category, settings.libraryGenreDefinitions, a.shelfLocation).genre.label;
+        const genreB = resolveBookClassification(b.category, settings.libraryGenreDefinitions, b.shelfLocation).genre.label;
+        return catalogSort === 'genre_asc' ? genreA.localeCompare(genreB) : genreB.localeCompare(genreA);
+      }
       if (catalogSort === 'shelf') {
         return (a.shelfLocation || 'ZZZ').localeCompare(b.shelfLocation || 'ZZZ');
       }
@@ -503,7 +550,7 @@ export function LibraryWorkspace({
     });
 
     return list;
-  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds]);
+  }, [scopedItems, search, status, shelfFilter, labelFilter, catalogSort, getName, sharedNumberIds, settings.libraryGenreDefinitions, pinnedItemId]);
 
   // Organized scheme grouping (Genre → Author, or Author → Title)
   const organizedGroups = useMemo<BookPrimaryGroup[]>(() => {
@@ -832,6 +879,26 @@ export function LibraryWorkspace({
     );
   }
 
+  const backToPortalHref = `/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`;
+  // More than one library at this school — let the header's logo/name link (and the picker's
+  // own back link) reopen the "which library" picker instead of leaving the library section.
+  const chooseLibraryHref = locations.length > 1 ? `/${schoolId}/library` : undefined;
+
+  // More than one library at this school and nothing picked yet (no ?library= link, and this
+  // device hasn't chosen before) — ask instead of silently opening the school's main library.
+  if (needsLibraryChoice) {
+    return (
+      <LibraryStationPicker
+        locations={locations}
+        onPick={setActiveLibrary}
+        title="Which library do you want to open?"
+        subtitle="Choose one to continue — you can switch later from Library settings."
+        backHref={backToPortalHref}
+        backLabel="Back to portal"
+      />
+    );
+  }
+
   const pageCount = Math.max(
     1,
     Math.ceil(
@@ -846,15 +913,16 @@ export function LibraryWorkspace({
 
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
-  const backToPortalHref = `/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`;
 
   if (hubHome) {
     return (
       <LibraryPortalHub
         schoolName={schoolName}
+        libraryName={locations.length > 1 ? activeLibrary.name : undefined}
         overdueCount={overdueLoans.length}
         catalogCount={activeCopies.length}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         onSelect={(nextTab) => {
           if (navSoundEnabled) playSound('click');
           setTab(nextTab);
@@ -889,6 +957,7 @@ export function LibraryWorkspace({
         theme={currentTheme}
         schoolName={schoolName || 'School Library'}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         activeTab={
           tab === 'settings'
             ? 'settings'
@@ -1168,24 +1237,29 @@ export function LibraryWorkspace({
                     ref={searchInputRef}
                     className="pl-9 h-9 rounded-xl border-border/70 text-xs shadow-none"
                     aria-label="Search catalog"
-                    placeholder="Search by title…"
+                    placeholder="Search by title, author, or genre…"
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
+                      setPinnedItemId(null);
                       setPage(1);
                     }}
                     onKeyDown={(e) => {
                       // A barcode scanner types like a fast keyboard and ends with Enter —
                       // clear the box shortly after so the next book can be scanned fresh.
+                      // The book that was found stays on screen even after the box clears.
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        scheduleSearchClear();
+                        pinMatchAndScheduleClear(search);
                       }
                     }}
                   />
                   {search && (
                     <button
-                      onClick={() => setSearch('')}
+                      onClick={() => {
+                        setSearch('');
+                        setPinnedItemId(null);
+                      }}
                       className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
                     >
                       <X className="h-4 w-4" />
@@ -1207,6 +1281,8 @@ export function LibraryWorkspace({
                   <option value="title_desc">Title (Z–A)</option>
                   <option value="author_asc">Author (A–Z)</option>
                   <option value="author_desc">Author (Z–A)</option>
+                  <option value="genre_asc">Genre (A–Z)</option>
+                  <option value="genre_desc">Genre (Z–A)</option>
                   <option value="shelf">Shelf Location</option>
                 </select>
 
@@ -1286,6 +1362,27 @@ export function LibraryWorkspace({
                 </div>
               )}
 
+              {pinnedItemId && !search && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+                >
+                  <p className="font-semibold">Showing the book you just found.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-xl text-xs font-bold"
+                    onClick={() => setPinnedItemId(null)}
+                  >
+                    Show all books
+                  </Button>
+                </motion.div>
+              )}
+
               {sharedNumberIds.size > 0 && (
                 <motion.div
                   layout
@@ -1333,28 +1430,10 @@ export function LibraryWorkspace({
                     <span className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
                       <Tag className="h-3.5 w-3.5 text-primary" />
                       <span>Shelving Hierarchy:</span>
+                      <span className="font-semibold text-foreground normal-case tracking-normal">
+                        {LIBRARY_ORGANIZATION_SCHEMES[activeScheme].shortLabel}
+                      </span>
                     </span>
-                    <div className="inline-flex rounded-xl border border-border/70 bg-background p-0.5">
-                      {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((schemeKey) => {
-                        const isSelected = activeScheme === schemeKey;
-                        const meta = LIBRARY_ORGANIZATION_SCHEMES[schemeKey];
-                        return (
-                          <button
-                            key={schemeKey}
-                            type="button"
-                            onClick={() => setActiveScheme(schemeKey)}
-                            className={cn(
-                              'px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all',
-                              isSelected
-                                ? 'bg-primary text-primary-foreground shadow-xs'
-                                : 'text-muted-foreground hover:text-foreground',
-                            )}
-                          >
-                            {meta.shortLabel}
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -2295,7 +2374,7 @@ export function LibraryWorkspace({
               reviews={libraryReviews}
               reviewsUnavailable={Boolean(reviewsError)}
               genreDefinitions={settings.libraryGenreDefinitions}
-              getStudentName={getName}
+              getStudentName={getReportName}
               getClassName={getClass}
               onViewOverdue={() => {
                 setStatus('overdue');
