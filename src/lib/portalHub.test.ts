@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_MAIN_PORTAL_CARDS,
+  isLibraryPortalHubCardVisible,
   isMainPortalCardEnabled,
   portalHubGridClass,
   resolveMainPortalCards,
@@ -31,6 +32,13 @@ describe('portalHub', () => {
   it('checks card visibility from settings', () => {
     expect(isMainPortalCardEnabled(['admin', 'print'], 'redeem')).toBe(false);
     expect(isMainPortalCardEnabled(undefined, 'admin')).toBe(true);
+  });
+
+  it('shows the library hub card only when the Library product is on', () => {
+    expect(isLibraryPortalHubCardVisible({})).toBe(true);
+    expect(isLibraryPortalHubCardVisible({ payLibrary: true })).toBe(true);
+    expect(isLibraryPortalHubCardVisible({ payLibrary: false })).toBe(false);
+    expect(isLibraryPortalHubCardVisible({ payLibrary: true }, { payLibrary: false })).toBe(false);
   });
 
   it('toggles cards without removing the last one', () => {

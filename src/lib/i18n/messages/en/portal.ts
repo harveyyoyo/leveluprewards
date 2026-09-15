@@ -24,6 +24,10 @@ const portal = {
     title: 'Parent Portal',
     description: "View your child's points, behavior notes, and today's attendance.",
   },
+  library: {
+    title: 'Library',
+    description: 'Look up books, check them in and out, and let students borrow on their own.',
+  },
   libraryKiosk: {
     title: 'Library Kiosk',
     description: 'Self-checkout & book return station for students with badge scanning and recommendations.',

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -36,6 +36,7 @@ import type { TeacherPersonnelRole } from '@/lib/types';
 import { isSchoolPortalChooser } from '@/lib/students/studentKioskRoute';
 import { isCompactDisplayMode, isMobileDisplayMode, isPortalAreaOnDisplayMode } from '@/lib/displayMode';
 import {
+    isLibraryPortalHubCardVisible,
     isMainPortalCardEnabled,
     portalHubCardPaddingClass,
     portalHubGapClass,
@@ -173,7 +174,7 @@ export default function PortalPage() {
         schoolId,
         autoLogin: false,
     });
-    const { settings, updateSettings } = useSettings();
+    const { settings, updateSettings, pillarAccess } = useSettings();
     const prefersReducedMotion = useReducedMotion();
     const playSound = useArcadeSound();
     const { toast } = useToast();
@@ -331,6 +332,17 @@ export default function PortalPage() {
               },
             ]
           : []),
+        ...(isLibraryPortalHubCardVisible(settings, pillarAccess)
+          ? [
+              {
+                  id: 'library',
+                  href: `/${schoolId}/library`,
+                  title: t('portal.library.title'),
+                  description: t('portal.library.description'),
+                  icon: BookOpen,
+              },
+            ]
+          : []),
         ...(settings.enableStudentPortal === true && isRewardsPillarOn(settings)
           ? [
               {
@@ -354,11 +366,11 @@ export default function PortalPage() {
             ]
           : []),
     ];
-    const visiblePortals = portals.filter(
-        (area) =>
-            isMainPortalCardEnabled(settings.mainPortalCards, area.id) &&
-            isPortalAreaOnDisplayMode(area.id, settings.displayMode),
-    );
+    const visiblePortals = portals.filter((area) => {
+        const allowedOnDisplay = isPortalAreaOnDisplayMode(area.id, settings.displayMode);
+        if (area.id === 'library') return allowedOnDisplay;
+        return isMainPortalCardEnabled(settings.mainPortalCards, area.id) && allowedOnDisplay;
+    });
     const hubCardCount = visiblePortals.length;
     const hubDenseLayout = hubCardCount >= 4;
     const showWelcomeTourFooter = settings.enableHelperMode === true;

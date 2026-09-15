@@ -48,6 +48,7 @@ describe('displayMode', () => {
     expect(isPortalAreaOnDisplayMode('print', 'mobile')).toBe(true);
     expect(isPortalAreaOnDisplayMode('redeem', 'mobile')).toBe(true);
     expect(isPortalAreaOnDisplayMode('parent', 'mobile')).toBe(false);
+    expect(isPortalAreaOnDisplayMode('library', 'mobile')).toBe(true);
     expect(isDockItemOnDisplayMode('admin', 'mobile')).toBe(true);
     expect(isDockItemOnDisplayMode('print', 'app')).toBe(true);
   });
