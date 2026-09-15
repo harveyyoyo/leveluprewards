@@ -1,5 +1,8 @@
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
-import { sanitizeInternalNextPath } from '@/lib/auth/internalNextRedirect';
+import {
+  isTrustedRedirectHostname,
+  sanitizeInternalNextPath,
+} from '@/lib/auth/internalNextRedirect';
 import {
   isOfficeAppPath,
   isOfficeHostname,
@@ -37,6 +40,112 @@ export function consumeSchoolLoginOfficeIntent(schoolId: string): boolean {
   } catch {
     return false;
   }
+}
+
+export const SCHOOL_LOGIN_LIBRARY_INTENT_KEY = 'lvlup:schoolLoginLibraryIntent';
+/** Query flag for the shareable library sign-in page (`/login?library=1`). */
+export const SCHOOL_LOGIN_LIBRARY_INTENT_PARAM = 'library';
+
+export function hasUrlSchoolLoginLibraryIntent(
+  params: URLSearchParams | null | undefined,
+): boolean {
+  return params?.get(SCHOOL_LOGIN_LIBRARY_INTENT_PARAM) === '1';
+}
+
+export function markSchoolLoginLibraryIntent(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(SCHOOL_LOGIN_LIBRARY_INTENT_KEY, '1');
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeSchoolLoginLibraryIntent(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const stored = sessionStorage.getItem(SCHOOL_LOGIN_LIBRARY_INTENT_KEY);
+    sessionStorage.removeItem(SCHOOL_LOGIN_LIBRARY_INTENT_KEY);
+    return stored === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function isLibraryAppPath(pathname: string): boolean {
+  const parts = pathname.split('/').filter(Boolean);
+  const section = (parts[1] || '').toLowerCase();
+  return section === 'library' || section === 'librarian';
+}
+
+/**
+ * Rewrite `/{oldSchool}/library…` to `/{schoolId}/library…` so typing a different
+ * school on a library sign-in link still opens that school's library.
+ */
+export function retargetLibraryLoginPath(next: string, schoolId: string): string | null {
+  const sid = schoolId.trim().toLowerCase();
+  if (!sid || !next.trim()) return null;
+
+  let decoded = next;
+  try {
+    decoded = decodeURIComponent(next);
+  } catch {
+    return null;
+  }
+
+  let pathname = decoded;
+  let search = '';
+  let absoluteOrigin = '';
+
+  if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
+    try {
+      const parsed = new URL(decoded);
+      if (!isTrustedRedirectHostname(parsed.hostname)) return null;
+      pathname = parsed.pathname;
+      search = parsed.search;
+      absoluteOrigin = `${parsed.protocol}//${parsed.host}`;
+    } catch {
+      return null;
+    }
+  } else {
+    if (!pathname.startsWith('/') || pathname.startsWith('//') || pathname.includes('..')) {
+      return null;
+    }
+    const queryAt = pathname.indexOf('?');
+    if (queryAt >= 0) {
+      search = pathname.slice(queryAt);
+      pathname = pathname.slice(0, queryAt);
+    }
+  }
+
+  if (pathname.includes('..')) return null;
+  const parts = pathname.split('/').filter(Boolean);
+  const section = (parts[1] || '').toLowerCase();
+  if (section !== 'library' && section !== 'librarian') return null;
+
+  const rewritten = `/${sid}/${parts.slice(1).join('/')}${search}`;
+  return absoluteOrigin ? `${absoluteOrigin}${rewritten}` : rewritten;
+}
+
+export function schoolLibraryHref(schoolId: string): string {
+  return `/${schoolId.trim().toLowerCase()}/library`;
+}
+
+/** How `/login` should treat the School ID box for a given query string. */
+export function schoolLoginPageStateFromSearch(search: string): {
+  school: string;
+  blankSchoolBox: boolean;
+  libraryIntent: boolean;
+} {
+  const raw = search.startsWith('?') ? search.slice(1) : search;
+  const params = new URLSearchParams(raw);
+  const libraryIntent = hasUrlSchoolLoginLibraryIntent(params);
+  const blankSchoolBox = params.get('changeSchool') === '1' || libraryIntent;
+  return {
+    school: blankSchoolBox ? '' : (params.get('school') || '').trim(),
+    blankSchoolBox,
+    libraryIntent,
+  };
 }
 
 /** Client navigations must hard-assign cross-origin URLs (Next router only handles same-origin). */
@@ -128,8 +237,16 @@ export function schoolLoginRedirectHref(
   const pathname =
     options?.pathname ??
     (typeof window !== 'undefined' ? window.location.pathname : `/${route}`);
-  const params = new URLSearchParams({ school: route });
-  if (options?.changeSchool) params.set('changeSchool', '1');
+  const libraryPath = isLibraryAppPath(pathname);
+  const params = new URLSearchParams();
+  if (libraryPath) {
+    markSchoolLoginLibraryIntent();
+    params.set('changeSchool', '1');
+    params.set(SCHOOL_LOGIN_LIBRARY_INTENT_PARAM, '1');
+  } else {
+    params.set('school', route);
+    if (options?.changeSchool) params.set('changeSchool', '1');
+  }
 
   const next = schoolLoginNextPath(route, pathname);
   if (next) params.set('next', next);
@@ -143,6 +260,7 @@ export function schoolLoginRedirectHref(
   if (onOffice) {
     markSchoolLoginOfficeIntent(route);
     params.set(SCHOOL_LOGIN_OFFICE_INTENT_PARAM, '1');
+    if (!params.has('school')) params.set('school', route);
   }
 
   if (usePortalLogin) {
@@ -155,7 +273,7 @@ export function schoolLoginRedirectHref(
 
 /**
  * Post-login destination after school passcode sign-in (`/login?school=&next=`).
- * Prefers a validated `next`, then office intent, then the rewards portal default.
+ * Prefers a validated `next`, then office intent, then library intent, then the rewards portal default.
  */
 export function resolveSchoolLoginNextUrl(
   schoolId: string,
@@ -172,15 +290,20 @@ export function resolveSchoolLoginNextUrl(
     hasUrlSchoolLoginOfficeIntent(params) ||
     consumeSchoolLoginOfficeIntent(sid) ||
     isOfficeHostname(window.location.host);
+  const storedLibraryIntent = consumeSchoolLoginLibraryIntent();
+  const libraryIntent = hasUrlSchoolLoginLibraryIntent(params) || storedLibraryIntent;
+  const libraryFromNext = nextParam ? retargetLibraryLoginPath(nextParam, sid) : null;
 
   if (nextParam) {
     const target = sanitizeInternalNextPath(nextParam, sid);
     if (target) return target;
     if (officeIntent) return officePublicHref(sid);
+    if (libraryIntent || libraryFromNext) return libraryFromNext ?? schoolLibraryHref(sid);
     return defaultPortal;
   }
 
   if (officeIntent) return officePublicHref(sid);
+  if (libraryIntent) return schoolLibraryHref(sid);
 
   const pathname = options?.pathname ?? window.location.pathname;
   const officeNext = schoolLoginNextPath(sid, pathname);

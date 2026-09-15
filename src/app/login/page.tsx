@@ -5,17 +5,28 @@ import { usePathname } from 'next/navigation';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { SchoolDeveloperLoginForm } from '@/components/auth/SchoolDeveloperLoginForm';
 import { useAuth } from '@/components/providers/AuthProvider';
+import {
+  markSchoolLoginLibraryIntent,
+  schoolLoginPageStateFromSearch,
+} from '@/lib/auth/schoolLoginRedirect';
 
-function readLoginUrlState(): { school: string; changeSchool: boolean } {
-  if (typeof window === 'undefined') return { school: '', changeSchool: false };
+function readLoginUrlState(): {
+  school: string;
+  changeSchool: boolean;
+  library: boolean;
+} {
+  if (typeof window === 'undefined') {
+    return { school: '', changeSchool: false, library: false };
+  }
   try {
-    const params = new URLSearchParams(window.location.search);
+    const state = schoolLoginPageStateFromSearch(window.location.search);
     return {
-      school: (params.get('school') || '').trim(),
-      changeSchool: params.get('changeSchool') === '1',
+      school: state.school,
+      changeSchool: state.blankSchoolBox,
+      library: state.libraryIntent,
     };
   } catch {
-    return { school: '', changeSchool: false };
+    return { school: '', changeSchool: false, library: false };
   }
 }
 
@@ -28,6 +39,7 @@ export default function LoginPage() {
   const { clearSchoolChooserSession } = useAuth();
   const [schoolFromQuery, setSchoolFromQuery] = useState('');
   const [changeSchool, setChangeSchool] = useState(false);
+  const [libraryLogin, setLibraryLogin] = useState(false);
   const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(undefined);
   const changeSchoolResetDoneRef = useRef(false);
 
@@ -36,11 +48,16 @@ export default function LoginPage() {
       const state = readLoginUrlState();
       setSchoolFromQuery(state.school);
       setChangeSchool(state.changeSchool);
+      setLibraryLogin(state.library);
     };
     read();
     window.addEventListener('popstate', read);
     return () => window.removeEventListener('popstate', read);
   }, [pathname]);
+
+  useEffect(() => {
+    if (libraryLogin) markSchoolLoginLibraryIntent();
+  }, [libraryLogin]);
 
   useEffect(() => {
     if (changeSchool) {
@@ -88,6 +105,7 @@ export default function LoginPage() {
       key={changeSchool ? 'change-school' : initialSchoolId ?? 'login'}
       mode="full"
       initialSchoolId={initialSchoolId}
+      libraryLogin={libraryLogin}
     />
   );
 }
