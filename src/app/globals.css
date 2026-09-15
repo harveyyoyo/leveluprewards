@@ -967,6 +967,29 @@ html[data-office-portal] .office-content-pane {
     0 28px 60px color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 26%, transparent);
 }
 
+/* Library door — reading-hall photo + school library theme wash */
+.portal-choose-card--library {
+  background-color: transparent;
+  border-color: color-mix(in srgb, var(--portal-accent, hsl(var(--ring))) 52%, transparent);
+}
+
+.portal-library-card-photo {
+  transform: scale(1.06);
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .portal-library-card-photo,
+.group:focus-visible .portal-library-card-photo {
+  transform: scale(1.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-library-card-photo {
+    transform: none;
+    transition: none;
+  }
+}
+
 .portal-choose-icon {
   box-shadow:
     0 2px 6px hsl(222 47% 11% / 0.22),
