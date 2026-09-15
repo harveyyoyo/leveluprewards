@@ -64,6 +64,7 @@ import type { LibraryItem, LibraryItemInput, Student, Class, Category, LibraryBo
 import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib/library/libraryOperations';
 import { allocateNextGenreBarcode, duplicateCheckoutItemIds, isCatalogCheckoutCodeTaken } from '@/lib/library/libraryIntakeHelpers';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
+import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
 import { filterLibraryCatalog, downloadLibraryCsv, libraryCopyNeedsProcessing, type LibraryLoan } from '@/lib/library/libraryWorkspace';
 import {
@@ -833,6 +834,9 @@ export function LibraryWorkspace({
   );
   const currentCatalogSlice = filteredCatalog.slice((page - 1) * pageSize, page * pageSize);
   const currentGroupSlice = catalogGroups.slice((page - 1) * pageSize, page * pageSize);
+  // A search that looks like a scanned barcode (not a typed title/author) — used to offer
+  // "add this book" when nothing matches, instead of just saying no results were found.
+  const searchLooksScanned = /^\d{6,}$/.test(search.trim()) || isRetailIsbnBarcode(search.trim());
 
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
@@ -1749,8 +1753,23 @@ export function LibraryWorkspace({
                     <BookOpen className="mx-auto h-10 w-10 text-muted-foreground/50" />
                     <h3 className="font-bold text-sm text-foreground">No books found</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                      No books match the current filters. Adjust your search or add books to your catalog.
+                      {searchLooksScanned
+                        ? `"${search.trim()}" isn't in the catalog yet.`
+                        : 'No books match the current filters. Adjust your search or add books to your catalog.'}
                     </p>
+                    {searchLooksScanned && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setIntakePrefillCode(search.trim());
+                          setIntakeOpen(true);
+                        }}
+                        className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Register &amp; Add Book</span>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   organizedGroups.map((primaryGroup) => {
@@ -1864,7 +1883,30 @@ export function LibraryWorkspace({
             )}
 
             {/* PRESENTATION MODE 3: GROUPED TITLES VIEW (Master Title Cards) */}
-            {catalogView === 'grouped' && (
+            {catalogView === 'grouped' && currentGroupSlice.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center space-y-3 bg-muted/10">
+                <BookOpen className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <h3 className="font-bold text-sm text-foreground">No books found</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  {searchLooksScanned
+                    ? `"${search.trim()}" isn't in the catalog yet.`
+                    : 'No books match the current filters. Adjust your search or add books to your catalog.'}
+                </p>
+                {searchLooksScanned && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setIntakePrefillCode(search.trim());
+                      setIntakeOpen(true);
+                    }}
+                    className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Register &amp; Add Book</span>
+                  </Button>
+                )}
+              </div>
+            ) : catalogView === 'grouped' && (
               <motion.div
                 className={cn(
                   viewMode === 'grid' ? libraryTitleGridClass(coverSize) : 'space-y-3',
