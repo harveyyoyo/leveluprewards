@@ -152,9 +152,13 @@ export function SchoolDeveloperLoginForm({
 
   useEffect(() => {
     if (isDeveloperOnly) return;
+    if (libraryLogin) {
+      setSchoolId('');
+      return;
+    }
     const s = initialSchoolId?.trim().toLowerCase();
     if (s) setSchoolId(s);
-  }, [isDeveloperOnly, initialSchoolId]);
+  }, [isDeveloperOnly, initialSchoolId, libraryLogin]);
 
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading) return;

@@ -60,7 +60,8 @@ export default function LoginPage() {
   }, [libraryLogin]);
 
   useEffect(() => {
-    if (changeSchool) {
+    const urlState = readLoginUrlState();
+    if (urlState.changeSchool || urlState.library) {
       if (!changeSchoolResetDoneRef.current) {
         changeSchoolResetDoneRef.current = true;
         clearSchoolChooserSession();
@@ -102,9 +103,9 @@ export default function LoginPage() {
 
   return (
     <SchoolDeveloperLoginForm
-      key={changeSchool ? 'change-school' : initialSchoolId ?? 'login'}
+      key={libraryLogin ? 'library-login' : changeSchool ? 'change-school' : initialSchoolId ?? 'login'}
       mode="full"
-      initialSchoolId={initialSchoolId}
+      initialSchoolId={libraryLogin ? undefined : initialSchoolId}
       libraryLogin={libraryLogin}
     />
   );
