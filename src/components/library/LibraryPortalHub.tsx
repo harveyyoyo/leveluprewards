@@ -9,6 +9,7 @@ import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryT
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 
 type HubDoorId = Exclude<LibraryHeaderNavTab, 'reports'>;
 
@@ -238,6 +239,7 @@ export function LibraryPortalHub({
         ) : null}
 
       </main>
+      <SiteFooter />
     </div>
   );
 }

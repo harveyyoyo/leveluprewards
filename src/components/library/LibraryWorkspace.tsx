@@ -98,6 +98,7 @@ import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryGettingStarted } from './LibraryGettingStarted';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { groupBooksIntoPiles, getBookPileKey, type BookPile } from '@/lib/library/bookPiles';
@@ -2256,6 +2257,8 @@ export function LibraryWorkspace({
         </footer>
       )}
     </div>
+
+      <SiteFooter />
 
       {/* Edit Copy Modal */}
       {editOpen && (
