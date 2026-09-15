@@ -239,7 +239,7 @@ export function LibraryPortalHub({
         ) : null}
 
       </main>
-      <SiteFooter compact />
+      <SiteFooter />
     </div>
   );
 }

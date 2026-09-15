@@ -2355,7 +2355,7 @@ export function LibraryWorkspace({
       )}
     </div>
 
-      <SiteFooter compact />
+      <SiteFooter />
 
       {/* Edit Copy Modal */}
       {editOpen && (
