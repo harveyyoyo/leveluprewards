@@ -27,6 +27,7 @@ export function LibraryHeaderBar({
   schoolName,
   productLabel = 'Library',
   backToPortalHref,
+  chooseLibraryHref,
   activeTab,
   onNavigate,
   onHome,
@@ -37,6 +38,9 @@ export function LibraryHeaderBar({
   schoolName: string;
   productLabel?: string;
   backToPortalHref: string;
+  /** When a school has more than one library, the logo/name link opens the "which library"
+   * picker instead of leaving the library section entirely. */
+  chooseLibraryHref?: string;
   activeTab: LibraryHeaderTab;
   onNavigate: (tab: LibraryHeaderNavTab) => void;
   onHome: () => void;
@@ -48,7 +52,11 @@ export function LibraryHeaderBar({
     <div className={cn('relative z-10 w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', theme.classes.header)}>
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <Link href={backToPortalHref} title="Back to LevelUp" className="flex items-center gap-2 sm:gap-3 shrink-0 group">
+          <Link
+            href={chooseLibraryHref || backToPortalHref}
+            title={chooseLibraryHref ? 'Switch library' : 'Back to LevelUp'}
+            className="flex items-center gap-2 sm:gap-3 shrink-0 group"
+          >
             <span
               className={cn(
                 'grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl border-2 p-1 shadow-sm transition-transform group-hover:-translate-y-0.5',

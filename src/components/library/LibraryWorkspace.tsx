@@ -879,6 +879,11 @@ export function LibraryWorkspace({
     );
   }
 
+  const backToPortalHref = `/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`;
+  // More than one library at this school — let the header's logo/name link (and the picker's
+  // own back link) reopen the "which library" picker instead of leaving the library section.
+  const chooseLibraryHref = locations.length > 1 ? `/${schoolId}/library` : undefined;
+
   // More than one library at this school and nothing picked yet (no ?library= link, and this
   // device hasn't chosen before) — ask instead of silently opening the school's main library.
   if (needsLibraryChoice) {
@@ -888,6 +893,8 @@ export function LibraryWorkspace({
         onPick={setActiveLibrary}
         title="Which library do you want to open?"
         subtitle="Choose one to continue — you can switch later from Library settings."
+        backHref={backToPortalHref}
+        backLabel="Back to portal"
       />
     );
   }
@@ -906,7 +913,6 @@ export function LibraryWorkspace({
 
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
-  const backToPortalHref = `/${schoolId}/${loginState === 'admin' || loginState === 'developer' ? 'admin' : loginState === 'teacher' ? 'teacher' : 'portal'}`;
 
   if (hubHome) {
     return (
@@ -916,6 +922,7 @@ export function LibraryWorkspace({
         overdueCount={overdueLoans.length}
         catalogCount={activeCopies.length}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         onSelect={(nextTab) => {
           if (navSoundEnabled) playSound('click');
           setTab(nextTab);
@@ -950,6 +957,7 @@ export function LibraryWorkspace({
         theme={currentTheme}
         schoolName={schoolName || 'School Library'}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         activeTab={
           tab === 'settings'
             ? 'settings'

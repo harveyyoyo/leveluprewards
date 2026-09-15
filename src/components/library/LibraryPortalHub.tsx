@@ -72,6 +72,8 @@ export interface LibraryPortalHubProps {
   overdueCount?: number;
   catalogCount?: number;
   backToPortalHref: string;
+  /** When a school has more than one library, the logo/name link opens the "which library" picker. */
+  chooseLibraryHref?: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
 }
@@ -87,6 +89,7 @@ export function LibraryPortalHub({
   overdueCount = 0,
   catalogCount,
   backToPortalHref,
+  chooseLibraryHref,
   onSelect,
   onOpenSettings,
 }: LibraryPortalHubProps) {
@@ -125,6 +128,7 @@ export function LibraryPortalHub({
         schoolName={schoolName}
         productLabel={copy.headerProduct}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         activeTab="hub"
         onNavigate={onSelect}
         onHome={() => {}}
