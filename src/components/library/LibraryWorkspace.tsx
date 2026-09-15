@@ -628,6 +628,13 @@ export function LibraryWorkspace({
     return Array.from(selected).map((id) => map.get(id)).filter(Boolean) as LibraryItem[];
   }, [scopedItems, selected]);
 
+  // What the toolbar's "Print Labels" button will actually print: the current selection if
+  // there is one, otherwise every copy still needing a sticker in the current filtered view.
+  const printQueueCount =
+    selected.size > 0
+      ? selected.size
+      : filteredCatalog.filter((item) => libraryCopyNeedsProcessing(item)).length;
+
   const selectAllCurrentPage = () => {
     const currentSlice = filteredCatalog.slice((page - 1) * pageSize, page * pageSize);
     setSelected((prev) => {
@@ -1090,14 +1097,11 @@ export function LibraryWorkspace({
                         : filteredCatalog.filter((item) => libraryCopyNeedsProcessing(item));
                     if (queue.length) print(queue);
                   }}
-                  disabled={
-                    selected.size === 0 &&
-                    !filteredCatalog.some((item) => libraryCopyNeedsProcessing(item))
-                  }
+                  disabled={printQueueCount === 0}
                   className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
                 >
                   <Printer className="h-3.5 w-3.5" />
-                  <span>Print Labels</span>
+                  <span>Print Labels ({printQueueCount})</span>
                 </Button>
 
                 <Button
