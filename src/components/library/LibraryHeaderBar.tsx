@@ -53,9 +53,9 @@ export function LibraryHeaderBar({
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Link
-            href={chooseLibraryHref || backToPortalHref}
-            title={chooseLibraryHref ? 'Switch library' : 'Back to LevelUp'}
-            className="flex items-center gap-2 sm:gap-3 shrink-0 group"
+            href={backToPortalHref}
+            title="Back to LevelUp"
+            className="group flex items-center shrink-0"
           >
             <span
               className={cn(
@@ -65,10 +65,14 @@ export function LibraryHeaderBar({
             >
               <LevelUpLogoMark className="h-full w-full" />
             </span>
-            <span className="hidden sm:flex flex-col leading-tight">
-              <span className="font-black text-base">{schoolName}</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
-            </span>
+          </Link>
+          <Link
+            href={chooseLibraryHref || backToPortalHref}
+            title={chooseLibraryHref ? 'Switch library' : 'Back to LevelUp'}
+            className="hidden sm:flex flex-col leading-tight"
+          >
+            <span className="font-black text-base">{schoolName}</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
           </Link>
           <button
             type="button"
