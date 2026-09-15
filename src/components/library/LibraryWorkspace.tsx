@@ -429,7 +429,7 @@ export function LibraryWorkspace({
   const { active: activeLibrary, setActive: setActiveLibrary, needsChoice: needsLibraryChoice } = useActiveLibraryLocation(
     schoolId,
     locations,
-    { requireExplicitChoice: true },
+    { requireExplicitChoice: true, ignoreStoredChoice: true },
   );
   const scopedItems = useMemo(
     () => filterItemsForLibrary(items, activeLibrary.id),
