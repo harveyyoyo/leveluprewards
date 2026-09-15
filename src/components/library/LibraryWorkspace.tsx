@@ -96,6 +96,7 @@ import { LibraryPrintLabelsModal } from './LibraryPrintLabelsModal';
 import { LibraryPolicySettingsCard } from './LibraryPolicySettingsCard';
 import { LibraryThemeSettingsCard } from './LibraryThemeSettingsCard';
 import { LibraryPortalHub } from './LibraryPortalHub';
+import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -276,6 +277,11 @@ export function LibraryWorkspace({
   const [status, setStatus] = useState('all');
   const [shelfFilter, setShelfFilter] = useState('all');
   const [labelFilter, setLabelFilter] = useState<'all' | 'labeled' | 'unlabeled' | 'shared_number'>('all');
+  // Changing a filter (e.g. Reports' "View overdue" jumping here with status=overdue) means the
+  // user wants to browse that list, not keep looking at whatever book was previously pinned.
+  useEffect(() => {
+    setPinnedItemId(null);
+  }, [status, shelfFilter, labelFilter]);
   const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'genre_asc' | 'genre_desc' | 'shelf'>('title_asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
@@ -420,7 +426,11 @@ export function LibraryWorkspace({
   });
 
   const { locations } = useLibraryLocations(schoolId);
-  const { active: activeLibrary, setActive: setActiveLibrary } = useActiveLibraryLocation(schoolId, locations);
+  const { active: activeLibrary, setActive: setActiveLibrary, needsChoice: needsLibraryChoice } = useActiveLibraryLocation(
+    schoolId,
+    locations,
+    { requireExplicitChoice: true },
+  );
   const scopedItems = useMemo(
     () => filterItemsForLibrary(items, activeLibrary.id),
     [activeLibrary.id, items],
@@ -461,14 +471,22 @@ export function LibraryWorkspace({
     [studentsById, classes],
   );
 
-  // Look up what the just-typed/scanned term matches, pin that book on screen, then clear the box.
+  // Look up what the just-typed/scanned term matches. Only when it lands on exactly one book —
+  // the normal case for a barcode/ISBN scan — do we pin that book and clear the box a moment
+  // later; a term that matches several books (or none) just stays in the box so the user can
+  // see the narrowed list. The lookup ignores the current status/shelf/label filters on purpose:
+  // if you scan a specific book, you want to see that book, not have it hidden by an unrelated
+  // filter like "Available Now".
   const pinMatchAndScheduleClear = useCallback(
     (term: string) => {
-      const matches = filterLibraryCatalog(scopedItems, term, status, getName, settings.libraryGenreDefinitions);
-      setPinnedItemId(matches[0]?.id ?? null);
-      scheduleSearchClear();
+      const matches = filterLibraryCatalog(scopedItems, term, 'all', getName, settings.libraryGenreDefinitions);
+      if (matches.length === 1) {
+        setPinnedItemId(matches[0].id);
+        setPage(1);
+        scheduleSearchClear();
+      }
     },
-    [scopedItems, status, getName, settings.libraryGenreDefinitions, scheduleSearchClear],
+    [scopedItems, getName, settings.libraryGenreDefinitions, scheduleSearchClear],
   );
 
   // Shelf locations list for filtering
@@ -861,6 +879,19 @@ export function LibraryWorkspace({
     );
   }
 
+  // More than one library at this school and nothing picked yet (no ?library= link, and this
+  // device hasn't chosen before) — ask instead of silently opening the school's main library.
+  if (needsLibraryChoice) {
+    return (
+      <LibraryStationPicker
+        locations={locations}
+        onPick={setActiveLibrary}
+        title="Which library do you want to open?"
+        subtitle="Choose one to continue — you can switch later from Library settings."
+      />
+    );
+  }
+
   const pageCount = Math.max(
     1,
     Math.ceil(
@@ -881,6 +912,7 @@ export function LibraryWorkspace({
     return (
       <LibraryPortalHub
         schoolName={schoolName}
+        libraryName={locations.length > 1 ? activeLibrary.name : undefined}
         overdueCount={overdueLoans.length}
         catalogCount={activeCopies.length}
         backToPortalHref={backToPortalHref}
@@ -1320,6 +1352,27 @@ export function LibraryWorkspace({
                     hintText="Align a book barcode in frame to search for it"
                   />
                 </div>
+              )}
+
+              {pinnedItemId && !search && (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-sm"
+                >
+                  <p className="font-semibold">Showing the book you just found.</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 rounded-xl text-xs font-bold"
+                    onClick={() => setPinnedItemId(null)}
+                  >
+                    Show all books
+                  </Button>
+                </motion.div>
               )}
 
               {sharedNumberIds.size > 0 && (

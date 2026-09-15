@@ -67,6 +67,8 @@ function useIsLargeScreen() {
 
 export interface LibraryPortalHubProps {
   schoolName?: string;
+  /** Name of the specific library currently open (e.g. "School Library" or "test") — shown in the welcome heading. */
+  libraryName?: string;
   overdueCount?: number;
   catalogCount?: number;
   backToPortalHref: string;
@@ -81,6 +83,7 @@ export interface LibraryPortalHubProps {
  */
 export function LibraryPortalHub({
   schoolName = 'School Library',
+  libraryName,
   overdueCount = 0,
   catalogCount,
   backToPortalHref,
@@ -132,9 +135,9 @@ export function LibraryPortalHub({
         <div className="m-auto w-full">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
           <span className="block sm:inline">{copy.welcomeLead}</span>
-          {copy.welcomeHighlight ? (
+          {libraryName || copy.welcomeHighlight ? (
             <span className="relative mt-1 sm:mt-0 sm:ml-3 inline-block">
-              {copy.welcomeHighlight}
+              {libraryName || copy.welcomeHighlight}
               <svg
                 aria-hidden
                 viewBox="0 0 200 12"

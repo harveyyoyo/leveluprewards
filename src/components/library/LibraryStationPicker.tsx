@@ -13,18 +13,20 @@ export function LibraryStationPicker({
   locations,
   classNames,
   onPick,
+  title = 'Which library is this station?',
+  subtitle = 'Choose once for this device. Students will only borrow books from that library here.',
 }: {
   locations: LibraryLocation[];
   classNames?: Record<string, string>;
   onPick: (id: string) => void;
+  title?: string;
+  subtitle?: string;
 }) {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-2xl flex-col justify-center gap-6 p-6">
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-black tracking-tight">Which library is this station?</h1>
-        <p className="text-muted-foreground">
-          Choose once for this device. Students will only borrow books from that library here.
-        </p>
+        <h1 className="text-3xl font-black tracking-tight">{title}</h1>
+        <p className="text-muted-foreground">{subtitle}</p>
       </div>
       <motion.div
         className="grid gap-3"
