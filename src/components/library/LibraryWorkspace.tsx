@@ -13,6 +13,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  CheckSquare,
   ClipboardCheck,
   Clock,
   Download,
@@ -55,7 +56,6 @@ import { resolveBookClassification } from '@/lib/library/libraryClassification';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -1633,18 +1633,23 @@ export function LibraryWorkspace({
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
-                  <Checkbox
-                    checked={selectionMode}
-                    onCheckedChange={(checked) => {
-                      const on = checked === true;
-                      setSelectionMode(on);
-                      if (!on) setSelected(new Set());
-                    }}
-                    className="h-3.5 w-3.5"
-                  />
+                <Button
+                  type="button"
+                  variant={selectionMode ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    const on = !selectionMode;
+                    setSelectionMode(on);
+                    if (!on) setSelected(new Set());
+                  }}
+                  className={cn(
+                    'h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs',
+                    selectionMode && currentTheme.classes.button,
+                  )}
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
                   <span>Select books</span>
-                </label>
+                </Button>
                 {selectionMode && (
                   <button
                     type="button"
