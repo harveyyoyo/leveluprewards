@@ -871,7 +871,10 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        'library-readable relative min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300',
+        // Locked to the viewport height so the header and footer always stay put — only the
+        // content between them scrolls, instead of the whole page (which used to force an
+        // awkward few-pixel scroll just to reach the footer).
+        'library-readable relative h-dvh max-h-dvh overflow-hidden transition-colors duration-300 animate-in fade-in duration-300',
         isNightDesk
           ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
@@ -904,12 +907,12 @@ export function LibraryWorkspace({
         onOpenSettings={() => switchTab('settings')}
       />
 
-      {/* Main Column: Top Bar + Content */}
-      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
+      {/* Main Column: Top Bar + Content — this is the part that scrolls now, not the page */}
+      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto', (isNightDesk || isReadingRoom) && 'w-full')}>
 
 
         {/* Main Workstation View Area */}
-        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
+        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 pb-[max(1rem,env(safe-area-inset-bottom))] overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
         <AnimatePresence mode="wait">
         <motion.div
           key={tab}
