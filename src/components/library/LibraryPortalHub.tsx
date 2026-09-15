@@ -2,11 +2,12 @@
 
 import { useEffect, useState, type ComponentType } from 'react';
 import { motion } from 'framer-motion';
-import { Library, BookOpen, Monitor, ArrowRight, Stamp } from 'lucide-react';
+import { Library, BookOpen, Monitor, ArrowRight, Stamp, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
+import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -71,7 +72,6 @@ export interface LibraryPortalHubProps {
   backToPortalHref: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
-  onOpenSetup?: () => void;
 }
 
 /**
@@ -86,9 +86,8 @@ export function LibraryPortalHub({
   backToPortalHref,
   onSelect,
   onOpenSettings,
-  onOpenSetup,
 }: LibraryPortalHubProps) {
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const theme = resolveLibraryTheme(settings.libraryTheme as LibraryThemeId, settings.libraryBoxOpacity);
   const copy = resolveLibraryHubCopy(settings.libraryHubCopy);
   const isLargeScreen = useIsLargeScreen();
@@ -129,7 +128,8 @@ export function LibraryPortalHub({
         onOpenSettings={onOpenSettings}
       />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center justify-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
+        <div className="m-auto w-full">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
           <span className="block sm:inline">{copy.welcomeLead}</span>
           {copy.welcomeHighlight ? (
@@ -169,6 +169,7 @@ export function LibraryPortalHub({
                 key={card.id}
                 type="button"
                 layoutId={`library-hub-${card.id}`}
+                data-intro-tour={`library-hub-${card.id}`}
                 onClick={() => onSelect(card.id)}
                 variants={{
                   hidden: { opacity: 0, y: 18, rotate: 0 },
@@ -211,7 +212,6 @@ export function LibraryPortalHub({
 
                   <h3 className="mt-1 lg:mt-3 text-base lg:text-2xl font-black">{text.title}</h3>
                   <p className="mt-0.5 text-xs font-semibold uppercase tracking-[0.18em] opacity-50">{text.tagline}</p>
-                  <p className="mt-0.5 lg:mt-2 text-xs lg:text-sm leading-relaxed opacity-75 lg:line-clamp-2">{text.description}</p>
 
                   <span
                     className={cn(
@@ -228,16 +228,15 @@ export function LibraryPortalHub({
           })}
         </motion.div>
 
-        {onOpenSetup ? (
-          <button
-            type="button"
-            onClick={onOpenSetup}
-            className="mt-8 lg:mt-12 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
-          >
-            Getting started
-          </button>
-        ) : null}
-
+        <button
+          type="button"
+          onClick={() => activateLibraryTour(updateSettings)}
+          className="mt-8 lg:mt-12 inline-flex items-center gap-1.5 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
+        >
+          <Compass className="h-3.5 w-3.5" />
+          Take a quick tour
+        </button>
+        </div>
       </main>
       <SiteFooter />
     </div>

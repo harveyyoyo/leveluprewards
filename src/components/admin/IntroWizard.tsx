@@ -32,6 +32,7 @@ import { teacherTourSteps } from '@/lib/tours/teacherTour';
 import { studentTourSteps } from '@/lib/tours/studentTour';
 import { teacherFeaturesTourSteps } from '@/lib/tours/teacherFeaturesTour';
 import { studentFeaturesTourSteps } from '@/lib/tours/studentFeaturesTour';
+import { libraryTourSteps } from '@/lib/tours/libraryTour';
 
 type TourId =
   | 'welcome'
@@ -40,7 +41,8 @@ type TourId =
   | 'teacher'
   | 'student'
   | 'teacher-features'
-  | 'student-features';
+  | 'student-features'
+  | 'library';
 
 function normalizeTourId(tourId: string | null | undefined): TourId | null {
   if (
@@ -50,7 +52,8 @@ function normalizeTourId(tourId: string | null | undefined): TourId | null {
     tourId === 'teacher' ||
     tourId === 'student' ||
     tourId === 'teacher-features' ||
-    tourId === 'student-features'
+    tourId === 'student-features' ||
+    tourId === 'library'
   ) {
     return tourId;
   }
@@ -66,6 +69,7 @@ function getTourSteps(tourId: string | null | undefined): IntroStep[] {
   if (id === 'student') return studentTourSteps;
   if (id === 'teacher-features') return teacherFeaturesTourSteps;
   if (id === 'student-features') return studentFeaturesTourSteps;
+  if (id === 'library') return libraryTourSteps;
   return [];
 }
 
@@ -85,6 +89,7 @@ const STAFF_ROUTE_SUFFIXES = [
   '/student-home',
   '/prize',
   '/hall-of-fame',
+  '/library',
 ];
 
 function isPublicRoute(pathname: string) {
@@ -225,10 +230,15 @@ export function IntroWizard() {
   const steps = useMemo(() => getTourSteps(activeTourId), [activeTourId]);
   const isWizardEnabled = Boolean(activeTourId && steps.length > 0);
 
+  // Re-sync from whatever was last persisted whenever the active tour (re)selects itself.
+  // Starting a tour on purpose (activateXTour helpers) clears this storage key first, so a
+  // deliberate restart still lands on step 0 — but an incidental remount of this component
+  // (e.g. a parent re-rendering for unrelated reasons) now resumes instead of losing progress.
   useEffect(() => {
     if (!isWizardEnabled || !activeTourId) return;
-
-    setStepIndex(0);
+    const raw = window.localStorage.getItem(getStorageKey(activeTourId));
+    const parsed = raw ? parseInt(raw, 10) : 0;
+    setStepIndex(Number.isFinite(parsed) && parsed >= 0 && parsed < steps.length ? parsed : 0);
   }, [isWizardEnabled, activeTourId, steps.length]);
 
   // Re-check target visibility after route changes and layout settles.
@@ -331,7 +341,7 @@ export function IntroWizard() {
         targetId={currentStep.target}
         active={Boolean(currentStep.target) && !isFirstStep}
       />
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         <motion.div
           key={stepIndex}
           initial={{ opacity: 0, y: 40, scale: 0.96 }}
