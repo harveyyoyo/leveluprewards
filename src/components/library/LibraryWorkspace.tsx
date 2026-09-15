@@ -64,6 +64,7 @@ import type { LibraryItem, LibraryItemInput, Student, Class, Category, LibraryBo
 import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib/library/libraryOperations';
 import { allocateNextGenreBarcode, duplicateCheckoutItemIds, isCatalogCheckoutCodeTaken } from '@/lib/library/libraryIntakeHelpers';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
+import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
 import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
 import { filterLibraryCatalog, downloadLibraryCsv, libraryCopyNeedsProcessing, type LibraryLoan } from '@/lib/library/libraryWorkspace';
 import {
@@ -98,6 +99,7 @@ import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryGettingStarted } from './LibraryGettingStarted';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import { groupBooksIntoPiles, getBookPileKey, type BookPile } from '@/lib/library/bookPiles';
@@ -322,6 +324,9 @@ export function LibraryWorkspace({
   }, [coverSize, coverSizeReady]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Turning this on reveals a checkbox on every book so specific copies can be picked —
+  // it no longer selects everything the moment it's checked.
+  const [selectionMode, setSelectionMode] = useState(false);
   const [editing, setEditing] = useState<LibraryItem | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [intakeOpen, setIntakeOpen] = useState(false);
@@ -647,6 +652,17 @@ export function LibraryWorkspace({
     });
   };
 
+  // Titles view groups copies under one title card — selecting the card selects every
+  // copy of that title at once (there's no single "book" to select otherwise).
+  const toggleGroupSelect = (copies: LibraryItem[]) => {
+    setSelected((prev) => {
+      const allSelected = copies.every((c) => prev.has(c.id));
+      const next = new Set(prev);
+      copies.forEach((c) => (allSelected ? next.delete(c.id) : next.add(c.id)));
+      return next;
+    });
+  };
+
   const run = async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -818,6 +834,9 @@ export function LibraryWorkspace({
   );
   const currentCatalogSlice = filteredCatalog.slice((page - 1) * pageSize, page * pageSize);
   const currentGroupSlice = catalogGroups.slice((page - 1) * pageSize, page * pageSize);
+  // A search that looks like a scanned barcode (not a typed title/author) — used to offer
+  // "add this book" when nothing matches, instead of just saying no results were found.
+  const searchLooksScanned = /^\d{6,}$/.test(search.trim()) || isRetailIsbnBarcode(search.trim());
 
   const isNightDesk = currentTheme.id === 'night_desk';
   const isReadingRoom = currentTheme.id === 'reading_room';
@@ -852,7 +871,10 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        'library-readable relative min-h-dvh transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300',
+        // Locked to the viewport height so the header and footer always stay put — only the
+        // content between them scrolls, instead of the whole page (which used to force an
+        // awkward few-pixel scroll just to reach the footer).
+        'library-readable relative h-dvh max-h-dvh overflow-hidden transition-colors duration-300 animate-in fade-in duration-300',
         isNightDesk
           ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
@@ -885,12 +907,12 @@ export function LibraryWorkspace({
         onOpenSettings={() => switchTab('settings')}
       />
 
-      {/* Main Column: Top Bar + Content */}
-      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-dvh', (isNightDesk || isReadingRoom) && 'w-full')}>
+      {/* Main Column: Top Bar + Content — this is the part that scrolls now, not the page */}
+      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto', (isNightDesk || isReadingRoom) && 'w-full')}>
 
 
         {/* Main Workstation View Area */}
-        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
+        <main className={cn('flex-1 min-w-0 p-3 sm:p-6 lg:p-8 pb-[max(1rem,env(safe-area-inset-bottom))] overflow-x-hidden w-full mx-auto', (isNightDesk || isReadingRoom) ? 'max-w-6xl' : 'max-w-7xl')}>
         <AnimatePresence mode="wait">
         <motion.div
           key={tab}
@@ -1403,17 +1425,31 @@ export function LibraryWorkspace({
               )}
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/50">
-                <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
-                  <Checkbox
-                    checked={
-                      currentCatalogSlice.length > 0 &&
-                      currentCatalogSlice.every((i) => selected.has(i.id))
-                    }
-                    onCheckedChange={selectAllCurrentPage}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span>Select books</span>
-                </label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-semibold text-muted-foreground hover:text-foreground">
+                    <Checkbox
+                      checked={selectionMode}
+                      onCheckedChange={(checked) => {
+                        const on = checked === true;
+                        setSelectionMode(on);
+                        if (!on) setSelected(new Set());
+                      }}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span>Select books</span>
+                  </label>
+                  {selectionMode && (
+                    <button
+                      type="button"
+                      onClick={selectAllCurrentPage}
+                      className="text-[11px] font-semibold text-primary hover:underline"
+                    >
+                      {currentCatalogSlice.length > 0 && currentCatalogSlice.every((i) => selected.has(i.id))
+                        ? 'Deselect all'
+                        : 'Select all on this page'}
+                    </button>
+                  )}
+                </div>
                 <span className="text-[11px] text-muted-foreground">
                   {filteredCatalog.length} {filteredCatalog.length === 1 ? 'copy' : 'copies'}
                 </span>
@@ -1720,8 +1756,23 @@ export function LibraryWorkspace({
                     <BookOpen className="mx-auto h-10 w-10 text-muted-foreground/50" />
                     <h3 className="font-bold text-sm text-foreground">No books found</h3>
                     <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                      No books match the current filters. Adjust your search or add books to your catalog.
+                      {searchLooksScanned
+                        ? `"${search.trim()}" isn't in the catalog yet.`
+                        : 'No books match the current filters. Adjust your search or add books to your catalog.'}
                     </p>
+                    {searchLooksScanned && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setIntakePrefillCode(search.trim());
+                          setIntakeOpen(true);
+                        }}
+                        className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Register &amp; Add Book</span>
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   organizedGroups.map((primaryGroup) => {
@@ -1835,7 +1886,30 @@ export function LibraryWorkspace({
             )}
 
             {/* PRESENTATION MODE 3: GROUPED TITLES VIEW (Master Title Cards) */}
-            {catalogView === 'grouped' && (
+            {catalogView === 'grouped' && currentGroupSlice.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/80 p-12 text-center space-y-3 bg-muted/10">
+                <BookOpen className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                <h3 className="font-bold text-sm text-foreground">No books found</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                  {searchLooksScanned
+                    ? `"${search.trim()}" isn't in the catalog yet.`
+                    : 'No books match the current filters. Adjust your search or add books to your catalog.'}
+                </p>
+                {searchLooksScanned && (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setIntakePrefillCode(search.trim());
+                      setIntakeOpen(true);
+                    }}
+                    className="rounded-xl text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow-xs"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Register &amp; Add Book</span>
+                  </Button>
+                )}
+              </div>
+            ) : catalogView === 'grouped' && (
               <motion.div
                 className={cn(
                   viewMode === 'grid' ? libraryTitleGridClass(coverSize) : 'space-y-3',
@@ -1851,6 +1925,7 @@ export function LibraryWorkspace({
                   const totalCopies = group.copies.length;
                   const primaryCopy = group.copies[0];
                   const isGrid = viewMode === 'grid';
+                  const groupChecked = group.copies.length > 0 && group.copies.every((c) => selected.has(c.id));
                   return (
                     <motion.button
                       type="button"
@@ -1860,6 +1935,10 @@ export function LibraryWorkspace({
                         show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 380, damping: 28 } },
                       }}
                       onClick={() => {
+                        if (selectionMode) {
+                          toggleGroupSelect(group.copies);
+                          return;
+                        }
                         if (!primaryCopy) return;
                         setEditing(primaryCopy);
                         setEditOpen(true);
@@ -1867,13 +1946,14 @@ export function LibraryWorkspace({
                       className={cn(
                         'text-left shadow-sm transition-all border',
                         currentTheme.classes.card,
+                        groupChecked && 'ring-3 ring-primary border-primary bg-primary/5',
                         isGrid ? 'flex flex-col gap-2.5 rounded-2xl p-2.5' : 'w-full rounded-2xl p-4',
                       )}
                     >
                       <div className={cn(isGrid ? 'flex flex-col gap-2.5' : 'flex items-start gap-4')}>
                         <div
                           className={cn(
-                            'rounded-xl border bg-muted/20 shadow-xs',
+                            'relative rounded-xl border bg-muted/20 shadow-xs',
                             isGrid ? 'aspect-[2/3] w-full' : 'h-20 w-14 shrink-0',
                           )}
                         >
@@ -1886,6 +1966,27 @@ export function LibraryWorkspace({
                             fit="contain"
                             className="h-full w-full rounded-xl"
                           />
+                          {selectionMode && (
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleGroupSelect(group.copies);
+                              }}
+                              aria-label={groupChecked ? 'Deselect title' : 'Select title'}
+                              className="absolute top-1.5 left-1.5 z-10"
+                            >
+                              <span
+                                className={cn(
+                                  'flex h-6 w-6 items-center justify-center rounded-full shadow-md transition-all',
+                                  groupChecked
+                                    ? 'bg-primary text-primary-foreground ring-2 ring-white scale-110'
+                                    : 'bg-background/80 text-transparent hover:text-foreground hover:bg-background',
+                                )}
+                              >
+                                <Check className={cn('h-3.5 w-3.5', groupChecked ? 'opacity-100' : 'opacity-0')} />
+                              </span>
+                            </span>
+                          )}
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-1">
@@ -2256,6 +2357,8 @@ export function LibraryWorkspace({
         </footer>
       )}
     </div>
+
+      <SiteFooter />
 
       {/* Edit Copy Modal */}
       {editOpen && (

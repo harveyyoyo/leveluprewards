@@ -9,6 +9,7 @@ import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryT
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
+import { SiteFooter } from '@/components/layout/SiteFooter';
 
 type HubDoorId = Exclude<LibraryHeaderNavTab, 'reports'>;
 
@@ -115,7 +116,7 @@ export function LibraryPortalHub({
   } as const;
 
   return (
-    <div className={cn('library-readable relative flex min-h-dvh w-full flex-col overflow-x-hidden animate-in fade-in duration-300', theme.classes.wrapper)}>
+    <div className={cn('library-readable relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden animate-in fade-in duration-300', theme.classes.wrapper)}>
       <LibraryBackdrop theme={theme} />
       <LibraryHeaderBar
         theme={theme}
@@ -128,7 +129,7 @@ export function LibraryPortalHub({
         onOpenSettings={onOpenSettings}
       />
 
-      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-4 sm:px-6 py-12 lg:py-24 text-center">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center justify-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
           <span className="block sm:inline">{copy.welcomeLead}</span>
           {copy.welcomeHighlight ? (
@@ -238,6 +239,7 @@ export function LibraryPortalHub({
         ) : null}
 
       </main>
+      <SiteFooter />
     </div>
   );
 }

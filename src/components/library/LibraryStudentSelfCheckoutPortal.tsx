@@ -1600,8 +1600,9 @@ export function LibraryStudentSelfCheckoutPortal({
           />
         ) : null}
 
-        {/* Step 1 Quick Mode Switcher (Non-intrusive) */}
-        {step === 'student' && dropBoxOn && (
+        {/* Step 1 Quick Mode Switcher (Non-intrusive) — hidden while a scanned book is
+            already held pending a student ID, since switching modes here would abandon it. */}
+        {step === 'student' && dropBoxOn && !pendingBookCode && (
           <div className="pt-1 text-center">
             {mode === 'return' ? (
               <Button

@@ -73,6 +73,9 @@ type IntakeRow = {
   status: IntakeRowStatus;
   error?: string;
   copies?: number;
+  /** Set once a barcode scan or "Find this book" search has confidently matched this row —
+   * hides the redundant "Find this book" button until the title is edited again. */
+  identifiedByLookup?: boolean;
   coverUrl?: string;
   description?: string;
   pageCount?: number;
@@ -176,6 +179,7 @@ export function LibraryBookIntakeScanner({
             category: classification.genre.label,
             shelfLocation: classification.shelfLocation,
             status: isAiGuess ? 'ai_review' : 'ready',
+            identifiedByLookup: true,
             error: undefined,
           });
           playSound('success');
@@ -407,6 +411,7 @@ export function LibraryBookIntakeScanner({
             category: classification.genre.label,
             shelfLocation: initialShelf,
             status: isAiGuess ? 'ai_review' : 'ready',
+            identifiedByLookup: true,
             coverUrl: hit.coverUrl,
             description: hit.description,
             pageCount: hit.pageCount,
@@ -641,8 +646,8 @@ export function LibraryBookIntakeScanner({
   };
 
   const statusLabel: Record<IntakeRowStatus, string> = {
-    lookup: 'Looking up…',
-    ready: 'Ready',
+    lookup: 'Processing…',
+    ready: 'Processed',
     ai_review: 'Confirm AI guess',
     needs_title: 'Identify item',
     duplicate_catalog: 'In catalog',
@@ -859,6 +864,9 @@ export function LibraryBookIntakeScanner({
                               : e.target.value.trim()
                                 ? 'ready'
                                 : 'needs_title',
+                          // Editing a title by hand means it no longer necessarily reflects the
+                          // matched record — bring back "Find this book" so it can be re-checked.
+                          identifiedByLookup: false,
                           error: undefined,
                         })
                       }
@@ -875,7 +883,7 @@ export function LibraryBookIntakeScanner({
                         !row.title.trim() && 'border-amber-500 bg-amber-500/10 placeholder:text-amber-700/70 dark:placeholder:text-amber-300/70 focus-visible:ring-amber-500',
                       )}
                     />
-                    {row.status !== 'saved' && row.status !== 'lookup' && row.title.trim().length >= 2 && (
+                    {row.status !== 'saved' && row.status !== 'lookup' && !row.identifiedByLookup && row.title.trim().length >= 2 && (
                       <Button
                         type="button"
                         variant="ghost"
