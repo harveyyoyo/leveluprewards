@@ -264,6 +264,8 @@ export interface StudentTheme {
   fontWeight?: number;
   /** Per-student ID card scan format. When set, overrides the school-wide branding default. */
   idCardUseQr?: boolean;
+  /** Per-student ID card layout. When set, overrides the school-wide branding default. */
+  idCardLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
 }
 
 /** Default student / ID card text size: +1 step above standard (1.0). */

@@ -430,6 +430,13 @@ exports.lookupStudentByBadge = functions
 );
 
 const STUDENT_THEME_HEX = /^#[0-9a-fA-F]{6}$/;
+const STUDENT_THEME_ID_CARD_LAYOUTS = new Set([
+  "classic",
+  "credit_card",
+  "modern",
+  "minimalist",
+  "high_vis",
+]);
 
 function sanitizeKioskStudentThemePayload(raw: unknown): Record<string, unknown> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -468,6 +475,9 @@ function sanitizeKioskStudentThemePayload(raw: unknown): Record<string, unknown>
   }
   if (typeof data.fontWeight === "number" && Number.isFinite(data.fontWeight)) {
     out.fontWeight = data.fontWeight >= 600 ? 800 : 400;
+  }
+  if (typeof data.idCardLayout === "string" && STUDENT_THEME_ID_CARD_LAYOUTS.has(data.idCardLayout)) {
+    out.idCardLayout = data.idCardLayout;
   }
   return out;
 }

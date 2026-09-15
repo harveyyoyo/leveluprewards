@@ -101,8 +101,84 @@ interface TickerEvent {
   type: 'earn' | 'redeem' | 'info' | 'levelup' | 'error';
 }
 
+/** All tiles share one width/height so the stack's card size never jumps between rotations. */
+const HERO_SHOWCASE_ITEMS = [
+  {
+    src: '/marketing/screenshots/kiosk-welcome.png',
+    alt: 'Student welcome screen with points and level',
+    width: 640,
+    height: 400,
+    caption: 'Kiosk View: Tap card or enter ID to view credits',
+    captionClassName: 'text-[#1a2e42]/60',
+    withPulse: true,
+  },
+  {
+    src: '/marketing/screenshots/kiosk-rewards-shop.png',
+    alt: 'School rewards shop',
+    width: 640,
+    height: 400,
+    caption: 'Define custom rewards & privileges',
+    captionClassName: 'text-[#c9a227]',
+    withPulse: false,
+  },
+  {
+    src: '/marketing/screenshots/student-home-portal.png',
+    alt: 'Student home portal with levels, streaks, and rewards',
+    width: 640,
+    height: 400,
+    caption: 'Student Portal: Levels, streaks & rewards from anywhere',
+    captionClassName: 'text-[#1a2e42]/60',
+    withPulse: true,
+  },
+  {
+    src: '/marketing/screenshots/hall-of-fame.png',
+    alt: 'Hall of Fame leaderboard display',
+    width: 640,
+    height: 400,
+    caption: 'Celebrate wins on the Hall of Fame',
+    captionClassName: 'text-[#c9a227]',
+    withPulse: false,
+  },
+  {
+    src: '/marketing/screenshots/bulletin-board.png',
+    alt: 'School bulletin board with point-earning opportunities',
+    width: 640,
+    height: 400,
+    caption: 'Bulletin Board: Ways to earn points, front and center',
+    captionClassName: 'text-[#1a2e42]/60',
+    withPulse: true,
+  },
+  {
+    src: '/marketing/screenshots/live-admin-rewards-full.png',
+    alt: 'Admin rewards shop management screen',
+    width: 640,
+    height: 400,
+    caption: 'Rewards Shop: Set prizes, points & stock in seconds',
+    captionClassName: 'text-[#c9a227]',
+    withPulse: false,
+  },
+] as const;
+
+const HERO_SHOWCASE_ROTATE_MS = 3500;
+
+/** Fanned-deck position for each step behind the front card (index 0 = front). */
+const HERO_STACK_OFFSETS = [
+  { x: 0, y: 0, rotate: -2.5, scale: 1, opacity: 1, zIndex: 40 },
+  { x: 14, y: 10, rotate: 3, scale: 0.96, opacity: 0.9, zIndex: 30 },
+  { x: 24, y: 18, rotate: -4, scale: 0.92, opacity: 0.78, zIndex: 20 },
+  { x: 32, y: 26, rotate: 5, scale: 0.88, opacity: 0.65, zIndex: 10 },
+] as const;
+
 export function ShowcaseLanding() {
   const [showIntro, setShowIntro] = useState(false);
+  const [activeShowcase, setActiveShowcase] = useState(0);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setActiveShowcase((i) => (i + 1) % HERO_SHOWCASE_ITEMS.length);
+    }, HERO_SHOWCASE_ROTATE_MS);
+    return () => window.clearInterval(id);
+  }, []);
 
   useLayoutEffect(() => {
     if (prefersReducedMotion() || readIntroSeen()) return;
@@ -433,58 +509,83 @@ export function ShowcaseLanding() {
             </p>
           </motion.div>
 
-          {/* Floating Premium Visual Mockups */}
+          {/* Floating Premium Visual Mockups: auto-rotating stacked deck */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, rotate: 2 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{ duration: 0.9, delay: 0.3 }}
-            className="relative mx-auto w-full max-w-md lg:max-w-none flex justify-center py-10"
+            className="relative mx-auto w-full max-w-sm py-10"
           >
             {/* Soft decorative background glow behind images */}
             <div className="absolute top-[20%] left-[20%] w-[60%] h-[60%] rounded-full bg-[#c9a227]/10 filter blur-[40px] animate-pulse pointer-events-none" />
 
-            <div className="relative w-full">
-              {/* Primary mockup */}
-              <motion.figure 
-                whileHover={{ rotate: 0, scale: 1.03, y: -5 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="relative z-10 rotate-[-2.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/80 p-4 shadow-[12px_16px_36px_rgba(26,46,66,0.12)] backdrop-blur-md cursor-pointer"
-              >
-                <div className="overflow-hidden rounded-xl bg-[#e8e4dc] border border-[#1a2e42]/10">
-                  <Image
-                    src="/marketing/screenshots/kiosk-welcome.png"
-                    alt="Student welcome screen with points and level"
-                    width={640}
-                    height={400}
-                    className="w-full object-cover"
-                    priority
-                  />
-                </div>
-                <figcaption className="mt-3 text-center text-xs font-bold text-[#1a2e42]/60 flex items-center justify-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                  Kiosk View: Tap card or enter ID to view credits
-                </figcaption>
-              </motion.figure>
+            <div className="relative h-[290px] sm:h-[330px]">
+              {HERO_SHOWCASE_ITEMS.map((item, index) => {
+                const itemCount = HERO_SHOWCASE_ITEMS.length;
+                // Distance behind the front card (0 = front); fans each step further back.
+                const depth = Math.min(
+                  (index - activeShowcase + itemCount) % itemCount,
+                  HERO_STACK_OFFSETS.length - 1,
+                );
+                const stack = HERO_STACK_OFFSETS[depth];
+                const isActive = depth === 0;
+                return (
+                  <motion.figure
+                    key={item.src}
+                    onClick={() => setActiveShowcase(index)}
+                    animate={{
+                      rotate: stack.rotate,
+                      x: stack.x,
+                      y: stack.y,
+                      scale: stack.scale,
+                      opacity: stack.opacity,
+                      zIndex: stack.zIndex,
+                    }}
+                    whileHover={isActive ? { rotate: 0, scale: 1.03, y: -5 } : undefined}
+                    transition={{
+                      default: { type: 'tween', duration: 0.7, ease: [0.4, 0, 0.2, 1] },
+                      // zIndex must snap immediately, not interpolate — otherwise the wrong
+                      // card would briefly sit on top mid-swap while positions are still easing.
+                      zIndex: { duration: 0 },
+                    }}
+                    className="absolute inset-x-0 top-0 cursor-pointer rounded-2xl border border-[#1a2e42]/15 bg-white/90 p-4 shadow-[12px_16px_36px_rgba(26,46,66,0.12)] backdrop-blur-md"
+                  >
+                    <div className="overflow-hidden rounded-xl bg-[#e8e4dc] border border-[#1a2e42]/10">
+                      <Image
+                        src={item.src}
+                        alt={item.alt}
+                        width={item.width}
+                        height={item.height}
+                        className="w-full object-cover"
+                        priority={index === 0}
+                      />
+                    </div>
+                    <figcaption
+                      className={`mt-3 text-center text-xs font-bold flex items-center justify-center gap-1.5 ${item.captionClassName}`}
+                    >
+                      {item.withPulse && (
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      )}
+                      {item.caption}
+                    </figcaption>
+                  </motion.figure>
+                );
+              })}
+            </div>
 
-              {/* Overlapping secondary mockup */}
-              <motion.figure 
-                whileHover={{ rotate: 0, scale: 1.05, y: -8 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                className="absolute -bottom-10 -right-6 z-20 w-[80%] rotate-[3.5deg] rounded-2xl border border-[#1a2e42]/15 bg-white/95 p-3.5 shadow-[16px_20px_48px_rgba(201,162,39,0.18)] cursor-pointer"
-              >
-                <div className="overflow-hidden rounded-xl bg-[#e8e4dc] border border-[#1a2e42]/10">
-                  <Image
-                    src="/marketing/screenshots/kiosk-rewards-shop.png"
-                    alt="School rewards shop"
-                    width={520}
-                    height={340}
-                    className="w-full object-cover"
-                  />
-                </div>
-                <figcaption className="mt-3 text-center text-[11px] font-bold text-[#c9a227]">
-                  Define custom rewards &amp; privileges
-                </figcaption>
-              </motion.figure>
+            {/* Dots: jump straight to a mockup */}
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {HERO_SHOWCASE_ITEMS.map((item, index) => (
+                <button
+                  key={item.src}
+                  type="button"
+                  aria-label={`Show mockup: ${item.alt}`}
+                  onClick={() => setActiveShowcase(index)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    index === activeShowcase ? 'w-5 bg-[#c9a227]' : 'w-1.5 bg-[#1a2e42]/20'
+                  }`}
+                />
+              ))}
             </div>
           </motion.div>
               </motion.div>

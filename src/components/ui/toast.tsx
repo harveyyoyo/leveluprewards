@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
@@ -9,19 +10,35 @@ import { cn } from "@/lib/utils"
 
 const ToastProvider = ToastPrimitives.Provider
 
+/**
+ * Rendered straight to `document.body` so it always sits above every other
+ * layered surface (dialogs, dropdowns, the app shell's own z-indexed wrapper),
+ * regardless of where `<Toaster />` happens to be mounted in the tree — a
+ * z-index only wins within its own stacking context, so without this a toast
+ * nested inside a lower-z-index ancestor could render behind an open dialog
+ * even with a very high z-index of its own.
+ */
 const ToastViewport = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Viewport>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Viewport>
->(({ className, ...props }, ref) => (
-  <ToastPrimitives.Viewport
-    ref={ref}
-    className={cn(
-      "fixed top-0 z-[300] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-64 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] no-print",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, ref) => {
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => setMounted(true), [])
+
+  const viewport = (
+    <ToastPrimitives.Viewport
+      ref={ref}
+      className={cn(
+        "fixed top-0 z-[1000] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-64 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] no-print",
+        className
+      )}
+      {...props}
+    />
+  )
+
+  if (!mounted) return null
+  return createPortal(viewport, document.body)
+})
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(

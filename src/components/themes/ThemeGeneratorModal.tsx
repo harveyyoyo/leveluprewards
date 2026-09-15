@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Award, ChevronRight, Loader2, QrCode, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
+import { Award, ChevronRight, LayoutTemplate, Loader2, QrCode, Redo2, ScanBarcode, Trash2, Undo2, Wallet, Wand2 } from 'lucide-react';
 import { StudentTheme } from '@/lib/types';
 import {
     DEFAULT_STUDENT_THEME_FONT_SCALE,
@@ -39,6 +39,18 @@ import {
     replaceCssColor,
     uniqueBackgroundColors,
 } from '@/components/themes/themeBackgroundStyle';
+
+const ID_CARD_LAYOUT_OPTIONS: { id: NonNullable<StudentTheme['idCardLayout']>; label: string }[] = [
+    { id: 'classic', label: 'Classic' },
+    { id: 'credit_card', label: 'Credit Card' },
+    { id: 'modern', label: 'Modern' },
+    { id: 'minimalist', label: 'Minimalist' },
+    { id: 'high_vis', label: 'High-Vis Badge' },
+];
+
+const ID_CARD_LAYOUT_LABELS: Record<string, string> = Object.fromEntries(
+    ID_CARD_LAYOUT_OPTIONS.map((option) => [option.id, option.label]),
+);
 
 function StudentPortalThemePreview({
     theme,
@@ -589,6 +601,87 @@ export function ThemeGeneratorModal({
                 <div className="grid gap-6 py-4">
                     <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-start">
                         <div className="space-y-6">
+                            {showIdCardScanOverride && previewTheme ? (
+                                <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
+                                    <Label htmlFor="theme-id-card-layout" className="flex items-center gap-2">
+                                        <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                        ID card layout
+                                    </Label>
+                                    <Select
+                                        value={previewTheme.idCardLayout ?? 'inherit'}
+                                        onValueChange={(v) => {
+                                            if (v === 'inherit') {
+                                                commitThemeFrom((prev) => {
+                                                    if (!prev) return prev;
+                                                    const { idCardLayout: _removed, ...rest } = prev;
+                                                    return rest;
+                                                });
+                                                return;
+                                            }
+                                            updateTheme({ idCardLayout: v as StudentTheme['idCardLayout'] });
+                                        }}
+                                    >
+                                        <SelectTrigger id="theme-id-card-layout" className="h-10">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="inherit">
+                                                School default ({ID_CARD_LAYOUT_LABELS[settings.idCardLayout || 'classic']})
+                                            </SelectItem>
+                                            {ID_CARD_LAYOUT_OPTIONS.map((option) => (
+                                                <SelectItem key={option.id} value={option.id}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[10px] leading-snug text-muted-foreground">
+                                        Overrides the school-wide branding layout for this student's printed ID card only.
+                                    </p>
+                                </div>
+                            ) : null}
+                            {showIdCardScanOverride && previewTheme ? (
+                                <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
+                                    <Label htmlFor="theme-id-card-scan" className="flex items-center gap-2">
+                                        <QrCode className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                                        ID card scan code
+                                    </Label>
+                                    <Select
+                                        value={
+                                            previewTheme.idCardUseQr === undefined
+                                                ? 'inherit'
+                                                : previewTheme.idCardUseQr
+                                                  ? 'qr'
+                                                  : 'barcode'
+                                        }
+                                        onValueChange={(v) => {
+                                            if (v === 'inherit') {
+                                                commitThemeFrom((prev) => {
+                                                    if (!prev) return prev;
+                                                    const { idCardUseQr: _removed, ...rest } = prev;
+                                                    return rest;
+                                                });
+                                                return;
+                                            }
+                                            updateTheme({ idCardUseQr: v === 'qr' });
+                                        }}
+                                    >
+                                        <SelectTrigger id="theme-id-card-scan" className="h-10">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="inherit">
+                                                School default ({settings.idCardUseQrCode ? 'QR' : 'Barcode'})
+                                            </SelectItem>
+                                            <SelectItem value="qr">QR code (left side)</SelectItem>
+                                            <SelectItem value="barcode">Barcode (bottom strip)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[10px] leading-snug text-muted-foreground">
+                                        Overrides the school-wide branding setting for this student only. QR shows on the left with initials inside the code.
+                                    </p>
+                                </div>
+                            ) : null}
                             <div className="grid gap-2">
                                 <Label>AI Generation Model</Label>
                                 <Select
@@ -754,48 +847,6 @@ export function ThemeGeneratorModal({
                                             </div>
                                         </div>
                                     </div>
-                                    {showIdCardScanOverride ? (
-                                        <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
-                                            <Label htmlFor="theme-id-card-scan" className="flex items-center gap-2">
-                                                <QrCode className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
-                                                ID card scan code
-                                            </Label>
-                                            <Select
-                                                value={
-                                                    previewTheme.idCardUseQr === undefined
-                                                        ? 'inherit'
-                                                        : previewTheme.idCardUseQr
-                                                          ? 'qr'
-                                                          : 'barcode'
-                                                }
-                                                onValueChange={(v) => {
-                                                    if (v === 'inherit') {
-                                                        commitThemeFrom((prev) => {
-                                                            if (!prev) return prev;
-                                                            const { idCardUseQr: _removed, ...rest } = prev;
-                                                            return rest;
-                                                        });
-                                                        return;
-                                                    }
-                                                    updateTheme({ idCardUseQr: v === 'qr' });
-                                                }}
-                                            >
-                                                <SelectTrigger id="theme-id-card-scan" className="h-10">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="inherit">
-                                                        School default ({settings.idCardUseQrCode ? 'QR' : 'Barcode'})
-                                                    </SelectItem>
-                                                    <SelectItem value="qr">QR code (left side)</SelectItem>
-                                                    <SelectItem value="barcode">Barcode (bottom strip)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <p className="text-[10px] leading-snug text-muted-foreground">
-                                                Overrides the school-wide branding setting for this student only. QR shows on the left with initials inside the code.
-                                            </p>
-                                        </div>
-                                    ) : null}
                                     <div className="grid grid-cols-5 gap-2">
                                         {[
                                             { key: 'background', label: 'BG' },
