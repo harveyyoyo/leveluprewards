@@ -4795,6 +4795,59 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   color: var(--theme-text) !important;
 }
 
+/*
+ * Student Theme Typography Scaling:
+ * Allows theme `fontScale` (stored as e.g. 0.85 to 1.3, default 1.1) to scale all student surface text,
+ * matching how `--print-id-font-scale` scales the student ID card.
+ */
+.student-theme-surface {
+  --theme-font-scale: 1.1;
+  font-size: calc(1rem * var(--theme-font-scale, 1));
+}
+
+.student-theme-surface .text-\[8px\] { font-size: calc(8px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[9px\] { font-size: calc(9px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[10px\] { font-size: calc(10px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[11px\] { font-size: calc(11px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[12px\] { font-size: calc(12px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[13px\] { font-size: calc(13px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-4xl { font-size: calc(2.25rem * var(--theme-font-scale, 1)) !important; }
+
+.student-theme-surface .text-xs:not([class*="leading-"]) { line-height: calc(1rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-sm:not([class*="leading-"]) { line-height: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-base:not([class*="leading-"]) { line-height: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-lg:not([class*="leading-"]) { line-height: calc(1.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xl:not([class*="leading-"]) { line-height: calc(1.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-2xl:not([class*="leading-"]) { line-height: calc(2rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-3xl:not([class*="leading-"]) { line-height: calc(2.25rem * var(--theme-font-scale, 1)) !important; }
+
+@media (min-width: 640px) {
+  .student-theme-surface .sm\:text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
+}
+
+@media (min-width: 768px) {
+  .student-theme-surface .md\:text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
+}
+
 /* Legacy Mode Overrides - Strips performance-heavy effects */
 .legacy *:not([data-legacy-motion-root]):not([data-legacy-motion-root] *) {
   backdrop-filter: none !important;
