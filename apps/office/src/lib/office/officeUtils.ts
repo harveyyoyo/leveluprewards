@@ -25,6 +25,29 @@ export function getOfficeStudentFullName(student: Pick<OfficeStudent, 'firstName
   return label || last;
 }
 
+/** Sentinel returned for a name that matches more than one student on the roster. */
+export const AMBIGUOUS_STUDENT_MATCH = Symbol('ambiguous-student-match');
+
+/**
+ * Maps lowercased full name -> student id, for matching CSV/AI import rows against
+ * the roster. Two students with the same name are a real, if rare, possibility
+ * (siblings, common names) - rather than silently picking one, names that match
+ * more than one student resolve to AMBIGUOUS_STUDENT_MATCH so callers can skip
+ * the row and say why, instead of quietly filing a grade or invoice under the
+ * wrong sibling.
+ */
+export function buildStudentIdByNameMap(
+  students: Pick<OfficeStudent, 'id' | 'firstName' | 'lastName' | 'nickname'>[],
+): Map<string, string | typeof AMBIGUOUS_STUDENT_MATCH> {
+  const map = new Map<string, string | typeof AMBIGUOUS_STUDENT_MATCH>();
+  for (const s of students) {
+    const key = getOfficeStudentFullName(s).toLowerCase();
+    if (!key) continue;
+    map.set(key, map.has(key) ? AMBIGUOUS_STUDENT_MATCH : s.id);
+  }
+  return map;
+}
+
 export function getOfficeTeacherLabel(
   student: Pick<OfficeStudent, 'teacherId' | 'teacherName'>,
   teacherNameById: Map<string, string>,

@@ -442,37 +442,38 @@ export function OfficeBillingView({
       if (editInvoiceId) {
         const existing = invoices.find((i) => i.id === editInvoiceId);
         if (!existing) throw new Error('Invoice not found');
-        const status = saveAsDraft ? 'draft' : existing.status === 'draft' && !saveAsDraft ? 'sent' : existing.status;
+        const draftOrSentStatus =
+          saveAsDraft ? 'draft' : existing.status === 'draft' && !saveAsDraft ? 'sent' : existing.status;
+        // Cap paidCents to the (possibly lowered) new amount before resolving status, so
+        // shrinking an invoice below what's already been paid is reflected consistently
+        // everywhere below - not just self-corrected on read via invoicePaidCents().
+        const paidCents = Math.min(invoicePaidCents(existing), cents);
+        const resolvedStatus =
+          draftOrSentStatus === 'draft'
+            ? 'draft'
+            : resolveInvoiceStatusAfterPayment({ ...existing, amountCents: cents, status: draftOrSentStatus }, paidCents);
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
           label: invoiceLabel.trim(),
           amountCents: cents,
           dueDate: due,
-          status,
+          status: resolvedStatus,
+          paidCents,
         });
         const account = accounts.find((a) => a.id === existing.accountId);
         if (account) {
           const nextInvoices = invoices.map((i) =>
             i.id === editInvoiceId
-              ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status }
+              ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status: resolvedStatus, paidCents }
               : i,
           );
-          const updatedInvoice = nextInvoices.find((i) => i.id === editInvoiceId)!;
           const oldRemaining = invoiceBalanceDueCents(existing);
           const newRemaining =
-            status === 'sent' || status === 'partial'
-              ? Math.max(0, cents - invoicePaidCents(existing))
-              : 0;
+            resolvedStatus === 'sent' || resolvedStatus === 'partial' ? Math.max(0, cents - paidCents) : 0;
           let balanceCents = account.balanceCents || 0;
           if (existing.status === 'sent' || existing.status === 'partial') {
             balanceCents = Math.max(0, balanceCents - oldRemaining + newRemaining);
-          } else if (status === 'sent' && existing.status === 'draft') {
-            balanceCents += cents;
-          }
-          const resolvedStatus = resolveInvoiceStatusAfterPayment(updatedInvoice, invoicePaidCents(updatedInvoice));
-          if (resolvedStatus !== status) {
-            await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
-              status: resolvedStatus,
-            });
+          } else if (resolvedStatus === 'sent' && existing.status === 'draft') {
+            balanceCents += newRemaining;
           }
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
             balanceCents,

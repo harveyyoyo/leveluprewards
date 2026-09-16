@@ -535,6 +535,22 @@ export function OfficeAiImportSection({
           </div>
         </div>
 
+        {aiSnapshot?.warnings?.length ? (
+          <Alert variant="destructive" className="rounded-xl">
+            <AlertTitle>{aiSnapshot.warnings.length} row(s) could not be used</AlertTitle>
+            <AlertDescription>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
+                {aiSnapshot.warnings.slice(0, 20).map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+              {aiSnapshot.warnings.length > 20 ? (
+                <p className="mt-1 text-xs">…and {aiSnapshot.warnings.length - 20} more.</p>
+              ) : null}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {previewTotal > 0 && aiSnapshot ? (
           <div className="space-y-4 rounded-xl border bg-muted/30 p-3">
             <div>

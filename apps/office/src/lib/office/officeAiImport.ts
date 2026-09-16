@@ -15,6 +15,8 @@ import type {
   OfficeTeacher,
 } from '@/lib/office/types';
 import {
+  AMBIGUOUS_STUDENT_MATCH,
+  buildStudentIdByNameMap,
   getOfficeStudentFullName,
   parseUsdToCents,
   resolveOfficeTeacherIdByName,
@@ -76,6 +78,8 @@ export type ParsedOfficeSnapshot = {
   staffAccounts?: ParsedOfficeStaffRow[];
   defaultActiveTerm?: string;
   statementSchoolName?: string;
+  /** Rows the AI returned that couldn't be used (missing a required field) - shown to the user, not silently dropped. */
+  warnings?: string[];
 };
 
 export type OfficeAiImportReport = {
@@ -187,6 +191,8 @@ function normalizeInvoiceStatus(raw: unknown): ParsedOfficeInvoiceRow['status'] 
 }
 
 export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): ParsedOfficeSnapshot {
+  const warnings: string[] = [];
+
   const teachersRaw = unwrapArray(parsed, ['teachers', 'officeTeachers', 'homeroomTeachers', 'classroomTeachers']);
   const teachers: ParsedOfficeTeacherRow[] = [];
   for (const row of teachersRaw) {
@@ -196,7 +202,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.name === 'string' && o.name.trim()) ||
       (typeof o.teacherName === 'string' && o.teacherName.trim()) ||
       '';
-    if (!name) continue;
+    if (!name) {
+      warnings.push('Skipped a teacher row with no name.');
+      continue;
+    }
     teachers.push({
       name,
       email: (typeof o.email === 'string' && o.email.trim()) || null,
@@ -204,14 +213,17 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
   }
 
   const classesRaw = unwrapArray(parsed, ['classes', 'officeClasses', 'classGroups']);
-  const classes = classesRaw
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const o = row as Record<string, unknown>;
-      const name = String(o.name ?? o.className ?? o.title ?? '').trim();
-      return name ? { name } : null;
-    })
-    .filter(Boolean) as { name: string }[];
+  const classes: { name: string }[] = [];
+  for (const row of classesRaw) {
+    if (!row || typeof row !== 'object') continue;
+    const o = row as Record<string, unknown>;
+    const name = String(o.name ?? o.className ?? o.title ?? '').trim();
+    if (!name) {
+      warnings.push('Skipped a class row with no name.');
+      continue;
+    }
+    classes.push({ name });
+  }
 
   const studentsRaw = unwrapArray(parsed, ['students', 'officeStudents', 'roster', 'pupils']);
   const students: ParsedOfficeStudentRow[] = [];
@@ -219,7 +231,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
     if (!row || typeof row !== 'object') continue;
     const o = row as Record<string, unknown>;
     const name = parseStudentName(o);
-    if (!name) continue;
+    if (!name) {
+      warnings.push('Skipped a student row with no recognizable first/last name.');
+      continue;
+    }
     const className =
       (typeof o.className === 'string' && o.className.trim()) ||
       (typeof o.homeroom === 'string' && o.homeroom.trim()) ||
@@ -255,7 +270,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.subject === 'string' && o.subject.trim()) ||
       (typeof o.course === 'string' && o.course.trim()) ||
       '';
-    if (!name || !termLabel || !subject) continue;
+    if (!name || !termLabel || !subject) {
+      const missing = [!name && 'student name', !termLabel && 'term', !subject && 'subject']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped a grade row missing ${missing}.`);
+      continue;
+    }
     grades.push({
       studentName: name.studentName,
       termLabel,
@@ -280,7 +301,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.family === 'string' && o.family.trim()) ||
       (typeof o.accountName === 'string' && o.accountName.trim()) ||
       '';
-    if (!familyName) continue;
+    if (!familyName) {
+      warnings.push('Skipped a billing account row with no family name.');
+      continue;
+    }
     let studentNames: string[] | undefined;
     if (Array.isArray(o.studentNames)) {
       studentNames = o.studentNames
@@ -316,7 +340,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.description === 'string' && o.description.trim()) ||
       '';
     const amountCents = parseAmountCents(o);
-    if (!familyName || !label || amountCents == null) continue;
+    if (!familyName || !label || amountCents == null) {
+      const missing = [!familyName && 'family name', !label && 'label', amountCents == null && 'amount']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped an invoice row missing ${missing}.`);
+      continue;
+    }
     invoices.push({
       familyName,
       label,
@@ -344,7 +374,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.password === 'string' && o.password.trim()) ||
       (typeof o.pin === 'string' && o.pin.trim()) ||
       '';
-    if (!displayName || !username || !passcode) continue;
+    if (!displayName || !username || !passcode) {
+      const missing = [!displayName && 'name', !username && 'username', !passcode && 'passcode']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped a staff login row missing ${missing}.`);
+      continue;
+    }
     staffAccounts.push({ displayName, username, passcode });
   }
 
@@ -366,6 +402,7 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
     (typeof parsed.schoolName === 'string' && parsed.schoolName.trim()) ||
     '';
   if (statementSchoolName) snap.statementSchoolName = statementSchoolName;
+  if (warnings.length) snap.warnings = warnings;
   return snap;
 }
 
@@ -417,9 +454,7 @@ export async function applyOfficeAiSnapshot(
   };
 
   const classIdByName = new Map(ctx.classes.map((c) => [c.name.trim().toLowerCase(), c.id]));
-  const studentIdByName = new Map(
-    ctx.students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id]),
-  );
+  const studentIdByName = buildStudentIdByNameMap(ctx.students);
   const studentById = new Map(ctx.students.map((s) => [s.id, s]));
   const accountIdByFamily = new Map(
     ctx.billingAccounts.map((a) => [a.familyName.trim().toLowerCase(), a.id]),
@@ -481,6 +516,12 @@ export async function applyOfficeAiSnapshot(
     const classId = row.className ? classIdByName.get(row.className.trim().toLowerCase()) ?? null : null;
     const teacherId = resolveOfficeTeacherIdByName(teacherRoster, row.teacherName);
     const existingId = studentIdByName.get(key);
+    if (existingId === AMBIGUOUS_STUDENT_MATCH) {
+      report.errors.push(
+        `Student "${row.firstName} ${row.lastName}": name matches more than one existing student - skipped, resolve manually.`,
+      );
+      continue;
+    }
     if (existingId && ctx.upsertStudents) {
       const existing = studentById.get(existingId);
       if (existing) {
@@ -538,6 +579,10 @@ export async function applyOfficeAiSnapshot(
       report.errors.push(`Grade for "${row.studentName}": no matching student on the roster - skipped.`);
       continue;
     }
+    if (studentId === AMBIGUOUS_STUDENT_MATCH) {
+      report.errors.push(`Grade for "${row.studentName}": name matches more than one student - skipped, resolve manually.`);
+      continue;
+    }
     const dedupeKey = `${studentId}|${row.termLabel.trim().toLowerCase()}|${row.subject.toLowerCase()}`;
     if (gradeKeys.has(dedupeKey)) {
       report.gradesDuplicate += 1;
@@ -570,7 +615,13 @@ export async function applyOfficeAiSnapshot(
     const studentIds: string[] = [];
     for (const name of row.studentNames ?? []) {
       const sid = studentIdByName.get(name.toLowerCase());
-      if (sid) studentIds.push(sid);
+      if (sid === AMBIGUOUS_STUDENT_MATCH) {
+        report.errors.push(
+          `Family "${row.familyName}": "${name}" matches more than one student - not linked, resolve manually.`,
+        );
+      } else if (sid) {
+        studentIds.push(sid);
+      }
     }
     const ref = doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts'));
     accountIdByFamily.set(key, ref.id);

@@ -43,6 +43,7 @@ type OfficeGradesViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classNameById: Map<string, string>;
+  teacherNameById?: Map<string, string>;
   studentLabelById: Map<string, string>;
   entries: OfficeGradeEntry[];
   userName: string | null;
@@ -62,6 +63,7 @@ export function OfficeGradesView({
   schoolId,
   students,
   classNameById,
+  teacherNameById,
   studentLabelById,
   entries,
   userName,
@@ -85,6 +87,7 @@ export function OfficeGradesView({
   const [busy, setBusy] = useState(false);
   const [filterTerm, setFilterTerm] = useState('all');
   const [filterClass, setFilterClass] = useState('all');
+  const [filterHomeroom, setFilterHomeroom] = useState('all');
   const [search, setSearch] = useState('');
   const [showMissingPanel, setShowMissingPanel] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -112,6 +115,7 @@ export function OfficeGradesView({
   }, [students, classNameById]);
 
   const studentClassId = useMemo(() => new Map(students.map((s) => [s.id, s.classId])), [students]);
+  const studentTeacherId = useMemo(() => new Map(students.map((s) => [s.id, s.teacherId])), [students]);
 
   const missingForTerm = useMemo(
     () => studentsWithoutGradesForTerm(students, entries, activeTerm),
@@ -126,6 +130,10 @@ export function OfficeGradesView({
         const cid = studentClassId.get(e.studentId);
         if (cid !== filterClass) return false;
       }
+      if (filterHomeroom !== 'all') {
+        const tid = studentTeacherId.get(e.studentId);
+        if (tid !== filterHomeroom) return false;
+      }
       if (q) {
         const label = (studentLabelById.get(e.studentId) ?? '').toLowerCase();
         const subj = (e.subject ?? '').toLowerCase();
@@ -133,7 +141,7 @@ export function OfficeGradesView({
       }
       return true;
     });
-  }, [entries, filterTerm, filterClass, studentClassId, search, studentLabelById]);
+  }, [entries, filterTerm, filterClass, filterHomeroom, studentClassId, studentTeacherId, search, studentLabelById]);
 
   const subjectSuggestions = useMemo(() => uniqueGradeSubjects(entries), [entries]);
   const letterGrades = ['A', 'B', 'C', 'D', 'F'];
@@ -193,11 +201,16 @@ export function OfficeGradesView({
     if (cls && (cls === 'all' || classOptions.some((c) => c.id === cls))) {
       setFilterClass(cls);
     }
-  }, [searchParams, classOptions]);
+    const homeroom = searchParams.get('homeroom')?.trim();
+    if (homeroom && students.some((s) => s.teacherId === homeroom)) {
+      setFilterHomeroom(homeroom);
+    }
+  }, [searchParams, classOptions, students]);
 
   useOfficeUrlSync({
     term: filterTerm !== 'all' ? filterTerm : undefined,
     class: filterClass !== 'all' ? filterClass : undefined,
+    homeroom: filterHomeroom !== 'all' ? filterHomeroom : undefined,
   });
 
   const openedFromQuery = useRef(false);
@@ -472,6 +485,21 @@ export function OfficeGradesView({
             </SelectContent>
           </Select>
         </div>
+        {filterHomeroom !== 'all' ? (
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold uppercase text-muted-foreground">Homeroom</Label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-lg gap-1.5"
+              onClick={() => setFilterHomeroom('all')}
+            >
+              {teacherNameById?.get(filterHomeroom) ?? 'Selected teacher'}
+              <span aria-hidden>×</span>
+            </Button>
+          </div>
+        ) : null}
         <OfficeWorkingTermSelect
           label="Term"
           value={activeTerm}

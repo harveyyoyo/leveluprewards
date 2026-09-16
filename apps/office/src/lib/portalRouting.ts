@@ -116,7 +116,18 @@ export function isLocalDevHost(rawHost: string | null | undefined): boolean {
   );
 }
 
-/** Origin for redirects during local dev (never 0.0.0.0; http on localhost). */
+/**
+ * Origin for redirects during local dev (never 0.0.0.0; http on localhost).
+ *
+ * NOTE (flagged, not fixed): this trusts x-fh-requested-host/x-forwarded-host/host
+ * from the request with no allowlist - a request that reaches this server with a
+ * forged one of those headers gets that value reflected into the redirect URL.
+ * The `x-fh-` prefix suggests this is intentional for a Firebase Hosting proxy that
+ * only forwards validated custom-domain values, in which case restricting this to
+ * known hosts here would break real multi-domain routing rather than fix anything.
+ * Confirm with whoever owns the Hosting/proxy config before tightening this - do
+ * not change it based on a guess about the infrastructure in front of it.
+ */
 export function requestBrowserOrigin(req: {
   headers: { get(name: string): string | null };
   nextUrl: { host: string; port: string; protocol: string };

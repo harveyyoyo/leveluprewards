@@ -444,7 +444,7 @@ export function OfficeClassesView({
         })}
         {filtered.length === 0 ? (
           <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No classes match your search.
+            {query.trim() ? 'No classes match your search.' : 'No classes yet - create one to get started.'}
           </p>
         ) : null}
       </div>

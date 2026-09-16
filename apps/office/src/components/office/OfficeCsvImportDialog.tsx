@@ -14,7 +14,11 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
-import { getOfficeStudentFullName, resolveOfficeTeacherIdByName } from '@/lib/office/officeUtils';
+import {
+  AMBIGUOUS_STUDENT_MATCH,
+  buildStudentIdByNameMap,
+  resolveOfficeTeacherIdByName,
+} from '@/lib/office/officeUtils';
 import { parseOfficeGradesCsv, parseOfficeStudentsCsv } from '@/lib/office/officeCsvImport';
 import { commitBatches } from '@/lib/office/officeAiImport';
 
@@ -101,15 +105,18 @@ export function OfficeCsvImportDialog({
           toast({ variant: 'destructive', title: 'No rows to import', description: errors[0] });
           return;
         }
-        const studentIdByName = new Map(
-          students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id]),
-        );
+        const studentIdByName = buildStudentIdByNameMap(students);
         const gradeOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
         let skipped = 0;
+        let ambiguous = 0;
         for (const row of rows) {
           const studentId = studentIdByName.get(row.studentName.toLowerCase());
           if (!studentId) {
             skipped += 1;
+            continue;
+          }
+          if (studentId === AMBIGUOUS_STUDENT_MATCH) {
+            ambiguous += 1;
             continue;
           }
           const student = students.find((s) => s.id === studentId);
@@ -131,7 +138,7 @@ export function OfficeCsvImportDialog({
         await commitBatches(firestore, gradeOps);
         toast({
           title: 'Grades imported',
-          description: `${rows.length - skipped} saved${skipped ? ` · ${skipped} unknown students` : ''}${errors.length ? ` · ${errors.length} row errors` : ''}.`,
+          description: `${rows.length - skipped - ambiguous} saved${skipped ? ` · ${skipped} unknown students` : ''}${ambiguous ? ` · ${ambiguous} matched more than one student with that name (skipped)` : ''}${errors.length ? ` · ${errors.length} row errors` : ''}.`,
         });
       }
       setOpen(false);
