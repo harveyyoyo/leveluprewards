@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -301,17 +301,17 @@ export function ThemeGeneratorModal({
     } = useThemeEditorHistory(initialTheme);
     const playSound = useArcadeSound();
 
-    const handleUndo = () => {
+    const handleUndo = useCallback(() => {
         if (!canUndo) return;
         playSound('click');
         undoTheme();
-    };
+    }, [canUndo, playSound, undoTheme]);
 
-    const handleRedo = () => {
+    const handleRedo = useCallback(() => {
         if (!canRedo) return;
         playSound('click');
         redoTheme();
-    };
+    }, [canRedo, playSound, redoTheme]);
 
     const [model, setModel] = useState<string>(DEFAULT_ARCADE_AI_MODEL);
     const [animatePreview, setAnimatePreview] = useState(false);

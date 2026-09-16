@@ -4,7 +4,7 @@
 
 import React from 'react';
 
-import type { Student } from '@/lib/types';
+import type { Student, IdCardCustomOptions } from '@/lib/types';
 import {
   DEFAULT_STUDENT_THEME_FONT_SCALE,
   DEFAULT_STUDENT_THEME_FONT_TRACKING,
@@ -32,55 +32,34 @@ import {
   formatCreditCardPan,
 } from '@/components/print/CreditCardChrome';
 
-
-
 export function StudentIdCard({
-
   student,
-
   schoolName,
-
   schoolLogoUrl,
-
   className,
-
   isColorEnabled,
-
   appLogoUrl,
-
   appName,
-
   appTagline,
-
   cornerStyle,
-
-  /** When true, always apply stored themes (e.g. theme editor preview) even if the school has student themes turned off. */
-
   forceStudentThemePreview = false,
   overrideLayout,
+  overrideOptions,
+  overrideOrientation,
 }: {
-
   student: Student;
-
   schoolName: string;
-
   schoolLogoUrl?: string | null;
-
   className?: string;
-
   isColorEnabled: boolean;
-
   appLogoUrl?: string | null;
-
   appName?: string;
-
   appTagline?: string;
-
   cornerStyle?: 'rounded' | 'rectangular';
-
   forceStudentThemePreview?: boolean;
   overrideLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
-
+  overrideOptions?: IdCardCustomOptions;
+  overrideOrientation?: 'landscape' | 'portrait';
 }) {
 
   const { settings } = useSettings();
@@ -187,23 +166,66 @@ export function StudentIdCard({
 
 
 
+  const options = overrideOptions ?? settings.idCardCustomOptions;
+  const orientation = overrideOrientation ?? options?.orientation ?? settings.idCardOrientation ?? 'landscape';
+  const isPortrait = orientation === 'portrait';
+  const cardFinish = options?.cardFinish ?? 'none';
+
+  const resolvedSchoolName = (options?.showSchoolName !== false)
+    ? (options?.schoolNameOverride?.trim() || schoolName)
+    : '';
+  const showSchoolLogo = options?.showSchoolLogo !== false && Boolean(schoolLogoUrl);
+  const showAppName = options?.showAppName !== false;
+  const showAppTagline = options?.showAppTagline !== false;
+  const showDomain = options?.showDomain !== false;
+  const showEmoji = options?.showEmoji !== false;
+  const showValidThru = options?.showValidThru === true;
+  const validThruText = options?.validThruText?.trim() || '06/27';
+  const showClass = options?.showClass !== false && Boolean(className);
+  const classPrefix = options?.classPrefix ?? 'Class: ';
+  const showIdNumber = options?.showIdNumber === true;
+  const idNumberLabel = options?.idNumberLabel ?? 'ID:';
+  const showPointsBadge = options?.showPointsBadge === true;
+  const showBarcodeDigits = options?.showBarcodeDigits !== false;
+
   const displayFirst = student.firstName ?? '';
-
   const displayLast = student.lastName ?? '';
-
   const studentInitials = `${displayFirst[0] || ''}${displayLast[0] || ''}`.trim() || '?';
-
   const displayNickname = student.nickname?.trim() || null;
-
   const fullName = `${displayFirst} ${displayLast}`.trim();
 
-  const longestNamePart = Math.max(fullName.length, displayNickname?.length ?? 0);
+  // Name formatting & casing
+  let formattedName = fullName;
+  if (options?.nameFormat === 'first_only') {
+    formattedName = displayFirst || fullName;
+  } else if (options?.nameFormat === 'nickname_preferred' && displayNickname) {
+    formattedName = displayNickname;
+  }
 
+  if (options?.nameCasing === 'uppercase') {
+    formattedName = formattedName.toUpperCase();
+  } else if (options?.nameCasing === 'titlecase') {
+    formattedName = formattedName.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  }
+
+  const longestNamePart = Math.max(formattedName.length, displayNickname?.length ?? 0);
   const nameFitScale = longestNamePart >= 34 ? 0.68 : longestNamePart >= 28 ? 0.76 : longestNamePart >= 22 ? 0.88 : 1;
-
   const fitStyle: React.CSSProperties = { ['--print-id-name-fit-scale' as string]: String(nameFitScale) };
-
   const resolvedCardStyle = cardStyle ? { ...cardStyle, ...fitStyle } : fitStyle;
+
+  const photoShapeClass = options?.photoShape === 'circle'
+    ? 'rounded-full'
+    : options?.photoShape === 'square'
+      ? 'rounded-none'
+      : options?.photoShape === 'rounded'
+        ? 'rounded-2xl'
+        : (settings.photoBorderRadius === 'sm' ? 'rounded-sm' :
+           settings.photoBorderRadius === 'md' ? 'rounded-md' :
+           settings.photoBorderRadius === 'lg' ? 'rounded-2xl' :
+           settings.photoBorderRadius === 'full' ? 'rounded-full' :
+           settings.photoBorderRadius === 'none' ? 'rounded-none' : 'rounded-full');
+
+  const photoBorderClass = options?.photoBorder === false ? 'border-0' : 'border';
 
   const photoOrQr = useQr ? (
     <div className="print-id-qr-slot" aria-label={`Student scan code ${student.nfcId}`}>
@@ -217,11 +239,8 @@ export function StudentIdCard({
   ) : (
     <div className={cn(
       "print-id-avatar transition-all duration-300",
-      settings.photoBorderRadius === 'sm' && 'rounded-sm',
-      settings.photoBorderRadius === 'md' && 'rounded-md',
-      settings.photoBorderRadius === 'lg' && 'rounded-2xl',
-      settings.photoBorderRadius === 'full' && 'rounded-full',
-      settings.photoBorderRadius === 'none' && 'rounded-none',
+      photoShapeClass,
+      photoBorderClass,
       settings.photoDropShadow === 'sm' && 'drop-shadow-sm',
       settings.photoDropShadow === 'md' && 'drop-shadow-md',
       settings.photoDropShadow === 'lg' && 'drop-shadow-xl',
@@ -246,35 +265,95 @@ export function StudentIdCard({
   ) : null;
 
   return (
-
     <div
-
       className={cn(
-        'print-id-card',
+        'print-id-card relative overflow-hidden',
+        isPortrait && 'print-id-card--portrait',
+        cardFinish === 'gloss' && 'print-id-finish-gloss',
+        cardFinish === 'hologram' && 'print-id-finish-hologram',
+        cardFinish === 'matte' && 'print-id-finish-matte',
         isColorEnabled && 'is-colored',
         resolvedCornerStyle === 'rectangular' && 'print-id-card--rectangular',
-        resolvedLayout === 'credit_card' && 'print-id-card--credit-card',
-        resolvedLayout === 'modern' && 'print-id-card--modern',
-        resolvedLayout === 'minimalist' && 'print-id-card--minimalist',
-        resolvedLayout === 'high_vis' && 'print-id-card--high-vis',
+        resolvedLayout === 'credit_card' && !isPortrait && 'print-id-card--credit-card',
+        resolvedLayout === 'modern' && !isPortrait && 'print-id-card--modern',
+        resolvedLayout === 'minimalist' && !isPortrait && 'print-id-card--minimalist',
+        resolvedLayout === 'high_vis' && !isPortrait && 'print-id-card--high-vis',
         useQr && 'print-id-card--qr-scan',
         displayNickname && 'has-nickname',
       )}
-
       style={resolvedCardStyle}
-
     >
-
       {themeFontFamily && <GoogleFontLoader fontFamily={themeFontFamily} />}
 
-      {resolvedLayout === 'credit_card' ? (
+      {/* PORTRAIT ORIENTATION BADGE */}
+      {isPortrait ? (
+        <div className="flex flex-col h-full w-full justify-between relative text-center py-1">
+          {/* Lanyard punch-hole simulator */}
+          <div className="mx-auto w-7 h-1.5 rounded-full border border-black/20 bg-black/10 shrink-0 mb-1" aria-hidden="true" />
+
+          {/* School Header */}
+          <div className="flex items-center justify-center gap-1.5 px-2">
+            {showSchoolLogo && schoolLogoUrl && (
+              <div className="h-5 w-5 shrink-0 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={schoolLogoUrl} alt="" className="max-h-full max-w-full object-contain" />
+              </div>
+            )}
+            {resolvedSchoolName && (
+              <span className="text-[10px] font-black tracking-wider uppercase truncate max-w-[140px]" style={headerStyle}>
+                {resolvedSchoolName}
+              </span>
+            )}
+          </div>
+
+          {/* Centered Photo or QR */}
+          <div className="flex justify-center my-1 shrink-0">
+            {photoOrQr}
+          </div>
+
+          {/* Name & Details */}
+          <div className="space-y-0.5 px-2 my-auto">
+            <div className="text-sm font-black leading-tight tracking-tight" style={nameStyle}>
+              {formattedName}
+            </div>
+            {displayNickname && options?.nameFormat !== 'nickname_preferred' && (
+              <div className="text-[10px] font-medium opacity-80" style={metaStyle}>"{displayNickname}"</div>
+            )}
+            {showClass && (
+              <div className="text-[10px] font-bold opacity-90" style={classStyle}>
+                {classPrefix}{className}
+              </div>
+            )}
+            {showPointsBadge && (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[9px] font-black mt-0.5">
+                ⭐ {student.points ?? 0} pts
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Barcode / QR + ID */}
+          <div className="mt-auto pt-1 flex flex-col items-center justify-center">
+            {barcodeFooter}
+            {showIdNumber && (
+              <div className="text-[8px] font-mono opacity-70 mt-0.5" style={metaStyle}>
+                {idNumberLabel} {student.nfcId}
+              </div>
+            )}
+            {showValidThru && (
+              <div className="text-[7px] font-bold uppercase tracking-wider opacity-60 mt-0.5">
+                VALID THRU {validThruText}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : resolvedLayout === 'credit_card' ? (
         <>
           <div className="credit-card-top">
             <CreditCardBrand
-              schoolName={schoolName}
-              schoolLogoUrl={schoolLogoUrl}
-              appLogoUrl={appLogoUrl}
-              appName={appName}
+              schoolName={resolvedSchoolName}
+              schoolLogoUrl={showSchoolLogo ? schoolLogoUrl : undefined}
+              appLogoUrl={showAppName ? appLogoUrl : undefined}
+              appName={showAppName ? appName : undefined}
               style={headerStyle}
             />
             {photoOrQr}
@@ -287,12 +366,15 @@ export function StudentIdCard({
             <div className="credit-card-number">{formatCreditCardPan(student.nfcId)}</div>
             <div className="credit-card-identity">
               <div className="print-id-text">
-                <div className="print-id-name" style={nameStyle}>{fullName}</div>
+                <div className="print-id-name" style={nameStyle}>{formattedName}</div>
                 {displayNickname ? (
                   <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
                 ) : null}
+                {showClass && (
+                  <div className="text-[9px] font-bold opacity-90" style={classStyle}>{classPrefix}{className}</div>
+                )}
               </div>
-              <CreditCardValidThru date="06/27" />
+              <CreditCardValidThru date={validThruText} />
             </div>
           </div>
           {barcodeFooter}
@@ -301,21 +383,23 @@ export function StudentIdCard({
         <>
           <div className="print-id-header-container">
             <div className="print-id-app" style={headerStyle}>
-              {appLogoUrl && (
+              {showAppName && appLogoUrl && (
                 <div className="print-id-app-logo">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={appLogoUrl} alt="" className="object-contain" />
                 </div>
               )}
-              <div className="print-id-app-text">
-                <span className="print-id-app-name">{appName || APP_NAME}</span>
-                <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>
-                <PrintLevelUpDomain />
-              </div>
+              {showAppName && (
+                <div className="print-id-app-text">
+                  <span className="print-id-app-name">{appName || APP_NAME}</span>
+                  {showAppTagline && <span className="print-id-app-tagline">{appTagline ?? APP_TAGLINE}</span>}
+                  {showDomain && <PrintLevelUpDomain />}
+                </div>
+              )}
             </div>
             <div className="print-id-school" style={headerStyle}>
-              <span className="print-id-header">{schoolName}</span>
-              {schoolLogoUrl && (
+              {resolvedSchoolName && <span className="print-id-header">{resolvedSchoolName}</span>}
+              {showSchoolLogo && schoolLogoUrl && (
                 <div className="print-id-school-logo">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={schoolLogoUrl} alt="" className="object-contain" />
@@ -327,14 +411,21 @@ export function StudentIdCard({
             <div className="print-id-left flex items-center" style={{ marginLeft: '0.1in', gap: useQr ? '0.1in' : '0.12in' }}>
               {photoOrQr}
               <div className="print-id-text">
-                <div className="print-id-name" style={nameStyle}>{fullName}</div>
-                {displayNickname ? (
+                <div className="print-id-name" style={nameStyle}>{formattedName}</div>
+                {displayNickname && options?.nameFormat !== 'nickname_preferred' ? (
                   <div className="print-id-nickname" style={metaStyle}>{displayNickname}</div>
                 ) : null}
-                <div className="print-id-class" style={classStyle}>Class: {className}</div>
+                {showClass && (
+                  <div className="print-id-class" style={classStyle}>{classPrefix}{className}</div>
+                )}
+                {showPointsBadge && (
+                  <div className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-700 dark:text-amber-300 text-[9px] font-black w-fit">
+                    ⭐ {student.points ?? 0} pts
+                  </div>
+                )}
               </div>
             </div>
-            {(customEmojiUrl || themeEmoji) && (
+            {showEmoji && (customEmojiUrl || themeEmoji) && (
               <div className="print-id-theme-emoji-center" aria-hidden style={emojiGlowStyle}>
                 {customEmojiUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -348,11 +439,8 @@ export function StudentIdCard({
           {barcodeFooter}
         </>
       )}
-
     </div>
-
   );
-
 }
 
 

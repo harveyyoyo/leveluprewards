@@ -677,14 +677,40 @@ export interface BackupInfo {
 }
 
 /** Per-category (or per-printed-coupon) currency/design override. */
+export interface IdCardCustomOptions {
+  orientation?: 'landscape' | 'portrait';
+  cardFinish?: 'none' | 'gloss' | 'hologram' | 'matte';
+  showSchoolName?: boolean;
+  schoolNameOverride?: string;
+  showSchoolLogo?: boolean;
+  showAppName?: boolean;
+  showAppTagline?: boolean;
+  showDomain?: boolean;
+  nameFormat?: 'full' | 'first_only' | 'nickname_preferred';
+  nameCasing?: 'standard' | 'uppercase' | 'titlecase';
+  showClass?: boolean;
+  classPrefix?: string;
+  showIdNumber?: boolean;
+  idNumberLabel?: string;
+  showPointsBadge?: boolean;
+  photoShape?: 'rounded' | 'circle' | 'square';
+  photoBorder?: boolean;
+  showEmoji?: boolean;
+  showValidThru?: boolean;
+  validThruText?: string;
+  showSecurityChip?: boolean;
+  showBarcodeDigits?: boolean;
+}
+
 export type CategoryCurrencyOverride = Partial<CurrencySettings> & {
   mode: CurrencySettings['mode'];
 };
 
 export interface CurrencySettings {
-  mode: 'points' | 'money';
+  mode: 'points' | 'money' | 'coins';
   pointsDesign?: string;
   moneyDesign?: string;
+  coinDesign?: string;
   
   // Points coupon design
   couponBgColor?: string;
@@ -706,6 +732,17 @@ export interface CurrencySettings {
   moneyShowSerial?: boolean;
   moneyShowGuilloche?: boolean;
   moneyShowSchoolName?: boolean;
+  moneyWatermark?: string;
+  moneySignatureTitle?: string;
+  moneyDenominationColors?: Record<string, { bg: string; accent: string; text: string }>;
+
+  // Coins & tokens design
+  coinFinish?: 'gold' | 'silver' | 'bronze' | 'copper' | 'emerald';
+  coinRimStyle?: 'ridged' | 'smooth' | 'stars';
+  coinTopText?: string;
+  coinBottomText?: string;
+  coinShowSchoolName?: boolean;
+  coinShowValue?: boolean;
 }
 
 export interface Database {

@@ -7,6 +7,7 @@ export function categoryCurrencyIcon(
 ): string {
   if (!override) return fallbackIcon;
   if (override.mode === 'money') return override.moneyDesign || fallbackIcon;
+  if (override.mode === 'coins') return override.coinDesign || fallbackIcon;
   return override.pointsDesign || fallbackIcon;
 }
 
@@ -19,15 +20,18 @@ export function resolveCategoryCurrency(
 
   const mode = override.mode || school.mode;
   const isMoney = mode === 'money';
+  const isCoins = mode === 'coins';
   const icon = isMoney
     ? override.moneyDesign || school.icon
-    : override.pointsDesign || school.icon;
+    : isCoins
+      ? override.coinDesign || school.icon
+      : override.pointsDesign || school.icon;
 
   return {
     ...school,
     mode,
     icon,
-    label: mode === school.mode ? school.label : isMoney ? 'Money' : 'Points',
+    label: mode === school.mode ? school.label : isMoney ? 'Money' : isCoins ? 'Tokens' : 'Points',
     couponBgColor: override.couponBgColor ?? school.couponBgColor,
     couponTextColor: override.couponTextColor ?? school.couponTextColor,
     couponBorderColor: override.couponBorderColor ?? school.couponBorderColor,
@@ -39,6 +43,12 @@ export function resolveCategoryCurrency(
     moneyDenominationPrefix: override.moneyDenominationPrefix ?? school.moneyDenominationPrefix,
     moneyBillTitle: override.moneyBillTitle ?? school.moneyBillTitle,
     moneyBorderStyle: override.moneyBorderStyle ?? school.moneyBorderStyle,
+    coinFinish: override.coinFinish ?? school.coinFinish,
+    coinRimStyle: override.coinRimStyle ?? school.coinRimStyle,
+    coinTopText: override.coinTopText ?? school.coinTopText,
+    coinBottomText: override.coinBottomText ?? school.coinBottomText,
+    coinShowSchoolName: override.coinShowSchoolName ?? school.coinShowSchoolName,
+    coinShowValue: override.coinShowValue ?? school.coinShowValue,
   };
 }
 
@@ -47,6 +57,9 @@ export function defaultCategoryCurrencyOverride(school: PreviewCurrency): Catego
     mode: school.mode,
     pointsDesign: school.icon,
     moneyDesign: school.mode === 'money' ? school.icon : '💵',
+    coinDesign: school.mode === 'coins' ? school.icon : '🪙',
+    coinFinish: school.coinFinish,
+    coinRimStyle: school.coinRimStyle,
     couponBgColor: school.couponBgColor,
     couponTextColor: school.couponTextColor,
     couponBorderColor: school.couponBorderColor,

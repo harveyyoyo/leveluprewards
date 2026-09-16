@@ -42,12 +42,29 @@ describe('resolveCategoryCurrency', () => {
     expect(next.pointsTitle).toBe('STAR POINTS');
     expect(moneySchool.mode).toBe('money');
   });
+  it('switches a category to coins without changing school defaults', () => {
+    const next = resolveCategoryCurrency(school, {
+      mode: 'coins',
+      coinDesign: '🪙',
+      coinFinish: 'gold',
+      coinRimStyle: 'ridged',
+      coinTopText: 'HONOR ROLL',
+    });
+    expect(next.mode).toBe('coins');
+    expect(next.icon).toBe('🪙');
+    expect(next.coinFinish).toBe('gold');
+    expect(next.coinRimStyle).toBe('ridged');
+    expect(next.coinTopText).toBe('HONOR ROLL');
+    expect(next.label).toBe('Tokens');
+    expect(school.mode).toBe('points');
+  });
 });
 
 describe('categoryCurrencyIcon', () => {
   it('uses the override icon and falls back to the school icon', () => {
     expect(categoryCurrencyIcon(undefined, '⭐')).toBe('⭐');
-    expect(categoryCurrencyIcon({ mode: 'money', moneyDesign: '🪙' }, '⭐')).toBe('🪙');
+    expect(categoryCurrencyIcon({ mode: 'money', moneyDesign: '💵' }, '⭐')).toBe('💵');
+    expect(categoryCurrencyIcon({ mode: 'coins', coinDesign: '🪙' }, '⭐')).toBe('🪙');
     expect(categoryCurrencyIcon({ mode: 'points', pointsDesign: '🏆' }, '⭐')).toBe('🏆');
   });
 });
