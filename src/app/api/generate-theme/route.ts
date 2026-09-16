@@ -24,6 +24,7 @@ type ThemeResponse = {
     emoji: string;
     fontFamily: string;
     backgroundStyle?: string | null;
+    idCardLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
 };
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -102,6 +103,11 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
     const fontFamily = resolveLegibleFont(asString(data.fontFamily).replace(/[^\w\s-]/g, '').slice(0, 80));
     const emoji = asString(data.emoji);
 
+    const rawLayout = asString(data.idCardLayout).toLowerCase();
+    const validLayout = (['classic', 'credit_card', 'modern', 'minimalist', 'high_vis'] as const).find(
+        (l) => l === rawLayout,
+    );
+
     return {
         background: requireHex(data.background, '#020617'),
         text: requireHex(data.text, '#ffffff'),
@@ -111,6 +117,7 @@ function sanitizeTheme(raw: unknown): ThemeResponse | null {
         emoji: emoji ? Array.from(emoji)[0] : '⭐',
         fontFamily,
         backgroundStyle: backgroundStyle && SAFE_BACKGROUND.test(backgroundStyle) ? backgroundStyle : null,
+        ...(validLayout ? { idCardLayout: validLayout } : {}),
     };
 }
 
@@ -257,6 +264,20 @@ Required schema:
             const theme = sanitizeTheme(parseThemeAiJson(responseText));
             if (!theme) {
                 throw new Error('AI response was not an object');
+            }
+            const promptLower = prompt.toLowerCase();
+            if (!theme.idCardLayout) {
+                if (promptLower.includes('credit card') || promptLower.includes('credit_card') || promptLower.includes('bank card')) {
+                    theme.idCardLayout = 'credit_card';
+                } else if (promptLower.includes('minimalist') || promptLower.includes('minimal')) {
+                    theme.idCardLayout = 'minimalist';
+                } else if (promptLower.includes('high vis') || promptLower.includes('high-vis') || promptLower.includes('badge')) {
+                    theme.idCardLayout = 'high_vis';
+                } else if (promptLower.includes('modern')) {
+                    theme.idCardLayout = 'modern';
+                } else if (promptLower.includes('classic')) {
+                    theme.idCardLayout = 'classic';
+                }
             }
             // Student themes are untrusted input — clamp to WCAG contrast rules before returning.
             const normalized = normalizeStudentTheme(theme as any) ?? theme;

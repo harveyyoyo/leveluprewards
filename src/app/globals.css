@@ -1946,7 +1946,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
    Circular avatar centered, beautiful spacing. Apple-style.
    ============================================================ */
 .print-id-card--minimalist {
-  padding: 8px 12px;
+  padding: 6px 12px;
   border: 1px solid rgba(0,0,0,0.08);
   background: #ffffff;
 }
@@ -1954,56 +1954,82 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 .print-id-card--minimalist .print-id-header-container {
   border-bottom: none;
   padding-bottom: 0;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .print-id-card--minimalist .print-id-main {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
   padding: 0;
+  min-height: 0;
 }
 
 .print-id-card--minimalist .print-id-left {
   flex-direction: column;
   align-items: center;
   margin-left: 0 !important;
-  gap: 4px !important;
+  gap: 2px !important;
   width: 100%;
 }
 
 .print-id-card--minimalist .print-id-avatar {
-  width: 22mm;
-  height: 22mm;
+  width: 18mm;
+  height: 18mm;
   border: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .print-id-card--minimalist .print-id-qr-slot {
-  width: 20mm;
-  height: 20mm;
-  min-width: 20mm;
-  min-height: 20mm;
+  width: 17mm;
+  height: 17mm;
+  min-width: 17mm;
+  min-height: 17mm;
   border: none;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
+.print-id-card--minimalist.has-nickname .print-id-avatar,
+.print-id-card--minimalist:has(.print-id-nickname) .print-id-avatar {
+  width: 15.5mm;
+  height: 15.5mm;
+}
+
+.print-id-card--minimalist.has-nickname .print-id-qr-slot,
+.print-id-card--minimalist:has(.print-id-nickname) .print-id-qr-slot {
+  width: 15.5mm;
+  height: 15.5mm;
+  min-width: 15.5mm;
+  min-height: 15.5mm;
+}
+
 .print-id-card--minimalist .print-id-text {
   text-align: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .print-id-card--minimalist .print-id-name {
-  font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+  font-size: calc(13px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
   font-weight: 600;
   letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.print-id-card--minimalist .print-id-nickname {
+  font-size: calc(9.5px * var(--print-id-font-scale) * var(--print-id-name-fit-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  line-height: 1.1;
+  margin: 0;
 }
 
 .print-id-card--minimalist .print-id-class {
-  font-size: calc(10px * var(--print-id-font-scale));
+  font-size: calc(9px * var(--print-id-font-scale));
   font-weight: 400;
   opacity: 0.6;
+  line-height: 1.1;
 }
 
 .print-id-card--minimalist .print-id-theme-emoji-center {
@@ -2012,12 +2038,12 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
 
 .print-id-card--minimalist .print-id-barcode-container {
   border-top: none;
-  padding-top: 4px;
+  padding-top: 2px;
   padding-bottom: 0;
   margin-top: 0;
 }
 .print-id-card--minimalist .print-id-barcode-container .print-barcode-svg {
-  max-height: 0.24in;
+  max-height: 0.20in;
   opacity: 0.8;
 }
 
@@ -3653,17 +3679,23 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   .print-id-card--modern .print-id-barcode-container { position: absolute !important; bottom: 0 !important; left: 24mm !important; right: 0 !important; width: auto !important; margin: 0 !important; padding: 4px 0 3px 0 !important; border-top: 1px solid rgba(0,0,0,0.06) !important; }
 
   /* Minimalist Layout Print Overrides */
-  .print-id-card--minimalist { padding: 8px 12px !important; border: 1px solid rgba(0,0,0,0.08) !important; background: #ffffff !important; }
-  .print-id-card--minimalist .print-id-header-container { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 2px !important; }
-  .print-id-card--minimalist .print-id-main { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 6px !important; padding: 0 !important; }
-  .print-id-card--minimalist .print-id-left { flex-direction: column !important; align-items: center !important; margin-left: 0 !important; width: 100% !important; }
-  .print-id-card--minimalist .print-id-avatar { width: 22mm !important; height: 22mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
-  .print-id-card--minimalist .print-id-qr-slot { width: 20mm !important; height: 20mm !important; min-width: 20mm !important; min-height: 20mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
-  .print-id-card--minimalist .print-id-text { text-align: center !important; gap: 2px !important; }
-  .print-id-card--minimalist .print-id-name { font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0 !important; }
-  .print-id-card--minimalist .print-id-class { font-size: calc(10px * var(--print-id-font-scale)) !important; font-weight: 400 !important; opacity: 0.6 !important; }
+  .print-id-card--minimalist { padding: 6px 12px !important; border: 1px solid rgba(0,0,0,0.08) !important; background: #ffffff !important; }
+  .print-id-card--minimalist .print-id-header-container { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 1px !important; }
+  .print-id-card--minimalist .print-id-main { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; padding: 0 !important; min-height: 0 !important; }
+  .print-id-card--minimalist .print-id-left { flex-direction: column !important; align-items: center !important; margin-left: 0 !important; gap: 2px !important; width: 100% !important; }
+  .print-id-card--minimalist .print-id-avatar { width: 18mm !important; height: 18mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+  .print-id-card--minimalist .print-id-qr-slot { width: 17mm !important; height: 17mm !important; min-width: 17mm !important; min-height: 17mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+  .print-id-card--minimalist.has-nickname .print-id-avatar,
+  .print-id-card--minimalist:has(.print-id-nickname) .print-id-avatar { width: 15.5mm !important; height: 15.5mm !important; }
+  .print-id-card--minimalist.has-nickname .print-id-qr-slot,
+  .print-id-card--minimalist:has(.print-id-nickname) .print-id-qr-slot { width: 15.5mm !important; height: 15.5mm !important; min-width: 15.5mm !important; min-height: 15.5mm !important; }
+  .print-id-card--minimalist .print-id-text { text-align: center !important; gap: 1px !important; }
+  .print-id-card--minimalist .print-id-name { font-size: calc(13px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0 !important; line-height: 1.15 !important; }
+  .print-id-card--minimalist .print-id-nickname { font-size: calc(9.5px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0.04em !important; opacity: 0.75 !important; line-height: 1.1 !important; margin: 0 !important; }
+  .print-id-card--minimalist .print-id-class { font-size: calc(9px * var(--print-id-font-scale)) !important; font-weight: 400 !important; opacity: 0.6 !important; line-height: 1.1 !important; }
   .print-id-card--minimalist .print-id-theme-emoji-center { display: none !important; }
-  .print-id-card--minimalist .print-id-barcode-container { border-top: none !important; padding-top: 4px !important; padding-bottom: 0 !important; margin-top: 0 !important; }
+  .print-id-card--minimalist .print-id-barcode-container { border-top: none !important; padding-top: 2px !important; padding-bottom: 0 !important; margin-top: 0 !important; }
+  .print-id-card--minimalist .print-id-barcode-container .print-barcode-svg { max-height: 0.20in !important; }
 
   /* High-Vis Badge Layout Print Overrides */
   .print-id-card--high-vis { padding: 10px !important; justify-content: center !important; }
@@ -4082,17 +4114,23 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--modern .print-id-barcode-container { position: absolute !important; bottom: 0 !important; left: 24mm !important; right: 0 !important; width: auto !important; margin: 0 !important; padding: 4px 0 3px 0 !important; border-top: 1px solid rgba(0,0,0,0.06) !important; }
 
   /* DTC Minimalist Layout Overrides */
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist { padding: 8px 12px !important; border: 1px solid rgba(0,0,0,0.08) !important; background: #ffffff !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-header-container { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 2px !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-main { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 6px !important; padding: 0 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-left { flex-direction: column !important; align-items: center !important; margin-left: 0 !important; width: 100% !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-avatar { width: 22mm !important; height: 22mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-qr-slot { width: 20mm !important; height: 20mm !important; min-width: 20mm !important; min-height: 20mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-text { text-align: center !important; gap: 2px !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-name { font-size: calc(14px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0 !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-class { font-size: calc(10px * var(--print-id-font-scale)) !important; font-weight: 400 !important; opacity: 0.6 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist { padding: 6px 12px !important; border: 1px solid rgba(0,0,0,0.08) !important; background: #ffffff !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-header-container { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 1px !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-main { flex-direction: column !important; justify-content: center !important; align-items: center !important; gap: 3px !important; padding: 0 !important; min-height: 0 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-left { flex-direction: column !important; align-items: center !important; margin-left: 0 !important; gap: 2px !important; width: 100% !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-avatar { width: 18mm !important; height: 18mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-qr-slot { width: 17mm !important; height: 17mm !important; min-width: 17mm !important; min-height: 17mm !important; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist.has-nickname .print-id-avatar,
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist:has(.print-id-nickname) .print-id-avatar { width: 15.5mm !important; height: 15.5mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist.has-nickname .print-id-qr-slot,
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist:has(.print-id-nickname) .print-id-qr-slot { width: 15.5mm !important; height: 15.5mm !important; min-width: 15.5mm !important; min-height: 15.5mm !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-text { text-align: center !important; gap: 1px !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-name { font-size: calc(13px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0 !important; line-height: 1.15 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-nickname { font-size: calc(9.5px * var(--print-id-font-scale) * var(--print-id-name-fit-scale)) !important; font-weight: 600 !important; letter-spacing: 0.04em !important; opacity: 0.75 !important; line-height: 1.1 !important; margin: 0 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-class { font-size: calc(9px * var(--print-id-font-scale)) !important; font-weight: 400 !important; opacity: 0.6 !important; line-height: 1.1 !important; }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-theme-emoji-center { display: none !important; }
-  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-barcode-container { border-top: none !important; padding-top: 4px !important; padding-bottom: 0 !important; margin-top: 0 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-barcode-container { border-top: none !important; padding-top: 2px !important; padding-bottom: 0 !important; margin-top: 0 !important; }
+  body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--minimalist .print-id-barcode-container .print-barcode-svg { max-height: 0.20in !important; }
 
   /* DTC High-Vis Badge Layout Overrides */
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--high-vis { padding: 10px !important; justify-content: center !important; }

@@ -418,7 +418,16 @@ export function ThemeGeneratorModal({
             }
 
             const generatedTheme: StudentTheme = await response.json();
-            commitTheme(generatedTheme);
+            commitThemeFrom((prev) => ({
+                ...prev,
+                ...generatedTheme,
+                idCardLayout: generatedTheme.idCardLayout ?? prev?.idCardLayout,
+                idCardUseQr: generatedTheme.idCardUseQr ?? prev?.idCardUseQr,
+                fontScale: generatedTheme.fontScale ?? prev?.fontScale,
+                fontTracking: generatedTheme.fontTracking ?? prev?.fontTracking,
+                fontStyle: generatedTheme.fontStyle ?? prev?.fontStyle,
+                fontWeight: generatedTheme.fontWeight ?? prev?.fontWeight,
+            }));
             toast({
                 title: 'Theme Generated',
                 description: 'Preview the new theme below before saving.',
@@ -601,7 +610,7 @@ export function ThemeGeneratorModal({
                 <div className="grid gap-6 py-4">
                     <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-start">
                         <div className="space-y-6">
-                            {showIdCardScanOverride && previewTheme ? (
+                            {previewTheme ? (
                                 <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
                                     <Label htmlFor="theme-id-card-layout" className="flex items-center gap-2">
                                         <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -636,7 +645,9 @@ export function ThemeGeneratorModal({
                                         </SelectContent>
                                     </Select>
                                     <p className="text-[10px] leading-snug text-muted-foreground">
-                                        Overrides the school-wide branding layout for this student's printed ID card only.
+                                        {previewStudent
+                                            ? "Overrides the school-wide branding layout for this student's printed ID card only."
+                                            : "Choose the card layout to display with this theme."}
                                     </p>
                                 </div>
                             ) : null}

@@ -872,15 +872,12 @@ export function LibraryWorkspace({
   return (
     <div
       className={cn(
-        // Locked to the viewport height so the header and footer always stay put — only the
-        // content between them scrolls, instead of the whole page (which used to force an
-        // awkward few-pixel scroll just to reach the footer).
-        'library-readable relative h-dvh max-h-dvh overflow-hidden transition-colors duration-300 animate-in fade-in duration-300',
+        'library-readable relative min-h-dvh flex flex-col transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300',
         isNightDesk
-          ? 'flex flex-col bg-[#0b1324] text-[#f8fafc] dark'
+          ? 'bg-[#0b1324] text-[#f8fafc] dark'
           : isReadingRoom
-            ? 'flex flex-col bg-[#fafaf9] text-[#0f172a]'
-            : 'flex flex-col',
+            ? 'bg-[#fafaf9] text-[#0f172a]'
+            : '',
         currentTheme.classes.wrapper
       )}
     >
@@ -906,8 +903,8 @@ export function LibraryWorkspace({
         onOpenSettings={() => switchTab('settings')}
       />
 
-      {/* Main Column: Top Bar + Content — this is the part that scrolls now, not the page */}
-      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto', (isNightDesk || isReadingRoom) && 'w-full')}>
+      {/* Main Column: Top Bar + Content */}
+      <div className={cn('relative z-10 flex-1 flex flex-col min-w-0', (isNightDesk || isReadingRoom) && 'w-full')}>
 
 
         {/* Main Workstation View Area */}
@@ -2032,7 +2029,10 @@ export function LibraryWorkspace({
                   variant="outline"
                   size="sm"
                   disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  onClick={() => {
+                    setPage((p) => Math.max(1, p - 1));
+                    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className="rounded-xl text-xs font-bold"
                 >
                   Previous
@@ -2041,7 +2041,10 @@ export function LibraryWorkspace({
                   variant="outline"
                   size="sm"
                   disabled={page >= pageCount}
-                  onClick={() => setPage((p) => p + 1)}
+                  onClick={() => {
+                    setPage((p) => Math.min(pageCount, p + 1));
+                    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                   className="rounded-xl text-xs font-bold"
                 >
                   Next
