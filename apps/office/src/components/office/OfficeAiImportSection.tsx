@@ -15,6 +15,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Helper } from '@/components/ui/helper';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthFetch } from '@/lib/authFetch';
@@ -32,6 +33,7 @@ import type {
   OfficeBillingAccount,
   OfficeClass,
   OfficeGradeEntry,
+  OfficeInvoice,
   OfficeStudent,
   OfficeTeacher,
 } from '@/lib/office/types';
@@ -45,7 +47,10 @@ type OfficeAiImportSectionProps = {
   students: OfficeStudent[];
   gradeEntries: OfficeGradeEntry[];
   billingAccounts: OfficeBillingAccount[];
+  invoices?: OfficeInvoice[];
   canImportStaff: boolean;
+  /** Lower-cased usernames already in use, so AI-imported staff logins can't collide with them. */
+  existingStaffUsernames?: string[];
   userName?: string | null;
 };
 
@@ -56,7 +61,9 @@ export function OfficeAiImportSection({
   students,
   gradeEntries,
   billingAccounts,
+  invoices,
   canImportStaff,
+  existingStaffUsernames,
   userName,
 }: OfficeAiImportSectionProps) {
   const firestore = useFirestore();
@@ -248,8 +255,8 @@ export function OfficeAiImportSection({
     };
   }, [aiSnapshot, classes, teachers, students, gradeEntries, billingAccounts, upsertStudents]);
 
-  const classNames = classes.map((c) => c.name);
-  const studentNames = students.map((s) => getOfficeStudentFullName(s));
+  const classNames = useMemo(() => classes.map((c) => c.name), [classes]);
+  const studentNames = useMemo(() => students.map((s) => getOfficeStudentFullName(s)), [students]);
 
   const counts = useMemo(() => {
     return aiSnapshot ? officeSnapshotCounts(aiSnapshot) : {};
@@ -373,9 +380,12 @@ export function OfficeAiImportSection({
         students,
         gradeEntries,
         billingAccounts,
+        invoices: invoices ?? [],
         upsertStudents,
         updatedBy: userName,
         canImportStaff,
+        existingStaffUsernames,
+        authFetch,
       });
       const summary = formatOfficeImportReport(report);
       toast({
@@ -397,10 +407,23 @@ export function OfficeAiImportSection({
   const previewTotal = aiSnapshot ? totalOfficeSnapshotItems(aiSnapshot) : 0;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <section
+      id="import"
+      className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+    >
       <h2 className="text-base font-bold flex items-center gap-2">
         <Wand2 className="h-4 w-4 text-teal-700" />
         AI import
+        <Helper
+          content={
+            <>
+              <p>You'll always see a preview of what will be added before anything is saved.</p>
+              <p>Nothing here ever touches the Rewards side (points, prizes, kiosk) - imports only write to this school's Office data (grades, billing, roster).</p>
+            </>
+          }
+        >
+          <span className="sr-only">What does AI import do?</span>
+        </Helper>
       </h2>
       <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
         Paste or upload anything — rosters, grade exports, tuition lists, family contacts. The model figures out

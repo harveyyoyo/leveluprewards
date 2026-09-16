@@ -104,8 +104,39 @@ export function planOfficeClassPromotion(classes: Pick<OfficeClass, 'id' | 'name
     changes.push({ classId: cls.id, currentName: cls.name, nextName: result.nextName });
   }
 
-  changes.sort((a, b) => a.currentName.localeCompare(b.currentName));
+  // A class staying put (skipped) keeps its current name; a class being renamed takes on
+  // its nextName. If two classes would end up sharing a name (e.g. "Grade 11" -> "Grade 12"
+  // while a "Grade 12" already exists), applying the plan would merge them under one name -
+  // pull every class involved in such a collision out of `changes` for manual resolution.
+  const resultingNameOwners = new Map<string, string[]>();
+  for (const skip of skipped) {
+    const key = skip.name.trim().toLowerCase();
+    resultingNameOwners.set(key, [...(resultingNameOwners.get(key) ?? []), skip.classId]);
+  }
+  for (const change of changes) {
+    const key = change.nextName.trim().toLowerCase();
+    resultingNameOwners.set(key, [...(resultingNameOwners.get(key) ?? []), change.classId]);
+  }
+
+  const collidingClassIds = new Set(
+    [...resultingNameOwners.values()].filter((ids) => ids.length > 1).flat(),
+  );
+
+  const finalChanges: OfficeClassPromotionRow[] = [];
+  for (const change of changes) {
+    if (collidingClassIds.has(change.classId)) {
+      skipped.push({
+        classId: change.classId,
+        name: change.currentName,
+        reason: `Renaming to "${change.nextName}" would collide with another class - rename manually`,
+      });
+      continue;
+    }
+    finalChanges.push(change);
+  }
+
+  finalChanges.sort((a, b) => a.currentName.localeCompare(b.currentName));
   skipped.sort((a, b) => a.name.localeCompare(b.name));
 
-  return { changes, skipped };
+  return { changes: finalChanges, skipped };
 }

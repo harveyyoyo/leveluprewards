@@ -8,6 +8,14 @@ const MAX_BYTES = 15 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
+    // Reject an oversized upload before buffering the whole multipart body into memory.
+    // A dishonest Content-Length can still slip through - the post-parse buf.length check
+    // below is the real backstop - but this avoids paying the cost for the common case.
+    const contentLength = Number(req.headers.get('content-length') || 0);
+    if (contentLength > MAX_BYTES) {
+      return NextResponse.json({ error: `File too large (max ${MAX_BYTES / (1024 * 1024)} MB).` }, { status: 413 });
+    }
+
     let schoolId = '';
     try {
       const form = await req.formData();

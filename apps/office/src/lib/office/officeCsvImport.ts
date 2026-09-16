@@ -16,6 +16,34 @@ export type ParsedOfficeGradeRow = {
   notes: string | null;
 };
 
+/**
+ * Splits raw CSV text into logical rows, respecting quoted fields that contain
+ * embedded newlines (e.g. a multi-line Notes cell) - a plain `text.split(/\r?\n/)`
+ * would cut such a field in half and corrupt every row after it.
+ */
+function splitCsvRows(text: string): string[] {
+  const rows: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+      cur += ch;
+      continue;
+    }
+    if (!inQuotes && (ch === '\n' || ch === '\r')) {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      rows.push(cur);
+      cur = '';
+      continue;
+    }
+    cur += ch;
+  }
+  if (cur.trim()) rows.push(cur);
+  return rows.filter((l) => l.trim());
+}
+
 function parseCsvLine(line: string): string[] {
   const cells: string[] = [];
   let cur = '';
@@ -64,7 +92,7 @@ function headerIndex(headers: string[], aliases: string[]): number {
 }
 
 export function parseOfficeStudentsCsv(text: string): { rows: ParsedOfficeStudentRow[]; errors: string[] } {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  const lines = splitCsvRows(text);
   const errors: string[] = [];
   if (lines.length < 2) {
     return { rows: [], errors: ['CSV needs a header row and at least one data row.'] };
@@ -102,7 +130,7 @@ export function parseOfficeStudentsCsv(text: string): { rows: ParsedOfficeStuden
 }
 
 export function parseOfficeGradesCsv(text: string): { rows: ParsedOfficeGradeRow[]; errors: string[] } {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  const lines = splitCsvRows(text);
   const errors: string[] = [];
   if (lines.length < 2) {
     return { rows: [], errors: ['CSV needs a header row and at least one data row.'] };

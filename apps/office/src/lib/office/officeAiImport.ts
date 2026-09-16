@@ -4,7 +4,7 @@ import {
   writeBatch,
   type Firestore,
 } from 'firebase/firestore';
-import { addStaffAccount } from '@/lib/db/staffAccounts';
+import { addStaffAccount, type AuthFetchFn } from '@/lib/db/staffAccounts';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import type {
   OfficeBillingAccount,
@@ -84,7 +84,10 @@ export type OfficeAiImportReport = {
   studentsAdded: number;
   studentsUpdated: number;
   gradesAdded: number;
-  gradesSkipped: number;
+  /** Grade rows whose student name didn't match anyone on the roster. */
+  gradesStudentNotFound: number;
+  /** Grade rows that matched a student but were exact duplicates of an existing entry. */
+  gradesDuplicate: number;
   billingAccountsAdded: number;
   invoicesAdded: number;
   staffAdded: number;
@@ -368,7 +371,11 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
 
 const BATCH_SIZE = 400;
 
-async function commitBatches(firestore: Firestore, ops: Array<(batch: ReturnType<typeof writeBatch>) => void>) {
+/** Commits write-batch ops in chunks safely under Firestore's 500-operation batch limit. */
+export async function commitBatches(
+  firestore: Firestore,
+  ops: Array<(batch: ReturnType<typeof writeBatch>) => void>,
+) {
   for (let i = 0; i < ops.length; i += BATCH_SIZE) {
     const batch = writeBatch(firestore);
     for (const op of ops.slice(i, i + BATCH_SIZE)) op(batch);
@@ -386,9 +393,12 @@ export async function applyOfficeAiSnapshot(
     students: OfficeStudent[];
     gradeEntries: OfficeGradeEntry[];
     billingAccounts: OfficeBillingAccount[];
+    invoices?: OfficeInvoice[];
     upsertStudents?: boolean;
     updatedBy?: string | null;
     canImportStaff?: boolean;
+    existingStaffUsernames?: string[];
+    authFetch?: AuthFetchFn;
   },
 ): Promise<OfficeAiImportReport> {
   const report: OfficeAiImportReport = {
@@ -397,7 +407,8 @@ export async function applyOfficeAiSnapshot(
     studentsAdded: 0,
     studentsUpdated: 0,
     gradesAdded: 0,
-    gradesSkipped: 0,
+    gradesStudentNotFound: 0,
+    gradesDuplicate: 0,
     billingAccountsAdded: 0,
     invoicesAdded: 0,
     staffAdded: 0,
@@ -415,7 +426,9 @@ export async function applyOfficeAiSnapshot(
   );
 
   const gradeKeys = new Set(
-    ctx.gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${e.subject.toLowerCase()}`),
+    ctx.gradeEntries.map(
+      (e) => `${e.studentId}|${e.termLabel.trim().toLowerCase()}|${e.subject.toLowerCase()}`,
+    ),
   );
 
   const classOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
@@ -521,12 +534,13 @@ export async function applyOfficeAiSnapshot(
   for (const row of snapshot.grades ?? []) {
     const studentId = studentIdByName.get(row.studentName.toLowerCase());
     if (!studentId) {
-      report.gradesSkipped += 1;
+      report.gradesStudentNotFound += 1;
+      report.errors.push(`Grade for "${row.studentName}": no matching student on the roster - skipped.`);
       continue;
     }
-    const dedupeKey = `${studentId}|${row.termLabel}|${row.subject.toLowerCase()}`;
+    const dedupeKey = `${studentId}|${row.termLabel.trim().toLowerCase()}|${row.subject.toLowerCase()}`;
     if (gradeKeys.has(dedupeKey)) {
-      report.gradesSkipped += 1;
+      report.gradesDuplicate += 1;
       continue;
     }
     gradeKeys.add(dedupeKey);
@@ -576,6 +590,12 @@ export async function applyOfficeAiSnapshot(
   }
   await commitBatches(firestore, billingOps);
 
+  const invoiceKey = (accountId: string, label: string, amountCents: number, dueDate: string) =>
+    `${accountId}|${label.trim().toLowerCase()}|${amountCents}|${dueDate}`;
+  const invoiceKeys = new Set(
+    (ctx.invoices ?? []).map((inv) => invoiceKey(inv.accountId, inv.label, inv.amountCents, inv.dueDate)),
+  );
+
   const invoiceOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
   for (const row of snapshot.invoices ?? []) {
     const accountId = accountIdByFamily.get(row.familyName.trim().toLowerCase());
@@ -583,13 +603,20 @@ export async function applyOfficeAiSnapshot(
       report.errors.push(`Invoice "${row.label}": no billing account for family "${row.familyName}".`);
       continue;
     }
+    const dueDate = row.dueDate ?? new Date().toISOString().slice(0, 10);
+    const key = invoiceKey(accountId, row.label, row.amountCents, dueDate);
+    if (invoiceKeys.has(key)) {
+      report.errors.push(`Invoice "${row.label}" for "${row.familyName}": already imported - skipped.`);
+      continue;
+    }
+    invoiceKeys.add(key);
     const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
     invoiceOps.push((batch) =>
       batch.set(ref, {
         accountId,
         label: row.label,
         amountCents: row.amountCents,
-        dueDate: row.dueDate ?? new Date().toISOString().slice(0, 10),
+        dueDate,
         status: row.status ?? 'sent',
         createdAt: Date.now(),
         paidAt: row.status === 'paid' ? Date.now() : null,
@@ -601,16 +628,29 @@ export async function applyOfficeAiSnapshot(
   }
   await commitBatches(firestore, invoiceOps);
 
-  if (ctx.canImportStaff) {
+  if (ctx.canImportStaff && ctx.authFetch) {
+    const authFetch = ctx.authFetch;
+    const takenUsernames = new Set(ctx.existingStaffUsernames ?? []);
     for (const row of snapshot.staffAccounts ?? []) {
+      const username = row.username.trim().toLowerCase();
+      if (takenUsernames.has(username)) {
+        report.errors.push(`Staff "${row.displayName}": username "${username}" is already in use - skipped.`);
+        continue;
+      }
       try {
-        await addStaffAccount(firestore, schoolId, {
-          displayName: row.displayName,
-          username: row.username,
-          passcode: row.passcode,
-          role: 'office',
-          roles: ['office'],
-        });
+        await addStaffAccount(
+          firestore,
+          schoolId,
+          {
+            displayName: row.displayName,
+            username: row.username,
+            passcode: row.passcode,
+            role: 'office',
+            roles: ['office'],
+          },
+          authFetch,
+        );
+        takenUsernames.add(username);
         report.staffAdded += 1;
       } catch (e) {
         report.errors.push(`Staff "${row.displayName}": ${(e as Error).message}`);
@@ -638,7 +678,14 @@ export function formatOfficeImportReport(report: OfficeAiImportReport): string {
   if (report.studentsAdded) parts.push(`${report.studentsAdded} student${report.studentsAdded === 1 ? '' : 's'} added`);
   if (report.studentsUpdated) parts.push(`${report.studentsUpdated} student${report.studentsUpdated === 1 ? '' : 's'} updated`);
   if (report.gradesAdded) parts.push(`${report.gradesAdded} grade${report.gradesAdded === 1 ? '' : 's'}`);
-  if (report.gradesSkipped) parts.push(`${report.gradesSkipped} grade${report.gradesSkipped === 1 ? '' : 's'} skipped`);
+  if (report.gradesStudentNotFound) {
+    parts.push(
+      `${report.gradesStudentNotFound} grade${report.gradesStudentNotFound === 1 ? '' : 's'} skipped (student not found)`,
+    );
+  }
+  if (report.gradesDuplicate) {
+    parts.push(`${report.gradesDuplicate} grade${report.gradesDuplicate === 1 ? '' : 's'} already imported`);
+  }
   if (report.billingAccountsAdded) parts.push(`${report.billingAccountsAdded} billing account${report.billingAccountsAdded === 1 ? '' : 's'}`);
   if (report.invoicesAdded) parts.push(`${report.invoicesAdded} invoice${report.invoicesAdded === 1 ? '' : 's'}`);
   if (report.staffAdded) parts.push(`${report.staffAdded} staff login${report.staffAdded === 1 ? '' : 's'}`);

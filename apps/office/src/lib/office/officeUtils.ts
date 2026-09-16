@@ -167,17 +167,22 @@ export function billingStatusForAccount(
   return hasOverdue ? 'past_due' : 'active';
 }
 
+/** Invoice has actually been billed to the family (as opposed to a draft nobody has sent yet). */
+function isInvoiceBilled(inv: OfficeInvoice): boolean {
+  return inv.status === 'sent' || inv.status === 'partial';
+}
+
 export function isInvoiceOverdue(inv: OfficeInvoice, today = new Date()): boolean {
-  if (!isInvoiceOpen(inv)) return false;
+  if (!isInvoiceBilled(inv)) return false;
   const due = inv.dueDate?.slice(0, 10);
   if (!due) return false;
   const todayStr = today.toISOString().slice(0, 10);
   return due < todayStr;
 }
 
-/** Open invoice due today or within the next N days (not overdue). */
+/** Billed invoice due today or within the next N days (not overdue, and not a draft). */
 export function isInvoiceDueSoon(inv: OfficeInvoice, withinDays = 7, today = new Date()): boolean {
-  if (!isInvoiceOpen(inv)) return false;
+  if (!isInvoiceBilled(inv)) return false;
   const due = inv.dueDate?.slice(0, 10);
   if (!due) return false;
   const todayStr = today.toISOString().slice(0, 10);

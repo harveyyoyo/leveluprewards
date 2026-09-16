@@ -323,7 +323,7 @@ export function OfficeBillingView({
 
       toast({
         title: 'Bulk invoicing complete',
-        description: `Successfully generated ${createdCount} invoices totaling $${(totalAmountCents / 100).toFixed(2)}.`,
+        description: `Successfully generated ${createdCount} invoices totaling ${formatCents(totalAmountCents)}.`,
       });
 
       setBulkOpen(false);
@@ -416,7 +416,11 @@ export function OfficeBillingView({
       setAccountOpen(false);
       resetAccountForm();
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not create account', description: (e as Error).message });
+      toast({
+        variant: 'destructive',
+        title: editAccountId ? 'Could not update account' : 'Could not create account',
+        description: (e as Error).message,
+      });
     } finally {
       setBusy(false);
     }
@@ -743,7 +747,17 @@ export function OfficeBillingView({
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (!firestore || !confirm('Delete this billing account?')) return;
+    if (!firestore) return;
+    const linkedInvoices = invoices.filter((inv) => inv.accountId === id);
+    if (linkedInvoices.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot delete this account',
+        description: `${linkedInvoices.length} invoice${linkedInvoices.length === 1 ? '' : 's'} still point to it. Remove or reassign those invoices first.`,
+      });
+      return;
+    }
+    if (!confirm('Delete this billing account?')) return;
     try {
       await deleteDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', id));
       toast({ title: 'Account removed' });

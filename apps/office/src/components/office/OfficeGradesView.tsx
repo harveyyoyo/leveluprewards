@@ -227,6 +227,13 @@ export function OfficeGradesView({
       toast({ variant: 'destructive', title: 'Student, term, and subject are required.' });
       return;
     }
+    if (form.numericGrade.trim()) {
+      const n = Number(form.numericGrade);
+      if (!Number.isFinite(n) || n < 0 || n > 100) {
+        toast({ variant: 'destructive', title: 'Numeric grade must be between 0 and 100.' });
+        return;
+      }
+    }
     const duplicate = entries.find(
       (e) =>
         e.id !== editingId &&

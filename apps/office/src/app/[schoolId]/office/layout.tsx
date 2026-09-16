@@ -12,12 +12,13 @@ export const metadata: Metadata = {
 export default function OfficeLayout({ children }: { children: React.ReactNode }) {
   return (
     <OfficeThemeProvider>
-      <OfficePortalGate>
-        <Suspense fallback={null}>
-          <OfficeHandoffBootstrap />
-        </Suspense>
-        {children}
-      </OfficePortalGate>
+      {/* Rendered outside the gate: OfficePortalGate shows a loading/sign-in screen
+          instead of `children` whenever a handoff is pending, so the bootstrap that
+          actually completes the handoff must not depend on the gate opening first. */}
+      <Suspense fallback={null}>
+        <OfficeHandoffBootstrap />
+      </Suspense>
+      <OfficePortalGate>{children}</OfficePortalGate>
     </OfficeThemeProvider>
   );
 }

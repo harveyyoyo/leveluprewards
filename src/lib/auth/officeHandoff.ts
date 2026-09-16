@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { SignJWT, jwtVerify } from 'jose';
 import { getAuthGateSecret } from '@/lib/auth/schoolGateCookie';
 
@@ -8,9 +9,13 @@ export type OfficeHandoffClaims = {
   schoolId: string;
   loginState: 'admin' | 'office';
   userName: string;
+  /** Unique id for this handoff - lets the verifier enforce single use. */
+  jti: string;
 };
 
-export async function signOfficeHandoffMeta(claims: OfficeHandoffClaims): Promise<string | null> {
+export async function signOfficeHandoffMeta(
+  claims: Omit<OfficeHandoffClaims, 'jti'>,
+): Promise<string | null> {
   const secret = getAuthGateSecret();
   if (!secret) return null;
 
@@ -23,6 +28,7 @@ export async function signOfficeHandoffMeta(claims: OfficeHandoffClaims): Promis
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(OFFICE_HANDOFF_JWT_ISS)
     .setIssuedAt()
+    .setJti(randomUUID())
     .setExpirationTime('2m')
     .sign(secret);
 }
@@ -37,8 +43,9 @@ export async function verifyOfficeHandoffMeta(token: string): Promise<OfficeHand
     const schoolId = typeof payload.schoolId === 'string' ? payload.schoolId : '';
     const loginState = payload.loginState === 'admin' ? 'admin' : payload.loginState === 'office' ? 'office' : '';
     const userName = typeof payload.userName === 'string' ? payload.userName : '';
-    if (!uid || !schoolId || !loginState) return null;
-    return { uid, schoolId, loginState, userName };
+    const jti = typeof payload.jti === 'string' ? payload.jti : '';
+    if (!uid || !schoolId || !loginState || !jti) return null;
+    return { uid, schoolId, loginState, userName, jti };
   } catch {
     return null;
   }
