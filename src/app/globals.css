@@ -2694,10 +2694,16 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     margin: 0;
   }
 
-  /* 2. DISABLE FILTERS: Universal reset to kill backdrop-filters and filters */
-  *,
-  ::after,
-  ::before {
+  /* 2. DISABLE FILTERS: Universal reset to kill backdrop-filters and filters.
+     Excludes the ID card print surfaces: an ID card's shadows/highlights are
+     part of its physical design and must print exactly as previewed. Past
+     card-layout tweaks kept forgetting to manually re-add a shadow here for
+     print (see git history on `.print-id-card--credit-card`) — instead of
+     adding another one-off override, the card is simply exempt from this
+     reset, so its screen styles always carry through to print unchanged. */
+  *:not(#student-id-print-wrapper):not(#student-id-print-wrapper *):not(#student-id-dtc-print-wrapper):not(#student-id-dtc-print-wrapper *),
+  *:not(#student-id-print-wrapper):not(#student-id-print-wrapper *):not(#student-id-dtc-print-wrapper):not(#student-id-dtc-print-wrapper *)::after,
+  *:not(#student-id-print-wrapper):not(#student-id-print-wrapper *):not(#student-id-dtc-print-wrapper):not(#student-id-dtc-print-wrapper *)::before {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     filter: none !important;
