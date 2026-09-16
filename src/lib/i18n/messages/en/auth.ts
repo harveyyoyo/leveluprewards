@@ -46,6 +46,9 @@ const auth = {
   demoSchoolPasscodeHint: 'Enter the school passcode to continue.',
   openingGoogle: 'Opening Google…',
   useDifferentGoogleAccount: 'Use a different Google account',
+  signOutGoogle: 'Sign out of Google account',
+  signedOutOfGoogleTitle: 'Signed out of Google account',
+  signedOutOfGoogleDescription: 'Your Google account has been disconnected from Level Up.',
   googleNotEnabled: 'Google not enabled',
   developerOnlyPasscodeHint:
     'Sign in with a local developer passcode (no Google) or your allowed Google account. School staff should use ',

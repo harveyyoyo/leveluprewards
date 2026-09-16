@@ -5,6 +5,7 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { createScanDeduper } from '@/lib/library/libraryIntakeHelpers';
 import {
   getKioskWedgeBarcodeDetector,
+  kioskWedgeFallbackCameraConstraints,
   kioskWedgeFrontCameraConstraints,
   scanVideoFrameForBarcode,
 } from '@/lib/kioskWedgeCameraScan';
@@ -141,10 +142,25 @@ export function useKioskWedgeCameraAssist({
         useZxingFallbackRef.current = true;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: kioskWedgeFrontCameraConstraints(),
-        audio: false,
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: kioskWedgeFrontCameraConstraints(),
+          audio: false,
+        });
+      } catch {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: kioskWedgeFallbackCameraConstraints(),
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+      }
       streamRef.current = stream;
       const video = videoRef.current;
       video.srcObject = stream;
@@ -168,10 +184,21 @@ export function useKioskWedgeCameraAssist({
         };
       }
     } catch (err: unknown) {
-      console.error('Wedge-assist camera error:', err);
+      console.warn('Wedge-assist camera unavailable:', err);
       setHasCameraPermission(false);
-      const message =
-        err instanceof Error ? err.message : 'Could not access the front camera. Check permissions.';
+      const errName = err instanceof Error ? err.name : '';
+      const errMsg = err instanceof Error ? err.message : '';
+      const isNotFound =
+        errName === 'NotFoundError' ||
+        errName === 'DevicesNotFoundError' ||
+        errName === 'OverconstrainedError' ||
+        /not found/i.test(errMsg) ||
+        /device not found/i.test(errMsg);
+      const message = isNotFound
+        ? 'No camera found on this device.'
+        : errName === 'NotAllowedError' || errName === 'PermissionDeniedError'
+          ? 'Camera permission denied.'
+          : 'Could not access camera. Check permissions or device.';
       onErrorRef.current?.(message);
       stopCamera();
     }

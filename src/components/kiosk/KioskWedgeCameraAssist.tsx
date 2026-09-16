@@ -28,12 +28,18 @@ export function KioskWedgeCameraAssist({
   const { settings } = useSettings();
   const enabled = settings.kioskWedgeDemoCameraEnabled === true;
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const { videoRef, hasCameraPermission } = useKioskWedgeCameraAssist({
     enabled,
     active: enabled && active,
     onScan,
-    onError,
+    onError: (msg) => {
+      setCameraError(msg);
+      if (previewOpen) {
+        onError?.(msg);
+      }
+    },
   });
 
   if (!enabled) return null;
@@ -67,7 +73,7 @@ export function KioskWedgeCameraAssist({
             </div>
             {!hasCameraPermission ? (
               <div className="absolute inset-0 flex items-center justify-center bg-background/90 p-2 text-center text-[10px] font-semibold text-destructive">
-                Camera blocked
+                {cameraError || 'Camera unavailable'}
               </div>
             ) : null}
             <p className="bg-black/70 px-2 py-1 text-center text-[9px] font-bold uppercase tracking-wider text-white/90">
@@ -82,7 +88,13 @@ export function KioskWedgeCameraAssist({
         size="sm"
         variant="secondary"
         className="h-8 gap-1.5 rounded-full border-2 px-3 text-[10px] font-bold uppercase tracking-wider shadow-md"
-        onClick={() => setPreviewOpen((v) => !v)}
+        onClick={() => {
+          const next = !previewOpen;
+          setPreviewOpen(next);
+          if (next && !hasCameraPermission && cameraError) {
+            onError?.(cameraError);
+          }
+        }}
         aria-pressed={previewOpen}
         aria-label={previewOpen ? 'Hide demo camera preview' : 'Show demo camera preview'}
       >

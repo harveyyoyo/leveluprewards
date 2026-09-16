@@ -258,6 +258,7 @@ export function StudentIdCard({
         resolvedLayout === 'minimalist' && 'print-id-card--minimalist',
         resolvedLayout === 'high_vis' && 'print-id-card--high-vis',
         useQr && 'print-id-card--qr-scan',
+        displayNickname && 'has-nickname',
       )}
 
       style={resolvedCardStyle}

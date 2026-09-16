@@ -46,6 +46,9 @@ const auth = {
   demoSchoolPasscodeHint: 'הזינו את קוד הגישה של בית הספר כדי להמשיך.',
   openingGoogle: 'פותח Google…',
   useDifferentGoogleAccount: 'השתמשו בחשבון Google אחר',
+  signOutGoogle: 'התנתקות מחשבון Google',
+  signedOutOfGoogleTitle: 'התנתקת מחשבון Google',
+  signedOutOfGoogleDescription: 'חשבון Google שלך נותק מ-Level Up.',
   googleNotEnabled: 'Google לא מופעל',
   developerOnlyPasscodeHint:
     'היכנסו עם קוד מפתח מקומי (ללא Google) או עם חשבון Google מורשה. צוות בית הספר צריך להשתמש ב-',
