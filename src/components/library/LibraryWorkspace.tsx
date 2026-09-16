@@ -1024,6 +1024,17 @@ export function LibraryWorkspace({
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShelfAuditOpen(true)}
+                  className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs"
+                  title="Open the shelf audit tool to scan books and check physical inventory"
+                >
+                  <ClipboardCheck className="h-3.5 w-3.5 text-primary" />
+                  <span>Shelf Audit</span>
+                </Button>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-1.5 rounded-xl text-xs font-semibold shadow-xs">

@@ -1069,6 +1069,30 @@ export function LibraryStudentSelfCheckoutPortal({
                       studentLabel
                     )}
                   </p>
+
+                  {/* Student Loan Limit Indicator Badge */}
+                  <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-colors shadow-xs',
+                        effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts
+                          ? 'bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-950/60 dark:border-rose-800 dark:text-rose-200'
+                          : effectiveMaxCheckouts > 0 && studentLoans.length === effectiveMaxCheckouts - 1
+                            ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/60 dark:border-amber-800 dark:text-amber-200'
+                            : 'bg-primary/10 border-primary/20 text-primary'
+                      )}
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {effectiveMaxCheckouts === 0
+                        ? `${studentLoans.length} book${studentLoans.length === 1 ? '' : 's'} borrowed`
+                        : `${studentLoans.length} of ${effectiveMaxCheckouts} book${effectiveMaxCheckouts === 1 ? '' : 's'} borrowed`}
+                    </span>
+                    {effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts ? (
+                      <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                        (Limit reached)
+                      </span>
+                    ) : null}
+                  </div>
                   {autoResetSeconds > 0 && (
                     <div
                       className={cn(
@@ -1379,6 +1403,16 @@ export function LibraryStudentSelfCheckoutPortal({
             >
               Return
             </Button>
+          </div>
+        )}
+
+        {/* Loan Limit Warning Notice */}
+        {studentId && step === 'book' && effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts && (
+          <div
+            role="status"
+            className="flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-rose-300 bg-rose-50 p-3 text-rose-950 text-xs sm:text-sm font-semibold shadow-xs dark:border-rose-900 dark:bg-rose-950/70 dark:text-rose-200 text-center justify-center"
+          >
+            <span>You have reached your limit of {effectiveMaxCheckouts} books. Please return a book first to borrow another.</span>
           </div>
         )}
 
