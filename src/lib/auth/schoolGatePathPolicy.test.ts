@@ -23,9 +23,9 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/teacher/print`, sid, new Set(['teacher']))).toBe(true);
   });
 
-  it('office root allows portal scope; subpaths need office or admin', () => {
+  it('office routes allow portal scope; OfficePortalGate handles staff sign-in', () => {
     expect(schoolPathAllowedByGate(`/${sid}/office`, sid, new Set(['portal']))).toBe(true);
-    expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['portal']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/office/grades`, sid, new Set(['office']))).toBe(true);
   });
 

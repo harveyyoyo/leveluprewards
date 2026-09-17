@@ -96,10 +96,8 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
     );
   }
   if (section === 'office') {
-    if (pathname === `/${routeSchoolId}/office`) {
-      return loginState === 'school' || loginState === 'office' || loginState === 'admin';
-    }
-    return loginState === 'office' || loginState === 'admin';
+    // School passcode may reach any /office route; OfficePortalGate handles office staff sign-in.
+    return loginState === 'school' || loginState === 'office' || loginState === 'admin';
   }
   if (
     typeof window !== 'undefined' &&
