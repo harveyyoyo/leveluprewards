@@ -143,6 +143,34 @@ describe('office routing', () => {
     }
   });
 
+  it('derives portal host from office host when PORTAL_CANONICAL_HOST is unset', () => {
+    const previousPortal = process.env.PORTAL_CANONICAL_HOST;
+    const previousPublic = process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
+    delete process.env.PORTAL_CANONICAL_HOST;
+    delete process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
+    try {
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+    } finally {
+      if (previousPortal === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previousPortal;
+      }
+      if (previousPublic === undefined) {
+        delete process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.NEXT_PUBLIC_PORTAL_CANONICAL_HOST = previousPublic;
+      }
+    }
+  });
+
   it('serves /school/office on the main site when subdomain is not configured', () => {
     const previousOffice = process.env.OFFICE_CANONICAL_HOST;
     const previousPublic = process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST;
