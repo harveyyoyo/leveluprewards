@@ -10,6 +10,7 @@ import type { OfficeGradeEntry } from '@/lib/office/types';
 import { collectOfficeTermOptions, downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 
 type OfficeGradeReportViewProps = {
   schoolId: string;
@@ -51,6 +52,10 @@ export function OfficeGradeReportView({
       setTerm(termParam);
     }
   }, [searchParams]);
+
+  useOfficeUrlSync({
+    student: studentFilter !== 'all' ? studentFilter : undefined,
+  });
 
   const terms = useMemo(
     () =>

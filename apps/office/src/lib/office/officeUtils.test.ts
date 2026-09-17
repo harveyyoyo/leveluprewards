@@ -6,6 +6,7 @@ import {
   getOfficeStudentFullName,
   getOfficeStudentLabel,
   isInvoiceDueSoon,
+  isInvoiceOverdue,
   parseUsdToCents,
   studentIdsWithGradesForTerm,
   studentsWithoutGradesForTerm,
@@ -100,6 +101,21 @@ describe('officeUtils', () => {
     };
     expect(isInvoiceDueSoon(inv, 7, today)).toBe(true);
     expect(isInvoiceDueSoon({ ...inv, dueDate: '2026-06-01' }, 7, today)).toBe(false);
+  });
+
+  it('does not treat drafts as overdue or due soon', () => {
+    const today = new Date('2026-05-21');
+    const draft: OfficeInvoice = {
+      id: '1',
+      accountId: 'a',
+      label: 'Tuition',
+      amountCents: 1000,
+      dueDate: '2026-05-01',
+      status: 'draft',
+      createdAt: 0,
+    };
+    expect(isInvoiceOverdue(draft, today)).toBe(false);
+    expect(isInvoiceDueSoon(draft, 7, today)).toBe(false);
   });
 
   it('buildStudentIdByNameMap flags same-named students as ambiguous instead of picking one', () => {

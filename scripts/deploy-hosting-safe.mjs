@@ -40,12 +40,16 @@ async function verifyLiveSite() {
 
 run('node', ['scripts/prepare-firebase-framework-deploy.mjs']);
 run('node', ['scripts/ensure-hosting-production-env.mjs']);
+run('node', ['scripts/ensure-office-hosting-production-env.mjs']);
 run('npm', ['ci', '--prefix', 'functions']);
+run('npm', ['ci', '--prefix', 'apps/office']);
 run('npm', ['run', 'build']);
+run('npm', ['run', 'build', '--prefix', 'apps/office']);
 run('npx', ['firebase-tools', 'deploy', '--only', 'hosting', '--project', PROJECT_ID], {
   env: {
     ...process.env,
     FIREBASE_DEPLOY_SSR_GUARD_PREPARED: '1',
+    FIREBASE_EXPECT_HOSTING_SITES: 'studio-1273073612-71183,levelup-office',
   },
 });
 

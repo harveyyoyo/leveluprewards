@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { collection } from 'firebase/firestore';
 import { Building2, Eye, EyeOff, Loader2, LogIn } from 'lucide-react';
 import { useAppContext } from '@/components/providers/OfficeAuthProvider';
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useDoc, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,6 +45,7 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
   const routeSchoolId = params.schoolId?.trim().toLowerCase() ?? '';
   const router = useRouter();
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const {
     loginState,
@@ -73,8 +74,11 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
   const schoolDocRef = useSchoolMetadataDocRef();
   const { data: schoolMeta } = useDoc<{ name?: string }>(schoolDocRef);
   const routeSchoolPublicRef = useMemoFirebase(
-    () => (firestore && routeSchoolId ? schoolPublicDocRef(firestore, routeSchoolId) : null),
-    [firestore, routeSchoolId],
+    () =>
+      firestore && routeSchoolId && user
+        ? schoolPublicDocRef(firestore, routeSchoolId)
+        : null,
+    [firestore, routeSchoolId, user],
   );
   const { data: routeSchoolPublic } = useDoc<{ name?: string }>(routeSchoolPublicRef);
 
