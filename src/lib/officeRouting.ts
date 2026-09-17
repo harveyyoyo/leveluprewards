@@ -220,7 +220,13 @@ export function officeHostToPortalRedirectUrl(
   if (!isOfficeHostname(rawCurrentHost)) return null;
   if (isLocalDevHost(rawCurrentHost)) return null;
 
-  const portalHost = canonicalPortalHost();
+  let portalHost = canonicalPortalHost();
+  if (!portalHost) {
+    const officeHost = normalizeHost(rawCurrentHost);
+    if (officeHost.startsWith('office.')) {
+      portalHost = `portal.${officeHost.slice('office.'.length)}`;
+    }
+  }
   if (!portalHost) return null;
 
   let portalPath: string;
