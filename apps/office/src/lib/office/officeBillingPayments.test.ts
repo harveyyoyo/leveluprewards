@@ -40,6 +40,16 @@ describe('officeBillingPayments', () => {
     ]);
   });
 
+  it('caps paid/remaining and resolves to paid when an invoice amount is edited below what was already paid', () => {
+    // e.g. a $10 invoice with an $8 partial payment gets corrected down to $5.
+    const original = inv({ id: 'a', accountId: 'fam', amountCents: 10_000, status: 'partial', paidCents: 8_000 });
+    const edited = { ...original, amountCents: 5_000 };
+    const cappedPaid = Math.min(invoicePaidCents(original), edited.amountCents);
+    expect(cappedPaid).toBe(5_000);
+    expect(resolveInvoiceStatusAfterPayment(edited, cappedPaid)).toBe('paid');
+    expect(invoiceRemainingCents({ ...edited, paidCents: cappedPaid, status: 'paid' })).toBe(0);
+  });
+
   it('derives account balance from remaining invoice amounts', () => {
     const invoices = [
       inv({ id: '1', accountId: 'fam', amountCents: 5_000, status: 'sent', paidCents: 1_000 }),

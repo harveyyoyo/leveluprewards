@@ -15,7 +15,12 @@ export function isTrustedRedirectHostname(rawHost: string): boolean {
   const host = normalizeRedirectHostname(rawHost);
   if (!host) return false;
 
-  if (host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1') {
+  // Only trust loopback addresses outside production - in production this would be an
+  // open redirect to the *victim's own machine*, useful only to an attacker.
+  if (
+    process.env.NODE_ENV !== 'production' &&
+    (host === 'localhost' || host.endsWith('.localhost') || host === '127.0.0.1')
+  ) {
     return true;
   }
 

@@ -4149,6 +4149,49 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--high-vis .print-id-theme-emoji-center { position: absolute !important; bottom: 8px !important; right: 10px !important; font-size: calc(32px * var(--print-id-font-scale)) !important; margin: 0 !important; }
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card--high-vis .print-id-barcode-container { position: absolute !important; bottom: 4px !important; left: 10px !important; width: auto !important; border-top: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important; }
 
+  /* Portrait ID Card Badge Styling */
+  .print-id-card--portrait {
+    width: 2.125in !important;
+    height: 3.375in !important;
+    max-width: 2.125in !important;
+    max-height: 3.375in !important;
+    aspect-ratio: 2.125 / 3.375 !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    padding: 0.12in 0.1in 0.08in 0.1in !important;
+  }
+
+  /* Card Finishes: Gloss, Hologram, Matte */
+  .print-id-finish-gloss {
+    position: relative;
+  }
+  .print-id-finish-gloss::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.08) 42%, rgba(255,255,255,0) 58%, rgba(255,255,255,0.12) 100%);
+    border-radius: inherit;
+  }
+
+  .print-id-finish-hologram {
+    position: relative;
+  }
+  .print-id-finish-hologram::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(115deg, rgba(255,0,128,0.2) 0%, rgba(0,255,255,0.2) 30%, rgba(255,255,0,0.2) 60%, rgba(0,255,128,0.2) 90%);
+    mix-blend-mode: color-dodge;
+    border-radius: inherit;
+  }
+
+  .print-id-finish-matte {
+    position: relative;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  }
+
   /* Inherit theme font (and italic) from the card root; Avery/print rules above set Ubuntu on .print-id-header, etc. */
   body.dtc-card-printing #student-id-dtc-print-wrapper .print-id-card *:not(.print-barcode-svg):not(.print-barcode):not(.print-id-theme-emoji-center):not([data-branded-qr]):not(.print-id-qr) {
     font-family: inherit !important;
@@ -4793,6 +4836,59 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
  */
 .student-theme-surface :where(strong, b, .font-bold, .font-black, .font-extrabold):not([style*="color"]) {
   color: var(--theme-text) !important;
+}
+
+/*
+ * Student Theme Typography Scaling:
+ * Allows theme `fontScale` (stored as e.g. 0.85 to 1.3, default 1.1) to scale all student surface text,
+ * matching how `--print-id-font-scale` scales the student ID card.
+ */
+.student-theme-surface {
+  --theme-font-scale: 1.1;
+  font-size: calc(1rem * var(--theme-font-scale, 1));
+}
+
+.student-theme-surface .text-\[8px\] { font-size: calc(8px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[9px\] { font-size: calc(9px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[10px\] { font-size: calc(10px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[11px\] { font-size: calc(11px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[12px\] { font-size: calc(12px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-\[13px\] { font-size: calc(13px * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-4xl { font-size: calc(2.25rem * var(--theme-font-scale, 1)) !important; }
+
+.student-theme-surface .text-xs:not([class*="leading-"]) { line-height: calc(1rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-sm:not([class*="leading-"]) { line-height: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-base:not([class*="leading-"]) { line-height: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-lg:not([class*="leading-"]) { line-height: calc(1.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-xl:not([class*="leading-"]) { line-height: calc(1.75rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-2xl:not([class*="leading-"]) { line-height: calc(2rem * var(--theme-font-scale, 1)) !important; }
+.student-theme-surface .text-3xl:not([class*="leading-"]) { line-height: calc(2.25rem * var(--theme-font-scale, 1)) !important; }
+
+@media (min-width: 640px) {
+  .student-theme-surface .sm\:text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .sm\:text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
+}
+
+@media (min-width: 768px) {
+  .student-theme-surface .md\:text-xs { font-size: calc(0.75rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-sm { font-size: calc(0.875rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-base { font-size: calc(1rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-lg { font-size: calc(1.125rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-xl { font-size: calc(1.25rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-2xl { font-size: calc(1.5rem * var(--theme-font-scale, 1)) !important; }
+  .student-theme-surface .md\:text-3xl { font-size: calc(1.875rem * var(--theme-font-scale, 1)) !important; }
 }
 
 /* Legacy Mode Overrides - Strips performance-heavy effects */

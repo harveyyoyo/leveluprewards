@@ -19,6 +19,7 @@ export default function OfficeGradesPage() {
         schoolId={schoolId}
         students={shared.students}
         classNameById={shared.classNameById}
+        teacherNameById={shared.teacherNameById}
         studentLabelById={shared.studentLabelById}
         entries={gradeEntries}
         userName={userName}

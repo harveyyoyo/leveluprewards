@@ -168,6 +168,21 @@ export function OfficeGradeReportView({
               </Select>
             </div>
           ) : null}
+          {studentFilter !== 'all' ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Student</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg gap-1.5"
+                onClick={() => setStudentFilter('all')}
+              >
+                {studentLabelById.get(studentFilter) ?? 'Selected student'}
+                <span aria-hidden>×</span>
+              </Button>
+            </div>
+          ) : null}
           <Button
             type="button"
             variant={groupByStudent ? 'default' : 'outline'}

@@ -81,13 +81,14 @@ export const OFFICE_NAV_ITEMS: OfficeNavItem[] = [
 
 export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeNavId {
   const school = schoolId.toLowerCase();
+  const path = pathname.toLowerCase();
   const internalPrefix = `/${school}/office`;
   const externalPrefix = `/${school}`;
 
   let rest = '';
-  if (pathname.startsWith(internalPrefix)) {
+  if (path.startsWith(internalPrefix)) {
     rest = pathname.slice(internalPrefix.length).replace(/^\//, '');
-  } else if (pathname === externalPrefix || pathname.startsWith(`${externalPrefix}/`)) {
+  } else if (path === externalPrefix || path.startsWith(`${externalPrefix}/`)) {
     rest = pathname.slice(externalPrefix.length).replace(/^\//, '');
   } else {
     return 'home';

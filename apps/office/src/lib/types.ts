@@ -109,7 +109,8 @@ export interface StaffAccount {
   id: string;
   /** Login id (stored lowercase). */
   username: string;
-  passcode: string;
+  /** @deprecated Legacy plaintext passcode, migrated to a hashed `secrets/staff_{id}` doc on first login. New accounts never set this. */
+  passcode?: string;
   displayName: string;
   role: StaffAccountRole;
   roles?: StaffAccountRole[];

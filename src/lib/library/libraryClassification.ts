@@ -225,11 +225,54 @@ export function getActiveLibraryGenres(customGenres?: LibraryGenreConfig[] | nul
 }
 
 /**
- * Normalize text for fuzzy category matching.
+ * Normalize text for fuzzy category matching: lowercase, collapse runs of punctuation/whitespace
+ * to single spaces. Keeping the spaces (rather than stripping them entirely) matters for keyword
+ * matching below — it lets us require a keyword to match a whole word, not just any substring.
  */
 function normalizeCategoryKey(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 }
+
+/** Space-padded so `.includes(\` \${keyword} \`)` only matches whole words, not substrings —
+ * without this, a bare keyword like "art" would match inside "earth", "war" inside "award", or
+ * "fiction" inside "nonfiction". */
+function paddedCategoryWords(text: string): string {
+  const normalized = normalizeCategoryKey(text);
+  return normalized ? ` ${normalized} ` : '';
+}
+
+function hasCategoryWord(paddedSegment: string, keyword: string): boolean {
+  return paddedSegment.includes(` ${keyword} `);
+}
+
+/**
+ * Real book-catalog category text (from Google Books/Open Library) rarely matches our genre
+ * labels literally — it comes back as BISAC-style subject text like "Juvenile Fiction",
+ * "Science Fiction", or "Juvenile Fiction / Action & Adventure / General". Each entry here is a
+ * whole-word keyword (matched via hasCategoryWord) checked against every "/"-or-comma-separated
+ * segment of that text. Ordered most-specific-genre-first so a segment like "Fantasy & Magic"
+ * lands in Fantasy & Sci-Fi rather than the generic "fiction" catch-all further down.
+ */
+const GENRE_KEYWORDS: { id: string; keywords: string[] }[] = [
+  { id: 'fantasy_scifi', keywords: ['fantasy', 'science fiction', 'sci fi', 'dystopian', 'magic', 'supernatural', 'paranormal'] },
+  { id: 'mystery', keywords: ['mystery', 'mysteries', 'detective', 'thriller', 'suspense', 'crime'] },
+  { id: 'biography', keywords: ['biography', 'biographies', 'autobiography', 'memoir'] },
+  { id: 'graphic_novel', keywords: ['comic', 'comics', 'graphic novel', 'graphic novels', 'manga', 'cartoons'] },
+  { id: 'arts_music', keywords: ['art', 'arts', 'music', 'photography', 'performing arts', 'sports recreation', 'sports', 'crafts hobbies', 'hobbies', 'games', 'cooking', 'dance', 'film'] },
+  { id: 'early_reader', keywords: ['picture book', 'picture books', 'easy reader', 'early reader', 'beginning reader', 'board book', 'toddler', 'concepts'] },
+  { id: 'reference', keywords: ['reference', 'encyclopedia', 'encyclopedias', 'dictionary', 'dictionaries', 'atlas', 'atlases', 'almanac'] },
+  { id: 'hebrew_judaica', keywords: ['judaica', 'jewish', 'hebrew'] },
+  { id: 'science', keywords: ['science', 'nature', 'animals', 'technology', 'computers', 'mathematics', 'math', 'coding', 'space', 'astronomy', 'biology', 'chemistry', 'physics', 'inventions', 'environment'] },
+  { id: 'history', keywords: ['history', 'historical', 'social science', 'social studies', 'politics', 'geography', 'war', 'ancient', 'civilization', 'government'] },
+  // Generic fiction words checked last — a segment like "Juvenile Fiction" only falls here if
+  // nothing more specific (e.g. a "Fantasy & Magic" sibling segment) already matched above.
+  // "stories" is deliberately excluded — it's too ambiguous ("Bible Stories", "True Stories" are
+  // often nonfiction subcategories, not storybooks).
+  { id: 'fiction', keywords: ['fiction', 'novel', 'novels', 'literature', 'literary'] },
+];
+
+/** Genres that only make sense for an actual story (not "nonfiction" educational subject matter). */
+const FICTION_BRANCH_GENRE_IDS = new Set(['fantasy_scifi', 'mystery', 'graphic_novel', 'fiction']);
 
 /**
  * Resolve a category/genre name to its full classification metadata.
@@ -246,12 +289,53 @@ export function resolveBookClassification(
 
   if (raw) {
     const key = normalizeCategoryKey(raw);
+
+    // 1. Exact match against a genre's label/id/prefix — handles simple direct values like
+    // "Fiction" or a school's own custom genre label ("Coding & Robotics").
     matched = genres.find((g) => {
       const gKey = normalizeCategoryKey(g.label);
       const gId = normalizeCategoryKey(g.id);
       const gPrefix = normalizeCategoryKey(g.callPrefix);
-      return gKey === key || gId === key || gPrefix === key || gKey.includes(key) || key.includes(gKey);
+      return gKey === key || gId === key || gPrefix === key;
     });
+
+    // 2. Real catalog lookups return BISAC-style subject text (e.g. "Juvenile Fiction / Fantasy
+    // & Magic / General") — check each "/"-or-comma-separated segment against known subject
+    // keywords, most-specific genre first, so "Fantasy & Magic" wins over the sibling generic
+    // "Juvenile Fiction" segment instead of both collapsing into a whole-string match.
+    if (!matched) {
+      const segments = raw.split(/[/,]/).map((s) => paddedCategoryWords(s)).filter(Boolean);
+
+      // A word like "Animals" shows up in BOTH a made-up animal story ("Juvenile Fiction /
+      // Animals") and a real nonfiction nature book ("Juvenile Nonfiction / Animals"). When a
+      // segment plainly says "Fiction" (and none says "Nonfiction"), check story-shaped genres
+      // first so the former lands in Fiction/Fantasy/Mystery instead of Science or History.
+      const looksLikeFiction =
+        segments.some((seg) => hasCategoryWord(seg, 'fiction')) &&
+        !segments.some((seg) => hasCategoryWord(seg, 'nonfiction'));
+      const keywordOrder = looksLikeFiction
+        ? [
+            ...GENRE_KEYWORDS.filter((g) => FICTION_BRANCH_GENRE_IDS.has(g.id)),
+            ...GENRE_KEYWORDS.filter((g) => !FICTION_BRANCH_GENRE_IDS.has(g.id)),
+          ]
+        : GENRE_KEYWORDS;
+
+      for (const { id, keywords } of keywordOrder) {
+        if (segments.some((seg) => keywords.some((kw) => hasCategoryWord(seg, kw)))) {
+          matched = genres.find((g) => g.id === id);
+          if (matched) break;
+        }
+      }
+    }
+
+    // 3. Last resort: loose whole-string substring match against a genre's label — covers
+    // values that don't exactly equal a label/id but do contain (or are contained by) one.
+    if (!matched) {
+      matched = genres.find((g) => {
+        const gKey = normalizeCategoryKey(g.label);
+        return gKey.includes(key) || key.includes(gKey);
+      });
+    }
   }
 
   // Fallback to General

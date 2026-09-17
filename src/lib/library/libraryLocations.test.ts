@@ -47,9 +47,9 @@ describe('libraryLocations', () => {
   });
 
   it('builds library links and unique ids', () => {
-    expect(libraryPath('demo', '', 'main')).toBe('/demo/library');
+    expect(libraryPath('demo', '', 'main')).toBe('/demo/library?library=main');
     expect(libraryPath('demo', '/kiosk', 'room-12')).toBe('/demo/library/kiosk?library=room-12');
-    expect(libraryDropBoxPath('demo', 'main')).toBe('/demo/library?tab=kiosk&mode=dropbox');
+    expect(libraryDropBoxPath('demo', 'main')).toBe('/demo/library?library=main&tab=kiosk&mode=dropbox');
     expect(libraryKioskDropBoxPath('demo', 'room-12')).toBe(
       '/demo/library/kiosk?library=room-12&mode=dropbox',
     );

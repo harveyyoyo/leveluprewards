@@ -5,6 +5,7 @@ import { guardAiRoute } from '@/lib/apiAuth';
 import { firebaseConfig } from '@/firebase/config';
 import { normalizeOfficeAiSnapshot } from '@/lib/office/officeAiImport';
 import { parseLooseJson } from '@/lib/server/looseJson';
+import { DEFAULT_ARCADE_AI_MODEL, isArcadeAiModel } from '@/lib/aiModelPreference';
 
 function buildOfficeImportInstruction(classNames: string[], studentNames: string[]): string {
   const classList =
@@ -138,7 +139,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'prompt is required' }, { status: 400 });
     }
 
-    const model = typeof body.model === 'string' ? body.model : 'gpt-4o-mini';
+    const requestedModel = typeof body.model === 'string' ? body.model : '';
+    const model = isArcadeAiModel(requestedModel) ? requestedModel : DEFAULT_ARCADE_AI_MODEL;
     const classNames = Array.isArray(body.classNames)
       ? body.classNames.filter((n): n is string => typeof n === 'string').slice(0, 300)
       : [];

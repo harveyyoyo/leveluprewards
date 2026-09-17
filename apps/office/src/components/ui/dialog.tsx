@@ -22,7 +22,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     data-legacy-motion-root="dialog"
     className={cn(
-      "fixed inset-0 z-40 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
       className
     )}
     {...props}

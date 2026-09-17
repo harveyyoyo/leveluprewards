@@ -238,7 +238,7 @@ function DeskInner({
         {avatar}
         {nameEl}
         {showPts ? (
-          <div className="text-xs font-bold tabular-nums text-muted-foreground sm:text-sm">
+          <div className="text-xs font-bold tabular-nums !text-muted-foreground sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         ) : null}
@@ -254,7 +254,7 @@ function DeskInner({
           {avatar}
           {nameEl ? <div className={cn(deskNameClass(design, visualScale), 'text-white')}>{name}</div> : null}
           {showPts ? (
-            <div className="text-xs font-bold tabular-nums text-indigo-200 sm:text-sm">
+            <div className="text-xs font-bold tabular-nums !text-indigo-200 sm:text-sm">
               {points.toLocaleString()} pts
             </div>
           ) : null}
@@ -269,7 +269,7 @@ function DeskInner({
         {avatar}
         {nameEl}
         {showPts ? (
-          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums sm:text-sm">
+          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums !text-foreground sm:text-sm">
             {points.toLocaleString()} pts
           </div>
         ) : null}
@@ -283,7 +283,7 @@ function DeskInner({
         {avatar}
         {nameEl}
         {showPts ? (
-          <div className="text-xs font-black tabular-nums sm:text-sm">{points.toLocaleString()} PTS</div>
+          <div className="text-xs font-black tabular-nums !text-foreground sm:text-sm">{points.toLocaleString()} PTS</div>
         ) : null}
       </>
     );
