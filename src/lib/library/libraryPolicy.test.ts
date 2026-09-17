@@ -61,8 +61,28 @@ describe('getLibraryPolicyFromSettings', () => {
 
   it('defaults allowIsbnCheckout to true and respects explicit toggle', () => {
     expect(getLibraryPolicyFromSettings({}).allowIsbnCheckout).toBe(true);
+    expect(getLibraryPolicyFromSettings({}).checkoutBarcodeMode).toBe('both');
+    expect(getLibraryPolicyFromSettings({}).allowBarcodeCheckout).toBe(true);
     expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: true }).allowIsbnCheckout).toBe(true);
     expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).allowIsbnCheckout).toBe(false);
+    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).checkoutBarcodeMode).toBe('barcode_only');
+  });
+
+  it('respects libraryCheckoutBarcodeMode for both, barcode_only, and isbn_only', () => {
+    const both = getLibraryPolicyFromSettings({ libraryCheckoutBarcodeMode: 'both' });
+    expect(both.checkoutBarcodeMode).toBe('both');
+    expect(both.allowIsbnCheckout).toBe(true);
+    expect(both.allowBarcodeCheckout).toBe(true);
+
+    const barcodeOnly = getLibraryPolicyFromSettings({ libraryCheckoutBarcodeMode: 'barcode_only' });
+    expect(barcodeOnly.checkoutBarcodeMode).toBe('barcode_only');
+    expect(barcodeOnly.allowIsbnCheckout).toBe(false);
+    expect(barcodeOnly.allowBarcodeCheckout).toBe(true);
+
+    const isbnOnly = getLibraryPolicyFromSettings({ libraryCheckoutBarcodeMode: 'isbn_only' });
+    expect(isbnOnly.checkoutBarcodeMode).toBe('isbn_only');
+    expect(isbnOnly.allowIsbnCheckout).toBe(true);
+    expect(isbnOnly.allowBarcodeCheckout).toBe(false);
   });
 });
 

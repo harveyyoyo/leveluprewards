@@ -60,12 +60,14 @@ function LibraryBookPageInner({ schoolId }: { schoolId: string }) {
     }
     void findLibraryItemByUpc(firestore, schoolId, code, {
       allowIsbn: libraryPolicy.allowIsbnCheckout,
+      allowBarcode: libraryPolicy.allowBarcodeCheckout,
+      checkoutBarcodeMode: mode === 'checkout' ? libraryPolicy.checkoutBarcodeMode : undefined,
       preferredStatus: mode === 'return' ? 'checked_out' : (mode === 'checkout' ? 'available' : undefined),
     }).then((found) => {
       setItem(found?.item ?? null);
       setLoading(false);
     });
-  }, [firestore, schoolId, code, libraryPolicy.allowIsbnCheckout, mode]);
+  }, [firestore, schoolId, code, libraryPolicy.allowIsbnCheckout, libraryPolicy.allowBarcodeCheckout, libraryPolicy.checkoutBarcodeMode, mode]);
 
   const processStudentCard = useCallback(
     async (badgeId: string) => {

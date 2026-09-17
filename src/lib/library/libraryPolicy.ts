@@ -9,6 +9,9 @@ import type {
 /** How library returns affect student balances. */
 export type LibraryRewardMode = 'none' | 'fines' | 'app_points' | 'isolated_points';
 
+/** Allowed barcode types for book checkout. */
+export type LibraryCheckoutBarcodeMode = 'both' | 'barcode_only' | 'isbn_only';
+
 /** School settings slice used for library loans and late fees. */
 export type LibraryPolicySettings = {
   rewardMode: LibraryRewardMode;
@@ -26,8 +29,12 @@ export type LibraryPolicySettings = {
   renewalDays: number;
   allowRenewIfOverdue: boolean;
   allowMultipleCopiesOfSameTitle: boolean;
+  /** Allowed barcode types when checking out books: both, printed barcodes only, or ISBN only. */
+  checkoutBarcodeMode: LibraryCheckoutBarcodeMode;
   /** Allow taking out / checking out books using the published ISBN barcode. Turned on by default. */
   allowIsbnCheckout: boolean;
+  /** Allow taking out / checking out books using printed barcodes. Turned on by default. */
+  allowBarcodeCheckout: boolean;
   maxFineCap: number;
   cameraScanEnabled: boolean;
   kioskAllowDropBoxReturn: boolean;
@@ -59,6 +66,23 @@ export function resolveLibraryRewardMode(settings: {
   return 'none';
 }
 
+export function resolveLibraryCheckoutBarcodeMode(settings: {
+  libraryCheckoutBarcodeMode?: LibraryCheckoutBarcodeMode;
+  libraryAllowIsbnCheckout?: boolean;
+}): LibraryCheckoutBarcodeMode {
+  if (
+    settings.libraryCheckoutBarcodeMode === 'both' ||
+    settings.libraryCheckoutBarcodeMode === 'barcode_only' ||
+    settings.libraryCheckoutBarcodeMode === 'isbn_only'
+  ) {
+    return settings.libraryCheckoutBarcodeMode;
+  }
+  if (settings.libraryAllowIsbnCheckout === false) {
+    return 'barcode_only';
+  }
+  return 'both';
+}
+
 export function getLibraryPolicyFromSettings(
   settings: {
     libraryRewardMode?: LibraryRewardMode;
@@ -74,6 +98,7 @@ export function getLibraryPolicyFromSettings(
     libraryRenewalDays?: number;
     libraryAllowRenewIfOverdue?: boolean;
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    libraryCheckoutBarcodeMode?: LibraryCheckoutBarcodeMode;
     libraryAllowIsbnCheckout?: boolean;
     libraryMaxFineCap?: number;
     libraryCameraScanEnabled?: boolean;
@@ -98,6 +123,9 @@ export function getLibraryPolicyFromSettings(
   const onTimeReturnPoints = Math.max(0, settings.libraryOnTimeReturnPoints ?? 0);
   const categoryId = settings.libraryPointsCategoryId?.trim();
   const category = categoryId && categories ? categories.find((c) => c.id === categoryId) : undefined;
+  const checkoutBarcodeMode = resolveLibraryCheckoutBarcodeMode(settings);
+  const allowIsbnCheckout = checkoutBarcodeMode !== 'barcode_only';
+  const allowBarcodeCheckout = checkoutBarcodeMode !== 'isbn_only';
 
   return {
     rewardMode,
@@ -114,7 +142,9 @@ export function getLibraryPolicyFromSettings(
     renewalDays: Math.max(1, settings.libraryRenewalDays ?? loanPeriodDays),
     allowRenewIfOverdue: settings.libraryAllowRenewIfOverdue === true,
     allowMultipleCopiesOfSameTitle: settings.libraryAllowMultipleCopiesOfSameTitle === true,
-    allowIsbnCheckout: settings.libraryAllowIsbnCheckout !== false,
+    checkoutBarcodeMode,
+    allowIsbnCheckout,
+    allowBarcodeCheckout,
     maxFineCap: Math.max(0, settings.libraryMaxFineCap ?? 20),
     cameraScanEnabled: settings.libraryCameraScanEnabled === true,
     kioskAllowDropBoxReturn: settings.libraryKioskAllowDropBoxReturn !== false,

@@ -556,6 +556,8 @@ interface Settings {
     libraryAllowRenewIfOverdue?: boolean;
     /** Allow a student to borrow multiple copies of the same book title. */
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Allowed barcode types when checking out books: 'both', 'barcode_only', or 'isbn_only'. */
+    libraryCheckoutBarcodeMode?: 'both' | 'barcode_only' | 'isbn_only';
     /** Allow taking out / checking out books using the published ISBN barcode in addition to copy barcodes. */
     libraryAllowIsbnCheckout?: boolean;
     /** Maximum fine or deduction cap per book (0 = no limit). */
@@ -842,6 +844,7 @@ const defaultSettings: Settings = {
     libraryRenewalDays: 14,
     libraryAllowRenewIfOverdue: false,
     libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryCheckoutBarcodeMode: 'both',
     libraryAllowIsbnCheckout: true,
     libraryMaxFineCap: 20,
     libraryRequireWaiverReason: true,

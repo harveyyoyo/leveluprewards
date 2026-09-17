@@ -14,7 +14,7 @@ import {
   itemLibraryLocationId,
 } from '@/lib/library/libraryLocations';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
-import { type LibraryPolicySettings } from '@/lib/library/libraryPolicy';
+import { type LibraryPolicySettings, type LibraryCheckoutBarcodeMode } from '@/lib/library/libraryPolicy';
 
 export type LibraryCheckoutResult =
   | { action: 'checkout'; item: LibraryItem; itemId: string; dueAt?: number | null }
@@ -53,6 +53,8 @@ function catalogLookupCodes(rawCode: string): string[] {
 
 export type FindLibraryItemOptions = {
   allowIsbn?: boolean;
+  allowBarcode?: boolean;
+  checkoutBarcodeMode?: LibraryCheckoutBarcodeMode;
   preferredStatus?: 'available' | 'checked_out';
   studentId?: string;
 };
@@ -66,28 +68,40 @@ export async function findLibraryItemByUpc(
   const codes = catalogLookupCodes(rawCode);
   if (!codes.length) return null;
 
-  // 1. Exact UPC match (copy barcode)
+  const mode: LibraryCheckoutBarcodeMode =
+    options?.checkoutBarcodeMode ??
+    (options?.allowIsbn === false
+      ? 'barcode_only'
+      : options?.allowBarcode === false
+        ? 'isbn_only'
+        : 'both');
+
+  const canUseBarcode = mode === 'both' || mode === 'barcode_only';
+  const canUseIsbn = mode === 'both' || mode === 'isbn_only';
+
+  // 1. Exact UPC match (copy barcode) if barcode checkout is allowed
   let foundByUpc: { item: LibraryItem; itemId: string } | null = null;
-  for (const upc of codes) {
-    const snap = await getDocs(
-      query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', upc), limit(1)),
-    );
-    if (!snap.empty) {
-      const itemDoc = snap.docs[0];
-      const item = { id: itemDoc.id, ...itemDoc.data() } as LibraryItem;
-      if (!item.archived) {
-        foundByUpc = { item, itemId: itemDoc.id };
-        if (!options?.preferredStatus || item.status === options.preferredStatus) {
-          return foundByUpc;
+  if (canUseBarcode) {
+    for (const upc of codes) {
+      const snap = await getDocs(
+        query(collection(firestore, 'schools', schoolId, 'library'), where('upc', '==', upc), limit(1)),
+      );
+      if (!snap.empty) {
+        const itemDoc = snap.docs[0];
+        const item = { id: itemDoc.id, ...itemDoc.data() } as LibraryItem;
+        if (!item.archived) {
+          foundByUpc = { item, itemId: itemDoc.id };
+          if (!options?.preferredStatus || item.status === options.preferredStatus) {
+            return foundByUpc;
+          }
+          break;
         }
-        break;
       }
     }
   }
 
-  // 2. ISBN lookup if enabled (turned on by default)
-  const allowIsbn = options?.allowIsbn !== false;
-  if (allowIsbn) {
+  // 2. ISBN lookup if enabled
+  if (canUseIsbn) {
     for (const isbn of codes) {
       const snap = await getDocs(
         query(
@@ -209,7 +223,17 @@ export async function performLibraryCheckoutOrReturn(
     libraryLocationId?: string | null;
   },
 ): Promise<LibraryCheckoutResult> {
-  const allowIsbn = options?.policy?.allowIsbnCheckout !== false;
+  const isCheckout = options?.action === 'checkout';
+  const checkoutBarcodeMode = options?.policy?.checkoutBarcodeMode ?? (
+    options?.policy?.allowIsbnCheckout === false ? 'barcode_only' : 'both'
+  );
+  const allowIsbn = isCheckout
+    ? (checkoutBarcodeMode !== 'barcode_only')
+    : (options?.policy?.allowIsbnCheckout !== false);
+  const allowBarcode = isCheckout
+    ? (checkoutBarcodeMode !== 'isbn_only')
+    : (options?.policy?.allowBarcodeCheckout !== false);
+
   const preferredStatus =
     options?.action === 'checkout'
       ? 'available'
@@ -219,6 +243,8 @@ export async function performLibraryCheckoutOrReturn(
 
   const found = await findLibraryItemByUpc(firestore, schoolId, rawCode, {
     allowIsbn,
+    allowBarcode,
+    checkoutBarcodeMode: isCheckout ? checkoutBarcodeMode : undefined,
     preferredStatus,
     studentId,
   });
