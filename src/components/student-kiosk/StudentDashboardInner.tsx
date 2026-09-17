@@ -32,6 +32,9 @@ import { LevelUpKioskLogo } from '@/components/logos/LevelUpKioskLogo';
 import { KioskSponsorBanner } from '@/components/kiosk/KioskSponsorBanner';
 import { KioskLoginPrizeTeasers } from '@/components/kiosk/KioskLoginPrizeTeasers';
 import { KioskWedgeCameraAssist } from '@/components/kiosk/KioskWedgeCameraAssist';
+import { BonusSpinWheelModal } from '@/components/kiosk/BonusSpinWheelModal';
+import { claimWheelSpinBonus } from '@/lib/db/students';
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
 
 // ~32 KB (plus @vladmandic/face-api on the face tab). Load only when the
 // kiosk actually needs to scan a student.
@@ -230,7 +233,7 @@ export function StudentDashboardInner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges } = useAppContext();
+  const { redeemCoupon, redeemPrize, fulfillPrizeVoucherFromScan, printPrizeTickets, schoolId, isKioskLocked, badges, achievements } = useAppContext();
   const { refreshStudentKioskSession } = useAuth();
   const { show: firestoreSyncAlert } = useFirestoreSyncAlert();
   const firestore = useFirestore();
@@ -498,6 +501,56 @@ export function StudentDashboardInner({
       if (celebrationTimerRef.current) clearTimeout(celebrationTimerRef.current);
     };
   }, []);
+
+  const [spinningAchievementId, setSpinningAchievementId] = useState<string | null>(null);
+
+  const pendingWheelAchievement = useMemo(() => {
+    if (!student || !achievements || achievements.length === 0) return null;
+    const earned = student.earnedAchievements || [];
+    const pending = earned.find(
+      (a) => a.wheelSpun === false && a.achievementId !== spinningAchievementId,
+    );
+    if (!pending) return null;
+    const ach = achievements.find((a) => a.id === pending.achievementId);
+    if (!ach || !ach.enableWheelSpin) return null;
+    return {
+      achievement: ach,
+      earnedEntry: pending,
+    };
+  }, [student, achievements, spinningAchievementId]);
+
+  const handleWheelWon = useCallback(
+    async (wonAmount: number) => {
+      if (!pendingWheelAchievement || !schoolId || !student) return;
+      const ach = pendingWheelAchievement.achievement;
+      setSpinningAchievementId(ach.id);
+      try {
+        await claimWheelSpinBonus(
+          firestore,
+          schoolId,
+          student.id,
+          ach.id,
+          wonAmount,
+          ach.name,
+        );
+        playSound('success');
+        toast({
+          title: 'Bonus Won!',
+          description: `You won +${wonAmount} bonus points from the wheel spin!`,
+        });
+      } catch (err) {
+        console.error('Failed to claim wheel spin bonus:', err);
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'Could not record your bonus points. Please try again.',
+        });
+      } finally {
+        setSpinningAchievementId(null);
+      }
+    },
+    [pendingWheelAchievement, schoolId, student, firestore, playSound, toast],
+  );
 
   const [showRedeem, setShowRedeem] = useState(true);
   const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
@@ -2385,6 +2438,15 @@ export function StudentDashboardInner({
         )}
         </div>
       </div>
+      {schoolId && pendingWheelAchievement && !welcomeBackdropActive ? (
+        <BonusSpinWheelModal
+          key={pendingWheelAchievement.achievement.id}
+          isOpen={true}
+          achievement={pendingWheelAchievement.achievement}
+          primaryColor={activeTheme?.primary || LEVELUP_BRAND_PRIMARY_HEX}
+          onWon={handleWheelWon}
+        />
+      ) : null}
       {schoolId && libraryReviewBook ? (
         <LibraryBookReviewDialog
           isOpen={libraryReviewOpen}
