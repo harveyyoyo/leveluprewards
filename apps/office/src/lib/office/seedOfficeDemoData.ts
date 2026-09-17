@@ -10,6 +10,7 @@ import {
   type OfficeDemoSeedInput,
   type OfficeDemoSeedPayload,
 } from '@/lib/office/officeDemoSeedFactory';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 export {
   buildOfficeDemoSeed,
   buildOfficeDemoStaffAccount,
@@ -96,6 +97,12 @@ export async function seedOfficeDemoDataForSchool(
   schoolId: string,
   input: OfficeDemoSeedInput,
 ): Promise<OfficeDemoSeedPayload> {
+  // Defense in depth: this wipes every office collection for the school before reseeding it.
+  // Today the only caller (populateDemoOfficeDataForSchool) already checks this, but that
+  // check must not be this destructive function's only safety net.
+  if (!isPublicSampleSchoolId(schoolId)) {
+    throw new Error('Office demo data can only be seeded for a built-in sample school.');
+  }
   const payload = buildOfficeDemoSeed(input);
   await clearOfficeCollections(firestore, schoolId);
   await writeOfficeDemoSeedToFirestore(firestore, schoolId, payload);

@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyOfficeHandoffMeta } from '@/lib/auth/officeHandoff';
 import { jsonError, sameOrigin } from '@/lib/server/apiSecurity';
+import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
+
+/**
+ * Records that a handoff jti has been redeemed. Uses `.create()` so a second
+ * redemption of the same jti (replay of a leaked handoff URL) fails atomically.
+ */
+async function consumeHandoffOnce(jti: string): Promise<boolean> {
+  try {
+    const db = await getFirebaseAdminFirestore();
+    await db.collection('officeHandoffConsumed').doc(jti).create({ consumedAt: Date.now() });
+    return true;
+  } catch {
+    // create() throws ALREADY_EXISTS on replay, and also on any infra error -
+    // fail closed either way rather than let a possible replay through.
+    return false;
+  }
+}
 
 /** POST: verify handoff meta JWT (client bootstrap; secret stays server-side). */
 export async function POST(req: NextRequest) {
@@ -17,6 +34,10 @@ export async function POST(req: NextRequest) {
   const claims = await verifyOfficeHandoffMeta(meta);
   if (!claims) {
     return jsonError(403, 'Invalid or expired handoff');
+  }
+
+  if (!(await consumeHandoffOnce(claims.jti))) {
+    return jsonError(403, 'This office sign-in link was already used.');
   }
 
   return NextResponse.json(claims);

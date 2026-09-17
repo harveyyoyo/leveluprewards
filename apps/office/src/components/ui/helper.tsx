@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { HelpCircle } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSettings } from '@/components/providers/OfficeSettingsProvider';
 import { cn } from '@/lib/utils';
 
@@ -42,27 +42,29 @@ export function Helper({
   return (
     <div className={cn('inline-flex items-center gap-1.5', className)}>
       {children}
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label="Section help"
-            className={cn(
-              'cursor-help text-muted-foreground/50 transition-colors hover:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
-              iconClassName,
-            )}
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label="Section help"
+              className={cn(
+                'cursor-help text-muted-foreground/50 transition-colors hover:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm',
+                iconClassName,
+              )}
+            >
+              <HelpCircle style={{ width: iconSize, height: iconSize }} aria-hidden />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent
+            side={side}
+            sideOffset={6}
+            className="z-[101] max-w-xs border-2 p-3 shadow-xl"
           >
-            <HelpCircle style={{ width: iconSize, height: iconSize }} aria-hidden />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent
-          side={side}
-          sideOffset={6}
-          className="z-[101] max-w-xs border-2 p-3 shadow-xl"
-        >
-          <HelperTooltipBody>{content}</HelperTooltipBody>
-        </TooltipContent>
-      </Tooltip>
+            <HelperTooltipBody>{content}</HelperTooltipBody>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
   );
 }

@@ -48,6 +48,12 @@ export function OfficePortalEntryLink({
         return;
       }
 
+      // Open the tab synchronously, in direct response to the click - opening it only
+      // after the awaits below would lose the "user gesture" context that lets browsers
+      // (Safari in particular) allow a popup at all, and it would silently get blocked.
+      // Can't pass noopener here since we need the handle back to navigate it below.
+      const tab = window.open('', '_blank', 'noreferrer');
+
       setBusy(true);
       try {
         await syncFirebaseSessionCookie(auth);
@@ -58,7 +64,8 @@ export function OfficePortalEntryLink({
         setBusy(false);
       }
 
-      window.open(openTarget, '_blank', 'noopener,noreferrer');
+      if (tab) tab.location.href = openTarget;
+      else window.open(openTarget, '_blank', 'noopener,noreferrer');
     },
     [auth, busy, schoolId],
   );

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AMBIGUOUS_STUDENT_MATCH,
+  buildStudentIdByNameMap,
   defaultDueDateIso,
   getOfficeStudentFullName,
   getOfficeStudentLabel,
@@ -98,6 +100,17 @@ describe('officeUtils', () => {
     };
     expect(isInvoiceDueSoon(inv, 7, today)).toBe(true);
     expect(isInvoiceDueSoon({ ...inv, dueDate: '2026-06-01' }, 7, today)).toBe(false);
+  });
+
+  it('buildStudentIdByNameMap flags same-named students as ambiguous instead of picking one', () => {
+    const students: OfficeStudent[] = [
+      { id: 'a1', firstName: 'Ari', lastName: 'Klein', updatedAt: 0 },
+      { id: 'a2', firstName: 'Ari', lastName: 'Klein', updatedAt: 0 },
+      { id: 'b1', firstName: 'Beila', lastName: 'Stern', updatedAt: 0 },
+    ];
+    const map = buildStudentIdByNameMap(students);
+    expect(map.get('beila stern')).toBe('b1');
+    expect(map.get('ari klein')).toBe(AMBIGUOUS_STUDENT_MATCH);
   });
 
   it('uniqueGradeSubjects merges defaults and entries', () => {

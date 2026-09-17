@@ -1,4 +1,4 @@
-import { doc, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
 import type { StaffAccount, StaffAccountRole, Teacher, TeacherPersonnelRole } from '@/lib/types';
 import { normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
 
@@ -84,24 +84,46 @@ export function buildStaffDirectory(
   return Array.from(expected.values());
 }
 
-/** Publish teachers + desk staff to `schoolPublic` for portal staff sign-in. */
+/**
+ * Publish desk staff (and, when provided, teachers) to `schoolPublic` for portal sign-in.
+ *
+ * Office only ever knows about its own `role: 'office'` staff accounts - it has no
+ * access to the Rewards-only teacher roster. Passing an empty/omitted `teachers`
+ * list here must NOT erase teacher rows that the Rewards app already published;
+ * this reads the existing directory first and preserves any `type: 'teacher'`
+ * entries that the caller didn't supply fresh data for.
+ */
 export async function syncSchoolStaffDirectory(
   firestore: Firestore,
   schoolId: string,
   teachers: Teacher[] | null | undefined,
   staffAccounts: StaffAccount[] | null | undefined,
 ): Promise<void> {
-  const staffDirectory = buildStaffDirectory(teachers, staffAccounts);
-  const now = Date.now();
-  // Debug log to help diagnose sync issues
-  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-    // [syncSchoolStaffDirectory] logged
+  const sid = schoolId.trim().toLowerCase();
+  const ref = doc(firestore, 'schoolPublic', sid);
+  const next = buildStaffDirectory(teachers, staffAccounts);
+
+  let preservedTeacherRows: StaffPortalLoginOption[] = [];
+  if (!teachers || teachers.length === 0) {
+    try {
+      const existing = await getDoc(ref);
+      const existingDirectory = (existing.data()?.staffDirectory ?? []) as StaffPortalLoginOption[];
+      preservedTeacherRows = existingDirectory.filter((row) => row.type === 'teacher');
+    } catch {
+      // If the read fails, fall through with no preserved rows rather than block the write.
+    }
   }
+
+  const merged = new Map<string, StaffPortalLoginOption>();
+  for (const row of preservedTeacherRows) merged.set(row.id, row);
+  for (const row of next) merged.set(row.id, row);
+
+  const now = Date.now();
   await setDoc(
-    doc(firestore, 'schoolPublic', schoolId),
+    ref,
     {
       active: true,
-      staffDirectory,
+      staffDirectory: Array.from(merged.values()),
       staffDirectoryUpdatedAt: now,
       updatedAt: now,
     },

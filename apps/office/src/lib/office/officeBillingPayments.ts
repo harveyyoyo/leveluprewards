@@ -86,18 +86,3 @@ export function accountBalanceFromInvoices(accountId: string, invoices: OfficeIn
     .filter((i) => i.accountId === accountId)
     .reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0);
 }
-
-export function applyPaymentToInvoice(
-  inv: OfficeInvoice,
-  allocationCents: number,
-): Pick<OfficeInvoice, 'paidCents' | 'status' | 'paidAt' | 'paymentMethod' | 'paymentNote'> {
-  const newPaid = invoicePaidCents(inv) + allocationCents;
-  const status = resolveInvoiceStatusAfterPayment(inv, newPaid);
-  return {
-    paidCents: newPaid,
-    status,
-    paidAt: status === 'paid' ? Date.now() : inv.paidAt ?? null,
-    paymentMethod: status === 'paid' ? inv.paymentMethod ?? null : inv.paymentMethod ?? null,
-    paymentNote: inv.paymentNote ?? null,
-  };
-}
