@@ -14,8 +14,13 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
-import { getOfficeStudentFullName, resolveOfficeTeacherIdByName } from '@/lib/office/officeUtils';
+import {
+  AMBIGUOUS_STUDENT_MATCH,
+  buildStudentIdByNameMap,
+  resolveOfficeTeacherIdByName,
+} from '@/lib/office/officeUtils';
 import { parseOfficeGradesCsv, parseOfficeStudentsCsv } from '@/lib/office/officeCsvImport';
+import { commitBatches } from '@/lib/office/officeAiImport';
 
 type OfficeCsvImportDialogProps = {
   schoolId: string;
@@ -69,24 +74,27 @@ export function OfficeCsvImportDialog({
         const classIdByName = new Map(
           classes.map((c) => [(c.name ?? '').trim().toLowerCase(), c.id]),
         );
-        const batch = writeBatch(firestore);
+        const studentOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
         for (const row of rows) {
           const classId = row.className
             ? classIdByName.get(row.className.toLowerCase()) ?? null
             : null;
           const ref = doc(collection(firestore, 'schools', schoolId, 'officeStudents'));
-          batch.set(ref, {
-            firstName: row.firstName,
-            lastName: row.lastName,
-            nickname: row.nickname,
-            classId,
-            teacherId: resolveOfficeTeacherIdByName(teachers, row.teacherName),
-            teacherName: resolveOfficeTeacherIdByName(teachers, row.teacherName) ? null : row.teacherName,
-            notes: row.notes,
-            updatedAt: Date.now(),
-          });
+          const teacherId = resolveOfficeTeacherIdByName(teachers, row.teacherName);
+          studentOps.push((batch) =>
+            batch.set(ref, {
+              firstName: row.firstName,
+              lastName: row.lastName,
+              nickname: row.nickname,
+              classId,
+              teacherId,
+              teacherName: teacherId ? null : row.teacherName,
+              notes: row.notes,
+              updatedAt: Date.now(),
+            }),
+          );
         }
-        await batch.commit();
+        await commitBatches(firestore, studentOps);
         toast({
           title: 'Students imported',
           description: `${rows.length} added${errors.length ? ` · ${errors.length} skipped` : ''}.`,
@@ -97,35 +105,40 @@ export function OfficeCsvImportDialog({
           toast({ variant: 'destructive', title: 'No rows to import', description: errors[0] });
           return;
         }
-        const studentIdByName = new Map(
-          students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id]),
-        );
-        const batch = writeBatch(firestore);
+        const studentIdByName = buildStudentIdByNameMap(students);
+        const gradeOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
         let skipped = 0;
+        let ambiguous = 0;
         for (const row of rows) {
           const studentId = studentIdByName.get(row.studentName.toLowerCase());
           if (!studentId) {
             skipped += 1;
             continue;
           }
+          if (studentId === AMBIGUOUS_STUDENT_MATCH) {
+            ambiguous += 1;
+            continue;
+          }
           const student = students.find((s) => s.id === studentId);
           const ref = doc(collection(firestore, 'schools', schoolId, 'officeGradeEntries'));
-          batch.set(ref, {
-            studentId,
-            classId: student?.classId ?? null,
-            termLabel: row.termLabel,
-            subject: row.subject,
-            letterGrade: row.letterGrade,
-            numericGrade: row.numericGrade,
-            notes: row.notes,
-            updatedAt: Date.now(),
-            updatedBy: userName ?? null,
-          });
+          gradeOps.push((batch) =>
+            batch.set(ref, {
+              studentId,
+              classId: student?.classId ?? null,
+              termLabel: row.termLabel,
+              subject: row.subject,
+              letterGrade: row.letterGrade,
+              numericGrade: row.numericGrade,
+              notes: row.notes,
+              updatedAt: Date.now(),
+              updatedBy: userName ?? null,
+            }),
+          );
         }
-        await batch.commit();
+        await commitBatches(firestore, gradeOps);
         toast({
           title: 'Grades imported',
-          description: `${rows.length - skipped} saved${skipped ? ` · ${skipped} unknown students` : ''}${errors.length ? ` · ${errors.length} row errors` : ''}.`,
+          description: `${rows.length - skipped - ambiguous} saved${skipped ? ` · ${skipped} unknown students` : ''}${ambiguous ? ` · ${ambiguous} matched more than one student with that name (skipped)` : ''}${errors.length ? ` · ${errors.length} row errors` : ''}.`,
         });
       }
       setOpen(false);

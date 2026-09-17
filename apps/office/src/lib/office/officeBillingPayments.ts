@@ -15,12 +15,17 @@ export type OfficePaymentRecord = {
   createdAt: number;
 };
 
-export function invoicePaidCents(inv: OfficeInvoice): number {
+/** Stored payment total, not capped to the current invoice amount. */
+export function recordedInvoicePaidCents(inv: OfficeInvoice): number {
   if (typeof inv.paidCents === 'number' && inv.paidCents >= 0) {
-    return Math.min(inv.paidCents, inv.amountCents || 0);
+    return inv.paidCents;
   }
   if (inv.status === 'paid') return inv.amountCents || 0;
   return 0;
+}
+
+export function invoicePaidCents(inv: OfficeInvoice): number {
+  return Math.min(recordedInvoicePaidCents(inv), inv.amountCents || 0);
 }
 
 export function invoiceRemainingCents(inv: OfficeInvoice): number {
@@ -87,17 +92,34 @@ export function accountBalanceFromInvoices(accountId: string, invoices: OfficeIn
     .reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0);
 }
 
-export function applyPaymentToInvoice(
-  inv: OfficeInvoice,
-  allocationCents: number,
-): Pick<OfficeInvoice, 'paidCents' | 'status' | 'paidAt' | 'paymentMethod' | 'paymentNote'> {
-  const newPaid = invoicePaidCents(inv) + allocationCents;
-  const status = resolveInvoiceStatusAfterPayment(inv, newPaid);
+/**
+ * Apply a staff invoice edit (amount / label / due date / draft flag) and keep
+ * paidCents + status consistent, including shrinking the amount below what was
+ * already paid.
+ */
+export function applyInvoiceAmountEdit(
+  existing: OfficeInvoice,
+  next: { amountCents: number; label: string; dueDate: string; saveAsDraft: boolean },
+): OfficeInvoice {
+  const draftOrSentStatus: OfficeInvoiceStatus = next.saveAsDraft
+    ? 'draft'
+    : existing.status === 'draft'
+      ? 'sent'
+      : existing.status;
+  const paidCents = Math.min(recordedInvoicePaidCents(existing), next.amountCents);
+  const status: OfficeInvoiceStatus =
+    draftOrSentStatus === 'draft'
+      ? 'draft'
+      : resolveInvoiceStatusAfterPayment(
+          { ...existing, amountCents: next.amountCents, status: draftOrSentStatus },
+          paidCents,
+        );
   return {
-    paidCents: newPaid,
+    ...existing,
+    label: next.label,
+    amountCents: next.amountCents,
+    dueDate: next.dueDate,
     status,
-    paidAt: status === 'paid' ? Date.now() : inv.paidAt ?? null,
-    paymentMethod: status === 'paid' ? inv.paymentMethod ?? null : inv.paymentMethod ?? null,
-    paymentNote: inv.paymentNote ?? null,
+    paidCents,
   };
 }

@@ -6,6 +6,11 @@ export function applySecurityHeaders(response: NextResponse) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
+  // NOTE (flagged, not fixed): 'unsafe-inline'/'unsafe-eval' below remove most of the
+  // XSS mitigation this header would otherwise provide. Removing them safely needs a
+  // per-request nonce threaded through Next's own inline hydration scripts (and testing
+  // that dev-mode HMR + every third-party script here still works) - not a drop-in change,
+  // and not something to attempt without dedicated testing against a real deploy.
   const csp = [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.firebaseio.com",

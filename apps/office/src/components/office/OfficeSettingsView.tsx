@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection } from 'firebase/firestore';
 import { Building2, Copy, Pencil, Plus, Trash2, UserPlus, X } from 'lucide-react';
 import { useAppContext } from '@/components/providers/OfficeAuthProvider';
@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthFetch } from '@/lib/authFetch';
 import { addStaffAccount, deleteStaffAccount, updateStaffAccount } from '@/lib/db/staffAccounts';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
@@ -42,10 +43,11 @@ type OfficeSettingsViewProps = {
 
 export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewProps) {
   const firestore = useFirestore();
+  const authFetch = useAuthFetch();
   const { toast } = useToast();
   const { loginState, isAdmin, isOffice, userName } = useAppContext();
   const { settings, isLoading: settingsLoading } = useOfficeSettings(schoolId);
-  const { gradeEntries, billingAccounts } = useOfficePortalData();
+  const { gradeEntries, billingAccounts, invoices } = useOfficePortalData();
   const suggestedTerm = getSuggestedTermLabel();
 
   const roleVerified = hasVerifiedOfficeFirestoreAccess({ loginState, isAdmin, isOffice, schoolId });
@@ -79,14 +81,20 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const [displayName, setDisplayName] = useState('');
   const [staffBusy, setStaffBusy] = useState(false);
   const [copiedId, setCopiedId] = useState('');
+  // Only seed the form from the live settings doc once (on initial load). Re-running this
+  // on every later snapshot update - which fires on any save from any admin, including our
+  // own - would silently overwrite whatever the admin is mid-way through typing.
+  const settingsSeededRef = useRef(false);
 
   useEffect(() => {
+    if (settingsSeededRef.current || settingsLoading) return;
+    settingsSeededRef.current = true;
     setDefaultTerm(settings?.defaultActiveTerm?.trim() || '');
     setStatementName(settings?.statementSchoolName?.trim() || schoolName?.trim() || '');
     setSchoolTerms(
       (settings?.configuredTerms ?? []).map((t) => t.trim()).filter(Boolean).sort(compareOfficeTermLabels),
     );
-  }, [settings, schoolName]);
+  }, [settings, settingsLoading, schoolName]);
 
   const addSchoolTerm = () => {
     const next = newTermName.trim();
@@ -146,7 +154,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const openEditStaff = (account: StaffAccount) => {
     setEditing(account);
     setUsername(account.username);
-    setPasscode(account.passcode);
+    // Passcodes are hashed server-side and never sent back to the client - leave
+    // blank and only rotate it if the admin explicitly types a new one below.
+    setPasscode('');
     setDisplayName(account.displayName);
     setDialogOpen(true);
   };
@@ -156,7 +166,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     const cleanUsername = username.trim().toLowerCase();
     const cleanPasscode = passcode.trim();
     const cleanDisplayName = displayName.trim();
-    if (!cleanUsername || !cleanPasscode || !cleanDisplayName) {
+    if (!cleanUsername || !cleanDisplayName || (!editing && !cleanPasscode)) {
       toast({ variant: 'destructive', title: 'Name, username, and passcode are required.' });
       return;
     }
@@ -174,23 +184,27 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
         const updated: StaffAccount = {
           ...editing,
           username: cleanUsername,
-          passcode: cleanPasscode,
           displayName: cleanDisplayName,
           role: 'office',
           roles: ['office'],
         };
-        await updateStaffAccount(firestore, schoolId, updated);
+        await updateStaffAccount(firestore, schoolId, updated, authFetch, cleanPasscode || undefined);
         const merged = (staffRaw ?? []).map((row) => (row.id === updated.id ? updated : row));
         void syncSchoolStaffDirectory(firestore, schoolId, [], merged).catch(() => undefined);
         toast({ title: 'Office staff updated' });
       } else {
-        const created = await addStaffAccount(firestore, schoolId, {
-          username: cleanUsername,
-          passcode: cleanPasscode,
-          displayName: cleanDisplayName,
-          role: 'office',
-          roles: ['office'],
-        });
+        const created = await addStaffAccount(
+          firestore,
+          schoolId,
+          {
+            username: cleanUsername,
+            passcode: cleanPasscode,
+            displayName: cleanDisplayName,
+            role: 'office',
+            roles: ['office'],
+          },
+          authFetch,
+        );
         void syncSchoolStaffDirectory(firestore, schoolId, [], [...(staffRaw ?? []), created]).catch(
           () => undefined,
         );
@@ -320,7 +334,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           students={shared.students}
           gradeEntries={gradeEntries}
           billingAccounts={billingAccounts}
+          invoices={invoices}
           canImportStaff={canManageStaff}
+          existingStaffUsernames={(staffRaw ?? []).map((a) => (a.username ?? '').trim().toLowerCase())}
           userName={userName}
         />
       ) : null}
@@ -444,11 +460,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
               />
             </div>
             <div className="space-y-2">
-              <Label>Passcode</Label>
+              <Label>{editing ? 'New passcode' : 'Passcode'}</Label>
               <Input
                 type="password"
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
+                placeholder={editing ? 'Leave blank to keep the current passcode' : undefined}
                 className="rounded-xl"
               />
             </div>

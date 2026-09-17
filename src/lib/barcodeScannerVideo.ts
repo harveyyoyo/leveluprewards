@@ -31,16 +31,21 @@ export function persistBarcodeScannerZoom(zoom: number): void {
   }
 }
 
-/** Mirror preview and apply digital zoom (decode still uses full sensor frame). */
+/**
+ * Apply digital zoom to the barcode/ISBN scanner preview (decode still uses full sensor frame).
+ * This camera normally faces away from the user (aimed at a book), so the preview is NOT
+ * mirrored — mirroring it made the book appear to move opposite to how it was actually moved.
+ */
 export function applyBarcodeScannerVideoStyle(video: HTMLVideoElement, zoom: number): void {
   const z = clampBarcodeScannerZoom(zoom);
-  video.style.transform = `scaleX(-1) scale(${z})`;
+  video.style.transform = `scale(${z})`;
   video.style.transformOrigin = 'center center';
 }
 
-/** Mirror front-camera preview for face train / sign-in (face-api uses raw video frames). */
+/** Mirror front-camera preview for face train / sign-in (a selfie-style "look in the mirror" view). */
 export function applyFaceCameraPreviewStyle(video: HTMLVideoElement): void {
-  applyBarcodeScannerVideoStyle(video, BARCODE_SCANNER_ZOOM_DEFAULT);
+  video.style.transform = 'scaleX(-1)';
+  video.style.transformOrigin = 'center center';
 }
 
 export function clearBarcodeScannerVideoStyle(video: HTMLVideoElement): void {

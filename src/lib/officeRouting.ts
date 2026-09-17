@@ -16,7 +16,19 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
 /** Path segments on the office host (after /{schoolId}/). */
 const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'teachers', 'billing', 'reports', 'settings']);
 
+import { isLocalDevHost } from '@/lib/portalRouting';
+
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
+
+function officeDevOrigin(): string | null {
+  const raw = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(/^https?:\/\//i.test(raw) ? raw : `http://${raw}`).origin;
+  } catch {
+    return null;
+  }
+}
 
 function normalizeHost(rawHost: string | null | undefined): string {
   const host = (rawHost || '').trim().toLowerCase();
@@ -141,21 +153,25 @@ export function officeHostInternalRewritePath(pathname: string): string | null {
 }
 
 /**
- * Redirect `/{school}/office/…` on the main or portal host to the office subdomain.
+ * Redirect `/{school}/office/…` away from the main or portal host only when:
+ * - optional office subdomain is configured (`OFFICE_CANONICAL_HOST`), or
+ * - local dev split (`NEXT_PUBLIC_OFFICE_DEV_ORIGIN` on a local dev host).
+ *
+ * Production default: serve `/{school}/office/…` on the main site (no redirect).
  */
-function officeRedirectTargetOrigin(protocol: string): string | null {
+function officeRedirectTargetOrigin(
+  protocol: string,
+  rawCurrentHost: string | null | undefined,
+): string | null {
   const targetHost = canonicalOfficeHost();
-  if (targetHost) {
+  if (targetHost && !isLocalDevHost(rawCurrentHost)) {
     const scheme = targetHost.includes('localhost') ? 'http:' : protocol || 'https:';
     return `${scheme}//${targetHost}`;
   }
-  const devOrigin = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
-  if (!devOrigin) return null;
-  try {
-    return new URL(/^https?:\/\//i.test(devOrigin) ? devOrigin : `http://${devOrigin}`).origin;
-  } catch {
-    return null;
+  if (isLocalDevHost(rawCurrentHost)) {
+    return officeDevOrigin();
   }
+  return null;
 }
 
 export function canonicalOfficeRedirectUrl(
@@ -164,8 +180,6 @@ export function canonicalOfficeRedirectUrl(
   rawCurrentHost: string | null | undefined,
   protocol: string,
 ): URL | null {
-  const targetOrigin = officeRedirectTargetOrigin(protocol);
-  if (!targetOrigin) return null;
   if (isOfficeHostname(rawCurrentHost)) return null;
 
   const parts = pathname.split('/').filter(Boolean);
@@ -175,17 +189,12 @@ export function canonicalOfficeRedirectUrl(
   if (!isSchoolIdSegment(school)) return null;
   if (parts[1].toLowerCase() !== 'office') return null;
 
+  const targetOrigin = officeRedirectTargetOrigin(protocol, rawCurrentHost);
+  if (!targetOrigin) return null;
+
   const publicTail = parts.slice(2).join('/');
-  const devOrigin = process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN?.trim();
-  let devOriginUrl: string | null = null;
-  if (devOrigin) {
-    try {
-      devOriginUrl = new URL(/^https?:\/\//i.test(devOrigin) ? devOrigin : `http://${devOrigin}`).origin;
-    } catch {
-      devOriginUrl = null;
-    }
-  }
-  const usesOfficeAppRoutes = !!devOriginUrl && targetOrigin === devOriginUrl;
+  const devOrigin = officeDevOrigin();
+  const usesOfficeAppRoutes = !!devOrigin && targetOrigin === devOrigin;
   const publicPath = usesOfficeAppRoutes
     ? publicTail
       ? `/${school.toLowerCase()}/office/${publicTail}`

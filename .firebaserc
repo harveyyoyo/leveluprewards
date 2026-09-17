@@ -7,6 +7,9 @@
       "hosting": {
         "default": [
           "studio-1273073612-71183"
+        ],
+        "office": [
+          "levelup-office"
         ]
       }
     }

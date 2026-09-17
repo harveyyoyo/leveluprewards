@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { updateDoc, type DocumentReference, type Firestore } from 'firebase/firestore';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, Undo2, Redo2, Coins, Sparkles, Check, Save } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,12 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { Coupon as CouponPreview } from '@/components/coupons/Coupon';
+import {
+  CoinTokenPreview,
+  COIN_FINISH_PALETTES,
+  type CoinFinish,
+  type CoinRimStyle,
+} from '@/components/coupons/CoinTokenPreview';
 import type { Database } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -87,7 +93,7 @@ function EmojiPickerField({
   return (
     <div className="space-y-1.5">
       <Label className="text-xs font-semibold">{label}</Label>
-      <Input value={value} onChange={(e) => onChange(e.target.value)} maxLength={10} className="h-9 text-center text-lg" aria-label={label} />
+      <Input value={value} onChange={(e) => onChange(e.target.value)} maxLength={10} className="h-9 text-center text-lg font-bold" aria-label={label} />
       <div className="flex flex-wrap gap-1.5 pt-1">
         {presets.map((p) => (
           <button
@@ -181,6 +187,21 @@ const MONEY_ICON_PRESETS: EmojiPreset[] = [
   { emoji: '🧾', name: 'Receipt' },
 ];
 
+const COIN_ICON_PRESETS: EmojiPreset[] = [
+  { emoji: '🪙', name: 'Token' },
+  { emoji: '⭐', name: 'Star' },
+  { emoji: '🏆', name: 'Trophy' },
+  { emoji: '🥇', name: 'Gold Medal' },
+  { emoji: '💎', name: 'Gem' },
+  { emoji: '👑', name: 'Crown' },
+  { emoji: '🦁', name: 'Lion' },
+  { emoji: '🦅', name: 'Eagle' },
+  { emoji: '🚀', name: 'Rocket' },
+  { emoji: '🎓', name: 'Graduation' },
+  { emoji: '🔥', name: 'Flame' },
+  { emoji: '🎯', name: 'Target' },
+];
+
 type PointsThemeValues = { bg: string; text: string; border: string };
 const POINTS_THEMES: SwatchTheme<PointsThemeValues>[] = [
   { name: 'Classic', values: { bg: '#ffffff', text: '#000000', border: '#94a3b8' } },
@@ -210,9 +231,11 @@ export type AdminCurrencyDesignTabProps = {
 };
 
 type FormState = {
-  currencyMode: 'points' | 'money';
+  currencyMode: 'points' | 'money' | 'coins';
   pointsDesign: string;
   moneyDesign: string;
+  coinDesign: string;
+  // Points coupon design
   couponBgColor: string;
   couponTextColor: string;
   couponBorderColor: string;
@@ -221,6 +244,7 @@ type FormState = {
   pointsShowSchoolName: boolean;
   pointsShowBarcode: boolean;
   pointsShowDomain: boolean;
+  // Money bill design
   moneyBgColor: string;
   moneyAccentColor: string;
   moneyTextColor: string;
@@ -230,6 +254,15 @@ type FormState = {
   moneyShowSerial: boolean;
   moneyShowGuilloche: boolean;
   moneyShowSchoolName: boolean;
+  moneyWatermark: string;
+  moneySignatureTitle: string;
+  // Coins & tokens design
+  coinFinish: CoinFinish;
+  coinRimStyle: CoinRimStyle;
+  coinTopText: string;
+  coinBottomText: string;
+  coinShowSchoolName: boolean;
+  coinShowValue: boolean;
 };
 
 function formStateFromSchool(cs: Database['currencySettings'] | undefined): FormState {
@@ -237,6 +270,7 @@ function formStateFromSchool(cs: Database['currencySettings'] | undefined): Form
     currencyMode: cs?.mode || 'points',
     pointsDesign: cs?.pointsDesign || '⭐',
     moneyDesign: cs?.moneyDesign || '💵',
+    coinDesign: cs?.coinDesign || '🪙',
     couponBgColor: cs?.couponBgColor || '#ffffff',
     couponTextColor: cs?.couponTextColor || '#000000',
     couponBorderColor: cs?.couponBorderColor || '#94a3b8',
@@ -254,6 +288,14 @@ function formStateFromSchool(cs: Database['currencySettings'] | undefined): Form
     moneyShowSerial: cs?.moneyShowSerial ?? true,
     moneyShowGuilloche: cs?.moneyShowGuilloche ?? true,
     moneyShowSchoolName: cs?.moneyShowSchoolName ?? true,
+    moneyWatermark: cs?.moneyWatermark || '',
+    moneySignatureTitle: cs?.moneySignatureTitle || 'Issued by',
+    coinFinish: (cs?.coinFinish as CoinFinish) || 'gold',
+    coinRimStyle: (cs?.coinRimStyle as CoinRimStyle) || 'ridged',
+    coinTopText: cs?.coinTopText || '',
+    coinBottomText: cs?.coinBottomText || 'LEVEL UP REWARDS',
+    coinShowSchoolName: cs?.coinShowSchoolName ?? true,
+    coinShowValue: cs?.coinShowValue ?? true,
   };
 }
 
@@ -269,10 +311,54 @@ export function AdminCurrencyDesignTab({
 
   const [saved, setSaved] = useState<FormState>(() => formStateFromSchool(cs));
   const [form, setForm] = useState<FormState>(() => formStateFromSchool(cs));
+  const [history, setHistory] = useState<FormState[]>([]);
+  const [future, setFuture] = useState<FormState[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewDenom, setPreviewDenom] = useState<number>(10);
 
-  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+    setHistory((prev) => [...prev.slice(-25), form]);
+    setFuture([]);
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleUndo = useCallback(() => {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory((h) => h.slice(0, h.length - 1));
+    setFuture((f) => [form, ...f]);
+    setForm(prev);
+    playSound('click');
+  }, [history, form, playSound]);
+
+  const handleRedo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    setFuture((f) => f.slice(1));
+    setHistory((h) => [...h, form]);
+    setForm(next);
+    playSound('click');
+  }, [future, form, playSound]);
+
+  // Keyboard shortcut listener for Ctrl+Z and Ctrl+Y
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
 
   const isDirty = useMemo(() => JSON.stringify(form) !== JSON.stringify(saved), [form, saved]);
 
@@ -287,6 +373,7 @@ export function AdminCurrencyDesignTab({
         'currencySettings.mode': form.currencyMode,
         'currencySettings.pointsDesign': form.pointsDesign,
         'currencySettings.moneyDesign': form.moneyDesign,
+        'currencySettings.coinDesign': form.coinDesign,
         // Points coupon
         'currencySettings.couponBgColor': form.couponBgColor,
         'currencySettings.couponTextColor': form.couponTextColor,
@@ -306,8 +393,19 @@ export function AdminCurrencyDesignTab({
         'currencySettings.moneyShowSerial': form.moneyShowSerial,
         'currencySettings.moneyShowGuilloche': form.moneyShowGuilloche,
         'currencySettings.moneyShowSchoolName': form.moneyShowSchoolName,
+        'currencySettings.moneyWatermark': form.moneyWatermark,
+        'currencySettings.moneySignatureTitle': form.moneySignatureTitle,
+        // Coins & tokens
+        'currencySettings.coinFinish': form.coinFinish,
+        'currencySettings.coinRimStyle': form.coinRimStyle,
+        'currencySettings.coinTopText': form.coinTopText,
+        'currencySettings.coinBottomText': form.coinBottomText,
+        'currencySettings.coinShowSchoolName': form.coinShowSchoolName,
+        'currencySettings.coinShowValue': form.coinShowValue,
       });
       setSaved(form);
+      setHistory([]);
+      setFuture([]);
       playSound('success');
       toast({ title: 'Currency & Design settings saved' });
     } catch (e) {
@@ -318,14 +416,19 @@ export function AdminCurrencyDesignTab({
     }
   };
 
-  const handleReset = () => setForm(saved);
+  const handleReset = () => {
+    setForm(saved);
+    setHistory([]);
+    setFuture([]);
+    playSound('click');
+  };
 
   const previewCoupon = {
     id: 'preview',
     schoolId,
     code: 'A12345B',
-    points: 10,
-    value: 10,
+    points: previewDenom,
+    value: previewDenom,
     category: 'Good Behavior Award',
     teacher: 'Mr. Teacher',
     teacherId: 't1',
@@ -352,63 +455,153 @@ export function AdminCurrencyDesignTab({
         moneyShowGuilloche: form.moneyShowGuilloche,
         moneyShowSchoolName: form.moneyShowSchoolName,
       }
-    : {
-        mode: 'points' as const,
-        icon: form.pointsDesign,
-        label: 'Points',
-        couponBgColor: form.couponBgColor,
-        couponTextColor: form.couponTextColor,
-        couponBorderColor: form.couponBorderColor,
-        couponBorderStyle: form.couponBorderStyle,
-        pointsTitle: form.pointsTitle,
-        pointsShowSchoolName: form.pointsShowSchoolName,
-        pointsShowBarcode: form.pointsShowBarcode,
-        pointsShowDomain: form.pointsShowDomain,
-      };
+    : form.currencyMode === 'coins'
+      ? {
+          mode: 'coins' as const,
+          icon: form.coinDesign,
+          label: 'Tokens',
+          coinFinish: form.coinFinish,
+          coinRimStyle: form.coinRimStyle,
+          coinTopText: form.coinTopText,
+          coinBottomText: form.coinBottomText,
+          coinShowSchoolName: form.coinShowSchoolName,
+          coinShowValue: form.coinShowValue,
+        }
+      : {
+          mode: 'points' as const,
+          icon: form.pointsDesign,
+          label: 'Points',
+          couponBgColor: form.couponBgColor,
+          couponTextColor: form.couponTextColor,
+          couponBorderColor: form.couponBorderColor,
+          couponBorderStyle: form.couponBorderStyle,
+          pointsTitle: form.pointsTitle,
+          pointsShowSchoolName: form.pointsShowSchoolName,
+          pointsShowBarcode: form.pointsShowBarcode,
+          pointsShowDomain: form.pointsShowDomain,
+        };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Card className="border-0 bg-background shadow-lg rounded-3xl overflow-hidden">
         <CardHeader className="p-6 md:p-8 border-b bg-gradient-to-r from-muted/50 via-background to-muted/20">
-          <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
-            <span className="text-2xl">🎨</span>
-            Currency & Coupon Design
-            {isDirty && (
-              <Badge variant="secondary" className="ml-1 font-semibold normal-case tracking-normal">
-                Unsaved changes
-              </Badge>
-            )}
-          </CardTitle>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <CardTitle className="text-xl font-black tracking-tight flex items-center gap-3">
+              <span className="text-2xl">🎨</span>
+              Currency & Reward Studio
+              {isDirty && (
+                <Badge variant="secondary" className="ml-1 font-semibold normal-case tracking-normal">
+                  Unsaved changes
+                </Badge>
+              )}
+            </CardTitle>
+
+            {/* Undo & Redo Actions */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleUndo}
+                disabled={history.length === 0}
+                className="rounded-xl h-9 px-3 gap-1.5 font-bold"
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Undo</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleRedo}
+                disabled={future.length === 0}
+                className="rounded-xl h-9 px-3 gap-1.5 font-bold"
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Redo</span>
+              </Button>
+              {isDirty && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="rounded-xl h-9 px-3 text-muted-foreground font-bold"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1.5" />
+                  Discard
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSave}
+                disabled={isSaving || !isDirty}
+                className="rounded-xl h-9 px-4 font-bold shadow-md bg-primary hover:bg-primary/90 text-white"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
+                Save Design
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-6 md:p-8">
 
-          {/* ── Mode Selector ── */}
+          {/* ── Mode Selector: 3 Reward Systems ── */}
           <div className="space-y-4 mb-8">
-            <Label className="text-lg font-bold">Reward System</Label>
-            <div className="flex gap-4">
+            <Label className="text-base font-black">Reward System Mode</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div
                 role="button"
                 tabIndex={0}
                 className={cn(
-                  "flex-1 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                  form.currencyMode === 'points' ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
+                  "p-4 rounded-2xl border-2 cursor-pointer transition-all text-left",
+                  form.currencyMode === 'points'
+                    ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                    : "border-border hover:bg-muted/40 text-muted-foreground"
                 )}
                 onClick={() => set('currencyMode', 'points')}
               >
-                <div className={cn("font-bold text-lg mb-1", form.currencyMode === 'points' ? 'text-primary' : '')}>⭐ Points</div>
-                <div className="text-sm">Classic coupon-style reward system</div>
+                <div className={cn("font-bold text-base mb-1 flex items-center gap-1.5", form.currencyMode === 'points' ? 'text-primary' : 'text-foreground')}>
+                  ⭐ Points Coupons
+                </div>
+                <div className="text-xs">Classic ticket-style printed reward vouchers</div>
               </div>
+
               <div
                 role="button"
                 tabIndex={0}
                 className={cn(
-                  "flex-1 p-4 rounded-xl border-2 cursor-pointer transition-all",
-                  form.currencyMode === 'money' ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500 shadow-sm" : "border-border hover:bg-muted/50 text-muted-foreground"
+                  "p-4 rounded-2xl border-2 cursor-pointer transition-all text-left",
+                  form.currencyMode === 'money'
+                    ? "border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500 shadow-sm"
+                    : "border-border hover:bg-muted/40 text-muted-foreground"
                 )}
                 onClick={() => set('currencyMode', 'money')}
               >
-                <div className={cn("font-bold text-lg mb-1", form.currencyMode === 'money' ? 'text-emerald-600' : '')}>💵 Play Money</div>
-                <div className="text-sm">Dollar-bill style reward system</div>
+                <div className={cn("font-bold text-base mb-1 flex items-center gap-1.5", form.currencyMode === 'money' ? 'text-emerald-600' : 'text-foreground')}>
+                  💵 Play Money Bills
+                </div>
+                <div className="text-xs">Dollar-bill paper cash with ornamental borders</div>
+              </div>
+
+              <div
+                role="button"
+                tabIndex={0}
+                className={cn(
+                  "p-4 rounded-2xl border-2 cursor-pointer transition-all text-left",
+                  form.currencyMode === 'coins'
+                    ? "border-amber-500 bg-amber-500/5 ring-1 ring-amber-500 shadow-sm"
+                    : "border-border hover:bg-muted/40 text-muted-foreground"
+                )}
+                onClick={() => set('currencyMode', 'coins')}
+              >
+                <div className={cn("font-bold text-base mb-1 flex items-center gap-1.5", form.currencyMode === 'coins' ? 'text-amber-600' : 'text-foreground')}>
+                  🪙 Coins & Tokens
+                </div>
+                <div className="text-xs">3D metallic medallions with engraved rim text</div>
               </div>
             </div>
           </div>
@@ -418,13 +611,14 @@ export function AdminCurrencyDesignTab({
             {/* ── Left: Controls ── */}
             <div className="space-y-6 min-w-0">
               {/* Emoji pickers */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <EmojiPickerField label="Points Icon" value={form.pointsDesign} onChange={(v) => set('pointsDesign', v)} presets={POINTS_ICON_PRESETS} />
                 <EmojiPickerField label="Money Icon" value={form.moneyDesign} onChange={(v) => set('moneyDesign', v)} presets={MONEY_ICON_PRESETS} />
+                <EmojiPickerField label="Token Icon" value={form.coinDesign} onChange={(v) => set('coinDesign', v)} presets={COIN_ICON_PRESETS} />
               </div>
 
               <div className="border-t pt-6">
-                {form.currencyMode === 'points' ? (
+                {form.currencyMode === 'points' && (
                   /* ── Points Coupon Styling ── */
                   <div className="space-y-5">
                     <Label className="text-base font-bold flex items-center gap-2">
@@ -472,7 +666,9 @@ export function AdminCurrencyDesignTab({
                       <ToggleField label="App Domain" description="Show LevelUp Rewards domain at the bottom" checked={form.pointsShowDomain} onChange={(v) => set('pointsShowDomain', v)} />
                     </div>
                   </div>
-                ) : (
+                )}
+
+                {form.currencyMode === 'money' && (
                   /* ── Money Bill Designer ── */
                   <div className="space-y-5">
                     <Label className="text-base font-bold flex items-center gap-2">
@@ -544,29 +740,148 @@ export function AdminCurrencyDesignTab({
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Save */}
-              <div className="pt-4 flex flex-wrap items-center gap-3">
-                <Button onClick={handleSave} disabled={isSaving || !isDirty} className="px-8 h-11 font-bold">
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Settings
-                </Button>
-                {isDirty && (
-                  <Button onClick={handleReset} variant="ghost" disabled={isSaving} className="h-11 font-semibold text-muted-foreground">
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Discard changes
-                  </Button>
+                {form.currencyMode === 'coins' && (
+                  /* ── Coins & Tokens Designer ── */
+                  <div className="space-y-6">
+                    <Label className="text-base font-bold flex items-center gap-2">
+                      🪙 Coins & Tokens Designer
+                    </Label>
+
+                    {/* Metallic Finish Swatches */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Metallic Finish</Label>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                        {(['gold', 'silver', 'bronze', 'copper', 'emerald'] as CoinFinish[]).map((finish) => {
+                          const palette = COIN_FINISH_PALETTES[finish];
+                          const isActive = form.coinFinish === finish;
+                          return (
+                            <button
+                              key={finish}
+                              type="button"
+                              onClick={() => set('coinFinish', finish)}
+                              className={cn(
+                                'p-2.5 rounded-2xl border-2 transition-all flex flex-col items-center gap-1.5 text-center',
+                                isActive
+                                  ? 'border-primary ring-2 ring-primary/20 bg-primary/5 shadow-sm'
+                                  : 'border-border hover:bg-muted/40',
+                              )}
+                            >
+                              <div
+                                className="w-8 h-8 rounded-full border shadow-sm"
+                                style={{ background: palette.outerRing }}
+                              />
+                              <span className="text-xs font-bold leading-tight">{palette.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Rim Style */}
+                    <div className="space-y-2">
+                      <Label className="text-xs font-semibold text-muted-foreground">Coin Edge Rim Style</Label>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { id: 'ridged' as const, label: 'Ridged Edge', desc: 'Milled grooves around rim' },
+                          { id: 'stars' as const, label: 'Star Studded', desc: 'Stars engraved around edge' },
+                          { id: 'smooth' as const, label: 'Smooth Rim', desc: 'Double concentric rings' },
+                        ].map((r) => {
+                          const isActive = form.coinRimStyle === r.id;
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => set('coinRimStyle', r.id)}
+                              className={cn(
+                                'p-2.5 rounded-xl border-2 text-left transition-all',
+                                isActive
+                                  ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                  : 'border-border hover:bg-muted/40',
+                              )}
+                            >
+                              <div className="text-xs font-bold">{r.label}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5">{r.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Engraved Rim Text */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Top Rim Engraving</Label>
+                        <Input
+                          value={form.coinTopText}
+                          onChange={(e) => set('coinTopText', e.target.value)}
+                          placeholder="e.g. EXCELLENCE or School Name"
+                          maxLength={25}
+                          className="h-9 font-bold uppercase text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold">Bottom Rim Engraving</Label>
+                        <Input
+                          value={form.coinBottomText}
+                          onChange={(e) => set('coinBottomText', e.target.value)}
+                          placeholder="e.g. LEVEL UP REWARDS"
+                          maxLength={25}
+                          className="h-9 font-bold uppercase text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Toggles */}
+                    <div className="border-t pt-4 space-y-1">
+                      <ToggleField
+                        label="Include School Name"
+                        description="Use school name on top rim when no custom text is set"
+                        checked={form.coinShowSchoolName}
+                        onChange={(v) => set('coinShowSchoolName', v)}
+                      />
+                      <ToggleField
+                        label="Display Token Value"
+                        description="Show number value below the center emblem"
+                        checked={form.coinShowValue}
+                        onChange={(v) => set('coinShowValue', v)}
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* ── Right: Live Preview ── */}
-            <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-2xl border min-h-[420px] lg:w-[480px]">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-6">Live Preview</h3>
+            <div className="flex flex-col items-center justify-center p-8 bg-muted/30 rounded-3xl border min-h-[440px] lg:w-[480px]">
+              <div className="flex items-center justify-between w-full mb-6">
+                <h3 className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                  Live Preview
+                </h3>
+
+                {/* Denomination Switcher */}
+                <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl">
+                  {[1, 5, 10, 20, 50, 100].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setPreviewDenom(d)}
+                      className={cn(
+                        'px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all',
+                        previewDenom === d
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {form.currencyMode === 'money' ? `$${d}` : d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div
                 style={{ fontSize: form.currencyMode === 'money' ? '32px' : '36px' }}
-                className="pointer-events-none drop-shadow-lg"
+                className="pointer-events-none drop-shadow-xl"
               >
                 <CouponPreview
                   coupon={previewCoupon}
@@ -574,10 +889,13 @@ export function AdminCurrencyDesignTab({
                   previewCurrency={previewCurrency}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-6 text-center max-w-[300px]">
+
+              <p className="text-[11px] text-muted-foreground mt-6 text-center max-w-[320px] leading-relaxed">
                 {form.currencyMode === 'money'
-                  ? 'This is how your printed money bills will look. Every element above updates the preview in real time.'
-                  : 'This is how your printed coupons will look. Adjust colors and styles above.'}
+                  ? 'Real-time preview of your printed school bucks. Switch values above to test different denominations.'
+                  : form.currencyMode === 'coins'
+                    ? '3D metallic token preview. The rim text and center emblem update dynamically.'
+                    : 'Real-time preview of your printed coupons. Adjust colors and borders on the left.'}
               </p>
             </div>
           </div>

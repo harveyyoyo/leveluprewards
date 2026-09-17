@@ -19,16 +19,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "src/lib/server/classroomAlertRulesEvaluator.ts",
-    "src/lib/server/classroomPointsAdmin.ts",
-    "src/lib/server/libraryAiIsbnLookup.ts",
-    "src/lib/server/mediaAssetLibrary.ts",
-    "src/lib/server/mediaAssetRecapture.ts",
-    "src/components/ui/NumericKeypad.tsx",
-    "src/lib/google/googleSchoolAccess.ts"
-  ]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }

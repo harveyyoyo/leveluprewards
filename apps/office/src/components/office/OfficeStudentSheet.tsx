@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -61,15 +61,25 @@ export function OfficeStudentSheet({
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Firestore's live snapshot hands us a new `student` object on every background
+  // update, not just when the sheet is opened for a different student. Re-seeding
+  // (and force-closing edit mode) on every one of those would silently wipe out
+  // whatever the admin is mid-way through typing - only do it when the sheet
+  // actually opens or switches to a different student.
+  const seededKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (student) {
-      setFirstName(student.firstName ?? '');
-      setLastName(student.lastName ?? '');
-      setNickname(student.nickname ?? '');
-      setClassId(student.classId ?? '');
-      setTeacherId(student.teacherId ?? '');
-      setNotes(student.notes ?? '');
+    if (!open || !student) {
+      seededKeyRef.current = null;
+      return;
     }
+    if (seededKeyRef.current === student.id) return;
+    seededKeyRef.current = student.id;
+    setFirstName(student.firstName ?? '');
+    setLastName(student.lastName ?? '');
+    setNickname(student.nickname ?? '');
+    setClassId(student.classId ?? '');
+    setTeacherId(student.teacherId ?? '');
+    setNotes(student.notes ?? '');
     setIsEditing(false);
   }, [student, open]);
 
@@ -147,8 +157,16 @@ export function OfficeStudentSheet({
     }
   };
 
+  const handleOpenChange = (next: boolean) => {
+    if (!next && isEditing) {
+      if (!confirm('Discard unsaved changes to this student?')) return;
+      setIsEditing(false);
+    }
+    onOpenChange(next);
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader className="relative">
           {isEditing ? (

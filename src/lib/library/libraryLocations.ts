@@ -107,7 +107,6 @@ export function libraryPath(
 ): string {
   const base = `/${schoolId}/library${suffix}`;
   const id = normalizeLibraryLocationId(libraryLocationId);
-  if (id === DEFAULT_LIBRARY_LOCATION_ID) return base;
   return `${base}${base.includes('?') ? '&' : '?'}library=${encodeURIComponent(id)}`;
 }
 

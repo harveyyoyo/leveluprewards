@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, deleteDoc, doc, getDocs, limit, query, setDoc, where } from 'firebase/firestore';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import type { LibraryLocation, LibraryLocationKind } from '@/lib/library/libraryLocations';
 import {
@@ -149,21 +149,16 @@ export function useLibraryLocations(schoolId: string | null | undefined) {
 export function useActiveLibraryLocation(
   schoolId: string | null | undefined,
   locations: LibraryLocation[],
-  options?: { requireExplicitChoice?: boolean },
+  options?: { requireExplicitChoice?: boolean; ignoreStoredChoice?: boolean },
 ) {
   const router = useRouter();
   const pathname = usePathname();
-  const [urlId, setUrlId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const urlId = searchParams.get('library');
   const [forcePick, setForcePick] = useState(false);
-  useEffect(() => {
-    const sync = () => {
-      setUrlId(new URLSearchParams(window.location.search).get('library'));
-    };
-    sync();
-    window.addEventListener('popstate', sync);
-    return () => window.removeEventListener('popstate', sync);
-  }, [pathname]);
-  const storedId = schoolId ? readStoredLibraryLocationId(schoolId) : null;
+  // ignoreStoredChoice: only the URL's own ?library= counts as "already chosen" — a remembered
+  // pick from a previous visit does not, so a plain link always asks again.
+  const storedId = schoolId && !options?.ignoreStoredChoice ? readStoredLibraryLocationId(schoolId) : null;
   const requestedId = urlId || storedId;
   const hasExplicitChoice = Boolean(urlId || storedId);
   const needsChoice = Boolean(
@@ -177,19 +172,19 @@ export function useActiveLibraryLocation(
     (id: string) => {
       setForcePick(false);
       if (schoolId) writeStoredLibraryLocationId(schoolId, id);
-      const params = new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search);
-      if (id === DEFAULT_LIBRARY_LOCATION_ID) params.delete('library');
-      else params.set('library', id);
+      // Always write the id into the URL — including the main library — so picking it counts
+      // as an explicit choice. Leaving it off for the main library (as this used to) made a
+      // deliberate pick of "School Library" look identical to no choice at all.
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('library', id);
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-      setUrlId(id === DEFAULT_LIBRARY_LOCATION_ID ? null : id);
     },
-    [pathname, router, schoolId],
+    [pathname, router, schoolId, searchParams],
   );
 
   const resetChoice = useCallback(() => {
     setForcePick(true);
-    setUrlId(null);
     if (schoolId && typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(libraryLocationStorageKey(schoolId));

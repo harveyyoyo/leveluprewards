@@ -51,7 +51,7 @@ import {
     type BarcodeNumberScheme,
     DEFAULT_LIBRARY_PLACEMENT_ZONES,
 } from '@/lib/library/libraryClassification';
-import type { LibraryOrganizationScheme } from '@/lib/types';
+import type { LibraryOrganizationScheme, IdCardCustomOptions } from '@/lib/types';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
@@ -230,10 +230,16 @@ interface Settings {
     idCardPaperId?: string;
     /** Student ID card corners: rounded (ID-1 look) or rectangular (easier to cut on plain paper). */
     idCardCornerStyle?: 'rounded' | 'rectangular';
+    /** Card print layout: landscape (horizontal) or portrait (vertical badge). */
+    idCardOrientation?: 'landscape' | 'portrait';
+    /** Detailed visual styling options for student ID cards. */
+    idCardCustomOptions?: IdCardCustomOptions;
     /** Student ID card design layout. */
     idCardLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
     /** When on, student/staff/prize shelf ID cards show a QR code instead of a Code 128 barcode. */
     idCardUseQrCode?: boolean;
+    /** Optional custom message printed at the bottom of sheets or cards. */
+    printFooterNote?: string;
     /** When on, printed coupons show a QR code on the left instead of a bottom barcode strip. */
     couponUseQrCode?: boolean;
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
@@ -550,6 +556,8 @@ interface Settings {
     libraryAllowRenewIfOverdue?: boolean;
     /** Allow a student to borrow multiple copies of the same book title. */
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Allowed barcode types when checking out books: 'both', 'barcode_only', or 'isbn_only'. */
+    libraryCheckoutBarcodeMode?: 'both' | 'barcode_only' | 'isbn_only';
     /** Allow taking out / checking out books using the published ISBN barcode in addition to copy barcodes. */
     libraryAllowIsbnCheckout?: boolean;
     /** Maximum fine or deduction cap per book (0 = no limit). */
@@ -836,6 +844,7 @@ const defaultSettings: Settings = {
     libraryRenewalDays: 14,
     libraryAllowRenewIfOverdue: false,
     libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryCheckoutBarcodeMode: 'both',
     libraryAllowIsbnCheckout: true,
     libraryMaxFineCap: 20,
     libraryRequireWaiverReason: true,
@@ -916,8 +925,11 @@ const defaultSettings: Settings = {
     idCardPrinterFamily: 'browser_sheet',
     idCardPaperId: defaultPaperForFamily('browser_sheet'),
     idCardCornerStyle: 'rounded',
+    idCardOrientation: 'landscape',
+    idCardCustomOptions: undefined,
     idCardLayout: 'classic',
     idCardUseQrCode: false,
+    printFooterNote: '',
     couponUseQrCode: false,
     printerReminderPrizeVouchers: '',
     prizeVoucherPaperFormat: 'label_50x70',

@@ -6,6 +6,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
+import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 
 type UseAdminGooglePasscodeBypassOptions = {
   schoolId: string | null | undefined;
@@ -17,7 +18,8 @@ type UseAdminGooglePasscodeBypassOptions = {
 
 /**
  * Google sign-in can open school admin without a passcode when the server confirms allowlist access.
- * Auto-login only runs for accounts that can bypass (allowlisted developer Google accounts).
+ * Demo schools (the public sample schools) use the same known seeded passcode every time, so they
+ * auto-login too instead of asking the visitor to type it in.
  */
 export function useAdminGooglePasscodeBypass({
   schoolId,
@@ -31,13 +33,23 @@ export function useAdminGooglePasscodeBypass({
   const [googleAutoLoginExhausted, setGoogleAutoLoginExhausted] = useState(false);
   const attemptedRef = useRef(false);
 
-  const canBypassAdminPasscode = canBypassSchoolAdminPasscode(user);
+  const isDemoSchool = isPublicSampleSchoolId(schoolId);
+  const canBypassAdminPasscode = canBypassSchoolAdminPasscode(user) || isDemoSchool;
 
   const loginAsAdminViaGoogle = useCallback(async (): Promise<boolean> => {
     const sid = schoolId?.trim().toLowerCase();
     if (!sid || !canBypassAdminPasscode) return false;
     setIsAutoLoggingIn(true);
     try {
+      if (isDemoSchool && !canBypassSchoolAdminPasscode(user)) {
+        const result = await loginSchoolAdmin(login, user, sid, SAMPLE_SCHOOL_ACCESS_PASSCODE);
+        if (result.ok) {
+          onSuccess?.();
+          return true;
+        }
+        onError?.(result.message);
+        return false;
+      }
       // ID token can briefly omit Google identities right after popup/redirect link.
       const maxAttempts = 3;
       for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -57,7 +69,7 @@ export function useAdminGooglePasscodeBypass({
     } finally {
       setIsAutoLoggingIn(false);
     }
-  }, [canBypassAdminPasscode, login, onError, onSuccess, schoolId, user]);
+  }, [canBypassAdminPasscode, isDemoSchool, login, onError, onSuccess, schoolId, user]);
 
   useEffect(() => {
     if (!autoLogin || attemptedRef.current) return;

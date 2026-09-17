@@ -50,7 +50,7 @@ export function OfficeClassesView({
 }: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { openStudent, openClass } = useOfficeEntityNav();
+  const { openStudent, openClass, selectedStudentId } = useOfficeEntityNav();
 
   const exportClassRoster = () => {
     const rows: string[][] = [];
@@ -88,6 +88,14 @@ export function OfficeClassesView({
     }
   }, [searchParams, classes, students, isLoading]);
 
+  // The student sheet itself is owned by OfficeEntityNavProvider (selectedStudentId), not
+  // this component. When it closes (selectedStudentId -> null), drop our own highlight too -
+  // otherwise the url-sync effect below keeps re-writing `?student=` from the stale
+  // highlightStudentId and the sheet immediately reopens itself.
+  useEffect(() => {
+    if (!selectedStudentId) setHighlightStudentId(null);
+  }, [selectedStudentId]);
+
   useOfficeUrlSync({
     class: expandedClassId ?? undefined,
     student: highlightStudentId ?? undefined,
@@ -115,9 +123,17 @@ export function OfficeClassesView({
   };
 
   const handleSaveClass = async () => {
-    if (!firestore) return;
-    if (!className.trim()) {
+    if (!firestore || busy) return;
+    const trimmedName = className.trim();
+    if (!trimmedName) {
       toast({ variant: 'destructive', title: 'Class name is required.' });
+      return;
+    }
+    const duplicate = classes.some(
+      (c) => c.id !== editingClass?.id && c.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+    );
+    if (duplicate) {
+      toast({ variant: 'destructive', title: 'A class with that name already exists.' });
       return;
     }
     setBusy(true);
@@ -192,7 +208,7 @@ export function OfficeClassesView({
 
   const handleDeleteClass = async (cls: OfficeClass, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore) return;
+    if (!firestore || busy) return;
 
     const classStudents = students.filter((s) => s.classId === cls.id);
     const hasStudents = classStudents.length > 0;
@@ -369,6 +385,7 @@ export function OfficeClassesView({
                         size="icon"
                         className="h-8 w-8 rounded-lg hover:bg-muted/80 text-destructive hover:text-destructive/80"
                         onClick={(e) => void handleDeleteClass(cls, e)}
+                        disabled={busy}
                         aria-label="Delete class"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -427,7 +444,7 @@ export function OfficeClassesView({
         })}
         {filtered.length === 0 ? (
           <p className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No classes match your search.
+            {query.trim() ? 'No classes match your search.' : 'No classes yet - create one to get started.'}
           </p>
         ) : null}
       </div>
@@ -509,7 +526,7 @@ export function OfficeClassesView({
                 placeholder="e.g. Grade 5"
                 className="rounded-xl"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') void handleSaveClass();
+                  if (e.key === 'Enter' && !busy) void handleSaveClass();
                 }}
               />
             </div>

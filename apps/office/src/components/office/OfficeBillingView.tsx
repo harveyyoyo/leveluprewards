@@ -40,6 +40,7 @@ import type { OfficeStudent } from '@/lib/office/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   accountBalanceFromInvoices,
+  applyInvoiceAmountEdit,
   autoAllocatePayment,
   invoiceBalanceDueCents,
   invoicePaidCents,
@@ -293,7 +294,8 @@ export function OfficeBillingView({
 
       const promises = targetAccounts.map(async (account) => {
         const invoiceRef = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
-        const invoiceDoc = {
+        const invoiceDoc: OfficeInvoice = {
+          id: invoiceRef.id,
           accountId: account.id,
           label: bulkLabel.trim(),
           amountCents: cents,
@@ -301,18 +303,19 @@ export function OfficeBillingView({
           status,
           createdAt: Date.now(),
         };
-        await setDoc(invoiceRef, invoiceDoc);
+        await setDoc(invoiceRef, {
+          accountId: invoiceDoc.accountId,
+          label: invoiceDoc.label,
+          amountCents: invoiceDoc.amountCents,
+          dueDate: invoiceDoc.dueDate,
+          status: invoiceDoc.status,
+          createdAt: invoiceDoc.createdAt,
+        });
 
         if (status === 'sent') {
-          const nextInvoices: OfficeInvoice[] = [
-            ...invoices,
-            {
-              id: invoiceRef.id,
-              ...invoiceDoc,
-            },
-          ];
+          const nextInvoices: OfficeInvoice[] = [...invoices, invoiceDoc];
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', account.id), {
-            balanceCents: (account.balanceCents || 0) + cents,
+            balanceCents: accountBalanceFromInvoices(account.id, nextInvoices),
             status: billingStatusForAccount(account.id, nextInvoices, account.status),
             updatedAt: Date.now(),
           });
@@ -323,7 +326,7 @@ export function OfficeBillingView({
 
       toast({
         title: 'Bulk invoicing complete',
-        description: `Successfully generated ${createdCount} invoices totaling $${(totalAmountCents / 100).toFixed(2)}.`,
+        description: `Successfully generated ${createdCount} invoices totaling ${formatCents(totalAmountCents)}.`,
       });
 
       setBulkOpen(false);
@@ -416,7 +419,11 @@ export function OfficeBillingView({
       setAccountOpen(false);
       resetAccountForm();
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not create account', description: (e as Error).message });
+      toast({
+        variant: 'destructive',
+        title: editAccountId ? 'Could not update account' : 'Could not create account',
+        description: (e as Error).message,
+      });
     } finally {
       setBusy(false);
     }
@@ -438,40 +445,24 @@ export function OfficeBillingView({
       if (editInvoiceId) {
         const existing = invoices.find((i) => i.id === editInvoiceId);
         if (!existing) throw new Error('Invoice not found');
-        const status = saveAsDraft ? 'draft' : existing.status === 'draft' && !saveAsDraft ? 'sent' : existing.status;
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
-          label: invoiceLabel.trim(),
+        const nextInvoice = applyInvoiceAmountEdit(existing, {
           amountCents: cents,
+          label: invoiceLabel.trim(),
           dueDate: due,
-          status,
+          saveAsDraft,
+        });
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
+          label: nextInvoice.label,
+          amountCents: nextInvoice.amountCents,
+          dueDate: nextInvoice.dueDate,
+          status: nextInvoice.status,
+          paidCents: nextInvoice.paidCents,
         });
         const account = accounts.find((a) => a.id === existing.accountId);
         if (account) {
-          const nextInvoices = invoices.map((i) =>
-            i.id === editInvoiceId
-              ? { ...i, label: invoiceLabel.trim(), amountCents: cents, dueDate: due, status }
-              : i,
-          );
-          const updatedInvoice = nextInvoices.find((i) => i.id === editInvoiceId)!;
-          const oldRemaining = invoiceBalanceDueCents(existing);
-          const newRemaining =
-            status === 'sent' || status === 'partial'
-              ? Math.max(0, cents - invoicePaidCents(existing))
-              : 0;
-          let balanceCents = account.balanceCents || 0;
-          if (existing.status === 'sent' || existing.status === 'partial') {
-            balanceCents = Math.max(0, balanceCents - oldRemaining + newRemaining);
-          } else if (status === 'sent' && existing.status === 'draft') {
-            balanceCents += cents;
-          }
-          const resolvedStatus = resolveInvoiceStatusAfterPayment(updatedInvoice, invoicePaidCents(updatedInvoice));
-          if (resolvedStatus !== status) {
-            await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', editInvoiceId), {
-              status: resolvedStatus,
-            });
-          }
+          const nextInvoices = invoices.map((i) => (i.id === editInvoiceId ? nextInvoice : i));
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
-            balanceCents,
+            balanceCents: accountBalanceFromInvoices(existing.accountId, nextInvoices),
             status: billingStatusForAccount(existing.accountId, nextInvoices, account.status),
             updatedAt: Date.now(),
           });
@@ -480,30 +471,28 @@ export function OfficeBillingView({
       } else {
         const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
         const status = saveAsDraft ? 'draft' : 'sent';
-        await setDoc(ref, {
+        const created: OfficeInvoice = {
+          id: ref.id,
           accountId: invoiceAccountId,
           label: invoiceLabel.trim(),
           amountCents: cents,
           dueDate: due,
           status,
           createdAt: Date.now(),
+        };
+        await setDoc(ref, {
+          accountId: created.accountId,
+          label: created.label,
+          amountCents: created.amountCents,
+          dueDate: created.dueDate,
+          status: created.status,
+          createdAt: created.createdAt,
         });
         const account = accounts.find((a) => a.id === invoiceAccountId);
         if (account && !saveAsDraft) {
-          const nextInvoices: OfficeInvoice[] = [
-            ...invoices,
-            {
-              id: ref.id,
-              accountId: invoiceAccountId,
-              label: invoiceLabel.trim(),
-              amountCents: cents,
-              dueDate: due,
-              status,
-              createdAt: Date.now(),
-            },
-          ];
+          const nextInvoices: OfficeInvoice[] = [...invoices, created];
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', invoiceAccountId), {
-            balanceCents: (account.balanceCents || 0) + cents,
+            balanceCents: accountBalanceFromInvoices(invoiceAccountId, nextInvoices),
             status: billingStatusForAccount(invoiceAccountId, nextInvoices, account.status),
             updatedAt: Date.now(),
           });
@@ -530,13 +519,12 @@ export function OfficeBillingView({
         status: 'void',
       });
       const account = accounts.find((a) => a.id === inv.accountId);
-      const balanceReduction = invoiceBalanceDueCents(inv);
-      if (account && balanceReduction > 0) {
+      if (account) {
         const nextInvoices = invoices.map((i) =>
           i.id === inv.id ? { ...i, status: 'void' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - balanceReduction),
+          balanceCents: accountBalanceFromInvoices(inv.accountId, nextInvoices),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -559,7 +547,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'sent' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: (account.balanceCents || 0) + (inv.amountCents || 0),
+          balanceCents: accountBalanceFromInvoices(inv.accountId, nextInvoices),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -743,7 +731,17 @@ export function OfficeBillingView({
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (!firestore || !confirm('Delete this billing account?')) return;
+    if (!firestore) return;
+    const linkedInvoices = invoices.filter((inv) => inv.accountId === id);
+    if (linkedInvoices.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Cannot delete this account',
+        description: `${linkedInvoices.length} invoice${linkedInvoices.length === 1 ? '' : 's'} still point to it. Remove or reassign those invoices first.`,
+      });
+      return;
+    }
+    if (!confirm('Delete this billing account?')) return;
     try {
       await deleteDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', id));
       toast({ title: 'Account removed' });
