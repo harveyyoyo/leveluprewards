@@ -1709,6 +1709,7 @@ export function StudentDashboardInner({
           '--theme-primary-foreground': primaryForeground,
           '--theme-card': themeCard,
           '--theme-accent': effectiveTheme.accent || 'hsl(var(--accent))',
+          '--theme-font-scale': String(fontScale),
           ...(effectiveTheme.backgroundStyle
             ? { background: effectiveTheme.backgroundStyle }
             : {

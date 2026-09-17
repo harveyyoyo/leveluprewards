@@ -1166,6 +1166,7 @@ export function PrizeDashboard({
             ['--theme-primary-foreground' as string]: primaryForeground,
             ['--theme-card' as string]: themeCard,
             ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
+            ['--theme-font-scale' as string]: String(fontScale),
             ...(activeTheme.backgroundStyle
                 ? { background: activeTheme.backgroundStyle }
                 : {
