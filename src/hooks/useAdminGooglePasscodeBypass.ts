@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
-import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode, hasGoogleAuthProvider, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { refreshGoogleIdToken } from '@/lib/google/googleAuthSession';
 import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 
@@ -34,7 +34,9 @@ export function useAdminGooglePasscodeBypass({
   const attemptedRef = useRef(false);
 
   const isDemoSchool = isPublicSampleSchoolId(schoolId);
-  const canBypassAdminPasscode = canBypassSchoolAdminPasscode(user) || isDemoSchool;
+  const canBypassAdminPasscode =
+    canBypassSchoolAdminPasscode(user) || hasGoogleAuthProvider(user) || isDemoSchool;
+
 
   const loginAsAdminViaGoogle = useCallback(async (): Promise<boolean> => {
     const sid = schoolId?.trim().toLowerCase();

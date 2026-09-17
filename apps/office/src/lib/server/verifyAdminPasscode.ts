@@ -22,6 +22,13 @@ function adminPasscodeFrom(data: Record<string, unknown>): string {
   return trimmedString(data.adminPasscode) || trimmedString(data.passcode) || '';
 }
 
+function schoolAdminEmailsFrom(data: Record<string, unknown>): string[] {
+  if (!Array.isArray(data.adminEmails)) return [];
+  return (data.adminEmails as unknown[])
+    .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+    .filter(Boolean);
+}
+
 function isGoogleAuthenticated(firebase: Record<string, unknown> | undefined): boolean {
   const provider = String(firebase?.sign_in_provider ?? '');
   if (provider === 'google.com') return true;
@@ -67,21 +74,35 @@ export async function verifyAdminPasscodeServer(
     throw new VerifyAdminPasscodeError('not-found', 'School not found.');
   }
 
+  const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
   const adminRoleRef = schoolRef.collection('roles_admin').doc(args.uid);
   // Primary: email allowlist from env var. Fallback: Firestore developer UID list
   // (survives env var misconfiguration / missing deploys).
   const developerCanBypass =
     isAllowedGoogleAdminBypass(args.email, googleAuth) ||
     (googleAuth && (await isDeveloperUid(db, args.uid)));
-  // Google/developer bypass applies only when no passcode was submitted (matches client gate).
-  const googleAdminBypass = developerCanBypass && passcode.length === 0;
+
+  const normalizedEmail = args.email.trim().toLowerCase();
+  const schoolAdminEmails = schoolAdminEmailsFrom(schoolData);
+  const isSchoolAdminGoogleUser =
+    googleAuth &&
+    normalizedEmail.length > 0 &&
+    schoolAdminEmails.includes(normalizedEmail);
+
+  // Google/developer or school admin bypass applies only when no passcode was submitted (matches client gate).
+  const googleAdminBypass = (developerCanBypass || isSchoolAdminGoogleUser) && passcode.length === 0;
 
   if (!googleAdminBypass) {
     if (passcode.length === 0) {
+      if (googleAuth && normalizedEmail) {
+        throw new VerifyAdminPasscodeError(
+          'permission-denied',
+          `The Google account (${args.email}) is not authorized as an administrator for this school.`,
+        );
+      }
       throw new VerifyAdminPasscodeError('invalid-argument', 'A valid passcode is required.');
     }
 
-    const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
     const legacyExpected = adminPasscodeFrom(schoolData);
     if (
       !(await verifyPasscodeCredential(
