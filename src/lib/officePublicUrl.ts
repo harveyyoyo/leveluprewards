@@ -24,16 +24,23 @@ function officeDevOrigin(): string | null {
 
 function officeCanonicalOrigin(): string | null {
   const host = canonicalOfficeHost();
-  if (!host) {
+  if (host) {
+    if (typeof window !== 'undefined') {
+      if (isLocalDevHost(window.location.host) && !isOfficeHostname(window.location.host)) {
+        return officeDevOrigin();
+      }
+    }
+    const scheme = host.includes('localhost') ? 'http' : 'https';
+    return `${scheme}://${host}`;
+  }
+  if (
+    typeof window !== 'undefined' &&
+    isLocalDevHost(window.location.host) &&
+    !isOfficeHostname(window.location.host)
+  ) {
     return officeDevOrigin();
   }
-  if (typeof window !== 'undefined') {
-    if (isLocalDevHost(window.location.host) && !isOfficeHostname(window.location.host)) {
-      return officeDevOrigin();
-    }
-  }
-  const scheme = host.includes('localhost') ? 'http' : 'https';
-  return `${scheme}://${host}`;
+  return null;
 }
 
 /** True when office subdomain URLs should be used (env configured or current host is office.*). */

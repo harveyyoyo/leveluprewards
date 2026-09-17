@@ -53,7 +53,7 @@ describe('office routing', () => {
     expect(officeHostInternalRewritePath('/yeshiva/office/grades')).toBeNull();
   });
 
-  it('redirects legacy /school/office paths to office host', () => {
+  it('redirects legacy /school/office paths to office host when subdomain is configured', () => {
     const previous = process.env.OFFICE_CANONICAL_HOST;
     process.env.OFFICE_CANONICAL_HOST = 'office.leveluprewards.app';
     try {
@@ -78,6 +78,42 @@ describe('office routing', () => {
         delete process.env.OFFICE_CANONICAL_HOST;
       } else {
         process.env.OFFICE_CANONICAL_HOST = previous;
+      }
+    }
+  });
+
+  it('serves /school/office on the main site when subdomain is not configured', () => {
+    const previousOffice = process.env.OFFICE_CANONICAL_HOST;
+    const previousPublic = process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST;
+    delete process.env.OFFICE_CANONICAL_HOST;
+    delete process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST;
+    try {
+      expect(
+        canonicalOfficeRedirectUrl(
+          '/yeshiva/office/grades',
+          '',
+          'portal.leveluprewards.app',
+          'https:',
+        ),
+      ).toBeNull();
+      expect(
+        canonicalOfficeRedirectUrl(
+          '/schoolabc/office',
+          '',
+          'leveluprewards.app',
+          'https:',
+        ),
+      ).toBeNull();
+    } finally {
+      if (previousOffice === undefined) {
+        delete process.env.OFFICE_CANONICAL_HOST;
+      } else {
+        process.env.OFFICE_CANONICAL_HOST = previousOffice;
+      }
+      if (previousPublic === undefined) {
+        delete process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST;
+      } else {
+        process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST = previousPublic;
       }
     }
   });
