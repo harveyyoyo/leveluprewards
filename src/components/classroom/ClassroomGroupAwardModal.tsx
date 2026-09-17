@@ -152,11 +152,11 @@ export function ClassroomGroupAwardModal({
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-foreground">{group.name}</span>
                       <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                        {group.studentIds.length} students
+                        {group.studentIds.length} {group.studentIds.length === 1 ? 'student' : 'students'}
                       </span>
                     </div>
                     <p className="mt-1 truncate text-xs text-muted-foreground">
-                      {namesPreview || `${group.studentIds.length} seated`}
+                      {namesPreview || `${group.studentIds.length} ${group.studentIds.length === 1 ? 'student' : 'students'}`}
                     </p>
                   </div>
 

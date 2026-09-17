@@ -1740,11 +1740,9 @@ function ClassroomPointsPanelInner({
   const monitorAwardActions =
     !editMode &&
     !isStudentAudience &&
-    (prefs.showRandomPicker ||
-      prefs.showClassAwardButton ||
-      prefs.showBurstAward ||
-      (prefs.showBurstAward && burstMode && burstSelected.length > 0)) ? (
+    placedStudentIds.length > 0 ? (
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+
         {prefs.showRandomPicker ? (
           <ClassroomMonitorActionButton
             design={design}
