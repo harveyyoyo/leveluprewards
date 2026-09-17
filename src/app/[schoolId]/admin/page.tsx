@@ -2146,6 +2146,7 @@ function AdminDashboardInner() {
           <TabsContent value="attendance" className={scrollingAdminTabClassName}>
             <AdminAttendanceTab
               schoolId={schoolId}
+              students={students || []}
               teachers={teachers}
               selectedAttendanceTeacherId={selectedAttendanceTeacherId}
               setSelectedAttendanceTeacherId={setSelectedAttendanceTeacherId}

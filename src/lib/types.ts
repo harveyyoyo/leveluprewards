@@ -571,11 +571,14 @@ export interface AttendanceLogEntry {
   signedInAt: number;
   pointsAwarded: number;
   onTime: boolean;
+  status?: 'on-time' | 'late' | 'excused';
   periodLabel?: string;
   /** A deterministic per-session key used to prevent double sign-ins. */
   sessionId?: string;
-   /** Optional owning teacher when using per-teacher attendance configs. */
+  /** Optional owning teacher when using per-teacher attendance configs. */
   teacherId?: string;
+  manual?: boolean;
+  note?: string;
 }
 
 /** Student currently out on a bathroom pass (one doc per student). */
