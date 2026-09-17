@@ -349,7 +349,9 @@ export function LibraryCheckoutDesk({
           // Parallel lookup: check both student badge and book catalog item
           const [foundItemRaw, studentFoundId] = await Promise.all([
             findLibraryItemByUpc(firestore, schoolId, cleanRaw, {
-              allowIsbn: policy.allowIsbnCheckout,
+              allowIsbn: mode === 'return' ? true : policy.allowIsbnCheckout,
+              allowBarcode: mode === 'return' ? true : policy.allowBarcodeCheckout,
+              checkoutBarcodeMode: mode === 'return' ? undefined : policy.checkoutBarcodeMode,
               preferredStatus: mode === 'return' ? 'checked_out' : (mode === 'checkout' ? 'available' : undefined),
               studentId: studentId || undefined,
             }),
@@ -518,6 +520,12 @@ export function LibraryCheckoutDesk({
           }
 
           // 3. NEITHER BOOK NOR STUDENT FOUND
+          if (isRetailIsbnBarcode(cleanRaw) && policy.checkoutBarcodeMode === 'barcode_only' && mode !== 'return') {
+            throw new Error('This school requires scanning the printed barcode sticker to check out. Please scan the sticker on the book.');
+          }
+          if (isSchoolLibraryBarcode(cleanRaw) && policy.checkoutBarcodeMode === 'isbn_only' && mode !== 'return') {
+            throw new Error('This school requires scanning the book\'s ISBN barcode to check out. Please scan the ISBN on the back cover.');
+          }
           if (isRetailIsbnBarcode(cleanRaw) || isSchoolLibraryBarcode(cleanRaw)) {
             throw new Error('Book not in catalog. Click "+ Add books" above to onboard it.');
           }
