@@ -57,9 +57,15 @@ export type SchoolDeveloperLoginFormProps = {
   mode?: SchoolDeveloperLoginFormMode;
   /** Prefill School ID (e.g. from `/login?school=` after a gated route redirect). */
   initialSchoolId?: string;
+  /** Shareable library sign-in: blank school box, then open that school's library. */
+  libraryLogin?: boolean;
 };
 
-export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: SchoolDeveloperLoginFormProps) {
+export function SchoolDeveloperLoginForm({
+  mode = 'full',
+  initialSchoolId,
+  libraryLogin = false,
+}: SchoolDeveloperLoginFormProps) {
   const [schoolId, setSchoolId] = useState('');
   const [schoolPasscode, setSchoolPasscode] = useState('');
   const [developerPasscode, setDeveloperPasscode] = useState('');
@@ -147,9 +153,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
   useEffect(() => {
     if (isDeveloperOnly) return;
+    if (libraryLogin) {
+      setSchoolId('');
+      return;
+    }
     const s = initialSchoolId?.trim().toLowerCase();
     if (s) setSchoolId(s);
-  }, [isDeveloperOnly, initialSchoolId]);
+  }, [isDeveloperOnly, initialSchoolId, libraryLogin]);
 
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading) return;
@@ -676,7 +686,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   .
                 </>
               ) : (
-              <>{t('auth.enterSchoolIdHint')}</>
+              <>{libraryLogin ? t('auth.enterLibrarySchoolIdHint') : t('auth.enterSchoolIdHint')}</>
               )}
             </p>
           </div>
@@ -841,7 +851,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                         : isAllowedGoogleEmail
                           ? t('auth.continueDeveloperPortal')
                           : t('auth.signInWithGoogle')
-                      : t('auth.signInToSchool')
+                      : libraryLogin
+                        ? t('auth.openTheLibrary')
+                        : t('auth.signInToSchool')
                   }
                   disabled={isSubmitting || isGoogleSigningIn}
                   className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
@@ -849,7 +861,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   {(isSubmitting || isGoogleSigningIn) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
                   {isSubmitting || isGoogleSigningIn
                     ? loginPhase === 'session'
-                      ? 'Opening your school portal…'
+                      ? libraryLogin
+                        ? t('auth.openingLibrary')
+                        : 'Opening your school portal…'
                       : loginPhase === 'verifying'
                         ? 'Verifying school…'
                         : t('auth.signingIn')
@@ -859,7 +873,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                         : isAllowedGoogleEmail
                           ? t('auth.continueDeveloperPortal')
                           : t('auth.signInWithGoogle')
-                      : t('auth.continue')}
+                      : libraryLogin
+                        ? t('auth.openTheLibrary')
+                        : t('auth.continue')}
                 </button>
               )}
 
