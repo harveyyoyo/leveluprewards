@@ -52,14 +52,11 @@ export function schoolPathAllowedByGate(
     return scopes.has('librarian') || scopes.has('admin');
   }
   if (section === 'office') {
-    if (pathname === prefix + 'office' || pathname === prefix + 'office/') {
-      return (
-        scopes.has('portal') ||
-        scopes.has('office') ||
-        scopes.has('admin')
-      );
-    }
-    return scopes.has('office') || scopes.has('admin');
+    return (
+      scopes.has('portal') ||
+      scopes.has('office') ||
+      scopes.has('admin')
+    );
   }
   if (section === 'sss') {
     if (pathname === prefix + 'sss' || pathname === prefix + 'sss/') {
