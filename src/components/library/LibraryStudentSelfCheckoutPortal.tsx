@@ -1516,7 +1516,7 @@ export function LibraryStudentSelfCheckoutPortal({
                   {nameMatches.map((s) => {
                     const initials = ((s.firstName?.[0] || '') + (s.lastName?.[0] || '')).toUpperCase() || 'ST';
                     return (
-                      <li key={s.id} role="option">
+                      <li key={s.id} role="option" aria-selected={studentId === s.id}>
                         <button
                           type="button"
                           className="group flex w-full items-center gap-3 rounded-xl p-2.5 sm:p-3 text-left text-base transition-all hover:bg-accent/80 text-foreground"
