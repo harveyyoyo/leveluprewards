@@ -128,12 +128,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
         }
       } catch (error) {
         console.error("FirebaseProvider: getRedirectResult failed:", error);
-        if (isGoogleRedirectStateLostError(error)) {
-          clearPendingGoogleRedirect();
-          clearGoogleRedirectAttempt();
-          scrubFirebaseAuthRedirectParams();
-          markGoogleRedirectFailedNotice();
-        } else if (!cancelled) {
+        clearPendingGoogleRedirect();
+        clearGoogleRedirectAttempt();
+        scrubFirebaseAuthRedirectParams();
+        markGoogleRedirectFailedNotice();
+        if (!cancelled) {
           setUserAuthState((prev) => ({
             ...prev,
             userError: error instanceof Error ? error : new Error(String(error)),
