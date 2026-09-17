@@ -502,6 +502,8 @@ export interface Achievement {
   enableWheelSpin?: boolean;
   /** Exact point values for the 6 wheel segments. If omitted, falls back to computed segments based on bonusPoints. */
   wheelSegments?: number[];
+  /** When false, milestone evaluation is paused. Defaults to true. */
+  enabled?: boolean;
 }
 
 /** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */
