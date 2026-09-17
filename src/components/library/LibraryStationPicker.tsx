@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { BookOpen, Library } from 'lucide-react';
+import { ArrowLeft, BookOpen, Library } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import {
   libraryLocationKindLabel,
@@ -13,18 +14,34 @@ export function LibraryStationPicker({
   locations,
   classNames,
   onPick,
+  title = 'Which library is this station?',
+  subtitle = 'Choose once for this device. Students will only borrow books from that library here.',
+  backHref,
+  backLabel = 'Back',
 }: {
   locations: LibraryLocation[];
   classNames?: Record<string, string>;
   onPick: (id: string) => void;
+  title?: string;
+  subtitle?: string;
+  /** Optional escape hatch — shown above the choices when there's somewhere else to go instead. */
+  backHref?: string;
+  backLabel?: string;
 }) {
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-2xl flex-col justify-center gap-6 p-6">
+      {backHref ? (
+        <Link
+          href={backHref}
+          className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {backLabel}
+        </Link>
+      ) : null}
       <div className="space-y-2 text-center">
-        <h1 className="text-3xl font-black tracking-tight">Which library is this station?</h1>
-        <p className="text-muted-foreground">
-          Choose once for this device. Students will only borrow books from that library here.
-        </p>
+        <h1 className="text-3xl font-black tracking-tight">{title}</h1>
+        <p className="text-muted-foreground">{subtitle}</p>
       </div>
       <motion.div
         className="grid gap-3"
