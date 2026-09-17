@@ -6,6 +6,7 @@ import {
   isOfficeSchoolScopedPath,
   officeHostInternalRewritePath,
   officeHostRedirectPath,
+  officeHostToPortalRedirectUrl,
   shouldHideGlobalAppChrome,
 } from './officeRouting';
 
@@ -78,6 +79,66 @@ describe('office routing', () => {
         delete process.env.OFFICE_CANONICAL_HOST;
       } else {
         process.env.OFFICE_CANONICAL_HOST = previous;
+      }
+    }
+  });
+
+  it('redirects legacy office subdomain hits to portal with /office paths', () => {
+    const previousPortal = process.env.PORTAL_CANONICAL_HOST;
+    process.env.PORTAL_CANONICAL_HOST = 'portal.leveluprewards.app';
+    try {
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+      expect(
+        officeHostToPortalRedirectUrl('/yeshiva', '', 'office.leveluprewards.app', 'https:')
+          ?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office');
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/office/teachers',
+          '',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/yeshiva/office/teachers');
+      expect(
+        officeHostToPortalRedirectUrl('/', '', 'office.leveluprewards.app', 'https:')?.toString(),
+      ).toBe('https://portal.leveluprewards.app/login');
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/login',
+          '?school=yeshiva',
+          'office.leveluprewards.app',
+          'https:',
+        )?.toString(),
+      ).toBe('https://portal.leveluprewards.app/login?school=yeshiva');
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'portal.leveluprewards.app',
+          'https:',
+        ),
+      ).toBeNull();
+      expect(
+        officeHostToPortalRedirectUrl(
+          '/yeshiva/teachers',
+          '',
+          'office.localhost:3000',
+          'http:',
+        ),
+      ).toBeNull();
+    } finally {
+      if (previousPortal === undefined) {
+        delete process.env.PORTAL_CANONICAL_HOST;
+      } else {
+        process.env.PORTAL_CANONICAL_HOST = previousPortal;
       }
     }
   });
