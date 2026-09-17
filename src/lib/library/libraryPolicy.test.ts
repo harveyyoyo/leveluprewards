@@ -59,13 +59,10 @@ describe('getLibraryPolicyFromSettings', () => {
     expect(policy.maxFineCap).toBe(25);
   });
 
-  it('defaults allowIsbnCheckout to true and respects explicit toggle', () => {
-    expect(getLibraryPolicyFromSettings({}).allowIsbnCheckout).toBe(true);
+  it('defaults checkoutBarcodeMode to both', () => {
     expect(getLibraryPolicyFromSettings({}).checkoutBarcodeMode).toBe('both');
+    expect(getLibraryPolicyFromSettings({}).allowIsbnCheckout).toBe(true);
     expect(getLibraryPolicyFromSettings({}).allowBarcodeCheckout).toBe(true);
-    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: true }).allowIsbnCheckout).toBe(true);
-    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).allowIsbnCheckout).toBe(false);
-    expect(getLibraryPolicyFromSettings({ libraryAllowIsbnCheckout: false }).checkoutBarcodeMode).toBe('barcode_only');
   });
 
   it('respects libraryCheckoutBarcodeMode for both, barcode_only, and isbn_only', () => {

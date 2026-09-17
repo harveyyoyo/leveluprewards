@@ -224,9 +224,7 @@ export async function performLibraryCheckoutOrReturn(
   },
 ): Promise<LibraryCheckoutResult> {
   const isCheckout = options?.action === 'checkout';
-  const checkoutBarcodeMode = options?.policy?.checkoutBarcodeMode ?? (
-    options?.policy?.allowIsbnCheckout === false ? 'barcode_only' : 'both'
-  );
+  const checkoutBarcodeMode = options?.policy?.checkoutBarcodeMode ?? 'both';
   const allowIsbn = isCheckout
     ? (checkoutBarcodeMode !== 'barcode_only')
     : (options?.policy?.allowIsbnCheckout !== false);

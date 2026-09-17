@@ -71,14 +71,10 @@ export function resolveLibraryCheckoutBarcodeMode(settings: {
   libraryAllowIsbnCheckout?: boolean;
 }): LibraryCheckoutBarcodeMode {
   if (
-    settings.libraryCheckoutBarcodeMode === 'both' ||
     settings.libraryCheckoutBarcodeMode === 'barcode_only' ||
     settings.libraryCheckoutBarcodeMode === 'isbn_only'
   ) {
     return settings.libraryCheckoutBarcodeMode;
-  }
-  if (settings.libraryAllowIsbnCheckout === false) {
-    return 'barcode_only';
   }
   return 'both';
 }
