@@ -493,6 +493,10 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      match /officeFamilies/{familyId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
       match /sssStudents/{studentId} {
         allow read, write: if canAccessSss(schoolId);
       }
