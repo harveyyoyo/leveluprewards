@@ -9,6 +9,7 @@ import {
   canonicalOfficeRedirectUrl,
   isOfficeChromeRequest,
   OFFICE_CHROME_REQUEST_HEADER,
+  officeHostToPortalRedirectUrl,
 } from '@/lib/officeRouting';
 import {
   canonicalSssRedirectUrl,
@@ -55,6 +56,18 @@ export async function middleware(request: NextRequest) {
     request.headers.get('x-fh-requested-host') ??
     request.headers.get('x-forwarded-host') ??
     request.headers.get('host');
+
+  const officeToPortalUrl = officeHostToPortalRedirectUrl(
+    pathname,
+    search,
+    forwardedHost,
+    request.nextUrl.protocol,
+  );
+  if (officeToPortalUrl) {
+    const redirect = NextResponse.redirect(officeToPortalUrl);
+    applySecurityHeaders(redirect);
+    return redirect;
+  }
 
   const canonicalPortalUrl = canonicalPortalRedirectUrl(
     pathname,

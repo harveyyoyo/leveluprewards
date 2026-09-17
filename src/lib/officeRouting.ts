@@ -16,7 +16,7 @@ const RESERVED_OFFICE_SEGMENTS = new Set([
 /** Path segments on the office host (after /{schoolId}/). */
 const OFFICE_PUBLIC_SEGMENTS = new Set(['students', 'classes', 'grades', 'teachers', 'billing', 'reports', 'settings']);
 
-import { isLocalDevHost } from '@/lib/portalRouting';
+import { canonicalPortalHost, isLocalDevHost } from '@/lib/portalRouting';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
@@ -203,6 +203,37 @@ export function canonicalOfficeRedirectUrl(
       ? `/${school.toLowerCase()}/${publicTail}`
       : `/${school.toLowerCase()}`;
   const target = new URL(`${targetOrigin}${publicPath}`);
+  target.search = search || '';
+  return target;
+}
+
+/**
+ * When the legacy office subdomain hits the rewards/portal app, send users to the
+ * canonical portal host with `/{school}/office/…` paths (owner preference).
+ */
+export function officeHostToPortalRedirectUrl(
+  pathname: string,
+  search: string,
+  rawCurrentHost: string | null | undefined,
+  protocol: string,
+): URL | null {
+  if (!isOfficeHostname(rawCurrentHost)) return null;
+  if (isLocalDevHost(rawCurrentHost)) return null;
+
+  const portalHost = canonicalPortalHost();
+  if (!portalHost) return null;
+
+  let portalPath: string;
+  if (pathname === '/' || pathname === '' || pathname === '/office-bootstrap') {
+    portalPath = '/login';
+  } else if (isOfficeAppPath(pathname)) {
+    portalPath = pathname;
+  } else {
+    portalPath = officeHostInternalRewritePath(pathname) ?? pathname;
+  }
+
+  const scheme = portalHost.includes('localhost') ? 'http:' : protocol || 'https:';
+  const target = new URL(`${scheme}//${portalHost}${portalPath}`);
   target.search = search || '';
   return target;
 }
