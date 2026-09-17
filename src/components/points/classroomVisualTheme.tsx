@@ -555,7 +555,7 @@ function monitorActionButtonClass(
     primary?: boolean;
     disabled?: boolean;
     iconOnly?: boolean;
-    tone?: 'random' | 'class' | 'burst';
+    tone?: 'random' | 'class' | 'burst' | 'group';
   },
 ) {
   const isDark = design === 'midnight';
@@ -592,7 +592,14 @@ function monitorActionButtonClass(
               : design === 'brutalist'
                 ? 'border-sky-700 bg-sky-300 text-sky-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-sky-400'
                 : 'border-sky-400/70 bg-sky-500/15 text-sky-800 hover:bg-sky-500/25 dark:text-sky-200'
+        : tone === 'group'
+          ? isDark
+            ? 'border-amber-400/60 bg-amber-500/30 text-amber-100 hover:bg-amber-500/45'
+            : design === 'brutalist'
+              ? 'border-amber-700 bg-amber-300 text-amber-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-amber-400'
+              : 'border-amber-400/70 bg-amber-500/15 text-amber-800 hover:bg-amber-500/25 dark:text-amber-200'
           : null;
+
 
   return cn(
     'inline-flex items-center border-2 font-bold shadow-sm transition hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50',
@@ -631,7 +638,7 @@ export function ClassroomMonitorActionButton({
   title?: string;
   onClick?: () => void;
   iconOnly?: boolean;
-  tone?: 'random' | 'class' | 'burst';
+  tone?: 'random' | 'class' | 'burst' | 'group';
 }) {
   const aria = title || label;
   return (
