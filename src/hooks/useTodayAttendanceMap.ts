@@ -7,6 +7,11 @@ import type { AttendanceLogEntry } from '@/lib/types';
 
 export type TodayAttendanceStatus = 'unknown' | 'absent' | 'on-time' | 'late';
 
+export type TodayAttendanceRecord = {
+  status: TodayAttendanceStatus;
+  logId: string;
+};
+
 function startOfLocalDayMs(): number {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
@@ -14,7 +19,10 @@ function startOfLocalDayMs(): number {
 }
 
 /** Latest sign-in per student for today (when Attendance pillar is in use). */
-export function useTodayAttendanceMap(schoolId: string, enabled: boolean): Map<string, TodayAttendanceStatus> {
+export function useTodayAttendanceRecords(
+  schoolId: string,
+  enabled: boolean,
+): Map<string, TodayAttendanceRecord> {
   const firestore = useFirestore();
   const dayStart = useMemo(() => startOfLocalDayMs(), []);
 
@@ -28,15 +36,28 @@ export function useTodayAttendanceMap(schoolId: string, enabled: boolean): Map<s
   const { data: logs } = useCollection<AttendanceLogEntry>(logQuery);
 
   return useMemo(() => {
-    const map = new Map<string, TodayAttendanceStatus>();
+    const map = new Map<string, TodayAttendanceRecord>();
     if (!enabled || !logs?.length) return map;
     for (const entry of logs) {
       if (!entry.studentId || map.has(entry.studentId)) continue;
       if (Number(entry.signedInAt || 0) < dayStart) continue;
-      map.set(entry.studentId, entry.onTime === false ? 'late' : 'on-time');
+      const logId = entry.id || `${entry.studentId}_${entry.sessionId || entry.signedInAt}`;
+      map.set(entry.studentId, {
+        status: entry.onTime === false ? 'late' : 'on-time',
+        logId,
+      });
     }
     return map;
   }, [dayStart, enabled, logs]);
+}
+
+export function useTodayAttendanceMap(schoolId: string, enabled: boolean): Map<string, TodayAttendanceStatus> {
+  const records = useTodayAttendanceRecords(schoolId, enabled);
+  return useMemo(() => {
+    const map = new Map<string, TodayAttendanceStatus>();
+    records.forEach((record, studentId) => map.set(studentId, record.status));
+    return map;
+  }, [records]);
 }
 
 export function attendanceStatusForStudent(

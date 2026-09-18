@@ -68,7 +68,7 @@ export function ClassroomSeatingShortcutsHint({
 
   if (!onMonitor) {
     const tapLine = prefs.instantTap
-      ? `Tap a student to award +${prefs.defaultPoints} points right away.`
+      ? `Tap a student to award +${prefs.defaultPoints} points right away. Right-click opens the awards menu.`
       : 'Tap a student to open the awards menu.';
 
     return (
@@ -84,43 +84,35 @@ export function ClassroomSeatingShortcutsHint({
   }
 
   return (
-    <div className="space-y-1.5 text-[11px] leading-snug text-muted-foreground sm:text-xs">
-      <p>
-        <span className="font-semibold text-foreground">Awards:</span>{' '}
-        {prefs.instantTap
-          ? `Tap a desk = +${prefs.defaultPoints} points.`
-          : 'Tap a desk = awards menu (pick a quick award).'}
-        {prefs.showRandomPicker ? (
-          <>
-            {' '}
-            <ShortcutKey>R</ShortcutKey> = random student.
-          </>
-        ) : null}{' '}
-        <ShortcutKey>Ctrl</ShortcutKey>+<ShortcutKey>U</ShortcutKey> = undo last award.
-        {prefs.showBurstAward ? ' Burst on the toolbar = select several desks, award once.' : null}
-      </p>
-      <p>
-        <span className="font-semibold text-foreground">Behavior notes:</span> Hold {noteKeyLine} and click a
-        student. Shift+click = choose note type from a menu.
-        {deductTypeLabels.length > 0
-          ? ` Selected note types can deduct −${noteDeduct.points} pts in the note dialog (${deductTypeLabels.join(', ')}).`
-          : ''}
-      </p>
-      {attendanceEnabled || bathroomEnabled ? (
-        <p>
-          <span className="font-semibold text-foreground">Other:</span>{' '}
-          {attendanceEnabled ? (
+    <div className="space-y-1.5 text-[11px] leading-snug !text-foreground sm:text-xs">
+      <p className="font-semibold !text-foreground">Keyboard quick settings</p>
+      <ul className="space-y-1">
+        <li>
+          <span className="font-semibold">Tap a desk</span> ={' '}
+          {prefs.instantTap ? `+${prefs.defaultPoints} points right away · right-click = menu` : 'open the awards menu'}
+          {prefs.showRandomPicker ? (
             <>
-              Colored dot on each desk = class sign-in today (green present, amber late, red absent).{' '}
+              {' '}
+              · <ShortcutKey>R</ShortcutKey> = random student
             </>
           ) : null}
-          {bathroomEnabled ? (
-            <>
-              <ShortcutKey>Alt</ShortcutKey>+click = bathroom pass timer.
-            </>
-          ) : null}
-        </p>
-      ) : null}
+        </li>
+        <li>
+          <span className="font-semibold">Behavior notes:</span> hold {noteKeyLine} and click a desk.{' '}
+          <ShortcutKey>Shift</ShortcutKey>+click = choose note type.
+          {deductTypeLabels.length > 0
+            ? ` Some note types can take away −${noteDeduct.points} pts (${deductTypeLabels.join(', ')}).`
+            : ''}
+        </li>
+        {bathroomEnabled ? (
+          <li>
+            <ShortcutKey>Alt</ShortcutKey>+click = bathroom pass
+          </li>
+        ) : null}
+        {attendanceEnabled ? (
+          <li>Corner dots = class sign-in today (green present, orange late, red not signed in).</li>
+        ) : null}
+      </ul>
     </div>
   );
 }

@@ -214,7 +214,7 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/office\/billing/i, paths: ['src/app/[schoolId]/office/billing/page.tsx'] },
   { pattern: /\/office\/reports/i, paths: ['src/app/[schoolId]/office/reports/page.tsx'] },
   { pattern: /\/office(?:\/|$)/i, paths: ['src/app/[schoolId]/office/page.tsx'] },
-  { pattern: /\/classroom-realm/i, paths: ['src/components/classroom/ClassroomTabLauncher.tsx', 'src/components/classroom/ClassroomLiveMonitor.tsx'] },
+  { pattern: /\/classroom(?:-realm)?/i, paths: ['src/components/classroom/ClassroomTabLauncher.tsx', 'src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/classroom(?:\/|$)/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/librarian/i, paths: ['src/app/[schoolId]/librarian/page.tsx'] },
   { pattern: /\/secretary/i, paths: ['src/app/[schoolId]/secretary/page.tsx'] },

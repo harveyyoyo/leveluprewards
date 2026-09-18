@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   Heart,
   LayoutGrid,
@@ -21,6 +22,14 @@ import {
 
 import type { ClassroomDesign, ClassroomDeskVisualScale } from '@/lib/classroomSeatingChart';
 import { normalizeClassroomDesign } from '@/lib/classroomSeatingChart';
+import { sanitizeClassroomDeskAwardLabel } from '@/lib/classroom/classroomAwardLabel';
+import {
+  CLASSROOM_TOKEN_CANVAS_CLASS,
+  CLASSROOM_TOKEN_TEACHER_GOLD,
+  CLASSROOM_TOKEN_TEACHER_NAVY,
+  classroomTokenAccent,
+  isClassroomTokenDesign,
+} from '@/lib/classroom/classroomTokenTheme';
 
 export type { ClassroomDesign };
 
@@ -34,7 +43,7 @@ export type ClassroomEffect =
   | 'snow';
 
 export const CLASSROOM_DESIGNS: { id: ClassroomDesign; label: string; description: string }[] = [
-  { id: 'aurora', label: 'Aurora', description: 'Gradient & glow' },
+  { id: 'aurora', label: 'Aurora', description: 'Colorful token desks' },
   { id: 'minimal', label: 'Minimal', description: 'Clean & monochrome' },
   { id: 'playful', label: 'Playful', description: 'Colorful avatars' },
   { id: 'brutalist', label: 'Brutalist', description: 'Sharp & bold' },
@@ -60,7 +69,9 @@ export function classroomDesignShellClass(design: ClassroomDesign, isFullscreen:
           ? 'bg-gradient-to-br from-rose-50 via-amber-50 to-sky-50 dark:from-rose-950/40 dark:via-amber-950/30 dark:to-sky-950/40'
           : design === 'brutalist'
             ? 'bg-yellow-50 dark:bg-yellow-950/30'
-            : 'bg-gradient-to-br from-primary/5 via-background to-primary/10';
+            : isClassroomTokenDesign(design)
+              ? CLASSROOM_TOKEN_CANVAS_CLASS
+              : 'bg-gradient-to-br from-primary/5 via-background to-primary/10';
   return cn(
     base,
     bg,
@@ -68,14 +79,24 @@ export function classroomDesignShellClass(design: ClassroomDesign, isFullscreen:
   );
 }
 
+export function classroomChartSurfaceClass(design: ClassroomDesign): string {
+  if (isClassroomTokenDesign(design)) {
+    return cn(
+      'rounded-2xl border border-[#d6d0c6] p-2 sm:p-3',
+      CLASSROOM_TOKEN_CANVAS_CLASS,
+    );
+  }
+  return 'rounded-2xl border border-border/50 bg-card/25 p-2 sm:p-3';
+}
+
 export function classroomControlsBarClass(design: ClassroomDesign): string {
   if (design === 'midnight') {
-    return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-sm';
+    return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-800 bg-slate-950 p-3 shadow-sm';
   }
   if (design === 'brutalist') {
     return 'mb-3 flex flex-wrap items-center gap-2 border-2 border-foreground bg-card p-3 shadow-[4px_4px_0_0_hsl(var(--foreground))]';
   }
-  return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3 shadow-sm';
+  return 'mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-[#F8FAFC] p-3 shadow-sm';
 }
 
 function studentInitials(student: Student) {
@@ -96,6 +117,8 @@ export type ClassroomDeskVisualProps = {
   showSession: boolean;
   photoDisplayMode?: 'cover' | 'contain';
   visualScale?: ClassroomDeskVisualScale;
+  /** Hide the name so a high-contrast overlay can stay readable on faded desks. */
+  hideName?: boolean;
 };
 
 function deskAvatarSizeClass(design: ClassroomDesign, scale: ClassroomDeskVisualScale): string {
@@ -103,6 +126,9 @@ function deskAvatarSizeClass(design: ClassroomDesign, scale: ClassroomDeskVisual
   if (scale === 'md') return 'h-8 w-8 text-[10px]';
   if (design === 'playful' || design === 'brutalist') {
     return 'h-11 w-11 text-xs sm:h-14 sm:w-14 sm:text-sm';
+  }
+  if (isClassroomTokenDesign(design)) {
+    return 'h-10 w-10 text-[10px] sm:h-12 sm:w-12 sm:text-xs';
   }
   return 'h-10 w-10 text-[10px] sm:h-12 sm:w-12 sm:text-xs';
 }
@@ -135,6 +161,9 @@ function deskAvatarShellClass(
   if (design === 'brutalist') {
     return cn(base, size, 'border-2 border-foreground bg-yellow-300 font-black uppercase');
   }
+  if (isClassroomTokenDesign(design)) {
+    return cn(base, size, 'classroom-on-dark rounded-full font-black !text-white');
+  }
   return cn(
     base,
     size,
@@ -160,6 +189,10 @@ function DeskAvatar({
   visualScale?: ClassroomDeskVisualScale;
 }) {
   const shell = deskAvatarShellClass(design, index, visualScale);
+  const token = isClassroomTokenDesign(design) ? classroomTokenAccent(index) : null;
+  const tokenRingStyle = token
+    ? { boxShadow: `0 0 0 3px ${token.ring}`, backgroundColor: token.fill }
+    : undefined;
   if (photoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -170,6 +203,7 @@ function DeskAvatar({
           shell,
           photoDisplayMode === 'cover' ? 'object-cover' : 'object-contain bg-muted/30',
         )}
+        style={tokenRingStyle}
       />
     );
   }
@@ -177,7 +211,12 @@ function DeskAvatar({
     if (emoji.startsWith('http')) {
       return (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={emoji} alt="" className={cn(shell, 'object-contain bg-muted/20 p-0.5')} />
+        <img
+          src={emoji}
+          alt=""
+          className={cn(shell, 'object-contain bg-muted/20 p-0.5')}
+          style={tokenRingStyle}
+        />
       );
     }
     return (
@@ -187,20 +226,47 @@ function DeskAvatar({
           'flex items-center justify-center leading-none',
           visualScale === 'sm' ? 'text-sm' : 'text-lg sm:text-xl',
         )}
+        style={tokenRingStyle}
       >
         {emoji}
       </div>
     );
   }
-  return <div className={shell}>{initials}</div>;
+  return (
+    <div className={shell} style={tokenRingStyle}>
+      {initials}
+    </div>
+  );
 }
 
 function deskNameClass(design: ClassroomDesign, scale: ClassroomDeskVisualScale): string {
   const weight =
-    design === 'brutalist' ? 'font-black uppercase' : design === 'playful' ? 'font-bold' : 'font-semibold';
+    design === 'brutalist'
+      ? 'font-bold uppercase'
+      : isClassroomTokenDesign(design)
+        ? 'font-bold tracking-normal !text-foreground'
+        : design === 'playful'
+          ? 'font-bold'
+          : 'font-semibold';
   const ink = design === 'midnight' ? 'text-white' : 'text-foreground';
-  if (scale === 'md') return cn('line-clamp-1 px-0.5 text-center text-[10px] leading-tight', weight, ink);
-  return cn('line-clamp-2 text-center text-[10px] sm:text-xs', weight, ink);
+  if (scale === 'md') {
+    return cn('max-w-full px-1 text-center text-[10px] leading-snug line-clamp-2', weight, ink);
+  }
+  return cn('max-w-full px-1 text-center text-[10px] leading-snug line-clamp-2 sm:text-xs', weight, ink);
+}
+
+function DeskPointsPill({ points, compact = false }: { points: number; compact?: boolean }) {
+  return (
+    <div
+      className={cn(
+        'classroom-on-dark shrink-0 rounded-full px-2 py-0.5 font-black tabular-nums tracking-normal !text-white',
+        compact ? 'text-[9px]' : 'text-[10px] sm:text-xs',
+      )}
+      style={{ backgroundColor: '#0F172A', color: '#fff' }}
+    >
+      {points.toLocaleString()} pts
+    </div>
+  );
 }
 
 function DeskInner({
@@ -211,6 +277,7 @@ function DeskInner({
   showBalance,
   photoDisplayMode,
   visualScale = 'lg',
+  hideName = false,
 }: ClassroomDeskVisualProps) {
   const initials = display?.initials ?? (student ? studentInitials(student) : '?');
   const name = display?.name ?? (student ? getStudentNickname(student) : '');
@@ -230,18 +297,14 @@ function DeskInner({
       visualScale={visualScale}
     />
   );
-  const nameEl = showName ? <div className={deskNameClass(design, visualScale)}>{name}</div> : null;
+  const nameEl = showName && !hideName ? <div className={deskNameClass(design, visualScale)}>{name}</div> : null;
 
   if (design === 'minimal') {
     return (
       <>
         {avatar}
         {nameEl}
-        {showPts ? (
-          <div className="text-xs font-bold tabular-nums !text-muted-foreground sm:text-sm">
-            {points.toLocaleString()} pts
-          </div>
-        ) : null}
+        {showPts ? <DeskPointsPill points={points} /> : null}
       </>
     );
   }
@@ -250,14 +313,10 @@ function DeskInner({
     return (
       <>
         <div className="absolute -inset-px rounded-2xl bg-gradient-to-br from-indigo-500/20 via-transparent to-fuchsia-500/20 opacity-0 transition-opacity group-hover:opacity-100" />
-        <div className="relative flex flex-col items-center justify-center gap-1">
+        <div className="relative flex flex-col items-center justify-center gap-2">
           {avatar}
           {nameEl ? <div className={cn(deskNameClass(design, visualScale), 'text-white')}>{name}</div> : null}
-          {showPts ? (
-            <div className="text-xs font-bold tabular-nums !text-indigo-200 sm:text-sm">
-              {points.toLocaleString()} pts
-            </div>
-          ) : null}
+          {showPts ? <DeskPointsPill points={points} /> : null}
         </div>
       </>
     );
@@ -268,11 +327,7 @@ function DeskInner({
       <>
         {avatar}
         {nameEl}
-        {showPts ? (
-          <div className="rounded-full bg-foreground/5 px-2.5 py-0.5 text-xs font-bold tabular-nums !text-foreground sm:text-sm">
-            {points.toLocaleString()} pts
-          </div>
-        ) : null}
+        {showPts ? <DeskPointsPill points={points} /> : null}
       </>
     );
   }
@@ -282,9 +337,17 @@ function DeskInner({
       <>
         {avatar}
         {nameEl}
-        {showPts ? (
-          <div className="text-xs font-black tabular-nums !text-foreground sm:text-sm">{points.toLocaleString()} PTS</div>
-        ) : null}
+        {showPts ? <DeskPointsPill points={points} /> : null}
+      </>
+    );
+  }
+
+  if (isClassroomTokenDesign(design)) {
+    return (
+      <>
+        {avatar}
+        {nameEl}
+        {showPts ? <DeskPointsPill points={points} compact={visualScale === 'md'} /> : null}
       </>
     );
   }
@@ -294,14 +357,7 @@ function DeskInner({
       <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl bg-gradient-to-r from-primary to-primary/60 opacity-0 transition-opacity group-hover:opacity-100" />
       {avatar}
       {nameEl}
-      {showPts ? (
-        <div className="flex items-baseline gap-0.5">
-          <span className="text-sm font-black tabular-nums !text-primary sm:text-base">
-            {points.toLocaleString()}
-          </span>
-          <span className="text-[11px] font-semibold text-muted-foreground sm:text-xs">pts</span>
-        </div>
-      ) : null}
+      {showPts ? <DeskPointsPill points={points} /> : null}
     </>
   );
 }
@@ -331,7 +387,7 @@ export function classroomStudentDeskClass(
   const { isPending, isFlashing, isBurstSelected, isRandom, editMode, hasStudent, visualScale = 'lg' } = state;
   const interactive = cn(
     'group relative flex h-full min-h-0 w-full flex-col items-center justify-center',
-    visualScale === 'sm' ? 'gap-0 p-0.5' : visualScale === 'md' ? 'gap-0.5 p-0.5' : 'gap-1 p-1',
+    visualScale === 'sm' ? 'gap-1 p-1 pb-5' : visualScale === 'md' ? 'gap-1.5 p-1.5 pb-6' : 'gap-2 p-2 pb-7',
     hasStudent ? 'overflow-visible' : 'overflow-hidden',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     hasStudent && !editMode && 'hover:shadow-sm',
@@ -339,24 +395,34 @@ export function classroomStudentDeskClass(
     isPending && 'z-10 scale-[1.02] ring-4 ring-primary',
     isFlashing && 'z-10 ring-4 ring-emerald-400/80',
     isBurstSelected && 'ring-4 ring-sky-500 bg-sky-500/10',
-    isRandom && 'z-10 ring-4 ring-amber-400',
+    isRandom &&
+      'z-20 scale-[1.04] ring-[5px] ring-amber-400 shadow-[0_0_28px_8px_rgba(251,191,36,0.55)]',
   );
 
   if (!hasStudent) {
+    const quiet = cn(interactive, editMode && 'cursor-pointer');
     if (design === 'midnight') {
       return cn(
-        interactive,
-        'rounded-2xl border-2 border-dashed border-white/20 bg-white/[0.02]',
+        quiet,
+        'rounded-2xl border border-white/10 bg-white/[0.03]',
+        editMode && 'border-white/15 bg-white/[0.05]',
       );
     }
     if (design === 'brutalist') {
-      return cn(interactive, 'border-2 border-dashed border-foreground bg-yellow-50/80');
+      return cn(quiet, 'border border-foreground/20 bg-transparent');
     }
-    const radius = design === 'minimal' ? 'rounded-xl' : design === 'playful' ? 'rounded-3xl' : 'rounded-2xl';
+    const radius = design === 'minimal'
+      ? 'rounded-xl'
+      : design === 'playful'
+        ? 'rounded-3xl'
+        : isClassroomTokenDesign(design)
+          ? 'rounded-[1.25rem]'
+          : 'rounded-2xl';
     return cn(
-      interactive,
+      quiet,
       radius,
-      'border-2 border-dashed border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10',
+      'border border-black/[0.08] bg-black/[0.03]',
+      editMode && 'border-black/15 bg-black/[0.04] shadow-none',
     );
   }
 
@@ -384,6 +450,13 @@ export function classroomStudentDeskClass(
       'border-2 border-foreground bg-card shadow-[4px_4px_0_0_hsl(var(--foreground))] hover:border-primary/40',
     );
   }
+  if (isClassroomTokenDesign(design)) {
+    return cn(
+      interactive,
+      'rounded-[1.25rem] border-2 bg-white',
+      hasStudent && !editMode && 'hover:shadow-none',
+    );
+  }
   return cn(
     interactive,
     'rounded-2xl border border-border bg-card shadow-sm hover:border-primary/30',
@@ -393,47 +466,87 @@ export function classroomStudentDeskClass(
 export function ClassroomEmptyDeskLabel({
   design,
   visualScale = 'lg',
+  editMode = false,
 }: {
   design: ClassroomDesign;
   visualScale?: ClassroomDeskVisualScale;
+  /** Only arrange mode may show a whisper-quiet hint. */
+  editMode?: boolean;
 }) {
-  const size = visualScale === 'sm' ? 'text-[8px]' : visualScale === 'md' ? 'text-[10px]' : 'text-[10px] sm:text-xs';
+  if (!editMode) return null;
+  void visualScale;
+  return (
+    <span
+      className={cn(
+        'select-none text-[8px] font-medium uppercase tracking-wide',
+        design === 'midnight' ? 'text-white/25' : 'text-black/25',
+      )}
+      aria-hidden
+    >
+      empty
+    </span>
+  );
+}
+
+export function classroomArrangeBarClass(design: ClassroomDesign): string {
   if (design === 'midnight') {
-    return <span className={cn(size, 'font-medium text-white/40')}>Empty seat</span>;
+    return 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border-2 border-white/45 bg-[#102033] px-3 py-2.5 text-sm text-white shadow-sm';
   }
-  if (design === 'brutalist') {
-    return <span className={cn(size, 'font-black uppercase')}>Empty</span>;
-  }
-  return <span className={cn(size, 'font-medium text-muted-foreground')}>Empty seat</span>;
+  return 'flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border-2 border-[#102033] bg-[#f7f4ee] px-3 py-2.5 text-sm text-[#102033] shadow-sm';
 }
 
 export const ClassroomDeskVisual = memo(function ClassroomDeskVisual(props: ClassroomDeskVisualProps) {
   return <DeskInner {...props} />;
 });
 
+const sessionBadgeSpring = { type: 'spring' as const, stiffness: 280, damping: 26 };
+
+/** Last-award phrases on desks (Good job, etc.) stay visible this long. */
+export const CLASSROOM_LAST_AWARD_FLASH_MS = 5000;
+
 export function ClassroomSessionBadge({
   sessionPts,
   lastAwardLabel,
+  lastAwardAt,
   tight,
 }: {
   sessionPts: number;
   /** Latest quick-award label for this student this session. */
   lastAwardLabel?: string | null;
+  lastAwardAt?: number | null;
   tight?: boolean;
 }) {
-  if (sessionPts === 0 && !lastAwardLabel) return null;
+  const deskAwardLabel = sanitizeClassroomDeskAwardLabel(lastAwardLabel);
+  const [phraseVisible, setPhraseVisible] = useState(false);
+
+  useEffect(() => {
+    if (!deskAwardLabel || lastAwardAt == null) {
+      setPhraseVisible(false);
+      return;
+    }
+    const remaining = CLASSROOM_LAST_AWARD_FLASH_MS - (Date.now() - lastAwardAt);
+    if (remaining <= 0) {
+      setPhraseVisible(false);
+      return;
+    }
+    setPhraseVisible(true);
+    const timer = window.setTimeout(() => setPhraseVisible(false), remaining);
+    return () => window.clearTimeout(timer);
+  }, [deskAwardLabel, lastAwardAt]);
+
+  if (sessionPts === 0 && !phraseVisible) return null;
   return (
     <div
       className={cn(
-        'absolute bottom-0.5 right-0.5 z-[1] flex max-w-[92%] flex-col items-end gap-0.5',
+        'flex max-w-[92%] flex-col items-end gap-0.5',
         tight && 'max-w-[88%]',
       )}
     >
       {sessionPts !== 0 ? (
         <span
           className={cn(
-            'rounded-md px-1.5 font-black leading-none',
-            sessionPts > 0 ? 'bg-emerald-500/90 text-white' : 'bg-rose-500/90 text-white',
+            'classroom-on-dark rounded-md px-1.5 font-black leading-none !text-white',
+            sessionPts > 0 ? 'bg-emerald-500/90' : 'bg-rose-500/90',
             tight ? 'text-[10px] sm:text-xs' : 'text-xs sm:text-sm',
           )}
         >
@@ -441,17 +554,23 @@ export function ClassroomSessionBadge({
           {sessionPts}
         </span>
       ) : null}
-      {lastAwardLabel ? (
-        <span
-          className={cn(
-            'max-w-full truncate rounded border border-emerald-500/30 bg-background/95 px-1.5 font-semibold leading-tight text-emerald-800 shadow-sm dark:text-emerald-200',
-            tight ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-xs',
-          )}
-          title={lastAwardLabel}
-        >
-          {lastAwardLabel}
-        </span>
-      ) : null}
+      <AnimatePresence>
+        {phraseVisible && deskAwardLabel ? (
+          <motion.span
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={sessionBadgeSpring}
+            className={cn(
+              'max-w-full truncate rounded border border-emerald-500/30 bg-background/95 px-1.5 font-semibold leading-tight text-emerald-800 shadow-sm dark:text-emerald-200',
+              tight ? 'text-[9px] sm:text-[10px]' : 'text-[10px] sm:text-xs',
+            )}
+            title={deskAwardLabel}
+          >
+            {deskAwardLabel}
+          </motion.span>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -459,11 +578,14 @@ export function ClassroomSessionBadge({
 export function ClassroomTeacherDesk({
   design,
   frontAtBottom = false,
+  showFrontHint = true,
   leadingAction,
   trailingAction,
 }: {
   design: ClassroomDesign;
   frontAtBottom?: boolean;
+  /** Hide the small “Front of class” line on the class screen. */
+  showFrontHint?: boolean;
   /** Arrange seats + optional award buttons — left column. */
   leadingAction?: ReactNode;
   /** e.g. Undo — right column. */
@@ -472,18 +594,21 @@ export function ClassroomTeacherDesk({
   const frontHint = frontAtBottom
     ? 'Front of class — bottom of screen'
     : 'Front of class — top of screen';
+  const hintEl = showFrontHint ? (
+    <p className="text-[10px] text-muted-foreground">{frontHint}</p>
+  ) : null;
   const edgeMargin = frontAtBottom ? 'mt-2' : 'mb-2';
 
   const wrap = (deskContent: ReactNode) => (
     <div
       className={cn(
-        'grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-2 sm:gap-x-3',
+        'relative grid w-full shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-x-2 gap-y-2 sm:gap-x-3',
         edgeMargin,
       )}
     >
       <div className="flex min-w-0 flex-wrap items-center justify-start gap-2">{leadingAction}</div>
-      <div className="justify-self-center px-1">{deskContent}</div>
-      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">{trailingAction}</div>
+      <div className="justify-self-center self-center px-1">{deskContent}</div>
+      <div className="flex min-h-0 min-w-0 items-stretch justify-end">{trailingAction}</div>
     </div>
   );
 
@@ -495,7 +620,7 @@ export function ClassroomTeacherDesk({
         </div>
         <div className="text-center">
           <p className="text-sm font-bold tracking-wide text-white">Teacher desk</p>
-          <p className="text-[10px] text-white/50">{frontHint}</p>
+          {showFrontHint ? <p className="text-[10px] font-semibold !text-white/90">{frontHint}</p> : null}
         </div>
       </div>,
     );
@@ -506,7 +631,9 @@ export function ClassroomTeacherDesk({
         <Monitor className="h-6 w-6 text-foreground" strokeWidth={2.5} />
         <div className="text-center">
           <p className="text-sm font-black uppercase tracking-wider !text-foreground">Teacher desk</p>
-          <p className="text-[10px] font-bold uppercase !text-foreground/70">{frontHint}</p>
+          {showFrontHint ? (
+            <p className="text-[10px] font-bold uppercase !text-foreground/70">{frontHint}</p>
+          ) : null}
         </div>
       </div>,
     );
@@ -519,7 +646,7 @@ export function ClassroomTeacherDesk({
         </div>
         <div className="text-center">
           <p className="text-sm font-bold !text-foreground">Teacher desk</p>
-          <p className="text-[10px] text-muted-foreground">{frontHint}</p>
+          {hintEl}
         </div>
       </div>,
     );
@@ -531,7 +658,32 @@ export function ClassroomTeacherDesk({
           <Monitor className="h-4 w-4 text-muted-foreground" />
           <p className="text-xs font-semibold text-foreground">Teacher desk</p>
         </div>
-        <p className="text-[10px] text-muted-foreground">{frontHint}</p>
+        {hintEl}
+      </div>,
+    );
+  }
+  if (isClassroomTokenDesign(design)) {
+    return wrap(
+      <div
+        className="classroom-on-dark flex items-center justify-center gap-3 rounded-2xl px-5 py-2.5 shadow-[4px_6px_0_0_rgba(16,32,51,0.28)]"
+        style={{ backgroundColor: CLASSROOM_TOKEN_TEACHER_NAVY, color: '#fff' }}
+      >
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-full shadow-md"
+          style={{ backgroundColor: CLASSROOM_TOKEN_TEACHER_GOLD }}
+        >
+          <Monitor className="h-5 w-5" style={{ color: CLASSROOM_TOKEN_TEACHER_NAVY }} />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black tracking-tight !text-white" style={{ color: '#fff' }}>
+            Teacher desk
+          </p>
+          {showFrontHint ? (
+            <p className="text-[10px] font-semibold !text-white" style={{ color: '#f8fafc' }}>
+              {frontHint}
+            </p>
+          ) : null}
+        </div>
       </div>,
     );
   }
@@ -542,7 +694,7 @@ export function ClassroomTeacherDesk({
       </div>
       <div className="text-center">
         <p className="text-sm font-bold !text-foreground">Teacher desk</p>
-        <p className="text-[10px] text-muted-foreground">{frontHint}</p>
+        {hintEl}
       </div>
     </div>,
   );
@@ -565,37 +717,31 @@ function monitorActionButtonClass(
       ? 'h-8 w-8 justify-center rounded-lg sm:h-9 sm:w-9'
       : 'h-9 w-9 justify-center rounded-lg'
     : isFullscreen
-      ? 'gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] sm:px-3 sm:py-2 sm:text-xs'
-      : 'gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm';
+      ? 'gap-1.5 rounded-xl px-2.5 py-1.5 text-xs sm:px-2.5 sm:py-1.5 sm:text-sm'
+      : 'gap-1.5 rounded-xl px-3 py-2 text-xs sm:text-sm';
 
   const tone = opts?.tone;
   const toneClass =
     tone === 'random'
       ? isDark
-        ? 'border-violet-400/60 bg-violet-500/30 text-violet-100 hover:bg-violet-500/45'
-        : design === 'brutalist'
-          ? 'border-violet-700 bg-violet-300 text-violet-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-violet-400'
-          : 'border-violet-400/70 bg-violet-500/15 text-violet-800 hover:bg-violet-500/25 dark:text-violet-200'
+        ? 'border-indigo-300 bg-indigo-500 text-white hover:bg-indigo-400'
+        : 'classroom-light-ink border-indigo-700 bg-indigo-400 !text-[#0F172A] hover:bg-indigo-300'
       : tone === 'class'
         ? isDark
-          ? 'border-emerald-400/60 bg-emerald-500/30 text-emerald-100 hover:bg-emerald-500/45'
-          : design === 'brutalist'
-            ? 'border-emerald-700 bg-emerald-300 text-emerald-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-emerald-400'
-            : 'border-emerald-400/70 bg-emerald-500/15 text-emerald-800 hover:bg-emerald-500/25 dark:text-emerald-200'
+          ? 'border-indigo-300 bg-indigo-500 text-white hover:bg-indigo-400'
+          : 'classroom-light-ink border-indigo-700 bg-indigo-400 !text-[#0F172A] hover:bg-indigo-300'
         : tone === 'burst'
           ? opts?.primary
             ? isDark
-              ? 'border-transparent bg-gradient-to-br from-sky-500 to-cyan-500 text-white shadow-sky-500/30'
-              : 'border-transparent bg-gradient-to-br from-sky-500 to-cyan-600 text-white shadow-sky-500/25'
+              ? 'border-transparent bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-indigo-500/30'
+              : 'border-transparent bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-indigo-500/25'
             : isDark
-              ? 'border-sky-400/60 bg-sky-500/30 text-sky-100 hover:bg-sky-500/45'
-              : design === 'brutalist'
-                ? 'border-sky-700 bg-sky-300 text-sky-950 shadow-[2px_2px_0_0_hsl(var(--foreground))] hover:bg-sky-400'
-                : 'border-sky-400/70 bg-sky-500/15 text-sky-800 hover:bg-sky-500/25 dark:text-sky-200'
+              ? 'border-indigo-300 bg-indigo-500 text-white hover:bg-indigo-400'
+              : 'classroom-light-ink border-indigo-700 bg-indigo-400 !text-[#0F172A] hover:bg-indigo-300'
           : null;
 
   return cn(
-    'inline-flex items-center border-2 font-bold shadow-sm transition hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50',
+    'inline-flex items-center border-2 font-black shadow-sm transition hover:-translate-y-px disabled:pointer-events-none disabled:opacity-50',
     size,
     toneClass ??
       (opts?.primary
@@ -641,7 +787,10 @@ export function ClassroomMonitorActionButton({
       aria-label={aria}
       disabled={disabled}
       onClick={onClick}
-      className={monitorActionButtonClass(design, isFullscreen, { primary, disabled, iconOnly, tone })}
+      className={cn(
+        monitorActionButtonClass(design, isFullscreen, { primary, disabled, iconOnly, tone }),
+        'classroom-monitor-action',
+      )}
     >
       <Icon className={cn('shrink-0', iconOnly ? 'h-4 w-4' : isFullscreen ? 'h-3.5 w-3.5 sm:h-4 sm:w-4' : 'h-4 w-4')} aria-hidden />
       {iconOnly ? null : label}
@@ -756,7 +905,7 @@ export function ClassroomDesignSwitcher({
         <p className="px-2 pb-2 pt-1 text-xs leading-snug text-muted-foreground">
           Desk shapes and accents. App light/dark mode is in profile settings.
         </p>
-        {CLASSROOM_DESIGNS.map((d) => (
+        {CLASSROOM_DESIGNS.filter((d) => d?.id && d.label).map((d) => (
           <SelectItem key={d.id} value={d.id} className="text-sm">
             <span className="font-semibold">{d.label}</span>
             <span className="text-xs text-muted-foreground"> — {d.description}</span>

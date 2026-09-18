@@ -1,0 +1,206 @@
+'use client';
+
+import { motion } from 'framer-motion';
+import { Palette } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  CLASSROOM_APPEARANCE_THEMES,
+  classroomAppearanceThemeById,
+} from '@/lib/classroom/classroomAppearanceThemes';
+import type { ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
+import { cn } from '@/lib/utils';
+
+const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
+
+function ThemeSwatch({
+  selected,
+  swatches,
+  title,
+  hint,
+  tokenPreview,
+  onSelect,
+}: {
+  selected: boolean;
+  swatches: [string, string, string, string];
+  title: string;
+  hint: string;
+  tokenPreview?: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex flex-col items-start gap-1.5 rounded-xl border p-2 text-left transition-colors hover:bg-muted/60',
+        selected ? 'border-primary bg-primary/10 ring-1 ring-primary/35' : 'border-border/60',
+      )}
+      aria-pressed={selected}
+      aria-label={`${title}. ${hint}`}
+    >
+      {tokenPreview ? (
+        <span
+          className="relative grid h-10 w-full grid-cols-4 items-end gap-0.5 overflow-hidden rounded-lg border border-[#d6d0c6] px-1 pb-1"
+          style={{
+            backgroundColor: '#f4f0e8',
+            backgroundImage: 'radial-gradient(circle, #c8c2b6 1px, transparent 1.1px)',
+            backgroundSize: '7px 7px',
+          }}
+        >
+          {swatches.slice(0, 3).map((color) => (
+            <span
+              key={color}
+              className="h-6 rounded-[4px] border-2 bg-white"
+              style={{ borderColor: color, boxShadow: `2px 2px 0 0 ${color}` }}
+            />
+          ))}
+          <span className="h-4 rounded-sm" style={{ backgroundColor: swatches[3] }} />
+        </span>
+      ) : (
+        <span className="grid h-10 w-full grid-cols-2 grid-rows-2 overflow-hidden rounded-lg border border-black/10 shadow-sm">
+          {swatches.map((color) => (
+            <span key={color} style={{ backgroundColor: color }} />
+          ))}
+        </span>
+      )}
+      <span className="text-[11px] font-bold leading-tight text-foreground">{title}</span>
+      <span className="text-[10px] leading-tight text-muted-foreground">{hint}</span>
+    </button>
+  );
+}
+
+export function ClassroomAppearancePopover({
+  prefs,
+  rewardsPillarOn = false,
+  onChange,
+  triggerClassName,
+  iconOnly = false,
+}: {
+  prefs: ClassroomSeatingPrefs;
+  rewardsPillarOn?: boolean;
+  onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
+  triggerClassName?: string;
+  iconOnly?: boolean;
+}) {
+  const active = classroomAppearanceThemeById(prefs.design);
+
+  return (
+    <Popover modal>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={triggerClassName}
+          aria-label="Appearance"
+          title="How desks and the room look"
+        >
+          <Palette className="h-4 w-4 shrink-0" aria-hidden />
+          {iconOnly ? null : <span className="hidden sm:inline">Appearance</span>}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        collisionPadding={12}
+        className="z-[500] w-[22rem] rounded-2xl p-0"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={spring}
+          className="max-h-[min(70vh,32rem)] space-y-4 overflow-y-auto p-3"
+        >
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Look</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Now: {active?.title ?? 'Vibrant / Playful'}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {CLASSROOM_APPEARANCE_THEMES.map((theme) => (
+                <ThemeSwatch
+                  key={theme.id}
+                  selected={prefs.design === theme.id}
+                  swatches={theme.swatches}
+                  title={theme.title}
+                  hint={theme.hint}
+                  tokenPreview={theme.id === 'aurora'}
+                  onSelect={() => onChange({ design: theme.id })}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Desk cards</p>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showPointBalances}
+                onCheckedChange={(v) => onChange({ showPointBalances: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">
+                  {rewardsPillarOn ? 'Point balances' : 'Classroom balances'}
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showSessionTotals}
+                onCheckedChange={(v) => onChange({ showSessionTotals: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Session badges</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showSessionLastAward ?? true}
+                disabled={!prefs.showSessionTotals}
+                onCheckedChange={(v) => onChange({ showSessionLastAward: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Last award label</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showStudentPhotos !== false}
+                onCheckedChange={(v) => onChange({ showStudentPhotos: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Student photos</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showLastName}
+                onCheckedChange={(v) => onChange({ showLastName: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Last names</span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2">
+              <Checkbox
+                className="mt-0.5"
+                checked={prefs.showStudentEmoji}
+                onCheckedChange={(v) => onChange({ showStudentEmoji: v === true })}
+              />
+              <span className="text-xs leading-snug">
+                <span className="font-semibold">Student emoji</span>
+              </span>
+            </label>
+          </div>
+        </motion.div>
+      </PopoverContent>
+    </Popover>
+  );
+}

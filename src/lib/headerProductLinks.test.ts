@@ -15,7 +15,7 @@ describe('headerProductHref', () => {
   });
 
   it('opens dedicated classroom and library pages', () => {
-    expect(headerProductHref('classroom', 'yeshiva', 'teacher')).toBe('/yeshiva/classroom-realm');
+    expect(headerProductHref('classroom', 'yeshiva', 'teacher')).toBe('/yeshiva/classroom');
     expect(headerProductHref('library', 'yeshiva', 'librarian')).toBe('/yeshiva/librarian');
     expect(headerProductHref('library', 'yeshiva', 'teacher')).toBe('/yeshiva/library');
     expect(headerProductHref('library', 'yeshiva', 'secretary')).toBe('/yeshiva/library');

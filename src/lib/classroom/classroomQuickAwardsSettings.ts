@@ -31,13 +31,15 @@ export function newClassroomQuickAwardId(): string {
 function normalizeOneQuickAward(raw: unknown, index: number): ClassroomQuickAward | null {
   if (!raw || typeof raw !== 'object') return null;
   const row = raw as Partial<ClassroomQuickAward>;
-  const label = typeof row.label === 'string' ? row.label.trim() : '';
+  const rawLabel = typeof row.label === 'string' ? row.label.trim() : '';
+  const label = /^quick\s*tap$/i.test(rawLabel) ? 'Good job' : rawLabel;
   const points = Number(row.points);
   if (!label || !Number.isFinite(points) || points <= 0) return null;
-  const description =
+  const rawDescription =
     typeof row.description === 'string' && row.description.trim()
       ? row.description.trim()
       : label;
+  const description = /^quick\s*tap$/i.test(rawDescription) ? 'Good job' : rawDescription;
   const id =
     typeof row.id === 'string' && row.id.trim()
       ? row.id.trim()
@@ -75,7 +77,7 @@ export function resolveClassroomQuickTapDescription(
   settings?: ClassroomLabelsSettings | null,
 ): string {
   const custom = settings?.classroomQuickTapDescription?.trim();
-  if (custom) return custom;
+  if (custom) return /^quick\s*tap$/i.test(custom) ? 'Good job' : custom;
   const first = resolveClassroomQuickAwards(settings)[0];
   return first?.description ?? 'Quick award';
 }
