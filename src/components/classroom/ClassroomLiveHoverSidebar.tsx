@@ -60,6 +60,7 @@ export function ClassroomLiveHoverSidebar({
   const [expanded, setExpanded] = useState(false);
   const [iconOnly, setIconOnly] = useState(true);
   const collapseTimerRef = useRef<number | null>(null);
+  const revealTimerRef = useRef<number | null>(null);
 
   const clearCollapseTimer = useCallback(() => {
     if (collapseTimerRef.current != null) {
@@ -68,21 +69,39 @@ export function ClassroomLiveHoverSidebar({
     }
   }, []);
 
+  const clearRevealTimer = useCallback(() => {
+    if (revealTimerRef.current != null) {
+      window.clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  }, []);
+
+  const revealFullPanel = useCallback(() => {
+    clearRevealTimer();
+    setIconOnly(false);
+  }, [clearRevealTimer]);
+
   const open = useCallback(() => {
     clearCollapseTimer();
     setExpanded(true);
-    // Keep iconOnly until width spring finishes (see onAnimationComplete).
-  }, [clearCollapseTimer]);
+    // Keep icons until the width spring is mostly done so labels are never cut in half.
+    clearRevealTimer();
+    revealTimerRef.current = window.setTimeout(() => {
+      setIconOnly(false);
+      revealTimerRef.current = null;
+    }, 200);
+  }, [clearCollapseTimer, clearRevealTimer]);
 
   const scheduleCollapse = useCallback(() => {
     clearCollapseTimer();
+    clearRevealTimer();
     collapseTimerRef.current = window.setTimeout(() => {
       // Drop labels immediately so collapse never shows clipped text.
       setIconOnly(true);
       setExpanded(false);
       collapseTimerRef.current = null;
     }, COLLAPSE_DELAY_MS);
-  }, [clearCollapseTimer]);
+  }, [clearCollapseTimer, clearRevealTimer]);
 
   const chrome = useMemo<ClassroomLiveSidebarChrome>(
     () => ({ expanded, iconOnly, requestExpand: open }),
@@ -105,7 +124,7 @@ export function ClassroomLiveHoverSidebar({
           onMouseLeave={scheduleCollapse}
           onAnimationComplete={() => {
             if (expanded) {
-              setIconOnly(false);
+              revealFullPanel();
             } else {
               setIconOnly(true);
             }
