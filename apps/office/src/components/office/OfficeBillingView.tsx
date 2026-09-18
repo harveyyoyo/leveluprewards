@@ -472,7 +472,11 @@ export function OfficeBillingView({
           let balanceCents = account.balanceCents || 0;
           if (existing.status === 'sent' || existing.status === 'partial') {
             balanceCents = Math.max(0, balanceCents - oldRemaining + newRemaining);
-          } else if (resolvedStatus === 'sent' && existing.status === 'draft') {
+          } else if (existing.status === 'draft' && resolvedStatus !== 'draft') {
+            // A draft becoming sent/partial adds whatever is still owed to the family
+            // balance. Checking resolvedStatus !== 'draft' (not just === 'sent') also
+            // covers the edge case of a draft that already had a partial payment
+            // recorded on it before being sent - newRemaining already accounts for that.
             balanceCents += newRemaining;
           }
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
