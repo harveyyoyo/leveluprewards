@@ -51,7 +51,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
 
     useEffect(() => {
         if (isOpen) {
-            if (achievement && isEditing) {
+            if (achievement) {
                 setName(achievement.name || '');
                 setDescription(achievement.description || '');
                 setIcon(achievement.icon || 'Trophy');
