@@ -25,7 +25,7 @@ function renderDesk(handlersRef: { current: ClassroomGridHandlers }, deskMenuEna
         layoutRows={1}
         layoutCols={1}
         cellStudentIds={['s1']}
-        visualCells={[{ visualRow: 0, visualCol: 0, cellIndex: 0 }]}
+        visualCells={[{ visualRow: 0, cellIndex: 0 }]}
         deskCatalog={catalog}
         design="aurora"
         accentColor="#22c55e"
@@ -34,14 +34,14 @@ function renderDesk(handlersRef: { current: ClassroomGridHandlers }, deskMenuEna
         showBalance
         showSessionTotals
         showSessionLastAward
-        density="roomy"
+        density="normal"
         gridGap={8}
         editMode={false}
         pendingCellIndex={null}
         pendingStartedAt={null}
         autoAwardMs={0}
         flyUpCell={null}
-        flyUpSize="md"
+        flyUpSize="medium"
         flashCell={null}
         burstSelected={[]}
         randomHighlightId={null}

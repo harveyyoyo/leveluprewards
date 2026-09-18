@@ -347,7 +347,7 @@ function DeskInner({
       <>
         {avatar}
         {nameEl}
-        {showPts ? <DeskPointsPill points={points} compact={visualScale === 'md'} /> : null}
+        {showPts ? <DeskPointsPill points={points} /> : null}
       </>
     );
   }
