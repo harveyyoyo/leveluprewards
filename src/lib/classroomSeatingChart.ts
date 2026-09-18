@@ -400,6 +400,216 @@ export function buildInitialLayout(studentIds: string[], cols = 5): ClassroomSea
   return { rows, cols, cells };
 }
 
+export type ClassroomRoomShape = 'rows' | 'pairs' | 'pods' | 'ushape';
+
+export const CLASSROOM_ROOM_SHAPES: {
+  id: ClassroomRoomShape;
+  label: string;
+  description: string;
+  emoji: string;
+}[] = [
+  { id: 'rows', label: 'Classic Rows', description: 'Neat grid of desks facing forward', emoji: '🪑' },
+  { id: 'pairs', label: 'Partner Pairs', description: 'Desks in pairs with aisles between them', emoji: '👥' },
+  { id: 'pods', label: 'Table Pods', description: 'Clusters of 4 desks for group teamwork', emoji: '🍀' },
+  { id: 'ushape', label: 'U-Shape Circle', description: 'Desks along the perimeter with an open center', emoji: '🧲' },
+];
+
+/** Build a seating chart according to common real-world classroom shapes. */
+export function buildRoomShapeLayout(
+  shape: ClassroomRoomShape,
+  studentIds: string[],
+  preferredCols?: number,
+): ClassroomSeatingLayout {
+  if (shape === 'rows') {
+    const cols = preferredCols ?? initialLayoutColumnCount(studentIds.length);
+    return buildInitialLayout(studentIds, cols);
+  }
+
+  if (shape === 'pairs') {
+    // 2 desks side-by-side with an aisle column between pairs
+    const pairsPerRow = studentIds.length > 16 ? 3 : 2;
+    const cols = pairsPerRow * 3 - 1; // 2 pairs -> 5 cols (D D . D D), 3 pairs -> 8 cols (D D . D D . D D)
+    const desksPerRow = pairsPerRow * 2;
+    const rows = Math.max(2, Math.ceil(studentIds.length / desksPerRow));
+    const cells: (string | null)[] = Array.from({ length: rows * cols }, () => null);
+
+    let studentIndex = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        // Aisle column is every 3rd column (index 2, 5, etc.)
+        if (c % 3 === 2) continue;
+        if (studentIndex < studentIds.length) {
+          cells[r * cols + c] = studentIds[studentIndex++];
+        }
+      }
+    }
+    // Safety check: ensure any extra students are placed
+    while (studentIndex < studentIds.length) {
+      cells.push(studentIds[studentIndex++]);
+    }
+    const finalRows = Math.ceil(cells.length / cols);
+    while (cells.length < finalRows * cols) cells.push(null);
+    return { rows: finalRows, cols, cells };
+  }
+
+  if (shape === 'pods') {
+    // 2x2 pods with aisle row & col
+    const podsPerRow = studentIds.length > 16 ? 3 : 2;
+    const cols = podsPerRow * 3 - 1; // 2 pods -> 5 cols, 3 pods -> 8 cols
+    const totalPods = Math.max(1, Math.ceil(studentIds.length / 4));
+    const podRowBlocks = Math.ceil(totalPods / podsPerRow);
+    const rows = Math.max(2, podRowBlocks * 3 - 1);
+    const cells: (string | null)[] = Array.from({ length: rows * cols }, () => null);
+
+    let studentIndex = 0;
+    for (let p = 0; p < totalPods; p++) {
+      const podRowBlock = Math.floor(p / podsPerRow);
+      const podColBlock = p % podsPerRow;
+      const r0 = podRowBlock * 3;
+      const c0 = podColBlock * 3;
+      const offsets = [
+        [0, 0],
+        [0, 1],
+        [1, 0],
+        [1, 1],
+      ];
+      for (const [dr, dc] of offsets) {
+        if (studentIndex < studentIds.length) {
+          const r = r0 + dr;
+          const c = c0 + dc;
+          if (r < rows && c < cols) {
+            cells[r * cols + c] = studentIds[studentIndex++];
+          }
+        }
+      }
+    }
+    // Safety check
+    while (studentIndex < studentIds.length) {
+      cells.push(studentIds[studentIndex++]);
+    }
+    const finalRows = Math.ceil(cells.length / cols);
+    while (cells.length < finalRows * cols) cells.push(null);
+    return { rows: finalRows, cols, cells };
+  }
+
+  if (shape === 'ushape') {
+    // Perimeter horseshoe: left column, bottom row, right column, empty center
+    const cols = studentIds.length <= 14 ? 5 : studentIds.length <= 24 ? 6 : 7;
+    // Perimeter spots = 2 * rows + (cols - 2)
+    const neededRows = Math.max(3, Math.ceil((studentIds.length - (cols - 2)) / 2));
+    const rows = neededRows;
+    const cells: (string | null)[] = Array.from({ length: rows * cols }, () => null);
+
+    const perimeterCoords: [number, number][] = [];
+    // Down left column
+    for (let r = 0; r < rows - 1; r++) {
+      perimeterCoords.push([r, 0]);
+    }
+    // Across bottom row (from left to right)
+    for (let c = 0; c < cols; c++) {
+      perimeterCoords.push([rows - 1, c]);
+    }
+    // Up right column (from bottom-1 up to top)
+    for (let r = rows - 2; r >= 0; r--) {
+      perimeterCoords.push([r, cols - 1]);
+    }
+
+    let studentIndex = 0;
+    for (const [r, c] of perimeterCoords) {
+      if (studentIndex < studentIds.length) {
+        cells[r * cols + c] = studentIds[studentIndex++];
+      }
+    }
+
+    // If more students than outer ring, fill inner row safely
+    for (let r = rows - 2; r >= 0 && studentIndex < studentIds.length; r--) {
+      for (let c = 1; c < cols - 1 && studentIndex < studentIds.length; c++) {
+        cells[r * cols + c] = studentIds[studentIndex++];
+      }
+    }
+
+    // Safety fallback
+    while (studentIndex < studentIds.length) {
+      cells.push(studentIds[studentIndex++]);
+    }
+    const finalRows = Math.ceil(cells.length / cols);
+    while (cells.length < finalRows * cols) cells.push(null);
+    return { rows: finalRows, cols, cells };
+  }
+
+  return buildInitialLayout(studentIds, preferredCols ?? 5);
+}
+
+export type ClassroomSeatingGroup = {
+  id: string;
+  name: string;
+  type: 'row' | 'table';
+  studentIds: string[];
+};
+
+/**
+ * Group students on the seating chart into rows and table pods for quick group awards.
+ */
+export function extractLayoutGroups(
+  layout: ClassroomSeatingLayout,
+  frontAtBottom = false,
+): ClassroomSeatingGroup[] {
+  const groups: ClassroomSeatingGroup[] = [];
+  const { rows, cols, cells } = layout;
+
+  // 1. Group by Rows
+  for (let r = 0; r < rows; r++) {
+    const rowStudentIds: string[] = [];
+    for (let c = 0; c < cols; c++) {
+      const id = cells[r * cols + c];
+      if (id) rowStudentIds.push(id);
+    }
+    if (rowStudentIds.length > 0) {
+      const rowNum = frontAtBottom ? rows - r : r + 1;
+      groups.push({
+        id: `row-${r}`,
+        name: `Row ${rowNum}`,
+        type: 'row',
+        studentIds: rowStudentIds,
+      });
+    }
+  }
+
+  // 2. Detect Pods / Tables if grid is wide enough
+  const hasAisleCol = cols >= 3 && Array.from({ length: rows }, (_, r) => cells[r * cols + 2]).every((id) => !id);
+  const hasAisleRow = rows >= 3 && Array.from({ length: cols }, (_, c) => cells[2 * cols + c]).every((id) => !id);
+
+  if (hasAisleCol || cols >= 4) {
+    let tableNum = 1;
+    const rStep = hasAisleRow ? 3 : 2;
+    const cStep = hasAisleCol ? 3 : 2;
+    for (let r = 0; r < rows; r += rStep) {
+      for (let c = 0; c < cols; c += cStep) {
+        const podIds: string[] = [];
+        for (let dr = 0; dr < 2 && r + dr < rows; dr++) {
+          for (let dc = 0; dc < 2 && c + dc < cols; dc++) {
+            const id = cells[(r + dr) * cols + (c + dc)];
+            if (id) podIds.push(id);
+          }
+        }
+        if (podIds.length >= 2) {
+          groups.push({
+            id: `table-${tableNum}`,
+            name: `Table ${tableNum}`,
+            type: 'table',
+            studentIds: podIds,
+          });
+          tableNum++;
+        }
+      }
+    }
+  }
+
+  return groups;
+}
+
+
+
 export function resizeLayout(
   layout: ClassroomSeatingLayout,
   rows: number,

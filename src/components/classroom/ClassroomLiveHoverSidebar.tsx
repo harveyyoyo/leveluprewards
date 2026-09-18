@@ -108,15 +108,18 @@ export function ClassroomLiveHoverSidebar({
     [expanded, iconOnly, open],
   );
 
-  const width = expanded ? CLASSROOM_LIVE_SIDEBAR_EXPANDED_PX : CLASSROOM_LIVE_SIDEBAR_COLLAPSED_PX;
-
   return (
-    <div className="relative z-20 h-full shrink-0" style={{ width }}>
+    <div
+      className="relative z-20 h-full shrink-0"
+      style={{ width: expanded ? CLASSROOM_LIVE_SIDEBAR_EXPANDED_PX : CLASSROOM_LIVE_SIDEBAR_COLLAPSED_PX }}
+    >
       <ClassroomLiveSidebarChromeContext.Provider value={chrome}>
         <motion.aside
           layoutId="classroom-live-sidebar-rail"
           initial={false}
-          animate={{ width }}
+          animate={{
+            width: expanded ? CLASSROOM_LIVE_SIDEBAR_EXPANDED_PX : CLASSROOM_LIVE_SIDEBAR_COLLAPSED_PX,
+          }}
           transition={spring}
           aria-label={ariaLabel}
           aria-expanded={expanded && !iconOnly}
@@ -139,7 +142,7 @@ export function ClassroomLiveHoverSidebar({
           <div
             className={cn(
               'flex min-h-0 flex-1 flex-col overflow-hidden',
-              iconOnly ? 'items-center gap-1.5 overflow-y-auto overflow-x-hidden' : 'gap-1.5',
+              iconOnly ? 'items-start gap-1.5 overflow-y-auto overflow-x-hidden' : 'gap-1.5',
             )}
           >
             {children}

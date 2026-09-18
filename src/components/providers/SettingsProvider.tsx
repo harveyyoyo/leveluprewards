@@ -100,6 +100,7 @@ interface Settings {
     enableStudentThemes: boolean;
     // Engagement
     enableAchievements: boolean;
+    achievementsStarterSeeded?: boolean;
     enableBadges: boolean;
     enableLevels: boolean;
     enableStreaks: boolean;
@@ -823,6 +824,7 @@ const defaultSettings: Settings = {
     enableThemeAnimations: false,
     enableStudentThemes: true,
     enableAchievements: false,
+    achievementsStarterSeeded: false,
     enableBadges: false,
     enableLevels: false,
     enableStreaks: false,

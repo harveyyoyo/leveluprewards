@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import type { Achievement } from '@/lib/types';
 
 interface BonusSpinWheelModalProps {
     isOpen: boolean;
-    achievement: any;
+    achievement: Pick<Achievement, 'name' | 'bonusPoints' | 'wheelSegments'> | Achievement;
     onWon: (wonAmount: number) => Promise<void>;
     primaryColor?: string;
 }
@@ -59,17 +60,12 @@ export function BonusSpinWheelModal({
     ];
 
     useEffect(() => {
-        if (isOpen && !hasSpun && achievement) {
-            setHasSpun(true);
-            // Trigger automatic spin
-            setTimeout(() => {
-                handleSpin();
-            }, 1000);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, hasSpun, achievement]);
+        setHasSpun(false);
+        setResult(null);
+        setIsSpinning(false);
+    }, [achievement?.name, achievement?.bonusPoints]);
 
-    const handleSpin = async () => {
+    const handleSpin = useCallback(async () => {
         if (isSpinning || result !== null) return;
 
         setIsSpinning(true);
@@ -100,10 +96,21 @@ export function BonusSpinWheelModal({
         playSound('success');
 
         // Allow reading the prize, then close/callback
-        setTimeout(async () => {
-            await onWon(wonAmount);
+        setTimeout(() => {
+            void onWon(wonAmount);
         }, 3000);
-    };
+    }, [controls, isSpinning, onWon, playSound, result, segments]);
+
+    useEffect(() => {
+        if (isOpen && !hasSpun && achievement) {
+            setHasSpun(true);
+            // Trigger automatic spin after 1s
+            const timer = setTimeout(() => {
+                void handleSpin();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, hasSpun, achievement, handleSpin]);
 
     // Calculate SVG Pie Slices
     const svgPaths = useMemo(() => {
@@ -148,7 +155,15 @@ export function BonusSpinWheelModal({
                     {/* Wheel Container */}
                     <motion.div
                         animate={controls}
-                        className="w-full h-full rounded-full border-8 border-card/80 shadow-2xl relative overflow-hidden bg-muted flex items-center justify-center select-none"
+                        onClick={() => {
+                            if (!isSpinning && result === null) {
+                                void handleSpin();
+                            }
+                        }}
+                        className={cn(
+                            "w-full h-full rounded-full border-8 border-card/80 shadow-2xl relative overflow-hidden bg-muted flex items-center justify-center select-none",
+                            !isSpinning && result === null ? "cursor-pointer active:scale-[0.99] transition-transform hover:scale-[1.01]" : ""
+                        )}
                         style={{
                             boxShadow: `0 0 40px ${primaryColor}44, inset 0 0 20px rgba(0,0,0,0.2)`
                         }}
@@ -176,8 +191,9 @@ export function BonusSpinWheelModal({
                         </svg>
 
                         {/* Center point */}
-                        <div className="absolute w-12 h-12 rounded-full bg-card/90 shadow-lg z-10 flex items-center justify-center border-4 border-border">
-                            <div className="w-4 h-4 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }} />
+                        <div className="absolute w-14 h-14 rounded-full bg-card shadow-lg z-10 flex flex-col items-center justify-center border-4 border-border cursor-pointer">
+                            <span className="text-[10px] font-black uppercase tracking-tight text-foreground/80">SPIN</span>
+                            <div className="w-2.5 h-2.5 rounded-full animate-pulse mt-0.5" style={{ backgroundColor: primaryColor }} />
                         </div>
                     </motion.div>
 

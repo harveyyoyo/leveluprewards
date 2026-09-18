@@ -101,19 +101,43 @@ export function StudentKioskTopBar({
           </div>
         </div>
 
-        <div className="text-center">
-          <p
-            className="text-[9px] font-bold uppercase tracking-[0.24em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
-            style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
-          >
-            {t('student.kiosk.balance')}
-          </p>
-          <p
-            className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl [@media(max-height:760px)]:text-2xl"
-            style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
-          >
-            {points.toLocaleString()}
-          </p>
+        <div className="flex items-center gap-3 sm:gap-4 justify-center text-center">
+          <div>
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
+              style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+            >
+              Spendable
+            </p>
+            <p
+              className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl"
+              style={{ color: themed ? 'var(--theme-primary)' : 'hsl(var(--primary))' }}
+            >
+              {points.toLocaleString()}
+            </p>
+          </div>
+          <div
+            className="h-8 w-px bg-border/60"
+            style={
+              themed
+                ? { backgroundColor: 'color-mix(in srgb, var(--theme-page-text) 20%, transparent)' }
+                : undefined
+            }
+          />
+          <div>
+            <p
+              className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-60 sm:text-[10px] [@media(max-height:760px)]:text-[8px]"
+              style={{ color: themed ? 'var(--theme-page-text)' : undefined }}
+            >
+              All-Time
+            </p>
+            <p
+              className="text-2xl font-black tabular-nums leading-none sm:text-3xl md:text-4xl [@media(max-height:760px)]:text-xl opacity-90"
+              style={{ color: themed ? 'var(--theme-page-text)' : 'hsl(var(--foreground))' }}
+            >
+              {(student.lifetimePoints ?? points ?? 0).toLocaleString()}
+            </p>
+          </div>
         </div>
 
         {trailingActions ? (

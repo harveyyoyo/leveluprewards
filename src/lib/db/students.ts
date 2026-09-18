@@ -833,3 +833,69 @@ export const uploadStudents = async (firestore: Firestore, schoolId: string, csv
   const failedCount = dataLines.length - successCount;
   return { success: successCount, failed: failedCount, errors };
 };
+
+export const claimWheelSpinBonus = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+  achievementId: string,
+  wonAmount: number,
+  achievementName?: string,
+): Promise<{ success: boolean; pointsAwarded: number }> => {
+  if (wonAmount < 0 || !Number.isFinite(wonAmount)) {
+    return { success: false, pointsAwarded: 0 };
+  }
+  const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+
+  try {
+    await runTransaction(firestore, async (transaction) => {
+      const studentDoc = await transaction.get(studentRef);
+      if (!studentDoc.exists()) {
+        throw new Error('Student not found.');
+      }
+      const studentData = studentDoc.data() as Student;
+      const earnedAchievements = [...(studentData.earnedAchievements || [])];
+      const matchIndex = earnedAchievements.findIndex(
+        (a) => a.achievementId === achievementId && a.wheelSpun === false
+      );
+      if (matchIndex === -1) {
+        return;
+      }
+
+      earnedAchievements[matchIndex] = {
+        ...earnedAchievements[matchIndex],
+        wheelSpun: true,
+        bonusPointsWon: wonAmount,
+      };
+
+      const newPoints = Number(studentData.points ?? 0) + wonAmount;
+      const newLifetimePoints = Number(studentData.lifetimePoints ?? 0) + wonAmount;
+
+      if (wonAmount > 0) {
+        const actRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+        transaction.set(actRef, {
+          desc: `Bonus Wheel: +${wonAmount} pts (${achievementName || 'Milestone'})`,
+          amount: wonAmount,
+          date: Date.now(),
+        });
+      }
+
+      transaction.update(studentRef, {
+        points: newPoints,
+        lifetimePoints: newLifetimePoints,
+        earnedAchievements,
+        updatedAt: Date.now(),
+      });
+    });
+
+    return { success: true, pointsAwarded: wonAmount };
+  } catch (error) {
+    reportFirestorePermissionError(error, {
+      path: studentRef.path,
+      operation: 'update',
+      requestResourceData: { achievementId, wonAmount },
+    });
+    throw error;
+  }
+};
+

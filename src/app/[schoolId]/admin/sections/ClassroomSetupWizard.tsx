@@ -36,9 +36,14 @@ import type { Class, Student } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { buildClassroomFullscreenUrl } from '@/lib/classroomPointsUrl';
 import {
+  saveClassroomLayout,
   saveClassroomPrefs,
+  buildRoomShapeLayout,
+  CLASSROOM_ROOM_SHAPES,
+  type ClassroomRoomShape,
   type ClassroomDesign,
 } from '@/lib/classroomSeatingChart';
+
 import {
   applyClassroomWizardSettings,
   classroomPrefsFromDraft,
@@ -80,7 +85,9 @@ export function ClassroomSetupWizard({
   const [draft, setDraft] = useState<ClassroomSetupWizardDraft>(() =>
     defaultClassroomWizardDraft(classes),
   );
+  const [roomShape, setRoomShape] = useState<ClassroomRoomShape>('rows');
   const [finishing, setFinishing] = useState(false);
+
   const [finishSummary, setFinishSummary] = useState<string[]>([]);
 
   const sortedClasses = useMemo(
@@ -137,9 +144,20 @@ export function ClassroomSetupWizard({
       if (draft.spotlightClassId) {
         const cls = sortedClasses.find((c) => c.id === draft.spotlightClassId);
         if (cls) summary.push(`Spotlight class: ${cls.name}`);
+
+        const classStudentIds = students
+          .filter((s) => s.classId === draft.spotlightClassId)
+          .map((s) => s.id);
+        if (classStudentIds.length > 0) {
+          const shapeLayout = buildRoomShapeLayout(roomShape, classStudentIds);
+          saveClassroomLayout(schoolId, 'admin', draft.spotlightClassId, shapeLayout);
+          const meta = CLASSROOM_ROOM_SHAPES.find((s) => s.id === roomShape);
+          if (meta) summary.push(`Room shape: ${meta.label}`);
+        }
       }
 
       setFinishSummary(summary);
+
       setStep(3);
       onComplete?.();
       toast({
@@ -251,10 +269,35 @@ export function ClassroomSetupWizard({
                   {studentsInSpotlight} student{studentsInSpotlight === 1 ? '' : 's'} in this class.
                   Teachers open the Classroom tab for their own roster.
                 </p>
+
+                <div className="pt-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Initial room shape
+                  </Label>
+                  <Select
+                    value={roomShape}
+                    onValueChange={(v) => setRoomShape(v as ClassroomRoomShape)}
+                  >
+                    <SelectTrigger className="mt-1 rounded-xl">
+                      <SelectValue placeholder="Choose room shape" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CLASSROOM_ROOM_SHAPES.map((shape) => (
+                        <SelectItem key={shape.id} value={shape.id}>
+                          <span>{shape.emoji} {shape.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {CLASSROOM_ROOM_SHAPES.find((s) => s.id === roomShape)?.description}
+                  </p>
+                </div>
               </div>
             )}
           </div>
         )}
+
 
         {step === 2 && (
           <div className="space-y-4">

@@ -285,6 +285,108 @@ export const recordClassSignIn = async (
   return result;
 };
 
+// ---- Manual Attendance Entry ----
+
+export interface ManualAttendanceOptions {
+  status?: 'on-time' | 'late' | 'excused';
+  points?: number;
+  periodLabel?: string;
+  teacherId?: string;
+  note?: string;
+  attendanceTimeZone?: string;
+  categoryId?: string;
+}
+
+export const recordManualAttendance = async (
+  firestore: Firestore,
+  schoolId: string,
+  studentId: string,
+  student: Student,
+  options: ManualAttendanceOptions = {}
+): Promise<{ success: boolean; pointsAwarded: number; reason?: string; periodLabel?: string }> => {
+  const now = Date.now();
+  const clock = getSchoolDayClock(now, options.attendanceTimeZone, { whenUnset: 'local' });
+  const yyyy = clock.year;
+  const mm = String(clock.month).padStart(2, '0');
+  const dd = String(clock.day).padStart(2, '0');
+  const dayKey = `${yyyy}${mm}${dd}`;
+  const classKey = (student.classId || '').trim() || 'no_class';
+  const periodKey = (options.periodLabel || '').trim() || 'daily';
+  const sessionId = `${dayKey}:${classKey}:${periodKey}`;
+
+  const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
+  const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+  const logDocId = `${studentId}_${sessionId}`;
+  const logRef = doc(firestore, 'schools', schoolId, 'attendanceLog', logDocId);
+
+  const status = options.status || 'on-time';
+  const onTime = status === 'on-time';
+  const pointsToAward = options.points !== undefined ? Math.max(0, options.points) : (onTime ? 5 : 1);
+
+  return runTransaction(firestore, async (transaction) => {
+    const existing = await transaction.get(logRef);
+    if (existing.exists()) {
+      return { success: false, pointsAwarded: 0, reason: 'already_checked_in', periodLabel: options.periodLabel };
+    }
+
+    const studentSnap = await transaction.get(studentRef);
+    if (!studentSnap.exists()) throw new Error('Student not found');
+    const data = studentSnap.data() as Student;
+
+    let categoryName: string | undefined;
+    if (pointsToAward > 0 && options.categoryId) {
+      const categorySnap = await transaction.get(
+        doc(firestore, 'schools', schoolId, 'categories', options.categoryId)
+      );
+      const name = (categorySnap.data() as Category | undefined)?.name?.trim();
+      if (name) categoryName = name;
+    }
+
+    const studentPatch: Record<string, unknown> = {
+      points: (data.points || 0) + pointsToAward,
+      lifetimePoints: (data.lifetimePoints ?? 0) + pointsToAward,
+      updatedAt: now,
+    };
+    if (pointsToAward > 0) {
+      studentPatch.pointsByPeriod = applyPointsByPeriod(data.pointsByPeriod, pointsToAward, now);
+    }
+    if (categoryName) {
+      const categoryPointsUpdate = { ...data.categoryPoints };
+      categoryPointsUpdate[categoryName] = (categoryPointsUpdate[categoryName] || 0) + pointsToAward;
+      studentPatch.categoryPoints = categoryPointsUpdate;
+      studentPatch.categoryPointsByPeriod = applyCategoryPointsByPeriod(
+        data.categoryPointsByPeriod,
+        categoryName,
+        pointsToAward,
+        now
+      );
+    }
+    transaction.update(studentRef, studentPatch);
+
+    const desc = options.periodLabel
+      ? `Attendance (${status}): ${options.periodLabel}`
+      : `Attendance (${status})`;
+    transaction.set(activityRef, { desc, amount: pointsToAward, date: now } as HistoryItem);
+
+    const studentName = [student.firstName, student.lastName].filter(Boolean).join(' ') || student.nickname || studentId;
+    transaction.set(logRef, {
+      studentId,
+      studentName,
+      signedInAt: now,
+      pointsAwarded: pointsToAward,
+      onTime,
+      status,
+      periodLabel: options.periodLabel ?? null,
+      sessionId,
+      teacherId: options.teacherId ?? null,
+      manual: true,
+      note: options.note ?? null,
+    });
+
+    return { success: true, pointsAwarded: pointsToAward, periodLabel: options.periodLabel };
+  });
+};
+
 // ---- Logs ----
 
 export const listAttendanceLog = async (

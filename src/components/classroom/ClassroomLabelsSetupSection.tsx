@@ -20,6 +20,7 @@ import {
   normalizeBehaviorQuickOptions,
   normalizeClassroomQuickAwards,
   resolveClassroomQuickTapDescription,
+  CLASSROOM_COMPLIMENT_STICKER_PRESETS,
   type ClassroomBehaviorQuickOptions,
 } from '@/lib/classroom/classroomQuickAwardsSettings';
 import {
@@ -131,20 +132,37 @@ function QuickAwardsEditorBody({
           </div>
         ))}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="mt-1.5 h-7 rounded-md px-2 text-[10px] font-bold"
-        disabled={disabled || quickAwards.length >= MAX_CLASSROOM_QUICK_AWARDS}
-        onClick={addQuickAward}
-      >
-        <Plus className="mr-1 h-3 w-3" />
-        Add
-      </Button>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 rounded-md px-2 text-[10px] font-bold"
+          disabled={disabled || quickAwards.length >= MAX_CLASSROOM_QUICK_AWARDS}
+          onClick={addQuickAward}
+        >
+          <Plus className="mr-1 h-3 w-3" />
+          Add
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="h-7 rounded-md px-2.5 text-[10px] font-bold"
+          disabled={disabled}
+          title="Load cheerful compliment stickers for positive classroom praise"
+          onClick={() => {
+            setQuickAwards([...CLASSROOM_COMPLIMENT_STICKER_PRESETS]);
+          }}
+        >
+          <Sparkles className="mr-1 h-3 w-3 text-amber-500" />
+          Praise stickers
+        </Button>
+      </div>
     </>
   );
 }
+
 
 function BehaviorCategoryEditorBody({
   shortcutKey,

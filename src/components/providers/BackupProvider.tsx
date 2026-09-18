@@ -41,7 +41,7 @@ import type { SchoolProfileType } from '@/lib/schoolProfile';
 interface BackupContextType {
     createSchool: (schoolId: string, name?: string, passcodes?: SchoolPasscodeUpdates) => Promise<CreateSchoolResult | null>;
     deleteSchool: (schoolId: string) => Promise<void>;
-    updateSchool: (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => Promise<void>;
+    updateSchool: (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string; adminEmails?: string[]; schoolProfile?: SchoolProfileType }) => Promise<void>;
     devCreateBackup: (schoolId: string) => Promise<void>;
     devRestoreFromBackup: (schoolId: string, backupId: string) => Promise<void>;
     devDownloadBackup: (schoolId: string, backupId: string) => Promise<void>;
@@ -496,7 +496,7 @@ export function BackupProvider({ children }: { children: React.ReactNode }) {
         }
     }, [firestore, auth, toast, playSound, functions]);
 
-    const updateSchool = useCallback(async (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string }) => {
+    const updateSchool = useCallback(async (schoolId: string, updates: SchoolPasscodeUpdates & { name?: string; adminEmails?: string[]; schoolProfile?: SchoolProfileType }) => {
         if (!firestore) return;
         if (!auth.currentUser) {
             const message = 'No Firebase session. Sign in at /developer and try again.';

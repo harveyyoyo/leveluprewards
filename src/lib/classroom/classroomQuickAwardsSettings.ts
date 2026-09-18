@@ -141,3 +141,14 @@ export function defaultBehaviorQuickOptions(): ClassroomBehaviorQuickOptions {
   }
   return out;
 }
+
+/** Pre-made cheerful compliment sticker presets for quick awards. */
+export const CLASSROOM_COMPLIMENT_STICKER_PRESETS: ClassroomQuickAward[] = [
+  { id: 'focus', label: 'Super Focus 🎯', points: 5, description: 'Super focus' },
+  { id: 'teamwork', label: 'Team Player 🤝', points: 5, description: 'Great teamwork' },
+  { id: 'kindness', label: 'Kind Heart 💖', points: 5, description: 'Kindness and helping others' },
+  { id: 'clean', label: 'Clean Desk ✨', points: 5, description: 'Clean workspace' },
+  { id: 'creative', label: 'Creative Idea 💡', points: 10, description: 'Creative thinking' },
+  { id: 'participate', label: 'Hand Raised 🙋', points: 5, description: 'Active participation' },
+];
+

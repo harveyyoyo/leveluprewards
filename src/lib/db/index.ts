@@ -20,6 +20,7 @@ export {
   purgeStudentsProgress,
   uploadStudents,
   importStudentsFromParsedRows,
+  claimWheelSpinBonus,
 } from './students';
 export type { AwardPointsOptions } from './students';
 

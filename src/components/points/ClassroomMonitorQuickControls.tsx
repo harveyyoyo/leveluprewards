@@ -329,7 +329,7 @@ export function ClassroomMonitorQuickControls({
             hidden: { opacity: 0 },
             visible: { opacity: 1, transition: { ...spring, staggerChildren: 0.04 } },
           }}
-          className="flex h-full min-h-0 w-full flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
+          className="flex h-full min-h-0 w-9 flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
           data-testid="classroom-monitor-icon-rail"
         >
           {onToggleEditMode ? (

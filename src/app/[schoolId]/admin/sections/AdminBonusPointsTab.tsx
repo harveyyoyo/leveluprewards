@@ -1,8 +1,10 @@
 'use client';
 
-import { Edit, Loader2, Plus, Trash2, Trophy } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Edit, Loader2, Plus, Sparkles, Trash2, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   StaffPortalSectionCard,
   StaffPortalSectionCardContent,
@@ -15,126 +17,285 @@ import { EmptyState } from '@/components/ui/empty-state';
 import DynamicIcon from '@/components/DynamicIcon';
 import { AdminRecordListHeader } from '@/components/admin/AdminRecordListHeader';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
-
-function achievementCriteriaLabel(ach: any) {
-  const criteria = ach?.criteria;
-  if (!criteria) return '-';
-  if (criteria.type === 'points') return `>= ${criteria.threshold ?? 0} current`;
-  if (criteria.type === 'lifetimePoints') return `>= ${criteria.threshold ?? 0} lifetime`;
-  if (criteria.type === 'coupons') return `Cat: ${criteria.threshold ?? 0}`;
-  if (criteria.type === 'manual') return 'Manual';
-  return '-';
-}
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { useAppContext } from '@/components/AppProvider';
+import { useFirestore } from '@/firebase';
+import { updateAchievement, addAchievement } from '@/lib/db/achievements';
+import { SAMPLE_BADGES } from '@/lib/sampleBadges';
+import type { Achievement } from '@/lib/types';
 
 export function AdminBonusPointsTab(props: any) {
   const {
     achievementsLoading,
     achievements,
-    isAddingSamples,
-    setIsAddSampleBadgesOpen,
     setEditingAchievement,
     setIsBadgeModalOpen,
     setAchievementToDelete,
   } = props;
 
+  const { settings, updateSettings } = useSettings();
+  const { schoolId, categories = [] } = useAppContext();
+  const firestore = useFirestore();
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const autoSeededRef = useRef(false);
+
+  // Auto-seed starter sample milestones once if the list is empty
+  useEffect(() => {
+    if (
+      !achievementsLoading &&
+      Array.isArray(achievements) &&
+      achievements.length === 0 &&
+      !settings.achievementsStarterSeeded &&
+      !autoSeededRef.current &&
+      firestore &&
+      schoolId
+    ) {
+      autoSeededRef.current = true;
+      (async () => {
+        try {
+          for (const sample of SAMPLE_BADGES) {
+            await addAchievement(firestore, schoolId, { ...sample, enabled: true });
+          }
+          await updateSettings({ achievementsStarterSeeded: true });
+        } catch (err) {
+          console.error('Failed to auto-seed starter milestones:', err);
+        }
+      })();
+    }
+  }, [achievementsLoading, achievements, settings.achievementsStarterSeeded, firestore, schoolId, updateSettings]);
+
+  const handleToggleAchievement = async (ach: Achievement) => {
+    if (!firestore || !schoolId || togglingId) return;
+    setTogglingId(ach.id);
+    try {
+      const nextEnabled = ach.enabled === false ? true : false;
+      await updateAchievement(firestore, schoolId, { ...ach, enabled: nextEnabled });
+    } catch (err) {
+      console.error('Failed to toggle milestone:', err);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const isSystemActive = settings.enableAchievements === true;
+
+  const getCategoryName = (catId?: string) => {
+    if (!catId) return 'Category';
+    const match = categories.find((c: any) => c.id === catId);
+    return match ? match.name : 'Category';
+  };
+
+  const renderAchievementCriteria = (ach: any) => {
+    const criteria = ach?.criteria;
+    if (!criteria) return <span>-</span>;
+    const thresh = criteria.threshold ?? 0;
+
+    if (criteria.type === 'coupons') {
+      const catName = getCategoryName(criteria.categoryId);
+      return (
+        <div className="flex flex-col">
+          <span className="font-semibold text-xs text-foreground truncate">{thresh} in {catName}</span>
+          <span className="text-[10px] text-muted-foreground font-medium">Category goal</span>
+        </div>
+      );
+    }
+
+    // Default & lifetime: All-Time Points
+    return (
+      <div className="flex flex-col">
+        <span className="font-semibold text-xs text-foreground">{thresh} all-time pts</span>
+        <span className="text-[10px] text-muted-foreground font-medium">Total earned all-time</span>
+      </div>
+    );
+  };
+
   return (
     <StaffPortalTabPanel
       tabValue="bonuspoints"
       trailing={
-          <div className="flex flex-wrap gap-2">
-            <TabWalkthroughHeaderAction />
-            <Button variant="outline" onClick={() => setIsAddSampleBadgesOpen(true)} className="rounded-xl" disabled={isAddingSamples}>
-              {isAddingSamples ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trophy className="mr-2 h-4 w-4" />}
-              Add sample milestones
-            </Button>
-            <Button onClick={() => { setEditingAchievement(null); setIsBadgeModalOpen(true); }} className="rounded-xl">
-              <Plus className="mr-2 h-4 w-4" /> Add milestone
-            </Button>
-          </div>
-        }
+        <div className="flex flex-wrap gap-2">
+          <TabWalkthroughHeaderAction />
+          <Button
+            onClick={() => {
+              setEditingAchievement(null);
+              setIsBadgeModalOpen(true);
+            }}
+            className="rounded-xl"
+          >
+            <Plus className="mr-2 h-4 w-4" /> New milestone
+          </Button>
+        </div>
+      }
     >
-    <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardContent>
-        {achievementsLoading ? (
-          <ul className="space-y-2 pr-1">
-            {[1, 2, 3].map((i: number) => (
-              <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
-                <Skeleton className="h-10 w-48" />
-                <Skeleton className="h-8 w-20" />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <ul className="pr-1 space-y-1">
-            {achievements && achievements.length > 0 ? (
-              <AdminRecordListHeader
-                gridClassName="grid-cols-[76px_minmax(180px,1fr)_minmax(140px,180px)_100px_minmax(90px,120px)_44px]"
-                columns={[
-                  { label: 'Edit' },
-                  { label: 'Milestone Name' },
-                  { label: 'Requirement' },
-                  { label: 'Bonus Award', className: 'text-center' },
-                  { label: 'Tier' },
-                  { label: 'Delete', className: 'text-right' },
-                ]}
+      <div className="space-y-4 w-full">
+        {/* Master ON / OFF Switch */}
+        <StaffPortalSectionCard className="w-full border-2 border-primary/20 bg-primary/5">
+          <StaffPortalSectionCardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-black text-base tracking-tight">Bonus Milestones System</span>
+                <Badge variant={isSystemActive ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase tracking-wider">
+                  {isSystemActive ? 'ON · ACTIVE' : 'OFF · PAUSED'}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground max-w-xl">
+                When switched on, students automatically earn extra bonus points and prize wheel spins when reaching point targets.
+                Turn off anytime to temporarily pause all bonus rewards without losing your setup.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+              <span className="text-xs font-bold text-muted-foreground">
+                {isSystemActive ? 'Enabled' : 'Disabled'}
+              </span>
+              <Switch
+                checked={isSystemActive}
+                onCheckedChange={(checked) => updateSettings({ enableAchievements: checked })}
+                aria-label="Toggle bonus milestones system"
               />
-            ) : null}
-            {(achievements || []).map((ach: any) => (
-              <li
-                key={ach.id}
-                className="grid grid-cols-[76px_minmax(180px,1fr)_minmax(140px,180px)_100px_minmax(90px,120px)_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2 transition-colors hover:border-primary/20 hover:bg-background"
-              >
-                <div className="flex items-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold"
-                    onClick={() => { setEditingAchievement(ach); setIsBadgeModalOpen(true); }}
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                    Edit
-                  </Button>
-                </div>
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
-                    className="size-8 rounded-lg flex items-center justify-center border shrink-0 bg-background"
-                    style={{ borderColor: ach.accentColor || undefined }}
-                  >
-                    <DynamicIcon name={ach.icon} className="w-4 h-4" style={ach.accentColor ? { color: ach.accentColor } : undefined} />
-                  </div>
-                  <span className="truncate text-sm font-bold">{ach.name}</span>
-                </div>
-                <div className="truncate text-sm font-medium text-muted-foreground">{achievementCriteriaLabel(ach)}</div>
-                <div className="text-center text-sm font-bold text-primary">
-                  {(ach.bonusPoints ?? 0) >= 1 ? `+${ach.bonusPoints} pts` : '-'}
-                  {ach.enableWheelSpin ? ' + wheel' : ''}
-                </div>
-                <div className="truncate text-sm font-medium text-muted-foreground">{ach.tier || '-'}</div>
-                <div className="flex items-center justify-end">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
-                    onClick={() => setAchievementToDelete(ach)}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-            {(!achievements || achievements.length === 0) && (
-              <EmptyState
-                icon={Trophy}
-                title="No milestones yet"
-                description="Milestones give students extra bonus points when they hit point thresholds (e.g. +25 pts at 100 total)."
-                action={{ label: 'Add first milestone', icon: Plus, onClick: () => { setEditingAchievement?.(null); setIsBadgeModalOpen?.(true); } }}
-                secondaryAction={{ label: 'Add samples', onClick: () => setIsAddSampleBadgesOpen?.(true) }}
-              />
+            </div>
+          </StaffPortalSectionCardContent>
+        </StaffPortalSectionCard>
+
+        {/* Milestones List Card */}
+        <StaffPortalSectionCard className="w-full overflow-hidden">
+          <StaffPortalSectionCardContent>
+            {achievementsLoading ? (
+              <ul className="space-y-2 pr-1">
+                {[1, 2, 3].map((i: number) => (
+                  <li key={i} className="flex justify-between items-center bg-secondary/20 p-4 rounded-2xl border">
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-8 w-20" />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <ul className="pr-1 space-y-1.5">
+                {achievements && achievements.length > 0 ? (
+                  <AdminRecordListHeader
+                    gridClassName="grid-cols-[64px_68px_minmax(180px,1fr)_minmax(150px,190px)_110px_minmax(80px,100px)_44px]"
+                    columns={[
+                      { label: 'Status' },
+                      { label: 'Edit' },
+                      { label: 'Milestone' },
+                      { label: 'Requirement (How to Earn)' },
+                      { label: 'Bonus Award', className: 'text-center' },
+                      { label: 'Tier' },
+                      { label: 'Delete', className: 'text-right' },
+                    ]}
+                  />
+                ) : null}
+                {(achievements || []).map((ach: any) => {
+                  const isRowActive = ach.enabled !== false;
+                  return (
+                    <li
+                      key={ach.id}
+                      className={`grid grid-cols-[64px_68px_minmax(180px,1fr)_minmax(150px,190px)_110px_minmax(80px,100px)_44px] items-center gap-3 rounded-xl border bg-secondary/20 px-3 py-2.5 transition-colors hover:border-primary/20 hover:bg-background ${
+                        !isRowActive ? 'opacity-60 bg-muted/30' : ''
+                      }`}
+                    >
+                      {/* ON/OFF Switch */}
+                      <div className="flex items-center">
+                        <Switch
+                          checked={isRowActive}
+                          disabled={togglingId === ach.id}
+                          onCheckedChange={() => void handleToggleAchievement(ach)}
+                          title={isRowActive ? 'Active — click to pause' : 'Paused — click to activate'}
+                          className="scale-90"
+                        />
+                      </div>
+
+                      {/* Edit Button */}
+                      <div className="flex items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1 rounded-lg border-primary/20 bg-background hover:bg-primary/5 text-primary font-semibold text-xs"
+                          onClick={() => {
+                            setEditingAchievement(ach);
+                            setIsBadgeModalOpen(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                          Edit
+                        </Button>
+                      </div>
+
+                      {/* Milestone Name & Icon */}
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <div
+                          className="size-8 rounded-lg flex items-center justify-center border shrink-0 bg-background"
+                          style={{ borderColor: ach.accentColor || undefined }}
+                        >
+                          <DynamicIcon
+                            name={ach.icon}
+                            className="w-4 h-4"
+                            style={ach.accentColor ? { color: ach.accentColor } : undefined}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="truncate block text-sm font-bold leading-tight">{ach.name}</span>
+                          <span className="text-[10px] text-muted-foreground truncate block leading-tight">
+                            {ach.description}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Requirement (2-line clean copy) */}
+                      <div className="truncate text-sm font-medium">
+                        {renderAchievementCriteria(ach)}
+                      </div>
+
+                      {/* Bonus Award */}
+                      <div className="text-center text-xs font-bold text-primary flex flex-col items-center justify-center">
+                        <span>{(ach.bonusPoints ?? 0) >= 1 ? `+${ach.bonusPoints} pts` : '-'}</span>
+                        {ach.enableWheelSpin ? (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-extrabold flex items-center gap-0.5">
+                            🎡 Spin Wheel
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* Tier */}
+                      <div className="truncate text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {ach.tier || '-'}
+                      </div>
+
+                      {/* Delete */}
+                      <div className="flex items-center justify-end">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10 rounded-lg"
+                          onClick={() => setAchievementToDelete(ach)}
+                          title="Delete milestone"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+                {(!achievements || achievements.length === 0) && (
+                  <EmptyState
+                    icon={Trophy}
+                    title="No milestones yet"
+                    description="Milestones give students extra bonus points and prize wheel spins when reaching all-time point targets."
+                    action={{
+                      label: 'Create milestone',
+                      icon: Plus,
+                      onClick: () => {
+                        setEditingAchievement?.(null);
+                        setIsBadgeModalOpen?.(true);
+                      },
+                    }}
+                  />
+                )}
+              </ul>
             )}
-          </ul>
-        )}
-      </StaffPortalSectionCardContent>
-    </StaffPortalSectionCard>
+          </StaffPortalSectionCardContent>
+        </StaffPortalSectionCard>
+      </div>
     </StaffPortalTabPanel>
   );
 }
