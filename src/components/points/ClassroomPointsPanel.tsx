@@ -32,6 +32,7 @@ import {
 import { sanitizeSessionForStudentDisplay } from '@/lib/classroom/classroomStudentDisplay';
 import { isClassroomOnlyMode, isPillarOn, CLASSROOM_LOCAL_REWARDS, CLASSROOM_SESSION_ONLY, isRewardsPillarOn } from '@/lib/productPillars';
 import { BehaviorNoteDialog } from '@/components/classroom/BehaviorNoteDialog';
+import { ClassroomRollCallDialog } from '@/components/classroom/ClassroomRollCallDialog';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
 import { BathroomPassesBar } from '@/components/attendance/BathroomPassesBar';
@@ -391,6 +392,8 @@ function ClassroomPointsPanelInner({
   );
   const [burstMode, setBurstMode] = useState(false);
   const [burstSelected, setBurstSelected] = useState<string[]>([]);
+  const [rollCallOpen, setRollCallOpen] = useState(false);
+  const [isSubmittingRollCall, setIsSubmittingRollCall] = useState(false);
   const [sessionData, setSessionData] = useState<ClassroomSessionData>({ totals: {}, lastAward: {} });
   const [lastAwardSummary, setLastAwardSummary] = useState<{
     label: string;
@@ -1552,34 +1555,26 @@ function ClassroomPointsPanelInner({
     [applyPointsToStudents, clearAutoTimer, functions, schoolId, studentById, toast],
   );
 
-  const markRemainingPresent = useCallback(async () => {
+  const absentStudentsOnChart = useMemo(() => {
+    if (!placedStudentIds.length) return [];
+    return placedStudentIds
+      .filter((id) => !todayAttendance.has(id) || todayAttendance.get(id) === 'absent')
+      .map((id) => studentById.get(id))
+      .filter((s): s is Student => Boolean(s));
+  }, [placedStudentIds, todayAttendance, studentById]);
+
+  const markRemainingPresent = useCallback(() => {
     if (!placedStudentIds.length) return;
-    const absentIds = placedStudentIds.filter(
-      (id) => !todayAttendance.has(id) || todayAttendance.get(id) === 'absent',
-    );
-    if (absentIds.length === 0) {
-      toast({
-        title: 'All present',
-        description: 'Every student on the seating chart is already marked present today.',
-      });
-      return;
-    }
+    setRollCallOpen(true);
+  }, [placedStudentIds]);
 
-    if (
-      typeof window !== 'undefined' &&
-      !window.confirm(
-        `Mark ${absentIds.length} student${absentIds.length === 1 ? '' : 's'} present today?`,
-      )
-    ) {
-      return;
-    }
-
+  const handleConfirmRollCall = useCallback(async () => {
+    if (!absentStudentsOnChart.length) return;
+    setIsSubmittingRollCall(true);
     try {
       if (functions) {
         await Promise.all(
-          absentIds.map(async (id) => {
-            const s = studentById.get(id);
-            if (!s) return;
+          absentStudentsOnChart.map(async (s) => {
             try {
               await performKioskAttendanceSignIn({ functions, schoolId, student: s });
             } catch {
@@ -1588,12 +1583,17 @@ function ClassroomPointsPanelInner({
           }),
         );
       } else {
-        await applyPointsToStudents(absentIds, 1, 'Attendance: Morning roll call');
+        await applyPointsToStudents(
+          absentStudentsOnChart.map((s) => s.id),
+          1,
+          'Attendance: Morning roll call',
+        );
       }
       toast({
         title: 'Roll call updated',
-        description: `Marked ${absentIds.length} student${absentIds.length === 1 ? '' : 's'} present today.`,
+        description: `Marked ${absentStudentsOnChart.length} student${absentStudentsOnChart.length === 1 ? '' : 's'} present today.`,
       });
+      setRollCallOpen(false);
     } catch (err) {
       console.error('Failed roll call', err);
       toast({
@@ -1601,8 +1601,10 @@ function ClassroomPointsPanelInner({
         title: 'Could not complete roll call',
         description: err instanceof Error ? err.message : 'Please try again.',
       });
+    } finally {
+      setIsSubmittingRollCall(false);
     }
-  }, [placedStudentIds, todayAttendance, functions, studentById, schoolId, applyPointsToStudents, toast]);
+  }, [absentStudentsOnChart, functions, schoolId, applyPointsToStudents, toast]);
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
@@ -2345,6 +2347,14 @@ function ClassroomPointsPanelInner({
           onSaved={onBehaviorNoteSaved}
         />
       ) : null}
+      <ClassroomRollCallDialog
+        open={rollCallOpen}
+        onOpenChange={setRollCallOpen}
+        absentStudents={absentStudentsOnChart}
+        className={effectiveClassName}
+        isSubmitting={isSubmittingRollCall}
+        onConfirm={handleConfirmRollCall}
+      />
     </div>
   );
 }
@@ -2439,14 +2449,14 @@ function ClassroomAwardMenu({
           type="button"
           variant="outline"
           size="sm"
-          className="mt-2 w-full rounded-xl text-xs font-bold gap-2 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/10"
+          className="mt-2 w-full rounded-xl text-xs font-bold gap-2 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/10 bg-emerald-500/5 shadow-xs"
           onClick={(e) => {
             e.stopPropagation();
             onMarkPresent();
           }}
         >
           <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-          Mark Present Today (+1 pt)
+          Mark Present Today
         </Button>
       ) : null}
       <Button

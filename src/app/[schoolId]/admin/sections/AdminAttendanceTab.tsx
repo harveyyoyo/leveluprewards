@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
-import { Clock, Globe, Loader2, Trash2, Users, Zap } from 'lucide-react';
+import { Clock, Globe, Loader2, Sparkles, Trash2, Users, Volume2, VolumeX, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -177,97 +177,142 @@ export function AdminAttendanceTab(props: any) {
               </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="school-points-signin">Default Sign-in Points</Label>
-                <Input
-                  id="school-points-signin"
-                  type="number"
-                  min={0}
-                  value={attendanceConfig?.pointsForSignIn ?? 1}
-                  onChange={(e) => setAttendanceConfigState({
-                    ...(attendanceConfig || {}),
-                    pointsForSignIn: parseInt(e.target.value, 10) || 0
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Standard points for showing up.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1: Points & Timing */}
+              <div className="rounded-2xl border bg-card/60 p-5 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2.5 border-b pb-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black">Daily Points & Timing</h4>
+                    <p className="text-xs text-muted-foreground">Standard points awarded when students check in</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="school-points-signin" className="text-xs font-bold">Sign-in Points</Label>
+                    <Input
+                      id="school-points-signin"
+                      type="number"
+                      min={0}
+                      className="rounded-xl h-9 text-xs"
+                      value={attendanceConfig?.pointsForSignIn ?? 1}
+                      onChange={(e) => setAttendanceConfigState({
+                        ...(attendanceConfig || {}),
+                        pointsForSignIn: parseInt(e.target.value, 10) || 0
+                      })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">For showing up.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="school-points-ontime" className="text-xs font-bold">On-time Bonus</Label>
+                    <Input
+                      id="school-points-ontime"
+                      type="number"
+                      min={0}
+                      className="rounded-xl h-9 text-xs"
+                      value={attendanceConfig?.pointsForOnTime ?? 5}
+                      onChange={(e) => setAttendanceConfigState({
+                        ...(attendanceConfig || {}),
+                        pointsForOnTime: parseInt(e.target.value, 10) || 0
+                      })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">Extra for arriving early.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="school-ontime-window" className="text-xs font-bold">Window (min)</Label>
+                    <Input
+                      id="school-ontime-window"
+                      type="number"
+                      min={1}
+                      className="rounded-xl h-9 text-xs"
+                      value={attendanceConfig?.onTimeWindowMinutes ?? 5}
+                      onChange={(e) => setAttendanceConfigState({
+                        ...(attendanceConfig || {}),
+                        onTimeWindowMinutes: parseInt(e.target.value, 10) || 1
+                      })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">Grace period.</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="school-points-ontime">Default On-time Bonus</Label>
-                <Input
-                  id="school-points-ontime"
-                  type="number"
-                  min={0}
-                  value={attendanceConfig?.pointsForOnTime ?? 5}
-                  onChange={(e) => setAttendanceConfigState({
-                    ...(attendanceConfig || {}),
-                    pointsForOnTime: parseInt(e.target.value, 10) || 0
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Extra points for arriving early.</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="school-ontime-window">On-time Window (min)</Label>
-                <Input
-                  id="school-ontime-window"
-                  type="number"
-                  min={1}
-                  value={attendanceConfig?.onTimeWindowMinutes ?? 5}
-                  onChange={(e) => setAttendanceConfigState({
-                    ...(attendanceConfig || {}),
-                    onTimeWindowMinutes: parseInt(e.target.value, 10) || 1
-                  })}
-                />
-                <p className="text-xs text-muted-foreground">Minutes after start to count as on-time.</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Default Category</Label>
-                <Select
-                  value={attendanceConfig?.categoryId || '__none__'}
-                  onValueChange={(v) => setAttendanceConfigState({
-                    ...(attendanceConfig || {}),
-                    categoryId: v === '__none__' ? undefined : v
-                  })}
-                >
-                  <SelectTrigger className="h-10 rounded-xl">
-                    <SelectValue placeholder="None" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">None</SelectItem>
-                    {categories?.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Attendance points count toward this category and seed new default rules.</p>
-              </div>
-              <div className="space-y-2">
-                <Label>Quiet Mode (Late Sign-Ins)</Label>
-                <Select
-                  value={String(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1)}
-                  onValueChange={(v) => {
-                    const val = parseInt(v, 10);
-                    setAttendanceConfigState({
-                      ...(attendanceConfig || {}),
-                      attendanceQuietAfterMinutes: val,
-                    });
-                    if (updateSettings) {
-                      void updateSettings({ attendanceQuietAfterMinutes: val });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-10 rounded-xl">
-                    <SelectValue placeholder="Always play sound" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="-1">Always play sound</SelectItem>
-                    <SelectItem value="0">Mute at bell (0 min)</SelectItem>
-                    <SelectItem value="1">Mute 1 min after bell</SelectItem>
-                    <SelectItem value="2">Mute 2 min after bell</SelectItem>
-                    <SelectItem value="5">Mute 5 min after bell</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">Mutes kiosk sign-in sound so late arrivals do not disturb class.</p>
+
+              {/* Card 2: Sound & Category */}
+              <div className="rounded-2xl border bg-card/60 p-5 space-y-4 shadow-xs">
+                <div className="flex items-center gap-2.5 border-b pb-3">
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black">Classroom Audio & Defaults</h4>
+                    <p className="text-xs text-muted-foreground">Control kiosk sound and reward category</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold">Quiet Mode (Late Arrivals)</Label>
+                    <Select
+                      value={String(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1)}
+                      onValueChange={(v) => {
+                        const val = parseInt(v, 10);
+                        setAttendanceConfigState({
+                          ...(attendanceConfig || {}),
+                          attendanceQuietAfterMinutes: val,
+                        });
+                        if (updateSettings) {
+                          void updateSettings({ attendanceQuietAfterMinutes: val });
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-9 rounded-xl text-xs">
+                        <SelectValue placeholder="Always play sound" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="-1">Always play sound</SelectItem>
+                        <SelectItem value="0">Mute at bell (0 min)</SelectItem>
+                        <SelectItem value="1">Mute 1 min after bell</SelectItem>
+                        <SelectItem value="2">Mute 2 min after bell</SelectItem>
+                        <SelectItem value="5">Mute 5 min after bell</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1) >= 0 ? (
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium pt-0.5">
+                        <VolumeX className="w-3.5 h-3.5 shrink-0" />
+                        Chime mutes after bell to protect teaching.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium pt-0.5">
+                        <Volume2 className="w-3.5 h-3.5 shrink-0" />
+                        Chime rings aloud on every sign-in.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-bold">Default Category</Label>
+                    <Select
+                      value={attendanceConfig?.categoryId || '__none__'}
+                      onValueChange={(v) => setAttendanceConfigState({
+                        ...(attendanceConfig || {}),
+                        categoryId: v === '__none__' ? undefined : v
+                      })}
+                    >
+                      <SelectTrigger className="h-9 rounded-xl text-xs">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">None</SelectItem>
+                        {categories?.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground pt-0.5">Category for default rules.</p>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="pt-4 border-t">

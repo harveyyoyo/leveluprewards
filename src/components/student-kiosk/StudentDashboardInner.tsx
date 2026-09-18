@@ -199,7 +199,15 @@ import { StudentKioskPointsFlyUp } from '@/components/student-kiosk/StudentKiosk
 
 
 const PrizeDashboard = dynamic(
-  () => import('@/app/[schoolId]/prize/PrizeDashboard').then((m) => m.PrizeDashboard),
+  () =>
+    import('@/app/[schoolId]/prize/PrizeDashboard')
+      .then((m) => m.PrizeDashboard)
+      .catch((err) => {
+        if (typeof window !== 'undefined' && (err?.message?.includes('Loading chunk') || err?.name === 'ChunkLoadError')) {
+          window.location.reload();
+        }
+        throw err;
+      }),
   {
     ssr: false,
     loading: () => null,
@@ -642,7 +650,11 @@ export function StudentDashboardInner({
           student,
         });
         if (result.pointsAwarded > 0) {
-          playSound('success');
+          const quietMinutes = settings.attendanceQuietAfterMinutes ?? -1;
+          const isQuiet = quietMinutes >= 0 && !result.onTime;
+          if (!isQuiet) {
+            playSound('success');
+          }
           animationKey.current += 1;
           setFlyReusableCoupon(false);
           setFlyPointsValue(result.pointsAwarded);
@@ -652,7 +664,7 @@ export function StudentDashboardInner({
         console.error('Attendance sign-in failed', err);
       }
     })();
-  }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, playSound]);
+  }, [settings.payAttendance, settings.enableClassSignIn, settings.attendanceQuietAfterMinutes, student, schoolId, functions, playSound]);
  
   // --- Birthday bonus points (when enabled in school settings) ---
   useEffect(() => {
@@ -741,7 +753,7 @@ export function StudentDashboardInner({
   }, [searchParams]);
 
   useEffect(() => {
-    void import('@/app/[schoolId]/prize/PrizeDashboard');
+    void import('@/app/[schoolId]/prize/PrizeDashboard').catch(() => {});
   }, []);
 
   const handleStudentIdScan = useCallback(
