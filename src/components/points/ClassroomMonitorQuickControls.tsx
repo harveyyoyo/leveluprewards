@@ -96,7 +96,6 @@ function CollapsedToolIcon({
   return (
     <motion.button
       type="button"
-      layoutId={`classroom-tool-icon-${tone}-${label}`}
       variants={{
         hidden: { opacity: 0, scale: 0.85 },
         visible: { opacity: 1, scale: 1, transition: spring },
@@ -299,6 +298,8 @@ export function ClassroomMonitorQuickControls({
   onOpenSetup?: () => void;
 }) {
   const isLeft = placement === 'left';
+  const { iconOnly, requestExpand } = useClassroomLiveSidebarChrome();
+  const showIconRail = isLeft && iconOnly;
   void shortcutHint;
   void notesEnabled;
 
@@ -314,6 +315,142 @@ export function ClassroomMonitorQuickControls({
   const groupsLook = monitorSelectTriggerLook(design, isFullscreen, 'groups');
   const iconInk = (ink: 'light' | 'dark' | 'amber') =>
     ink === 'dark' ? 'text-slate-900' : ink === 'amber' ? 'text-amber-300' : 'text-white';
+
+  if (showIconRail) {
+    const cardScan = attendanceSource === 'card-scan' && interactionMode !== 'attendance';
+    return (
+      <MonitorToolbarPlacementContext.Provider value={placement}>
+        <motion.div
+          key="classroom-monitor-icon-rail"
+          layoutId="classroom-monitor-tabs"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { ...spring, staggerChildren: 0.04 } },
+          }}
+          className="flex h-full min-h-0 w-9 flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
+          data-testid="classroom-monitor-icon-rail"
+        >
+          {onToggleEditMode ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="arrange"
+              label={editMode ? 'Done arranging' : 'Arrange seats'}
+              title={editMode ? 'Done arranging seats' : 'Arrange seats — drag desks to match your room'}
+              active={editMode}
+              onClick={onToggleEditMode}
+            >
+              <GripVertical className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {liveAwardActions ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="gold"
+              label="Awards"
+              title="Hover to open awards and class tools"
+              onClick={requestExpand}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onRandomPick ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="random"
+              label="Random student picker"
+              title="Pick a random student (R)"
+              onClick={onRandomPick}
+            >
+              <Shuffle className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {showRaffle && onOpenRaffle ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="raffle"
+              label="Raffle"
+              title="Run a raffle for this class"
+              active={raffleOpen}
+              onClick={onOpenRaffle}
+            >
+              <Dices className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onOpenBehavior ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="behavior"
+              label="Behavior"
+              title="Behavior notes for this class"
+              active={behaviorOpen}
+              onClick={onOpenBehavior}
+            >
+              <BookOpenCheck className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {attendanceEnabled && onAttendanceSourceChange ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="attendance"
+              label={
+                interactionMode === 'attendance'
+                  ? 'Attendance: manual roll call. Open settings'
+                  : cardScan
+                    ? 'Attendance: Badge reader active. Open settings'
+                    : 'Attendance settings'
+              }
+              title="Choose card scan or manual roll call — hover open for options"
+              active={interactionMode === 'attendance'}
+              onClick={requestExpand}
+            >
+              {cardScan ? <IdCard className="h-4 w-4" aria-hidden /> : <ClipboardCheck className="h-4 w-4" aria-hidden />}
+            </CollapsedToolIcon>
+          ) : null}
+          <CollapsedToolIcon
+            design={design}
+            tone="sound"
+            label={prefs.awardSounds !== false ? 'Turn award sounds off' : 'Turn award sounds on'}
+            title={prefs.awardSounds !== false ? 'Award sounds on — click to mute' : 'Award sounds off — click to unmute'}
+            active={prefs.awardSounds === false}
+            onClick={() => onChange({ awardSounds: prefs.awardSounds === false })}
+          >
+            {prefs.awardSounds !== false ? (
+              <Volume2 className="h-4 w-4" aria-hidden />
+            ) : (
+              <VolumeX className="h-4 w-4" aria-hidden />
+            )}
+          </CollapsedToolIcon>
+          <ClassroomGroupTimer design={design} isFullscreen={isFullscreen} iconOnly />
+          {onAssignGroups && onClearGroups ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="groups"
+              label="Groups"
+              title="Make classroom groups — hover open for options"
+              active={Boolean(groups)}
+              onClick={requestExpand}
+            >
+              <Users className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onOpenSetup ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="menu"
+              label="Setup and settings"
+              title="School rules, poster TV, raffle setup, and more"
+              active={setupOpen}
+              onClick={onOpenSetup}
+            >
+              <Settings2 className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+        </motion.div>
+      </MonitorToolbarPlacementContext.Provider>
+    );
+  }
 
   const arrangeButton = onToggleEditMode ? (
     <button
@@ -437,6 +574,7 @@ export function ClassroomMonitorQuickControls({
   return (
     <MonitorToolbarPlacementContext.Provider value={placement}>
       <motion.div
+        key="classroom-monitor-full-panel"
         layoutId="classroom-monitor-tabs"
         initial="hidden"
         animate="visible"
@@ -449,6 +587,7 @@ export function ClassroomMonitorQuickControls({
           },
         }}
         className="flex h-full min-h-0 w-full flex-col items-stretch justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
+        data-testid="classroom-monitor-full-panel"
       >
         {editMode ? (
           <motion.section

@@ -15,9 +15,16 @@ import {
   Maximize2,
   Shuffle,
   Sparkles,
+  Undo2,
+  Redo2,
+  Users,
+  MousePointerClick,
+  Layers,
 } from 'lucide-react';
+import { ClassroomGroupAwardModal } from '@/components/classroom/ClassroomGroupAwardModal';
 import {
   buildClassroomFullscreenUrl,
+
   openClassroomFullscreenTab,
   type ClassroomFullscreenAudience,
 } from '@/lib/classroomPointsUrl';
@@ -80,6 +87,7 @@ import {
   classroomPointSoundEffect,
   CLASSROOM_PICK_SOUND,
   CLASSROOM_TAP_SOUND,
+  CLASSROOM_UNDO_SOUND,
 } from '@/lib/classroom/classroomPointSounds';
 import type { SoundEffect } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
@@ -108,6 +116,9 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import {
   applyClassroomSessionAward,
   buildInitialLayout,
+  buildRoomShapeLayout,
+  CLASSROOM_ROOM_SHAPES,
+  type ClassroomRoomShape,
   clearClassroomSession,
   findNewSessionAwards,
   initialLayoutColumnCount,
@@ -133,6 +144,8 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
+
+
 import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
 import { resolveEffectiveDeskDisplayPrefs } from '@/lib/classroom/classroomMonitorDisplaySettings';
 import {
@@ -469,6 +482,7 @@ function ClassroomPointsPanelInner({
 
   const [burstMode, setBurstMode] = useState(false);
   const [burstSelected, setBurstSelected] = useState<string[]>([]);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
 
   useEffect(() => {
     if (!attendanceEnabled && interactionMode === 'attendance') {
@@ -542,7 +556,7 @@ function ClassroomPointsPanelInner({
     },
     [],
   );
-  const [redoAction, setRedoAction] = useState<LastClassroomAction | null>(null);
+  const [, setRedoAction] = useState<LastClassroomAction | null>(null);
   const [randomHighlightId, setRandomHighlightId] = useState<string | null>(null);
   const [randomPickWinnerId, setRandomPickWinnerId] = useState<string | null>(null);
   const randomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -896,7 +910,7 @@ function ClassroomPointsPanelInner({
     setBurstSelected([]);
     setLastAction(null);
     setRedoAction(null);
-  }, [effectiveClassId, reloadSessionData, setLastAction]);
+  }, [effectiveClassId, reloadSessionData]);
 
   useEffect(() => {
     if (!isStudentAudience || !effectiveClassId) return;
@@ -1379,7 +1393,6 @@ function ClassroomPointsPanelInner({
       triggerDeskAwardFeedback,
       triggerFeedbackForStudentIds,
       recordSessionAwards,
-      setLastAction,
       studentById,
       deferredStudents,
       label,
@@ -1665,6 +1678,129 @@ function ClassroomPointsPanelInner({
     if (ok) setBurstSelected([]);
   }, [burstSelected, presentSeatedIds, prefs.defaultPoints, prefs.defaultDescription, applyPointsToStudents]);
 
+  const handleAwardGroup = useCallback(
+    async (studentIds: string[], groupName: string, points: number) => {
+      if (!studentIds.length) return;
+      playClassroomSound(CLASSROOM_TAP_SOUND);
+      const desc = `${groupName} — ${prefs.defaultDescription}`;
+      await applyPointsToStudents(studentIds, points, desc);
+      triggerFeedbackForStudentIds(studentIds, points);
+    },
+    [applyPointsToStudents, playClassroomSound, prefs.defaultDescription, triggerFeedbackForStudentIds],
+  );
+
+  const applyRoomShape = useCallback(
+    (shape: ClassroomRoomShape) => {
+      const ids = classStudents.map((s) => s.id);
+      if (!ids.length) {
+        toast({
+          variant: 'destructive',
+          title: 'No students in class',
+          description: 'Add students to the class before arranging the room shape.',
+        });
+        return;
+      }
+      const nextLayout = buildRoomShapeLayout(shape, ids);
+      commitLayout(nextLayout);
+      const meta = CLASSROOM_ROOM_SHAPES.find((s) => s.id === shape);
+      toast({
+        title: `${meta?.emoji ?? '📐'} Room shape arranged`,
+        description: `Arranged into ${meta?.label.toLowerCase() ?? shape}. You can still drag desks around.`,
+      });
+    },
+    [classStudents, commitLayout, toast],
+  );
+
+  const handleUndo = useCallback(async () => {
+    if (!lastAction || isUndoing) return;
+    setIsUndoing(true);
+    const actionToUndo = lastAction;
+    const undoLabel = `Undo: ${actionToUndo.description}`;
+    const teacher = budgetOptions?.currentTeacher ?? null;
+    const skipBudget = !budgetOptions || budgetOptions.isAdmin;
+    try {
+      const undoRewardsMode = !(sessionOnlyBalance || actionToUndo.classroomOnly);
+      const signedDelta = actionToUndo.mode === 'award' ? -actionToUndo.points : actionToUndo.points;
+      const result = await awardClassroomPoints(firestore, {
+        schoolId,
+        studentIds: actionToUndo.studentIds,
+        signedDelta,
+        description: undoLabel,
+        rewardsMode: undoRewardsMode,
+        ...classroomMeta,
+      });
+      if (!result.success) {
+        playClassroomSound('error');
+        toast({ variant: 'destructive', title: 'Undo failed', description: result.message });
+        return;
+      }
+      if (sessionOnlyBalance || actionToUndo.classroomOnly) {
+        setClassroomBalances((prev) => {
+          const next = { ...prev };
+          for (const id of actionToUndo.studentIds) {
+            next[id] = Math.max(0, (prev[id] ?? 0) + signedDelta);
+          }
+          return next;
+        });
+      } else if (
+        actionToUndo.mode === 'award' &&
+        !skipBudget &&
+        settings.enableTeacherBudgets &&
+        teacher &&
+        actionToUndo.budgetSpent &&
+        budgetOptions?.onBudgetSpend
+      ) {
+        await budgetOptions.onBudgetSpend(-actionToUndo.budgetSpent);
+      }
+      if (effectiveClassId) {
+        recordSessionAwards(actionToUndo.studentIds, signedDelta, undoLabel);
+      }
+      playClassroomSound(CLASSROOM_UNDO_SOUND);
+      toast({
+        title: 'Undone',
+        description: `Reversed last action for ${actionToUndo.studentIds.length} student(s).`,
+      });
+      setRedoAction(actionToUndo);
+      setLastAction(null);
+    } finally {
+      setIsUndoing(false);
+    }
+  }, [
+    lastAction,
+    isUndoing,
+    budgetOptions,
+    settings.enableTeacherBudgets,
+    playClassroomSound,
+    toast,
+    schoolId,
+    effectiveClassId,
+    sessionOnlyBalance,
+    firestore,
+    classroomMeta,
+    recordSessionAwards,
+  ]);
+
+  const handleRedo = useCallback(async () => {
+    if (!redoAction || isUndoing) return;
+    setIsUndoing(true);
+    const actionToRedo = redoAction;
+    try {
+      const signedPoints = actionToRedo.mode === 'deduct' ? -actionToRedo.points : actionToRedo.points;
+      const ok = await applyPointsToStudents(actionToRedo.studentIds, signedPoints, actionToRedo.description);
+      if (ok) {
+        setLastAction(actionToRedo);
+        setRedoAction(null);
+        toast({
+          title: 'Redone',
+          description: `Restored last action for ${actionToRedo.studentIds.length} student(s).`,
+        });
+      }
+    } finally {
+      setIsUndoing(false);
+    }
+  }, [redoAction, isUndoing, applyPointsToStudents, toast]);
+
+
   useEffect(() => {
     if (editMode || isStudentAudience) return;
     const isTypingTarget = (target: EventTarget | null) =>
@@ -1748,6 +1884,15 @@ function ClassroomPointsPanelInner({
       ) {
         e.preventDefault();
         pickRandomStudent();
+      } else if (e.key === 'u' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+        e.preventDefault();
+        void handleRedo();
+      } else if (e.key === 'u' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        void handleUndo();
+      } else if (e.key === 'y' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        void handleRedo();
       } else if (e.key === 'Escape') {
         setPendingAward(null);
         clearAutoTimer();
@@ -1759,7 +1904,7 @@ function ClassroomPointsPanelInner({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [editMode, pendingAward, pickRandomStudent, clearAutoTimer, isFullscreen, isStudentAudience]);
+  }, [editMode, pendingAward, pickRandomStudent, handleUndo, handleRedo, clearAutoTimer, isFullscreen, isStudentAudience]);
 
   const handleDragStart = (index: number) => {
     if (!editMode) return;
@@ -2172,6 +2317,7 @@ function ClassroomPointsPanelInner({
     !isStudentAudience &&
     (prefs.showRandomPicker || monitorLiveAwardActions) ? (
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+
         {prefs.showRandomPicker ? (
           <ClassroomMonitorActionButton
             design={design}
@@ -2184,6 +2330,20 @@ function ClassroomPointsPanelInner({
             onClick={pickRandomStudent}
           />
         ) : null}
+        <ClassroomMonitorActionButton
+          design={design}
+          isFullscreen={isFullscreen}
+          iconOnly={!isFullscreen}
+          tone="group"
+          icon={Layers}
+          label="Table / Group"
+          title="Reward a Table or Row of students"
+          onClick={() => {
+            playClassroomSound(CLASSROOM_TAP_SOUND);
+            setGroupModalOpen(true);
+          }}
+          disabled={!placedStudentIds.length}
+        />
         {monitorLiveAwardActions}
       </div>
     ) : null;
@@ -2276,6 +2436,26 @@ function ClassroomPointsPanelInner({
             <div className="ml-auto flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2">
               <ClassroomToolButton
                 design={design}
+                icon={Undo2}
+                label="Undo"
+                title={lastAction ? 'Undo last award (Ctrl+U)' : 'Nothing to undo yet'}
+                deskRow
+                iconOnly
+                onClick={() => void handleUndo()}
+                disabled={!lastAction || isUndoing}
+              />
+              <ClassroomToolButton
+                design={design}
+                icon={Redo2}
+                label="Redo"
+                title={redoAction ? 'Redo (Ctrl+Y)' : 'Nothing to redo yet'}
+                deskRow
+                iconOnly
+                onClick={() => void handleRedo()}
+                disabled={!redoAction || isUndoing}
+              />
+              <ClassroomToolButton
+                design={design}
                 icon={GripVertical}
                 label="Arrange seats"
                 onClick={toggleEditMode}
@@ -2325,6 +2505,7 @@ function ClassroomPointsPanelInner({
             onRedo={redoLayout}
             onRowsChange={(rows) => applyGridSize(rows, activeLayout.cols)}
             onColsChange={(cols) => applyGridSize(activeLayout.rows, cols)}
+            onApplyRoomShape={applyRoomShape}
             onSeatEveryone={seatEveryone}
             onDone={toggleEditMode}
           />
@@ -2616,7 +2797,18 @@ function ClassroomPointsPanelInner({
           }}
         />
       ) : null}
+      <ClassroomGroupAwardModal
+        open={groupModalOpen}
+        onOpenChange={setGroupModalOpen}
+        layout={activeLayout}
+        students={classStudents}
+        frontAtBottom={prefs.frontAtBottom}
+        defaultPoints={prefs.defaultPoints}
+        icon={icon}
+        onAwardGroup={handleAwardGroup}
+      />
       {behaviorNoteStudent ? (
+
         <BehaviorNoteDialog
           open={!!behaviorNoteStudent}
           onOpenChange={(open) => {
