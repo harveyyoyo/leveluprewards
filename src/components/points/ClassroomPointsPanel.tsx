@@ -22,6 +22,7 @@ import {
   Redo2,
   Users,
   MousePointerClick,
+  UserCheck,
 } from 'lucide-react';
 import {
   buildClassroomFullscreenUrl,
@@ -36,8 +37,9 @@ import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
 import { BathroomPassesBar } from '@/components/attendance/BathroomPassesBar';
 import { startBathroomPass, endBathroomPass } from '@/lib/db/bathroom';
 import { formatBathroomElapsed } from '@/lib/bathroom/formatBathroomElapsed';
+import { performKioskAttendanceSignIn } from '@/lib/attendance/kioskSignIn';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useFunctions } from '@/firebase';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import {
   classroomPointSoundEffect,
@@ -231,6 +233,7 @@ function ClassroomPointsPanelInner({
     isTeacher,
     isSecretary,
   } = useAppContext();
+  const functions = useFunctions();
   const attendanceEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
   const bathroomTimerOn = attendanceEnabled && (settings.enableBathroomTimer ?? true);
   const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
@@ -1438,6 +1441,9 @@ function ClassroomPointsPanelInner({
     setDragIndex(null);
   };
 
+  const bathroomRequirePresent = settings.bathroomRequirePresent;
+  const bathroomMaxStudentsOut = settings.bathroomMaxStudentsOut ?? 2;
+
   const handleBathroomToggle = useCallback(
     async (studentId: string) => {
       if (!bathroomEnabled) return;
@@ -1445,13 +1451,24 @@ function ClassroomPointsPanelInner({
       if (!student) return;
 
       const isOut = activeBathroomPasses.has(studentId);
-      if (!isOut && settings.bathroomRequirePresent !== false) {
+      if (!isOut && bathroomRequirePresent !== false) {
         const status = todayAttendance.get(studentId) ?? 'absent';
         if (status === 'absent') {
           toast({
             variant: 'destructive',
             title: 'Not signed in',
             description: 'Student must sign in for attendance before leaving for the bathroom.',
+          });
+          return;
+        }
+      }
+
+      if (!isOut) {
+        if (bathroomMaxStudentsOut > 0 && activeBathroomPasses.size >= bathroomMaxStudentsOut) {
+          toast({
+            variant: 'destructive',
+            title: 'Room pass limit reached',
+            description: `Maximum ${bathroomMaxStudentsOut} student${bathroomMaxStudentsOut === 1 ? '' : 's'} can be out at once. Please wait for someone to return.`,
           });
           return;
         }
@@ -1492,18 +1509,100 @@ function ClassroomPointsPanelInner({
       activeBathroomPasses,
       bathroomEnabled,
       bathroomMaxMinutes,
+      bathroomMaxStudentsOut,
+      bathroomRequirePresent,
       effectiveClassId,
       viewingAllStudents,
       firestore,
       operatorId,
       operatorName,
       schoolId,
-      settings.bathroomRequirePresent,
       studentById,
       todayAttendance,
       toast,
     ],
   );
+
+  const handleMarkPresent = useCallback(
+    async (studentId: string) => {
+      if (!schoolId) return;
+      const s = studentById.get(studentId);
+      if (!s) return;
+      try {
+        if (functions) {
+          await performKioskAttendanceSignIn({ functions, schoolId, student: s });
+        } else {
+          await applyPointsToStudents([studentId], 1, 'Attendance: Marked present by teacher');
+        }
+        toast({
+          title: 'Marked present',
+          description: `${getStudentNickname(s)} has been marked present for today.`,
+        });
+        setPendingAward(null);
+        clearAutoTimer();
+      } catch (err) {
+        console.error('Failed to mark present', err);
+        toast({
+          variant: 'destructive',
+          title: 'Could not mark present',
+          description: err instanceof Error ? err.message : 'Please try again.',
+        });
+      }
+    },
+    [applyPointsToStudents, clearAutoTimer, functions, schoolId, studentById, toast],
+  );
+
+  const markRemainingPresent = useCallback(async () => {
+    if (!placedStudentIds.length) return;
+    const absentIds = placedStudentIds.filter(
+      (id) => !todayAttendance.has(id) || todayAttendance.get(id) === 'absent',
+    );
+    if (absentIds.length === 0) {
+      toast({
+        title: 'All present',
+        description: 'Every student on the seating chart is already marked present today.',
+      });
+      return;
+    }
+
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        `Mark ${absentIds.length} student${absentIds.length === 1 ? '' : 's'} present today?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      if (functions) {
+        await Promise.all(
+          absentIds.map(async (id) => {
+            const s = studentById.get(id);
+            if (!s) return;
+            try {
+              await performKioskAttendanceSignIn({ functions, schoolId, student: s });
+            } catch {
+              // Ignore individual duplicate errors
+            }
+          }),
+        );
+      } else {
+        await applyPointsToStudents(absentIds, 1, 'Attendance: Morning roll call');
+      }
+      toast({
+        title: 'Roll call updated',
+        description: `Marked ${absentIds.length} student${absentIds.length === 1 ? '' : 's'} present today.`,
+      });
+    } catch (err) {
+      console.error('Failed roll call', err);
+      toast({
+        variant: 'destructive',
+        title: 'Could not complete roll call',
+        description: err instanceof Error ? err.message : 'Please try again.',
+      });
+    }
+  }, [placedStudentIds, todayAttendance, functions, studentById, schoolId, applyPointsToStudents, toast]);
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
@@ -1701,6 +1800,7 @@ function ClassroomPointsPanelInner({
     (prefs.showRandomPicker ||
       prefs.showClassAwardButton ||
       prefs.showBurstAward ||
+      attendanceEnabled ||
       (prefs.showBurstAward && burstMode && burstSelected.length > 0)) ? (
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
         {prefs.showRandomPicker ? (
@@ -1725,6 +1825,19 @@ function ClassroomPointsPanelInner({
             label={viewingAllStudents ? `All +${prefs.defaultPoints}` : `Class +${prefs.defaultPoints}`}
             title={`Award +${prefs.defaultPoints} to everyone on the chart`}
             onClick={awardWholeClass}
+            disabled={!placedStudentIds.length}
+          />
+        ) : null}
+        {attendanceEnabled ? (
+          <ClassroomMonitorActionButton
+            design={design}
+            isFullscreen={isFullscreen}
+            iconOnly
+            tone="class"
+            icon={UserCheck}
+            label="Roll call"
+            title="Mark remaining absent students present today"
+            onClick={() => void markRemainingPresent()}
             disabled={!placedStudentIds.length}
           />
         ) : null}
@@ -1804,12 +1917,16 @@ function ClassroomPointsPanelInner({
     });
   };
 
+  const pendingStudentStatus = pendingStudent && attendanceEnabled ? (todayAttendance.get(pendingStudent.id) ?? 'absent') : undefined;
+
   const awardMenu =
     !prefs.instantTap && pendingAward && pendingStudent ? (
       <ClassroomAwardMenu
         student={pendingStudent}
         prefs={chartPrefsForAwards}
         pendingAward={pendingAward}
+        attendanceStatus={pendingStudentStatus}
+        onMarkPresent={attendanceEnabled && pendingStudentStatus === 'absent' ? () => void handleMarkPresent(pendingStudent.id) : undefined}
         onPick={(points, description) => {
           playClassroomSound(CLASSROOM_TAP_SOUND);
           void confirmPendingAward(points, description);
@@ -2238,6 +2355,8 @@ function ClassroomAwardMenu({
   student,
   prefs,
   pendingAward,
+  attendanceStatus,
+  onMarkPresent,
   onPick,
   onBehaviorNote,
   onPauseAutoAward,
@@ -2246,6 +2365,8 @@ function ClassroomAwardMenu({
   student: Student;
   prefs: ClassroomSeatingPrefs;
   pendingAward: PendingAward;
+  attendanceStatus?: string;
+  onMarkPresent?: () => void;
   onPick: (points: number, description: string) => void;
   onBehaviorNote?: () => void;
   onPauseAutoAward: (dropdownOpen: boolean) => void;
@@ -2311,6 +2432,21 @@ function ClassroomAwardMenu({
           }}
         >
           Behavior note
+        </Button>
+      ) : null}
+      {onMarkPresent && attendanceStatus === 'absent' ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="mt-2 w-full rounded-xl text-xs font-bold gap-2 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkPresent();
+          }}
+        >
+          <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          Mark Present Today (+1 pt)
         </Button>
       ) : null}
       <Button

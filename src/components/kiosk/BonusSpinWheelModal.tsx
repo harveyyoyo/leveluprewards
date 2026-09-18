@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -58,18 +58,7 @@ export function BonusSpinWheelModal({
         '#6366f1'  // indigo-500
     ];
 
-    useEffect(() => {
-        if (isOpen && !hasSpun && achievement) {
-            setHasSpun(true);
-            // Trigger automatic spin
-            setTimeout(() => {
-                handleSpin();
-            }, 1000);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, hasSpun, achievement]);
-
-    const handleSpin = async () => {
+    const handleSpin = useCallback(async () => {
         if (isSpinning || result !== null) return;
 
         setIsSpinning(true);
@@ -103,7 +92,17 @@ export function BonusSpinWheelModal({
         setTimeout(async () => {
             await onWon(wonAmount);
         }, 3000);
-    };
+    }, [controls, isSpinning, onWon, playSound, result, segments]);
+
+    useEffect(() => {
+        if (isOpen && !hasSpun && achievement) {
+            setHasSpun(true);
+            // Trigger automatic spin
+            setTimeout(() => {
+                void handleSpin();
+            }, 1000);
+        }
+    }, [isOpen, hasSpun, achievement, handleSpin]);
 
     // Calculate SVG Pie Slices
     const svgPaths = useMemo(() => {

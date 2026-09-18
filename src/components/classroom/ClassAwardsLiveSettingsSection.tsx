@@ -461,6 +461,7 @@ export function ClassAwardsLiveSettingsSection({
           classSignInEnabled={classSignInEnabled}
           enableBathroomTimer={settings.enableBathroomTimer ?? true}
           bathroomMaxMinutes={settings.bathroomMaxMinutes ?? 5}
+          bathroomMaxStudentsOut={settings.bathroomMaxStudentsOut ?? 2}
           bathroomRequirePresent={settings.bathroomRequirePresent ?? true}
           canEdit={canEdit}
           onChange={updateSettings}

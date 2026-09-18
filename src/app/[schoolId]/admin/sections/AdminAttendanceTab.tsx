@@ -21,6 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import type { AttendanceRewardRule } from '@/lib/types';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
 import { AttendanceTimeZoneField } from '@/components/attendance/AttendanceTimeZoneField';
+import { AttendanceHeadcountPrintDialog } from '@/components/attendance/AttendanceHeadcountPrintDialog';
 import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 
@@ -55,6 +56,10 @@ export function AdminAttendanceTab(props: any) {
     handleSaveAttendanceConfig,
     getAttendanceConfig,
     setAttendanceConfig,
+    students,
+    schoolName,
+    settings,
+    updateSettings,
   } = props;
 
   const dayOptions = [
@@ -133,6 +138,12 @@ export function AdminAttendanceTab(props: any) {
       trailing={
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             <TabWalkthroughHeaderAction />
+            <AttendanceHeadcountPrintDialog
+              schoolName={schoolName || 'School'}
+              students={students || []}
+              classes={classes || []}
+              attendanceLogs={teacherAttendanceLog || []}
+            />
             <AttendanceSetupWizard variant="admin" />
           </div>
         }
@@ -229,6 +240,34 @@ export function AdminAttendanceTab(props: any) {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">Attendance points count toward this category and seed new default rules.</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Quiet Mode (Late Sign-Ins)</Label>
+                <Select
+                  value={String(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1)}
+                  onValueChange={(v) => {
+                    const val = parseInt(v, 10);
+                    setAttendanceConfigState({
+                      ...(attendanceConfig || {}),
+                      attendanceQuietAfterMinutes: val,
+                    });
+                    if (updateSettings) {
+                      void updateSettings({ attendanceQuietAfterMinutes: val });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue placeholder="Always play sound" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="-1">Always play sound</SelectItem>
+                    <SelectItem value="0">Mute at bell (0 min)</SelectItem>
+                    <SelectItem value="1">Mute 1 min after bell</SelectItem>
+                    <SelectItem value="2">Mute 2 min after bell</SelectItem>
+                    <SelectItem value="5">Mute 5 min after bell</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">Mutes kiosk sign-in sound so late arrivals do not disturb class.</p>
               </div>
             </div>
             <div className="pt-4 border-t">

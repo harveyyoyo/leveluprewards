@@ -2174,6 +2174,10 @@ function AdminDashboardInner() {
               getAttendanceConfig={getAttendanceConfig}
               setAttendanceConfig={setAttendanceConfig}
               UniversalPeriodsAdmin={UniversalPeriodsAdmin}
+              students={students}
+              schoolName={schoolData?.name || 'School'}
+              settings={settings}
+              updateSettings={updateSettings}
             />
           </TabsContent>
 
