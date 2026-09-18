@@ -326,7 +326,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
       }
       h.onDeskTap(studentId, cellIndex);
     },
-    [attendanceLook, cellIndex, editMode, handlersRef, studentId],
+    [cellIndex, editMode, handlersRef, studentId],
   );
 
   const bathroomElapsedMs =

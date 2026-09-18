@@ -896,7 +896,7 @@ function ClassroomPointsPanelInner({
     setBurstSelected([]);
     setLastAction(null);
     setRedoAction(null);
-  }, [effectiveClassId, reloadSessionData]);
+  }, [effectiveClassId, reloadSessionData, setLastAction]);
 
   useEffect(() => {
     if (!isStudentAudience || !effectiveClassId) return;
@@ -1379,6 +1379,7 @@ function ClassroomPointsPanelInner({
       triggerDeskAwardFeedback,
       triggerFeedbackForStudentIds,
       recordSessionAwards,
+      setLastAction,
       studentById,
       deferredStudents,
       label,
