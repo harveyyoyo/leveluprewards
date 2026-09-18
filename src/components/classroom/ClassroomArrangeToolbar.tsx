@@ -4,7 +4,18 @@ import { motion } from 'framer-motion';
 import { Check, Minus, Plus, Redo2, Undo2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { classroomArrangeBarClass, type ClassroomDesign } from '@/components/points/classroomVisualTheme';
+import {
+  CLASSROOM_ROOM_SHAPES,
+  type ClassroomRoomShape,
+} from '@/lib/classroomSeatingChart';
 import { cn } from '@/lib/utils';
 
 const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
@@ -30,6 +41,7 @@ export function ClassroomArrangeToolbar({
   onRedo,
   onRowsChange,
   onColsChange,
+  onApplyRoomShape,
   onSeatEveryone,
   onDone,
 }: {
@@ -44,6 +56,7 @@ export function ClassroomArrangeToolbar({
   onRedo: () => void;
   onRowsChange: (rows: number) => void;
   onColsChange: (cols: number) => void;
+  onApplyRoomShape?: (shape: ClassroomRoomShape) => void;
   onSeatEveryone: () => void;
   onDone: () => void;
 }) {
@@ -161,6 +174,33 @@ export function ClassroomArrangeToolbar({
             <Plus className="h-3 w-3" />
           </Button>
         </div>
+        {onApplyRoomShape ? (
+          <>
+            <span className="hidden font-black sm:inline">|</span>
+            <div className="flex items-center gap-1.5">
+              <span className="shrink-0 text-sm font-black">Shape:</span>
+              <Select
+                value=""
+                onValueChange={(value) => {
+                  if (value) onApplyRoomShape(value as ClassroomRoomShape);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[145px] rounded-lg border-2 border-[#102033] bg-white text-xs font-black text-[#102033]">
+                  <SelectValue placeholder="Pick shape..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLASSROOM_ROOM_SHAPES.map((shape) => (
+                    <SelectItem key={shape.id} value={shape.id} className="text-xs">
+                      <span>
+                        {shape.emoji} {shape.label}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
