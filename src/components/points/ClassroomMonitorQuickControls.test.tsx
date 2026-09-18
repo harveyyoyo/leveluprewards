@@ -143,4 +143,12 @@ describe('ClassroomMonitorQuickControls', () => {
       classroomTokenAccent(6).border,
     );
   });
+
+  it('renders a full labeled panel outside the hover rail (not a clipped half panel)', () => {
+    render(<ClassroomMonitorQuickControls {...leftProps} onOpenSetup={vi.fn()} />);
+
+    expect(screen.getByTestId('classroom-monitor-full-panel')).toBeDefined();
+    expect(screen.queryByTestId('classroom-monitor-icon-rail')).toBeNull();
+    expect(screen.getByText('Arrange seats')).toBeDefined();
+  });
 });

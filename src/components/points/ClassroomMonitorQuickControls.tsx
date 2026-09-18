@@ -96,7 +96,6 @@ function CollapsedToolIcon({
   return (
     <motion.button
       type="button"
-      layoutId={`classroom-tool-icon-${tone}-${label}`}
       variants={{
         hidden: { opacity: 0, scale: 0.85 },
         visible: { opacity: 1, scale: 1, transition: spring },
