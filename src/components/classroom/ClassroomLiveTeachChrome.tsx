@@ -20,6 +20,7 @@ import {
   saveClassroomLiveCheatsheetShown,
 } from '@/lib/classroom/classroomLiveCheatsheet';
 import { ClassroomWhosOutPulse } from '@/components/classroom/ClassroomWhosOutPulse';
+import type { ClassroomWhosOutPass } from '@/lib/classroom/classroomWhosOutPasses';
 import {
   Popover,
   PopoverContent,
@@ -83,7 +84,7 @@ export function ClassroomLiveTeachChrome({
   classes?: Class[];
   scope: string;
   sessionPoints: number;
-  passes: { studentId: string; studentName: string; startedAt?: number }[];
+  passes: ClassroomWhosOutPass[];
   bathroomMaxMinutes: number;
   onReturn: (studentId: string) => void;
   onClassChange?: (classId: string) => void;
