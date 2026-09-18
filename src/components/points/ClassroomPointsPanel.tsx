@@ -556,7 +556,8 @@ function ClassroomPointsPanelInner({
     },
     [],
   );
-  const [, setRedoAction] = useState<LastClassroomAction | null>(null);
+  const [redoAction, setRedoAction] = useState<LastClassroomAction | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
   const [randomHighlightId, setRandomHighlightId] = useState<string | null>(null);
   const [randomPickWinnerId, setRandomPickWinnerId] = useState<string | null>(null);
   const randomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -910,7 +911,7 @@ function ClassroomPointsPanelInner({
     setBurstSelected([]);
     setLastAction(null);
     setRedoAction(null);
-  }, [effectiveClassId, reloadSessionData]);
+  }, [effectiveClassId, reloadSessionData, setLastAction]);
 
   useEffect(() => {
     if (!isStudentAudience || !effectiveClassId) return;
@@ -1393,6 +1394,7 @@ function ClassroomPointsPanelInner({
       triggerDeskAwardFeedback,
       triggerFeedbackForStudentIds,
       recordSessionAwards,
+      setLastAction,
       studentById,
       deferredStudents,
       label,
@@ -1778,6 +1780,7 @@ function ClassroomPointsPanelInner({
     firestore,
     classroomMeta,
     recordSessionAwards,
+    setLastAction,
   ]);
 
   const handleRedo = useCallback(async () => {
@@ -1798,7 +1801,7 @@ function ClassroomPointsPanelInner({
     } finally {
       setIsUndoing(false);
     }
-  }, [redoAction, isUndoing, applyPointsToStudents, toast]);
+  }, [redoAction, isUndoing, applyPointsToStudents, toast, setLastAction]);
 
 
   useEffect(() => {
