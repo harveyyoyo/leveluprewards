@@ -91,6 +91,7 @@ import {
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
 
+
 import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
 import { resolveEffectiveDeskDisplayPrefs } from '@/lib/classroom/classroomMonitorDisplaySettings';
 import {
