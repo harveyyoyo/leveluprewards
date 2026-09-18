@@ -22,9 +22,12 @@ import {
   Redo2,
   Users,
   MousePointerClick,
+  Layers,
 } from 'lucide-react';
+import { ClassroomGroupAwardModal } from '@/components/classroom/ClassroomGroupAwardModal';
 import {
   buildClassroomFullscreenUrl,
+
   openClassroomFullscreenTab,
   type ClassroomFullscreenAudience,
 } from '@/lib/classroomPointsUrl';
@@ -64,6 +67,9 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import {
   applyClassroomSessionAward,
   buildInitialLayout,
+  buildRoomShapeLayout,
+  CLASSROOM_ROOM_SHAPES,
+  type ClassroomRoomShape,
   clearClassroomSession,
   findNewSessionAwards,
   initialLayoutColumnCount,
@@ -84,6 +90,7 @@ import {
   CLASSROOM_PREFS_VERSION,
   DEFAULT_CLASSROOM_PREFS,
 } from '@/lib/classroomSeatingChart';
+
 import { queueClassroomPrefsFirestoreSync } from '@/lib/db/classroomPrefsSync';
 import { resolveEffectiveDeskDisplayPrefs } from '@/lib/classroom/classroomMonitorDisplaySettings';
 import {
@@ -388,6 +395,7 @@ function ClassroomPointsPanelInner({
   );
   const [burstMode, setBurstMode] = useState(false);
   const [burstSelected, setBurstSelected] = useState<string[]>([]);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
   const [sessionData, setSessionData] = useState<ClassroomSessionData>({ totals: {}, lastAward: {} });
   const [lastAwardSummary, setLastAwardSummary] = useState<{
     label: string;
@@ -1234,6 +1242,40 @@ function ClassroomPointsPanelInner({
     if (ok) setBurstSelected([]);
   }, [burstSelected, prefs.defaultPoints, prefs.defaultDescription, applyPointsToStudents]);
 
+  const handleAwardGroup = useCallback(
+    async (studentIds: string[], groupName: string, points: number) => {
+      if (!studentIds.length) return;
+      playClassroomSound(CLASSROOM_TAP_SOUND);
+      const desc = `${groupName} — ${prefs.defaultDescription}`;
+      await applyPointsToStudents(studentIds, points, desc);
+      triggerFeedbackForStudentIds(studentIds, points);
+    },
+    [applyPointsToStudents, playClassroomSound, prefs.defaultDescription, triggerFeedbackForStudentIds],
+  );
+
+  const applyRoomShape = useCallback(
+    (shape: ClassroomRoomShape) => {
+      const ids = classStudents.map((s) => s.id);
+      if (!ids.length) {
+        toast({
+          variant: 'destructive',
+          title: 'No students in class',
+          description: 'Add students to the class before arranging the room shape.',
+        });
+        return;
+      }
+      const nextLayout = buildRoomShapeLayout(shape, ids);
+      setLayout(nextLayout);
+      const meta = CLASSROOM_ROOM_SHAPES.find((s) => s.id === shape);
+      toast({
+        title: `${meta?.emoji ?? '📐'} Room shape arranged`,
+        description: `Arranged into ${meta?.label.toLowerCase() ?? shape}. You can still drag desks around.`,
+      });
+    },
+    [classStudents, toast],
+  );
+
+
   const handleUndo = useCallback(async () => {
     if (!lastAction || isUndoing) return;
     setIsUndoing(true);
@@ -1698,11 +1740,9 @@ function ClassroomPointsPanelInner({
   const monitorAwardActions =
     !editMode &&
     !isStudentAudience &&
-    (prefs.showRandomPicker ||
-      prefs.showClassAwardButton ||
-      prefs.showBurstAward ||
-      (prefs.showBurstAward && burstMode && burstSelected.length > 0)) ? (
+    placedStudentIds.length > 0 ? (
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
+
         {prefs.showRandomPicker ? (
           <ClassroomMonitorActionButton
             design={design}
@@ -1728,7 +1768,22 @@ function ClassroomPointsPanelInner({
             disabled={!placedStudentIds.length}
           />
         ) : null}
+        <ClassroomMonitorActionButton
+          design={design}
+          isFullscreen={isFullscreen}
+          iconOnly
+          tone="group"
+          icon={Layers}
+          label="Table / Group"
+          title="Reward a Table or Row of students"
+          onClick={() => {
+            playClassroomSound(CLASSROOM_TAP_SOUND);
+            setGroupModalOpen(true);
+          }}
+          disabled={!placedStudentIds.length}
+        />
         {prefs.showBurstAward ? (
+
           <ClassroomMonitorActionButton
             design={design}
             isFullscreen={isFullscreen}
@@ -2032,9 +2087,31 @@ function ClassroomPointsPanelInner({
           >
             <Plus className="h-3 w-3" />
           </Button>
+          <span className="hidden text-muted-foreground sm:inline">·</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-muted-foreground">Shape:</span>
+            <Select
+              value=""
+              onValueChange={(v) => {
+                if (v) applyRoomShape(v as ClassroomRoomShape);
+              }}
+            >
+              <SelectTrigger className="h-8 w-[145px] rounded-lg text-xs font-semibold">
+                <SelectValue placeholder="Pick shape..." />
+              </SelectTrigger>
+              <SelectContent>
+                {CLASSROOM_ROOM_SHAPES.map((shape) => (
+                  <SelectItem key={shape.id} value={shape.id} className="text-xs">
+                    <span>{shape.emoji} {shape.label}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <span className="text-muted-foreground">Drag desks to match your room.</span>
         </div>
       )}
+
 
       {chartNeedsRosterPlacement && !isFullscreen ? (
         <div className="flex shrink-0 flex-col gap-2 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2181,7 +2258,18 @@ function ClassroomPointsPanelInner({
       </div>
 
       {awardMenu}
+      <ClassroomGroupAwardModal
+        open={groupModalOpen}
+        onOpenChange={setGroupModalOpen}
+        layout={activeLayout}
+        students={classStudents}
+        frontAtBottom={prefs.frontAtBottom}
+        defaultPoints={prefs.defaultPoints}
+        icon={icon}
+        onAwardGroup={handleAwardGroup}
+      />
       {behaviorNoteStudent ? (
+
         <BehaviorNoteDialog
           open={!!behaviorNoteStudent}
           onOpenChange={(open) => {
