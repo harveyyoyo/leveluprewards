@@ -11,6 +11,8 @@ import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypa
 import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useToast } from '@/hooks/use-toast';
 import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { GoogleIcon } from '@/components/auth/GoogleIcon';
+import { signInWithGooglePopup } from '@/lib/google/googleSignIn';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -67,9 +69,10 @@ function AdminSignInContent() {
   const playSound = useArcadeSound();
   const { toast } = useToast();
   const { login, isInitialized, schoolId: activeSchoolId, loginState, isAdmin } = useAppContext();
-  const { user } = useFirebase();
+  const { user, auth } = useFirebase();
   const [passcode, setPasscode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const { t } = useTranslation();
 
   const schoolId = useMemo(
@@ -135,6 +138,39 @@ function AdminSignInContent() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    if (!schoolId || !auth || isGoogleSubmitting || isSubmitting) return;
+    setIsGoogleSubmitting(true);
+    try {
+      const cred = await signInWithGooglePopup(auth);
+      const authResult = await loginSchoolAdmin(login, cred.user, schoolId, '');
+      if (!authResult.ok) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: t('portal.adminPasscode.loginFailedTitle') || 'Sign in failed',
+          description: authResult.message,
+        });
+        return;
+      }
+      playSound('login');
+      redirectAfterAdminLogin();
+    } catch (err: unknown) {
+      const code = String((err as { code?: string })?.code ?? '');
+      if (code === 'auth/popup-closed-by-user') {
+        return;
+      }
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Google sign-in failed',
+        description: (err as Error)?.message || 'Could not complete Google sign-in.',
+      });
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  };
+
   if (
     !isInitialized ||
     isAutoLoggingIn ||
@@ -161,12 +197,12 @@ function AdminSignInContent() {
             <CardTitle className="text-2xl font-black tracking-tight">{t('portal.adminPasscode.signInTitle')}</CardTitle>
           </div>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-4">
           <form
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (isSubmitting) return;
+              if (isSubmitting || isGoogleSubmitting) return;
               playSound('click');
               void handleSubmit();
             }}
@@ -186,7 +222,11 @@ function AdminSignInContent() {
               />
             </div>
 
-            <Button type="submit" className="w-full h-12 rounded-xl font-black" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl font-black"
+              disabled={isSubmitting || isGoogleSubmitting}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
@@ -198,14 +238,41 @@ function AdminSignInContent() {
             </Button>
           </form>
 
+          <div className="relative my-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground font-medium">{t('common.or') || 'Or'}</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-12 rounded-xl font-bold flex items-center justify-center gap-2 border-border shadow-sm hover:bg-muted"
+            disabled={isSubmitting || isGoogleSubmitting}
+            onClick={() => void handleGoogleSignIn()}
+          >
+            {isGoogleSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                {t('common.signingIn')}
+              </>
+            ) : (
+              <>
+                <GoogleIcon className="h-4 w-4" />
+                Sign in with Google
+              </>
+            )}
+          </Button>
+
           <Button variant="outline" className="w-full h-12 rounded-xl font-bold" asChild>
             <Link href={backHref} onClick={() => playSound('click')}>
               <ArrowLeft className="mr-2 h-4 w-4" aria-hidden="true" />
               {t('common.back')}
             </Link>
           </Button>
-
-
         </CardContent>
       </Card>
     </div>
