@@ -43,7 +43,7 @@ export function StudentPointsTypeButton({ student, className }: StudentPointsTyp
               : 'text-muted-foreground',
             className,
           )}
-          title={`${points.toLocaleString()} points — click for breakdown`}
+          title={`${points.toLocaleString()} spendable · ${((student.lifetimePoints ?? points) ?? 0).toLocaleString()} all-time — click for breakdown`}
           onClick={(e) => e.stopPropagation()}
         >
           <span className="max-w-[2.25rem] truncate px-0.5">{circleLabel}</span>
@@ -54,13 +54,20 @@ export function StudentPointsTypeButton({ student, className }: StudentPointsTyp
         className="w-64 p-3"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Point balance
-        </p>
-        <p className="mt-0.5 text-lg font-black tabular-nums text-primary">
-          {points.toLocaleString()}{' '}
-          <span className="text-xs font-bold uppercase tracking-wide opacity-70">pts</span>
-        </p>
+        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Spendable</p>
+            <p className="text-base font-black tabular-nums text-primary">
+              {points.toLocaleString()} <span className="text-[10px] font-bold">pts</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">All-Time</p>
+            <p className="text-base font-black tabular-nums text-foreground">
+              {((student.lifetimePoints ?? points) ?? 0).toLocaleString()} <span className="text-[10px] font-bold">pts</span>
+            </p>
+          </div>
+        </div>
         {totals.length > 0 ? (
           <ul className="mt-3 space-y-1.5 border-t border-border/60 pt-3">
             {totals.map((row) => (

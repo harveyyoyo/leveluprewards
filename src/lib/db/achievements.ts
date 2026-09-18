@@ -1,4 +1,4 @@
-import { doc, setDoc, updateDoc, deleteDoc, Firestore } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteDoc, deleteField, Firestore } from 'firebase/firestore';
 import type { Achievement } from '../types';
 import { reportFirestorePermissionError } from '@/firebase/error-emitter';
 import { removeUndefined } from './helpers';
@@ -18,7 +18,11 @@ export const addAchievement = async (firestore: Firestore, schoolId: string, ach
 export const updateAchievement = async (firestore: Firestore, schoolId: string, achievement: Achievement) => {
   const achievementDocRef = doc(firestore, 'schools', schoolId, 'achievements', achievement.id);
   try {
-    await updateDoc(achievementDocRef, removeUndefined({ ...achievement } as unknown as Record<string, unknown>));
+    const payload = removeUndefined({ ...achievement } as unknown as Record<string, unknown>) as Record<string, unknown>;
+    if (!achievement.enableWheelSpin || !achievement.wheelSegments) {
+      payload.wheelSegments = deleteField();
+    }
+    await updateDoc(achievementDocRef, payload);
   } catch (error) {
     reportFirestorePermissionError(error, { path: achievementDocRef.path, operation: 'update', requestResourceData: achievement });
     throw error;
