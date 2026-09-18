@@ -25,6 +25,7 @@ describe('isPresentationRoute', () => {
     expect(isPresentationRoute('/schoolabc/classroom-screen')).toBe(true);
     expect(isPresentationRoute('/schoolabc/house-sorting')).toBe(true);
     expect(isPresentationRoute('/schoolabc/classroom-realm')).toBe(true);
+    expect(isPresentationRoute('/schoolabc/classroom')).toBe(true);
     expect(isPresentationRoute('/schoolabc/houses-realm')).toBe(true);
   });
 });

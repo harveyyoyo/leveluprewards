@@ -85,7 +85,7 @@ function QuickAwardsEditorBody({
     <>
       <div className={cn('mb-2 flex items-center gap-2', compact && 'mb-1.5')}>
         <Label className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-          Quick tap
+          Instant award
         </Label>
         <Input
           className={cn('min-w-0 flex-1 rounded-md', compact ? 'h-7 text-xs' : 'h-8 text-sm')}

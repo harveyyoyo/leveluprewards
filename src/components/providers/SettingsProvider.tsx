@@ -389,6 +389,8 @@ interface Settings {
     classroomMonitorIncludeLastName?: boolean;
     /** Show student sticker / theme emoji on desk avatars. */
     classroomMonitorIncludeStudentEmoji?: boolean;
+    /** Show student photos on seating chart desks. Default on when unset. */
+    classroomMonitorIncludeStudentPhotos?: boolean;
     /** Show behavior-notes shortcut tips on the live monitor by default. Default on when unset. */
     classroomMonitorShowBehaviorNotesTips?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
@@ -1009,6 +1011,7 @@ const defaultSettings: Settings = {
     classroomMonitorIncludeSessionLastAward: true,
     classroomMonitorIncludeLastName: false,
     classroomMonitorIncludeStudentEmoji: false,
+    classroomMonitorIncludeStudentPhotos: true,
     classroomMonitorShowBehaviorNotesTips: true,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,

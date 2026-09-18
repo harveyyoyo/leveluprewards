@@ -35,11 +35,12 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['houseCoordinator']))).toBe(true);
   });
 
-  it('classroom-realm allows the same people who can open the admin Classroom tab', () => {
-    expect(schoolPathAllowedByGate(`/${sid}/classroom-realm`, sid, new Set(['portal']))).toBe(true);
-    expect(schoolPathAllowedByGate(`/${sid}/classroom-realm`, sid, new Set(['admin']))).toBe(true);
+  it('classroom allows the same people who can open the admin Classroom tab', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['admin']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['kiosk']))).toBe(false);
     expect(schoolPathAllowedByGate(`/${sid}/classroom-realm`, sid, new Set(['teacher']))).toBe(true);
-    expect(schoolPathAllowedByGate(`/${sid}/classroom-realm`, sid, new Set(['kiosk']))).toBe(false);
   });
 
   it('displays and displays-realm allow staff and portal', () => {

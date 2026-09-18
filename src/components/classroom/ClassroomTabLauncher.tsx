@@ -40,8 +40,7 @@ export function ClassroomTabLauncher({ schoolId }: { schoolId: string }) {
           {CLASSROOM_TAB_LABEL}
         </h2>
         <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
-          Classroom opens in its own teaching space — live awards, a student class screen, seating,
-          raffle, and behavior notes, with a look you can pick for your school.
+          Classroom is the live teaching board — awards, seating, raffle, behavior notes, and the class screen.
         </p>
       </div>
 

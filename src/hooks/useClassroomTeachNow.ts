@@ -5,8 +5,15 @@ import { useFirestore } from '@/firebase';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
+import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { useToast } from '@/hooks/use-toast';
 import { endBathroomPass } from '@/lib/db/bathroom';
+import { endRecessCheckout } from '@/lib/db/recess';
+import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import {
+  classroomWhosOutPassLabel,
+  mergeClassroomWhosOutPasses,
+} from '@/lib/classroom/classroomWhosOutPasses';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import {
   pickClassroomActiveClass,
@@ -42,6 +49,7 @@ export function useClassroomTeachNow({
   const attendanceOn = isPillarOn(settings, 'payAttendance');
   const seatingScope = variant === 'admin' ? 'admin' : activeTeacherId || 'staff';
   const bathroomMaxMinutes = Math.min(30, Math.max(1, settings.bathroomMaxMinutes ?? 5));
+  const recessMaxMinutes = resolveRecessMaxMinutes(settings);
 
   const availableClasses = useMemo(
     () => classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
@@ -77,7 +85,8 @@ export function useClassroomTeachNow({
   }, [students, activeClass]);
 
   const attendanceMap = useTodayAttendanceMap(schoolId, attendanceOn);
-  const activePasses = useActiveBathroomPasses(schoolId, true);
+  const bathroomPasses = useActiveBathroomPasses(schoolId, true);
+  const recessPasses = useActiveRecessPasses(schoolId, true);
 
   useEffect(() => {
     if (!schoolId || !selectedClassId) return;
@@ -103,18 +112,20 @@ export function useClassroomTeachNow({
     return { present, late, absent };
   }, [classStudents, attendanceMap]);
 
-  const allActivePasses = useMemo(() => {
-    const list: { studentId: string; studentName: string; startedAt: number }[] = [];
-    for (const [studentId, pass] of activePasses.entries()) {
-      const s = students.find((stud) => stud.id === studentId);
-      list.push({
-        studentId,
-        studentName: s ? getStudentNickname(s) : pass.studentName || 'Student',
-        startedAt: pass.startedAt || Date.now(),
-      });
-    }
-    return list;
-  }, [students, activePasses]);
+  const allActivePasses = useMemo(
+    () =>
+      mergeClassroomWhosOutPasses({
+        recess: recessPasses,
+        bathroom: bathroomPasses,
+        nameFor: (studentId, fallbackName) => {
+          const s = students.find((stud) => stud.id === studentId);
+          return s ? getStudentNickname(s) : fallbackName || 'Student';
+        },
+        recessMaxMinutes,
+        bathroomMaxMinutes,
+      }),
+    [bathroomMaxMinutes, bathroomPasses, recessMaxMinutes, recessPasses, students],
+  );
 
   const classActivePasses = useMemo(() => {
     const classStudentIds = new Set(classStudents.map((s) => s.id));
@@ -123,10 +134,22 @@ export function useClassroomTeachNow({
 
   const handleEndPass = async (studentId: string) => {
     try {
-      await endBathroomPass(firestore, schoolId, studentId, bathroomMaxMinutes);
+      const [recessLog, bathroomLog] = await Promise.all([
+        endRecessCheckout(firestore, schoolId, studentId, recessMaxMinutes),
+        endBathroomPass(firestore, schoolId, studentId, bathroomMaxMinutes),
+      ]);
+      if (!recessLog && !bathroomLog) {
+        toast({
+          variant: 'destructive',
+          title: 'Could not end pass',
+          description: 'That pass may already be closed.',
+        });
+        return;
+      }
+      const label = recessLog ? classroomWhosOutPassLabel(recessLog.reason) : 'Bathroom';
       toast({
         title: 'Back in class',
-        description: 'Bathroom pass ended.',
+        description: `${label} pass ended.`,
       });
     } catch {
       toast({

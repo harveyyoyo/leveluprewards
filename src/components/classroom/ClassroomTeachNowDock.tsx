@@ -124,12 +124,12 @@ export function ClassroomTeachNowDock({
               >
                 <Timer className="h-3.5 w-3.5" aria-hidden />
                 {teach.classActivePasses.length > 0
-                  ? `${teach.classActivePasses.length} on bathroom pass`
+                  ? `${teach.classActivePasses.length} out on a pass`
                   : 'Nobody out'}
               </span>
               <span
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/12 bg-white/8 px-2.5"
-                style={{ color: 'var(--cr-accent-text)' }}
+                className="classroom-on-dark inline-flex h-8 items-center gap-1.5 rounded-xl border-2 border-[#f5c518] bg-[#f5c518] px-2.5 text-xs font-black tabular-nums"
+                style={{ color: '#102033' }}
               >
                 <Sparkles className="h-3.5 w-3.5" aria-hidden />
                 +{teach.sessionPoints} pts this session

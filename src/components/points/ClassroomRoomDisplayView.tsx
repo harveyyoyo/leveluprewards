@@ -6,6 +6,7 @@ import { Clock, LayoutGrid, Loader2, MessageSquare, Trophy, Users } from 'lucide
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { loadClassroomSession } from '@/lib/classroomSeatingChart';
+import { sanitizeClassroomDeskAwardLabel } from '@/lib/classroom/classroomAwardLabel';
 import {
   focusLineForDay,
   loadClassroomScreenPrefs,
@@ -126,7 +127,7 @@ export function ClassroomRoomDisplayView({
         id: s.id,
         name: getStudentNickname(s) || s.firstName || s.id,
         session: sessionData.totals[s.id] ?? 0,
-        lastLabel: sessionData.lastAward[s.id]?.label ?? null,
+        lastLabel: sanitizeClassroomDeskAwardLabel(sessionData.lastAward[s.id]?.label),
       }))
       .filter((row) => row.session !== 0)
       .sort((a, b) => b.session - a.session)
