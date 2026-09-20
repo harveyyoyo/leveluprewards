@@ -11,6 +11,7 @@
     "prepare": "node scripts/install-agent-git-hooks.mjs",
     "agent:branch": "node scripts/ensure-agent-branch.mjs",
     "dev": "node scripts/dev-with-warmup.cjs",
+    "dev:video": "npm run dev --prefix promo-video",
     "dev:office": "npm run dev --prefix apps/office",
     "install:office": "npm install --prefix apps/office",
     "dev:warm": "node scripts/dev-with-warmup.cjs",
