@@ -87,6 +87,8 @@ export function SchoolDeveloperLoginForm({
   const schoolLoginIntentRef = useRef(false);
   const adminSchoolAutoResolveAttemptedRef = useRef<string | null>(null);
   const [isResolvingAdminSchool, setIsResolvingAdminSchool] = useState(false);
+  const [matchedSchools, setMatchedSchools] = useState<Array<{ id: string; name: string }>>([]);
+  const [showManualSchoolEntry, setShowManualSchoolEntry] = useState(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -208,14 +210,12 @@ export function SchoolDeveloperLoginForm({
     if (!allowDeveloperToggle && isDeveloper) setIsDeveloper(false);
   }, [allowDeveloperToggle, isDeveloper, isDeveloperOnly]);
 
-  // Anyone signed in with Google who isn't the platform's own developer/owner and who is
-  // registered as a school's admin (schools/{id}.adminEmails) skips "which school?" entirely
-  // — land them straight in their school's admin area instead of asking again.
+  // Google accounts listed on a school's adminEmails see those schools as buttons
+  // instead of typing a School ID.
   useEffect(() => {
     if (isDeveloperOnly || libraryLogin) return;
     if (!mounted || !isInitialized || isUserLoading) return;
     if (!hasGoogleUser || !firebaseUser) return;
-    if (initialSchoolId?.trim() || schoolId.trim()) return;
     if (isAllowedGoogleEmail) return; // Owner/developer keeps the manual school picker.
     if (adminSchoolAutoResolveAttemptedRef.current === firebaseUser.uid) return;
     adminSchoolAutoResolveAttemptedRef.current = firebaseUser.uid;
@@ -229,15 +229,29 @@ export function SchoolDeveloperLoginForm({
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
-        const data = (await res.json()) as { schoolId?: string | null };
-        const resolvedSchoolId = data.schoolId;
-        if (!resolvedSchoolId) return;
-        const schoolResult = await login('school', { schoolId: resolvedSchoolId, passcode: '' });
-        if (!schoolResult.ok) return;
-        const adminResult = await loginSchoolAdmin(login, firebaseUser, resolvedSchoolId, '');
-        if (!adminResult.ok) return;
-        playSound('login');
-        router.replace(`/${resolvedSchoolId}/admin`);
+        const data = (await res.json()) as {
+          schools?: Array<{ id?: string; name?: string }>;
+          schoolId?: string | null;
+        };
+        const schools = Array.isArray(data.schools)
+          ? data.schools
+              .map((school) => ({
+                id: typeof school.id === 'string' ? school.id.trim().toLowerCase() : '',
+                name:
+                  typeof school.name === 'string' && school.name.trim()
+                    ? school.name.trim()
+                    : typeof school.id === 'string'
+                      ? school.id
+                      : '',
+              }))
+              .filter((school) => school.id)
+          : data.schoolId
+            ? [{ id: data.schoolId.trim().toLowerCase(), name: data.schoolId.trim().toLowerCase() }]
+            : [];
+        setMatchedSchools(schools);
+        if (schools.length > 0) {
+          setShowManualSchoolEntry(false);
+        }
       } catch {
         // Best-effort convenience — silently fall back to the manual school picker.
       } finally {
@@ -252,13 +266,60 @@ export function SchoolDeveloperLoginForm({
     isUserLoading,
     hasGoogleUser,
     firebaseUser,
-    initialSchoolId,
-    schoolId,
     isAllowedGoogleEmail,
-    login,
-    playSound,
-    router,
   ]);
+
+  const enterMatchedSchool = async (sid: string) => {
+    if (isSubmitting || !sid.trim()) return;
+    const cleanId = sid.trim().toLowerCase();
+    playSound('click');
+    schoolLoginIntentRef.current = true;
+    clearPendingGoogleRedirect();
+    setGoogleSchoolLoginError(null);
+    setIsSubmitting(true);
+    setLoginPhase('verifying');
+    try {
+      const schoolResult = await login('school', { schoolId: cleanId, passcode: '' });
+      if (!schoolResult.ok) {
+        setGoogleSchoolLoginError(schoolResult.message);
+        playSound('error');
+        triggerShake();
+        toast({
+          variant: 'destructive',
+          title: t('common.loginFailed'),
+          description: schoolResult.message,
+        });
+        return;
+      }
+
+      const adminResult = await loginSchoolAdmin(login, firebaseUser, cleanId, '');
+      if (!adminResult.ok) {
+        // School access worked; land on the portal chooser if admin login is unavailable.
+        playSound('login');
+        if (!auth) return;
+        setLoginPhase('session');
+        const navigated = await navigateAfterSchoolLogin(auth, cleanId);
+        if (!navigated) {
+          playSound('error');
+          triggerShake();
+          toast({
+            variant: 'destructive',
+            title: t('auth.sessionFailedTitle'),
+            description:
+              'Your school was accepted, but this browser could not open a secure session. Please try again.',
+          });
+        }
+        return;
+      }
+
+      playSound('login');
+      router.replace(`/${cleanId}/admin`);
+    } finally {
+      setIsSubmitting(false);
+      setLoginPhase('idle');
+    }
+  };
+
   const completeDeveloperLogin = async (options?: { force?: boolean }) => {
     if (!firebaseUser || !allowDeveloperLogin || !isAllowedGoogleEmail) return;
     if (!isDeveloperOnly && !isDeveloper) return;
@@ -363,6 +424,9 @@ export function SchoolDeveloperLoginForm({
       }
       developerLoginCompletedUidRef.current = null;
       developerAutoLoginAttemptedRef.current = false;
+      adminSchoolAutoResolveAttemptedRef.current = null;
+      setMatchedSchools([]);
+      setShowManualSchoolEntry(false);
       toast({
         title: t('auth.signedOutOfGoogleTitle'),
         description: t('auth.signedOutOfGoogleDescription'),
@@ -695,6 +759,15 @@ export function SchoolDeveloperLoginForm({
     );
   }
 
+  const showMatchedSchoolPicker =
+    !isDeveloperOnly &&
+    !isDeveloper &&
+    hasGoogleUser &&
+    !isAllowedGoogleEmail &&
+    matchedSchools.length > 0 &&
+    !showManualSchoolEntry &&
+    !googleSchoolLoginError;
+
   return (
     <div className="min-h-screen relative overflow-hidden font-sans flex flex-col items-center justify-center transition-colors duration-500 pb-8">
       <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center">
@@ -759,41 +832,123 @@ export function SchoolDeveloperLoginForm({
           >
             {!isDeveloperOnly && !isDeveloper && (
               <div className="space-y-2">
-                <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
-                  {t('auth.schoolId')}
-                </Label>
                 {isResolvingAdminSchool ? (
                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
-                    Checking your account for an existing school...
+                    {t('auth.checkingYourSchools')}
                   </p>
                 ) : null}
-                <div className="flex gap-2 items-center">
-                  <input
-                    id="schoolId"
-                    ref={schoolIdRef}
-                    className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
-                    placeholder={t('auth.schoolIdPlaceholder')}
-                    value={schoolId}
-                    onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
-                    autoComplete="username"
-                  />
-                  <button
-                    type="button"
-                    title="Toggle onscreen keyboard"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      setActiveField(activeField === 'schoolId' ? null : 'schoolId');
-                      schoolIdRef.current?.focus();
+
+                {showMatchedSchoolPicker ? (
+                  <motion.div
+                    className="space-y-3"
+                    initial="hidden"
+                    animate="show"
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+                      },
                     }}
-                    className={cn(
-                      "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
-                      activeField === 'schoolId' && "bg-primary/10 border-primary text-primary"
-                    )}
                   >
-                    <Keyboard className="h-5 w-5" />
-                  </button>
-                </div>
+                    <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {t('auth.signedInAsGoogle')}{' '}
+                          <span className="font-mono text-foreground font-semibold truncate inline-block max-w-full align-bottom">
+                            {googleEmail || t('auth.yourAccount')}
+                          </span>
+                          . {t('auth.pickSchoolBelow')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleGoogleSignOut()}
+                        disabled={isGoogleSigningIn}
+                        className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors disabled:opacity-50"
+                      >
+                        {t('auth.signOutGoogle')}
+                      </button>
+                    </div>
+                    <Label className="text-xs font-semibold text-muted-foreground">
+                      {matchedSchools.length === 1
+                        ? t('auth.yourSchool')
+                        : t('auth.chooseYourSchool')}
+                    </Label>
+                    {matchedSchools.map((school) => (
+                      <motion.button
+                        key={school.id}
+                        type="button"
+                        layoutId={`google-school-${school.id}`}
+                        variants={{
+                          hidden: { opacity: 0, y: 10 },
+                          show: {
+                            opacity: 1,
+                            y: 0,
+                            transition: { type: 'spring', stiffness: 380, damping: 28 },
+                          },
+                        }}
+                        onClick={() => void enterMatchedSchool(school.id)}
+                        disabled={isSubmitting || isGoogleSigningIn}
+                        className="w-full h-12 rounded-xl border border-border bg-background hover:bg-muted transition-colors text-sm font-semibold text-foreground px-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60 inline-flex items-center justify-between gap-3"
+                      >
+                        <span className="truncate">{school.name}</span>
+                        <span className="shrink-0 text-xs font-mono text-muted-foreground">
+                          {school.id}
+                        </span>
+                      </motion.button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setShowManualSchoolEntry(true)}
+                      className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                    >
+                      {t('auth.useDifferentSchool')}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <>
+                    <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
+                      {t('auth.schoolId')}
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <input
+                        id="schoolId"
+                        ref={schoolIdRef}
+                        className="flex-1 h-12 rounded-xl px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-all font-semibold bg-background border border-border text-foreground placeholder:text-muted-foreground"
+                        placeholder={t('auth.schoolIdPlaceholder')}
+                        value={schoolId}
+                        onChange={(e) => setSchoolId(e.target.value.trim().toLowerCase())}
+                        autoComplete="username"
+                      />
+                      <button
+                        type="button"
+                        title="Toggle onscreen keyboard"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setActiveField(activeField === 'schoolId' ? null : 'schoolId');
+                          schoolIdRef.current?.focus();
+                        }}
+                        className={cn(
+                          "h-12 w-12 rounded-xl border border-border bg-card flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0",
+                          activeField === 'schoolId' && "bg-primary/10 border-primary text-primary"
+                        )}
+                      >
+                        <Keyboard className="h-5 w-5" />
+                      </button>
+                    </div>
+                    {matchedSchools.length > 0 && showManualSchoolEntry ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowManualSchoolEntry(false)}
+                        className="text-xs font-semibold text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                      >
+                        {t('auth.backToYourSchools')}
+                      </button>
+                    ) : null}
+                  </>
+                )}
               </div>
             )}
             {(isDeveloperOnly || isDeveloper) && allowDevPasscodeLogin && (
@@ -812,7 +967,7 @@ export function SchoolDeveloperLoginForm({
                 />
               </div>
             )}
-            {(!isDeveloperOnly && !isDeveloper) && (
+            {(!isDeveloperOnly && !isDeveloper && !showMatchedSchoolPicker) && (
               hasGoogleUser && !googleSchoolLoginError ? (
                 <div className="rounded-xl border border-border/70 bg-background/60 px-4 py-3 flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -897,6 +1052,13 @@ export function SchoolDeveloperLoginForm({
                   <Loader2 className="h-5 w-5 animate-spin" />
                   <span>{t('auth.initializingDeveloper')}</span>
                 </div>
+              ) : showMatchedSchoolPicker ? (
+                isSubmitting ? (
+                  <div className="text-center bg-primary/10 border border-primary/20 text-primary rounded-xl p-4 flex flex-col items-center gap-2 font-semibold text-sm animate-pulse">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>{t('auth.signingIn')}</span>
+                  </div>
+                ) : null
               ) : (isDeveloperOnly || isDeveloper) && hasGoogleUser && !isAllowedGoogleEmail ? null : (
                 <button
                   type={isDeveloperOnly || isDeveloper ? 'button' : 'submit'}
