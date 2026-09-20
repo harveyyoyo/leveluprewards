@@ -48,6 +48,10 @@ describe('office routing', () => {
     expect(officeHostInternalRewritePath('/yeshiva')).toBe('/yeshiva/office');
     expect(officeHostInternalRewritePath('/yeshiva/grades')).toBe('/yeshiva/office/grades');
     expect(officeHostInternalRewritePath('/yeshiva/office/grades')).toBeNull();
+    // Regression: 'teachers' was missing from OFFICE_PUBLIC_SEGMENTS, so the office-host
+    // Teachers page 404'd even though officePublicHref/schoolLoginRedirect both treat
+    // 'teachers' as a valid public segment.
+    expect(officeHostInternalRewritePath('/yeshiva/teachers')).toBe('/yeshiva/office/teachers');
   });
 
   it('redirects legacy /school/office paths to office host', () => {

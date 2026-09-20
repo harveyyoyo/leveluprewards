@@ -111,6 +111,41 @@ export function rateLimit(
 }
 
 // ---------------------------------------------------------------------------
+// Body size enforcement
+// ---------------------------------------------------------------------------
+
+/** Thrown by readJsonBodyWithLimit when the body exceeds the given byte limit. */
+export class BodyTooLargeError extends Error {}
+
+/**
+ * Reads and JSON-parses a request body while enforcing a real byte limit on the
+ * stream itself. A Content-Length header check alone can be bypassed by a request
+ * that omits it (e.g. chunked transfer-encoding) or lies about it; this counts the
+ * actual bytes read regardless of what the header claims.
+ */
+export async function readJsonBodyWithLimit(req: NextRequest, maxBytes: number): Promise<unknown> {
+  const reader = req.body?.getReader();
+  if (!reader) return {};
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new BodyTooLargeError('Body too large');
+      }
+      chunks.push(value);
+    }
+  }
+  if (chunks.length === 0) return {};
+  const text = Buffer.concat(chunks.map((c) => Buffer.from(c))).toString('utf8');
+  return JSON.parse(text);
+}
+
+// ---------------------------------------------------------------------------
 // Response helpers
 // ---------------------------------------------------------------------------
 

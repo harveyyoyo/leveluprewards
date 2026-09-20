@@ -8,7 +8,7 @@ import {
   SCHOOL_GATE_JWT_ISS,
 } from '@/lib/auth/schoolGateCookie';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
-import { clientIp, sameOrigin, rateLimit, jsonError } from '@/lib/server/apiSecurity';
+import { BodyTooLargeError, clientIp, sameOrigin, rateLimit, jsonError, readJsonBodyWithLimit } from '@/lib/server/apiSecurity';
 
 const MAX_ATTEMPTS = 20;
 const MAX_BODY_BYTES = 32 * 1024;
@@ -30,12 +30,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: true });
     }
 
-    const contentLength = Number(req.headers.get('content-length') || 0);
-    if (contentLength > MAX_BODY_BYTES) {
-      return jsonError(413, 'Body too large');
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonBodyWithLimit(req, MAX_BODY_BYTES);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) return jsonError(413, 'Body too large');
+      return jsonError(400, 'Invalid request body');
     }
-
-    const body = await req.json();
+    const body = rawBody as { idToken?: unknown; schoolId?: unknown };
     const idToken = typeof body?.idToken === 'string' ? body.idToken : '';
     const schoolId = typeof body?.schoolId === 'string' ? body.schoolId.trim().toLowerCase() : '';
     if (!idToken || !schoolId || !SCHOOL_ID_RE.test(schoolId)) {

@@ -12,9 +12,15 @@ async function consumeHandoffOnce(jti: string): Promise<boolean> {
     const db = await getFirebaseAdminFirestore();
     await db.collection('officeHandoffConsumed').doc(jti).create({ consumedAt: Date.now() });
     return true;
-  } catch {
-    // create() throws ALREADY_EXISTS on replay, and also on any infra error -
-    // fail closed either way rather than let a possible replay through.
+  } catch (e) {
+    // gRPC code 6 = ALREADY_EXISTS, the expected outcome on a genuine replay. Anything
+    // else (missing/misconfigured Admin credentials, Firestore outage, etc.) fails
+    // closed the same way (a legitimate first-time handoff must not be let through on
+    // an infra error), but gets logged so it is not mistaken for an actual replay.
+    const code = (e as { code?: number | string })?.code;
+    if (code !== 6 && code !== 'already-exists') {
+      console.error('[office-handoff/verify] consumeHandoffOnce failed (not a replay):', e);
+    }
     return false;
   }
 }

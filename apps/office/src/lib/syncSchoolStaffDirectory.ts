@@ -92,6 +92,18 @@ export function buildStaffDirectory(
  * list here must NOT erase teacher rows that the Rewards app already published;
  * this reads the existing directory first and preserves any `type: 'teacher'`
  * entries that the caller didn't supply fresh data for.
+ *
+ * KNOWN LIMITATION (not fully fixed): this only protects teacher rows, which Office
+ * never manages and so can always be blanket-preserved. Staff-account rows are still
+ * built from whatever `staffAccounts` the caller passes in - if two office sessions
+ * edit the same school's staff at the same moment, the second write can land with a
+ * stale view of the first one's change (a plain read-then-write race, not a
+ * transaction). Blanket-preserving unknown staff-account rows the same way as
+ * teachers would fix the race but break real deletions (a removed account's row
+ * would never disappear), so that is not a safe substitute. This is still a strict
+ * improvement over the prior behavior, which dropped every teacher row on every
+ * single save; closing the remaining staff-account race needs a transaction keyed
+ * off the live staffAccounts collection, not just this function's inputs.
  */
 export async function syncSchoolStaffDirectory(
   firestore: Firestore,

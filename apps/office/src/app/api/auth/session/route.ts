@@ -7,7 +7,7 @@ import {
 } from '@/lib/auth/firebaseSessionCookie';
 import { SCHOOL_GATE_COOKIE_NAME } from '@/lib/auth/schoolGateCookie';
 import { authCookieFlags } from '@/lib/auth/authCookieOptions';
-import { clientIp, sameOrigin, rateLimit, jsonError } from '@/lib/server/apiSecurity';
+import { BodyTooLargeError, clientIp, sameOrigin, rateLimit, jsonError, readJsonBodyWithLimit } from '@/lib/server/apiSecurity';
 
 const MAX_ATTEMPTS = 20;
 const MAX_BODY_BYTES = 32 * 1024;
@@ -27,12 +27,14 @@ export async function POST(req: NextRequest) {
       return jsonError(429, 'Too many requests');
     }
 
-    const contentLength = Number(req.headers.get('content-length') || 0);
-    if (contentLength > MAX_BODY_BYTES) {
-      return jsonError(413, 'Body too large');
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonBodyWithLimit(req, MAX_BODY_BYTES);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) return jsonError(413, 'Body too large');
+      return jsonError(400, 'Invalid request body');
     }
-
-    const body = await req.json();
+    const body = rawBody as { idToken?: unknown };
     const idToken = typeof body?.idToken === 'string' ? body.idToken : '';
     if (!idToken) {
       return jsonError(400, 'idToken required');
