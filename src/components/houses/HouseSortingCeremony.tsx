@@ -120,7 +120,7 @@ export function HouseSortingCeremony() {
     if (done || !currentStudent) return;
     if (step !== 'question' && step !== 'name') return;
     playCeremony('ceremony_step');
-  }, [currentStudent?.id, step, done, playCeremony]);
+  }, [currentStudent, currentStudent?.id, step, done, playCeremony]);
 
   const finishOrAdvance = useCallback(() => {
     if (index + 1 >= queue.length) {
