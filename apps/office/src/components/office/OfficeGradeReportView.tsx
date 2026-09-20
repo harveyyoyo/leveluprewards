@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -29,6 +29,8 @@ export function OfficeGradeReportView({
   embedded = false,
 }: OfficeGradeReportViewProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { term: activeTerm, configuredTerms } = useOfficeTerm(schoolId);
   const { settings } = useOfficeSettings(schoolId);
   const [term, setTerm] = useState(activeTerm);
@@ -51,6 +53,18 @@ export function OfficeGradeReportView({
       setTerm(termParam);
     }
   }, [searchParams]);
+
+  const clearStudentFilter = useCallback(() => {
+    setStudentFilter('all');
+    // Also drop ?student= from the URL - otherwise a reload (or anything else that
+    // re-reads searchParams) silently re-applies the filter this just cleared.
+    if (searchParams.get('student')) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete('student');
+      const q = next.toString();
+      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+    }
+  }, [pathname, router, searchParams]);
 
   const terms = useMemo(
     () =>
@@ -176,7 +190,7 @@ export function OfficeGradeReportView({
                 variant="outline"
                 size="sm"
                 className="h-9 rounded-lg gap-1.5"
-                onClick={() => setStudentFilter('all')}
+                onClick={clearStudentFilter}
               >
                 {studentLabelById.get(studentFilter) ?? 'Selected student'}
                 <span aria-hidden>×</span>

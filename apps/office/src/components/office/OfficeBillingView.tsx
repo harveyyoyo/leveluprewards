@@ -485,7 +485,15 @@ export function OfficeBillingView({
             updatedAt: Date.now(),
           });
         }
-        toast({ title: 'Invoice updated' });
+        const excessPaidCents = invoicePaidCents(existing) - paidCents;
+        if (excessPaidCents > 0) {
+          toast({
+            title: 'Invoice updated',
+            description: `The new amount is below what was already recorded as paid - ${formatCents(excessPaidCents)} is no longer tracked against this invoice.`,
+          });
+        } else {
+          toast({ title: 'Invoice updated' });
+        }
       } else {
         const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
         const status = saveAsDraft ? 'draft' : 'sent';
@@ -753,12 +761,15 @@ export function OfficeBillingView({
 
   const handleDeleteAccount = async (id: string) => {
     if (!firestore) return;
-    const linkedInvoices = invoices.filter((inv) => inv.accountId === id);
+    // Voided invoices are already inert (excluded from balances/reports) - only a
+    // still-live invoice should block deletion. There's no "reassign to another
+    // account" action in this UI, so don't promise one; voiding is the real path.
+    const linkedInvoices = invoices.filter((inv) => inv.accountId === id && inv.status !== 'void');
     if (linkedInvoices.length > 0) {
       toast({
         variant: 'destructive',
         title: 'Cannot delete this account',
-        description: `${linkedInvoices.length} invoice${linkedInvoices.length === 1 ? '' : 's'} still point to it. Remove or reassign those invoices first.`,
+        description: `${linkedInvoices.length} invoice${linkedInvoices.length === 1 ? '' : 's'} still linked to it. Void ${linkedInvoices.length === 1 ? 'it' : 'them'} first.`,
       });
       return;
     }
