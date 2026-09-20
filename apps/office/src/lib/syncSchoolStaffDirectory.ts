@@ -1,6 +1,7 @@
-import { doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, type Firestore } from 'firebase/firestore';
 import type { StaffAccount, StaffAccountRole, Teacher, TeacherPersonnelRole } from '@/lib/types';
 import { normalizeTeacherPersonnelRole } from '@/lib/teacherPersonnelRole';
+import { staffAccountsCollectionRef } from '@/lib/db/staffAccounts';
 
 /** Public portal sign-in row (stored on `schoolPublic/{schoolId}.staffDirectory`). */
 export type StaffPortalLoginOption = {
@@ -93,27 +94,30 @@ export function buildStaffDirectory(
  * this reads the existing directory first and preserves any `type: 'teacher'`
  * entries that the caller didn't supply fresh data for.
  *
- * KNOWN LIMITATION (not fully fixed): this only protects teacher rows, which Office
- * never manages and so can always be blanket-preserved. Staff-account rows are still
- * built from whatever `staffAccounts` the caller passes in - if two office sessions
- * edit the same school's staff at the same moment, the second write can land with a
- * stale view of the first one's change (a plain read-then-write race, not a
- * transaction). Blanket-preserving unknown staff-account rows the same way as
- * teachers would fix the race but break real deletions (a removed account's row
- * would never disappear), so that is not a safe substitute. This is still a strict
- * improvement over the prior behavior, which dropped every teacher row on every
- * single save; closing the remaining staff-account race needs a transaction keyed
- * off the live staffAccounts collection, not just this function's inputs.
+ * Staff-account rows are read fresh from the live `staffAccounts` collection here
+ * rather than trusted from a caller-supplied array, so two office sessions editing
+ * the same school's staff around the same moment can no longer have the second
+ * write overwrite the first with a stale snapshot - each call re-derives the
+ * directory from whatever is actually in Firestore at that moment. The read here
+ * and the `schoolPublic` write below are still two separate operations rather than
+ * one transaction (Firestore web SDK transactions can't include an open-ended
+ * collection query), so a write that lands in the gap between them can still be
+ * briefly overwritten - but every staff mutation triggers a fresh call to this
+ * function, so any such loss is corrected by the very next save rather than
+ * persisting indefinitely.
  */
 export async function syncSchoolStaffDirectory(
   firestore: Firestore,
   schoolId: string,
   teachers: Teacher[] | null | undefined,
-  staffAccounts: StaffAccount[] | null | undefined,
 ): Promise<void> {
   const sid = schoolId.trim().toLowerCase();
   const ref = doc(firestore, 'schoolPublic', sid);
-  const next = buildStaffDirectory(teachers, staffAccounts);
+
+  const staffSnap = await getDocs(staffAccountsCollectionRef(firestore, sid));
+  const liveStaffAccounts = staffSnap.docs.map((d) => ({ id: d.id, ...d.data() }) as StaffAccount);
+
+  const next = buildStaffDirectory(teachers, liveStaffAccounts);
 
   let preservedTeacherRows: StaffPortalLoginOption[] = [];
   if (!teachers || teachers.length === 0) {
