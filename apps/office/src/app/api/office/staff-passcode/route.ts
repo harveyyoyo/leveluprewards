@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
-import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
+import { BodyTooLargeError, clientIp, jsonError, rateLimit, readJsonBodyWithLimit, sameOrigin } from '@/lib/server/apiSecurity';
 import { resolveSchoolGateScopes } from '@/lib/server/resolveSchoolGateScopes';
 import { writePasscodeSecret } from '@/lib/server/passcodeCredential';
 import { staffPasscodeSecretId } from '@/lib/passcodeSecrets';
@@ -21,12 +21,16 @@ export async function POST(req: NextRequest) {
       return jsonError(429, 'Too many requests');
     }
 
-    const contentLength = Number(req.headers.get('content-length') || 0);
-    if (contentLength > MAX_BODY_BYTES) return jsonError(413, 'Body too large');
-
     const authHeader = req.headers.get('authorization') || '';
     const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    const body = await req.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonBodyWithLimit(req, MAX_BODY_BYTES);
+    } catch (e) {
+      if (e instanceof BodyTooLargeError) return jsonError(413, 'Body too large');
+      return jsonError(400, 'Invalid request body');
+    }
+    const body = rawBody as { schoolId?: unknown; accountId?: unknown; passcode?: unknown };
     const schoolId = typeof body?.schoolId === 'string' ? body.schoolId.trim().toLowerCase() : '';
     const accountId = typeof body?.accountId === 'string' ? body.accountId.trim() : '';
     const passcode = typeof body?.passcode === 'string' ? body.passcode.trim() : '';
