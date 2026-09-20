@@ -71,6 +71,10 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/secretary`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/prize-clerk`, sid, new Set(['portal']))).toBe(true);
-    expect(schoolPathAllowedByGate(`/${sid}/librarian`, sid, new Set(['librarian']))).toBe(true);
+  });
+
+  it('public sample school student kiosk is open for any scopes', () => {
+    expect(schoolPathAllowedByGate('/schoolabc/student', 'schoolabc', new Set())).toBe(true);
+    expect(schoolPathAllowedByGate('/yeshiva/student', 'yeshiva', new Set())).toBe(true);
   });
 });

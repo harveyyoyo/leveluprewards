@@ -1,6 +1,7 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
+import { isPublicSampleSchoolId, SAMPLE_SCHOOL_ACCESS_PASSCODE } from '@/lib/sampleSchools';
 import { PASSCODE_SECRET_IDS } from '@/lib/passcodeSecrets';
 import { schoolPasscodeConfigured, verifyPasscodeCredential } from '@/lib/server/passcodeCredential';
 
@@ -127,6 +128,14 @@ export async function verifySchoolAccessServer(
   const schoolId = args.schoolId.trim().toLowerCase();
   const passcode = args.passcode.trim();
   const googleAuth = isGoogleAuthenticated(args.firebase);
+
+  if (
+    isPublicSampleSchoolId(schoolId) &&
+    (passcode === SAMPLE_SCHOOL_ACCESS_PASSCODE || passcode === '')
+  ) {
+    await ensureAnonymousPortalSession(db, schoolId, args.uid);
+    return;
+  }
 
   const schoolDoc = await db.collection('schools').doc(schoolId).get();
   if (!schoolDoc.exists) {

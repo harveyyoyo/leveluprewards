@@ -1151,7 +1151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 try {
                     setStudentKioskSessionEstablished(false);
                     setStudentKioskSessionError(null);
-                    if (credentials.passcode && credentials.passcode.trim()) {
+                    if (
+                        credentials.passcode &&
+                        credentials.passcode.trim() &&
+                        !isPublicSampleSchoolId(lowerSchoolId)
+                    ) {
                         const verifyResult = await verifySchoolAccessViaApi(
                             auth,
                             lowerSchoolId,

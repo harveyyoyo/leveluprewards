@@ -121,4 +121,16 @@ describe('verifySchoolAccessServer', () => {
     const payload = sessionSet.mock.calls[0]?.[0] as { grantedAt?: Date };
     expect(payload.grantedAt).toBeInstanceOf(Date);
   });
+
+  it('allows public sample school with demo passcode 1234 even if school doc is missing', async () => {
+    const { db, sessionSet } = mockDb({ schoolExists: false });
+    await verifySchoolAccessServer(db, {
+      uid: 'user-1',
+      email: '',
+      firebase: {},
+      schoolId: 'schoolabc',
+      passcode: '1234',
+    });
+    expect(sessionSet).toHaveBeenCalled();
+  });
 });

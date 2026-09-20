@@ -1,3 +1,5 @@
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
+
 /**
  * Edge-safe path checks aligned with `SchoolSessionGate.canUseRoute` (section-level).
  */
@@ -151,6 +153,7 @@ export function schoolPathAllowedByGate(
   }
 
   if (section === 'student') {
+    if (isPublicSampleSchoolId(normSchool)) return true;
     return (
       scopes.has('kiosk') ||
       scopes.has('portal') ||
