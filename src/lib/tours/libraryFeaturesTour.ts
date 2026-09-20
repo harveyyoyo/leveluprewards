@@ -33,6 +33,14 @@ export const libraryFeaturesTourSteps: IntroStep[] = [
     requireTarget: false,
   },
   {
+    id: 'library-features-suggestions',
+    title: 'Smart Book Suggestions & Quiz',
+    body: 'Help students discover their next favorite book! The system suggests books based on what they rated and enjoyed, or kids can take a quick 2-question quiz to find books on the shelf.',
+    onRoute: '/library',
+    target: 'library-hub-kiosk',
+    requireTarget: false,
+  },
+  {
     id: 'library-features-policy',
     title: 'Borrowing Limits & Due Dates',
     body: 'Set how many books each student can check out at once (such as 2 books for 14 days) and easily check who has books that need returning.',

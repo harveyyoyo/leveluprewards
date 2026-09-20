@@ -187,19 +187,23 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     expect(screen.getAllByText(/Reading Levels & Genres/i).length).toBeGreaterThan(0);
     clickNext();
 
-    // Step 5: Policy
+    // Step 5: Book Suggestions & Quiz
+    expect(screen.getAllByText(/Smart Book Suggestions & Quiz/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 6: Policy
     expect(screen.getAllByText(/Borrowing Limits & Due Dates/i).length).toBeGreaterThan(0);
     clickNext();
 
-    // Step 6: Self-Checkout
+    // Step 7: Self-Checkout
     expect(screen.getAllByText(/Student Self-Checkout Station/i).length).toBeGreaterThan(0);
     clickNext();
 
-    // Step 7: Audit
+    // Step 8: Audit
     expect(screen.getAllByText(/Quick Shelf Inventory Audits/i).length).toBeGreaterThan(0);
     clickNext();
 
-    // Step 8: Finish
+    // Step 9: Finish
     expect(screen.getAllByText(/Your Library is Ready!/i).length).toBeGreaterThan(0);
     const finishButtons = screen.getAllByRole('button', { name: /finish/i });
     expect(finishButtons.length).toBeGreaterThan(0);
