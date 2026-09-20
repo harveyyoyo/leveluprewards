@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { normalizeSchoolId } from '@/lib/schoolId';
-import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
-import { isStudentKioskRoute } from '@/lib/students/studentKioskRoute';
 import { SchoolDeveloperLoginForm } from '@/components/auth/SchoolDeveloperLoginForm';
 import { useAuth } from '@/components/providers/AuthProvider';
 import {
@@ -38,36 +36,12 @@ function readLoginUrlState(): {
  */
 export default function LoginPage() {
   const pathname = usePathname();
-  const router = useRouter();
   const { clearSchoolChooserSession } = useAuth();
   const [schoolFromQuery, setSchoolFromQuery] = useState('');
   const [changeSchool, setChangeSchool] = useState(false);
   const [libraryLogin, setLibraryLogin] = useState(false);
   const [initialSchoolId, setInitialSchoolId] = useState<string | undefined>(undefined);
   const changeSchoolResetDoneRef = useRef(false);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const nextRaw = params.get('next');
-      if (nextRaw) {
-        const decoded = decodeURIComponent(nextRaw);
-        const schoolParam = normalizeSchoolId(params.get('school'));
-        const parts = decoded.split('/').filter(Boolean);
-        const nextSchool = parts[0]?.toLowerCase() || schoolParam;
-        if (
-          isPublicSampleSchoolId(nextSchool) &&
-          isStudentKioskRoute(decoded, nextSchool)
-        ) {
-          router.replace(decoded);
-          return;
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, [router, pathname]);
 
   useEffect(() => {
     const read = () => {

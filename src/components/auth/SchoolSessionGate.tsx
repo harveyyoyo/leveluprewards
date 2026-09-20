@@ -206,19 +206,6 @@ function SchoolSessionGateBody({
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
 
-    if (canAutoEnterPublicKiosk) {
-      const sessionSchool = normalizeSchoolId(schoolId);
-      if (
-        sessionSchool !== route ||
-        loginState === 'loggedOut' ||
-        !ALLOWED.has(loginState) ||
-        (loginState !== 'school' && loginState !== 'student' && loginState !== 'developer')
-      ) {
-        void login('student', studentKioskLoginCredentials(route));
-        return;
-      }
-    }
-
     if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
       if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {
         void login('student', studentKioskLoginCredentials(route));
@@ -232,10 +219,6 @@ function SchoolSessionGateBody({
 
     const sessionSchool = normalizeSchoolId(schoolId);
     if (!sessionSchool || sessionSchool !== route) {
-      if (canAutoEnterPublicKiosk) {
-        void login('student', studentKioskLoginCredentials(route));
-        return;
-      }
       if (loginState === 'school' && sessionSchool && sessionSchool !== route) {
         redirectToSchoolLogin({ changeSchool: true });
         return;
@@ -314,13 +297,6 @@ function SchoolSessionGateBody({
   if (loginState !== 'developer') {
     const sessionSchool = normalizeSchoolId(schoolId);
     if (!sessionSchool || sessionSchool !== route) {
-      if (canAutoEnterPublicKiosk) {
-        return (
-          <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
-            <div className="animate-pulse font-semibold text-foreground">Loading…</div>
-          </div>
-        );
-      }
       return (
         <SessionGateLoading
           label={
@@ -333,13 +309,6 @@ function SchoolSessionGateBody({
     }
 
     if (!canUseRoute(pathname, route, loginState)) {
-      if (canAutoEnterPublicKiosk) {
-        return (
-          <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm">
-            <div className="animate-pulse font-semibold text-foreground">Loading…</div>
-          </div>
-        );
-      }
       return <SessionGateLoading label="Redirecting…" />;
     }
   }

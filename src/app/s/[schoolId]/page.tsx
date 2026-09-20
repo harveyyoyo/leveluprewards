@@ -6,9 +6,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { getDoc } from 'firebase/firestore';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
-import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { useSettings } from '@/components/providers/SettingsProvider';
-
 import { Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -43,13 +41,9 @@ export default function PublicSchoolPage() {
 
                 if (snap.exists() && snap.data()?.active !== false) {
                     setEntryError(null);
-                    if (isPublicSampleSchoolId(sid)) {
-                        router.replace(`/${sid}/student`);
-                    } else {
-                        router.replace(
-                            `/login?school=${encodeURIComponent(sid)}&next=${encodeURIComponent(`/${sid}/student`)}`,
-                        );
-                    }
+                    router.replace(
+                        `/login?school=${encodeURIComponent(sid)}&next=${encodeURIComponent(`/${sid}/student`)}`,
+                    );
                 } else {
                     setNotFound(true);
                 }

@@ -43,8 +43,6 @@ const PUBLIC_SECOND = new Set(['sign-in']);
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 
-import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
-
 /**
  * Returns `{ schoolId }` when the URL is a gated `/{schoolId}/(protected)/…` route.
  */
@@ -58,6 +56,5 @@ export function parseSchoolScopedSessionPath(pathname: string): { schoolId: stri
   const second = parts[1].toLowerCase();
   if (PUBLIC_SECOND.has(second)) return null;
   if (!PROTECTED_SECOND.has(second)) return null;
-  if (isPublicSampleSchoolId(rawSchool) && second === 'student') return null;
   return { schoolId: rawSchool };
 }

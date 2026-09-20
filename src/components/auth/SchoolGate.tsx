@@ -6,8 +6,6 @@ import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { normalizeSchoolId, studentKioskLoginCredentials } from '@/lib/schoolId';
 
-import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
-
 const ALLOWED = [
   'student',
   'teacher',
@@ -39,23 +37,17 @@ export function SchoolGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isInitialized) return;
     if (loginState === 'loggedOut') {
-      if (isPublicSampleSchoolId(routeSchoolId)) {
-        void login('student', studentKioskLoginCredentials(routeSchoolId));
-        return;
-      }
       router.push('/');
       return;
     }
     if (!schoolId) {
       const canRecoverFromRoute =
         !!routeSchoolId && (loginState === 'student' || loginState === 'school');
-      if (canRecoverFromRoute || isPublicSampleSchoolId(routeSchoolId)) {
-        void login('student', studentKioskLoginCredentials(routeSchoolId));
-        return;
+      if (!canRecoverFromRoute) {
+        router.push('/');
       }
-      router.push('/');
     }
-  }, [isInitialized, schoolId, loginState, routeSchoolId, router, login]);
+  }, [isInitialized, schoolId, loginState, routeSchoolId, router]);
 
   if (!isInitialized) {
     return (
