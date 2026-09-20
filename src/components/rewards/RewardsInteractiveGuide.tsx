@@ -338,9 +338,9 @@ export function RewardsInteractiveGuide({
       <Sheet open={isOpen} onOpenChange={handleOpenChange}>
         <SheetContent
           side="right"
-          overlayClassName="bg-black/15 backdrop-blur-[0.5px] cursor-pointer"
-          onPointerDownOutside={() => handleOpenChange(false)}
-          onInteractOutside={() => handleOpenChange(false)}
+          overlayClassName="bg-black/15 backdrop-blur-[0.5px]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
           className="w-full sm:max-w-xl flex flex-col p-0 gap-0 h-[100dvh] max-h-[100dvh] bg-background text-foreground shadow-2xl border-l border-border"
         >
           {/* Header */}
