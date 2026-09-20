@@ -17,6 +17,10 @@ This rule defines general requirements and standards for the application UI and 
 - Follow the premium, modern aesthetic defined in `docs/blueprint.md`.
 - Ensure high contrast and readability as defined in `theme-readability.mdc`.
 
+## Permanent Web Addresses (Hardwired Routes)
+- **Student Kiosk**: Must **always** be `/{schoolId}/student` (e.g. `https://leveluprewards.app/schoolabc/student`). Never rename, move, or nest this web address during redesigns or menu reorganization.
+- Aliases (e.g. `/{schoolId}/kiosk`, `/{schoolId}/checkin`) must redirect permanently to `/{schoolId}/student`.
+
 ## Deployment & Stability
 - **Pre-Deployment Check**: Before any deployment, the site must be verified to be working well.
 - **Login Verification**: Specifically ensure that account login functionality (School, Student, Teacher, Admin) is fully operational.

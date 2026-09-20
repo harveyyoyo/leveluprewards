@@ -1,5 +1,14 @@
 import type { LoginState } from '@/components/providers/AuthProvider';
 
+/**
+ * Permanent, hardwired URL for the student check-in kiosk: `/{schoolId}/student`.
+ * This URL must NEVER change, be renamed, or be moved, even during major site redesigns.
+ */
+export function studentKioskPath(schoolId: string): string {
+  const sid = schoolId.trim().toLowerCase();
+  return `/${sid}/student`;
+}
+
 /** True when the browser is on the student kiosk surface for this school. */
 export function isStudentKioskRoute(pathname: string | null | undefined, schoolId: string | null): boolean {
   if (!pathname || !schoolId) return false;
