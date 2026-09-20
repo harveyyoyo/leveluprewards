@@ -182,7 +182,9 @@ function LayoutClientWrapperInner({
       (pathname.includes('/smart-screen') || pathname.includes('/displays'));
     const isHouseSortingPage =
       typeof pathname === 'string' &&
-      (pathname.includes('/house-sorting') || pathname.includes('/houses-realm'));
+      (pathname.includes('/house-sorting') ||
+        pathname.includes('/houses-realm') ||
+        /\/houses(?:\/|$|\?)/.test(pathname));
     const isClassroomRealmPage =
       typeof pathname === 'string' &&
       (pathname.includes('/classroom-realm') || pathname.includes('/classroom'));

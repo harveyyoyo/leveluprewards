@@ -205,8 +205,8 @@ export function RewardsInteractiveGuide({
         'Every point earned by an individual student also boosts their house total.',
         'Encourages peer teamwork and positive school community pride.',
       ],
-      actionLabel: 'Open Houses Realm',
-      getHref: (s) => `/${s}/houses-realm`,
+      actionLabel: 'Open Houses',
+      getHref: (s) => `/${s}/houses`,
     },
     {
       id: 'hall_of_fame',

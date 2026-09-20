@@ -16,7 +16,11 @@ export type SoundEffect =
   | 'classroom_tap'
   | 'classroom_award'
   | 'classroom_big_award'
-  | 'classroom_deduct';
+  | 'classroom_deduct'
+  /** Houses sorting ceremony — warm fanfare (theme-independent). */
+  | 'ceremony_step'
+  | 'ceremony_reveal'
+  | 'ceremony_complete';
 
 export type AudioThemeId = 'retro_arcade' | 'modern_chime' | 'sci_fi_synth';
 
@@ -69,7 +73,7 @@ const createSynth = () => {
 
     const now = audioCtx.currentTime;
 
-    // Classroom point sounds — warm chimes (same on all themes; not harsh arcade blips).
+    // Classroom + Houses ceremony — warm chimes (same on all themes; not harsh arcade blips).
     switch (sound) {
       case 'classroom_tap':
         playNote(587.33, now, 0.07, 'sine', 0.032);
@@ -90,6 +94,27 @@ const createSynth = () => {
         playNote(440, now, 0.1, 'sine', 0.035);
         playNote(369.99, now + 0.08, 0.18, 'sine', 0.03);
         break;
+      case 'ceremony_step':
+        playNote(392.0, now, 0.1, 'sine', 0.038);
+        playNote(523.25, now + 0.09, 0.16, 'sine', 0.042);
+        break;
+      case 'ceremony_reveal':
+        playNote(392.0, now, 0.1, 'triangle', 0.045);
+        playNote(523.25, now + 0.08, 0.1, 'triangle', 0.048);
+        playNote(659.25, now + 0.16, 0.1, 'sine', 0.05);
+        playNote(783.99, now + 0.24, 0.12, 'sine', 0.052);
+        playNote(987.77, now + 0.34, 0.14, 'sine', 0.05);
+        playNote(1046.5, now + 0.46, 0.45, 'sine', 0.055);
+        playNote(1318.51, now + 0.58, 0.35, 'triangle', 0.04);
+        break;
+      case 'ceremony_complete':
+        playNote(523.25, now, 0.12, 'sine', 0.045);
+        playNote(659.25, now + 0.1, 0.12, 'sine', 0.045);
+        playNote(783.99, now + 0.2, 0.12, 'sine', 0.048);
+        playNote(1046.5, now + 0.32, 0.18, 'sine', 0.05);
+        playNote(1318.51, now + 0.48, 0.22, 'triangle', 0.048);
+        playNote(1567.98, now + 0.66, 0.5, 'sine', 0.052);
+        break;
       default:
         break;
     }
@@ -97,7 +122,10 @@ const createSynth = () => {
       sound === 'classroom_tap' ||
       sound === 'classroom_award' ||
       sound === 'classroom_big_award' ||
-      sound === 'classroom_deduct'
+      sound === 'classroom_deduct' ||
+      sound === 'ceremony_step' ||
+      sound === 'ceremony_reveal' ||
+      sound === 'ceremony_complete'
     ) {
       return;
     }

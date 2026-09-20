@@ -371,7 +371,7 @@ export function AdminHousesManage({
     setTransferStudent(null);
   };
 
-  const sortingHref = `/${schoolId}/houses-realm/ceremony`;
+  const sortingHref = `/${schoolId}/houses/ceremony`;
   const openAiSetup = () => {
     if (typeof window !== 'undefined') {
       window.open(housesRealmOpenHref(schoolId, 'setup'), '_blank', 'noopener,noreferrer');

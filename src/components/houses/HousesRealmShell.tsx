@@ -23,9 +23,14 @@ export function useHousesRealmTheme(active: boolean) {
   useEffect(() => {
     if (!active) return;
     const el = document.documentElement;
-    const vars = housesRealmThemeVars(resolveHousesRealmTheme(themeId));
+    const theme = resolveHousesRealmTheme(themeId);
+    const vars = housesRealmThemeVars(theme);
+    el.setAttribute('data-houses-realm', '');
+    el.setAttribute('data-hr-tone', theme.tone);
     for (const [key, value] of Object.entries(vars)) el.style.setProperty(key, value);
     return () => {
+      el.removeAttribute('data-houses-realm');
+      el.removeAttribute('data-hr-tone');
       for (const key of Object.keys(vars)) el.style.removeProperty(key);
     };
   }, [active, themeId]);
@@ -50,7 +55,7 @@ export function HousesRealmShell({
   hideChrome?: boolean;
 }) {
   const pathname = usePathname();
-  const base = `/${schoolId.trim().toLowerCase()}/houses-realm`;
+  const base = `/${schoolId.trim().toLowerCase()}/houses`;
   useHousesRealmTheme(!hideChrome);
 
   if (hideChrome) {

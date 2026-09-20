@@ -66,6 +66,16 @@ const nextConfig = {
         permanent: true,
       },
       {
+        source: '/:schoolId/houses-realm',
+        destination: '/:schoolId/houses',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/houses-realm/:path*',
+        destination: '/:schoolId/houses/:path*',
+        permanent: true,
+      },
+      {
         source: '/:schoolId/admin-signin',
         destination: '/:schoolId/admin-sign-in',
         permanent: true,

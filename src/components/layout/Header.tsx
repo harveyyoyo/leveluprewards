@@ -141,7 +141,9 @@ export default function Header() {
   const isDeveloperMode = loginState === 'developer' && !schoolId;
   const fullscreen = searchParams?.get('fullscreen') === '1';
   const isHouseSortingPage =
-    pathname?.includes('/house-sorting') || pathname?.includes('/houses-realm');
+    pathname?.includes('/house-sorting') ||
+    pathname?.includes('/houses-realm') ||
+    (typeof pathname === 'string' && /\/houses(?:\/|$|\?)/.test(pathname));
   const isClassroomRealmPage =
     pathname?.includes('/classroom-realm') || pathname?.includes('/classroom');
   const isLibraryPage =

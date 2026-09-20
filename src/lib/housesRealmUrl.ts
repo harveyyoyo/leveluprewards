@@ -18,7 +18,7 @@ function housesDevOrigin(): string | null {
 export function housesRealmHref(schoolId: string, segment: HousesRealmSegment = ''): string {
   const school = schoolId.trim().toLowerCase();
   const origin = housesDevOrigin();
-  const path = segment ? `/${school}/houses-realm/${segment}` : `/${school}/houses-realm`;
+  const path = segment ? `/${school}/houses/${segment}` : `/${school}/houses`;
   if (origin) return `${origin}${path}`;
   return path;
 }
@@ -33,7 +33,8 @@ export function housesRealmOpenHref(schoolId: string, segment: HousesRealmSegmen
   return href;
 }
 
+/** True for the Houses app path (`/houses` or legacy `/houses-realm`). */
 export function isHousesRealmPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return pathname.includes('/houses-realm');
+  return pathname.includes('/houses-realm') || /\/houses(?:\/|$|\?)/.test(pathname);
 }

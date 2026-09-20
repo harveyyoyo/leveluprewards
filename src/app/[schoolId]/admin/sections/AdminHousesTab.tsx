@@ -3,7 +3,7 @@
 import type { House, Student, Teacher } from '@/lib/types';
 import { HousesTabLauncher } from '@/components/houses/HousesTabLauncher';
 
-/** Rewards admin tab — launcher only. Full houses UI lives in /houses-realm (new tab). */
+/** Rewards admin tab — launcher only. Full houses UI lives in /houses (new tab). */
 export function AdminHousesTab({
   schoolId,
 }: {

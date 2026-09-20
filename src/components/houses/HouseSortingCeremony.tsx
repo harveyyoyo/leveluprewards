@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { collection } from 'firebase/firestore';
@@ -15,7 +15,7 @@ import { pickRandomSortingQuestion } from '@/lib/houses/sortingCeremonyQuestions
 import { resolveHouseSortingCelebrationEffect } from '@/lib/houses/houseSortingCelebration';
 import { HouseSortingCelebrationLayer } from '@/components/houses/HouseSortingCelebrationLayer';
 import { housesRealmHref } from '@/lib/housesRealmUrl';
-import { useArcadeSound } from '@/hooks/useArcadeSound';
+import { useHousesSound } from '@/hooks/useHousesSound';
 import { Loader2, MessageCircleQuestion, Sparkles, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -64,7 +64,7 @@ export function HouseSortingCeremony() {
     [students],
   );
 
-  const playSound = useArcadeSound({ ignoreSchoolSoundMute: true });
+  const { playCeremony, playUi } = useHousesSound();
   useHousesRealmTheme(true);
 
   const useFakeQuestions = settings.houseSortingUseFakeQuestions === true;
@@ -79,12 +79,22 @@ export function HouseSortingCeremony() {
   const currentStudent = queue[index];
   const currentHouse = currentStudent?.houseId ? houseById.get(currentStudent.houseId) : undefined;
 
+  const playRevealSound = useCallback(() => {
+    const effect = resolveHouseSortingCelebrationEffect(settings.houseSortingCelebrationEffect);
+    if (effect === 'none') {
+      playCeremony('ceremony_step');
+      return;
+    }
+    if (effect === 'flash') {
+      playCeremony('swoosh');
+    }
+    playCeremony('ceremony_reveal');
+  }, [playCeremony, settings.houseSortingCelebrationEffect]);
+
   const goToReveal = () => {
     setStep('reveal');
     setCelebrationRunId(Date.now());
-    const effect = resolveHouseSortingCelebrationEffect(settings.houseSortingCelebrationEffect);
-    if (effect === 'flash') playSound('swoosh');
-    else if (effect !== 'none') playSound('classroom_big_award');
+    playRevealSound();
   };
 
   const initialStepForStudent = useFakeQuestions ? 'question' : 'name';
@@ -105,9 +115,33 @@ export function HouseSortingCeremony() {
     setFakeQuestion(pickRandomSortingQuestion());
   }, [currentStudent?.id, initialStepForStudent]);
 
-  const advance = () => {
+  // Soft chime when a new student steps onto the stage (name / question).
+  useEffect(() => {
+    if (done || !currentStudent) return;
+    if (step !== 'question' && step !== 'name') return;
+    playCeremony('ceremony_step');
+  }, [currentStudent?.id, step, done, playCeremony]);
+
+  const finishOrAdvance = useCallback(() => {
     if (index + 1 >= queue.length) {
       setDone(true);
+      playCeremony('ceremony_complete');
+      return;
+    }
+    playUi('click');
+    setIndex((i) => i + 1);
+  }, [index, queue.length, playCeremony, playUi]);
+
+  const advance = () => {
+    if (step === 'reveal') {
+      finishOrAdvance();
+      return;
+    }
+    // Skip before reveal
+    playUi('click');
+    if (index + 1 >= queue.length) {
+      setDone(true);
+      playCeremony('ceremony_complete');
       return;
     }
     setIndex((i) => i + 1);
@@ -120,20 +154,14 @@ export function HouseSortingCeremony() {
       if (step === 'question' || step === 'name') {
         setStep('reveal');
         setCelebrationRunId(Date.now());
-        const effect = resolveHouseSortingCelebrationEffect(settings.houseSortingCelebrationEffect);
-        if (effect === 'flash') playSound('swoosh');
-        else if (effect !== 'none') playSound('classroom_big_award');
+        playRevealSound();
         return;
       }
-      if (index + 1 >= queue.length) {
-        setDone(true);
-        return;
-      }
-      setIndex((i) => i + 1);
+      finishOrAdvance();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [step, index, queue.length, playSound, settings.houseSortingCelebrationEffect]);
+  }, [step, finishOrAdvance, playRevealSound]);
 
   const staffOk =
     loginState === 'admin' ||
@@ -221,7 +249,10 @@ export function HouseSortingCeremony() {
             </Link>
             <button
               type="button"
-              onClick={() => setWarningDismissed(true)}
+              onClick={() => {
+                playUi('click');
+                setWarningDismissed(true);
+              }}
               className="rounded-full bg-violet-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-violet-400"
             >
               Continue anyway
@@ -259,6 +290,7 @@ export function HouseSortingCeremony() {
             <button
               type="button"
               onClick={() => {
+                playCeremony('ceremony_step');
                 setIndex(0);
                 setDone(false);
                 setWarningDismissed(false);
@@ -387,7 +419,7 @@ export function HouseSortingCeremony() {
                 >
                   <HouseBadge house={currentHouse} size="lg" className="scale-125 text-base sm:scale-150 sm:text-lg" />
                 </motion.div>
-                {currentHouse.motto ? (
+                {settings.housesShowMotto !== false && currentHouse.motto ? (
                   <motion.p
                     variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } }}
                     transition={{ type: 'spring', stiffness: 300, damping: 28 }}
