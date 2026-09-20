@@ -28,6 +28,10 @@ const SettingsModal = dynamic(
   () => import('../settings/SettingsModal').then(m => m.SettingsModal),
   { ssr: false },
 );
+const RewardsInteractiveGuide = dynamic(
+  () => import('../rewards/RewardsInteractiveGuide').then(m => m.RewardsInteractiveGuide),
+  { ssr: false },
+);
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isPillarOn, isRewardsPillarOn } from '@/lib/productPillars';
 import { cn } from '@/lib/utils';
@@ -575,6 +579,8 @@ export default function Header() {
               </Link>
             ) : null}
 
+            {schoolId ? <RewardsInteractiveGuide /> : null}
+
             <StaffPortalLayoutToggle variant="ghost" />
 
             <SettingsModal />
@@ -709,6 +715,8 @@ export default function Header() {
               <Home className="h-5 w-5" />
             </Link>
           ) : null}
+
+          {schoolId ? <RewardsInteractiveGuide /> : null}
 
           <StaffPortalLayoutToggle variant="ghost" />
 

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen, Compass } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -768,13 +768,20 @@ export default function PortalPage() {
                             variant="ghost"
                             size={hubDenseLayout ? 'sm' : 'default'}
                             className={cn(
-                                'rounded-full font-semibold text-foreground/80 transition-all hover:bg-secondary/60',
+                                'rounded-full font-semibold text-foreground/85 transition-all hover:bg-secondary/60 cursor-pointer',
                                 hubDenseLayout ? 'h-7 px-4 text-xs' : 'px-6',
                             )}
-                            onClick={startWelcomeTour}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                playSound('click');
+                                if (typeof window !== 'undefined') {
+                                    window.dispatchEvent(new CustomEvent('open-rewards-guide'));
+                                }
+                            }}
                         >
-                            <HelpCircle className={cn('text-primary/70', hubDenseLayout ? 'mr-1.5 h-3.5 w-3.5' : 'mr-2 h-4 w-4')} />
-                            Take a Quick Tour
+                            <Compass className={cn('text-primary/80', hubDenseLayout ? 'mr-1.5 h-3.5 w-3.5' : 'mr-2 h-4 w-4')} />
+                            Rewards Handbook & Guide
                         </Button>
                     </div>
                 ) : null}
