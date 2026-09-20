@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Barcode, BookOpen, Camera, CameraOff, Check, ClipboardList, CopyPlus, Layers, Loader2, Minus, Plus, ScanLine, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,6 +49,7 @@ import {
   type LibraryScanFeedback,
 } from './LibraryBarcodeReaderField';
 import { LibraryBookCover } from './LibraryBookCover';
+import { LibraryAiGuessConfirmDialog } from './LibraryAiGuessConfirmDialog';
 import {
   DEFAULT_LIBRARY_PLACEMENT_ZONES,
   getActiveLibraryGenres,
@@ -144,6 +146,18 @@ export function LibraryBookIntakeScanner({
   const [isBatchOpen, setIsBatchOpen] = useState(false);
   const [batchInput, setBatchInput] = useState('');
   const [isProcessingBatch, setIsProcessingBatch] = useState(false);
+  const [reviewingRowId, setReviewingRowId] = useState<string | null>(null);
+  const skippedAiReviewIds = useRef(new Set<string>());
+  const [moreInfoRowIds, setMoreInfoRowIds] = useState<Set<string>>(new Set());
+
+  const toggleMoreInfo = (id: string) => {
+    setMoreInfoRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const catalogIsbns = useMemo(() => catalogIsbnSet(libraryItems), [libraryItems]);
   const catalogScannedCodes = useMemo(() => catalogScannedCodeSet(libraryItems), [libraryItems]);
@@ -183,10 +197,15 @@ export function LibraryBookIntakeScanner({
             error: undefined,
           });
           playSound('success');
-          toast({
-            title: isAiGuess ? 'AI found a match — please check it' : 'Details filled in',
-            description: `Loaded details for "${hit.title}"${hit.author ? ` by ${hit.author}` : ''}.`,
-          });
+          if (isAiGuess) {
+            skippedAiReviewIds.current.delete(rowId);
+            setReviewingRowId(rowId);
+          } else {
+            toast({
+              title: 'Details filled in',
+              description: `Loaded details for "${hit.title}"${hit.author ? ` by ${hit.author}` : ''}.`,
+            });
+          }
         } else {
           toast({
             variant: 'destructive',
@@ -423,11 +442,15 @@ export function LibraryBookIntakeScanner({
             status: isAiGuess ? 'ai_guess' : 'identified',
             title: hit.title,
             message: isAiGuess
-              ? 'AI suggested this title — confirm in the queue before registering.'
+              ? 'AI suggested this title — confirm in the popup before registering.'
               : hit.author
                 ? `By ${hit.author}`
                 : undefined,
           });
+          if (isAiGuess) {
+            skippedAiReviewIds.current.delete(id);
+            setReviewingRowId(id);
+          }
         } else {
           upsertRow({ id, status: 'needs_title' });
           const message = lookupFailureMessage(scannedCode, meta);
@@ -500,13 +523,13 @@ export function LibraryBookIntakeScanner({
   const [cameraActive, setCameraActive] = useState(false);
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, focusReader } = useBarcodeReaderWedge({
-    active: scanning,
+    active: scanning && !reviewingRowId,
     onScan: handleScan,
     disabled: registering,
   });
 
   const { videoRef, hasCameraPermission, zoom, setZoom } = useBarcodeScanner(
-    cameraEnabled && cameraActive && scanning && !registering,
+    cameraEnabled && cameraActive && scanning && !registering && !reviewingRowId,
     (code) => handleScan(code),
     () => {},
     { cameraEnabled: cameraEnabled && cameraActive, keepCameraWarm: true },
@@ -524,6 +547,41 @@ export function LibraryBookIntakeScanner({
   const lookupCount = rows.filter((r) => r.status === 'lookup').length;
   const aiReviewCount = rows.filter((r) => r.status === 'ai_review').length;
   const missingTitleCount = rows.filter((r) => r.status === 'needs_title' && !r.title.trim()).length;
+  const reviewingRow = rows.find((r) => r.id === reviewingRowId && r.status === 'ai_review') ?? null;
+
+  const openNextAiGuess = useCallback((exceptId?: string) => {
+    const next = rowsRef.current.find(
+      (r) => r.status === 'ai_review' && r.id !== exceptId && !skippedAiReviewIds.current.has(r.id),
+    );
+    setReviewingRowId(next?.id ?? null);
+  }, []);
+
+  const confirmAiGuess = useCallback(() => {
+    if (!reviewingRowId) return;
+    const id = reviewingRowId;
+    upsertRow({ id, status: 'ready' });
+    skippedAiReviewIds.current.delete(id);
+    openNextAiGuess(id);
+  }, [openNextAiGuess, reviewingRowId, upsertRow]);
+
+  const rejectAiGuess = useCallback(() => {
+    if (!reviewingRowId) return;
+    const id = reviewingRowId;
+    upsertRow({
+      id,
+      title: '',
+      author: '',
+      coverUrl: undefined,
+      description: undefined,
+      pageCount: undefined,
+      readingLevel: undefined,
+      publishedYear: undefined,
+      status: 'needs_title',
+      identifiedByLookup: false,
+    });
+    skippedAiReviewIds.current.add(id);
+    openNextAiGuess(id);
+  }, [openNextAiGuess, reviewingRowId, upsertRow]);
 
   const handleRegisterAll = async () => {
     const toSave = rows.filter((r) => r.status === 'ready' || ((r.status === 'needs_title' || r.status === 'error') && r.title.trim()));
@@ -547,11 +605,11 @@ export function LibraryBookIntakeScanner({
     }
 
     if (aiReviewCount > 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Confirm AI guesses',
-        description: `${aiReviewCount} AI-suggested book(s) need confirming before registering.`,
-      });
+      const firstGuess = rows.find((r) => r.status === 'ai_review');
+      if (firstGuess) {
+        skippedAiReviewIds.current.delete(firstGuess.id);
+        setReviewingRowId(firstGuess.id);
+      }
       return;
     }
 
@@ -929,7 +987,10 @@ export function LibraryBookIntakeScanner({
                         variant="outline"
                         size="icon"
                         className="h-7 w-7 rounded-lg border-violet-500/50 text-violet-600"
-                        onClick={() => upsertRow({ id: row.id, status: 'ready' })}
+                        onClick={() => {
+                          skippedAiReviewIds.current.delete(row.id);
+                          setReviewingRowId(row.id);
+                        }}
                         aria-label="Confirm AI guess"
                       >
                         <Check className="h-3 w-3" />
@@ -953,6 +1014,51 @@ export function LibraryBookIntakeScanner({
                       Type the book name, then tap Find this book. We will fill in the rest.
                     </p>
                   ) : null}
+
+                  {row.title.trim() && row.status !== 'lookup' ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] font-semibold text-foreground">
+                        Reading level:{' '}
+                        <span className="font-bold">{row.readingLevel?.trim() || 'not listed'}</span>
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] font-bold rounded-full"
+                        onClick={() => toggleMoreInfo(row.id)}
+                        aria-expanded={moreInfoRowIds.has(row.id)}
+                      >
+                        {moreInfoRowIds.has(row.id) ? 'Hide extra info' : 'More book info'}
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  <AnimatePresence initial={false}>
+                    {moreInfoRowIds.has(row.id) && row.title.trim() ? (
+                      <motion.div
+                        key={`${row.id}-more-info`}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="rounded-lg border bg-muted/30 px-2.5 py-2 space-y-1 text-[11px]">
+                          {row.pageCount || row.publishedYear ? (
+                            <p className="text-muted-foreground">
+                              {[row.pageCount ? `${row.pageCount} pages` : '', row.publishedYear].filter(Boolean).join(' · ')}
+                            </p>
+                          ) : null}
+                          {row.description?.trim() ? (
+                            <p className="leading-relaxed text-foreground">{row.description.trim()}</p>
+                          ) : (
+                            <p className="text-muted-foreground">No extra summary was found for this book.</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>
 
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                     <div className="space-y-0.5">
@@ -1101,6 +1207,32 @@ export function LibraryBookIntakeScanner({
           Scanner active · Press Enter or scan next book
         </p>
       </div>
+
+      <LibraryAiGuessConfirmDialog
+        open={Boolean(reviewingRow)}
+        guess={
+          reviewingRow
+            ? {
+                title: reviewingRow.title,
+                author: reviewingRow.author,
+                isbn: reviewingRow.isbn,
+                coverUrl: reviewingRow.coverUrl,
+                publishedYear: reviewingRow.publishedYear,
+                readingLevel: reviewingRow.readingLevel,
+                description: reviewingRow.description,
+                pageCount: reviewingRow.pageCount,
+              }
+            : null
+        }
+        remainingCount={aiReviewCount}
+        onOpenChange={(open) => {
+          if (open || !reviewingRowId) return;
+          skippedAiReviewIds.current.add(reviewingRowId);
+          setReviewingRowId(null);
+        }}
+        onConfirm={confirmAiGuess}
+        onReject={rejectAiGuess}
+      />
     </div>
   );
 }

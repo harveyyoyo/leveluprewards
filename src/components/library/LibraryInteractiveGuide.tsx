@@ -179,6 +179,18 @@ export function LibraryInteractiveGuide({
       actionLabel: 'Open Library Settings',
       actionTab: 'settings',
     },
+    {
+      id: 'ai_helper',
+      title: 'Ask the Library Helper',
+      summary: 'The same kind of helper LevelUp has — a sparkle chat that answers library questions in plain words.',
+      icon: Sparkles,
+      color: 'bg-amber-500/10 text-amber-700 border-amber-300 dark:text-amber-300',
+      steps: [
+        'Tap Ask in the top bar, or the round sparkle button in the corner.',
+        'Ask things like “How do I add a book?” or “Where are overdue titles?”',
+        'The helper can see this library’s counts (how many copies are out or late) but will not name students.',
+      ],
+    },
   ];
 
   const filteredTopics = topics.filter((t) => {
