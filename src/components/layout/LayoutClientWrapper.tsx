@@ -205,10 +205,10 @@ function LayoutClientWrapperInner({
           pathname?.includes('/displays')));
 
     const { kioskSignedIn } = useStudentLayoutChrome();
-    /** Student kiosk: hidden until pointer reveal. Sign-in screen reveals on any mouse move. */
+    /** Student kiosk: hidden until top-edge pointer reveal. */
     const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
     const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader, {
-      revealOnAnyPointerMove: useStudentKioskTopEdgeHeader && !kioskSignedIn,
+      resetKey: kioskSignedIn,
     });
     /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
     const usePortalScrollRevealHeader =
