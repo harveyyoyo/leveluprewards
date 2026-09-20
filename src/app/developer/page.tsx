@@ -1716,7 +1716,7 @@ export default function DeveloperPage() {
                     placeholder="e.g. eli7teitelbaum@gmail.com (comma-separated)"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Google accounts authorized to sign in as school admin without a passcode.
+                    Google accounts that can open this school and sign in as admin without a passcode.
                   </p>
                 </div>
               </div>

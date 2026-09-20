@@ -26,6 +26,7 @@ import {
   type User,
 } from 'firebase/auth';
 import { Loader2, Keyboard } from 'lucide-react';
+import { motion } from 'framer-motion';
 import {
   canUseGoogleRedirectSignIn,
   consumeGoogleRedirectFailedNotice,
@@ -433,14 +434,23 @@ export function SchoolDeveloperLoginForm({
       clearGoogleRedirectAttempt();
       playSound('success');
       const allowed = isAllowedDeveloperGoogleUser(result.user);
-      toast({
-        title: allowed ? t('auth.googleComplete') : t('auth.googleCompleteNoAccess'),
-        description: allowed
-          ? 'Developer mode is now available on this device.'
-          : 'This Google account is not on the developer allowlist.',
-      });
-      if (allowed && (isDeveloperOnly || isDeveloper)) {
-        await completeDeveloperLogin({ force: true });
+      if (isDeveloperOnly || isDeveloper) {
+        toast({
+          title: allowed ? t('auth.googleComplete') : t('auth.googleCompleteNoAccess'),
+          description: allowed
+            ? 'Developer mode is now available on this device.'
+            : 'This Google account is not on the developer allowlist.',
+        });
+        if (allowed) {
+          await completeDeveloperLogin({ force: true });
+        }
+      } else {
+        toast({
+          title: t('auth.googleComplete'),
+          description: schoolId.trim()
+            ? t('auth.schoolAccessNoPasscode')
+            : t('auth.googleSchoolReadyHint'),
+        });
       }
     } catch (err) {
       const e = err as { code?: string; message?: string };
@@ -928,6 +938,38 @@ export function SchoolDeveloperLoginForm({
                         ? t('auth.openTheLibrary')
                         : t('auth.continue')}
                 </button>
+              )}
+
+              {!isDeveloperOnly && !isDeveloper && !hasGoogleUser && googleSignInBlocked !== 'operation-not-allowed' && (
+                <motion.div
+                  className="space-y-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 28 }}
+                >
+                  <div className="flex items-center gap-3" aria-hidden>
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {t('auth.orUseGoogle')}
+                    </span>
+                    <div className="h-px flex-1 bg-border" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => void handleGoogleSignIn()}
+                    disabled={isGoogleSigningIn}
+                    className="w-full h-12 rounded-xl border border-border bg-card hover:bg-muted transition-colors text-sm font-semibold inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-60"
+                  >
+                    {isGoogleSigningIn ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        {t('auth.openingGoogle')}
+                      </>
+                    ) : (
+                      t('auth.signInWithGoogle')
+                    )}
+                  </button>
+                </motion.div>
               )}
 
               {(isDeveloperOnly || isDeveloper) && hasGoogleUser && isAllowedGoogleEmail && (
