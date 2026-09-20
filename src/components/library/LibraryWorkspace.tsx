@@ -36,6 +36,7 @@ import {
   Search,
   Settings,
   SlidersHorizontal,
+  Sparkles,
   Star,
   Tag,
   Trash2,
@@ -75,6 +76,7 @@ import {
   type LibraryOrganizationScheme,
   type BookPrimaryGroup,
 } from '@/lib/library/libraryOrganization';
+import { compareReadingLevel } from '@/lib/library/libraryReadingLevel';
 import { useActiveLibraryLocation, useLibraryLocations } from '@/hooks/useLibraryLocations';
 import {
   filterItemsForLibrary,
@@ -295,7 +297,7 @@ export function LibraryWorkspace({
   useEffect(() => {
     setPinnedItemId(null);
   }, [status, shelfFilter, labelFilter]);
-  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'genre_asc' | 'genre_desc' | 'shelf'>('title_asc');
+  const [catalogSort, setCatalogSort] = useState<'newest' | 'title_asc' | 'title_desc' | 'author_asc' | 'author_desc' | 'genre_asc' | 'genre_desc' | 'shelf' | 'reading_level'>('title_asc');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [coverSize, setCoverSize] = useState<LibraryCoverSize>('small');
@@ -364,6 +366,8 @@ export function LibraryWorkspace({
   const [category, setCategory] = useState('');
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  const [readingLevelJob, setReadingLevelJob] = useState<{ total: number; done: number; matched: number } | null>(null);
+  const readingLevelCancelRef = useRef(false);
   const reservedGenreCodesRef = useRef(new Set<string>());
   const [loanSearch, setLoanSearch] = useState('');
   const [classFilter, setClassFilter] = useState('all');
@@ -558,6 +562,9 @@ export function LibraryWorkspace({
       }
       if (catalogSort === 'shelf') {
         return (a.shelfLocation || 'ZZZ').localeCompare(b.shelfLocation || 'ZZZ');
+      }
+      if (catalogSort === 'reading_level') {
+        return compareReadingLevel(a.readingLevel, b.readingLevel);
       }
       return 0;
     });
@@ -759,6 +766,98 @@ export function LibraryWorkspace({
       setBusy(false);
     }
   };
+
+  // Looks up a reading level (Lexile/AR/grade) for each book title (not each copy — copies of the
+  // same title share one lookup and one save) and writes the results back. Runs a few books at a
+  // time so the progress bar and Stop button stay responsive on a big catalog. Runs automatically
+  // in the background (see the effect below) — there's no button to start it.
+  const fetchReadingLevelsForPiles = async (piles: BookPile[], opts?: { silent?: boolean }) => {
+    if (!piles.length) {
+      if (!opts?.silent) toast({ title: 'Nothing to look up', description: 'Every book here already has a reading level.' });
+      return;
+    }
+    readingLevelCancelRef.current = false;
+    setReadingLevelJob({ total: piles.length, done: 0, matched: 0 });
+    const CHUNK_SIZE = 6;
+    let matched = 0;
+    let stoppedEarly = false;
+    try {
+      for (let i = 0; i < piles.length; i += CHUNK_SIZE) {
+        if (readingLevelCancelRef.current) break;
+        const chunk = piles.slice(i, i + CHUNK_SIZE);
+        const res = await fetch('/api/library/reading-levels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: chunk.map((pile) => ({ id: pile.pileKey, isbn: pile.isbn, title: pile.title, author: pile.author })),
+            readingLevelSystem: settings.libraryReadingLevelSystem,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data?.aiConfigured === false) {
+          stoppedEarly = true;
+          if (!opts?.silent) {
+            toast({
+              variant: 'destructive',
+              title: 'AI lookup is not turned on',
+              description: 'Ask your tech admin to turn on AI book lookup for this school before using this tool.',
+            });
+          }
+          break;
+        }
+        const results: { id: string; readingLevel: string | null }[] = Array.isArray(data?.results) ? data.results : [];
+        const levels = results
+          .filter((r) => r.readingLevel)
+          .flatMap((r) => {
+            const pile = chunk.find((p) => p.pileKey === r.id);
+            return pile ? pile.copies.map((copy) => ({ itemId: copy.id, readingLevel: r.readingLevel as string })) : [];
+          });
+        if (levels.length) {
+          await callLibrary(functions, 'libraryReadingLevelsSave', { schoolId, levels });
+          matched += results.filter((r) => r.readingLevel).length;
+        }
+        setReadingLevelJob({ total: piles.length, done: Math.min(i + chunk.length, piles.length), matched });
+      }
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Reading level lookup failed', description: (e as Error).message });
+    } finally {
+      const cancelled = readingLevelCancelRef.current;
+      setReadingLevelJob(null);
+      if (!stoppedEarly && matched > 0) {
+        toast({
+          title: cancelled ? 'Stopped' : 'Reading levels updated',
+          description: `Found a reading level for ${matched} of ${piles.length} book${piles.length === 1 ? '' : 's'} checked.`,
+        });
+      }
+    }
+  };
+
+  // Automatically fills in missing reading levels in the background — no button needed. Runs once
+  // per school per day (tracked in sessionStorage) so it doesn't re-spend AI lookups every time the
+  // catalog page opens, and only while the Catalog tab is actually open.
+  const autoReadingLevelStartedRef = useRef(false);
+  useEffect(() => {
+    if (tab !== 'catalog') return;
+    if (readingLevelJob) return;
+    if (autoReadingLevelStartedRef.current) return;
+    if (!schoolId) return;
+    const todayKey = `libraryReadingLevelAutoRun:${schoolId}:${new Date().toISOString().slice(0, 10)}`;
+    try {
+      if (window.sessionStorage.getItem(todayKey)) return;
+    } catch {
+      /* ignore */
+    }
+    const missing = groupBooksIntoPiles(scopedItems).filter((pile) => !pile.readingLevel);
+    if (!missing.length) return;
+    autoReadingLevelStartedRef.current = true;
+    try {
+      window.sessionStorage.setItem(todayKey, '1');
+    } catch {
+      /* ignore */
+    }
+    void fetchReadingLevelsForPiles(missing, { silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, scopedItems, schoolId, readingLevelJob]);
 
   const itemAction = (item: LibraryItem, action: string, extra: Record<string, unknown> = {}) =>
     run(async () => {
@@ -1289,6 +1388,33 @@ export function LibraryWorkspace({
               </motion.div>
             )}
 
+            {readingLevelJob && (
+              <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-3.5 py-2.5">
+                <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold text-foreground">
+                    Automatically filling in reading levels{'…'} {readingLevelJob.done} of {readingLevelJob.total} checked, {readingLevelJob.matched} found
+                  </p>
+                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${readingLevelJob.total ? Math.round((readingLevelJob.done / readingLevelJob.total) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    readingLevelCancelRef.current = true;
+                  }}
+                  className="h-8 shrink-0 rounded-lg text-xs font-semibold"
+                >
+                  Stop
+                </Button>
+              </div>
+            )}
+
             {/* Consolidated Filter & View Toolbar */}
             <div className={cn('rounded-2xl p-3.5 shadow-xs space-y-3 border', currentTheme.classes.card)}>
               <div className="flex flex-wrap items-center gap-2">
@@ -1345,6 +1471,7 @@ export function LibraryWorkspace({
                   <option value="genre_asc">Genre (A–Z)</option>
                   <option value="genre_desc">Genre (Z–A)</option>
                   <option value="shelf">Shelf Location</option>
+                  <option value="reading_level">Reading Level (Easiest First)</option>
                 </select>
 
                 <select

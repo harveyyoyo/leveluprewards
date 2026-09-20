@@ -15,23 +15,26 @@ function book(partial: Partial<LibraryItem> & Pick<LibraryItem, 'id' | 'name' | 
 }
 
 describe('libraryOrganization', () => {
-  it('supports genre-then-author, author-then-title, and reading-level lineup choices', () => {
+  it('keeps the three lineup choices', () => {
     expect(Object.keys(LIBRARY_ORGANIZATION_SCHEMES)).toEqual([
       'genre_then_author',
       'author_then_title',
-      'reading_level_then_author',
+      'reading_level_then_title',
     ]);
     expect(LIBRARY_ORGANIZATION_SCHEMES.genre_then_author.label).toBe('Genre, then by Author (A–Z)');
     expect(LIBRARY_ORGANIZATION_SCHEMES.author_then_title.label).toBe('Author (A–Z), then by Title');
-    expect(LIBRARY_ORGANIZATION_SCHEMES.reading_level_then_author.label).toBe('Reading Level, then by Author (A–Z)');
+    expect(LIBRARY_ORGANIZATION_SCHEMES.reading_level_then_title.label).toBe(
+      'Reading Level (easiest first), then by Title',
+    );
   });
 
-  it('maps saved lineup choices onto the options', () => {
+  it('maps old saved lineup choices onto the three options', () => {
     expect(resolveLibraryOrganizationScheme(undefined)).toBe('genre_then_author');
     expect(resolveLibraryOrganizationScheme('shelf_then_author')).toBe('genre_then_author');
     expect(resolveLibraryOrganizationScheme('author_then_genre')).toBe('author_then_title');
-    expect(resolveLibraryOrganizationScheme('reading_level')).toBe('reading_level_then_author');
-    expect(resolveLibraryOrganizationScheme('reading_level_then_author')).toBe('reading_level_then_author');
+    expect(resolveLibraryOrganizationScheme('reading_level_then_title')).toBe('reading_level_then_title');
+    expect(resolveLibraryOrganizationScheme('reading_level_then_author')).toBe('reading_level_then_title');
+    expect(resolveLibraryOrganizationScheme('reading_level')).toBe('reading_level_then_title');
   });
 
   it('groups author-then-title by author, then title A–Z', () => {
@@ -47,23 +50,22 @@ describe('libraryOrganization', () => {
     expect(groups[0]?.subGroups.map((sub) => sub.subLabel)).toEqual(['A Doubter’s Almanac', 'Zebra Tales']);
   });
 
-  it('groups reading-level-then-author by level, then author A–Z', () => {
+  it('groups reading-level-then-title from easiest to hardest, unrated last', () => {
     const groups = groupBooksByOrganizationScheme(
       [
-        book({ id: '1', name: 'Matilda', author: 'Roald Dahl', readingLevel: 'N' }),
-        book({ id: '2', name: 'Charlie and the Chocolate Factory', author: 'Roald Dahl', readingLevel: 'M' }),
-        book({ id: '3', name: 'Charlotte’s Web', author: 'E.B. White', readingLevel: 'M' }),
-        book({ id: '4', name: 'Mystery Story', author: 'Unknown Author' }),
+        book({ id: '1', name: 'Hoot', author: 'Carl Hiaasen', readingLevel: 'Grade 5' }),
+        book({ id: '2', name: 'Green Eggs and Ham', author: 'Dr. Seuss', readingLevel: 'Grade K' }),
+        book({ id: '3', name: 'A Mystery Book', author: 'Unknown' }),
+        book({ id: '4', name: 'Charlotte’s Web', author: 'E.B. White', readingLevel: 'Grade 3' }),
       ],
-      'reading_level_then_author',
+      'reading_level_then_title',
     );
-
     expect(groups.map((group) => group.label)).toEqual([
-      'Reading Level M',
-      'Reading Level N',
-      'General / Unleveled',
+      'Emergent Readers (Pre-K–K)',
+      'Developing Readers (Grades 3–4)',
+      'Fluent Readers (Grades 5–6)',
+      'Not Leveled Yet',
     ]);
-    const groupM = groups[0];
-    expect(groupM?.subGroups.map((sub) => sub.subLabel)).toEqual(['Dahl, Roald', 'White, E.B.']);
+    expect(groups[groups.length - 1]?.subGroups[0]?.books.map((b) => b.name)).toEqual(['A Mystery Book']);
   });
 });

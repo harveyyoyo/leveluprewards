@@ -151,3 +151,29 @@ export async function saveLibraryCatalog(db: Firestore, schoolId: string, data: 
     return result;
   });
 }
+
+const MAX_READING_LEVEL_BATCH = 200;
+
+/**
+ * Saves a different reading level per copy in one call (the shared-patch path
+ * above only supports applying the same value to every selected copy). Each
+ * write is independent, so one missing/deleted copy doesn't fail the rest —
+ * unlike `saveLibraryCatalog`, this isn't wrapped in a transaction/receipt
+ * since re-applying the same reading level twice is harmless.
+ */
+export async function saveLibraryReadingLevels(db: Firestore, schoolId: string, data: Record<string, any>) {
+  const school = db.collection('schools').doc(schoolId);
+  const levels = Array.isArray(data?.levels) ? data.levels : [];
+  if (!levels.length || levels.length > MAX_READING_LEVEL_BATCH) {
+    throw new HttpsError('invalid-argument', `Send 1 to ${MAX_READING_LEVEL_BATCH} reading levels.`);
+  }
+  const results = await Promise.allSettled(
+    levels.map((entry: any) => {
+      const id = libraryId(entry?.itemId, 'copy ID');
+      const readingLevel = typeof entry?.readingLevel === 'string' ? entry.readingLevel.trim().slice(0, 60) || null : null;
+      return school.collection('library').doc(id).update({ readingLevel });
+    }),
+  );
+  const count = results.filter(r => r.status === 'fulfilled').length;
+  return { success: true, count };
+}
