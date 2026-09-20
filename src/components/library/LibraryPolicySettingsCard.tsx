@@ -68,6 +68,13 @@ import {
   resolveLibraryLabelFields,
   type LibraryLabelFieldId,
 } from '@/lib/library/libraryLabelSettings';
+import {
+  READING_LEVEL_SYSTEM_LABELS,
+  resolveReadingLevelSystemParam,
+  type LibraryReadingLevelSystem,
+} from '@/lib/library/libraryReadingLevel';
+import { LibraryBarcodeSticker } from '@/components/print/LibraryBarcodeSticker';
+import type { LibraryItem } from '@/lib/types';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -230,6 +237,39 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
     settings.libraryLabelFormatsEnabled,
   );
   const labelFields = resolveLibraryLabelFields(settings.libraryLabelFields);
+  const readingLevelSystem = resolveReadingLevelSystemParam(settings.libraryReadingLevelSystem);
+
+  // The real sticker sizing/border CSS only exists in an @media print block (globals.css), so it
+  // has no effect on this settings page. These Tailwind sizes (1in = 96px) recreate the same
+  // dimensions for an on-screen, print-accurate preview.
+  const PREVIEW_LABEL_SIZE_CLASS: Record<LibraryLabelFormat, string> = {
+    sticker: 'w-[252px] h-[96px]',
+    spine: 'w-[168px] h-[48px]',
+    spine_square: 'w-[252px] h-[96px]',
+    large_plate: 'w-[384px] h-[192px]',
+    thermal: 'w-[216px] h-[120px]',
+    pocket: 'w-[360px] h-[456px]',
+  };
+
+  const SAMPLE_LABEL_PREVIEW_ITEM: LibraryItem = {
+    id: 'preview',
+    name: 'Charlotte’s Web',
+    upc: 'FIC-823-0001',
+    isbn: '9780064400558',
+    status: 'available',
+    author: 'E.B. White',
+    category: 'Fiction',
+    shelfLocation: settings.libraryDefaultShelf || 'Aisle 1',
+    copyNumber: '1',
+    readingLevel: readingLevelSystem === 'lexile'
+      ? '680L'
+      : readingLevelSystem === 'ar'
+        ? 'AR 4.4'
+        : readingLevelSystem === 'fountas_pinnell'
+          ? 'Level R'
+          : 'Grade 3-4',
+    description: 'Some pig! A story of friendship between a pig and a spider.',
+  };
 
   const toggleLabelFormat = (id: LibraryLabelFormat, on: boolean) => {
     const current = enabledLibraryLabelFormats(settings.libraryLabelFormatsEnabled);
@@ -1897,9 +1937,25 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
             <div>
               <p className="text-xs font-bold">What goes on each sticker</p>
               <p className="text-[11px] text-muted-foreground">
-                Choose the pieces that print on the sticker.
+                Choose the pieces that print on the sticker. The preview below updates as you toggle them.
               </p>
             </div>
+
+            <div className="flex items-center justify-center overflow-auto rounded-lg border border-dashed bg-slate-50 p-4 max-h-[420px]">
+              <LibraryBarcodeSticker
+                item={SAMPLE_LABEL_PREVIEW_ITEM}
+                schoolName="Your School"
+                format={defaultLabelFormat}
+                className={cn(
+                  'flex flex-col items-center justify-between overflow-hidden border border-dashed border-slate-300 bg-white p-2 text-center shadow-sm',
+                  PREVIEW_LABEL_SIZE_CLASS[defaultLabelFormat],
+                )}
+              />
+            </div>
+            <p className="text-center text-[10.5px] text-muted-foreground">
+              {getLibraryLabelOption(defaultLabelFormat).shortName} · shown at print size
+            </p>
+
             <div className="grid gap-2 sm:grid-cols-2">
               {LIBRARY_LABEL_FIELD_IDS.map((fieldId) => (
                 <label
@@ -2283,6 +2339,27 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lib-reading-level-system" className="text-xs font-bold">Reading level scale to look up</Label>
+                  <Select
+                    value={readingLevelSystem}
+                    onValueChange={(v) => updateSettings({ libraryReadingLevelSystem: v as LibraryReadingLevelSystem })}
+                  >
+                    <SelectTrigger id="lib-reading-level-system" className="rounded-xl text-xs font-semibold">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {(Object.keys(READING_LEVEL_SYSTEM_LABELS) as LibraryReadingLevelSystem[]).map((key) => (
+                        <SelectItem key={key} value={key} className="text-xs">
+                          {READING_LEVEL_SYSTEM_LABELS[key]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Books are automatically checked for this reading level as they come in.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold">How new book numbers look</Label>

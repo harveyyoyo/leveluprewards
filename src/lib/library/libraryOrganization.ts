@@ -5,10 +5,12 @@ import {
   resolveBookClassification,
   type LibraryGenreConfig,
 } from './libraryClassification';
+import { READING_LEVEL_BANDS, compareReadingLevel, resolveReadingLevelBand } from './libraryReadingLevel';
 
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_title';
+  | 'author_then_title'
+  | 'reading_level_then_title';
 
 export interface SchemeMeta {
   id: LibraryOrganizationScheme;
@@ -35,11 +37,20 @@ export const LIBRARY_ORGANIZATION_SCHEMES: Record<LibraryOrganizationScheme, Sch
       'Books are lined up by the author’s last name, then by title A–Z for that author.',
     example: '[C] Canin, Ethan → A Doubter’s Almanac',
   },
+  reading_level_then_title: {
+    id: 'reading_level_then_title',
+    label: 'Reading Level (easiest first), then by Title',
+    shortLabel: 'Reading Level → Title',
+    description:
+      'Books are lined up from easiest reading level to hardest, then by title A–Z within each level.',
+    example: 'Grades 3–4 → [AR 4.2] The One and Only Ivan',
+  },
 };
 
-/** Map old saved choices onto the two lineup options. */
+/** Map old saved choices onto the lineup options. */
 export function resolveLibraryOrganizationScheme(value: unknown): LibraryOrganizationScheme {
   if (value === 'author_then_title' || value === 'author_then_genre') return 'author_then_title';
+  if (value === 'reading_level_then_title') return 'reading_level_then_title';
   return 'genre_then_author';
 }
 
@@ -178,6 +189,65 @@ export function groupBooksByOrganizationScheme(
     }
 
     return groups.sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  if (resolved === 'reading_level_then_title') {
+    // Top Level: reading-level band (easiest to hardest) -> Sub Level: the exact level text
+    const bandMap = new Map<string, { color: string; label: string; levelMap: Map<string, LibraryItem[]> }>();
+
+    for (const item of items) {
+      const { band } = resolveReadingLevelBand(item.readingLevel);
+      let entry = bandMap.get(band.id);
+      if (!entry) {
+        entry = { color: band.color, label: band.label, levelMap: new Map() };
+        bandMap.set(band.id, entry);
+      }
+      const levelKey = (item.readingLevel ?? '').trim() || 'No level recorded yet';
+      const existing = entry.levelMap.get(levelKey) ?? [];
+      existing.push(item);
+      entry.levelMap.set(levelKey, existing);
+    }
+
+    const groups: BookPrimaryGroup[] = [];
+    for (const [bandId, { color, label, levelMap }] of bandMap.entries()) {
+      const subGroups: BookSubGroup[] = [];
+      let total = 0;
+
+      const sortedLevels = Array.from(levelMap.keys()).sort((a, b) => {
+        const cmp = compareReadingLevel(
+          a === 'No level recorded yet' ? null : a,
+          b === 'No level recorded yet' ? null : b,
+        );
+        return cmp !== 0 ? cmp : a.localeCompare(b);
+      });
+
+      for (const levelKey of sortedLevels) {
+        const books = levelMap.get(levelKey) ?? [];
+        total += books.length;
+        books.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        subGroups.push({
+          subKey: `${bandId}::${levelKey}`,
+          subLabel: levelKey,
+          badgeText: `${books.length} ${books.length === 1 ? 'book' : 'books'}`,
+          books,
+        });
+      }
+
+      groups.push({
+        key: bandId,
+        label,
+        secondaryLabel: subGroups.length === 1 ? undefined : `${subGroups.length} reading levels`,
+        color,
+        totalCopies: total,
+        subGroups,
+      });
+    }
+
+    const bandOrder = (id: string) => {
+      const index = READING_LEVEL_BANDS.findIndex((band) => band.id === id);
+      return index === -1 ? READING_LEVEL_BANDS.length : index;
+    };
+    return groups.sort((a, b) => bandOrder(a.key) - bandOrder(b.key));
   }
 
   const authorMap = new Map<string, Map<string, LibraryItem[]>>();

@@ -161,7 +161,7 @@ export function LibraryBookIntakeScanner({
       if (!trimmed) return;
       setFindingTitleId(rowId);
       try {
-        const hits = await fetchCatalogHitsByTitle(trimmed);
+        const hits = await fetchCatalogHitsByTitle(trimmed, settings.libraryReadingLevelSystem);
         const hit = pickBestTitleHit(trimmed, hits) ?? hits[0] ?? null;
         if (hit) {
           const classification = resolveBookClassification(hit.category, settings.libraryGenreDefinitions);
@@ -397,6 +397,7 @@ export function LibraryBookIntakeScanner({
               message: phase === 'ai' ? LIBRARY_ISBN_AI_LOOKUP : LIBRARY_ISBN_LIST_LOOKUP,
             });
           },
+          readingLevelSystem: settings.libraryReadingLevelSystem,
         });
         setLookupPhase(null);
         if (hit?.title && !isSuspiciousCatalogTitle(hit.title)) {

@@ -62,6 +62,7 @@ import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import type { LibraryLabelFieldId } from '@/lib/library/libraryLabelSettings';
+import type { LibraryReadingLevelSystem } from '@/lib/library/libraryReadingLevel';
 import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
@@ -617,6 +618,8 @@ interface Settings {
     libraryBarcodeNumberScheme?: BarcodeNumberScheme;
     /** Primary book lineup: 'genre_then_author' (default) or 'author_then_title'. */
     libraryOrganizationScheme?: LibraryOrganizationScheme;
+    /** Which reading-level scale to look up automatically: 'auto' accepts whatever a source reports. */
+    libraryReadingLevelSystem?: LibraryReadingLevelSystem;
     /** Configured library genres with colors, call prefixes, and shelf placement. */
     libraryGenreDefinitions?: LibraryGenreConfig[];
     /** List of physical library placement sections/zones for shelving. */
@@ -873,6 +876,7 @@ const defaultSettings: Settings = {
     libraryBarcodeFormat: 'CODE128',
     libraryBarcodeNumberScheme: 'genre_code',
     libraryOrganizationScheme: 'genre_then_author',
+    libraryReadingLevelSystem: 'auto',
     libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES,
     libraryAutoLookupGoogleBooks: true,
     libraryCatalogShowCoverImages: true,

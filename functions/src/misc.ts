@@ -12,7 +12,7 @@ import {
 } from "./shared/reusableSampleCoupon";
 import { isReusableCouponDoc } from "./shared/reusableCoupon";
 import { libraryId, runLibraryOperation } from "./libraryService";
-import { saveLibraryCatalog } from "./libraryCatalogService";
+import { saveLibraryCatalog, saveLibraryReadingLevels } from "./libraryCatalogService";
 
 import "./init";
 
@@ -731,6 +731,14 @@ exports.libraryCatalogSave = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https
   const actor = await libraryActor(schoolId, context);
   if (!actor.staff) throw new functions.https.HttpsError("permission-denied", "Library staff access required.");
   return saveLibraryCatalog(admin.firestore(), schoolId, data, actor.uid);
+});
+
+/** Saves a different reading level per copy at once (bulk "fetch reading levels" tool). */
+exports.libraryReadingLevelsSave = functions.runWith(HOT_KIOSK_FUNCTION_OPTIONS).https.onCall(async (data: any, context) => {
+  const schoolId = libraryId(data?.schoolId, "school ID").toLowerCase();
+  const actor = await libraryActor(schoolId, context);
+  if (!actor.staff) throw new functions.https.HttpsError("permission-denied", "Library staff access required.");
+  return saveLibraryReadingLevels(admin.firestore(), schoolId, data);
 });
 
 /** Compatibility for already-open clients. Loan identity prevents double returns. */

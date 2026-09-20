@@ -261,7 +261,7 @@ export function LibraryItemModal({
     const timer = setTimeout(async () => {
       setIsSearchingTitle(true);
       try {
-        const hits = await fetchCatalogHitsByTitle(query);
+        const hits = await fetchCatalogHitsByTitle(query, settings.libraryReadingLevelSystem);
         setTitleSuggestions(hits);
         if (hits.length > 0) {
           setShowTitleSuggestions(true);
@@ -442,6 +442,7 @@ export function LibraryItemModal({
     try {
       const { hit } = await fetchCatalogHitByIsbn(trimmedIsbn, {
         onPhase: (phase) => setIsbnLookupPhase(phase),
+        readingLevelSystem: settings.libraryReadingLevelSystem,
       });
       if (hit?.title) {
         setName((prev) => prev.trim() || hit.title);
@@ -784,7 +785,7 @@ export function LibraryItemModal({
                       if (!name.trim()) return;
                       setIsSearchingTitle(true);
                       try {
-                        const hits = await fetchCatalogHitsByTitle(name);
+                        const hits = await fetchCatalogHitsByTitle(name, settings.libraryReadingLevelSystem);
                         const best = pickBestTitleHit(name, hits);
                         if (best) {
                           await applyBookAutofill(best);

@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import { type LibraryCatalogHit, isSuspiciousCatalogTitle } from '@/lib/library/libraryCatalogLookup';
+import type { LibraryReadingLevelSystem } from '@/lib/library/libraryReadingLevel';
 import { parseLooseJson } from '@/lib/server/looseJson';
 
 /**
@@ -12,7 +13,26 @@ import { parseLooseJson } from '@/lib/server/looseJson';
  * them before saving.
  */
 
-const AI_SYSTEM_PROMPT = `You identify books from their ISBN by searching the web.
+/**
+ * The reading-level instruction changes based on the school's chosen scale
+ * (a settings choice) so the AI reports the number the school actually shelves
+ * by, instead of whichever scale a random source happens to mention first.
+ */
+function readingLevelInstruction(preferredSystem: LibraryReadingLevelSystem = 'auto'): string {
+  const scaleName: Record<Exclude<LibraryReadingLevelSystem, 'auto'>, string> = {
+    lexile: 'a Lexile measure (e.g. "650L")',
+    ar: 'an Accelerated Reader / ATOS level (e.g. "AR 4.2")',
+    grade: 'a grade level or grade range (e.g. "Grade 3" or "Grades 3-5")',
+    fountas_pinnell: 'a Fountas & Pinnell / Guided Reading letter (e.g. "Level M")',
+  };
+  if (preferredSystem === 'auto') {
+    return 'For "readingLevel", report a reading-level metric only if search results state one — a Lexile score ("650L"), an Accelerated Reader level ("AR 4.2"), a Fountas & Pinnell/Guided Reading letter ("Level M"), or a grade range ("Grades 3-5"). Use the exact figure sources report. Leave "readingLevel" as an empty string if no source mentions one — never estimate or guess a number.';
+  }
+  return `For "readingLevel", report ${scaleName[preferredSystem]} if any source states one for this book. If sources only give a different kind of reading-level scale and never mention this one, leave "readingLevel" as an empty string — never convert or estimate one scale from another.`;
+}
+
+function buildIsbnSystemPrompt(preferredSystem: LibraryReadingLevelSystem = 'auto'): string {
+  return `You identify books from their ISBN by searching the web.
 Use web search to look up the given ISBN-13 (and ISBN-10 variant) on bookseller, publisher, and library sites, then report the real, published book it belongs to. Never invent a title — only report what the search results show.
 
 Reply with ONLY a JSON object (no prose, no markdown) matching this schema:
@@ -22,10 +42,14 @@ Reply with ONLY a JSON object (no prose, no markdown) matching this schema:
   "author": "string",
   "category": "string",
   "publisher": "string",
-  "publishedYear": "string"
+  "publishedYear": "string",
+  "readingLevel": "string"
 }
 
-Set "found" to true when web search identifies a specific published book for this ISBN — even if minor details (subtitle wording, year) differ slightly across retailers. Use the title and author that most booksellers or the publisher agree on. Set "found" to false only when search returns nothing useful or conflicting titles with no clear match.`;
+Set "found" to true when web search identifies a specific published book for this ISBN — even if minor details (subtitle wording, year) differ slightly across retailers. Use the title and author that most booksellers or the publisher agree on. Set "found" to false only when search returns nothing useful or conflicting titles with no clear match.
+
+${readingLevelInstruction(preferredSystem)}`;
+}
 
 export type AiBookResult = {
   found?: boolean;
@@ -34,6 +58,7 @@ export type AiBookResult = {
   category?: string;
   publisher?: string;
   publishedYear?: string;
+  readingLevel?: string;
 };
 
 export type AiIsbnLookupStatus = 'not_configured' | 'matched' | 'no_match' | 'error';
@@ -56,6 +81,7 @@ export function hitFromAiResult(result: AiBookResult, fallbackIsbn: string): Lib
     category: result.category?.trim() || undefined,
     publisher: result.publisher?.trim() || undefined,
     publishedYear: result.publishedYear?.trim() || undefined,
+    readingLevel: result.readingLevel?.trim() || undefined,
     source: 'ai',
   };
 }
@@ -66,7 +92,8 @@ function buildUserPrompt(variants: string[]): string {
   }. Return the JSON object described above.`;
 }
 
-const AI_TITLE_SYSTEM_PROMPT = `You identify books from a title a librarian typed.
+function buildTitleSystemPrompt(preferredSystem: LibraryReadingLevelSystem = 'auto'): string {
+  return `You identify books from a title a librarian typed.
 Use web search to find the published book that matches that name. Never invent a title — only report what the search results show.
 
 Reply with ONLY a JSON object (no prose, no markdown) matching this schema:
@@ -76,10 +103,14 @@ Reply with ONLY a JSON object (no prose, no markdown) matching this schema:
   "author": "string",
   "category": "string",
   "publisher": "string",
-  "publishedYear": "string"
+  "publishedYear": "string",
+  "readingLevel": "string"
 }
 
-Set "found" to true when search identifies a specific published book. Use the title and author that most booksellers or the publisher agree on. Set "found" to false only when search returns nothing useful.`;
+Set "found" to true when search identifies a specific published book. Use the title and author that most booksellers or the publisher agree on. Set "found" to false only when search returns nothing useful.
+
+${readingLevelInstruction(preferredSystem)}`;
+}
 
 function buildTitleUserPrompt(title: string): string {
   return `Search the web and identify the published book titled "${title}". Return the JSON object described above.`;
@@ -104,7 +135,10 @@ function extractOpenAiResponseText(response: OpenAI.Responses.Response): string 
 }
 
 /** OpenAI Responses API with the built-in web search tool. */
-async function lookupWithOpenAIWebSearch(variants: string[]): Promise<LibraryCatalogHit | null> {
+async function lookupWithOpenAIWebSearch(
+  variants: string[],
+  preferredSystem: LibraryReadingLevelSystem,
+): Promise<LibraryCatalogHit | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
   const client = new OpenAI({ apiKey });
@@ -112,7 +146,7 @@ async function lookupWithOpenAIWebSearch(variants: string[]): Promise<LibraryCat
     model: process.env.OPENAI_BOOK_LOOKUP_MODEL?.trim() || 'gpt-4o-mini',
     tools: [{ type: 'web_search' }],
     input: [
-      { role: 'system', content: AI_SYSTEM_PROMPT },
+      { role: 'system', content: buildIsbnSystemPrompt(preferredSystem) },
       { role: 'user', content: buildUserPrompt(variants) },
     ],
   });
@@ -120,7 +154,10 @@ async function lookupWithOpenAIWebSearch(variants: string[]): Promise<LibraryCat
 }
 
 /** Gemini with Google Search grounding (text output; JSON parsed loosely). */
-async function lookupWithGeminiWebSearch(variants: string[]): Promise<LibraryCatalogHit | null> {
+async function lookupWithGeminiWebSearch(
+  variants: string[],
+  preferredSystem: LibraryReadingLevelSystem,
+): Promise<LibraryCatalogHit | null> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -129,7 +166,7 @@ async function lookupWithGeminiWebSearch(variants: string[]): Promise<LibraryCat
     model: modelName,
     // Gemini 2.x+ uses googleSearch; googleSearchRetrieval is deprecated and 404s on newer models.
     tools: [{ googleSearch: {} } as never],
-    systemInstruction: AI_SYSTEM_PROMPT,
+    systemInstruction: buildIsbnSystemPrompt(preferredSystem),
     generationConfig: { temperature: 0 },
   });
   const result = await model.generateContent(buildUserPrompt(variants));
@@ -142,7 +179,10 @@ export function isAiIsbnLookupConfigured(): boolean {
 }
 
 /** Best-effort AI web-search identification of a book by ISBN. */
-export async function lookupBookByIsbnAi(variants: string[]): Promise<AiIsbnLookupOutcome> {
+export async function lookupBookByIsbnAi(
+  variants: string[],
+  preferredSystem: LibraryReadingLevelSystem = 'auto',
+): Promise<AiIsbnLookupOutcome> {
   if (!variants.length) {
     return { hit: null, status: 'not_configured' };
   }
@@ -153,7 +193,7 @@ export async function lookupBookByIsbnAi(variants: string[]): Promise<AiIsbnLook
   const errors: string[] = [];
 
   try {
-    const openai = await lookupWithOpenAIWebSearch(variants);
+    const openai = await lookupWithOpenAIWebSearch(variants, preferredSystem);
     if (openai) return { hit: openai, status: 'matched' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -162,7 +202,7 @@ export async function lookupBookByIsbnAi(variants: string[]): Promise<AiIsbnLook
   }
 
   try {
-    const gemini = await lookupWithGeminiWebSearch(variants);
+    const gemini = await lookupWithGeminiWebSearch(variants, preferredSystem);
     if (gemini) return { hit: gemini, status: 'matched' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -176,7 +216,10 @@ export async function lookupBookByIsbnAi(variants: string[]): Promise<AiIsbnLook
   return { hit: null, status: 'no_match' };
 }
 
-async function lookupTitleWithOpenAI(title: string): Promise<LibraryCatalogHit | null> {
+async function lookupTitleWithOpenAI(
+  title: string,
+  preferredSystem: LibraryReadingLevelSystem,
+): Promise<LibraryCatalogHit | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
   const client = new OpenAI({ apiKey });
@@ -184,14 +227,17 @@ async function lookupTitleWithOpenAI(title: string): Promise<LibraryCatalogHit |
     model: process.env.OPENAI_BOOK_LOOKUP_MODEL?.trim() || 'gpt-4o-mini',
     tools: [{ type: 'web_search' }],
     input: [
-      { role: 'system', content: AI_TITLE_SYSTEM_PROMPT },
+      { role: 'system', content: buildTitleSystemPrompt(preferredSystem) },
       { role: 'user', content: buildTitleUserPrompt(title) },
     ],
   });
   return parseAiHit(extractOpenAiResponseText(response), '');
 }
 
-async function lookupTitleWithGemini(title: string): Promise<LibraryCatalogHit | null> {
+async function lookupTitleWithGemini(
+  title: string,
+  preferredSystem: LibraryReadingLevelSystem,
+): Promise<LibraryCatalogHit | null> {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
   const genAI = new GoogleGenerativeAI(apiKey);
@@ -199,7 +245,7 @@ async function lookupTitleWithGemini(title: string): Promise<LibraryCatalogHit |
   const model = genAI.getGenerativeModel({
     model: modelName,
     tools: [{ googleSearch: {} } as never],
-    systemInstruction: AI_TITLE_SYSTEM_PROMPT,
+    systemInstruction: buildTitleSystemPrompt(preferredSystem),
     generationConfig: { temperature: 0 },
   });
   const result = await model.generateContent(buildTitleUserPrompt(title));
@@ -207,7 +253,10 @@ async function lookupTitleWithGemini(title: string): Promise<LibraryCatalogHit |
 }
 
 /** Best-effort AI web-search identification of a book by typed title. */
-export async function lookupBookByTitleAi(title: string): Promise<AiIsbnLookupOutcome> {
+export async function lookupBookByTitleAi(
+  title: string,
+  preferredSystem: LibraryReadingLevelSystem = 'auto',
+): Promise<AiIsbnLookupOutcome> {
   const trimmed = title.trim();
   if (!trimmed) return { hit: null, status: 'not_configured' };
   if (!isAiIsbnLookupConfigured()) return { hit: null, status: 'not_configured' };
@@ -215,7 +264,7 @@ export async function lookupBookByTitleAi(title: string): Promise<AiIsbnLookupOu
   const errors: string[] = [];
 
   try {
-    const openai = await lookupTitleWithOpenAI(trimmed);
+    const openai = await lookupTitleWithOpenAI(trimmed, preferredSystem);
     if (openai) return { hit: openai, status: 'matched' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -224,7 +273,7 @@ export async function lookupBookByTitleAi(title: string): Promise<AiIsbnLookupOu
   }
 
   try {
-    const gemini = await lookupTitleWithGemini(trimmed);
+    const gemini = await lookupTitleWithGemini(trimmed, preferredSystem);
     if (gemini) return { hit: gemini, status: 'matched' };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
