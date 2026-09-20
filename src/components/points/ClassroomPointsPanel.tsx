@@ -1940,7 +1940,7 @@ function ClassroomPointsPanelInner({
       if (!student) return;
 
       const isOut = activeBathroomPasses.has(studentId);
-      if (!isOut && settings.bathroomRequirePresent !== false) {
+      if (!isOut && bathroomRequirePresent !== false) {
         if (!classroomStudentCanTakeHallPass(displayAttendance.get(studentId))) {
           toast({
             variant: 'destructive',

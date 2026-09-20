@@ -384,7 +384,7 @@ export default function PortalPage() {
     });
     const hubCardCount = visiblePortals.length;
     const hubDenseLayout = hubCardCount >= 4;
-    const showWelcomeTourFooter = settings.enableHelperMode === true;
+    const showWelcomeTourFooter = settings.enableHelperMode !== false;
 
     const startPortalTour = (tourId: PortalTourId) => {
         playSound('click');
@@ -774,7 +774,7 @@ export default function PortalPage() {
                             onClick={startWelcomeTour}
                         >
                             <HelpCircle className={cn('text-primary/70', hubDenseLayout ? 'mr-1.5 h-3.5 w-3.5' : 'mr-2 h-4 w-4')} />
-                            Start Welcome Tour
+                            Take a Quick Tour
                         </Button>
                     </div>
                 ) : null}

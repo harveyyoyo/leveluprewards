@@ -76,7 +76,7 @@ function getTourSteps(tourId: string | null | undefined): IntroStep[] {
 const getStorageKey = (tourId: string) => `arcade_tour_progress_${tourId}`;
 
 const OFFER_TOUR_LABELS: Record<NonNullable<IntroStep['offerNextTour']>, string> = {
-  features: 'Explore add-on features',
+  features: 'See Advanced Features ✨',
   'teacher-features': 'Explore teacher add-ons',
   'student-features': 'Learn about Student Home',
 };
@@ -407,21 +407,31 @@ export function IntroWizard() {
                   ) : (
                     <>
                       {offeredTour ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={handleDismiss}
+                            className="rounded-full h-10 px-4 text-sm font-semibold"
+                          >
+                            Finish
+                          </Button>
+                          <Button
+                            onClick={() => startOfferedTour(offeredTour)}
+                            className="rounded-full shadow-lg h-10 px-5 text-sm font-bold bg-primary text-primary-foreground"
+                          >
+                            {OFFER_TOUR_LABELS[offeredTour]}
+                            <ArrowRight className="w-4 h-4 ml-2" />
+                          </Button>
+                        </>
+                      ) : (
                         <Button
-                          variant="outline"
-                          onClick={() => startOfferedTour(offeredTour)}
-                          className="rounded-full h-10 px-4 text-sm font-bold"
+                          onClick={handleNext}
+                          className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
                         >
-                          {OFFER_TOUR_LABELS[offeredTour]}
+                          {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
+                          {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
                         </Button>
-                      ) : null}
-                      <Button
-                        onClick={handleNext}
-                        className="rounded-full shadow-lg h-10 px-5 text-sm font-bold"
-                      >
-                        {isLast ? 'Finish' : isFirstStep ? 'Start walkthrough' : 'Next'}
-                        {!isLast ? <ArrowRight className="w-4 h-4 ml-2" /> : null}
-                      </Button>
+                      )}
                     </>
                   )}
                 </div>
