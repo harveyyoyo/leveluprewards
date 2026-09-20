@@ -113,8 +113,26 @@ export function AdminBonusPointsTab(props: any) {
   return (
     <StaffPortalTabPanel
       tabValue="bonuspoints"
+      subtitle="Students earn extra bonus points and prize wheel spins when reaching all-time point targets."
       trailing={
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Master ON / OFF Switch in top header */}
+          <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/80 px-3 py-1.5 shadow-sm">
+            <span className="text-xs font-bold text-muted-foreground">Bonus System</span>
+            <Badge
+              variant={isSystemActive ? 'default' : 'secondary'}
+              className="text-[10px] font-bold uppercase tracking-wider h-5 px-1.5"
+            >
+              {isSystemActive ? 'ON' : 'OFF'}
+            </Badge>
+            <Switch
+              checked={isSystemActive}
+              onCheckedChange={(checked) => updateSettings({ enableAchievements: checked })}
+              aria-label="Toggle bonus milestones system"
+              className="scale-90"
+            />
+          </div>
+
           <TabWalkthroughHeaderAction />
           <Button
             onClick={() => {
@@ -129,34 +147,6 @@ export function AdminBonusPointsTab(props: any) {
       }
     >
       <div className="space-y-4 w-full">
-        {/* Master ON / OFF Switch */}
-        <StaffPortalSectionCard className="w-full border-2 border-primary/20 bg-primary/5">
-          <StaffPortalSectionCardContent className="p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="font-black text-base tracking-tight">Bonus Milestones System</span>
-                <Badge variant={isSystemActive ? 'default' : 'secondary'} className="text-[10px] font-bold uppercase tracking-wider">
-                  {isSystemActive ? 'ON · ACTIVE' : 'OFF · PAUSED'}
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground max-w-xl">
-                When switched on, students automatically earn extra bonus points and prize wheel spins when reaching point targets.
-                Turn off anytime to temporarily pause all bonus rewards without losing your setup.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
-              <span className="text-xs font-bold text-muted-foreground">
-                {isSystemActive ? 'Enabled' : 'Disabled'}
-              </span>
-              <Switch
-                checked={isSystemActive}
-                onCheckedChange={(checked) => updateSettings({ enableAchievements: checked })}
-                aria-label="Toggle bonus milestones system"
-              />
-            </div>
-          </StaffPortalSectionCardContent>
-        </StaffPortalSectionCard>
-
         {/* Milestones List Card */}
         <StaffPortalSectionCard className="w-full overflow-hidden">
           <StaffPortalSectionCardContent>

@@ -156,11 +156,17 @@ export function useActiveLibraryLocation(
   const searchParams = useSearchParams();
   const urlId = searchParams.get('library');
   const [forcePick, setForcePick] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(urlId);
+
+  useEffect(() => {
+    setSelectedId(urlId);
+  }, [urlId]);
+
   // ignoreStoredChoice: only the URL's own ?library= counts as "already chosen" — a remembered
   // pick from a previous visit does not, so a plain link always asks again.
   const storedId = schoolId && !options?.ignoreStoredChoice ? readStoredLibraryLocationId(schoolId) : null;
-  const requestedId = urlId || storedId;
-  const hasExplicitChoice = Boolean(urlId || storedId);
+  const requestedId = urlId || selectedId || storedId;
+  const hasExplicitChoice = Boolean(urlId || selectedId || storedId);
   const needsChoice = Boolean(
     forcePick || (options?.requireExplicitChoice && locations.length > 1 && !hasExplicitChoice),
   );
@@ -171,6 +177,7 @@ export function useActiveLibraryLocation(
   const setActive = useCallback(
     (id: string) => {
       setForcePick(false);
+      setSelectedId(id);
       if (schoolId) writeStoredLibraryLocationId(schoolId, id);
       // Always write the id into the URL — including the main library — so picking it counts
       // as an explicit choice. Leaving it off for the main library (as this used to) made a
@@ -185,6 +192,7 @@ export function useActiveLibraryLocation(
 
   const resetChoice = useCallback(() => {
     setForcePick(true);
+    setSelectedId(null);
     if (schoolId && typeof window !== 'undefined') {
       try {
         window.localStorage.removeItem(libraryLocationStorageKey(schoolId));
@@ -192,8 +200,11 @@ export function useActiveLibraryLocation(
         // ignore
       }
     }
-    router.replace(pathname, { scroll: false });
-  }, [pathname, router, schoolId]);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('library');
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [pathname, router, schoolId, searchParams]);
 
   useEffect(() => {
     if (!schoolId || needsChoice || !hasExplicitChoice) return;

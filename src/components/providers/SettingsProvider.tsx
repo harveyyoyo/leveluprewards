@@ -351,7 +351,7 @@ interface Settings {
     attendanceQuietAfterMinutes?: number;
     // Guidance
     enableHelperMode: boolean;
-    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | null;
+    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | 'library-features' | null;
     // Workflow
     enableTeacherBudgets: boolean;
     /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
