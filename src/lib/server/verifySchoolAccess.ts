@@ -61,6 +61,24 @@ function isAllowedGoogleAdminBypass(email: string, googleAuth: boolean): boolean
   return isAllowedGoogleEmailOnAllowlist(normalized, getDeveloperGoogleEmailAllowlist());
 }
 
+function schoolAdminEmailsFrom(data: Record<string, unknown>): string[] {
+  if (!Array.isArray(data.adminEmails)) return [];
+  return (data.adminEmails as unknown[])
+    .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+    .filter(Boolean);
+}
+
+/** A school's own registered admin Google emails (schools/{id}.adminEmails). */
+function isAllowedSchoolAdminGoogleUser(
+  email: string,
+  googleAuth: boolean,
+  schoolData: Record<string, unknown>,
+): boolean {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized || !googleAuth) return false;
+  return schoolAdminEmailsFrom(schoolData).includes(normalized);
+}
+
 async function hasSchoolRole(db: Firestore, schoolId: string, uid: string): Promise<boolean> {
   const snaps = await Promise.all(
     STAFF_ROLES.map((role) =>
@@ -82,6 +100,7 @@ async function hasExistingSchoolPortalAccess(
   uid: string,
   email: string,
   googleAuth: boolean,
+  schoolData: Record<string, unknown>,
 ): Promise<boolean> {
   if (await hasSchoolRole(db, schoolId, uid)) return true;
 
@@ -94,6 +113,8 @@ async function hasExistingSchoolPortalAccess(
   if (portalSnap.exists) return true;
 
   if (isAllowedGoogleAdminBypass(email, googleAuth)) return true;
+  // A school's own registered admin Google emails also skip the front-door passcode.
+  if (isAllowedSchoolAdminGoogleUser(email, googleAuth, schoolData)) return true;
 
   return isDeveloperUid(db, uid);
 }
@@ -133,18 +154,25 @@ export async function verifySchoolAccessServer(
     throw new VerifySchoolAccessError('not-found', 'School not found.');
   }
 
+  const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
+
   if (passcode.length === 0) {
     if (
       googleAuth &&
-      (await hasExistingSchoolPortalAccess(db, schoolId, args.uid, args.email, googleAuth))
+      (await hasExistingSchoolPortalAccess(
+        db,
+        schoolId,
+        args.uid,
+        args.email,
+        googleAuth,
+        schoolData,
+      ))
     ) {
       await ensureAnonymousPortalSession(db, schoolId, args.uid);
       return;
     }
     throw new VerifySchoolAccessError('invalid-argument', 'A valid passcode is required.');
   }
-
-  const schoolData = (schoolDoc.data() ?? {}) as Record<string, unknown>;
   const legacyExpected = schoolAccessPasscodeFrom(schoolData);
   if (
     !(await verifyPasscodeCredential(

@@ -106,6 +106,47 @@ describe('verifySchoolAccessServer', () => {
     } satisfies Partial<VerifySchoolAccessError>);
   });
 
+  it('allows empty passcode for a school-authorized admin Google account', async () => {
+    const { db, sessionSet } = createMockDb({
+      schoolData: {
+        schoolAccessPasscode: '1234',
+        adminEmails: ['eli7teitelbaum@gmail.com'],
+      },
+    });
+
+    await verifySchoolAccessServer(db, {
+      uid: 'uid-elisheva',
+      email: 'eli7teitelbaum@gmail.com',
+      firebase: { sign_in_provider: 'google.com' },
+      schoolId: 'elisheva',
+      passcode: '',
+    });
+
+    expect(sessionSet).toHaveBeenCalled();
+  });
+
+  it('rejects empty passcode for a Google account that is not on the school list', async () => {
+    const { db } = createMockDb({
+      schoolData: {
+        schoolAccessPasscode: '1234',
+        adminEmails: ['eli7teitelbaum@gmail.com'],
+      },
+    });
+
+    await expect(
+      verifySchoolAccessServer(db, {
+        uid: 'uid-random',
+        email: 'unauthorized@example.com',
+        firebase: { sign_in_provider: 'google.com' },
+        schoolId: 'elisheva',
+        passcode: '',
+      }),
+    ).rejects.toMatchObject({
+      code: 'invalid-argument',
+      message: 'A valid passcode is required.',
+    } satisfies Partial<VerifySchoolAccessError>);
+  });
+
   it('throws failed-precondition when no school access passcode is configured', async () => {
     const { db } = createMockDb({ schoolData: {} });
 
