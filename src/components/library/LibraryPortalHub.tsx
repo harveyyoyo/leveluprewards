@@ -8,6 +8,7 @@ import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
+import { Button } from '@/components/ui/button';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -235,14 +236,18 @@ export function LibraryPortalHub({
           })}
         </motion.div>
 
-        <button
-          type="button"
-          onClick={() => activateLibraryTour(updateSettings)}
-          className="mt-8 lg:mt-12 inline-flex items-center gap-1.5 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
-        >
-          <Compass className="h-3.5 w-3.5" />
-          Take a quick tour
-        </button>
+        <div className="mt-8 flex justify-center lg:mt-12">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => activateLibraryTour(updateSettings)}
+            className="rounded-full px-5 py-2 text-xs font-bold text-foreground/85 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
+          >
+            <Compass className="mr-2 h-4 w-4 text-primary/80" />
+            Take a Quick Tour
+          </Button>
+        </div>
         </div>
       </main>
       <SiteFooter />

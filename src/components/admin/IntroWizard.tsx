@@ -33,6 +33,7 @@ import { studentTourSteps } from '@/lib/tours/studentTour';
 import { teacherFeaturesTourSteps } from '@/lib/tours/teacherFeaturesTour';
 import { studentFeaturesTourSteps } from '@/lib/tours/studentFeaturesTour';
 import { libraryTourSteps } from '@/lib/tours/libraryTour';
+import { libraryFeaturesTourSteps } from '@/lib/tours/libraryFeaturesTour';
 
 type TourId =
   | 'welcome'
@@ -42,7 +43,8 @@ type TourId =
   | 'student'
   | 'teacher-features'
   | 'student-features'
-  | 'library';
+  | 'library'
+  | 'library-features';
 
 function normalizeTourId(tourId: string | null | undefined): TourId | null {
   if (
@@ -53,7 +55,8 @@ function normalizeTourId(tourId: string | null | undefined): TourId | null {
     tourId === 'student' ||
     tourId === 'teacher-features' ||
     tourId === 'student-features' ||
-    tourId === 'library'
+    tourId === 'library' ||
+    tourId === 'library-features'
   ) {
     return tourId;
   }
@@ -70,6 +73,7 @@ function getTourSteps(tourId: string | null | undefined): IntroStep[] {
   if (id === 'teacher-features') return teacherFeaturesTourSteps;
   if (id === 'student-features') return studentFeaturesTourSteps;
   if (id === 'library') return libraryTourSteps;
+  if (id === 'library-features') return libraryFeaturesTourSteps;
   return [];
 }
 
@@ -79,6 +83,7 @@ const OFFER_TOUR_LABELS: Record<NonNullable<IntroStep['offerNextTour']>, string>
   features: 'See Advanced Features ✨',
   'teacher-features': 'Explore teacher add-ons',
   'student-features': 'Learn about Student Home',
+  'library-features': 'See Advanced Library Tools ✨',
 };
 
 const STAFF_ROUTE_SUFFIXES = [

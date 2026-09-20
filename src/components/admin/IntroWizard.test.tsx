@@ -4,9 +4,10 @@ import { IntroWizard } from './IntroWizard';
 
 const mockUpdateSettings = vi.fn();
 let mockActiveTourId: string | null = 'welcome';
+let mockPathname: string = '/portal';
 
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/portal',
+  usePathname: () => mockPathname,
 }));
 
 vi.mock('@/components/providers/SettingsProvider', () => ({
@@ -21,6 +22,7 @@ vi.mock('@/components/providers/SettingsProvider', () => ({
 describe('IntroWizard Quick Tour & Advanced Transition', () => {
   beforeEach(() => {
     mockActiveTourId = 'welcome';
+    mockPathname = '/portal';
     mockUpdateSettings.mockClear();
     window.localStorage.clear();
   });
@@ -113,6 +115,92 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
 
     // Step 9: Finish
     expect(screen.getAllByText(/You're Ready to Roll!/i).length).toBeGreaterThan(0);
+    const finishButtons = screen.getAllByRole('button', { name: /finish/i });
+    expect(finishButtons.length).toBeGreaterThan(0);
+    fireEvent.click(finishButtons[finishButtons.length - 1]);
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
+  });
+
+  it('steps through the library quick tour and transitions to advanced library tools', () => {
+    mockActiveTourId = 'library';
+    mockPathname = '/library';
+    render(<IntroWizard />);
+
+    // Step 1: Library Welcome
+    expect(screen.getByText(/Welcome to Your Library/i)).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /start walkthrough/i });
+    fireEvent.click(startButton);
+
+    const clickNext = () => {
+      const nextButtons = screen.getAllByRole('button', { name: /next/i });
+      fireEvent.click(nextButtons[nextButtons.length - 1]);
+    };
+
+    // Step 2: Librarian Desk
+    expect(screen.getAllByText(/Librarian Desk/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 3: Book Catalog
+    expect(screen.getAllByText(/Book Catalog/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 4: Student Kiosk
+    expect(screen.getAllByText(/Student Kiosk/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 5: Quick Tour Complete!
+    expect(screen.getAllByText(/Quick Tour Complete!/i).length).toBeGreaterThan(0);
+
+    // Verify "See Advanced Library Tools ✨" button is offered
+    const advancedBtn = screen.getByRole('button', { name: /See Advanced Library Tools/i });
+    expect(advancedBtn).toBeInTheDocument();
+
+    // Clicking it triggers transition
+    fireEvent.click(advancedBtn);
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
+  });
+
+  it('steps through all advanced library features steps cleanly', () => {
+    mockActiveTourId = 'library-features';
+    mockPathname = '/library';
+    render(<IntroWizard />);
+
+    // Step 1: Intro
+    expect(screen.getByText(/Advanced Library Tools/i)).toBeInTheDocument();
+    const startButton = screen.getByRole('button', { name: /start walkthrough/i });
+    fireEvent.click(startButton);
+
+    const clickNext = () => {
+      const nextButtons = screen.getAllByRole('button', { name: /next/i });
+      fireEvent.click(nextButtons[nextButtons.length - 1]);
+    };
+
+    // Step 2: Intake
+    expect(screen.getAllByText(/Camera & Barcode Book Lookup/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 3: Labels
+    expect(screen.getAllByText(/Printable Spine Labels & Stickers/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 4: Reading Levels
+    expect(screen.getAllByText(/Reading Levels & Genres/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 5: Policy
+    expect(screen.getAllByText(/Borrowing Limits & Due Dates/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 6: Self-Checkout
+    expect(screen.getAllByText(/Student Self-Checkout Station/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 7: Audit
+    expect(screen.getAllByText(/Quick Shelf Inventory Audits/i).length).toBeGreaterThan(0);
+    clickNext();
+
+    // Step 8: Finish
+    expect(screen.getAllByText(/Your Library is Ready!/i).length).toBeGreaterThan(0);
     const finishButtons = screen.getAllByRole('button', { name: /finish/i });
     expect(finishButtons.length).toBeGreaterThan(0);
     fireEvent.click(finishButtons[finishButtons.length - 1]);
