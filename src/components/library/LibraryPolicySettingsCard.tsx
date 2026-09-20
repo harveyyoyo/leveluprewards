@@ -55,6 +55,11 @@ import {
   type LibraryOrganizationScheme,
 } from '@/lib/library/libraryOrganization';
 import {
+  READING_LEVEL_SYSTEM_LABELS,
+  resolveReadingLevelSystemParam,
+  type LibraryReadingLevelSystem,
+} from '@/lib/library/libraryReadingLevel';
+import {
   StaffPortalTabInfoPopover,
   staffPortalTabInfoSection,
 } from '@/components/staff/StaffPortalTabInfoPopover';
@@ -225,6 +230,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const [testingSound, setTestingSound] = useState<string | null>(null);
   const enabledLabelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
   const enabledLabelFormats = enabledLibraryLabelFormats(settings.libraryLabelFormatsEnabled);
+  const readingLevelSystem = resolveReadingLevelSystemParam(settings.libraryReadingLevelSystem);
   const defaultLabelFormat = resolveDefaultLibraryLabelFormat(
     settings.libraryLabelFormat,
     settings.libraryLabelFormatsEnabled,
