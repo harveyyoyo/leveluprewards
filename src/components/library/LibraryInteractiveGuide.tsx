@@ -28,7 +28,6 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { LibraryHeaderTab } from './LibraryHeaderBar';
@@ -38,8 +37,6 @@ import { cn } from '@/lib/utils';
 export interface GuideTopic {
   id: string;
   title: string;
-  category: 'stations' | 'discovery' | 'cataloging' | 'management';
-  categoryLabel: string;
   summary: string;
   icon: typeof Library;
   color: string;
@@ -67,14 +64,11 @@ export function LibraryInteractiveGuide({
   onOpenDiscoveryModal,
 }: LibraryInteractiveGuideProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const topics: GuideTopic[] = [
     {
       id: 'desk',
       title: 'Librarian Desk',
-      category: 'stations',
-      categoryLabel: 'Core Stations',
       summary: 'The main command desk for helping students, checking books in and out, and seeing overdue books.',
       icon: Library,
       color: 'bg-sky-500/10 text-sky-600 border-sky-300 dark:text-sky-400',
@@ -89,8 +83,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'catalog',
       title: 'Book Catalog',
-      category: 'stations',
-      categoryLabel: 'Core Stations',
       summary: 'Your entire school book collection lives here. Search titles, sort by authors, and print shelf labels.',
       icon: BookOpen,
       color: 'bg-emerald-500/10 text-emerald-600 border-emerald-300 dark:text-emerald-400',
@@ -105,8 +97,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'kiosk',
       title: 'Student Self-Checkout Station',
-      category: 'stations',
-      categoryLabel: 'Core Stations',
       summary: 'A dedicated station where students scan their own badge and book barcode to borrow books independently.',
       icon: Monitor,
       color: 'bg-amber-500/10 text-amber-600 border-amber-300 dark:text-amber-400',
@@ -121,8 +111,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'suggestions',
       title: 'Smart Suggestions & Book Finder Quiz',
-      category: 'discovery',
-      categoryLabel: 'Smart Discovery',
       summary: 'Help students discover their next favorite book through personalized picks and a fun 2-question quiz.',
       icon: Sparkles,
       color: 'bg-purple-500/10 text-purple-600 border-purple-300 dark:text-purple-400',
@@ -138,8 +126,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'camera_scanner',
       title: 'Camera & Barcode Book Lookup',
-      category: 'cataloging',
-      categoryLabel: 'Adding & Labeling',
       summary: 'Hold any book barcode up to your camera. The system auto-loads the cover, author, summary, and page count!',
       icon: Camera,
       color: 'bg-rose-500/10 text-rose-600 border-rose-300 dark:text-rose-400',
@@ -154,8 +140,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'labels',
       title: 'Printable Spine Labels & Barcodes',
-      category: 'cataloging',
-      categoryLabel: 'Adding & Labeling',
       summary: 'Print barcode stickers and spine call-number tags directly from your browser on standard label sheets.',
       icon: Printer,
       color: 'bg-blue-500/10 text-blue-600 border-blue-300 dark:text-blue-400',
@@ -170,8 +154,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'levels_genres',
       title: 'Reading Levels & Color Genres',
-      category: 'cataloging',
-      categoryLabel: 'Adding & Labeling',
       summary: 'Organize your shelves by Guided Reading letters, Lexile levels, or color-coded genre tags.',
       icon: Layers,
       color: 'bg-teal-500/10 text-teal-600 border-teal-300 dark:text-teal-400',
@@ -186,8 +168,6 @@ export function LibraryInteractiveGuide({
     {
       id: 'rules_audits',
       title: 'Borrowing Rules & Shelf Audits',
-      category: 'management',
-      categoryLabel: 'Management & Rules',
       summary: 'Set how many books students can borrow, customize due dates, and run quick shelf audits to spot missing books.',
       icon: Clock,
       color: 'bg-indigo-500/10 text-indigo-600 border-indigo-300 dark:text-indigo-400',
@@ -201,22 +181,14 @@ export function LibraryInteractiveGuide({
     },
   ];
 
-  const categories = [
-    { id: 'all', label: 'All Topics' },
-    { id: 'stations', label: 'Core Stations' },
-    { id: 'discovery', label: 'Suggestions & Quiz' },
-    { id: 'cataloging', label: 'Adding & Labels' },
-    { id: 'management', label: 'Rules & Audits' },
-  ];
-
   const filteredTopics = topics.filter((t) => {
-    const matchesCategory = selectedCategory === 'all' || t.category === selectedCategory;
-    const matchesSearch =
-      !searchQuery.trim() ||
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.steps.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      t.title.toLowerCase().includes(q) ||
+      t.summary.toLowerCase().includes(q) ||
+      t.steps.some((s) => s.toLowerCase().includes(q))
+    );
   });
 
   const handleAction = (topic: GuideTopic) => {
@@ -264,30 +236,12 @@ export function LibraryInteractiveGuide({
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Clear search"
               >
                 <X className="h-4 w-4" />
               </button>
             ) : null}
-          </div>
-
-          {/* Category Filter Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={cn(
-                  'rounded-full px-3 py-1 text-[11px] font-bold whitespace-nowrap transition-all',
-                  selectedCategory === cat.id
-                    ? 'bg-primary text-primary-foreground shadow-xs'
-                    : 'bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground',
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -302,11 +256,8 @@ export function LibraryInteractiveGuide({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedCategory('all');
-                  }}
-                  className="rounded-full text-xs font-semibold mt-2"
+                  onClick={() => setSearchQuery('')}
+                  className="rounded-full text-xs font-semibold mt-2 cursor-pointer"
                 >
                   Clear search filters
                 </Button>
@@ -334,9 +285,6 @@ export function LibraryInteractiveGuide({
                             <h3 className="font-bold text-sm sm:text-base leading-snug text-foreground">
                               {topic.title}
                             </h3>
-                            <Badge variant="outline" className="text-[10px] font-semibold text-muted-foreground border-border/60 py-0 px-1.5 mt-0.5">
-                              {topic.categoryLabel}
-                            </Badge>
                           </div>
                         </div>
 

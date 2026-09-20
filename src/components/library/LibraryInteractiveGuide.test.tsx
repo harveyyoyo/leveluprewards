@@ -50,7 +50,7 @@ describe('LibraryInteractiveGuide', () => {
     expect(screen.queryByText('Student Self-Checkout Station')).toBeNull();
   });
 
-  it('filters topics by category chips', () => {
+  it('clears search when clear filters button is clicked', () => {
     render(
       <LibraryInteractiveGuide
         open={true}
@@ -60,11 +60,15 @@ describe('LibraryInteractiveGuide', () => {
       />
     );
 
-    const rulesChip = screen.getByRole('button', { name: /Rules & Audits/i });
-    fireEvent.click(rulesChip);
+    const searchInput = screen.getByPlaceholderText(/Search topics/i);
+    fireEvent.change(searchInput, { target: { value: 'nonexistentterm123' } });
 
-    expect(screen.getByText('Borrowing Rules & Shelf Audits')).toBeDefined();
-    expect(screen.queryByText('Librarian Desk')).toBeNull();
+    expect(screen.getByText('No matching topics found')).toBeDefined();
+
+    const clearButton = screen.getByRole('button', { name: /Clear search filters/i });
+    fireEvent.click(clearButton);
+
+    expect(screen.getByText('Librarian Desk')).toBeDefined();
   });
 
   it('navigates to tab and closes guide when an action button is clicked', () => {
