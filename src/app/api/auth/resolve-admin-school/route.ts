@@ -4,9 +4,13 @@ import {
   getFirebaseAdminFirestore,
 } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
-import { resolveAdminSchoolForGoogleUser } from '@/lib/server/resolveAdminSchool';
+import { listAdminSchoolsForGoogleUser } from '@/lib/server/resolveAdminSchool';
 
-/** POST: which single school (if any) has this Google account on its admin list. */
+/**
+ * POST: schools that list this Google account on adminEmails.
+ * Returns `{ schools, schoolId }` — schoolId is set only when exactly one school matches
+ * (kept for older clients).
+ */
 export async function POST(req: NextRequest) {
   try {
     if (!sameOrigin(req)) return jsonError(403, 'Forbidden');
@@ -24,15 +28,16 @@ export async function POST(req: NextRequest) {
     const decoded = await auth.verifyIdToken(idToken, true);
     const db = await getFirebaseAdminFirestore();
 
-    const schoolId = await resolveAdminSchoolForGoogleUser(db, {
+    const schools = await listAdminSchoolsForGoogleUser(db, {
       uid: decoded.uid,
       email: String(decoded.email ?? ''),
       firebase: decoded.firebase as Record<string, unknown> | undefined,
     });
+    const schoolId = schools.length === 1 ? schools[0]!.id : null;
 
-    return NextResponse.json({ schoolId });
+    return NextResponse.json({ schools, schoolId });
   } catch (e) {
     console.error('[api/auth/resolve-admin-school] POST failed:', e);
-    return NextResponse.json({ schoolId: null });
+    return NextResponse.json({ schools: [], schoolId: null });
   }
 }

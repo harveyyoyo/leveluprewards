@@ -23,8 +23,14 @@ const auth = {
   schoolSignInAria: '{appName} — כניסת בית ספר',
   enterSchoolIdHint:
     'הזינו את מזהה בית הספר וקוד הדלת. אפשר גם להיכנס עם Google אם בית הספר רשם את החשבון שלכם.',
-  googleSchoolReadyHint: 'הזינו את מזהה בית הספר והמשיכו. אין צורך בקוד דלת אם בית הספר רשם חשבון זה.',
+  googleSchoolReadyHint: 'בחרו את בית הספר למטה. אין צורך בקוד דלת.',
   orUseGoogle: 'או השתמשו ב-Google',
+  checkingYourSchools: 'מחפש את בתי הספר בחשבון שלכם…',
+  yourSchool: 'בית הספר שלכם',
+  chooseYourSchool: 'בחרו בית ספר',
+  pickSchoolBelow: 'בחרו את בית הספר למטה כדי להמשיך.',
+  useDifferentSchool: 'השתמשו בבית ספר אחר',
+  backToYourSchools: 'חזרה לבתי הספר שלכם',
   enterLibrarySchoolIdHint:
     'הקלידו את שם בית הספר בתיבה הריקה, ואז את קוד הדלת. תעברו ישר לספרייה של אותו בית ספר.',
   openTheLibrary: 'כניסה לספרייה',
