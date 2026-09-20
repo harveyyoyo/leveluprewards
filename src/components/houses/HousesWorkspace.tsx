@@ -152,8 +152,8 @@ export function HousesWorkspace({
 
   const resolveDefaultOpeningTab = useCallback((): HousesHeaderTab => {
     const preferred = settings.housesDefaultOpeningTab;
-    if (preferred && TAB_IDS.includes(preferred) && preferred !== 'settings') {
-      return preferred;
+    if (preferred && TAB_IDS.includes(preferred as HousesHeaderTab)) {
+      return preferred as HousesHeaderTab;
     }
     return 'teams';
   }, [settings.housesDefaultOpeningTab]);
@@ -208,11 +208,8 @@ export function HousesWorkspace({
       setSettingsOpen(true);
       return;
     }
-    const preferred =
-      TAB_IDS.includes(initialTab) && initialTab !== 'settings'
-        ? initialTab
-        : resolveDefaultOpeningTab();
-    if (preferred !== 'teams') {
+    const preferred = TAB_IDS.includes(initialTab) ? initialTab : resolveDefaultOpeningTab();
+    if (preferred !== 'teams' && preferred !== 'settings') {
       setPendingTab(preferred);
       writeTabToUrl(preferred);
     }

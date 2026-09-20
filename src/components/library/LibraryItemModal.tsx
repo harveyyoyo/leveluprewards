@@ -127,6 +127,7 @@ export function LibraryItemModal({
   const [showMoreInfo, setShowMoreInfo] = useState(false);
   const titleSearchContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { settings } = useSettings();
   const confirm = useConfirm();
   const playSound = useArcadeSound();
   const { setLibraryStickersToPrint } = usePrint();
@@ -293,7 +294,6 @@ export function LibraryItemModal({
     return t.length > 0 ? t : undefined;
   };
 
-  const { settings } = useSettings();
   const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
   const classification = resolveBookClassification(category, settings.libraryGenreDefinitions, shelfLocation);
   const typedCodeTaken = useMemo(() => {
