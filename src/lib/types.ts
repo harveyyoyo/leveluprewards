@@ -63,7 +63,8 @@ export interface LibraryItem {
 /** Primary organization hierarchy for library book shelving and catalog grouping. */
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_title';
+  | 'author_then_title'
+  | 'reading_level_then_author';
 
 
 export type LibraryItemInput = Pick<
