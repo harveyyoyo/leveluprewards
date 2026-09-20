@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { doc } from 'firebase/firestore';
+import { GoogleAuthProvider, linkWithPopup, signInWithPopup } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/components/AppProvider';
 import { useDoc, useFirestore, useMemoFirebase, useFirebase } from '@/firebase';
-import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { canBypassSchoolAdminPasscode, hasGoogleAuthProvider, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, LogOut, UserCheck, Loader2, ShieldCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -102,7 +103,7 @@ function TeacherPrinter(props: { teacherName: string; teacherId: string; onLogou
 
 export default function TeacherPage() {
     const { loginState, isInitialized, schoolId: activeSchoolId, login, logout, isAdmin, userName, userId, teacherDocId } = useAppContext();
-    const { user: firebaseUser } = useFirebase();
+    const { user: firebaseUser, auth } = useFirebase();
     const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const params = useParams<{ schoolId: string }>();
     const router = useRouter();
@@ -287,6 +288,44 @@ export default function TeacherPage() {
         }
     };
 
+    /** "Sign in with Google" for admin — added alongside the shared passcode, not instead of it. */
+    const handleGoogleAdminSignIn = async () => {
+        if (!schoolId || adminSubmitting) return;
+        setAdminSubmitting(true);
+        try {
+            let signedInUser = firebaseUser;
+            if (!hasGoogleAuthProvider(signedInUser)) {
+                const provider = new GoogleAuthProvider();
+                const result = signedInUser?.isAnonymous
+                    ? await linkWithPopup(signedInUser, provider)
+                    : await signInWithPopup(auth, provider);
+                signedInUser = result.user;
+            }
+            const authResult = await loginSchoolAdmin(login, signedInUser, schoolId, '');
+            if (!authResult.ok) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Google sign-in not allowed for this school',
+                    description: authResult.message,
+                });
+                return;
+            }
+            playSound('login');
+            setAdminDialogOpen(false);
+            router.replace(teacherTourActive ? `/${schoolId}/teacher` : `/${schoolId}/admin`);
+        } catch (e) {
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Google sign-in failed',
+                description: e instanceof Error ? e.message : 'Please try again.',
+            });
+        } finally {
+            setAdminSubmitting(false);
+        }
+    };
+
     if (!isInitialized || !schoolId) {
         return (
             <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
@@ -459,6 +498,23 @@ export default function TeacherPage() {
                                         }}
                                     />
                                 </div>
+                                <div className="relative py-1">
+                                    <div className="absolute inset-0 flex items-center">
+                                        <span className="w-full border-t" />
+                                    </div>
+                                    <div className="relative flex justify-center text-[10px] uppercase tracking-wider">
+                                        <span className="bg-background px-2 text-muted-foreground">or</span>
+                                    </div>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="rounded-xl font-bold w-full"
+                                    disabled={adminSubmitting}
+                                    onClick={() => void handleGoogleAdminSignIn()}
+                                >
+                                    Sign in with Google
+                                </Button>
                                 <DialogFooter className="gap-2 sm:gap-0">
                                     <Button
                                         type="button"

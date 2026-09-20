@@ -9,6 +9,7 @@ import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isAllowedDeveloperGoogleUser } from '@/lib/developerAccess';
+import { loginSchoolAdmin } from '@/lib/adminGoogleAccess';
 import { isGoogleSignedInUser } from '@/lib/google/googleSchoolAccess';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
@@ -83,6 +84,8 @@ export function SchoolDeveloperLoginForm({
   const developerAutoLoginAttemptedRef = useRef(false);
   const developerLoginCompletedUidRef = useRef<string | null>(null);
   const schoolLoginIntentRef = useRef(false);
+  const adminSchoolAutoResolveAttemptedRef = useRef<string | null>(null);
+  const [isResolvingAdminSchool, setIsResolvingAdminSchool] = useState(false);
   const { login, isInitialized, isUserLoading, loginState } = useAppContext();
   const { toast } = useToast();
   const router = useRouter();
@@ -203,6 +206,58 @@ export function SchoolDeveloperLoginForm({
     }
     if (!allowDeveloperToggle && isDeveloper) setIsDeveloper(false);
   }, [allowDeveloperToggle, isDeveloper, isDeveloperOnly]);
+
+  // Anyone signed in with Google who isn't the platform's own developer/owner and who is
+  // registered as a school's admin (schools/{id}.adminEmails) skips "which school?" entirely
+  // — land them straight in their school's admin area instead of asking again.
+  useEffect(() => {
+    if (isDeveloperOnly || libraryLogin) return;
+    if (!mounted || !isInitialized || isUserLoading) return;
+    if (!hasGoogleUser || !firebaseUser) return;
+    if (initialSchoolId?.trim() || schoolId.trim()) return;
+    if (isAllowedGoogleEmail) return; // Owner/developer keeps the manual school picker.
+    if (adminSchoolAutoResolveAttemptedRef.current === firebaseUser.uid) return;
+    adminSchoolAutoResolveAttemptedRef.current = firebaseUser.uid;
+
+    void (async () => {
+      setIsResolvingAdminSchool(true);
+      try {
+        const token = await firebaseUser.getIdToken();
+        const res = await fetch('/api/auth/resolve-admin-school', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { schoolId?: string | null };
+        const resolvedSchoolId = data.schoolId;
+        if (!resolvedSchoolId) return;
+        const schoolResult = await login('school', { schoolId: resolvedSchoolId, passcode: '' });
+        if (!schoolResult.ok) return;
+        const adminResult = await loginSchoolAdmin(login, firebaseUser, resolvedSchoolId, '');
+        if (!adminResult.ok) return;
+        playSound('login');
+        router.replace(`/${resolvedSchoolId}/admin`);
+      } catch {
+        // Best-effort convenience — silently fall back to the manual school picker.
+      } finally {
+        setIsResolvingAdminSchool(false);
+      }
+    })();
+  }, [
+    isDeveloperOnly,
+    libraryLogin,
+    mounted,
+    isInitialized,
+    isUserLoading,
+    hasGoogleUser,
+    firebaseUser,
+    initialSchoolId,
+    schoolId,
+    isAllowedGoogleEmail,
+    login,
+    playSound,
+    router,
+  ]);
   const completeDeveloperLogin = async (options?: { force?: boolean }) => {
     if (!firebaseUser || !allowDeveloperLogin || !isAllowedGoogleEmail) return;
     if (!isDeveloperOnly && !isDeveloper) return;
@@ -697,6 +752,12 @@ export function SchoolDeveloperLoginForm({
                 <Label htmlFor="schoolId" className="text-xs font-semibold text-muted-foreground">
                   {t('auth.schoolId')}
                 </Label>
+                {isResolvingAdminSchool ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                    Checking your account for an existing school...
+                  </p>
+                ) : null}
                 <div className="flex gap-2 items-center">
                   <input
                     id="schoolId"

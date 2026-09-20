@@ -131,10 +131,24 @@ function isGoogleAuthenticated(context: functions.https.CallableContext): boolea
   return Boolean(identities && (identities["google.com"] || identities.google));
 }
 
+/** A school's own registered admin Google emails (schools/{id}.adminEmails). */
+function isAllowedSchoolAdminGoogleUser(
+  schoolData: Record<string, any> | undefined,
+  context: functions.https.CallableContext,
+): boolean {
+  const email = (context.auth?.token?.email ?? "").trim().toLowerCase();
+  if (!email || !isGoogleAuthenticated(context)) return false;
+  const allowlist = Array.isArray(schoolData?.adminEmails)
+    ? (schoolData!.adminEmails as unknown[]).map((e) => (typeof e === "string" ? e.trim().toLowerCase() : "")).filter(Boolean)
+    : [];
+  return allowlist.includes(email);
+}
+
 async function hasExistingSchoolPortalAccess(
   schoolId: string,
   uid: string,
-  context: functions.https.CallableContext
+  context: functions.https.CallableContext,
+  schoolData?: Record<string, any>
 ): Promise<boolean> {
   const db = admin.firestore();
   if (
@@ -161,6 +175,9 @@ async function hasExistingSchoolPortalAccess(
   // Allowlisted Google dev/owner accounts may enter any school without the access passcode
   // (same bypass used for admin passcode login).
   if (isAllowedGoogleAdminBypass(context)) return true;
+  // A school's own registered admin Google emails also skip the front-door passcode —
+  // they still need to sign in as admin afterward, so this only opens the portal chooser.
+  if (isAllowedSchoolAdminGoogleUser(schoolData, context)) return true;
   return isDeveloper(context);
 }
 
@@ -509,16 +526,16 @@ exports.verifySchoolAccessPasscode = functions
     }
 
     const uid = context.auth!.uid;
+    const schoolData = schoolDoc.data()!;
 
     if (passcode.length === 0) {
-      if (isGoogleAuthenticated(context) && (await hasExistingSchoolPortalAccess(schoolId, uid, context))) {
+      if (isGoogleAuthenticated(context) && (await hasExistingSchoolPortalAccess(schoolId, uid, context, schoolData))) {
         await ensureAnonymousPortalSession(schoolId, uid);
         return { success: true };
       }
       throw new functions.https.HttpsError("invalid-argument", "A valid passcode is required.");
     }
 
-    const schoolData = schoolDoc.data()!;
     const legacyExpected = schoolAccessPasscodeFrom(schoolData);
     const verified = await verifyPasscodeCredential(
       schoolId,
