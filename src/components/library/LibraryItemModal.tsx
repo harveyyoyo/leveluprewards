@@ -275,7 +275,7 @@ export function LibraryItemModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [name, isEditing, isOpen]);
+  }, [name, isEditing, isOpen, settings.libraryReadingLevelSystem]);
 
   // Click outside listener for title suggestions
   useEffect(() => {

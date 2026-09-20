@@ -219,7 +219,7 @@ export function LibraryBookIntakeScanner({
         setFindingTitleId(null);
       }
     },
-    [upsertRow, playSound, toast, settings.libraryGenreDefinitions],
+    [upsertRow, playSound, toast, settings.libraryGenreDefinitions, settings.libraryReadingLevelSystem],
   );
 
   const addScanToQueue = useCallback(
@@ -483,7 +483,16 @@ export function LibraryBookIntakeScanner({
         setLookupPhase(null);
       }
     },
-    [toast, confirm, upsertRow, libraryItems, defaultGenre, settings.libraryDefaultShelf, settings.libraryGenreDefinitions],
+    [
+      toast,
+      confirm,
+      upsertRow,
+      libraryItems,
+      defaultGenre,
+      settings.libraryDefaultShelf,
+      settings.libraryGenreDefinitions,
+      settings.libraryReadingLevelSystem,
+    ],
   );
 
   const handleScan = useCallback(
