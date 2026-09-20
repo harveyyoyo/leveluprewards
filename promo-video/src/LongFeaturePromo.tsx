@@ -2,7 +2,6 @@ import React from "react";
 import {
   AbsoluteFill,
   Audio,
-  Easing,
   Sequence,
   Series,
   interpolate,
@@ -20,7 +19,6 @@ import {
   GoldSparkles,
   LevelUpLogoAnimated,
   LetterReveal,
-  XPBar,
 } from "./promo/cinematicComponents";
 import { CinematicTransition } from "./promo/cinematicTransition";
 import { defaultFeaturePromoPropsByVariant } from "./promo/featurePromoDefaults";
@@ -414,13 +412,6 @@ export const LongFeaturePromo: React.FC = () => {
       <Sequence from={montageEnd} durationInFrames={timing.total - montageEnd}>
         <CinematicFeatureOutro />
       </Sequence>
-
-      <XPBar
-        progress={interpolate(globalFrame, [0, timing.total], [0, 1], {
-          extrapolateRight: "clamp",
-          easing: Easing.out(Easing.quad),
-        })}
-      />
     </AbsoluteFill>
   );
 };

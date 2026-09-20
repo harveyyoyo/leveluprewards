@@ -381,9 +381,9 @@ const FeatureScene: React.FC<{
       <div style={{ position: "absolute", left: 70, right: 70, top: 470 }}>
         <PixelFrame clip={beat.clip} color={color} delay={8} />
       </div>
-      <PowerUp label="Combo" value="50" color={RETRO.green} start={42} x={66} y={1280} />
-      <PowerUp label="Badge" value="75" color={RETRO.pink} start={78} x={754} y={1378} />
-      <PowerUp label="Streak" value="100" color={RETRO.yellow} start={112} x={394} y={1520} />
+      <PowerUp label="Combo" value="50" color={RETRO.green} start={16} x={66} y={1260} />
+      <PowerUp label="Badge" value="75" color={RETRO.pink} start={32} x={730} y={1320} />
+      <PowerUp label="Streak" value="100" color={RETRO.yellow} start={48} x={390} y={1460} />
     </AbsoluteFill>
   );
 };

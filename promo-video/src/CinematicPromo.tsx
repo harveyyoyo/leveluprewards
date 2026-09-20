@@ -27,7 +27,6 @@ import {
   CinematicBg,
   GoldSparkles,
   LevelUpLogoAnimated,
-  XPBar,
 } from "./promo/cinematicComponents";
 import { outfit, jakarta } from "./promo/shared";
 
@@ -122,8 +121,8 @@ const CinematicVoiceBeat: React.FC<{
           flexDirection: isPortrait ? "column" : "row",
           alignItems: "center",
           justifyContent: "center",
-          padding: isPortrait ? "130px 54px 190px" : "0 72px",
-          gap: isPortrait ? 58 : 64,
+          padding: isPortrait ? "160px 48px 120px" : "0 72px",
+          gap: isPortrait ? 44 : 64,
         }}
       >
         <div
@@ -137,7 +136,7 @@ const CinematicVoiceBeat: React.FC<{
             transformOrigin: "center center",
           }}
         >
-          <BrowserMockup style={{ height: isPortrait ? 650 : 660 }}>
+          <BrowserMockup style={{ height: isPortrait ? 600 : 660 }}>
             <PromoClipVideo clip={beat.clip} />
           </BrowserMockup>
         </div>
@@ -188,11 +187,6 @@ const CinematicVoiceBeat: React.FC<{
         endFrame={Math.min(durationFrames - 8, 120)}
         color={beat.color}
       />
-      <XPBar
-        progress={interpolate(frame, [0, durationFrames], [xpStart, xpEnd], {
-          extrapolateRight: "clamp",
-        })}
-      />
     </AbsoluteFill>
   );
 };
@@ -225,31 +219,47 @@ const NoInputGraphic: React.FC<{
     <div
       style={{
         position: "relative",
-        height: 270,
-        borderRadius: 34,
-        padding: "28px 30px",
+        height: 250,
+        borderRadius: 28,
+        padding: "20px 24px",
         background: `linear-gradient(145deg, rgba(15,32,64,0.94), ${color}1f)`,
         border: `2px solid ${color}88`,
         boxShadow: `0 28px 80px rgba(0,0,0,0.42), 0 0 50px ${color}44`,
         opacity,
         transform: `translateY(${interpolate(enter, [0, 1], [70, 0])}px) scale(${interpolate(enter, [0, 1], [0.82, 1])})`,
         overflow: "hidden",
+        clipPath: "inset(0 round 28px)",
+        isolation: "isolate",
       }}
     >
       <div
         style={{
-          height: 138,
+          position: "relative",
+          height: 128,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
         {children}
+        <div
+          style={{
+            position: "absolute",
+            width: `${slash * 130}px`,
+            height: 7,
+            borderRadius: 999,
+            background: `linear-gradient(90deg, ${CINEMATIC.coral}, ${CINEMATIC.gold})`,
+            boxShadow: `0 0 16px ${CINEMATIC.coral}`,
+            transform: "rotate(-35deg)",
+            transformOrigin: "center center",
+            pointerEvents: "none",
+          }}
+        />
       </div>
       <div
         style={{
           fontFamily: outfit,
-          fontSize: 34,
+          fontSize: 30,
           fontWeight: 900,
           letterSpacing: 1,
           textTransform: "uppercase",
@@ -259,20 +269,6 @@ const NoInputGraphic: React.FC<{
       >
         No {label}
       </div>
-      <div
-        style={{
-          position: "absolute",
-          left: "12%",
-          top: "49%",
-          width: `${slash * 76}%`,
-          height: 10,
-          borderRadius: 999,
-          background: `linear-gradient(90deg, ${CINEMATIC.coral}, ${CINEMATIC.gold})`,
-          boxShadow: `0 0 34px ${CINEMATIC.coral}99`,
-          transform: "rotate(-20deg)",
-          transformOrigin: "left center",
-        }}
-      />
     </div>
   );
 };
@@ -280,14 +276,14 @@ const NoInputGraphic: React.FC<{
 const KeyboardGraphic: React.FC = () => (
   <div
     style={{
-      width: 210,
-      height: 94,
-      borderRadius: 18,
+      width: 170,
+      height: 84,
+      borderRadius: 14,
       border: `3px solid ${CINEMATIC.textMuted}`,
-      padding: 12,
+      padding: 10,
       display: "grid",
       gridTemplateColumns: "repeat(8, 1fr)",
-      gap: 6,
+      gap: 5,
       opacity: 0.9,
     }}
   >
@@ -295,7 +291,7 @@ const KeyboardGraphic: React.FC = () => (
       <div
         key={i}
         style={{
-          borderRadius: 5,
+          borderRadius: 4,
           background: i > 16 ? CINEMATIC.gold : CINEMATIC.textMuted,
           opacity: i > 16 ? 0.9 : 0.55,
         }}
@@ -307,10 +303,10 @@ const KeyboardGraphic: React.FC = () => (
 const MouseGraphic: React.FC = () => (
   <div
     style={{
-      width: 118,
-      height: 168,
-      borderRadius: 60,
-      border: `4px solid ${CINEMATIC.textMuted}`,
+      width: 80,
+      height: 114,
+      borderRadius: 40,
+      border: `3px solid ${CINEMATIC.textMuted}`,
       position: "relative",
       opacity: 0.92,
     }}
@@ -318,10 +314,10 @@ const MouseGraphic: React.FC = () => (
     <div
       style={{
         position: "absolute",
-        top: 18,
+        top: 14,
         left: "50%",
-        width: 8,
-        height: 36,
+        width: 6,
+        height: 24,
         borderRadius: 999,
         background: CINEMATIC.cyan,
         transform: "translateX(-50%)",
@@ -330,10 +326,10 @@ const MouseGraphic: React.FC = () => (
     <div
       style={{
         position: "absolute",
-        top: 70,
+        top: 48,
         left: 0,
         right: 0,
-        height: 4,
+        height: 3,
         background: CINEMATIC.textMuted,
         opacity: 0.5,
       }}
@@ -344,10 +340,10 @@ const MouseGraphic: React.FC = () => (
 const TouchscreenGraphic: React.FC = () => (
   <div
     style={{
-      width: 160,
-      height: 190,
-      borderRadius: 24,
-      border: `4px solid ${CINEMATIC.textMuted}`,
+      width: 90,
+      height: 118,
+      borderRadius: 16,
+      border: `3px solid ${CINEMATIC.textMuted}`,
       position: "relative",
       opacity: 0.92,
     }}
@@ -355,18 +351,18 @@ const TouchscreenGraphic: React.FC = () => (
     <div
       style={{
         position: "absolute",
-        inset: 18,
-        borderRadius: 16,
+        inset: 10,
+        borderRadius: 10,
         background: `linear-gradient(135deg, ${CINEMATIC.cyan}33, ${CINEMATIC.gold}2e)`,
       }}
     />
     <div
       style={{
         position: "absolute",
-        right: 10,
-        bottom: 8,
+        right: 8,
+        bottom: 6,
         fontFamily: outfit,
-        fontSize: 58,
+        fontSize: 30,
         fontWeight: 900,
         color: CINEMATIC.gold,
         transform: "rotate(-12deg)",
@@ -493,7 +489,7 @@ const ScanOnlyScene: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          top: isPortrait ? 118 : 78,
+          top: isPortrait ? 130 : 120,
           left: isPortrait ? 58 : 72,
           right: isPortrait ? 58 : 72,
           display: "grid",
@@ -517,7 +513,7 @@ const ScanOnlyScene: React.FC = () => {
           position: "absolute",
           left: 0,
           right: 0,
-          bottom: isPortrait ? 500 : 356,
+          bottom: isPortrait ? 490 : 360,
           textAlign: "center",
           opacity: scanText,
           transform: `translateY(${interpolate(scanText, [0, 1], [34, 0])}px)`,
@@ -538,13 +534,12 @@ const ScanOnlyScene: React.FC = () => {
         </div>
       </div>
       <AchievementBadge
-        emoji="ID"
+        emoji="⚡"
         title="Scan-first flow"
         xp={120}
         startFrame={132}
         color={CINEMATIC.green}
       />
-      <XPBar progress={progress} />
     </AbsoluteFill>
   );
 };
@@ -654,9 +649,9 @@ const OutroScene: React.FC = () => {
         <h2
           style={{
             fontFamily: outfit,
-            fontSize: isPortrait ? 92 : 110,
+            fontSize: isPortrait ? 92 : 104,
             fontWeight: 800,
-            lineHeight: isPortrait ? 0.96 : 0.9,
+            lineHeight: isPortrait ? 0.96 : 0.95,
             letterSpacing: isPortrait ? -2 : -4,
             margin: "0 0 12px",
             transform: `scale(${headlineE})`,
@@ -666,9 +661,7 @@ const OutroScene: React.FC = () => {
             filter: "drop-shadow(0 0 80px rgba(245,200,66,0.5))",
           }}
         >
-          {isPortrait ? "Try it out" : "Start free"}
-          <br />
-          free
+          {isPortrait ? "Try it out free" : "Start your free trial"}
         </h2>
         <p
           style={{
@@ -721,11 +714,6 @@ const OutroScene: React.FC = () => {
         xp={250}
         startFrame={80}
         color={CINEMATIC.gold}
-      />
-      <XPBar
-        progress={interpolate(frame, [0, outroDuration], [0.88, 1.0], {
-          extrapolateRight: "clamp",
-        })}
       />
     </AbsoluteFill>
   );
