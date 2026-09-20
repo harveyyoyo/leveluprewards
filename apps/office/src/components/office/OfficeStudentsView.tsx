@@ -70,6 +70,10 @@ export function OfficeStudentsView({
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [classes]);
 
+  const teacherOptions = useMemo(() => {
+    return teachers.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+  }, [teachers]);
+
   const gradedForTerm = useMemo(
     () => studentIdsWithGradesForTerm(gradeEntries, activeTerm),
     [gradeEntries, activeTerm],
@@ -223,6 +227,22 @@ export function OfficeStudentsView({
               {classOptions.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase text-muted-foreground">Homeroom</Label>
+          <Select value={homeroomFilter} onValueChange={setHomeroomFilter}>
+            <SelectTrigger className="w-44 h-11 rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All homerooms</SelectItem>
+              {teacherOptions.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.name}
                 </SelectItem>
               ))}
             </SelectContent>

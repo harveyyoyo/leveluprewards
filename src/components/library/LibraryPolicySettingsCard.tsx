@@ -1984,6 +1984,30 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               </div>
 
               <div className="space-y-1.5">
+                <Label htmlFor="lib-reading-level-system" className="text-xs font-bold flex items-center gap-1.5">
+                  <span>Reading level scale to look up</span>
+                </Label>
+                <Select
+                  value={readingLevelSystem}
+                  onValueChange={(v) => updateSettings({ libraryReadingLevelSystem: v as LibraryReadingLevelSystem })}
+                >
+                  <SelectTrigger id="lib-reading-level-system" className="rounded-xl text-xs font-semibold bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {(Object.keys(READING_LEVEL_SYSTEM_LABELS) as LibraryReadingLevelSystem[]).map((key) => (
+                      <SelectItem key={key} value={key} className="text-xs">
+                        {READING_LEVEL_SYSTEM_LABELS[key]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Books are automatically checked for this reading level as they come in.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
                 <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold flex items-center gap-1.5">
                   <span>Book number &amp; sticker style</span>
                 </Label>

@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from 'next/server';
 import { searchBooksByTitle } from '@/lib/library/libraryCatalogLookup';
+import { resolveReadingLevelSystemParam } from '@/lib/library/libraryReadingLevel';
 import { isAiIsbnLookupConfigured, lookupBookByTitleAi } from '@/lib/server/libraryAiIsbnLookup';
 
 export async function GET(request: Request) {
@@ -18,7 +19,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ hits: [], meta: { aiUsed: false } });
   }
 
-  const ai = await lookupBookByTitleAi(title);
+  const preferredSystem = resolveReadingLevelSystemParam(searchParams.get('readingLevelSystem'));
+  const ai = await lookupBookByTitleAi(title, preferredSystem);
   return NextResponse.json({
     hits: ai.hit ? [ai.hit] : [],
     meta: { aiUsed: true, aiStatus: ai.status, aiError: ai.error },

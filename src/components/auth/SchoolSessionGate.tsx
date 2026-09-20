@@ -119,12 +119,15 @@ function canUseRoute(pathname: string, routeSchoolId: string, loginState: string
 
   if (section === 'hall-of-fame') return canAccessHallOfFameRoute(loginState);
 
-  if (section === 'house-sorting' || section === 'houses-realm') {
+  // School passcode may open Houses (view / reach the page); staff tools still need a staff role.
+  // Matches admin/classroom: portal gate first, then staff sign-in on the page when required.
+  if (section === 'house-sorting' || section === 'houses' || section === 'houses-realm') {
     return (
       loginState === 'admin' ||
       loginState === 'teacher' ||
       loginState === 'houseCoordinator' ||
-      loginState === 'developer'
+      loginState === 'developer' ||
+      loginState === 'school'
     );
   }
 

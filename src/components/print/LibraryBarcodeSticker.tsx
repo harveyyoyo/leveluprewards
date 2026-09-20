@@ -30,8 +30,10 @@ export function LibraryBarcodeSticker({
   const shelf = item.shelfLocation?.trim() || classification.shelfLocation;
   const titleFit = title.length >= 36 ? 'text-[7pt]' : title.length >= 28 ? 'text-[8pt]' : 'text-[9pt]';
   const accent = show('genre') ? genre.color : '#64748b';
+  const readingLevel = show('readingLevel') && item.readingLevel ? item.readingLevel.trim() : '';
   const meta = [
     show('author') ? item.author : null,
+    readingLevel || null,
     show('shelf') && shelf ? `Shelf: ${shelf}` : null,
     show('copyNumber') && item.copyNumber ? `Copy ${item.copyNumber}` : null,
   ]
@@ -68,9 +70,10 @@ export function LibraryBarcodeSticker({
             ) : null}
             <div className="flex items-center justify-between text-[5.5pt] font-mono text-slate-600">
               <span className="truncate">
-                {show('shelf') ? shelf : null}
-                {!show('shelf') && show('author') ? item.author : null}
-                {!show('shelf') && !show('author') ? ' ' : null}
+                {show('shelf') && shelf ? shelf : null}
+                {!(show('shelf') && shelf) && readingLevel ? readingLevel : null}
+                {!(show('shelf') && shelf) && !readingLevel && show('author') ? item.author : null}
+                {!(show('shelf') && shelf) && !readingLevel && !show('author') ? ' ' : null}
               </span>
               {show('barcodeText') ? <span className="font-bold text-slate-900 ml-1">{barcode}</span> : null}
             </div>
@@ -113,6 +116,11 @@ export function LibraryBarcodeSticker({
           {show('shelf') ? (
             <div className="text-[6pt] font-bold text-slate-600 truncate max-w-full px-1">
               {shelf || 'Shelf ' + genre.callPrefix}
+            </div>
+          ) : null}
+          {readingLevel ? (
+            <div className="text-[6pt] font-semibold text-slate-500 truncate max-w-full px-1">
+              {readingLevel}
             </div>
           ) : null}
           {show('title') ? (
@@ -172,10 +180,11 @@ export function LibraryBarcodeSticker({
               {title}
             </div>
           ) : null}
-          {(show('author') || show('shelf') || show('copyNumber')) ? (
+          {(show('author') || show('shelf') || show('copyNumber') || readingLevel) ? (
             <div className="text-[7.5pt] text-slate-700 font-medium">
               {show('author') && item.author ? `By ${item.author}` : null}
               {show('author') && item.publishedYear ? ` (${item.publishedYear})` : null}
+              {readingLevel ? ` · ${readingLevel}` : null}
               {show('shelf') && shelf ? ` · Shelf: ${shelf}` : null}
               {show('copyNumber') && item.copyNumber ? ` · Copy #${item.copyNumber}` : null}
             </div>
@@ -221,11 +230,13 @@ export function LibraryBarcodeSticker({
 
         <div className="py-0.5 text-left">
           {show('title') ? <div className="font-bold text-[8pt] leading-tight truncate text-black">{title}</div> : null}
-          {(show('author') || show('shelf')) ? (
+          {(show('author') || show('shelf') || readingLevel) ? (
             <div className="text-[6pt] text-neutral-800 truncate font-mono">
               {show('author') && item.author ? `${item.author}` : ''}
-              {show('author') && item.author && show('shelf') ? ' · ' : ''}
+              {show('author') && item.author && (show('shelf') || readingLevel) ? ' · ' : ''}
               {show('shelf') ? shelf || 'General' : ''}
+              {show('shelf') && readingLevel ? ' · ' : ''}
+              {readingLevel}
             </div>
           ) : null}
         </div>
@@ -259,6 +270,7 @@ export function LibraryBarcodeSticker({
         <div className="py-1 space-y-0.5 text-left">
           {show('title') ? <div className="font-bold text-[9pt] text-slate-900 line-clamp-2 leading-tight">{title}</div> : null}
           {show('author') ? <div className="text-[7pt] text-slate-600 truncate">{item.author ? `Author: ${item.author}` : null}</div> : null}
+          {readingLevel ? <div className="text-[6.5pt] text-slate-500 font-mono">Level: {readingLevel}</div> : null}
           {(show('genre') || show('shelf') || show('copyNumber')) ? (
             <div className="flex items-center justify-between text-[6.5pt] text-slate-500 font-mono pt-0.5">
               <span>{show('genre') || show('shelf') ? `Call: ${show('genre') ? genre.callPrefix : ''} ${show('shelf') ? shelf : ''}`.trim() : ''}</span>

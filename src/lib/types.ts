@@ -64,7 +64,7 @@ export interface LibraryItem {
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
   | 'author_then_title'
-  | 'reading_level_then_author';
+  | 'reading_level_then_title';
 
 
 export type LibraryItemInput = Pick<

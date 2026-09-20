@@ -97,15 +97,19 @@ export function schoolPathAllowedByGate(
     return (
       scopes.has('admin') ||
       scopes.has('teacher') ||
-      scopes.has('houseCoordinator')
+      scopes.has('houseCoordinator') ||
+      scopes.has('portal')
     );
   }
 
-  if (section === 'houses-realm') {
+  // Portal (school passcode) may reach Houses; staff actions still require staff scopes on the client.
+  // Keep `houses-realm` so legacy URLs still pass the gate before redirecting to `/houses`.
+  if (section === 'houses' || section === 'houses-realm') {
     return (
       scopes.has('admin') ||
       scopes.has('teacher') ||
-      scopes.has('houseCoordinator')
+      scopes.has('houseCoordinator') ||
+      scopes.has('portal')
     );
   }
 

@@ -5,6 +5,7 @@ import {
   lookupBookByIsbn,
   normalizeIsbnDigits,
 } from '@/lib/library/libraryCatalogLookup';
+import { resolveReadingLevelSystemParam } from '@/lib/library/libraryReadingLevel';
 import { isAiIsbnLookupConfigured, lookupBookByIsbnAi } from '@/lib/server/libraryAiIsbnLookup';
 
 export async function GET(request: Request) {
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
   }
 
   const phase = searchParams.get('phase') === 'ai' ? 'ai' : 'catalog';
+  const preferredSystem = resolveReadingLevelSystemParam(searchParams.get('readingLevelSystem'));
   const aiConfigured = isAiIsbnLookupConfigured();
 
   // Catalog-only first so the page can say when the slower AI step starts.
@@ -38,7 +40,7 @@ export async function GET(request: Request) {
     });
   }
 
-  const aiOutcome = await lookupBookByIsbnAi(getIsbnLookupVariants(isbn));
+  const aiOutcome = await lookupBookByIsbnAi(getIsbnLookupVariants(isbn), preferredSystem);
   return NextResponse.json({
     hit: aiOutcome.hit,
     meta: {

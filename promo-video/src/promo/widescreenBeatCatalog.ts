@@ -54,7 +54,7 @@ export const WIDESCREEN_BEATS = {
     clip: CAPTURE_CLIPS.idCard,
     label: "Student ID cards",
     tagline: "Print-ready digital IDs for every student.",
-    emoji: "🪪",
+    emoji: "💳",
     color: "#4cc9f0",
   },
   dashboard: {

@@ -75,6 +75,11 @@ export function OfficeHandoffBootstrap() {
         window.location.replace(clean.pathname + (clean.search || ''));
       } catch (e) {
         console.error('[OfficeHandoffBootstrap]', e);
+        // signInWithCustomToken above may have already succeeded even though a later
+        // step (cookie sync, localStorage) failed - leaving the client signed in via
+        // Firebase Auth with no matching session cookie or local state. Sign out so a
+        // retry from the portal starts clean instead of trusting a half-completed handoff.
+        await auth.signOut().catch(() => undefined);
         toast({
           variant: 'destructive',
           title: 'Could not complete office sign-in',

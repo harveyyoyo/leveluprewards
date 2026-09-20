@@ -4,6 +4,7 @@ export function isPresentationRoute(pathname: string | null | undefined): boolea
   return (
     pathname.includes('/library/kiosk') ||
     pathname.includes('/houses-realm') ||
+    /\/houses(?:\/|$|\?)/.test(pathname) ||
     pathname.includes('/classroom-realm') ||
     /\/classroom(?:\/|$|\?)/.test(pathname) ||
     pathname.includes('/house-sorting') ||

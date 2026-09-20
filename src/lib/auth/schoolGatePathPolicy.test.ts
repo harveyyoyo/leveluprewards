@@ -35,6 +35,18 @@ describe('schoolPathAllowedByGate', () => {
     expect(schoolPathAllowedByGate(`/${sid}/hall-of-fame`, sid, new Set(['houseCoordinator']))).toBe(true);
   });
 
+  it('houses (and legacy houses-realm) and house-sorting allow portal (school passcode) plus staff', () => {
+    expect(schoolPathAllowedByGate(`/${sid}/houses`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/houses`, sid, new Set(['admin']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/houses`, sid, new Set(['teacher']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/houses`, sid, new Set(['houseCoordinator']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/houses`, sid, new Set(['kiosk']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/houses-realm`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/houses-realm`, sid, new Set(['kiosk']))).toBe(false);
+    expect(schoolPathAllowedByGate(`/${sid}/house-sorting`, sid, new Set(['portal']))).toBe(true);
+    expect(schoolPathAllowedByGate(`/${sid}/house-sorting`, sid, new Set(['kiosk']))).toBe(false);
+  });
+
   it('classroom allows the same people who can open the admin Classroom tab', () => {
     expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['portal']))).toBe(true);
     expect(schoolPathAllowedByGate(`/${sid}/classroom`, sid, new Set(['admin']))).toBe(true);

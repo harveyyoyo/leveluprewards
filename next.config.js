@@ -46,6 +46,26 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/:schoolId/kiosk',
+        destination: '/:schoolId/student',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/student-kiosk',
+        destination: '/:schoolId/student',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/checkin',
+        destination: '/:schoolId/student',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/check-in',
+        destination: '/:schoolId/student',
+        permanent: true,
+      },
+      {
         source: '/:schoolId/classroom-realm',
         destination: '/:schoolId/classroom',
         permanent: true,
@@ -63,6 +83,16 @@ const nextConfig = {
       {
         source: '/:schoolId/classroom-realm/:path*',
         destination: '/:schoolId/classroom',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/houses-realm',
+        destination: '/:schoolId/houses',
+        permanent: true,
+      },
+      {
+        source: '/:schoolId/houses-realm/:path*',
+        destination: '/:schoolId/houses/:path*',
         permanent: true,
       },
       {

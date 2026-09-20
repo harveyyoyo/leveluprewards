@@ -189,11 +189,10 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           roles: ['office'],
         };
         await updateStaffAccount(firestore, schoolId, updated, authFetch, cleanPasscode || undefined);
-        const merged = (staffRaw ?? []).map((row) => (row.id === updated.id ? updated : row));
-        void syncSchoolStaffDirectory(firestore, schoolId, [], merged).catch(() => undefined);
+        void syncSchoolStaffDirectory(firestore, schoolId, []).catch(() => undefined);
         toast({ title: 'Office staff updated' });
       } else {
-        const created = await addStaffAccount(
+        await addStaffAccount(
           firestore,
           schoolId,
           {
@@ -205,9 +204,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           },
           authFetch,
         );
-        void syncSchoolStaffDirectory(firestore, schoolId, [], [...(staffRaw ?? []), created]).catch(
-          () => undefined,
-        );
+        void syncSchoolStaffDirectory(firestore, schoolId, []).catch(() => undefined);
         toast({ title: 'Office staff account created' });
       }
       setDialogOpen(false);
@@ -223,8 +220,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     if (!confirm(`Remove ${account.displayName}? They will no longer be able to sign in to School Office.`)) return;
     try {
       await deleteStaffAccount(firestore, schoolId, account.id);
-      const merged = (staffRaw ?? []).filter((a) => a.id !== account.id);
-      void syncSchoolStaffDirectory(firestore, schoolId, [], merged).catch(() => undefined);
+      void syncSchoolStaffDirectory(firestore, schoolId, []).catch(() => undefined);
       toast({ title: 'Account removed' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });

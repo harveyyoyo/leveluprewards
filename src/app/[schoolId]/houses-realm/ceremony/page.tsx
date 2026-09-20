@@ -1,7 +1,10 @@
-'use client';
+import { redirect } from 'next/navigation';
 
-import { HouseSortingCeremony } from '@/components/houses/HouseSortingCeremony';
-
-export default function HousesRealmCeremonyPage() {
-  return <HouseSortingCeremony />;
+/** Old Houses Realm ceremony URL — redirects to /houses/ceremony. */
+export default function HousesRealmCeremonyRedirect({
+  params,
+}: {
+  params: { schoolId: string };
+}) {
+  redirect(`/${params.schoolId}/houses/ceremony`);
 }

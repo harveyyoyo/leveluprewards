@@ -6,21 +6,21 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
-    "@remotion/cli": "4.0.474",
-    "@remotion/google-fonts": "4.0.474",
-    "@remotion/media": "4.0.474",
-    "@remotion/player": "4.0.474",
-    "@remotion/tailwind-v4": "4.0.474",
-    "@remotion/transitions": "4.0.474",
-    "@remotion/zod-types": "4.0.474",
+    "@remotion/cli": "4.0.526",
+    "@remotion/google-fonts": "4.0.526",
+    "@remotion/media": "4.0.526",
+    "@remotion/player": "4.0.526",
+    "@remotion/tailwind-v4": "4.0.526",
+    "@remotion/transitions": "4.0.526",
+    "@remotion/zod-types": "4.0.526",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "remotion": "4.0.474",
+    "remotion": "4.0.526",
     "tailwindcss": "4.0.0",
-    "zod": "4.3.6"
+    "zod": "4.5.4"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.474",
+    "@remotion/eslint-config-flat": "4.0.526",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
     "@vitejs/plugin-react": "^4.3.4",
@@ -53,7 +53,9 @@
     "render:feature:arcade": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoArcade ../assets/levelup-promo-feature-arcade.mp4 --concurrency=1\"",
     "render:feature:themes": "npm run render:feature:aurora && npm run render:feature:chalkboard && npm run render:feature:arcade",
     "render:feature:all": "npm run render:feature:epic && npm run render:feature:warm && npm run render:feature:pro && npm run render:feature:hype && npm run render:feature:story && npm run render:feature:themes",
-    "render:new": "npm run render:teaser && npm run render:square && npm run render:extended"
+    "render:new": "npm run render:teaser && npm run render:square && npm run render:extended",
+    "render:pillars": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts PillarsShortPromo ../assets/levelup-promo-pillars.mp4 --concurrency=1\"",
+    "render:pillars:vertical": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts PillarsShortPromoVertical ../assets/levelup-promo-pillars-vertical.mp4 --concurrency=1\""
   },
   "sideEffects": [
     "*.css"

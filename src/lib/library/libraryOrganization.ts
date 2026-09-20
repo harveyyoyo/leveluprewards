@@ -5,11 +5,12 @@ import {
   resolveBookClassification,
   type LibraryGenreConfig,
 } from './libraryClassification';
+import { READING_LEVEL_BANDS, compareReadingLevel, resolveReadingLevelBand } from './libraryReadingLevel';
 
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
   | 'author_then_title'
-  | 'reading_level_then_author';
+  | 'reading_level_then_title';
 
 export interface SchemeMeta {
   id: LibraryOrganizationScheme;
@@ -36,20 +37,21 @@ export const LIBRARY_ORGANIZATION_SCHEMES: Record<LibraryOrganizationScheme, Sch
       'Books are lined up by the author’s last name, then by title A–Z for that author.',
     example: '[C] Canin, Ethan → A Doubter’s Almanac',
   },
-  reading_level_then_author: {
-    id: 'reading_level_then_author',
-    label: 'Reading Level, then by Author (A–Z)',
-    shortLabel: 'Reading Level → Author',
+  reading_level_then_title: {
+    id: 'reading_level_then_title',
+    label: 'Reading Level (easiest first), then by Title',
+    shortLabel: 'Reading Level → Title',
     description:
-      'Books are lined up by reading level (e.g. Guided Reading A–Z, Lexile, or Grade), then by author.',
-    example: 'Level M → [D] Dahl, Roald',
+      'Books are lined up from easiest reading level to hardest, then by title A–Z within each level.',
+    example: 'Grades 3–4 → [AR 4.2] The One and Only Ivan',
   },
 };
 
-/** Map saved choices onto the lineup options. */
+/** Map old saved choices onto the lineup options. */
 export function resolveLibraryOrganizationScheme(value: unknown): LibraryOrganizationScheme {
-  if (value === 'reading_level_then_author' || value === 'reading_level') return 'reading_level_then_author';
+  if (value === 'reading_level_then_author' || value === 'reading_level') return 'reading_level_then_title';
   if (value === 'author_then_title' || value === 'author_then_genre') return 'author_then_title';
+  if (value === 'reading_level_then_title') return 'reading_level_then_title';
   return 'genre_then_author';
 }
 
@@ -86,7 +88,6 @@ export function formatAuthorForFiling(author?: string | null): { filingName: str
 export function resolveBookPhysicalLocation(
   item: Partial<LibraryItem>,
   customGenres?: LibraryGenreConfig[] | null,
-  scheme?: LibraryOrganizationScheme | string | null,
 ): {
   shelfLocation: string;
   genre: LibraryGenreConfig;
@@ -98,17 +99,7 @@ export function resolveBookPhysicalLocation(
   const shelf = (item.shelfLocation ?? '').trim() || classification.shelfLocation || 'Main Stacks';
   const { filingName, letter } = formatAuthorForFiling(item.author);
 
-  const resolvedScheme = resolveLibraryOrganizationScheme(scheme);
-  let directionalGuide = `${shelf} · [${classification.genre.callPrefix}] · File under ${letter} (${filingName})`;
-
-  if (resolvedScheme === 'reading_level_then_author') {
-    const levelStr = (item.readingLevel ?? '').trim();
-    const tag = levelStr ? `Level ${levelStr}` : classification.genre.callPrefix;
-    directionalGuide = `${shelf} · [${tag}] · File under ${letter} (${filingName})`;
-  } else if (resolvedScheme === 'author_then_title') {
-    const titleStr = (item.name ?? '').trim() || 'Untitled';
-    directionalGuide = `${shelf} · File under ${letter} (${filingName}) → ${titleStr}`;
-  }
+  const directionalGuide = `${shelf} · [${classification.genre.callPrefix}] · File under ${letter} (${filingName})`;
 
   return {
     shelfLocation: shelf,
@@ -201,61 +192,63 @@ export function groupBooksByOrganizationScheme(
     return groups.sort((a, b) => a.label.localeCompare(b.label));
   }
 
-  if (resolved === 'reading_level_then_author') {
-    // Top Level: Reading Level -> Sub Level: Author
-    const levelMap = new Map<string, { label: string; badge: string; authorMap: Map<string, LibraryItem[]> }>();
+  if (resolved === 'reading_level_then_title') {
+    // Top Level: reading-level band (easiest to hardest) -> Sub Level: the exact level text
+    const bandMap = new Map<string, { color: string; label: string; levelMap: Map<string, LibraryItem[]> }>();
 
     for (const item of items) {
-      const rawLevel = (item.readingLevel ?? '').trim();
-      const levelKey = rawLevel ? rawLevel.toUpperCase() : 'UNLEVELED';
-      const levelLabel = rawLevel ? `Reading Level ${rawLevel}` : 'General / Unleveled';
-      const badge = rawLevel || '—';
-
-      let entry = levelMap.get(levelKey);
+      const { band } = resolveReadingLevelBand(item.readingLevel);
+      let entry = bandMap.get(band.id);
       if (!entry) {
-        entry = { label: levelLabel, badge, authorMap: new Map() };
-        levelMap.set(levelKey, entry);
+        entry = { color: band.color, label: band.label, levelMap: new Map() };
+        bandMap.set(band.id, entry);
       }
-      const { filingName } = formatAuthorForFiling(item.author);
-      const existing = entry.authorMap.get(filingName) ?? [];
+      const levelKey = (item.readingLevel ?? '').trim() || 'No level recorded yet';
+      const existing = entry.levelMap.get(levelKey) ?? [];
       existing.push(item);
-      entry.authorMap.set(filingName, existing);
+      entry.levelMap.set(levelKey, existing);
     }
 
     const groups: BookPrimaryGroup[] = [];
-    for (const [levelKey, { label, badge, authorMap }] of levelMap.entries()) {
+    for (const [bandId, { color, label, levelMap }] of bandMap.entries()) {
       const subGroups: BookSubGroup[] = [];
       let total = 0;
 
-      const sortedAuthors = Array.from(authorMap.keys()).sort((a, b) => a.localeCompare(b));
-      for (const author of sortedAuthors) {
-        const books = authorMap.get(author) ?? [];
+      const sortedLevels = Array.from(levelMap.keys()).sort((a, b) => {
+        const cmp = compareReadingLevel(
+          a === 'No level recorded yet' ? null : a,
+          b === 'No level recorded yet' ? null : b,
+        );
+        return cmp !== 0 ? cmp : a.localeCompare(b);
+      });
+
+      for (const levelKey of sortedLevels) {
+        const books = levelMap.get(levelKey) ?? [];
         total += books.length;
         books.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         subGroups.push({
-          subKey: `${levelKey}::${author}`,
-          subLabel: author,
+          subKey: `${bandId}::${levelKey}`,
+          subLabel: levelKey,
           badgeText: `${books.length} ${books.length === 1 ? 'book' : 'books'}`,
           books,
         });
       }
 
       groups.push({
-        key: levelKey,
+        key: bandId,
         label,
-        secondaryLabel: `${subGroups.length} ${subGroups.length === 1 ? 'author' : 'authors'}`,
-        badgeText: badge,
-        color: levelKey === 'UNLEVELED' ? '#64748B' : '#0284c7',
+        secondaryLabel: subGroups.length === 1 ? undefined : `${subGroups.length} reading levels`,
+        color,
         totalCopies: total,
         subGroups,
       });
     }
 
-    return groups.sort((a, b) => {
-      if (a.key === 'UNLEVELED') return 1;
-      if (b.key === 'UNLEVELED') return -1;
-      return a.key.localeCompare(b.key, undefined, { numeric: true, sensitivity: 'base' });
-    });
+    const bandOrder = (id: string) => {
+      const index = READING_LEVEL_BANDS.findIndex((band) => band.id === id);
+      return index === -1 ? READING_LEVEL_BANDS.length : index;
+    };
+    return groups.sort((a, b) => bandOrder(a.key) - bandOrder(b.key));
   }
 
   const authorMap = new Map<string, Map<string, LibraryItem[]>>();

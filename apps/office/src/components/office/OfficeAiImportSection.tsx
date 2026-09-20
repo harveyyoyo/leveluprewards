@@ -28,7 +28,7 @@ import {
   totalOfficeSnapshotItems,
   type ParsedOfficeSnapshot,
 } from '@/lib/office/officeAiImport';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { AMBIGUOUS_STUDENT_MATCH, buildStudentIdByNameMap, getOfficeStudentFullName } from '@/lib/office/officeUtils';
 import type {
   OfficeBillingAccount,
   OfficeClass,
@@ -109,8 +109,8 @@ export function OfficeAiImportSection({
     });
 
     // 3. Students Diff
-    const existingStudentNames = new Set(students.map((s) => getOfficeStudentFullName(s).toLowerCase()));
-    const studentByName = new Map(students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s]));
+    const studentIdByFullName = buildStudentIdByNameMap(students);
+    const studentById = new Map(students.map((s) => [s.id, s]));
 
     const studentDiffs = (aiSnapshot.students ?? []).map((row) => {
       const name = getOfficeStudentFullName({
@@ -119,13 +119,18 @@ export function OfficeAiImportSection({
         nickname: row.nickname ?? null,
       });
       const key = name.toLowerCase();
-      const exists = existingStudentNames.has(key);
-      const existingObj = exists ? studentByName.get(key) : null;
+      const match = studentIdByFullName.get(key);
+      const isAmbiguous = match === AMBIGUOUS_STUDENT_MATCH;
+      const exists = match !== undefined && !isAmbiguous;
+      const existingObj = exists ? studentById.get(match) : null;
 
       let message = '';
       let status: 'new' | 'merge' | 'skip' = 'new';
 
-      if (exists && existingObj) {
+      if (isAmbiguous) {
+        status = 'skip';
+        message = `Skip: multiple existing students are named "${name}" - can't tell which one to update.`;
+      } else if (exists && existingObj) {
         status = upsertStudents ? 'merge' : 'skip';
         const updates: string[] = [];
         if (!existingObj.nickname?.trim() && row.nickname) updates.push(`nickname "${row.nickname}"`);
@@ -154,9 +159,7 @@ export function OfficeAiImportSection({
     const existingGradeKeys = new Set(
       gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${(e.subject ?? '').toLowerCase()}`)
     );
-    const studentIdByName = new Map(
-      students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id])
-    );
+    const gradeStudentIdByName = new Map(studentIdByFullName);
     // Include newly parsed students
     (aiSnapshot.students ?? []).forEach((row, idx) => {
       const fullName = getOfficeStudentFullName({
@@ -164,23 +167,26 @@ export function OfficeAiImportSection({
         lastName: row.lastName,
         nickname: row.nickname ?? null,
       }).toLowerCase();
-      if (!studentIdByName.has(fullName)) {
-        studentIdByName.set(fullName, `new-student-${idx}`);
+      if (!gradeStudentIdByName.has(fullName)) {
+        gradeStudentIdByName.set(fullName, `new-student-${idx}`);
       }
     });
 
     const gradeDiffs = (aiSnapshot.grades ?? []).map((row) => {
-      const studentId = studentIdByName.get(row.studentName.toLowerCase());
+      const studentMatch = gradeStudentIdByName.get(row.studentName.toLowerCase());
       const gradeStr = row.letterGrade || (row.numericGrade != null ? `${row.numericGrade}%` : 'N/A');
-      
+
       let status: 'new' | 'skip' = 'new';
       let message = '';
 
-      if (!studentId) {
+      if (!studentMatch) {
         status = 'skip';
         message = `Skip: Student "${row.studentName}" not found in current list or import roster.`;
+      } else if (studentMatch === AMBIGUOUS_STUDENT_MATCH) {
+        status = 'skip';
+        message = `Skip: multiple existing students are named "${row.studentName}" - can't tell which one this grade belongs to.`;
       } else {
-        const dedupeKey = `${studentId}|${row.termLabel}|${row.subject.toLowerCase()}`;
+        const dedupeKey = `${studentMatch}|${row.termLabel}|${row.subject.toLowerCase()}`;
         if (existingGradeKeys.has(dedupeKey)) {
           status = 'skip';
           message = `Skip: ${row.subject} grade for ${row.studentName} in ${row.termLabel} already exists.`;

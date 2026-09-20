@@ -58,10 +58,13 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
   const studentRollup = isHouseStudentPointsRollupEnabled(settings);
   const housesEnabled = settings.enableHouses;
 
+  const sortBySafe =
+    !studentRollup && String(sortBy).startsWith('period_') ? 'lifetimePoints' : sortBy;
+
   const previewPath = useMemo(
     () =>
       buildHouseHallOfFameHref(schoolId, {
-        houseHallOfFameSortBy: sortBy,
+        houseHallOfFameSortBy: sortBySafe,
         houseHallOfFameLimit: limitCount,
         houseHallOfFamePodiumSize: podiumSize,
         houseHallOfFameAutoScroll: autoScroll,
@@ -69,7 +72,7 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
         houseHallOfFameGridColumns: gridColumns,
         houseHallOfFameLayout: layout,
       }),
-    [schoolId, sortBy, limitCount, podiumSize, autoScroll, gridLayout, gridColumns, layout],
+    [schoolId, sortBySafe, limitCount, podiumSize, autoScroll, gridLayout, gridColumns, layout],
   );
 
   const launchUrl = useMemo(() => resolveAppAbsoluteUrl(previewPath), [previewPath]);
@@ -140,14 +143,14 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
             <div className="space-y-2 md:col-span-1">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Sort by</Label>
               <Select
-                value={sortBy}
+                value={sortBySafe}
                 onValueChange={(v) => {
                   setSortBy(v);
                   updateSettings({ houseHallOfFameSortBy: v });
                 }}
               >
                 <SelectTrigger className="rounded-xl border bg-background font-medium h-10 shadow-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose sort" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="lifetimePoints">Lifetime house points</SelectItem>
@@ -208,13 +211,13 @@ export function AdminHouseHallOfFamePanel({ schoolId }: { schoolId: string }) {
                 }}
               >
                 <SelectTrigger className="rounded-xl border bg-background font-medium h-10 shadow-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose layout" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="landscape">
+                  <SelectItem value="landscape" textValue="Landscape">
                     <span className="inline-flex items-center gap-2"><Monitor className="w-3.5 h-3.5" /> Landscape</span>
                   </SelectItem>
-                  <SelectItem value="portrait">
+                  <SelectItem value="portrait" textValue="Portrait">
                     <span className="inline-flex items-center gap-2"><Smartphone className="w-3.5 h-3.5" /> Portrait</span>
                   </SelectItem>
                 </SelectContent>

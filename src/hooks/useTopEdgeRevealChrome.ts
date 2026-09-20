@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { GLOBAL_HEADER_HEIGHT_CSS_VAR } from '@/components/layout/HoverRevealHeaderShell';
 
 /** Pointer within this band from the viewport top reveals tucked chrome. */
-export const TOP_EDGE_REVEAL_PX = 12;
+export const TOP_EDGE_REVEAL_PX = 14;
+export const TOP_EDGE_REVEAL_TOUCH_PX = 24;
 
 /** After a touch reveals kiosk chrome, keep it available briefly so header controls stay reachable. */
 const TOUCH_REVEAL_LINGER_MS = 4000;
@@ -35,26 +36,26 @@ function updatePointerYVisibility(
 }
 
 export type UseTopEdgeRevealChromeOptions = {
-  /** Any pointer movement reveals chrome (student kiosk sign-in). Default: top-edge only. */
-  revealOnAnyPointerMove?: boolean;
+  /** Value that when changed will immediately close the header (e.g. kioskSignedIn). */
+  resetKey?: unknown;
 };
 
 /**
  * Keeps chrome hidden until the pointer enters the top edge (or moves over the revealed header).
- * Touch screens reveal chrome at the top edge (anywhere on sign-in); controls linger briefly.
+ * Touch screens reveal chrome when tapping the top edge; controls linger briefly.
  * Used on student kiosk where inner panels scroll instead of the document.
  */
 export function useTopEdgeRevealChrome(
   active: boolean,
-  { revealOnAnyPointerMove = false }: UseTopEdgeRevealChromeOptions = {},
+  options: UseTopEdgeRevealChromeOptions = {},
 ) {
+  const { resetKey } = options;
   const [visible, setVisible] = useState(false);
   const visibleRef = useRef(false);
   const touchLingerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // A successful kiosk sign-in changes the reveal policy. Close chrome left
-    // open by the login click before it can obscure the student's balance.
+    // When inactive or resetKey changes (e.g. kiosk sign-in), close chrome.
     visibleRef.current = false;
     setVisible(false);
     if (!active) return;
@@ -81,10 +82,6 @@ export function useTopEdgeRevealChrome(
     };
 
     const onMouseMove = (event: MouseEvent) => {
-      if (revealOnAnyPointerMove && !visibleRef.current) {
-        setVisibleIfChanged(true);
-        return;
-      }
       updatePointerYVisibility(event.clientY, visibleRef, setVisibleIfChanged);
     };
 
@@ -92,7 +89,7 @@ export function useTopEdgeRevealChrome(
 
     const onTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0];
-      if (!touch || (!revealOnAnyPointerMove && touch.clientY > TOP_EDGE_REVEAL_PX)) return;
+      if (!touch || touch.clientY > TOP_EDGE_REVEAL_TOUCH_PX) return;
       setVisibleIfChanged(true);
       scheduleTouchLingerHide();
     };
@@ -100,7 +97,7 @@ export function useTopEdgeRevealChrome(
     const onTouchMove = (event: TouchEvent) => {
       const touch = event.touches[0];
       if (!touch) return;
-      if (touch.clientY <= TOP_EDGE_REVEAL_PX) {
+      if (touch.clientY <= TOP_EDGE_REVEAL_TOUCH_PX) {
         setVisibleIfChanged(true);
         scheduleTouchLingerHide();
         return;
@@ -126,7 +123,7 @@ export function useTopEdgeRevealChrome(
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchmove', onTouchMove);
     };
-  }, [active, revealOnAnyPointerMove]);
+  }, [active, resetKey]);
 
   return visible;
 }

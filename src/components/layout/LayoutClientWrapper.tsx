@@ -182,7 +182,9 @@ function LayoutClientWrapperInner({
       (pathname.includes('/smart-screen') || pathname.includes('/displays'));
     const isHouseSortingPage =
       typeof pathname === 'string' &&
-      (pathname.includes('/house-sorting') || pathname.includes('/houses-realm'));
+      (pathname.includes('/house-sorting') ||
+        pathname.includes('/houses-realm') ||
+        /\/houses(?:\/|$|\?)/.test(pathname));
     const isClassroomRealmPage =
       typeof pathname === 'string' &&
       (pathname.includes('/classroom-realm') || pathname.includes('/classroom'));
@@ -203,10 +205,10 @@ function LayoutClientWrapperInner({
           pathname?.includes('/displays')));
 
     const { kioskSignedIn } = useStudentLayoutChrome();
-    /** Student kiosk: hidden until pointer reveal. Sign-in screen reveals on any mouse move. */
+    /** Student kiosk: hidden until top-edge pointer reveal. */
     const useStudentKioskTopEdgeHeader = isStudentKioskPage && canShowGlobalHeader;
     const studentKioskTopEdgeHeaderVisible = useTopEdgeRevealChrome(useStudentKioskTopEdgeHeader, {
-      revealOnAnyPointerMove: useStudentKioskTopEdgeHeader && !kioskSignedIn,
+      resetKey: kioskSignedIn,
     });
     /** Staff and inner portal routes: tuck/reveal when the display setting is on. Main portal hub keeps a fixed header. */
     const usePortalScrollRevealHeader =

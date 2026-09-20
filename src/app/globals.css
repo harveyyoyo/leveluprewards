@@ -642,7 +642,7 @@ html[data-office-portal] .office-content-pane {
      the literal values below are the Cosmic-theme fallbacks. */
   html[data-houses-realm] body {
     background-color: var(--hr-base, #12081f) !important;
-    color: #f8f4ff !important;
+    color: var(--hr-fg, #f8f4ff) !important;
   }
 
   html[data-houses-realm] :where(
@@ -656,7 +656,7 @@ html[data-office-portal] .office-content-pane {
   }
 
   .houses-realm-root {
-    color: #f8f4ff;
+    color: var(--hr-fg, #f8f4ff);
     background: var(--hr-base, #12081f);
   }
 
@@ -676,27 +676,128 @@ html[data-office-portal] .office-content-pane {
     background-size: 200px 200px;
   }
 
+  html[data-houses-realm][data-hr-tone='light'] .houses-realm-stars {
+    opacity: 0.35;
+  }
+
   .houses-realm-display {
     font-family: Fraunces, ui-serif, Georgia, serif;
     letter-spacing: -0.02em;
   }
 
-  /* Manage panel cards inside dark houses realm */
-  html[data-houses-realm] .houses-realm-manage :where(.bg-card, .bg-background) {
-    background-color: rgba(255, 255, 255, 0.06) !important;
-    color: #f8f4ff;
+  /* Semantic chrome helpers — follow active theme tone */
+  .hr-fg { color: var(--hr-fg, #f8f4ff); }
+  .hr-muted { color: var(--hr-muted, rgba(248, 244, 255, 0.62)); }
+  .hr-muted:hover,
+  .hr-nav-idle:hover {
+    color: var(--hr-fg, #f8f4ff);
+  }
+  .hr-panel {
+    background-color: var(--hr-panel, rgba(15, 23, 42, 0.58));
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.14));
+    color: var(--hr-fg, #f8f4ff);
+  }
+  .hr-chrome {
+    background-color: var(--hr-chrome, rgba(0, 0, 0, 0.40));
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.14));
+    color: var(--hr-fg, #f8f4ff);
+  }
+  .hr-border { border-color: var(--hr-border, rgba(255, 255, 255, 0.14)); }
+  .hr-soft {
+    background-color: color-mix(in srgb, var(--hr-fg, #f8f4ff) 6%, transparent);
+  }
+  .hr-soft:hover,
+  .hr-nav-idle:hover {
+    background-color: color-mix(in srgb, var(--hr-fg, #f8f4ff) 10%, transparent);
+  }
+  .hr-soft-strong {
+    background-color: color-mix(in srgb, var(--hr-fg, #f8f4ff) 12%, transparent);
+  }
+
+  /* Manage panel cards inside houses realm.
+     Attribute-substring match catches opacity-suffixed Tailwind variants
+     (bg-card/60, bg-background, bg-muted/15, …) the same way classroom does. */
+  html[data-houses-realm] .houses-realm-manage :where(
+      [class*='bg-card'],
+      [class*='bg-background'],
+      [class*='bg-muted']
+    ) {
+    background-color: var(--hr-panel, rgba(15, 23, 42, 0.72)) !important;
+    color: var(--hr-fg, #f8f4ff);
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.18));
   }
 
   html[data-houses-realm] .houses-realm-manage :where(.text-foreground) {
-    color: #f8f4ff !important;
+    color: var(--hr-fg, #f8f4ff) !important;
   }
 
   html[data-houses-realm] .houses-realm-manage :where(.text-muted-foreground) {
-    color: rgba(248, 244, 255, 0.55) !important;
+    color: var(--hr-muted, rgba(248, 244, 255, 0.78)) !important;
   }
 
-  html[data-houses-realm] .houses-realm-manage :where(.border-border) {
-    border-color: rgba(255, 255, 255, 0.12) !important;
+  html[data-houses-realm] .houses-realm-manage :where(.border-border, .border-input) {
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.18)) !important;
+  }
+
+  /* Form controls: dedicated high-contrast “paper” fields so Sort by /
+     Screen layout never render as white-on-white or dark-on-dark. */
+  html[data-houses-realm] .houses-realm-manage :where(
+      input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+      textarea,
+      select,
+      button[role='combobox'],
+      [role='combobox']
+    ) {
+    background-color: var(--hr-field, rgba(255, 252, 248, 0.96)) !important;
+    color: var(--hr-field-fg, #1a1228) !important;
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.18)) !important;
+    box-shadow: none;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(
+      input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+      textarea,
+      select,
+      button[role='combobox'],
+      [role='combobox']
+    ) :where(span, svg) {
+    color: inherit !important;
+  }
+
+  html[data-houses-realm] .houses-realm-manage button[role='combobox'] svg {
+    opacity: 0.7;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(input::placeholder, textarea::placeholder) {
+    color: color-mix(in srgb, var(--hr-field-fg, #1a1228) 55%, transparent) !important;
+    opacity: 1;
+  }
+
+  html[data-houses-realm] .houses-realm-manage :where(label) {
+    color: var(--hr-muted, rgba(248, 244, 255, 0.78));
+  }
+
+  /* Portaled select menus: light paper + dark ink for clear option lists. */
+  html[data-houses-realm] :where(
+      [data-radix-select-content],
+      [data-radix-popper-content-wrapper] [role='listbox'],
+      [data-radix-dropdown-menu-content]
+    ) {
+    background-color: var(--hr-field, rgba(255, 252, 248, 0.98)) !important;
+    color: var(--hr-field-fg, #1a1228) !important;
+    border-color: var(--hr-border, rgba(255, 255, 255, 0.18)) !important;
+  }
+
+  html[data-houses-realm] :where([data-radix-select-item], [data-radix-dropdown-menu-item]) {
+    color: var(--hr-field-fg, #1a1228);
+  }
+
+  html[data-houses-realm] :where(
+      [data-radix-select-item][data-highlighted],
+      [data-radix-dropdown-menu-item][data-highlighted]
+    ) {
+    background-color: color-mix(in srgb, var(--hr-field-fg, #1a1228) 10%, transparent) !important;
+    color: var(--hr-field-fg, #1a1228) !important;
   }
 
   /* Classroom realm — standalone fullscreen experience.

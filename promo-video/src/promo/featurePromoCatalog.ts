@@ -128,7 +128,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     tagline: "Print-ready digital IDs with live preview.",
 
-    emoji: "🪪",
+    emoji: "💳",
 
     color: "#38bdf8",
 
@@ -170,7 +170,7 @@ export const FEATURE_SEGMENT_CATALOG: Record<
 
     accent: "#fbbf24",
 
-    clip: clip(CAPTURE_PATHS.kioskPrizesHover, 1.08, 0.35),
+    clip: clip(CAPTURE_PATHS.marketingKioskRewardsShop),
 
   },
 

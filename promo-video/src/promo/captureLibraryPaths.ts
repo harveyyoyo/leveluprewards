@@ -38,4 +38,8 @@ export const CAPTURE_PATHS = {
   marketingStudentHomePortal: screenshot("student-home-portal.png"),
   marketingAdminIdCard: screenshot("admin-id-card.png"),
   marketingPortalHub: screenshot("portal-hub.png"),
+  marketingAdminAttendance: screenshot("attendance-full.png"),
+  marketingAdminLibrary: screenshot("library-full.png"),
+  marketingClassroomSeating: screenshot("classroom-seating.png"),
+  marketingKioskRewardsLive: screenshot("kiosk-rewards-shop.png"),
 } as const;

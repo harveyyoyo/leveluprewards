@@ -62,6 +62,7 @@ import type { LibraryThemeId } from '@/lib/library/libraryThemes';
 import { sanitizeLibraryHubCopy, type LibraryHubCopy } from '@/lib/library/libraryHubCopy';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
 import type { LibraryLabelFieldId } from '@/lib/library/libraryLabelSettings';
+import type { LibraryReadingLevelSystem } from '@/lib/library/libraryReadingLevel';
 import type { ModularScreenConfig } from '@/lib/displays/modularDisplaySchema';
 
 type ColorScheme =
@@ -147,6 +148,20 @@ interface Settings {
     houseSortingCelebrationEffect?: ClassroomCelebrationEffect;
     /** Sorting ceremony: kiosk-style fly-up with the house name on reveal. */
     houseSortingShowFlyUp?: boolean;
+    /** Houses realm: master switch for Houses UI + ceremony sounds. Default on. */
+    housesSoundsEnabled?: boolean;
+    /** Houses realm: click / award / wizard feedback sounds. Default on. */
+    housesUiSoundsEnabled?: boolean;
+    /** Sorting ceremony fanfare and reveal chimes (can play even if school-wide sounds are off). Default on. */
+    housesCeremonySoundsEnabled?: boolean;
+    /** Houses realm: default Teams board layout — house cards or standings chart. */
+    housesTeamsViewMode?: 'cards' | 'chart';
+    /** Houses realm: which tool opens when there is no URL tool/tab param. */
+    housesDefaultOpeningTab?: 'teams' | 'rosters' | 'ceremony' | 'hall-of-fame';
+    /** Show house mottos on team cards and sorting ceremony reveals. */
+    housesShowMotto?: boolean;
+    /** Show house value/trait chips on team cards. */
+    housesShowValue?: boolean;
     enableChallenges: boolean;
     // Analytics
     enableTeacherCharts: boolean;
@@ -621,6 +636,8 @@ interface Settings {
     libraryBarcodeNumberScheme?: BarcodeNumberScheme;
     /** Primary book lineup: 'genre_then_author' (default) or 'author_then_title'. */
     libraryOrganizationScheme?: LibraryOrganizationScheme;
+    /** Which reading-level scale to look up automatically: 'auto' accepts whatever a source reports. */
+    libraryReadingLevelSystem?: LibraryReadingLevelSystem;
     /** Configured library genres with colors, call prefixes, and shelf placement. */
     libraryGenreDefinitions?: LibraryGenreConfig[];
     /** List of physical library placement sections/zones for shelving. */
@@ -837,7 +854,7 @@ const defaultSettings: Settings = {
     recessStudentKioskEnabled: true,
     recessMaxMinutes: 10,
     enableHouses: false,
-    housesRealmTheme: 'cosmic',
+    housesRealmTheme: 'daylight',
     classroomRealmTheme: 'chalkboard',
     libraryTheme: 'grand_athenaeum',
     libraryThemeMatchKiosk: true,
@@ -877,6 +894,7 @@ const defaultSettings: Settings = {
     libraryBarcodeFormat: 'CODE128',
     libraryBarcodeNumberScheme: 'genre_code',
     libraryOrganizationScheme: 'genre_then_author',
+    libraryReadingLevelSystem: 'auto',
     libraryPlacementZones: DEFAULT_LIBRARY_PLACEMENT_ZONES,
     libraryAutoLookupGoogleBooks: true,
     libraryCatalogShowCoverImages: true,
@@ -889,6 +907,13 @@ const defaultSettings: Settings = {
     houseSortingUseFakeQuestions: false,
     houseSortingCelebrationEffect: 'confetti',
     houseSortingShowFlyUp: true,
+    housesSoundsEnabled: true,
+    housesUiSoundsEnabled: true,
+    housesCeremonySoundsEnabled: true,
+    housesTeamsViewMode: 'chart',
+    housesDefaultOpeningTab: 'teams',
+    housesShowMotto: true,
+    housesShowValue: true,
     enableChallenges: false,
     enableTeacherCharts: false,
     enableAdminAnalytics: false,

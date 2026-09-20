@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +67,28 @@ export function OfficeStudentSheet({
   // whatever the admin is mid-way through typing - only do it when the sheet
   // actually opens or switches to a different student.
   const seededKeyRef = useRef<string | null>(null);
+  const seededValuesRef = useRef<{
+    firstName: string;
+    lastName: string;
+    nickname: string;
+    classId: string;
+    teacherId: string;
+    notes: string;
+  } | null>(null);
+
+  const isDirty = useCallback(() => {
+    const seed = seededValuesRef.current;
+    if (!seed) return false;
+    return (
+      firstName !== seed.firstName ||
+      lastName !== seed.lastName ||
+      nickname !== seed.nickname ||
+      classId !== seed.classId ||
+      teacherId !== seed.teacherId ||
+      notes !== seed.notes
+    );
+  }, [firstName, lastName, nickname, classId, teacherId, notes]);
+
   useEffect(() => {
     if (!open || !student) {
       seededKeyRef.current = null;
@@ -78,7 +100,7 @@ export function OfficeStudentSheet({
     // sheet ever closing - e.g. clicking a different row while this one is open. That
     // bypasses the close-confirmation below entirely, so guard it here too instead of
     // silently discarding whatever is mid-edit.
-    if (seededKeyRef.current !== null && isEditing) {
+    if (seededKeyRef.current !== null && isEditing && isDirty()) {
       if (!confirm('Discard unsaved changes to this student?')) {
         onOpenChange(false);
         return;
@@ -86,6 +108,14 @@ export function OfficeStudentSheet({
     }
 
     seededKeyRef.current = student.id;
+    seededValuesRef.current = {
+      firstName: student.firstName ?? '',
+      lastName: student.lastName ?? '',
+      nickname: student.nickname ?? '',
+      classId: student.classId ?? '',
+      teacherId: student.teacherId ?? '',
+      notes: student.notes ?? '',
+    };
     setFirstName(student.firstName ?? '');
     setLastName(student.lastName ?? '');
     setNickname(student.nickname ?? '');
@@ -93,7 +123,7 @@ export function OfficeStudentSheet({
     setTeacherId(student.teacherId ?? '');
     setNotes(student.notes ?? '');
     setIsEditing(false);
-  }, [student, open, isEditing, onOpenChange]);
+  }, [student, open, isEditing, onOpenChange, isDirty]);
 
   if (!student) return null;
 
@@ -171,7 +201,7 @@ export function OfficeStudentSheet({
 
   const handleOpenChange = (next: boolean) => {
     if (!next && isEditing) {
-      if (!confirm('Discard unsaved changes to this student?')) return;
+      if (isDirty() && !confirm('Discard unsaved changes to this student?')) return;
       setIsEditing(false);
     }
     onOpenChange(next);

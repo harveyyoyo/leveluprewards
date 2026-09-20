@@ -9,6 +9,7 @@ import {
   type BarcodeNumberScheme,
   type LibraryGenreConfig,
 } from '@/lib/library/libraryClassification';
+import type { LibraryReadingLevelSystem } from '@/lib/library/libraryReadingLevel';
 import { generateLibraryBarcode, isSchoolLibraryBarcode, normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 
 /** Trim wedge / keyboard input before intake handling. */
@@ -52,16 +53,25 @@ export type IsbnLookupResult = {
 
 export type IsbnLookupPhase = 'catalog' | 'ai';
 
-export function isbnLookupRequestPath(isbn: string, phase: IsbnLookupPhase = 'catalog'): string {
+export function isbnLookupRequestPath(
+  isbn: string,
+  phase: IsbnLookupPhase = 'catalog',
+  readingLevelSystem?: LibraryReadingLevelSystem,
+): string {
   const params = new URLSearchParams({ isbn });
   if (phase === 'ai') params.set('phase', 'ai');
+  if (readingLevelSystem && readingLevelSystem !== 'auto') params.set('readingLevelSystem', readingLevelSystem);
   return `/api/library/lookup-isbn?${params.toString()}`;
 }
 
-async function fetchIsbnLookupPhase(isbnDigits: string, phase: IsbnLookupPhase): Promise<IsbnLookupResult> {
+async function fetchIsbnLookupPhase(
+  isbnDigits: string,
+  phase: IsbnLookupPhase,
+  readingLevelSystem?: LibraryReadingLevelSystem,
+): Promise<IsbnLookupResult> {
   const empty: IsbnLookupResult = { hit: null, meta: { aiConfigured: false } };
   try {
-    const res = await fetch(isbnLookupRequestPath(isbnDigits, phase));
+    const res = await fetch(isbnLookupRequestPath(isbnDigits, phase, readingLevelSystem));
     const json = (await res.json()) as {
       hit?: LibraryCatalogHit | null;
       meta?: IsbnLookupMeta;
@@ -83,15 +93,15 @@ async function fetchIsbnLookupPhase(isbnDigits: string, phase: IsbnLookupPhase):
  */
 export async function fetchCatalogHitByIsbn(
   isbnDigits: string,
-  options?: { onPhase?: (phase: IsbnLookupPhase) => void },
+  options?: { onPhase?: (phase: IsbnLookupPhase) => void; readingLevelSystem?: LibraryReadingLevelSystem },
 ): Promise<IsbnLookupResult> {
   options?.onPhase?.('catalog');
-  const catalog = await fetchIsbnLookupPhase(isbnDigits, 'catalog');
+  const catalog = await fetchIsbnLookupPhase(isbnDigits, 'catalog', options?.readingLevelSystem);
   if (catalog.hit) return catalog;
   if (!catalog.meta.aiConfigured) return catalog;
 
   options?.onPhase?.('ai');
-  const ai = await fetchIsbnLookupPhase(isbnDigits, 'ai');
+  const ai = await fetchIsbnLookupPhase(isbnDigits, 'ai', options?.readingLevelSystem);
   return {
     hit: ai.hit,
     meta: {
@@ -105,11 +115,16 @@ export async function fetchCatalogHitByIsbn(
 }
 
 /** Fetch online book catalog suggestions by title query. */
-export async function fetchCatalogHitsByTitle(title: string): Promise<LibraryCatalogHit[]> {
+export async function fetchCatalogHitsByTitle(
+  title: string,
+  readingLevelSystem?: LibraryReadingLevelSystem,
+): Promise<LibraryCatalogHit[]> {
   const trimmed = title.trim();
   if (trimmed.length < 2) return [];
   try {
-    const res = await fetch(`/api/library/lookup-title?title=${encodeURIComponent(trimmed)}`);
+    const params = new URLSearchParams({ title: trimmed });
+    if (readingLevelSystem && readingLevelSystem !== 'auto') params.set('readingLevelSystem', readingLevelSystem);
+    const res = await fetch(`/api/library/lookup-title?${params.toString()}`);
     if (!res.ok) return [];
     const json = (await res.json()) as { hits?: LibraryCatalogHit[] };
     return json.hits ?? [];
