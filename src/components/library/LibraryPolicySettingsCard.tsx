@@ -197,7 +197,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [openSections, setOpenSections] = useState<string[]>(['circulation']);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const checkoutBarcodeMode = resolveLibraryCheckoutBarcodeMode(settings);
 
   const trimmedSearch = searchQuery.trim().toLowerCase();
