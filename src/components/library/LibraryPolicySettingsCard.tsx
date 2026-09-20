@@ -197,7 +197,7 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
-  const [openSections, setOpenSections] = useState<string[]>(['circulation']);
+  const [openSections, setOpenSections] = useState<string[]>([]);
   const checkoutBarcodeMode = resolveLibraryCheckoutBarcodeMode(settings);
 
   const trimmedSearch = searchQuery.trim().toLowerCase();
@@ -320,7 +320,6 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
   const [newShelfName, setNewShelfName] = useState('');
   const [isAddingShelf, setIsAddingShelf] = useState(false);
-  const [showShelfExtras, setShowShelfExtras] = useState(false);
   const [editingShelfIndex, setEditingShelfIndex] = useState<number | null>(null);
   const [editingShelfValue, setEditingShelfValue] = useState('');
   const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
@@ -1956,7 +1955,62 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </Button>
         </div>
 
-        <AccordionContent className="px-4 space-y-5 pt-1">
+        <AccordionContent className="px-4 space-y-5 pt-2">
+          {/* Room Organization & Lineup Style */}
+          <div className="rounded-xl border bg-muted/40 p-3.5 space-y-2.5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="lib-org-scheme" className="text-xs font-bold flex items-center gap-1.5">
+                  <span>How books are lined up in the room</span>
+                </Label>
+                <Select
+                  value={orgScheme}
+                  onValueChange={(v) => updateSettings({ libraryOrganizationScheme: v as LibraryOrganizationScheme })}
+                >
+                  <SelectTrigger id="lib-org-scheme" className="rounded-xl text-xs font-semibold bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => (
+                      <SelectItem key={key} value={key} className="text-xs">
+                        {LIBRARY_ORGANIZATION_SCHEMES[key].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.description || 'Choose how books are ordered on the shelves.'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold flex items-center gap-1.5">
+                  <span>Book number &amp; sticker style</span>
+                </Label>
+                <Select
+                  value={barcodeScheme}
+                  onValueChange={(v) => updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })}
+                >
+                  <SelectTrigger id="lib-barcode-scheme" className="rounded-xl text-xs font-semibold bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="genre_code" className="text-xs">Genre code (FIC-823-0001)</SelectItem>
+                    <SelectItem value="dewey_numeric" className="text-xs">Dewey number (823-0001)</SelectItem>
+                    <SelectItem value="prefix_genre" className="text-xs">School prefix (LIB-FIC-0001)</SelectItem>
+                    <SelectItem value="classic_random" className="text-xs">Random school number</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Example:{' '}
+                  <span className="font-mono font-semibold text-foreground">
+                    {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 1 })}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div>
               <p className="text-xs font-bold">Step 1 · Name the furniture</p>
@@ -2252,63 +2306,6 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
                 );
               })}
             </motion.div>
-          </div>
-
-          <div className="space-y-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-0 text-xs text-muted-foreground"
-              onClick={() => setShowShelfExtras((open) => !open)}
-            >
-              {showShelfExtras ? 'Hide extra lineup options' : 'More · lineup and number style'}
-            </Button>
-            {showShelfExtras ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="lib-org-scheme" className="text-xs font-bold">How books are lined up</Label>
-                  <Select
-                    value={orgScheme}
-                    onValueChange={(v) => updateSettings({ libraryOrganizationScheme: v as LibraryOrganizationScheme })}
-                  >
-                    <SelectTrigger id="lib-org-scheme" className="rounded-xl text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => (
-                        <SelectItem key={key} value={key} className="text-xs">
-                          {LIBRARY_ORGANIZATION_SCHEMES[key].label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold">How new book numbers look</Label>
-                  <Select
-                    value={barcodeScheme}
-                    onValueChange={(v) => updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })}
-                  >
-                    <SelectTrigger id="lib-barcode-scheme" className="rounded-xl text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="genre_code" className="text-xs">Genre code (FIC-823-0001)</SelectItem>
-                      <SelectItem value="dewey_numeric" className="text-xs">Dewey number (823-0001)</SelectItem>
-                      <SelectItem value="prefix_genre" className="text-xs">School prefix (LIB-FIC-0001)</SelectItem>
-                      <SelectItem value="classic_random" className="text-xs">Random school number</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">
-                    Example:{' '}
-                    <span className="font-mono font-semibold text-foreground">
-                      {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 1 })}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            ) : null}
           </div>
         </AccordionContent>
       </AccordionItem>

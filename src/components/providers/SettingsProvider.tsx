@@ -343,11 +343,15 @@ interface Settings {
     enableBathroomTimer?: boolean;
     /** Max minutes before a bathroom pass is flagged as over limit. */
     bathroomMaxMinutes?: number;
+    /** Max students allowed out of the classroom at the same time (0 or undefined = unlimited). */
+    bathroomMaxStudentsOut?: number;
     /** When true, only students who signed in today can start a bathroom pass. */
     bathroomRequirePresent?: boolean;
+    /** Minutes after class period starts to mute attendance sign-in sound (-1 = always play sound, 0 = at bell, 1 = 1m in, etc.). */
+    attendanceQuietAfterMinutes?: number;
     // Guidance
     enableHelperMode: boolean;
-    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | null;
+    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | 'library-features' | null;
     // Workflow
     enableTeacherBudgets: boolean;
     /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
@@ -389,6 +393,8 @@ interface Settings {
     classroomMonitorIncludeLastName?: boolean;
     /** Show student sticker / theme emoji on desk avatars. */
     classroomMonitorIncludeStudentEmoji?: boolean;
+    /** Show student photos on seating chart desks. Default on when unset. */
+    classroomMonitorIncludeStudentPhotos?: boolean;
     /** Show behavior-notes shortcut tips on the live monitor by default. Default on when unset. */
     classroomMonitorShowBehaviorNotesTips?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
@@ -973,7 +979,9 @@ const defaultSettings: Settings = {
     enableAttendance: false,
     enableBathroomTimer: true,
     bathroomMaxMinutes: 5,
+    bathroomMaxStudentsOut: 2,
     bathroomRequirePresent: true,
+    attendanceQuietAfterMinutes: -1,
     enableHelperMode: true,
     activeTourId: null,
     enableTeacherBudgets: false,
@@ -1009,6 +1017,7 @@ const defaultSettings: Settings = {
     classroomMonitorIncludeSessionLastAward: true,
     classroomMonitorIncludeLastName: false,
     classroomMonitorIncludeStudentEmoji: false,
+    classroomMonitorIncludeStudentPhotos: true,
     classroomMonitorShowBehaviorNotesTips: true,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,

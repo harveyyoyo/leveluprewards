@@ -21,11 +21,13 @@ import type { Class, Student } from '@/lib/types';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useFirebase } from '@/firebase';
 import { collection, doc, runTransaction, type DocumentSnapshot } from 'firebase/firestore';
+import { ClassroomLiveRafflePlay } from '@/components/classroom/ClassroomLiveRafflePlay';
 import { JackpotMachine } from '@/components/raffle/JackpotMachine';
 import { RaffleAnimationNotice } from '@/components/raffle/RaffleAnimationNotice';
 import { RaffleSpinWheel } from '@/components/raffle/RaffleSpinWheel';
 import { parseRafflePointsPerTicket } from '@/lib/raffleTickets';
 import { rafflePointsFieldLabel } from '@/lib/raffleStudentPoints';
+import { loadClassroomSession, setClassroomSessionRaffleProjector } from '@/lib/classroomSeatingChart';
 import {
   buildRafflePool,
   filterStudentsForRaffleClass,
@@ -62,6 +64,12 @@ export function AdminRaffleTab({
   canEditSettings = true,
   operatorName,
   embedded = false,
+  livePlay = false,
+  initialClassFilter,
+  rulesOpen: rulesOpenProp,
+  onRulesOpenChange,
+  sessionScope,
+  sessionClassId,
 }: {
   schoolId: string;
   students: Student[];
@@ -69,6 +77,12 @@ export function AdminRaffleTab({
   canEditSettings?: boolean;
   operatorName?: string;
   embedded?: boolean;
+  livePlay?: boolean;
+  initialClassFilter?: RaffleClassFilter;
+  rulesOpen?: boolean;
+  onRulesOpenChange?: (open: boolean) => void;
+  sessionScope?: string;
+  sessionClassId?: string;
 }) {
   const { toast } = useToast();
   const { settings, updateSettings } = useSettings();
@@ -80,10 +94,15 @@ export function AdminRaffleTab({
   const [drawDialogOpen, setDrawDialogOpen] = useState(false);
   const [drawDialogMode, setDrawDialogMode] = useState<'jackpot' | 'wheel'>('jackpot');
   const [poolScope, setPoolScope] = useState<RafflePoolScope>('eligible');
-  const [classFilter, setClassFilter] = useState<RaffleClassFilter>('all');
+  const [classFilter, setClassFilter] = useState<RaffleClassFilter>(initialClassFilter ?? 'all');
   const [manualExcludeIds, setManualExcludeIds] = useState<Set<string>>(() => new Set());
   const [manualIncludeIds, setManualIncludeIds] = useState<Set<string>>(() => new Set());
   const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [rulesOpenLocal, setRulesOpenLocal] = useState(false);
+  const [entriesOpen, setEntriesOpen] = useState(false);
+  const [projectorOn, setProjectorOn] = useState(false);
+  const rulesOpen = rulesOpenProp ?? rulesOpenLocal;
+  const setRulesOpen = onRulesOpenChange ?? setRulesOpenLocal;
 
   const attendanceScopeAvailable = isAttendanceRaffleScopeAvailable(settings);
   const attendancePillarOn = isPillarOn(settings, 'payAttendance');
@@ -154,6 +173,46 @@ export function AdminRaffleTab({
 
   const entryIdSet = useMemo(() => new Set(entries.map((e) => e.id)), [entries]);
 
+  const eligibleCount = useMemo(
+    () =>
+      buildRafflePool({
+        students: scopedStudents,
+        settings,
+        rafflePointsPerTicket: settings.rafflePointsPerTicket,
+        raffleOneEntryPerStudent: oneEntryPerStudent,
+        poolScope: 'eligible',
+        onTimeTodayIds,
+        manualExcludeIds,
+        manualIncludeIds,
+      }).length,
+    [manualExcludeIds, manualIncludeIds, onTimeTodayIds, oneEntryPerStudent, scopedStudents, settings],
+  );
+
+  const onTimeCount = useMemo(
+    () =>
+      attendanceScopeAvailable
+        ? buildRafflePool({
+            students: scopedStudents,
+            settings,
+            rafflePointsPerTicket: settings.rafflePointsPerTicket,
+            raffleOneEntryPerStudent: oneEntryPerStudent,
+            poolScope: 'onTimeToday',
+            onTimeTodayIds,
+            manualExcludeIds,
+            manualIncludeIds,
+          }).length
+        : 0,
+    [
+      attendanceScopeAvailable,
+      manualExcludeIds,
+      manualIncludeIds,
+      onTimeTodayIds,
+      oneEntryPerStudent,
+      scopedStudents,
+      settings,
+    ],
+  );
+
   const excludedPreview = useMemo(() => {
     return scopedStudents
       .filter((s) => s?.id && manualExcludeIds.has(s.id))
@@ -211,6 +270,11 @@ export function AdminRaffleTab({
     setManualIncludeIds((prev) => new Set(prev).add(studentId));
     setAddStudentOpen(false);
   }, []);
+
+  useEffect(() => {
+    if (!initialClassFilter) return;
+    setClassFilter(initialClassFilter);
+  }, [initialClassFilter]);
 
   useEffect(() => {
     if (!attendanceScopeAvailable && poolScope === 'onTimeToday') {
@@ -272,9 +336,55 @@ export function AdminRaffleTab({
     return row ? { id: row.id, name: row.name } : null;
   }, [isGeneralRaffle, pickWeightedWinner, pointsPerTicket, raffleBalanceLabel, toast, totalTickets]);
 
+  const canProjectRaffle = livePlay && !!sessionScope && !!sessionClassId;
+
+  const publishRaffleProjector = useCallback(
+    (patch: {
+      show: boolean;
+      mode?: 'jackpot' | 'wheel';
+      winnerId?: string | null;
+      winnerName?: string | null;
+      spinId?: number;
+    }) => {
+      if (!sessionScope || !sessionClassId) return;
+      const current = loadClassroomSession(schoolId, sessionScope, sessionClassId).raffleProjector;
+      setClassroomSessionRaffleProjector(schoolId, sessionScope, sessionClassId, {
+        show: patch.show,
+        mode: patch.mode ?? drawDialogMode,
+        pool: jackpotPool,
+        winnerId: patch.winnerId ?? winner?.id ?? current?.winnerId ?? null,
+        winnerName: patch.winnerName ?? winner?.name ?? current?.winnerName ?? null,
+        spinId: patch.spinId ?? current?.spinId,
+      });
+    },
+    [drawDialogMode, jackpotPool, schoolId, sessionClassId, sessionScope, winner],
+  );
+
+  const handleLivePickWinner = useCallback(() => {
+    const picked = handleJackpotPickWinner();
+    if (picked && projectorOn && canProjectRaffle) {
+      publishRaffleProjector({
+        show: true,
+        mode: drawDialogMode,
+        winnerId: picked.id,
+        winnerName: picked.name,
+        spinId: Date.now(),
+      });
+    }
+    return picked;
+  }, [canProjectRaffle, drawDialogMode, handleJackpotPickWinner, projectorOn, publishRaffleProjector]);
+
   const handleJackpotSpinFinished = useCallback(
     async (w: { id: string; name: string }) => {
       setWinner({ id: w.id, name: w.name });
+      if (projectorOn && canProjectRaffle) {
+        publishRaffleProjector({
+          show: true,
+          mode: drawDialogMode,
+          winnerId: w.id,
+          winnerName: w.name,
+        });
+      }
 
       if (!deductOnPull || !firestore) return;
 
@@ -386,12 +496,16 @@ export function AdminRaffleTab({
       }
     },
     [
+      canProjectRaffle,
       deductOnPull,
+      drawDialogMode,
       entries,
       firestore,
       isGeneralRaffle,
       oneEntryPerStudent,
       pointsPerTicket,
+      projectorOn,
+      publishRaffleProjector,
       rewardsPillarOn,
       schoolId,
       toast,
@@ -716,7 +830,7 @@ export function AdminRaffleTab({
               <p className="text-xs text-muted-foreground">
                 Same pool and deduct behavior — only the animation changes. Wheel slices reflect ticket weights.
               </p>
-              <RaffleAnimationNotice />
+              {!livePlay ? <RaffleAnimationNotice /> : null}
               <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
@@ -928,28 +1042,170 @@ export function AdminRaffleTab({
                   embedded
                   title="Prize wheel"
                   slices={wheelSlices}
-                  pickWinner={handleJackpotPickWinner}
+                  pickWinner={livePlay ? handleLivePickWinner : handleJackpotPickWinner}
                   onSpinFinished={handleJackpotSpinFinished}
                   resetKey={jackpotResetKey}
                   pullLocked={isSavingDeduction}
-                  embeddedFooter={jackpotEmbeddedFooter}
+                  embeddedFooter={livePlay ? null : jackpotEmbeddedFooter}
+                  autoStart={livePlay}
                 />
               ) : (
                 <JackpotMachine
                   embedded
                   title="Jackpot"
                   pool={jackpotPool}
-                  pickWinner={handleJackpotPickWinner}
+                  pickWinner={livePlay ? handleLivePickWinner : handleJackpotPickWinner}
                   onSpinFinished={handleJackpotSpinFinished}
                   resetKey={jackpotResetKey}
                   pullLocked={isSavingDeduction}
-                  embeddedFooter={jackpotEmbeddedFooter}
+                  embeddedFooter={livePlay ? null : jackpotEmbeddedFooter}
+                  autoStart={livePlay}
                 />
               ))}
           </div>
         </DialogContent>
       </Dialog>
   );
+
+  if (embedded && livePlay) {
+    const statusText = `${entries.length} Eligible • ${
+      isGeneralRaffle || oneEntryPerStudent ? '1 Entry Each' : `${totalTickets} Tickets`
+    } • Deduct: ${deductOnPull ? 'ON' : 'OFF'}`;
+    return (
+      <>
+        <ClassroomLiveRafflePlay
+          eligibleCount={eligibleCount}
+          onTimeCount={onTimeCount}
+          attendanceAvailable={attendanceScopeAvailable}
+          poolScope={effectivePoolScope}
+          onPoolScopeChange={setPoolScope}
+          statusText={statusText}
+          winnerName={winner?.name}
+          rulesOpen={rulesOpen}
+          onRulesOpenChange={setRulesOpen}
+          rulesPanel={
+            canEditSettings ? (
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-bold">Student kiosk raffle</p>
+                  <Switch
+                    checked={!!settings.enableWeeklyRaffle}
+                    onCheckedChange={(checked) => updateSettings({ enableWeeklyRaffle: checked })}
+                    aria-label="Enable student kiosk raffle"
+                  />
+                </div>
+                <label className="block space-y-1">
+                  <span className="text-xs font-bold text-slate-600">Points per ticket</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={String(displayRafflePointsPerTicket)}
+                    onChange={(e) => {
+                      const n = Number(e.target.value);
+                      updateSettings({
+                        rafflePointsPerTicket: Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 25,
+                      });
+                    }}
+                    className="h-10 rounded-xl"
+                  />
+                </label>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-bold">One entry per student</p>
+                  <Switch
+                    checked={oneEntryPerStudent}
+                    onCheckedChange={(checked) => updateSettings({ raffleOneEntryPerStudent: !!checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-bold">Deduct on pull</p>
+                  <Switch
+                    checked={deductOnPull}
+                    onCheckedChange={(checked) => updateSettings({ raffleDeductPoints: !!checked })}
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-600">
+                {isGeneralRaffle || oneEntryPerStudent ? 'One entry each' : 'Odds from points'}. Deduct is{' '}
+                {deductOnPull ? 'on' : 'off'}.
+              </p>
+            )
+          }
+          entriesCount={entries.length}
+          entriesOpen={entriesOpen}
+          onEntriesOpenChange={setEntriesOpen}
+          entriesPanel={
+            <div className="space-y-2">
+              {entries.length === 0 ? (
+                <p className="text-sm text-slate-600">Nobody is in this draw yet.</p>
+              ) : (
+                entries.slice(0, 50).map((row) => (
+                  <div key={row.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="min-w-0 truncate font-semibold">{row.name}</span>
+                    <span className="shrink-0 font-black tabular-nums">×{row.tickets}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          }
+          projectorOn={projectorOn}
+          onProjectorOnChange={
+            canProjectRaffle
+              ? (on) => {
+                  setProjectorOn(on);
+                  publishRaffleProjector({
+                    show: on,
+                    mode: drawDialogMode,
+                    winnerId: winner?.id ?? null,
+                    winnerName: winner?.name ?? null,
+                  });
+                }
+              : undefined
+          }
+          onSpinReels={() => {
+            setDrawDialogMode('jackpot');
+            if (canEditSettings) updateSettings({ raffleDisplayMode: 'jackpot' });
+            if (projectorOn && canProjectRaffle) {
+              const picked = handleJackpotPickWinner();
+              if (picked) {
+                publishRaffleProjector({
+                  show: true,
+                  mode: 'jackpot',
+                  winnerId: picked.id,
+                  winnerName: picked.name,
+                  spinId: Date.now(),
+                });
+                void handleJackpotSpinFinished(picked);
+              }
+              return;
+            }
+            setDrawDialogOpen(true);
+          }}
+          onSpinWheel={() => {
+            setDrawDialogMode('wheel');
+            if (canEditSettings) updateSettings({ raffleDisplayMode: 'wheel' });
+            if (projectorOn && canProjectRaffle) {
+              const picked = handleJackpotPickWinner();
+              if (picked) {
+                publishRaffleProjector({
+                  show: true,
+                  mode: 'wheel',
+                  winnerId: picked.id,
+                  winnerName: picked.name,
+                  spinId: Date.now(),
+                });
+                void handleJackpotSpinFinished(picked);
+              }
+              return;
+            }
+            setDrawDialogOpen(true);
+          }}
+          canSpin={totalTickets > 0}
+        />
+        {projectorOn ? null : drawDialog}
+      </>
+    );
+  }
 
   if (embedded) {
     return (

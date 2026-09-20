@@ -26,6 +26,8 @@
     "dotenv": "^16.6.1",
     "firebase": "^11.9.1",
     "firebase-admin": "^13.8.0",
+    "firebase-frameworks": "^0.11.0",
+    "firebase-functions": "^6.0.1",
     "framer-motion": "^12.35.0",
     "jose": "^5.10.0",
     "lucide-react": "^0.475.0",
@@ -35,7 +37,9 @@
     "pdf-parse": "^2.4.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-hook-form": "^7.88.0",
     "tailwind-merge": "^3.0.1",
+    "tailwindcss": "3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5",
     "zod": "^3.25.76"
@@ -51,7 +55,6 @@
     "eslint-config-next": "^14.2.18",
     "jsdom": "^28.1.0",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
     "typescript": "5.9.3",
     "vite": "7.3.1",
     "vitest": "4.0.18"

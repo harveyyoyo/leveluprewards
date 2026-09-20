@@ -15,6 +15,7 @@ export type ClassroomDeskDisplay = {
 
 export type ClassroomDeskDisplayOptions = {
   showLastName?: boolean;
+  showStudentPhotos?: boolean;
   showStudentEmoji?: boolean;
   defaultStudentTheme?: StudentTheme | null;
   studentThemesEnabled?: boolean;
@@ -50,12 +51,13 @@ export function classroomDeskDisplayFromStudent(
     options?.showLastName && lastName ? `${nickname} ${lastName}` : nickname;
   const points = pointsOverride ?? student.points ?? 0;
   const emoji = resolveClassroomDeskEmoji(student, options);
+  const showPhotos = options?.showStudentPhotos !== false;
   return {
     id: student.id,
     name,
     initials,
     points,
-    ...(student.photoUrl ? { photoUrl: student.photoUrl } : {}),
+    ...(showPhotos && student.photoUrl ? { photoUrl: student.photoUrl } : {}),
     ...(emoji ? { emoji } : {}),
   };
 }
@@ -69,11 +71,12 @@ export function classroomDeskCatalogSignature(
   const list =
     classId === 'all' ? students : students.filter((s) => s.classId === classId);
   const showLast = options?.showLastName ? '1' : '0';
+  const showPhotos = options?.showStudentPhotos !== false ? '1' : '0';
   const showEmoji = options?.showStudentEmoji ? '1' : '0';
   const themeKey = options?.showStudentEmoji
     ? `${options.defaultStudentTheme?.emoji ?? ''}:${options.studentThemesEnabled !== false ? '1' : '0'}`
     : '';
-  return `${showLast}:${showEmoji}:${themeKey}|${list
+  return `${showLast}:${showPhotos}:${showEmoji}:${themeKey}|${list
     .map((s) => {
       const pts = s.classroomPoints ?? s.points ?? 0;
       const deskEmoji = resolveClassroomDeskEmoji(s, options) ?? '';

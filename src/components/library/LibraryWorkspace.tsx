@@ -99,6 +99,7 @@ import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
+import { LibraryInteractiveGuide } from './LibraryInteractiveGuide';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
@@ -173,6 +174,7 @@ export function LibraryWorkspace({
     (next: string) => {
       if (navSoundEnabled) playSound('click');
       setTab(next);
+      setHubHome(false);
     },
     [navSoundEnabled, playSound],
   );
@@ -217,9 +219,18 @@ export function LibraryWorkspace({
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
+
+  // Clear any legacy on-screen library tour in favor of the interactive guide.
+  useEffect(() => {
+    if (settings.activeTourId === 'library' || settings.activeTourId === 'library-features') {
+      updateSettings({ activeTourId: null });
+    }
+  }, [settings.activeTourId, updateSettings]);
+
   const [search, setSearch] = useState('');
   // The book a scan/search found, kept on screen after the search box auto-clears.
   const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchAutoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -425,7 +436,7 @@ export function LibraryWorkspace({
     reportPermissionErrors: false,
   });
 
-  const { locations } = useLibraryLocations(schoolId);
+  const { locations, isLoading: locationsLoading } = useLibraryLocations(schoolId);
   const { active: activeLibrary, setActive: setActiveLibrary, needsChoice: needsLibraryChoice } = useActiveLibraryLocation(
     schoolId,
     locations,
@@ -818,10 +829,16 @@ export function LibraryWorkspace({
     });
   };
 
-  if (!isInitialized || !schoolId) {
+  if (!isInitialized || !schoolId || locationsLoading) {
     return (
-      <div className="grid min-h-screen place-items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading library" />
+      <div
+        className={cn(
+          'library-readable relative grid min-h-screen place-items-center transition-colors duration-500',
+          currentTheme.classes.wrapper,
+        )}
+      >
+        <LibraryBackdrop theme={currentTheme} />
+        <Loader2 className="relative z-10 h-8 w-8 animate-spin text-primary" aria-label="Loading library" />
       </div>
     );
   }
@@ -916,24 +933,36 @@ export function LibraryWorkspace({
 
   if (hubHome) {
     return (
-      <LibraryPortalHub
-        schoolName={schoolName}
-        libraryName={locations.length > 1 ? activeLibrary.name : undefined}
-        overdueCount={overdueLoans.length}
-        catalogCount={activeCopies.length}
-        backToPortalHref={backToPortalHref}
-        chooseLibraryHref={chooseLibraryHref}
-        onSelect={(nextTab) => {
-          if (navSoundEnabled) playSound('click');
-          setTab(nextTab);
-          setHubHome(false);
-        }}
-        onOpenSettings={() => {
-          if (navSoundEnabled) playSound('click');
-          setTab('settings');
-          setHubHome(false);
-        }}
-      />
+      <>
+        <LibraryPortalHub
+          schoolName={schoolName}
+          libraryName={locations.length > 1 ? activeLibrary.name : undefined}
+          overdueCount={overdueLoans.length}
+          catalogCount={activeCopies.length}
+          backToPortalHref={backToPortalHref}
+          chooseLibraryHref={chooseLibraryHref}
+          onSelect={(nextTab) => {
+            if (navSoundEnabled) playSound('click');
+            setTab(nextTab);
+            setHubHome(false);
+          }}
+          onOpenSettings={() => {
+            if (navSoundEnabled) playSound('click');
+            setTab('settings');
+            setHubHome(false);
+          }}
+          onOpenGuide={() => setGuideOpen(true)}
+        />
+        <LibraryInteractiveGuide
+          open={guideOpen}
+          onOpenChange={setGuideOpen}
+          theme={currentTheme}
+          onNavigateTab={(nextTab) => {
+            switchTab(nextTab);
+            setGuideOpen(false);
+          }}
+        />
+      </>
     );
   }
 
@@ -970,6 +999,7 @@ export function LibraryWorkspace({
           setHubHome(true);
         }}
         onOpenSettings={() => switchTab('settings')}
+        onOpenGuide={() => setGuideOpen(true)}
       />
 
       {/* Main Column: Top Bar + Content */}
@@ -2616,6 +2646,16 @@ export function LibraryWorkspace({
           </div>
         </DialogContent>
       </Dialog>
+
+      <LibraryInteractiveGuide
+        open={guideOpen}
+        onOpenChange={setGuideOpen}
+        theme={currentTheme}
+        onNavigateTab={(nextTab) => {
+          switchTab(nextTab);
+          setGuideOpen(false);
+        }}
+      />
     </div>
   );
 }

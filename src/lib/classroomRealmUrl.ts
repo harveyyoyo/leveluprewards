@@ -20,25 +20,44 @@ function classroomDevOrigin(): string | null {
   }
 }
 
-/**
- * Public URL for the standalone Classroom experience.
- * Local dev can point at a separate origin via NEXT_PUBLIC_CLASSROOM_DEV_ORIGIN (future split app).
- */
-export function classroomRealmHref(schoolId: string, segment: ClassroomRealmSegment = ''): string {
-  const school = schoolId.trim().toLowerCase();
+function withOrigin(path: string): string {
   const origin = classroomDevOrigin();
-  const path = segment ? `/${school}/classroom-realm/${segment}` : `/${school}/classroom-realm`;
   if (origin) return `${origin}${path}`;
   return path;
 }
 
-/** Manage tabs (Class Awards Live, Behavior, Room display, Raffle). */
+/** Canonical Classroom page (the live teaching board). */
+export function classroomHref(
+  schoolId: string,
+  query?: { audience?: 'student'; classId?: string; scope?: string },
+): string {
+  const school = schoolId.trim().toLowerCase();
+  const params = new URLSearchParams();
+  if (query?.classId) params.set('classId', query.classId);
+  if (query?.scope) params.set('scope', query.scope);
+  if (query?.audience === 'student') params.set('audience', 'student');
+  const q = params.toString();
+  return withOrigin(`/${school}/classroom${q ? `?${q}` : ''}`);
+}
+
+/**
+ * Public URL for Classroom.
+ * Hub / manage / setup / live all open the live Classroom page.
+ * Class screen opens the same page in student view.
+ */
+export function classroomRealmHref(schoolId: string, segment: ClassroomRealmSegment = ''): string {
+  if (segment === 'class-screen') {
+    return classroomHref(schoolId, { audience: 'student' });
+  }
+  return classroomHref(schoolId);
+}
+
+/** Manage tabs now live on Classroom live tools — keep the helper so old links compile. */
 export function classroomRealmManageHref(
   schoolId: string,
-  section: ClassroomTabSection = 'seating',
+  _section: ClassroomTabSection = 'seating',
 ): string {
-  const base = classroomRealmHref(schoolId, 'manage');
-  return `${base}?section=${encodeURIComponent(section)}`;
+  return classroomHref(schoolId);
 }
 
 export function parseClassroomRealmManageSection(
@@ -63,5 +82,10 @@ export function classroomRealmOpenHref(schoolId: string, segment: ClassroomRealm
 
 export function isClassroomRealmPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
-  return pathname.includes('/classroom-realm');
+  return pathname.includes('/classroom-realm') || /\/classroom(?:\/|$)/.test(pathname);
+}
+
+export function classroomPortalHomeHref(schoolId: string): string {
+  const school = schoolId.trim().toLowerCase();
+  return `/${school}/portal`;
 }

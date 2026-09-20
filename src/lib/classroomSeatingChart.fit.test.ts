@@ -45,6 +45,39 @@ describe('fitClassroomSeatingGrid', () => {
     expect(fit.gridWidth).toBeLessThanOrEqual(200);
     expect(fit.gridHeight).toBeLessThanOrEqual(160);
   });
+
+  it('keeps the same 5×4 room and only shrinks desk size', () => {
+    const wide = fitClassroomSeatingGrid({
+      containerWidth: 900,
+      containerHeight: 700,
+      rows: 4,
+      cols: 5,
+      gap: 8,
+    });
+    const tight = fitClassroomSeatingGrid({
+      containerWidth: 360,
+      containerHeight: 280,
+      rows: 4,
+      cols: 5,
+      gap: 8,
+    });
+    expect(wide.gridWidth).toBe(wide.cellSize * 5 + 32);
+    expect(wide.gridHeight).toBe(wide.cellSize * 4 + 24);
+    expect(tight.gridWidth).toBe(tight.cellSize * 5 + 32);
+    expect(tight.gridHeight).toBe(tight.cellSize * 4 + 24);
+    expect(tight.cellSize).toBeLessThan(wide.cellSize);
+  });
+
+  it('reports no desk size while the chart box is still 0×0', () => {
+    const fit = fitClassroomSeatingGrid({
+      containerWidth: 0,
+      containerHeight: 0,
+      rows: 4,
+      cols: 5,
+      gap: 4,
+    });
+    expect(fit.cellSize).toBe(0);
+  });
 });
 
 describe('classroomDeskVisualScale', () => {

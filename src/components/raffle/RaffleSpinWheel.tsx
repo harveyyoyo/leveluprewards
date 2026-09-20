@@ -49,6 +49,7 @@ type RaffleSpinWheelProps = {
   embedded?: boolean;
   pullLocked?: boolean;
   embeddedFooter?: string | null;
+  autoStart?: boolean;
 };
 
 export function RaffleSpinWheel({
@@ -60,6 +61,7 @@ export function RaffleSpinWheel({
   embedded = false,
   pullLocked = false,
   embeddedFooter = null,
+  autoStart = false,
 }: RaffleSpinWheelProps) {
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -302,6 +304,15 @@ export function RaffleSpinWheel({
     slices.length,
     spinning,
   ]);
+
+  const spinRef = useRef(spin);
+  spinRef.current = spin;
+
+  useEffect(() => {
+    if (!autoStart) return;
+    const id = window.setTimeout(() => spinRef.current(), 160);
+    return () => window.clearTimeout(id);
+  }, [autoStart, resetKey]);
 
   const closeWinner = () => setShowWin(false);
 

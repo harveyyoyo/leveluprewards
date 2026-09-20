@@ -71,6 +71,8 @@ jobs:
               printf 'AUTH_GATE_SIGNING_SECRET=%s\n' "$AUTH_GATE_SIGNING_SECRET"
             fi
             printf 'AUTH_COOKIE_DOMAIN=.leveluprewards.app\n'
+            printf 'PORTAL_CANONICAL_HOST=portal.leveluprewards.app\n'
+            printf 'NEXT_PUBLIC_PORTAL_CANONICAL_HOST=portal.leveluprewards.app\n'
           } > .env
           node scripts/ensure-office-hosting-production-env.mjs
           if [ -z "$AUTH_GATE_SIGNING_SECRET" ]; then

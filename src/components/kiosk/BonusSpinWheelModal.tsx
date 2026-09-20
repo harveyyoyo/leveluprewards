@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Trophy, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -65,18 +65,7 @@ export function BonusSpinWheelModal({
         setIsSpinning(false);
     }, [achievement?.name, achievement?.bonusPoints]);
 
-    useEffect(() => {
-        if (isOpen && !hasSpun && achievement) {
-            setHasSpun(true);
-            // Trigger automatic spin after 1s
-            const timer = setTimeout(() => {
-                void handleSpin();
-            }, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [isOpen, hasSpun, achievement]);
-
-    const handleSpin = async () => {
+    const handleSpin = useCallback(async () => {
         if (isSpinning || result !== null) return;
 
         setIsSpinning(true);
@@ -107,10 +96,21 @@ export function BonusSpinWheelModal({
         playSound('success');
 
         // Allow reading the prize, then close/callback
-        setTimeout(async () => {
-            await onWon(wonAmount);
+        setTimeout(() => {
+            void onWon(wonAmount);
         }, 3000);
-    };
+    }, [controls, isSpinning, onWon, playSound, result, segments]);
+
+    useEffect(() => {
+        if (isOpen && !hasSpun && achievement) {
+            setHasSpun(true);
+            // Trigger automatic spin after 1s
+            const timer = setTimeout(() => {
+                void handleSpin();
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen, hasSpun, achievement, handleSpin]);
 
     // Calculate SVG Pie Slices
     const svgPaths = useMemo(() => {

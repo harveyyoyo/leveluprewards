@@ -14,7 +14,7 @@ describe('ClassroomTabLauncher', () => {
     render(<ClassroomTabLauncher schoolId="schoolabc" />);
 
     const link = screen.getByRole('link', { name: /open classroom/i });
-    expect(link.getAttribute('href')).toContain('/schoolabc/classroom-realm');
+    expect(link.getAttribute('href')).toContain('/schoolabc/classroom');
     expect(screen.queryByText(/command center/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /open classroom/i })).toBeNull();
   });

@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { AlertTriangle, Calendar, Clock, Loader2, RefreshCw, Smile, ThumbsDown, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,11 +64,24 @@ function errorHint(status?: number, message?: string): string {
   return 'Check the server message above, then sign in again as Admin or Teacher for this school.';
 }
 
+const feedSpring = { type: 'spring' as const, stiffness: 280, damping: 26 };
+
+function isSameLocalDay(timestamp: number, now = Date.now()) {
+  const left = new Date(timestamp);
+  const right = new Date(now);
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
 export function BehaviorTimelinePanel({
   schoolId,
   className,
   refreshToken = 0,
   embedded = false,
+  liveLog = false,
   mode = 'principal',
 }: {
   schoolId: string;
@@ -76,6 +90,8 @@ export function BehaviorTimelinePanel({
   refreshToken?: number;
   /** When true, render inside Classroom Management without a nested card. */
   embedded?: boolean;
+  /** Live drawer: today’s notes only, no how-to copy. */
+  liveLog?: boolean;
   /** Behavior tab vs Principal school-wide tab (same data, different heading). */
   mode?: BehaviorTimelineMode;
 }) {
@@ -88,6 +104,7 @@ export function BehaviorTimelinePanel({
   const [isLoading, setIsLoading] = useState(() => !peekBehaviorNotesCache(schoolId));
   const [error, setError] = useState<{ message: string; status?: number } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [kindFilter, setKindFilter] = useState<'all' | BehaviorNoteKind>('all');
 
   const handleDelete = useCallback(
     async (noteId: string) => {
@@ -174,22 +191,55 @@ export function BehaviorTimelinePanel({
     return () => window.removeEventListener(BEHAVIOR_NOTE_SAVED_EVENT, onNoteSaved);
   }, [load]);
 
-  const title = mode === 'behavior' ? 'Behavior notes' : 'Principal';
+  const visibleRows = useMemo(() => {
+    const scoped = liveLog ? rows.filter((row) => !row.createdAt || isSameLocalDay(row.createdAt)) : rows;
+    if (kindFilter === 'all') return scoped;
+    return scoped.filter((row) => row.kind === kindFilter);
+  }, [kindFilter, liveLog, rows]);
+
+  const title = liveLog
+    ? `Today's Notes (${visibleRows.length})`
+    : mode === 'behavior'
+      ? 'Behavior notes'
+      : 'Principal';
   const description =
-    mode === 'behavior'
-      ? `Notes you add from ${CLASSROOM_SEATING_SECTION_LABEL} (hold P, C, I, W, or H and click a student, or use the award menu). New entries appear here after you save.`
-      : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
+    liveLog
+      ? null
+      : mode === 'behavior'
+        ? `Notes you add from ${CLASSROOM_SEATING_SECTION_LABEL} (hold P, C, I, W, or H and click a student, or use the award menu). New entries appear here after you save.`
+        : 'School-wide log of behavior notes from all classes. Review positives, concerns, and incidents — separate from quick point awards.';
 
   const header = (
     <div className="flex items-start justify-between gap-2">
       <div className="space-y-2">
         {embedded ? (
-          <h3 className="text-lg font-black tracking-tight">{title}</h3>
+          <h3 className={cn('font-black tracking-tight', liveLog ? 'text-sm' : 'text-lg')}>{title}</h3>
         ) : (
           <CardTitle className="text-lg font-black">{title}</CardTitle>
         )}
-        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+        {description ? (
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">{description}</p>
+        ) : null}
       </div>
+      {liveLog ? (
+        <label className="sr-only" htmlFor="live-behavior-note-filter">
+          Filter notes
+        </label>
+      ) : null}
+      {liveLog ? (
+        <select
+          id="live-behavior-note-filter"
+          className="h-8 rounded-xl border border-slate-200 bg-white px-2 text-xs font-bold text-slate-800 shadow-sm"
+          value={kindFilter}
+          onChange={(event) => setKindFilter(event.target.value as 'all' | BehaviorNoteKind)}
+          aria-label="Filter notes"
+        >
+          <option value="all">All</option>
+          <option value="positive">Positive</option>
+          <option value="concern">Comment</option>
+          <option value="incident">Incident</option>
+        </select>
+      ) : (
       <Button
         type="button"
         variant="ghost"
@@ -201,11 +251,13 @@ export function BehaviorTimelinePanel({
       >
         <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} />
       </Button>
+      )}
     </div>
   );
 
   const body = (
     <div className="space-y-3">
+        {!liveLog ? (
         <div className="rounded-xl border border-border/60 bg-muted/25 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
           <p className="font-bold text-foreground">How teachers add a note</p>
           <ol className="mt-1.5 list-decimal space-y-1 pl-4">
@@ -229,8 +281,9 @@ export function BehaviorTimelinePanel({
           </ol>
           <p className="mt-2 text-[11px]">New notes appear here automatically after a teacher saves one.</p>
         </div>
+        ) : null}
 
-        <div className="max-h-[360px] space-y-3 overflow-y-auto">
+        <div className={cn('space-y-3 overflow-y-auto', liveLog ? 'max-h-[min(28rem,52vh)]' : 'max-h-[360px]')}>
         {error ? (
           <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -244,14 +297,22 @@ export function BehaviorTimelinePanel({
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading notes…
           </div>
-        ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">No behavior notes yet.</p>
+        ) : visibleRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">
+            {liveLog ? 'No notes yet today.' : 'No behavior notes yet.'}
+          </p>
         ) : (
-          rows.map((n) => {
+          visibleRows.map((n) => {
             const meta = kindMeta(n.kind);
             const Icon = meta.icon;
             return (
-              <div key={n.id} className="rounded-xl border bg-muted/20 p-3 space-y-2">
+              <motion.div
+                key={n.id}
+                initial={liveLog ? { opacity: 0, y: 8 } : false}
+                animate={{ opacity: 1, y: 0 }}
+                transition={feedSpring}
+                className="space-y-2 rounded-xl border bg-muted/20 p-3"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className={cn('gap-1 font-semibold', meta.className)}>
                     <Icon className="h-3 w-3" />
@@ -317,12 +378,12 @@ export function BehaviorTimelinePanel({
                     </span>
                   </div>
                 ) : null}
-                <p className="text-sm leading-snug">{n.note}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{n.note}</p>
                 <p className="text-[11px] text-muted-foreground">
                   {n.teacherName}
                   {n.pointsLabel ? ` · ${n.pointsLabel}${n.pointsAmount != null ? ` (${n.pointsAmount > 0 ? '+' : ''}${n.pointsAmount})` : ''}` : ''}
                 </p>
-              </div>
+              </motion.div>
             );
           })
         )}
@@ -332,8 +393,8 @@ export function BehaviorTimelinePanel({
 
   if (embedded) {
     return (
-      <section className={cn('space-y-4', className)}>
-        <div className="border-b border-border/40 pb-4">{header}</div>
+      <section className={cn(liveLog ? 'space-y-2' : 'space-y-4', className)}>
+        <div className={cn(liveLog ? 'pb-1' : 'border-b border-border/40 pb-4')}>{header}</div>
         {body}
       </section>
     );

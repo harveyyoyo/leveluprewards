@@ -63,7 +63,8 @@ export interface LibraryItem {
 /** Primary organization hierarchy for library book shelving and catalog grouping. */
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_title';
+  | 'author_then_title'
+  | 'reading_level_then_author';
 
 
 export type LibraryItemInput = Pick<
@@ -561,6 +562,8 @@ export interface AttendanceSettings {
   attendanceTimeZone?: string;
   /** Optional owner for per-teacher attendance configuration. */
   teacherId?: string;
+  /** Minutes after bell to mute kiosk sign-in audio (-1 for always play sound). */
+  attendanceQuietAfterMinutes?: number;
 }
 
 /** One sign-in event stored for admin reporting. */
@@ -571,11 +574,14 @@ export interface AttendanceLogEntry {
   signedInAt: number;
   pointsAwarded: number;
   onTime: boolean;
+  status?: 'on-time' | 'late' | 'excused';
   periodLabel?: string;
   /** A deterministic per-session key used to prevent double sign-ins. */
   sessionId?: string;
-   /** Optional owning teacher when using per-teacher attendance configs. */
+  /** Optional owning teacher when using per-teacher attendance configs. */
   teacherId?: string;
+  manual?: boolean;
+  note?: string;
 }
 
 /** Student currently out on a bathroom pass (one doc per student). */

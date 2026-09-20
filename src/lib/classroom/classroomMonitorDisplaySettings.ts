@@ -11,6 +11,7 @@ export type ClassroomMonitorDisplayFlags = {
   showSessionTotals: boolean;
   showSessionLastAward: boolean;
   showLastName: boolean;
+  showStudentPhotos: boolean;
   showStudentEmoji: boolean;
 };
 
@@ -52,6 +53,7 @@ export function classroomMonitorDisplayFromSettings(
     ...fromMode,
     showSessionLastAward: settings?.classroomMonitorIncludeSessionLastAward !== false,
     showLastName: settings?.classroomMonitorIncludeLastName === true,
+    showStudentPhotos: settings?.classroomMonitorIncludeStudentPhotos !== false,
     showStudentEmoji: settings?.classroomMonitorIncludeStudentEmoji === true,
   };
 }
@@ -63,6 +65,8 @@ function localDeskDisplayMatchesDefaults(prefs: ClassroomSeatingPrefs): boolean 
     (prefs.showSessionLastAward ?? DEFAULT_CLASSROOM_PREFS.showSessionLastAward) ===
       DEFAULT_CLASSROOM_PREFS.showSessionLastAward &&
     prefs.showLastName === DEFAULT_CLASSROOM_PREFS.showLastName &&
+    (prefs.showStudentPhotos ?? DEFAULT_CLASSROOM_PREFS.showStudentPhotos) ===
+      DEFAULT_CLASSROOM_PREFS.showStudentPhotos &&
     prefs.showStudentEmoji === DEFAULT_CLASSROOM_PREFS.showStudentEmoji
   );
 }
@@ -80,6 +84,8 @@ export function resolveEffectiveDeskDisplayPrefs(
     showSessionLastAward:
       localPrefs.showSessionLastAward ?? DEFAULT_CLASSROOM_PREFS.showSessionLastAward,
     showLastName: localPrefs.showLastName,
+    showStudentPhotos:
+      localPrefs.showStudentPhotos ?? DEFAULT_CLASSROOM_PREFS.showStudentPhotos,
     showStudentEmoji: localPrefs.showStudentEmoji,
   };
 }

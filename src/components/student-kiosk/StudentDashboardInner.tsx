@@ -202,7 +202,15 @@ import { StudentKioskPointsFlyUp } from '@/components/student-kiosk/StudentKiosk
 
 
 const PrizeDashboard = dynamic(
-  () => import('@/app/[schoolId]/prize/PrizeDashboard').then((m) => m.PrizeDashboard),
+  () =>
+    import('@/app/[schoolId]/prize/PrizeDashboard')
+      .then((m) => m.PrizeDashboard)
+      .catch((err) => {
+        if (typeof window !== 'undefined' && (err?.message?.includes('Loading chunk') || err?.name === 'ChunkLoadError')) {
+          window.location.reload();
+        }
+        throw err;
+      }),
   {
     ssr: false,
     loading: () => null,
@@ -695,7 +703,11 @@ export function StudentDashboardInner({
           student,
         });
         if (result.pointsAwarded > 0) {
-          playSound('success');
+          const quietMinutes = settings.attendanceQuietAfterMinutes ?? -1;
+          const isQuiet = quietMinutes >= 0 && !result.onTime;
+          if (!isQuiet) {
+            playSound('success');
+          }
           animationKey.current += 1;
           setFlyReusableCoupon(false);
           setFlyPointsValue(result.pointsAwarded);
@@ -705,7 +717,7 @@ export function StudentDashboardInner({
         console.error('Attendance sign-in failed', err);
       }
     })();
-  }, [settings.payAttendance, settings.enableClassSignIn, student, schoolId, functions, playSound]);
+  }, [settings.payAttendance, settings.enableClassSignIn, settings.attendanceQuietAfterMinutes, student, schoolId, functions, playSound]);
  
   // --- Birthday bonus points (when enabled in school settings) ---
   useEffect(() => {
@@ -768,6 +780,7 @@ export function StudentDashboardInner({
 
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const [fullPrizeShopOpen, setFullPrizeShopOpen] = useState(false);
+  const [kioskMobileTab, setKioskMobileTab] = useState<'redeem' | 'prizes' | 'info'>('redeem');
 
   const openFullPrizeShop = useCallback(() => {
     playSound('click');
@@ -793,7 +806,7 @@ export function StudentDashboardInner({
   }, [searchParams]);
 
   useEffect(() => {
-    void import('@/app/[schoolId]/prize/PrizeDashboard');
+    void import('@/app/[schoolId]/prize/PrizeDashboard').catch(() => {});
   }, []);
 
   const handleStudentIdScan = useCallback(
@@ -1862,15 +1875,27 @@ export function StudentDashboardInner({
               </>
             }
             trailingActions={
-              <StudentKioskLogoutControls
-                themed={{ active: !!effectiveTheme }}
-                primaryForeground={primaryForeground}
-                isKioskLocked={isKioskLocked}
-                autoLogoutEnabled={kioskAutoLogoutOn}
-                logoutTimer={logoutTimer}
-                sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
-                onLogout={handleManualLogout}
-              />
+              <div className="flex items-center gap-2">
+                {schoolId && settings.enableStudentThemes !== false ? (
+                  <StudentKioskThemeButton
+                    schoolId={schoolId}
+                    student={student}
+                    classLabel={studentClassLabel}
+                    themed={!!effectiveTheme}
+                    primaryForeground={primaryForeground}
+                    layout="inline"
+                  />
+                ) : null}
+                <StudentKioskLogoutControls
+                  themed={{ active: !!effectiveTheme }}
+                  primaryForeground={primaryForeground}
+                  isKioskLocked={isKioskLocked}
+                  autoLogoutEnabled={kioskAutoLogoutOn}
+                  logoutTimer={logoutTimer}
+                  sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
+                  onLogout={handleManualLogout}
+                />
+              </div>
             }
         />
         {student.nickname?.trim() ? (
@@ -1902,6 +1927,104 @@ export function StudentDashboardInner({
               onActivity={resetLogoutTimer}
             />
           ) : null}
+
+          {/* Mobile & Tablet Mode Tabs */}
+          <div className="flex shrink-0 items-center justify-center lg:hidden px-2">
+            <div
+              className={cn(
+                'flex w-full max-w-md items-center gap-1 rounded-2xl p-1 border shadow-sm',
+                !effectiveTheme ? 'bg-muted/70 border-border/60' : 'border-white/20'
+              )}
+              style={
+                effectiveTheme
+                  ? {
+                      backgroundColor: 'color-mix(in srgb, var(--theme-card) 92%, white)',
+                      borderColor: 'color-mix(in srgb, var(--theme-primary) 30%, transparent)',
+                    }
+                  : undefined
+              }
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setKioskMobileTab('redeem');
+                }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all',
+                  kioskMobileTab === 'redeem'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                style={
+                  effectiveTheme && kioskMobileTab === 'redeem'
+                    ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
+                    : effectiveTheme
+                      ? { color: 'var(--theme-page-text)' }
+                      : undefined
+                }
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Redeem</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setKioskMobileTab('prizes');
+                }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all',
+                  kioskMobileTab === 'prizes'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                style={
+                  effectiveTheme && kioskMobileTab === 'prizes'
+                    ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
+                    : effectiveTheme
+                      ? { color: 'var(--theme-page-text)' }
+                      : undefined
+                }
+              >
+                <Gift className="w-4 h-4" />
+                <span>Prizes</span>
+                {eligibleRewards.length > 0 && (
+                  <span
+                    className={cn(
+                      'ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-black',
+                      kioskMobileTab === 'prizes' ? 'bg-white/25 text-white' : 'bg-primary/20 text-primary'
+                    )}
+                  >
+                    {eligibleRewards.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playSound('click');
+                  setKioskMobileTab('info');
+                }}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black uppercase tracking-wider transition-all',
+                  kioskMobileTab === 'info'
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+                style={
+                  effectiveTheme && kioskMobileTab === 'info'
+                    ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground }
+                    : effectiveTheme
+                      ? { color: 'var(--theme-page-text)' }
+                      : undefined
+                }
+              >
+                <Clock className="w-4 h-4" />
+                <span>My Info</span>
+              </button>
+            </div>
+          </div>
 
           <div
             className={cn(
@@ -1952,6 +2075,7 @@ export function StudentDashboardInner({
             className={cn(
               'order-1 flex min-h-0 min-w-0 flex-1 flex-col px-4 sm:px-6 lg:order-2 lg:min-h-full lg:px-8',
               studentKioskCenterStackClass,
+              kioskMobileTab !== 'redeem' && 'hidden lg:flex',
             )}
           >
             <div className="flex min-h-0 flex-1 flex-col justify-center">
@@ -2041,98 +2165,112 @@ export function StudentDashboardInner({
             ) : null}
           </aside>
 
-          <div className="order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5">
-            <p
-              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
-              style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
-            >
-              Other info
-            </p>
-            {libraryBlock}
-            {profileExtrasBlock}
-            <StudentKioskPointCategoriesPanel
-              themed={!!effectiveTheme}
-              totals={pointTypeTotals}
-              footer={portalRaffleFooter}
-            />
-            {schoolId ? (
-              <StudentKioskActivityPreview
-                schoolId={schoolId}
-                studentId={student.id}
-                themed={!!effectiveTheme}
-                variant="sidebar"
-                showFooterCta={false}
-                onViewAll={() => {
-                  playSound('click');
-                  setActivityDialogOpen(true);
-                }}
-              />
-            ) : null}
-            {schoolId ? (
-              <StudentKioskMoreActivityButton
-                themed={{ active: !!effectiveTheme }}
-                primaryForeground={primaryForeground}
-                onClick={() => {
-                  playSound('click');
-                  setActivityDialogOpen(true);
-                }}
-              />
-            ) : null}
-            <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
-              Eligible prizes
-            </p>
-            <StudentKioskFadeScrollPane themed={!!effectiveTheme} className="min-h-[12rem]">
-              <div className="grid grid-cols-2 gap-3">
-              {prizesLoading
-                ? [...Array(6)].map((_, i) => (
-                    <Skeleton key={`m-${i}`} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
-                  ))
-                : eligibleRewards.map((reward) => (
-                    <StudentPrizeShopCard
-                      key={reward.id}
-                      prize={reward}
-                      studentPoints={student.points ?? 0}
-                      themed={!!effectiveTheme}
-                      primaryForeground={primaryForeground}
-                      wholeCardClick
-                      onRedeem={() => {
-                        playSound('click');
-                        setConfirmingPrize(reward);
-                      }}
-                    />
-                  ))}
-              {!prizesLoading && eligibleRewards.length === 0 ? (
-                <div
-                  className={cn(
-                    'col-span-2 flex flex-col items-center justify-center rounded-xl border border-dashed py-8 text-center',
-                    !activeTheme && 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50',
-                  )}
-                  style={
-                    activeTheme
-                      ? {
-                          backgroundColor: 'var(--theme-bg)',
-                          borderColor: 'var(--theme-primary)',
-                          color: 'var(--theme-text)',
-                        }
-                      : undefined
-                  }
+          <div
+            className={cn(
+              "order-4 flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:hidden [@media(max-height:760px)]:gap-1.5",
+              kioskMobileTab === 'redeem' && 'hidden'
+            )}
+          >
+            {kioskMobileTab === 'info' && (
+              <>
+                <p
+                  className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+                  style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
                 >
-                  <Star className="mb-2 h-6 w-6 opacity-60" aria-hidden />
-                  <p className="text-xs font-black">Almost there!</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-widest opacity-70">
-                    Keep earning points to unlock rewards
-                  </p>
-                </div>
-              ) : null}
-              </div>
-            </StudentKioskFadeScrollPane>
-            <StudentKioskMorePrizesButton
-              themed={{ active: !!effectiveTheme }}
-              primaryForeground={primaryForeground}
-              schoolId={schoolId}
-              studentId={student.id}
-              onClick={openFullPrizeShop}
-            />
+                  Other info
+                </p>
+                {libraryBlock}
+                {profileExtrasBlock}
+                <StudentKioskPointCategoriesPanel
+                  themed={!!effectiveTheme}
+                  totals={pointTypeTotals}
+                  footer={portalRaffleFooter}
+                />
+                {schoolId ? (
+                  <StudentKioskActivityPreview
+                    schoolId={schoolId}
+                    studentId={student.id}
+                    themed={!!effectiveTheme}
+                    variant="sidebar"
+                    showFooterCta={false}
+                    onViewAll={() => {
+                      playSound('click');
+                      setActivityDialogOpen(true);
+                    }}
+                  />
+                ) : null}
+                {schoolId ? (
+                  <StudentKioskMoreActivityButton
+                    themed={{ active: !!effectiveTheme }}
+                    primaryForeground={primaryForeground}
+                    onClick={() => {
+                      playSound('click');
+                      setActivityDialogOpen(true);
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
+
+            {kioskMobileTab === 'prizes' && (
+              <>
+                <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
+                  Eligible prizes
+                </p>
+                <StudentKioskFadeScrollPane themed={!!effectiveTheme} className="min-h-[12rem]">
+                  <div className="grid grid-cols-2 gap-3">
+                  {prizesLoading
+                    ? [...Array(6)].map((_, i) => (
+                        <Skeleton key={`m-${i}`} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
+                      ))
+                    : eligibleRewards.map((reward) => (
+                        <StudentPrizeShopCard
+                          key={reward.id}
+                          prize={reward}
+                          studentPoints={student.points ?? 0}
+                          themed={!!effectiveTheme}
+                          primaryForeground={primaryForeground}
+                          wholeCardClick
+                          onRedeem={() => {
+                            playSound('click');
+                            setConfirmingPrize(reward);
+                          }}
+                        />
+                      ))}
+                  {!prizesLoading && eligibleRewards.length === 0 ? (
+                    <div
+                      className={cn(
+                        'col-span-2 flex flex-col items-center justify-center rounded-xl border border-dashed py-8 text-center',
+                        !activeTheme && 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50',
+                      )}
+                      style={
+                        activeTheme
+                          ? {
+                              backgroundColor: 'var(--theme-bg)',
+                              borderColor: 'var(--theme-primary)',
+                              color: 'var(--theme-text)',
+                            }
+                          : undefined
+                      }
+                    >
+                      <Star className="mb-2 h-6 w-6 opacity-60" aria-hidden />
+                      <p className="text-xs font-black">Almost there!</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-widest opacity-70">
+                        Keep earning points to unlock rewards
+                      </p>
+                    </div>
+                  ) : null}
+                  </div>
+                </StudentKioskFadeScrollPane>
+                <StudentKioskMorePrizesButton
+                  themed={{ active: !!effectiveTheme }}
+                  primaryForeground={primaryForeground}
+                  schoolId={schoolId}
+                  studentId={student.id}
+                  onClick={openFullPrizeShop}
+                />
+              </>
+            )}
           </div>
           </div>
 
@@ -2190,26 +2328,84 @@ export function StudentDashboardInner({
               if (!open && !isRedeemingPrize) setConfirmingPrize(null);
             }}>
               <AlertDialogContent
-                className={cn(activeTheme && 'student-theme-surface')}
+                className={cn('max-w-md rounded-3xl p-6 shadow-2xl border-2', activeTheme && 'student-theme-surface')}
                 style={themeSurfaceStyle}
               >
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t('student.kiosk.redeemPrize')}</AlertDialogTitle>
+                <AlertDialogHeader className="text-center space-y-3">
+                  <div
+                    className={cn(
+                      'mx-auto w-20 h-20 rounded-2xl flex items-center justify-center shadow-md relative overflow-hidden transition-transform',
+                      !activeTheme && 'bg-primary/10 text-primary border border-primary/20'
+                    )}
+                    style={
+                      activeTheme
+                        ? {
+                            backgroundColor: 'var(--theme-bg)',
+                            color: 'var(--theme-primary)',
+                            borderColor: 'var(--theme-primary)',
+                            borderWidth: 1,
+                          }
+                        : undefined
+                    }
+                  >
+                    {confirmingPrize?.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={confirmingPrize.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <DynamicIcon name={confirmingPrize?.icon || 'Gift'} className="w-10 h-10 drop-shadow-sm" />
+                    )}
+                  </div>
+                  <AlertDialogTitle className="text-2xl sm:text-3xl font-black uppercase tracking-tight break-words [overflow-wrap:anywhere]">
+                    {confirmingPrize?.name}
+                  </AlertDialogTitle>
                   <AlertDialogDescription
-                    className="break-words [overflow-wrap:anywhere]"
+                    className="text-sm font-semibold"
                     style={activeTheme ? { color: 'var(--theme-text)', opacity: 0.85 } : undefined}
                   >
-                    {t('student.kiosk.redeem')}{' '}
-                    <span className="text-xl font-black sm:text-2xl [overflow-wrap:anywhere]">{confirmingPrize?.name}</span>
-                    {confirmingPrize
-                      ? ` ${t('student.kiosk.redeemConfirmFor', { points: (confirmingPrize.points || 0).toLocaleString() })}`
-                      : ''}
-                    ?
+                    Ready to trade your points for this reward?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+
+                {/* Points calculation card */}
+                <div
+                  className={cn(
+                    'my-3 rounded-2xl border-2 p-3.5 flex items-center justify-around text-center shadow-inner',
+                    !activeTheme && 'bg-muted/40 border-border/70'
+                  )}
+                  style={
+                    activeTheme
+                      ? {
+                          backgroundColor: 'var(--theme-bg)',
+                          borderColor: 'color-mix(in srgb, var(--theme-primary) 35%, transparent)',
+                        }
+                      : undefined
+                  }
+                >
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Prize Cost</p>
+                    <p
+                      className="text-xl font-black"
+                      style={activeTheme ? { color: 'var(--theme-primary)' } : { color: 'hsl(var(--primary))' }}
+                    >
+                      {(confirmingPrize?.points || 0).toLocaleString()} pts
+                    </p>
+                  </div>
+                  <div className="h-8 w-px bg-border/80" />
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Points Left Over</p>
+                    <p className="text-xl font-black opacity-90">
+                      {Math.max(0, (student.points || 0) - (confirmingPrize?.points || 0)).toLocaleString()} pts
+                    </p>
+                  </div>
+                </div>
+
                 {confirmingPrize?.aiFunReward === 'picker' ? (
                   <div className="py-2 space-y-2">
-                    <Label htmlFor="student-fun-kind" style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>What do you want?</Label>
+                    <Label htmlFor="student-fun-kind" style={activeTheme ? { color: 'var(--theme-text)' } : undefined}>What kind of surprise do you want?</Label>
                     <Select value={confirmingFunKind} onValueChange={(v) => setConfirmingFunKind(v as PrizeAiFunReward)}>
                       <SelectTrigger
                         id="student-fun-kind"
@@ -2227,16 +2423,32 @@ export function StudentDashboardInner({
                     </Select>
                   </div>
                 ) : null}
-                <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
-                  <AlertDialogCancel disabled={isRedeemingPrize} className="w-full sm:w-auto">
-                    Cancel
-                  </AlertDialogCancel>
+                <AlertDialogFooter className="flex-col gap-2.5 sm:flex-col sm:space-x-0 mt-2">
+                  <Button
+                    type="button"
+                    className="w-full h-12 rounded-xl text-base font-black uppercase tracking-wider shadow-lg transition-all active:scale-95"
+                    onClick={handleRedeemPrize}
+                    disabled={isRedeemingPrize}
+                    style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                  >
+                    {isRedeemingPrize ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden />
+                        Redeeming...
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="mr-2 h-5 w-5" aria-hidden />
+                        Yes, Get This Prize!
+                      </>
+                    )}
+                  </Button>
                   {confirmingPrize?.offerPrintTicketOnRedeem === true &&
                   confirmingPrize.aiFunReward == null ? (
                     <Button
                       type="button"
                       variant="outline"
-                      className="w-full sm:w-auto"
+                      className="w-full h-11 rounded-xl font-bold"
                       disabled={isRedeemingPrize}
                       onClick={() => void handleRedeemPrizePickupVoucher()}
                     >
@@ -2250,22 +2462,12 @@ export function StudentDashboardInner({
                       )}
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    className="w-full sm:w-auto"
-                    onClick={handleRedeemPrize}
+                  <AlertDialogCancel
                     disabled={isRedeemingPrize}
-                    style={activeTheme ? { backgroundColor: 'var(--theme-primary)', color: primaryForeground } : undefined}
+                    className="w-full h-11 rounded-xl font-bold border-2 text-muted-foreground"
                   >
-                    {isRedeemingPrize ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                        Redeeming...
-                      </>
-                    ) : (
-                      'Redeem now'
-                    )}
-                  </Button>
+                    Keep Saving
+                  </AlertDialogCancel>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
@@ -2394,19 +2596,6 @@ export function StudentDashboardInner({
 
         </div>
 
-        {/* Fixed bottom center theme button */}
-        {schoolId && settings.enableStudentThemes !== false && !fullPrizeShopOpen ? (
-          <div className="fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-30 -translate-x-1/2">
-            <StudentKioskThemeButton
-              schoolId={schoolId}
-              student={student}
-              classLabel={studentClassLabel}
-              themed={!!effectiveTheme}
-              primaryForeground={primaryForeground}
-              layout="inline"
-            />
-          </div>
-        ) : null}
 
         {welcomeBackdropActive && (
           <>

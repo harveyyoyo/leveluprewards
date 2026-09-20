@@ -90,6 +90,7 @@ interface SchoolInfo {
   passcode?: string;
   schoolAccessPasscode?: string;
   adminPasscode?: string;
+  adminEmails?: string[];
   schoolProfile?: SchoolProfileType;
   appSettings?: {
     payClassroom?: boolean;
@@ -131,6 +132,7 @@ export default function DeveloperPage() {
   const [editingSchoolName, setEditingSchoolName] = useState('');
   const [editingSchoolAccessPasscode, setEditingSchoolAccessPasscode] = useState('');
   const [editingAdminPasscode, setEditingAdminPasscode] = useState('');
+  const [editingAdminEmails, setEditingAdminEmails] = useState('');
   const [editingPasscodeStatus, setEditingPasscodeStatus] = useState<{
     schoolAccessConfigured: boolean;
     adminConfigured: boolean;
@@ -527,8 +529,10 @@ export default function DeveloperPage() {
       setEditingSchool({ ...data, id: school.id });
       setEditingSchoolName(data.name);
       setEditingJewishOrthodox(isJewishOrthodoxSchool(data, school.id));
+      setEditingAdminEmails(Array.isArray(data.adminEmails) ? data.adminEmails.join(', ') : '');
     } catch {
       setEditingJewishOrthodox(isJewishOrthodoxSchool(school, school.id));
+      setEditingAdminEmails(Array.isArray(school.adminEmails) ? school.adminEmails.join(', ') : '');
     }
 
     try {
@@ -571,6 +575,7 @@ export default function DeveloperPage() {
     setEditingSchoolName('');
     setEditingSchoolAccessPasscode('');
     setEditingAdminPasscode('');
+    setEditingAdminEmails('');
     setEditingPasscodeStatus(null);
     setEditingJewishOrthodox(false);
   }
@@ -583,6 +588,7 @@ export default function DeveloperPage() {
       passcode?: string;
       schoolAccessPasscode?: string;
       adminPasscode?: string;
+      adminEmails?: string[];
       schoolProfile?: SchoolProfileType;
     } = {};
     if (editingSchoolName && editingSchoolName !== editingSchool.name) {
@@ -596,6 +602,14 @@ export default function DeveloperPage() {
     }
     if (nextAdminPasscode) {
       updates.adminPasscode = nextAdminPasscode;
+    }
+    const currentEmailsStr = Array.isArray(editingSchool.adminEmails) ? editingSchool.adminEmails.join(', ') : '';
+    if (editingAdminEmails.trim() !== currentEmailsStr) {
+      const parsedEmails = editingAdminEmails
+        .split(/[,;\s]+/)
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+      updates.adminEmails = parsedEmails;
     }
     const nextProfile: SchoolProfileType = editingJewishOrthodox ? 'jewish_orthodox' : 'standard';
     const currentProfile: SchoolProfileType = isJewishOrthodoxSchool(editingSchool, editingSchool.id)
@@ -1689,6 +1703,21 @@ export default function DeveloperPage() {
                   {editingPasscodeStatus?.adminConfigured ? (
                     <p className="text-[11px] text-muted-foreground">An admin passcode is already saved (stored securely).</p>
                   ) : null}
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="admin-emails-edit" className="text-right">Admin Google</Label>
+                <div className="col-span-3 space-y-1">
+                  <Input
+                    id="admin-emails-edit"
+                    value={editingAdminEmails}
+                    onChange={(e) => setEditingAdminEmails(e.target.value)}
+                    autoComplete="off"
+                    placeholder="e.g. eli7teitelbaum@gmail.com (comma-separated)"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Google accounts authorized to sign in as school admin without a passcode.
+                  </p>
                 </div>
               </div>
             </div>

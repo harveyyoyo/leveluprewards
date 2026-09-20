@@ -11,6 +11,12 @@ export function isAllowedAdminGoogleUser(user: User | null | undefined): boolean
   return isAllowedDeveloperGoogleUser(user);
 }
 
+/** Check if user has an active Google sign-in */
+export function hasGoogleAuthProvider(user: User | null | undefined): boolean {
+  if (!user || user.isAnonymous) return false;
+  return user.providerData.some((p) => p.providerId === 'google.com');
+}
+
 /** Allowlisted developer Google accounts may attempt admin login without a passcode (server verifies allowlist). */
 export function canBypassSchoolAdminPasscode(user: User | null | undefined): boolean {
   return isAllowedDeveloperGoogleUser(user);
@@ -21,7 +27,7 @@ type AdminLoginFn = (
   credentials: { schoolId: string; passcode?: string },
 ) => Promise<LoginResult>;
 
-/** School admin login: passcode when required, or Google allowlist bypass when passcode is empty. */
+/** School admin login: passcode when required, or Google bypass when passcode is empty. */
 export async function loginSchoolAdmin(
   login: AdminLoginFn,
   user: User | null | undefined,
@@ -33,8 +39,9 @@ export async function loginSchoolAdmin(
   if (trimmed) {
     return login('admin', { schoolId: sid, passcode: trimmed });
   }
-  if (canBypassSchoolAdminPasscode(user)) {
+  if (canBypassSchoolAdminPasscode(user) || hasGoogleAuthProvider(user)) {
     return login('admin', { schoolId: sid, passcode: '' });
   }
   return { ok: false, message: 'Enter the admin passcode to continue.' };
 }
+

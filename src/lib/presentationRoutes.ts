@@ -5,6 +5,7 @@ export function isPresentationRoute(pathname: string | null | undefined): boolea
     pathname.includes('/library/kiosk') ||
     pathname.includes('/houses-realm') ||
     pathname.includes('/classroom-realm') ||
+    /\/classroom(?:\/|$|\?)/.test(pathname) ||
     pathname.includes('/house-sorting') ||
     pathname.includes('/classroom-screen') ||
     pathname.includes('/smart-screen') ||

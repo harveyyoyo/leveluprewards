@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useAppContext } from '@/components/AppProvider';
 import { useFirebase } from '@/firebase';
 import { canBypassSchoolAdminPasscode, loginSchoolAdmin } from '@/lib/adminGoogleAccess';
+import { GoogleIcon } from '@/components/auth/GoogleIcon';
+import { signInWithGooglePopup } from '@/lib/google/googleSignIn';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
     Dialog,
@@ -108,13 +110,14 @@ export function SettingsModal() {
         isAdmin: hasAdminRole,
         schoolId,
     } = useAppContext();
-    const { user: firebaseUser, firestore } = useFirebase();
+    const { user: firebaseUser, firestore, auth } = useFirebase();
     const canBypassAdminPasscode = canBypassSchoolAdminPasscode(firebaseUser);
     const canOpenSettings = loginState === 'admin' || loginState === 'developer' || loginState === 'teacher';
     const [open, setOpen] = useState(false);
     const [adminDialogOpen, setAdminDialogOpen] = useState(false);
     const [adminPasscode, setAdminPasscode] = useState('');
     const [adminSubmitting, setAdminSubmitting] = useState(false);
+    const [isGoogleSigningIn, setIsGoogleSigningIn] = useState(false);
     /** Set when kiosk/school session unlocks settings via passcode (before auth context re-renders). */
     const [kioskAdminSettingsUnlock, setKioskAdminSettingsUnlock] = useState(false);
     /** Full school settings (all sections, edits) — admin role, admin session, or kiosk passcode unlock. */
@@ -516,6 +519,45 @@ export function SettingsModal() {
         [adminSubmitting, beginSettingsSession, firebaseUser, login, playSound, schoolId, toast],
     );
 
+    const handleGoogleAdminSignIn = useCallback(async () => {
+        if (adminSubmitting || isGoogleSigningIn || !auth || !schoolId) return;
+        setIsGoogleSigningIn(true);
+        try {
+            const cred = await signInWithGooglePopup(auth);
+            const authResult = await loginSchoolAdmin(login, cred.user, schoolId, '');
+            if (!authResult.ok) {
+                playSound('error');
+                toast({
+                    variant: 'destructive',
+                    title: 'Sign in failed',
+                    description: authResult.message,
+                });
+                return;
+            }
+
+            playSound('login');
+            setKioskAdminSettingsUnlock(true);
+            const pendingView = pendingSettingsViewRef.current;
+            pendingSettingsViewRef.current = null;
+            beginSettingsSession(pendingView ?? 'hub', { fullAccess: true });
+            setOpen(true);
+            setAdminDialogOpen(false);
+        } catch (err: unknown) {
+            const code = String((err as { code?: string })?.code ?? '');
+            if (code === 'auth/popup-closed-by-user') {
+                return;
+            }
+            playSound('error');
+            toast({
+                variant: 'destructive',
+                title: 'Google sign-in failed',
+                description: (err as Error)?.message || 'Could not complete Google sign-in. Please try again.',
+            });
+        } finally {
+            setIsGoogleSigningIn(false);
+        }
+    }, [adminSubmitting, auth, beginSettingsSession, isGoogleSigningIn, login, playSound, schoolId, toast]);
+
     // For short-link kiosk entry routes, keep the UI minimal (and avoid showing settings).
     if (isShortLinkKioskRoute) return null;
 
@@ -527,6 +569,7 @@ export function SettingsModal() {
                 if (!open) {
                     setAdminSubmitting(false);
                     setAdminPasscode('');
+                    setIsGoogleSigningIn(false);
                 }
                 setAdminDialogOpen(open);
             }}
@@ -559,6 +602,35 @@ export function SettingsModal() {
                         />
                     </div>
                     <NumericKeypad value={adminPasscode} onChange={setAdminPasscode} />
+
+                    <div className="relative my-2">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t border-border" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground font-medium">Or</span>
+                        </div>
+                    </div>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 border-border shadow-sm hover:bg-muted"
+                        disabled={adminSubmitting || isGoogleSigningIn}
+                        onClick={() => void handleGoogleAdminSignIn()}
+                    >
+                        {isGoogleSigningIn ? (
+                            <>
+                                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                                Signing in with Google...
+                            </>
+                        ) : (
+                            <>
+                                <GoogleIcon className="h-4 w-4" />
+                                Sign in with Google
+                            </>
+                        )}
+                    </Button>
                 </div>
                 <DialogFooter className="gap-2 sm:gap-0">
                     <Button
@@ -566,14 +638,14 @@ export function SettingsModal() {
                         variant="outline"
                         className="rounded-xl font-bold"
                         onClick={() => setAdminDialogOpen(false)}
-                        disabled={adminSubmitting}
+                        disabled={adminSubmitting || isGoogleSigningIn}
                     >
                         Back
                     </Button>
                     <Button
                         type="button"
                         className="rounded-xl font-black"
-                        disabled={adminSubmitting}
+                        disabled={adminSubmitting || isGoogleSigningIn}
                         onClick={() => {
                             void attemptAdminUnlockForSettings(adminPasscode);
                         }}

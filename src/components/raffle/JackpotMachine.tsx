@@ -33,6 +33,8 @@ type JackpotMachineProps = {
   pullLocked?: boolean;
   /** When set, shown under PULL in embedded mode instead of the default raffle footer. */
   embeddedFooter?: string | null;
+  /** Start the first spin as soon as the machine mounts (Live raffle). */
+  autoStart?: boolean;
 };
 
 export function JackpotMachine({
@@ -44,6 +46,7 @@ export function JackpotMachine({
   embedded = false,
   pullLocked = false,
   embeddedFooter = null,
+  autoStart = false,
 }: JackpotMachineProps) {
   const [spinning, setSpinning] = useState(false);
   const [winner, setWinner] = useState<string | null>(null);
@@ -176,6 +179,8 @@ export function JackpotMachine({
     [muted, onSpinFinished, playWin],
   );
 
+  const spinRef = useRef<() => void>(() => {});
+
   const labels = useMemo(() => (pool.length ? pool.map((p) => p.name) : ['—']), [pool]);
 
   const reelStrips = useMemo(() => {
@@ -263,6 +268,14 @@ export function JackpotMachine({
       scheduleTimer(() => void finishCurrentSpin(runId), longestReelDuration + 120);
     })();
   };
+
+  spinRef.current = spin;
+
+  useEffect(() => {
+    if (!autoStart) return;
+    const id = window.setTimeout(() => spinRef.current(), 160);
+    return () => window.clearTimeout(id);
+  }, [autoStart, resetKey]);
 
   const shell = embedded
     ? 'relative overflow-hidden rounded-[1.75rem] border border-border bg-gradient-to-b from-muted/50 to-background text-foreground shadow-sm'

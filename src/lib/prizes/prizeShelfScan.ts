@@ -4,7 +4,7 @@ import { prizeAppearsInRewardsShop } from '@/lib/aiJokePrize';
 import { lookupPrizeByScanCode } from '@/lib/db/lookup';
 import { isPrizeScanCode, normalizeScanInput } from '@/lib/prizes/prizeScanCode';
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
-import { studentCanAffordPrizeByCategory, studentPrizeCategoryBalance, prizeHasCategoryRestriction } from '@/lib/prizes/prizeCategoryEligibility';
+import { studentCanAffordPrizeByCategory, describePrizeShortage } from '@/lib/prizes/prizeCategoryEligibility';
 import type { Prize, Student, Category } from '@/lib/types';
 
 export type PrizeShelfScanFailure = {
@@ -87,19 +87,14 @@ export async function resolvePrizeShelfScanForStudent(
 
   const requireAffordable = options.requireAffordable !== false;
   const categories = options.categories || [];
-  const spendable =
-    prizeHasCategoryRestriction(prize)
-      ? studentPrizeCategoryBalance(student, prize, categories)
-      : typeof student.points === 'number'
-        ? student.points
-        : 0;
   const cost = typeof prize.points === 'number' ? prize.points : 0;
   if (requireAffordable && !studentCanAffordPrizeByCategory(student, prize, categories)) {
-    const shortfall = Math.max(0, cost - spendable);
     return {
       error: {
         title: 'Not enough points',
-        description: `You need ${cost.toLocaleString()} pts for "${prize.name}" (${shortfall.toLocaleString()} more).`,
+        description:
+          describePrizeShortage(student, prize, categories) ||
+          `You need ${cost.toLocaleString()} pts for "${prize.name}".`,
       },
     };
   }
