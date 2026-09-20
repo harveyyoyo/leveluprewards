@@ -47,8 +47,6 @@ export interface GuideTopic {
   actionLabel?: string;
   actionTab?: LibraryHeaderTab;
   onSpecialAction?: () => void;
-  tourId?: 'library' | 'library-features';
-  tourStepIndex?: number;
 }
 
 export interface LibraryInteractiveGuideProps {
@@ -87,8 +85,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Open Librarian Desk',
       actionTab: 'desk',
-      tourId: 'library',
-      tourStepIndex: 1,
     },
     {
       id: 'catalog',
@@ -105,8 +101,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Open Book Catalog',
       actionTab: 'catalog',
-      tourId: 'library',
-      tourStepIndex: 2,
     },
     {
       id: 'kiosk',
@@ -123,8 +117,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Open Student Kiosk',
       actionTab: 'kiosk',
-      tourId: 'library',
-      tourStepIndex: 3,
     },
     {
       id: 'suggestions',
@@ -142,8 +134,6 @@ export function LibraryInteractiveGuide({
       actionLabel: onOpenDiscoveryModal ? 'Try Book Finder Quiz 🧭' : 'Go to Student Kiosk',
       actionTab: 'kiosk',
       onSpecialAction: onOpenDiscoveryModal,
-      tourId: 'library-features',
-      tourStepIndex: 4,
     },
     {
       id: 'camera_scanner',
@@ -160,8 +150,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Go to Catalog to Add Books',
       actionTab: 'catalog',
-      tourId: 'library-features',
-      tourStepIndex: 1,
     },
     {
       id: 'labels',
@@ -178,8 +166,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Open Catalog Labels',
       actionTab: 'catalog',
-      tourId: 'library-features',
-      tourStepIndex: 2,
     },
     {
       id: 'levels_genres',
@@ -196,8 +182,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Browse Shelves & Genres',
       actionTab: 'catalog',
-      tourId: 'library-features',
-      tourStepIndex: 3,
     },
     {
       id: 'rules_audits',
@@ -214,8 +198,6 @@ export function LibraryInteractiveGuide({
       ],
       actionLabel: 'Open Library Settings',
       actionTab: 'settings',
-      tourId: 'library-features',
-      tourStepIndex: 5,
     },
   ];
 
@@ -246,41 +228,26 @@ export function LibraryInteractiveGuide({
     }
   };
 
-  const handleStartWalkthrough = (tourId?: 'library' | 'library-features') => {
-    onOpenChange(false);
-    if (onStartTour) {
-      onStartTour(tourId || 'library');
-    }
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-xl flex flex-col p-0 gap-0 h-[100dvh] max-h-[100dvh] bg-background text-foreground"
+        overlayClassName="bg-black/15 backdrop-blur-[0.5px] cursor-pointer"
+        onPointerDownOutside={() => onOpenChange(false)}
+        onInteractOutside={() => onOpenChange(false)}
+        className="w-full sm:max-w-xl flex flex-col p-0 gap-0 h-[100dvh] max-h-[100dvh] bg-background text-foreground shadow-2xl border-l border-border"
       >
         {/* Header */}
-        <div className="p-5 border-b border-border/70 space-y-3 shrink-0 bg-muted/20">
+        <div className="p-5 border-b border-border/70 space-y-3 shrink-0 bg-muted/20 pr-12">
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-1">
-              <SheetTitle className="text-xl font-black flex items-center gap-2">
+              <SheetTitle className="text-xl font-black flex items-center gap-2 text-foreground">
                 <Compass className="h-5 w-5 text-primary" />
                 Library Guide & Feature Hub
               </SheetTitle>
               <SheetDescription className="text-xs text-muted-foreground">
                 Browse any library tool, learn how it works, and jump straight to it.
               </SheetDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleStartWalkthrough('library')}
-                className="rounded-full h-8 px-3 text-xs font-bold gap-1.5 shadow-xs"
-              >
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                <span>On-Screen Tour</span>
-              </Button>
             </div>
           </div>
 

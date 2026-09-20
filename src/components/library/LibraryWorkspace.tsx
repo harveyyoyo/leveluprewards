@@ -100,7 +100,6 @@ import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
 import { LibraryInteractiveGuide } from './LibraryInteractiveGuide';
-import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
@@ -220,6 +219,14 @@ export function LibraryWorkspace({
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, hubHome]);
+
+  // Clear any legacy on-screen library tour in favor of the interactive guide.
+  useEffect(() => {
+    if (settings.activeTourId === 'library' || settings.activeTourId === 'library-features') {
+      updateSettings({ activeTourId: null });
+    }
+  }, [settings.activeTourId, updateSettings]);
+
   const [search, setSearch] = useState('');
   // The book a scan/search found, kept on screen after the search box auto-clears.
   const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
@@ -947,14 +954,6 @@ export function LibraryWorkspace({
           onNavigateTab={(nextTab) => {
             switchTab(nextTab);
             setGuideOpen(false);
-          }}
-          onStartTour={(tourId) => {
-            setGuideOpen(false);
-            if (tourId === 'library') {
-              activateLibraryTour(updateSettings);
-            } else {
-              updateSettings({ activeTourId: tourId });
-            }
           }}
         />
       </>
@@ -2649,14 +2648,6 @@ export function LibraryWorkspace({
         onNavigateTab={(nextTab) => {
           switchTab(nextTab);
           setGuideOpen(false);
-        }}
-        onStartTour={(tourId) => {
-          setGuideOpen(false);
-          if (tourId === 'library') {
-            activateLibraryTour(updateSettings);
-          } else {
-            updateSettings({ activeTourId: tourId });
-          }
         }}
       />
     </div>

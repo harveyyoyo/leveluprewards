@@ -7,7 +7,6 @@ import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
-import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
 import { Button } from '@/components/ui/button';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
@@ -240,25 +239,15 @@ export function LibraryPortalHub({
         </motion.div>
 
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:mt-12">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => activateLibraryTour(updateSettings)}
-            className="rounded-full px-5 py-2 text-xs font-bold text-foreground/85 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
-          >
-            <Compass className="mr-2 h-4 w-4 text-primary/80" />
-            Take a Quick Tour
-          </Button>
           {onOpenGuide && (
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onOpenGuide}
-              className="rounded-full px-5 py-2 text-xs font-bold text-foreground/85 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
+              className="rounded-full px-6 py-2.5 text-xs font-bold text-foreground/90 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
             >
-              <BookOpen className="mr-2 h-4 w-4 text-primary/80" />
+              <Compass className="mr-2 h-4 w-4 text-primary" />
               Library Handbook & Guide
             </Button>
           )}
