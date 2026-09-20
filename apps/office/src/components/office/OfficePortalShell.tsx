@@ -18,6 +18,7 @@ import {
   OFFICE_SIDEBAR_PANE_CLASS,
 } from '@/lib/office/officeTheme';
 import { OfficeEntityNavProvider } from '@/components/office/OfficeEntityNavProvider';
+import { OfficeTourProvider } from '@/components/office/OfficeTourProvider';
 
 function getInitials(name: string | null | undefined): string {
   if (!name?.trim()) return '?';
@@ -38,6 +39,11 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const pathname = usePathname();
   const activeId = officeNavIdFromPath(pathname, schoolId);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // The tour only ever highlights sidebar links, so force the mobile drawer open for
+  // its duration (on narrow screens it's collapsed by default) rather than requiring
+  // the tour to juggle opening it itself.
+  const [tourActive, setTourActive] = useState(false);
+  const sidebarVisible = mobileOpen || tourActive;
 
   const displaySchool = schoolName?.trim() || schoolId;
   const activeNav = OFFICE_NAV_ITEMS.find((i) => i.id === activeId);
@@ -45,6 +51,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
 
   return (
+    <OfficeTourProvider onActiveChange={setTourActive}>
     <div
       className={cn(
         'min-h-screen text-slate-900 dark:text-slate-100',
@@ -70,7 +77,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           className={cn(
             OFFICE_SIDEBAR_PANE_CLASS,
             'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:inset-auto lg:z-0 lg:shrink-0 lg:translate-x-0',
-            mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
+            sidebarVisible ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
           <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
@@ -102,6 +109,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   key={item.id}
                   href={item.href(schoolId)}
                   onClick={() => setMobileOpen(false)}
+                  data-office-tour={item.id}
                   className={cn(
                     'flex items-start gap-3 rounded-xl px-3 py-3 transition-colors',
                     active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/10',
@@ -209,5 +217,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
         </div>
       </div>
     </div>
+    </OfficeTourProvider>
   );
 }

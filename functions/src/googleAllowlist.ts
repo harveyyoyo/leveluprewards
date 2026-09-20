@@ -8,17 +8,10 @@ export function isGoogleOwnerEmail(email: string): boolean {
   return GOOGLE_OWNER_EMAILS.includes(normalized);
 }
 
-/**
- * Owners always pass. Otherwise the email must be explicitly on the allowlist.
- * An empty/unconfigured allowlist denies everyone (fail closed) — it must NOT
- * grant access to any Google account, since that would let anyone in the world
- * sign in as a developer or bypass a school's admin passcode if the allowlist
- * env var is ever missing or misconfigured.
- */
+/** Owners always pass; otherwise the email must be explicitly present in the env allowlist. An empty/unset allowlist allows nobody but owners - it must never be treated as "allow all". */
 export function isAllowedGoogleEmailOnAllowlist(email: string, allowlist: string[]): boolean {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
   if (isGoogleOwnerEmail(normalized)) return true;
-  if (allowlist.length === 0) return false;
   return allowlist.includes(normalized);
 }

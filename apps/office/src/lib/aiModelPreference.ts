@@ -1,7 +1,6 @@
 /** Client + server: normalize saved `arcade_ai_model` from localStorage. */
 
 export const DEFAULT_ARCADE_AI_MODEL = 'gpt-4o-mini';
-export const STAFF_HELP_AI_MODEL = DEFAULT_ARCADE_AI_MODEL;
 
 export const ARCADE_AI_MODEL_OPTIONS = [
   'gpt-4o-mini',

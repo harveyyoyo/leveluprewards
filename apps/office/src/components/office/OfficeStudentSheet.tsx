@@ -73,6 +73,18 @@ export function OfficeStudentSheet({
       return;
     }
     if (seededKeyRef.current === student.id) return;
+
+    // seededKeyRef was already set once and the student changed under us without the
+    // sheet ever closing - e.g. clicking a different row while this one is open. That
+    // bypasses the close-confirmation below entirely, so guard it here too instead of
+    // silently discarding whatever is mid-edit.
+    if (seededKeyRef.current !== null && isEditing) {
+      if (!confirm('Discard unsaved changes to this student?')) {
+        onOpenChange(false);
+        return;
+      }
+    }
+
     seededKeyRef.current = student.id;
     setFirstName(student.firstName ?? '');
     setLastName(student.lastName ?? '');
@@ -81,7 +93,7 @@ export function OfficeStudentSheet({
     setTeacherId(student.teacherId ?? '');
     setNotes(student.notes ?? '');
     setIsEditing(false);
-  }, [student, open]);
+  }, [student, open, isEditing, onOpenChange]);
 
   if (!student) return null;
 

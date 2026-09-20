@@ -87,9 +87,9 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
 
   let rest = '';
   if (path.startsWith(internalPrefix)) {
-    rest = pathname.slice(internalPrefix.length).replace(/^\//, '');
+    rest = path.slice(internalPrefix.length).replace(/^\//, '');
   } else if (path === externalPrefix || path.startsWith(`${externalPrefix}/`)) {
-    rest = pathname.slice(externalPrefix.length).replace(/^\//, '');
+    rest = path.slice(externalPrefix.length).replace(/^\//, '');
   } else {
     return 'home';
   }

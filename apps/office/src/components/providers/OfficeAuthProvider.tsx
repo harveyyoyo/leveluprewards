@@ -123,12 +123,27 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
       }
 
       if (savedState === 'developer') {
-        setLoginState('developer');
-        setIsAdmin(true);
-        setIsOffice(false);
-        setUserName(savedName || 'Developer');
-        setUserId(auth.currentUser.uid);
-        if (savedSchoolId) setSchoolId(savedSchoolId);
+        // localStorage is client-writable by anyone (devtools, XSS) - unlike the admin/office
+        // branches below, this must not be trusted on its own. Re-verify against
+        // appConfig/developerAllowlist, which Firestore rules only let an actual allowlisted
+        // uid read (isDeveloper() gates it), so a spoofed 'developer' value fails this read.
+        try {
+          const allowlistRef = doc(firestore, 'appConfig', 'developerAllowlist');
+          const allowlistDoc = await getRoleDocForSessionRestore(allowlistRef);
+          const uids = allowlistDoc.exists() ? (allowlistDoc.data().uids as unknown) : undefined;
+          if (Array.isArray(uids) && uids.includes(auth.currentUser.uid)) {
+            setLoginState('developer');
+            setIsAdmin(true);
+            setIsOffice(false);
+            setUserName(savedName || 'Developer');
+            setUserId(auth.currentUser.uid);
+            if (savedSchoolId) setSchoolId(savedSchoolId);
+          } else {
+            clearLocalSession();
+          }
+        } catch {
+          clearLocalSession();
+        }
       } else if (savedState === 'admin' && savedSchoolId) {
         try {
           const adminRef = doc(firestore, 'schools', savedSchoolId, 'roles_admin', auth.currentUser.uid);

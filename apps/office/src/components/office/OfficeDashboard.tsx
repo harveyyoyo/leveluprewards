@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {
   AlertCircle,
   CheckCircle2,
+  Compass,
   CreditCard,
   FileText,
   GraduationCap,
@@ -18,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
+import { useOfficeTour } from '@/components/office/OfficeTourProvider';
 import type { OfficeGradeEntry } from '@/lib/office/types';
 import { formatCents } from '@/lib/office/officeNav';
 import { officePublicHref } from '@/lib/officePublicUrl';
@@ -65,6 +67,7 @@ export function OfficeDashboard({
   schoolDefaultTerm,
   configuredTerms,
 }: OfficeDashboardProps) {
+  const { start: startTour } = useOfficeTour();
   const gradePct =
     insights.termSubjects.length > 0
       ? insights.subjectGradeCompletionPct
@@ -251,6 +254,17 @@ export function OfficeDashboard({
           </section>
         </>
       )}
+
+      <p className="text-center text-xs text-muted-foreground">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 underline-offset-2 hover:underline"
+          onClick={startTour}
+        >
+          <Compass className="h-3 w-3" />
+          Take a quick tour
+        </button>
+      </p>
 
       {canPopulateDemoData && onPopulateDemoData ? (
         <p className="text-center text-xs text-muted-foreground">
