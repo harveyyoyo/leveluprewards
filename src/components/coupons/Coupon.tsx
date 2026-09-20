@@ -13,9 +13,10 @@ import { PrintLevelUpDomain } from '@/components/print/PrintLevelUpDomain';
 import { useSchoolDisplayName } from '@/hooks/useSchoolDisplayName';
 import { useCurrency } from '@/hooks/useCurrency';
 import { MoneyBill, type MoneyBillDesign, MONEY_BILL_DEFAULTS } from '@/components/coupons/MoneyBill';
+import { CoinTokenPreview, type CoinFinish, type CoinRimStyle } from '@/components/coupons/CoinTokenPreview';
 
 export type PreviewCurrency = {
-  mode: 'points' | 'money';
+  mode: 'points' | 'money' | 'coins';
   icon: string;
   label: string;
   // Points coupon design
@@ -37,6 +38,13 @@ export type PreviewCurrency = {
   moneyShowSerial?: boolean;
   moneyShowGuilloche?: boolean;
   moneyShowSchoolName?: boolean;
+  // Coins & tokens design overrides
+  coinFinish?: CoinFinish;
+  coinRimStyle?: CoinRimStyle;
+  coinTopText?: string;
+  coinBottomText?: string;
+  coinShowSchoolName?: boolean;
+  coinShowValue?: boolean;
 };
 
 function CouponTitle({ text, compact }: { text: string; compact: boolean }) {
@@ -121,6 +129,25 @@ export function Coupon({
         coupon={coupon}
         schoolName={schoolDisplayName || undefined}
         design={moneyDesign}
+      />
+    );
+  }
+
+  // ─── Coins & tokens mode: 3D medallion component ───
+  if (currency.mode === 'coins') {
+    return (
+      <CoinTokenPreview
+        coupon={coupon}
+        schoolName={schoolDisplayName || undefined}
+        design={{
+          finish: currency.coinFinish ?? 'gold',
+          rimStyle: currency.coinRimStyle ?? 'ridged',
+          topText: currency.coinTopText,
+          bottomText: currency.coinBottomText,
+          emblem: currency.icon || '⭐',
+          showSchoolName: currency.coinShowSchoolName ?? true,
+          showValue: currency.coinShowValue ?? true,
+        }}
       />
     );
   }

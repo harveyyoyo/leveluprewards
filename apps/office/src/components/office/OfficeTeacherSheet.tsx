@@ -74,7 +74,7 @@ export function OfficeTeacherSheet({
   if (!teacher) return null;
 
   const studentsHref = `${officePublicHref(schoolId, 'students')}?homeroom=${encodeURIComponent(teacher.id)}`;
-  const gradesHref = `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`;
+  const gradesHref = `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}&homeroom=${encodeURIComponent(teacher.id)}`;
 
   const handleSave = async () => {
     if (!firestore || !name.trim()) {

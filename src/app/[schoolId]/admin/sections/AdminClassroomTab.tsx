@@ -4,7 +4,7 @@ import type { ClassroomTabSection } from '@/lib/classroom/classroomTabSections';
 import { ClassroomTabLauncher } from '@/components/classroom/ClassroomTabLauncher';
 import type { Category, Class, Student } from '@/lib/types';
 
-/** Rewards admin tab — launcher only. Full classroom UI lives in /classroom-realm. */
+/** Rewards admin tab — launcher only. Classroom is the live teaching page. */
 export function AdminClassroomTab({
   schoolId,
 }: {

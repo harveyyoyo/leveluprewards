@@ -22,6 +22,10 @@ const auth = {
   preparingExperience: 'Preparing your school reward experience',
   schoolSignInAria: '{appName} — school sign-in',
   enterSchoolIdHint: "Enter your school's ID to open sign-in options for students and staff.",
+  enterLibrarySchoolIdHint:
+    "Type your school's name in the empty box, then the door code. You'll go straight to that school's library.",
+  openTheLibrary: 'Open the library',
+  openingLibrary: 'Opening the library…',
   developerPasscode: 'Local developer passcode',
   signedInAsGoogle: 'Signed in with Google as',
   yourAccount: 'your account',

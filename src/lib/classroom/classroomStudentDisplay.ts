@@ -18,5 +18,12 @@ export function sanitizeSessionForStudentDisplay(data: ClassroomSessionData): Cl
     ]),
   );
   const activity = (data.activity ?? []).filter((entry) => !isClassroomBehaviorNoteLabel(entry.label));
-  return { ...data, lastAward, activity };
+  return {
+    ...data,
+    lastAward,
+    activity,
+    randomPick: data.randomPick,
+    groups: data.groups,
+    raffleProjector: data.raffleProjector,
+  };
 }

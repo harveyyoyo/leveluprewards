@@ -39,7 +39,23 @@ describe('officePublicUrl', () => {
     locationSpy.mockRestore();
   });
 
-  it('uses office subdomain for public links and handoff API for portal entry', () => {
+  it('uses legacy paths on production hosts when only dev origin is baked in', () => {
+    for (const key of envKeys) {
+      delete process.env[key];
+    }
+    process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN = 'http://127.0.0.1:3001';
+    const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
+      ...window.location,
+      host: 'portal.leveluprewards.app',
+      origin: 'https://portal.leveluprewards.app',
+    } as Location);
+    expect(officePublicHref('Yeshiva', 'grades')).toBe('/yeshiva/office/grades');
+    expect(officePortalEntryHref('yeshiva')).toBe('/yeshiva/office');
+    expect(officePortalHandoffHref('yeshiva')).toBe('/yeshiva/office');
+    locationSpy.mockRestore();
+  });
+
+  it('uses office subdomain for public links when explicitly configured', () => {
     process.env.NEXT_PUBLIC_OFFICE_CANONICAL_HOST = 'office.leveluprewards.app';
     const locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({
       ...window.location,

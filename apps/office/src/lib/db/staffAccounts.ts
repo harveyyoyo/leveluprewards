@@ -13,27 +13,57 @@ export type StaffAccountInput = {
   phone?: string;
 };
 
+/** Matches the shape returned by `useAuthFetch()` / `authFetch`. */
+export type AuthFetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 function normalizeUsername(username: string): string {
   return username.trim().toLowerCase();
+}
+
+/**
+ * Hashes and stores a staff account's passcode server-side (never written to
+ * Firestore in plaintext from the client - see /api/office/staff-passcode).
+ */
+async function setStaffPasscode(
+  authFetch: AuthFetchFn,
+  schoolId: string,
+  accountId: string,
+  passcode: string,
+): Promise<void> {
+  const res = await authFetch('/api/office/staff-passcode', {
+    method: 'POST',
+    body: JSON.stringify({ schoolId, accountId, passcode }),
+  });
+  if (!res.ok) {
+    let message = 'Could not set the staff passcode.';
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (typeof data.error === 'string' && data.error.trim()) message = data.error.trim();
+    } catch {
+      // ignore
+    }
+    throw new Error(message);
+  }
 }
 
 export const addStaffAccount = async (
   firestore: Firestore,
   schoolId: string,
-  input: StaffAccountInput
+  input: StaffAccountInput,
+  authFetch: AuthFetchFn,
 ): Promise<StaffAccount> => {
   const id = `sa_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const username = normalizeUsername(input.username);
-  const account: StaffAccount = {
+  const account: Omit<StaffAccount, 'passcode'> = {
     id,
     username,
-    passcode: input.passcode.trim(),
     displayName: input.displayName.trim(),
     role: input.role,
     roles: input.roles?.length ? Array.from(new Set(input.roles)) : [input.role],
     email: input.email?.trim(),
     phone: input.phone?.trim(),
   };
+  await setStaffPasscode(authFetch, schoolId, id, input.passcode.trim());
   const ref = doc(firestore, 'schools', schoolId, 'staffAccounts', id);
   try {
     await setDoc(ref, removeUndefined(account as unknown as Record<string, unknown>));
@@ -47,13 +77,19 @@ export const addStaffAccount = async (
 export const updateStaffAccount = async (
   firestore: Firestore,
   schoolId: string,
-  account: StaffAccount
+  account: StaffAccount,
+  authFetch: AuthFetchFn,
+  /** Only rotate the stored passcode when the admin actually typed a new one. */
+  newPasscode?: string,
 ): Promise<void> => {
+  if (newPasscode?.trim()) {
+    await setStaffPasscode(authFetch, schoolId, account.id, newPasscode.trim());
+  }
   const ref = doc(firestore, 'schools', schoolId, 'staffAccounts', account.id);
-  const payload: StaffAccount = {
-    ...account,
+  const { passcode: _passcode, ...rest } = account;
+  const payload: Omit<StaffAccount, 'passcode'> = {
+    ...rest,
     username: normalizeUsername(account.username),
-    passcode: account.passcode.trim(),
     displayName: account.displayName.trim(),
     roles: account.roles?.length ? Array.from(new Set(account.roles)) : [account.role],
   };

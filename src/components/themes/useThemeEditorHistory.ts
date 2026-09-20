@@ -1,8 +1,11 @@
 import { useCallback, useReducer } from 'react';
 import type { StudentTheme } from '@/lib/types';
 
-function cloneTheme(theme: StudentTheme): StudentTheme {
-    return { ...theme };
+import { LEVELUP_BRAND_PRIMARY_HEX } from '@/lib/appBranding';
+import { DEFAULT_STUDENT_THEME_FONT_SCALE } from '@/lib/types';
+
+function cloneTheme(theme: StudentTheme | undefined): StudentTheme | undefined {
+    return theme ? { ...theme } : undefined;
 }
 
 function themesEqual(a: StudentTheme | undefined, b: StudentTheme | undefined): boolean {
@@ -11,13 +14,13 @@ function themesEqual(a: StudentTheme | undefined, b: StudentTheme | undefined): 
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
-type HistoryState = {
+export type HistoryState = {
     present: StudentTheme | undefined;
-    past: StudentTheme[];
-    future: StudentTheme[];
+    past: (StudentTheme | undefined)[];
+    future: (StudentTheme | undefined)[];
 };
 
-type HistoryAction =
+export type HistoryAction =
     | { type: 'reset'; theme: StudentTheme | undefined }
     | { type: 'commit'; theme: StudentTheme | undefined }
     | { type: 'commitFrom'; recipe: (current: StudentTheme | undefined) => StudentTheme | undefined }
@@ -25,24 +28,31 @@ type HistoryAction =
     | { type: 'undo' }
     | { type: 'redo' };
 
-function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
+export function historyReducer(state: HistoryState, action: HistoryAction): HistoryState {
     switch (action.type) {
         case 'reset':
             return { present: action.theme, past: [], future: [] };
         case 'commit': {
             if (themesEqual(state.present, action.theme)) return state;
-            const past = state.present ? [...state.past, cloneTheme(state.present)] : state.past;
+            const past = [...state.past, cloneTheme(state.present)];
             return { present: action.theme, past, future: [] };
         }
         case 'commitFrom': {
             const next = action.recipe(state.present);
             if (themesEqual(state.present, next)) return state;
-            const past = state.present ? [...state.past, cloneTheme(state.present)] : state.past;
+            const past = [...state.past, cloneTheme(state.present)];
             return { present: next, past, future: [] };
         }
         case 'patch': {
-            if (!state.present) return state;
-            const next = { ...state.present, ...action.partial };
+            const base: StudentTheme = state.present || {
+                background: '#020617',
+                text: '#f8fafc',
+                primary: LEVELUP_BRAND_PRIMARY_HEX,
+                cardBackground: '#0f172a',
+                accent: '#22c55e',
+                fontScale: DEFAULT_STUDENT_THEME_FONT_SCALE,
+            };
+            const next = { ...base, ...action.partial };
             if (themesEqual(state.present, next)) return state;
             return {
                 present: next,
@@ -54,14 +64,14 @@ function historyReducer(state: HistoryState, action: HistoryAction): HistoryStat
             if (state.past.length === 0) return state;
             const previous = state.past[state.past.length - 1];
             const past = state.past.slice(0, -1);
-            const future = state.present ? [cloneTheme(state.present), ...state.future] : state.future;
+            const future = [cloneTheme(state.present), ...state.future];
             return { present: cloneTheme(previous), past, future };
         }
         case 'redo': {
             if (state.future.length === 0) return state;
             const next = state.future[0];
             const future = state.future.slice(1);
-            const past = state.present ? [...state.past, cloneTheme(state.present)] : state.past;
+            const past = [...state.past, cloneTheme(state.present)];
             return { present: cloneTheme(next), past, future };
         }
         default:

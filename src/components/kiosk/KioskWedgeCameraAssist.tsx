@@ -64,7 +64,6 @@ export function KioskWedgeCameraAssist({
           muted
           tabIndex={previewOpen ? 0 : -1}
           aria-label={previewOpen ? 'Front camera preview for barcode aiming' : undefined}
-          style={previewOpen ? { transform: 'scaleX(-1)' } : undefined}
         />
         {previewOpen ? (
           <>

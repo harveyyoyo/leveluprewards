@@ -35,6 +35,7 @@ export type StudentThemeCssVars = {
   '--theme-primary-foreground': string;
   '--theme-card': string;
   '--theme-accent': string;
+  '--theme-font-scale': string;
 };
 
 const BLACK = '#020617';
@@ -380,6 +381,7 @@ export function getStudentThemeCssVars(
       '--theme-primary-foreground': primaryForegroundFor(effective),
       '--theme-card': themeCard,
       '--theme-accent': clampHex(effective.accent) || '#22c55e',
+      '--theme-font-scale': String(effective.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE),
     },
   };
 }

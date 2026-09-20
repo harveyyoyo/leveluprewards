@@ -21,3 +21,21 @@ test('rejects an upload that never released', () => {
 test('rejects a partial backend failure even if another site released', () => {
   assert.throws(() => assertFirebaseRelease('failed to create function projects/school/functions/ssr\nhosting[other-site]: release complete'), /backend/);
 });
+
+test('requires every expected hosting site to release', () => {
+  assert.throws(
+    () =>
+      assertFirebaseRelease('hosting[rewards-site]: release complete', {
+        expectedSites: ['rewards-site', 'office-site'],
+      }),
+    /office-site/,
+  );
+});
+
+test('accepts multi-site releases when all expected sites complete', () => {
+  assert.doesNotThrow(() =>
+    assertFirebaseRelease('hosting[rewards-site]: release complete\nhosting[office-site]: release complete', {
+      expectedSites: ['rewards-site', 'office-site'],
+    }),
+  );
+});

@@ -21,7 +21,7 @@ export function buildClassroomFullscreenUrl({
   if (scope) params.set('scope', scope);
   if (audience === 'student') params.set('audience', 'student');
   const q = params.toString();
-  return `/${schoolId}/classroom-realm/live${q ? `?${q}` : ''}`;
+  return `/${schoolId}/classroom${q ? `?${q}` : ''}`;
 }
 
 export function openClassroomFullscreenTab(params: ClassroomFullscreenUrlParams) {

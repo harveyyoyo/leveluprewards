@@ -31,13 +31,15 @@ export function newClassroomQuickAwardId(): string {
 function normalizeOneQuickAward(raw: unknown, index: number): ClassroomQuickAward | null {
   if (!raw || typeof raw !== 'object') return null;
   const row = raw as Partial<ClassroomQuickAward>;
-  const label = typeof row.label === 'string' ? row.label.trim() : '';
+  const rawLabel = typeof row.label === 'string' ? row.label.trim() : '';
+  const label = /^quick\s*tap$/i.test(rawLabel) ? 'Good job' : rawLabel;
   const points = Number(row.points);
   if (!label || !Number.isFinite(points) || points <= 0) return null;
-  const description =
+  const rawDescription =
     typeof row.description === 'string' && row.description.trim()
       ? row.description.trim()
       : label;
+  const description = /^quick\s*tap$/i.test(rawDescription) ? 'Good job' : rawDescription;
   const id =
     typeof row.id === 'string' && row.id.trim()
       ? row.id.trim()
@@ -75,7 +77,7 @@ export function resolveClassroomQuickTapDescription(
   settings?: ClassroomLabelsSettings | null,
 ): string {
   const custom = settings?.classroomQuickTapDescription?.trim();
-  if (custom) return custom;
+  if (custom) return /^quick\s*tap$/i.test(custom) ? 'Good job' : custom;
   const first = resolveClassroomQuickAwards(settings)[0];
   return first?.description ?? 'Quick award';
 }
@@ -139,3 +141,14 @@ export function defaultBehaviorQuickOptions(): ClassroomBehaviorQuickOptions {
   }
   return out;
 }
+
+/** Pre-made cheerful compliment sticker presets for quick awards. */
+export const CLASSROOM_COMPLIMENT_STICKER_PRESETS: ClassroomQuickAward[] = [
+  { id: 'focus', label: 'Super Focus 🎯', points: 5, description: 'Super focus' },
+  { id: 'teamwork', label: 'Team Player 🤝', points: 5, description: 'Great teamwork' },
+  { id: 'kindness', label: 'Kind Heart 💖', points: 5, description: 'Kindness and helping others' },
+  { id: 'clean', label: 'Clean Desk ✨', points: 5, description: 'Clean workspace' },
+  { id: 'creative', label: 'Creative Idea 💡', points: 10, description: 'Creative thinking' },
+  { id: 'participate', label: 'Hand Raised 🙋', points: 5, description: 'Active participation' },
+];
+

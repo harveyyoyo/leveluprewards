@@ -4,7 +4,7 @@ import {
   writeBatch,
   type Firestore,
 } from 'firebase/firestore';
-import { addStaffAccount } from '@/lib/db/staffAccounts';
+import { addStaffAccount, type AuthFetchFn } from '@/lib/db/staffAccounts';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import type {
   OfficeBillingAccount,
@@ -15,6 +15,8 @@ import type {
   OfficeTeacher,
 } from '@/lib/office/types';
 import {
+  AMBIGUOUS_STUDENT_MATCH,
+  buildStudentIdByNameMap,
   getOfficeStudentFullName,
   parseUsdToCents,
   resolveOfficeTeacherIdByName,
@@ -76,6 +78,8 @@ export type ParsedOfficeSnapshot = {
   staffAccounts?: ParsedOfficeStaffRow[];
   defaultActiveTerm?: string;
   statementSchoolName?: string;
+  /** Rows the AI returned that couldn't be used (missing a required field) - shown to the user, not silently dropped. */
+  warnings?: string[];
 };
 
 export type OfficeAiImportReport = {
@@ -84,7 +88,10 @@ export type OfficeAiImportReport = {
   studentsAdded: number;
   studentsUpdated: number;
   gradesAdded: number;
-  gradesSkipped: number;
+  /** Grade rows whose student name didn't match anyone on the roster. */
+  gradesStudentNotFound: number;
+  /** Grade rows that matched a student but were exact duplicates of an existing entry. */
+  gradesDuplicate: number;
   billingAccountsAdded: number;
   invoicesAdded: number;
   staffAdded: number;
@@ -184,6 +191,8 @@ function normalizeInvoiceStatus(raw: unknown): ParsedOfficeInvoiceRow['status'] 
 }
 
 export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): ParsedOfficeSnapshot {
+  const warnings: string[] = [];
+
   const teachersRaw = unwrapArray(parsed, ['teachers', 'officeTeachers', 'homeroomTeachers', 'classroomTeachers']);
   const teachers: ParsedOfficeTeacherRow[] = [];
   for (const row of teachersRaw) {
@@ -193,7 +202,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.name === 'string' && o.name.trim()) ||
       (typeof o.teacherName === 'string' && o.teacherName.trim()) ||
       '';
-    if (!name) continue;
+    if (!name) {
+      warnings.push('Skipped a teacher row with no name.');
+      continue;
+    }
     teachers.push({
       name,
       email: (typeof o.email === 'string' && o.email.trim()) || null,
@@ -201,14 +213,17 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
   }
 
   const classesRaw = unwrapArray(parsed, ['classes', 'officeClasses', 'classGroups']);
-  const classes = classesRaw
-    .map((row) => {
-      if (!row || typeof row !== 'object') return null;
-      const o = row as Record<string, unknown>;
-      const name = String(o.name ?? o.className ?? o.title ?? '').trim();
-      return name ? { name } : null;
-    })
-    .filter(Boolean) as { name: string }[];
+  const classes: { name: string }[] = [];
+  for (const row of classesRaw) {
+    if (!row || typeof row !== 'object') continue;
+    const o = row as Record<string, unknown>;
+    const name = String(o.name ?? o.className ?? o.title ?? '').trim();
+    if (!name) {
+      warnings.push('Skipped a class row with no name.');
+      continue;
+    }
+    classes.push({ name });
+  }
 
   const studentsRaw = unwrapArray(parsed, ['students', 'officeStudents', 'roster', 'pupils']);
   const students: ParsedOfficeStudentRow[] = [];
@@ -216,7 +231,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
     if (!row || typeof row !== 'object') continue;
     const o = row as Record<string, unknown>;
     const name = parseStudentName(o);
-    if (!name) continue;
+    if (!name) {
+      warnings.push('Skipped a student row with no recognizable first/last name.');
+      continue;
+    }
     const className =
       (typeof o.className === 'string' && o.className.trim()) ||
       (typeof o.homeroom === 'string' && o.homeroom.trim()) ||
@@ -252,7 +270,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.subject === 'string' && o.subject.trim()) ||
       (typeof o.course === 'string' && o.course.trim()) ||
       '';
-    if (!name || !termLabel || !subject) continue;
+    if (!name || !termLabel || !subject) {
+      const missing = [!name && 'student name', !termLabel && 'term', !subject && 'subject']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped a grade row missing ${missing}.`);
+      continue;
+    }
     grades.push({
       studentName: name.studentName,
       termLabel,
@@ -277,7 +301,10 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.family === 'string' && o.family.trim()) ||
       (typeof o.accountName === 'string' && o.accountName.trim()) ||
       '';
-    if (!familyName) continue;
+    if (!familyName) {
+      warnings.push('Skipped a billing account row with no family name.');
+      continue;
+    }
     let studentNames: string[] | undefined;
     if (Array.isArray(o.studentNames)) {
       studentNames = o.studentNames
@@ -313,7 +340,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.description === 'string' && o.description.trim()) ||
       '';
     const amountCents = parseAmountCents(o);
-    if (!familyName || !label || amountCents == null) continue;
+    if (!familyName || !label || amountCents == null) {
+      const missing = [!familyName && 'family name', !label && 'label', amountCents == null && 'amount']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped an invoice row missing ${missing}.`);
+      continue;
+    }
     invoices.push({
       familyName,
       label,
@@ -341,7 +374,13 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
       (typeof o.password === 'string' && o.password.trim()) ||
       (typeof o.pin === 'string' && o.pin.trim()) ||
       '';
-    if (!displayName || !username || !passcode) continue;
+    if (!displayName || !username || !passcode) {
+      const missing = [!displayName && 'name', !username && 'username', !passcode && 'passcode']
+        .filter(Boolean)
+        .join(', ');
+      warnings.push(`Skipped a staff login row missing ${missing}.`);
+      continue;
+    }
     staffAccounts.push({ displayName, username, passcode });
   }
 
@@ -363,12 +402,17 @@ export function normalizeOfficeAiSnapshot(parsed: Record<string, unknown>): Pars
     (typeof parsed.schoolName === 'string' && parsed.schoolName.trim()) ||
     '';
   if (statementSchoolName) snap.statementSchoolName = statementSchoolName;
+  if (warnings.length) snap.warnings = warnings;
   return snap;
 }
 
 const BATCH_SIZE = 400;
 
-async function commitBatches(firestore: Firestore, ops: Array<(batch: ReturnType<typeof writeBatch>) => void>) {
+/** Commits write-batch ops in chunks safely under Firestore's 500-operation batch limit. */
+export async function commitBatches(
+  firestore: Firestore,
+  ops: Array<(batch: ReturnType<typeof writeBatch>) => void>,
+) {
   for (let i = 0; i < ops.length; i += BATCH_SIZE) {
     const batch = writeBatch(firestore);
     for (const op of ops.slice(i, i + BATCH_SIZE)) op(batch);
@@ -386,9 +430,12 @@ export async function applyOfficeAiSnapshot(
     students: OfficeStudent[];
     gradeEntries: OfficeGradeEntry[];
     billingAccounts: OfficeBillingAccount[];
+    invoices?: OfficeInvoice[];
     upsertStudents?: boolean;
     updatedBy?: string | null;
     canImportStaff?: boolean;
+    existingStaffUsernames?: string[];
+    authFetch?: AuthFetchFn;
   },
 ): Promise<OfficeAiImportReport> {
   const report: OfficeAiImportReport = {
@@ -397,7 +444,8 @@ export async function applyOfficeAiSnapshot(
     studentsAdded: 0,
     studentsUpdated: 0,
     gradesAdded: 0,
-    gradesSkipped: 0,
+    gradesStudentNotFound: 0,
+    gradesDuplicate: 0,
     billingAccountsAdded: 0,
     invoicesAdded: 0,
     staffAdded: 0,
@@ -406,16 +454,16 @@ export async function applyOfficeAiSnapshot(
   };
 
   const classIdByName = new Map(ctx.classes.map((c) => [c.name.trim().toLowerCase(), c.id]));
-  const studentIdByName = new Map(
-    ctx.students.map((s) => [getOfficeStudentFullName(s).toLowerCase(), s.id]),
-  );
+  const studentIdByName = buildStudentIdByNameMap(ctx.students);
   const studentById = new Map(ctx.students.map((s) => [s.id, s]));
   const accountIdByFamily = new Map(
     ctx.billingAccounts.map((a) => [a.familyName.trim().toLowerCase(), a.id]),
   );
 
   const gradeKeys = new Set(
-    ctx.gradeEntries.map((e) => `${e.studentId}|${e.termLabel}|${e.subject.toLowerCase()}`),
+    ctx.gradeEntries.map(
+      (e) => `${e.studentId}|${e.termLabel.trim().toLowerCase()}|${e.subject.toLowerCase()}`,
+    ),
   );
 
   const classOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
@@ -468,6 +516,12 @@ export async function applyOfficeAiSnapshot(
     const classId = row.className ? classIdByName.get(row.className.trim().toLowerCase()) ?? null : null;
     const teacherId = resolveOfficeTeacherIdByName(teacherRoster, row.teacherName);
     const existingId = studentIdByName.get(key);
+    if (existingId === AMBIGUOUS_STUDENT_MATCH) {
+      report.errors.push(
+        `Student "${row.firstName} ${row.lastName}": name matches more than one existing student - skipped, resolve manually.`,
+      );
+      continue;
+    }
     if (existingId && ctx.upsertStudents) {
       const existing = studentById.get(existingId);
       if (existing) {
@@ -521,12 +575,17 @@ export async function applyOfficeAiSnapshot(
   for (const row of snapshot.grades ?? []) {
     const studentId = studentIdByName.get(row.studentName.toLowerCase());
     if (!studentId) {
-      report.gradesSkipped += 1;
+      report.gradesStudentNotFound += 1;
+      report.errors.push(`Grade for "${row.studentName}": no matching student on the roster - skipped.`);
       continue;
     }
-    const dedupeKey = `${studentId}|${row.termLabel}|${row.subject.toLowerCase()}`;
+    if (studentId === AMBIGUOUS_STUDENT_MATCH) {
+      report.errors.push(`Grade for "${row.studentName}": name matches more than one student - skipped, resolve manually.`);
+      continue;
+    }
+    const dedupeKey = `${studentId}|${row.termLabel.trim().toLowerCase()}|${row.subject.toLowerCase()}`;
     if (gradeKeys.has(dedupeKey)) {
-      report.gradesSkipped += 1;
+      report.gradesDuplicate += 1;
       continue;
     }
     gradeKeys.add(dedupeKey);
@@ -556,7 +615,13 @@ export async function applyOfficeAiSnapshot(
     const studentIds: string[] = [];
     for (const name of row.studentNames ?? []) {
       const sid = studentIdByName.get(name.toLowerCase());
-      if (sid) studentIds.push(sid);
+      if (sid === AMBIGUOUS_STUDENT_MATCH) {
+        report.errors.push(
+          `Family "${row.familyName}": "${name}" matches more than one student - not linked, resolve manually.`,
+        );
+      } else if (sid) {
+        studentIds.push(sid);
+      }
     }
     const ref = doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts'));
     accountIdByFamily.set(key, ref.id);
@@ -576,6 +641,12 @@ export async function applyOfficeAiSnapshot(
   }
   await commitBatches(firestore, billingOps);
 
+  const invoiceKey = (accountId: string, label: string, amountCents: number, dueDate: string) =>
+    `${accountId}|${label.trim().toLowerCase()}|${amountCents}|${dueDate}`;
+  const invoiceKeys = new Set(
+    (ctx.invoices ?? []).map((inv) => invoiceKey(inv.accountId, inv.label, inv.amountCents, inv.dueDate)),
+  );
+
   const invoiceOps: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
   for (const row of snapshot.invoices ?? []) {
     const accountId = accountIdByFamily.get(row.familyName.trim().toLowerCase());
@@ -583,13 +654,20 @@ export async function applyOfficeAiSnapshot(
       report.errors.push(`Invoice "${row.label}": no billing account for family "${row.familyName}".`);
       continue;
     }
+    const dueDate = row.dueDate ?? new Date().toISOString().slice(0, 10);
+    const key = invoiceKey(accountId, row.label, row.amountCents, dueDate);
+    if (invoiceKeys.has(key)) {
+      report.errors.push(`Invoice "${row.label}" for "${row.familyName}": already imported - skipped.`);
+      continue;
+    }
+    invoiceKeys.add(key);
     const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
     invoiceOps.push((batch) =>
       batch.set(ref, {
         accountId,
         label: row.label,
         amountCents: row.amountCents,
-        dueDate: row.dueDate ?? new Date().toISOString().slice(0, 10),
+        dueDate,
         status: row.status ?? 'sent',
         createdAt: Date.now(),
         paidAt: row.status === 'paid' ? Date.now() : null,
@@ -601,16 +679,29 @@ export async function applyOfficeAiSnapshot(
   }
   await commitBatches(firestore, invoiceOps);
 
-  if (ctx.canImportStaff) {
+  if (ctx.canImportStaff && ctx.authFetch) {
+    const authFetch = ctx.authFetch;
+    const takenUsernames = new Set(ctx.existingStaffUsernames ?? []);
     for (const row of snapshot.staffAccounts ?? []) {
+      const username = row.username.trim().toLowerCase();
+      if (takenUsernames.has(username)) {
+        report.errors.push(`Staff "${row.displayName}": username "${username}" is already in use - skipped.`);
+        continue;
+      }
       try {
-        await addStaffAccount(firestore, schoolId, {
-          displayName: row.displayName,
-          username: row.username,
-          passcode: row.passcode,
-          role: 'office',
-          roles: ['office'],
-        });
+        await addStaffAccount(
+          firestore,
+          schoolId,
+          {
+            displayName: row.displayName,
+            username: row.username,
+            passcode: row.passcode,
+            role: 'office',
+            roles: ['office'],
+          },
+          authFetch,
+        );
+        takenUsernames.add(username);
         report.staffAdded += 1;
       } catch (e) {
         report.errors.push(`Staff "${row.displayName}": ${(e as Error).message}`);
@@ -638,7 +729,14 @@ export function formatOfficeImportReport(report: OfficeAiImportReport): string {
   if (report.studentsAdded) parts.push(`${report.studentsAdded} student${report.studentsAdded === 1 ? '' : 's'} added`);
   if (report.studentsUpdated) parts.push(`${report.studentsUpdated} student${report.studentsUpdated === 1 ? '' : 's'} updated`);
   if (report.gradesAdded) parts.push(`${report.gradesAdded} grade${report.gradesAdded === 1 ? '' : 's'}`);
-  if (report.gradesSkipped) parts.push(`${report.gradesSkipped} grade${report.gradesSkipped === 1 ? '' : 's'} skipped`);
+  if (report.gradesStudentNotFound) {
+    parts.push(
+      `${report.gradesStudentNotFound} grade${report.gradesStudentNotFound === 1 ? '' : 's'} skipped (student not found)`,
+    );
+  }
+  if (report.gradesDuplicate) {
+    parts.push(`${report.gradesDuplicate} grade${report.gradesDuplicate === 1 ? '' : 's'} already imported`);
+  }
   if (report.billingAccountsAdded) parts.push(`${report.billingAccountsAdded} billing account${report.billingAccountsAdded === 1 ? '' : 's'}`);
   if (report.invoicesAdded) parts.push(`${report.invoicesAdded} invoice${report.invoicesAdded === 1 ? '' : 's'}`);
   if (report.staffAdded) parts.push(`${report.staffAdded} staff login${report.staffAdded === 1 ? '' : 's'}`);

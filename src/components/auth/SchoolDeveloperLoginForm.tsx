@@ -18,12 +18,11 @@ import { useFirestore, useMemoFirebase, useDoc, useFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import {
   GoogleAuthProvider,
-  linkWithPopup,
-  linkWithRedirect,
   signInAnonymously,
   signInWithPopup,
   signInWithRedirect,
   signOut,
+  type User,
 } from 'firebase/auth';
 import { Loader2, Keyboard } from 'lucide-react';
 import {
@@ -57,9 +56,15 @@ export type SchoolDeveloperLoginFormProps = {
   mode?: SchoolDeveloperLoginFormMode;
   /** Prefill School ID (e.g. from `/login?school=` after a gated route redirect). */
   initialSchoolId?: string;
+  /** Shareable library sign-in: blank school box, then open that school's library. */
+  libraryLogin?: boolean;
 };
 
-export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: SchoolDeveloperLoginFormProps) {
+export function SchoolDeveloperLoginForm({
+  mode = 'full',
+  initialSchoolId,
+  libraryLogin = false,
+}: SchoolDeveloperLoginFormProps) {
   const [schoolId, setSchoolId] = useState('');
   const [schoolPasscode, setSchoolPasscode] = useState('');
   const [developerPasscode, setDeveloperPasscode] = useState('');
@@ -147,9 +152,13 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
 
   useEffect(() => {
     if (isDeveloperOnly) return;
+    if (libraryLogin) {
+      setSchoolId('');
+      return;
+    }
     const s = initialSchoolId?.trim().toLowerCase();
     if (s) setSchoolId(s);
-  }, [isDeveloperOnly, initialSchoolId]);
+  }, [isDeveloperOnly, initialSchoolId, libraryLogin]);
 
   useEffect(() => {
     if (!mounted || !isInitialized || isUserLoading) return;
@@ -337,43 +346,34 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         await signOut(auth);
       }
 
-      // Redirect-first: desktop Chrome routinely blocks the OAuth popup window (surfacing its
-      // own "pop-ups blocked" banner) even on a real click. Redirect only needs sessionStorage
-      // and a normal top-level browser context, so use it directly and only fall back to a
-      // popup when redirect itself isn't usable (e.g. in-app browsers / blocked storage).
-      if (canUseGoogleRedirectSignIn()) {
-        if (shouldThrottleGoogleRedirect()) {
-          playSound('error');
-          toast({
-            variant: 'destructive',
-            title: t('auth.googleStillStarting'),
-            description:
-              'Wait a few seconds for the previous Google sign-in attempt to finish, or refresh the page and try again.',
-          });
+      let result: { user: User };
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        const pCode = String((popupErr as { code?: string })?.code ?? '');
+        const isBlocked =
+          pCode === 'auth/popup-blocked' ||
+          pCode === 'auth/operation-not-supported-in-this-environment';
+
+        if (isBlocked && canUseGoogleRedirectSignIn()) {
+          if (shouldThrottleGoogleRedirect()) {
+            playSound('error');
+            toast({
+              variant: 'destructive',
+              title: t('auth.googleStillStarting'),
+              description:
+                'Wait a few seconds for the previous Google sign-in attempt to finish, or refresh the page and try again.',
+            });
+            return;
+          }
+          markPendingGoogleRedirect();
+          markGoogleRedirectAttempt();
+          await signInWithRedirect(auth, provider);
           return;
         }
-        markPendingGoogleRedirect();
-        markGoogleRedirectAttempt();
-        if (auth.currentUser?.isAnonymous) {
-          await linkWithRedirect(auth.currentUser, provider);
-        } else {
-          await signInWithRedirect(auth, provider);
-        }
-        // The browser will navigate away; no toast needed here.
-        return;
+        throw popupErr;
       }
 
-      // If the app started an anonymous session (normal for this app),
-      // link it to Google so the UID stays stable for role provisioning.
-      const result = auth.currentUser?.isAnonymous
-        ? await linkWithPopup(auth.currentUser, provider).catch((linkErr) => {
-            const code = String((linkErr as { code?: string })?.code ?? '');
-            if (code === 'auth/credential-already-in-use') {
-              return signInWithPopup(auth, provider);
-            }
-            throw linkErr;
-          })
-        : await signInWithPopup(auth, provider);
       await refreshGoogleIdToken(result.user);
       clearGoogleRedirectAttempt();
       playSound('success');
@@ -390,6 +390,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
     } catch (err) {
       const e = err as { code?: string; message?: string };
       const code = String(e?.code ?? '');
+      if (code === 'auth/popup-closed-by-user') {
+        return;
+      }
       console.error('Google sign-in failed:', err);
 
       if (code === 'auth/operation-not-allowed') {
@@ -426,9 +429,6 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
         return;
       }
 
-      // Redirect is already tried first (above) whenever it's usable. Reaching a
-      // popup-blocked error here means redirect itself isn't available in this browser
-      // (in-app webview / blocked storage) — there's no better fallback left.
       if (code === 'auth/popup-blocked' || code === 'auth/operation-not-supported-in-this-environment') {
         playSound('error');
         toast({
@@ -676,7 +676,7 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   .
                 </>
               ) : (
-              <>{t('auth.enterSchoolIdHint')}</>
+              <>{libraryLogin ? t('auth.enterLibrarySchoolIdHint') : t('auth.enterSchoolIdHint')}</>
               )}
             </p>
           </div>
@@ -841,7 +841,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                         : isAllowedGoogleEmail
                           ? t('auth.continueDeveloperPortal')
                           : t('auth.signInWithGoogle')
-                      : t('auth.signInToSchool')
+                      : libraryLogin
+                        ? t('auth.openTheLibrary')
+                        : t('auth.signInToSchool')
                   }
                   disabled={isSubmitting || isGoogleSigningIn}
                   className="w-full h-12 font-bold rounded-xl transition-all active:scale-[0.99] bg-primary hover:bg-primary/90 text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-70 inline-flex items-center justify-center gap-2"
@@ -849,7 +851,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                   {(isSubmitting || isGoogleSigningIn) && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
                   {isSubmitting || isGoogleSigningIn
                     ? loginPhase === 'session'
-                      ? 'Opening your school portal…'
+                      ? libraryLogin
+                        ? t('auth.openingLibrary')
+                        : 'Opening your school portal…'
                       : loginPhase === 'verifying'
                         ? 'Verifying school…'
                         : t('auth.signingIn')
@@ -859,7 +863,9 @@ export function SchoolDeveloperLoginForm({ mode = 'full', initialSchoolId }: Sch
                         : isAllowedGoogleEmail
                           ? t('auth.continueDeveloperPortal')
                           : t('auth.signInWithGoogle')
-                      : t('auth.continue')}
+                      : libraryLogin
+                        ? t('auth.openTheLibrary')
+                        : t('auth.continue')}
                 </button>
               )}
 

@@ -18,6 +18,8 @@ export type StudentPrizeShopCardProps = {
   onRedeem: () => void;
   /** Kiosk rail: one tap anywhere on the card. Shop grid: dedicated Redeem button. */
   wholeCardClick?: boolean;
+  /** Why this prize is locked, when points exist but the wrong pile is needed. */
+  affordHint?: string;
   className?: string;
 };
 
@@ -28,11 +30,15 @@ export function StudentPrizeShopCard({
   primaryForeground,
   onRedeem,
   wholeCardClick = false,
+  affordHint,
   className,
 }: StudentPrizeShopCardProps) {
   const canAfford = studentPoints >= (prize.points || 0);
   const displayName = stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
   const pctTowardCost = Math.min(100, Math.floor((studentPoints / (prize.points || 1)) * 100));
+  const lockedTitle =
+    affordHint ||
+    `You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`;
 
   const prizeTitle = (
     <h3
@@ -123,7 +129,7 @@ export function StudentPrizeShopCard({
                   ? { borderColor: 'var(--theme-text-muted)', color: 'var(--theme-text-muted)' }
                   : { borderColor: 'hsl(var(--muted-foreground))', color: 'hsl(var(--muted-foreground))' }
               }
-              title={`You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`}
+              title={lockedTitle}
             >
               {pctTowardCost}%
             </Badge>
@@ -188,7 +194,7 @@ export function StudentPrizeShopCard({
 
   const cardClass = cn(
     'group relative flex w-full min-w-0 flex-col items-center justify-between rounded-2xl border-2 border-transparent p-3.5 text-center backdrop-blur-sm transition-all duration-300 sm:p-4',
-    canAfford ? 'hover:border-[var(--prize-card-hover-border)] hover:shadow-2xl hover:shadow-primary/5' : 'cursor-not-allowed opacity-75',
+    canAfford ? 'hover:border-[var(--prize-card-hover-border)] hover:shadow-2xl hover:shadow-primary/5' : 'opacity-75',
     wholeCardClick &&
       'cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
     className,
@@ -216,11 +222,10 @@ export function StudentPrizeShopCard({
         type="button"
         data-stagger-card
         onClick={() => {
-          if (!canAfford) return;
           onRedeem();
         }}
-        disabled={!canAfford}
-        aria-label={`Redeem ${displayName}`}
+        aria-label={canAfford ? `Redeem ${displayName}` : `Cannot redeem ${displayName}. ${lockedTitle}`}
+        title={!canAfford ? lockedTitle : undefined}
         className={cardClass}
         style={cardStyle}
       >

@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { OfficeBillingAccount, OfficeGradeEntry, OfficeInvoice } from '@/lib/office/types';
+import { OfficePortalChromeProvider } from '@/components/office/OfficePortalChrome';
 import { OfficePortalShell } from '@/components/office/OfficePortalShell';
 import { useSchoolMetadataDocRef } from '@/hooks/useSchoolMetadataDocRef';
 import {
@@ -319,14 +320,16 @@ export function OfficePortalGate({ children }: { children: React.ReactNode }) {
 
   return (
     <OfficePortalDataContext.Provider value={portalData}>
-      <OfficePortalShell
-        schoolId={routeSchoolId}
-        schoolName={displaySchool}
-        userName={userName}
-        onLogout={() => logout({ staffNavigateTo: 'office' })}
-      >
-        {children}
-      </OfficePortalShell>
+      <OfficePortalChromeProvider schoolId={routeSchoolId}>
+        <OfficePortalShell
+          schoolId={routeSchoolId}
+          schoolName={displaySchool}
+          userName={userName}
+          onLogout={() => logout({ staffNavigateTo: 'office' })}
+        >
+          {children}
+        </OfficePortalShell>
+      </OfficePortalChromeProvider>
     </OfficePortalDataContext.Provider>
   );
 }

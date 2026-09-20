@@ -63,6 +63,32 @@ export function studentPrizeCategoryBalance(
   return linked.reduce((sum, cat) => sum + studentCategoryBalance(student, cat), 0);
 }
 
+/** Wallet that can actually pay for this prize (category pile, or whole balance). */
+export function studentSpendablePointsForPrize(
+  student: Pick<Student, 'points' | 'categoryPoints'>,
+  prize: Pick<Prize, 'categoryIds'>,
+  categories: Category[],
+): number {
+  if (!prizeHasCategoryRestriction(prize)) return safePoints(student.points);
+  return studentPrizeCategoryBalance(student, prize, categories);
+}
+
+export function joinCategoryNames(names: string[]): string {
+  const unique = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+  if (unique.length === 0) return '';
+  if (unique.length === 1) return unique[0];
+  if (unique.length === 2) return `${unique[0]} or ${unique[1]}`;
+  return `${unique.slice(0, -1).join(', ')}, or ${unique[unique.length - 1]}`;
+}
+
+/** Human-readable category names this prize spends from, or empty if any points work. */
+export function prizeRequiredCategoryLabel(
+  prize: Pick<Prize, 'categoryIds'>,
+  categories: Category[],
+): string {
+  return joinCategoryNames(resolvePrizeCategories(prize, categories).map((c) => c.name));
+}
+
 export function studentCanAffordPrizeByCategory(
   student: Pick<Student, 'points' | 'categoryPoints'>,
   prize: Pick<Prize, 'points' | 'categoryIds'>,
@@ -70,10 +96,38 @@ export function studentCanAffordPrizeByCategory(
   quantity = 1,
 ): boolean {
   const cost = Math.max(0, prize.points) * Math.max(1, quantity);
-  if (!prizeHasCategoryRestriction(prize)) {
-    return safePoints(student.points) >= cost;
+  return studentSpendablePointsForPrize(student, prize, categories) >= cost;
+}
+
+/**
+ * Balance shown after a purchase attempt.
+ * If they can buy it, use the big wallet (what the header becomes).
+ * If they cannot, use the spendable pile so leftover cannot look like a successful buy.
+ */
+export function shownBalanceAfterPrizePurchase(
+  totalPoints: number,
+  spendablePoints: number,
+  cost: number,
+  canAfford: boolean,
+): number {
+  return (canAfford ? totalPoints : spendablePoints) - cost;
+}
+
+/** Short student-facing reason they cannot buy, or null if they can. */
+export function describePrizeShortage(
+  student: Pick<Student, 'points' | 'categoryPoints'>,
+  prize: Pick<Prize, 'points' | 'categoryIds'>,
+  categories: Category[],
+  quantity = 1,
+): string | null {
+  if (studentCanAffordPrizeByCategory(student, prize, categories, quantity)) return null;
+  const cost = Math.max(0, prize.points) * Math.max(1, quantity);
+  const spendable = studentSpendablePointsForPrize(student, prize, categories);
+  const label = prizeRequiredCategoryLabel(prize, categories);
+  if (label) {
+    return `This prize uses ${label} points. You have ${spendable.toLocaleString()} and need ${cost.toLocaleString()}.`;
   }
-  return studentPrizeCategoryBalance(student, prize, categories) >= cost;
+  return `You don't have enough points for this quantity. You have ${spendable.toLocaleString()} and need ${cost.toLocaleString()}.`;
 }
 
 /** Deduct `cost` from category balances (mutates a copy). Returns updated map or null if insufficient. */

@@ -1,716 +1,680 @@
 'use client';
 
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { createContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import {
-  ArrowUpRight,
-  ChevronDown,
-  GraduationCap,
+  BookOpenCheck,
+  ClipboardCheck,
+  Dices,
   GripVertical,
-  Hash,
-  Monitor,
-  NotebookPen,
-  Palette,
-  PanelTop,
-  Redo2,
-  RotateCcw,
+  IdCard,
+  Pause,
+  Play,
+  Settings2,
+  Shuffle,
   Sparkles,
-  Undo2,
+  Timer,
   Users,
   Volume2,
   VolumeX,
-  Zap,
 } from 'lucide-react';
+import { ClassroomAttendanceSourceControl } from '@/components/classroom/ClassroomAttendanceSourceControl';
+import { useClassroomLiveSidebarChrome } from '@/components/classroom/ClassroomLiveHoverSidebar';
+import { ClassroomGroupsTool } from '@/components/classroom/ClassroomGroupsTool';
+import { type ClassroomAttendanceSource } from '@/lib/classroom/classroomAttendanceSource';
+import { type ClassroomGroupAssignment } from '@/lib/classroom/classroomGroups';
+import { type ClassroomInteractionMode } from '@/lib/classroom/classroomInteractionMode';
+import { type ClassroomDesign } from '@/components/points/classroomVisualTheme';
+import type { ClassroomSeatingPrefs } from '@/lib/classroomSeatingChart';
+import { type ClassroomSeatingShortcutsHintState } from '@/components/points/classroomSeatingShortcutsHint';
 import {
-  CLASS_AWARDS_STUDENT_LAUNCH_LABEL,
-  CLASSROOM_ALL_STUDENTS_FILTER_ID,
-  CLASSROOM_ALL_STUDENTS_LABEL,
-} from '@/lib/classroom/classroomTabSections';
-import {
-  CLASSROOM_DESIGNS,
-  type ClassroomDesign,
-} from '@/components/points/classroomVisualTheme';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import type { Class } from '@/lib/types';
-import type {
-  ClassroomCelebrationEffect,
-  ClassroomMonitorMenuTab,
-  ClassroomSeatingPrefs,
-} from '@/lib/classroomSeatingChart';
-import {
-  MONITOR_MENU_TAB_LABELS,
-  MONITOR_MENU_TAB_ORDER,
-  normalizeClassroomDesign,
-  normalizeMonitorMenuTabs,
-} from '@/lib/classroomSeatingChart';
+  classroomSidebarToolAppearance,
+  classroomSidebarToolTint,
+  type ClassroomSidebarToolTone,
+} from '@/lib/classroom/classroomTokenTheme';
 import { cn } from '@/lib/utils';
 
-const MONITOR_POPOVER_Z = 'z-[500]';
+const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 
-const CELEBRATION_LABELS: Record<ClassroomCelebrationEffect, string> = {
-  flash: 'Flash',
-  none: 'None',
-  sparkles: 'Sparkles',
-  confetti: 'Confetti',
-  hearts: 'Hearts',
-  stars: 'Stars',
-  fireworks: 'Fireworks',
-  snow: 'Snow',
-};
+type MonitorToolbarPlacement = 'top' | 'left';
+const MonitorToolbarPlacementContext = createContext<MonitorToolbarPlacement>('top');
 
-function monitorSelectTriggerClass(design: ClassroomDesign, isFullscreen: boolean) {
-  const isDark = design === 'midnight';
-  return cn(
-    'h-auto w-auto gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-semibold shadow-sm sm:gap-2 sm:px-3 sm:py-2.5 sm:text-sm',
-    isFullscreen && 'px-2 py-1.5 text-[11px] sm:px-2.5 sm:py-2 sm:text-xs',
-    isDark
-      ? 'border-white/15 bg-white/5 text-white hover:border-white/30'
-      : design === 'brutalist'
-        ? 'border-foreground bg-card text-foreground shadow-[2px_2px_0_0_hsl(var(--foreground))]'
-        : 'border-border bg-card text-foreground hover:border-primary/40 hover:text-primary',
-  );
+type SidebarToolTone =
+  | 'arrange'
+  | 'random'
+  | 'attendance'
+  | 'sound'
+  | 'timer'
+  | 'gold'
+  | 'raffle'
+  | 'behavior'
+  | 'groups';
+
+const tactile =
+  'border-transparent shadow-sm shadow-black/10 transition-all hover:-translate-y-0.5 hover:shadow-md';
+
+function monitorSelectTriggerLook(
+  design: ClassroomDesign,
+  isFullscreen: boolean,
+  tone: SidebarToolTone = 'arrange',
+) {
+  const look = classroomSidebarToolAppearance(design, tone);
+  return {
+    className: cn(
+      'classroom-readable h-auto w-auto gap-1.5 rounded-xl px-2 py-1.5 text-xs tracking-normal sm:px-2.5',
+      tactile,
+      isFullscreen && 'px-2 py-1.5 text-xs',
+      look.className,
+    ),
+    style: look.style,
+    ink: look.ink,
+  };
 }
 
-const MonitorCategoryMenuTrigger = forwardRef<
-  HTMLButtonElement,
-  ButtonHTMLAttributes<HTMLButtonElement> & {
-    design: ClassroomDesign;
-    isFullscreen: boolean;
-    icon: LucideIcon;
-    label: string;
-  }
->(({ design, isFullscreen, icon: Icon, label, className, type = 'button', ...props }, ref) => (
-  <button
-    ref={ref}
-    type={type}
-    className={cn(
-      monitorSelectTriggerClass(design, isFullscreen),
-      'inline-flex items-center',
-      className,
-    )}
-    {...props}
-  >
-    <Icon className="h-4 w-4 shrink-0" aria-hidden />
-    <span className="max-w-[9rem] truncate">{label}</span>
-    <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" aria-hidden />
-  </button>
-));
-MonitorCategoryMenuTrigger.displayName = 'MonitorCategoryMenuTrigger';
+function iconInkClass(ink: 'light' | 'dark' | 'amber') {
+  return ink === 'dark' ? 'text-slate-900' : ink === 'amber' ? 'text-amber-300' : 'text-white';
+}
 
-function MonitorCategoryPopover({
+function CollapsedToolIcon({
   design,
-  isFullscreen,
-  icon,
+  tone,
   label,
-  contentClassName,
+  title,
+  active = false,
+  onClick,
   children,
 }: {
   design: ClassroomDesign;
-  isFullscreen: boolean;
-  icon: LucideIcon;
+  tone: ClassroomSidebarToolTone;
   label: string;
-  contentClassName?: string;
+  title?: string;
+  active?: boolean;
+  onClick: () => void;
   children: ReactNode;
 }) {
+  const look = classroomSidebarToolAppearance(design, tone);
   return (
-    <Popover modal>
-      <PopoverTrigger asChild>
-        <MonitorCategoryMenuTrigger design={design} isFullscreen={isFullscreen} icon={icon} label={label} />
-      </PopoverTrigger>
-      <PopoverContent
-        className={cn(MONITOR_POPOVER_Z, 'rounded-xl p-3', contentClassName)}
-        align="start"
-        collisionPadding={12}
-      >
-        {children}
-      </PopoverContent>
-    </Popover>
+    <motion.button
+      type="button"
+      variants={{
+        hidden: { opacity: 0, scale: 0.85 },
+        visible: { opacity: 1, scale: 1, transition: spring },
+      }}
+      data-look={design}
+      style={look.style}
+      className={cn(
+        'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm shadow-black/15',
+        look.className,
+        active && 'ring-2 ring-[#f5c518] ring-offset-1 ring-offset-transparent',
+      )}
+      aria-label={label}
+      title={title ?? label}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+    >
+      <span className={cn('inline-flex', iconInkClass(look.ink))}>{children}</span>
+    </motion.button>
   );
 }
 
-function ClassroomMonitorToolbarOptionsMenu({
+function formatGroupTimer(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function ClassroomGroupTimer({
   design,
-  prefs,
   isFullscreen,
-  rewardsPillarOn,
-  onChange,
-  classScreenUrl,
-  onResetSessionDisplay,
-  behaviorNotesTipsOn,
-  onBehaviorNotesTipsChange,
+  iconOnly = false,
 }: {
   design: ClassroomDesign;
-  prefs: ClassroomSeatingPrefs;
   isFullscreen: boolean;
-  rewardsPillarOn: boolean;
-  onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
-  classScreenUrl?: string | null;
-  onResetSessionDisplay?: () => void;
-  behaviorNotesTipsOn: boolean;
-  onBehaviorNotesTipsChange: (on: boolean) => void;
+  iconOnly?: boolean;
 }) {
-  const menus = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
+  const [running, setRunning] = useState(false);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const startedAtRef = useRef<number | null>(null);
 
-  const patchMenu = (key: ClassroomMonitorMenuTab, visible: boolean) => {
-    onChange({
-      monitorMenuTabs: {
-        ...menus,
-        [key]: visible,
-      },
-    });
+  useEffect(() => {
+    if (!running) return;
+    const id = window.setInterval(() => {
+      if (startedAtRef.current == null) return;
+      setElapsedMs(Date.now() - startedAtRef.current);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [running]);
+
+  const toggleRun = () => {
+    if (running) {
+      setRunning(false);
+      if (startedAtRef.current != null) {
+        setElapsedMs(Date.now() - startedAtRef.current);
+      }
+      startedAtRef.current = null;
+      return;
+    }
+    startedAtRef.current = Date.now() - elapsedMs;
+    setRunning(true);
   };
 
+  if (iconOnly) {
+    return (
+      <CollapsedToolIcon
+        design={design}
+        tone="timer"
+        label={running ? 'Pause group timer' : elapsedMs > 0 ? 'Resume group timer' : 'Start group timer'}
+        title={
+          running
+            ? `Timer running ${formatGroupTimer(elapsedMs)} — click to pause`
+            : `Group timer ${formatGroupTimer(elapsedMs)} — click to start`
+        }
+        active={running || elapsedMs > 0}
+        onClick={toggleRun}
+      >
+        {running ? <Pause className="h-4 w-4" aria-hidden /> : <Timer className="h-4 w-4" aria-hidden />}
+      </CollapsedToolIcon>
+    );
+  }
+
+  const look = monitorSelectTriggerLook(design, isFullscreen, 'timer');
+  const actionTint = classroomSidebarToolTint(design, 'timer');
+  const inkClass = look.ink === 'dark' ? 'text-slate-900' : 'text-white';
   return (
-    <MonitorCategoryPopover
-      design={design}
-      isFullscreen={isFullscreen}
-      icon={PanelTop}
-      label="Toolbar options"
-      contentClassName="w-64"
+    <div
+      data-look={design}
+      style={look.style}
+      className={cn(
+        look.className,
+        'flex w-full flex-col items-stretch gap-2 rounded-xl p-3 hover:translate-y-0',
+      )}
     >
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Toolbar options</p>
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-[11px] font-bold text-foreground">Toolbar buttons</p>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showRandomPicker}
-              onCheckedChange={(v) => onChange({ showRandomPicker: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Random picker</span> — button +{' '}
-              <kbd className="rounded border bg-muted px-1 font-mono text-[10px]">R</kbd>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showClassAwardButton}
-              onCheckedChange={(v) => onChange({ showClassAwardButton: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Class +N award</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={prefs.showBurstAward}
-              onCheckedChange={(v) => onChange({ showBurstAward: v === true })}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Burst award</span>
-            </span>
-          </label>
-          <label className="flex cursor-pointer items-start gap-2">
-            <Checkbox
-              className="mt-0.5"
-              checked={behaviorNotesTipsOn}
-              onCheckedChange={(v) => onBehaviorNotesTipsChange(v === true)}
-            />
-            <span className="text-xs leading-snug">
-              <span className="font-semibold">Behavior notes</span> — shortcut tips on the monitor.
-            </span>
-          </label>
-        </div>
-
-        <div className="space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[11px] font-bold text-foreground">Session &amp; display</p>
-          {classScreenUrl ? (
-            <a
-              href={classScreenUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-xs font-semibold no-underline transition-colors hover:bg-muted"
-            >
-              <Monitor className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              <span className="min-w-0 flex-1">{CLASS_AWARDS_STUDENT_LAUNCH_LABEL}</span>
-              <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
-            </a>
-          ) : null}
-          {onResetSessionDisplay ? (
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-lg border border-border/60 px-2.5 py-2 text-left text-xs font-semibold transition-colors hover:bg-muted"
-              onClick={onResetSessionDisplay}
-            >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Reset screen
-            </button>
-          ) : null}
-        </div>
-
-        <div className="space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[11px] font-bold text-foreground">Toolbar menus</p>
-          <p className="text-[10px] text-muted-foreground">
-            Chart style, tap mode, sounds, etc. Layout is on the arrange room bar while editing seats.
-          </p>
-          {MONITOR_MENU_TAB_ORDER.filter((key) => key !== 'awardSource').map((key) => (
-              <label key={key} className="flex cursor-pointer items-center gap-2">
-                <Checkbox checked={menus[key]} onCheckedChange={(v) => patchMenu(key, v === true)} />
-                <span className="text-xs font-medium">{MONITOR_MENU_TAB_LABELS[key]}</span>
-              </label>
-            ))}
-        </div>
+      <div className={cn('flex items-center gap-1.5', inkClass)}>
+        <Timer className="h-4 w-4 shrink-0" aria-hidden />
+        <span className="min-w-0 flex-1 text-left text-xs font-semibold tracking-normal">Group timer</span>
+        <span className="font-mono text-xs font-bold tabular-nums">{formatGroupTimer(elapsedMs)}</span>
       </div>
-    </MonitorCategoryPopover>
-  );
-}
-
-function ClassroomMonitorClassMenu({
-  design,
-  classes,
-  classId,
-  isFullscreen,
-  onChange,
-}: {
-  design: ClassroomDesign;
-  classes: Class[];
-  classId: string;
-  isFullscreen: boolean;
-  onChange: (classId: string) => void;
-}) {
-  if (classes.length === 0) return null;
-
-  const sorted = classes.slice().sort((a, b) => a.name.localeCompare(b.name));
-  const viewingAll = classId === CLASSROOM_ALL_STUDENTS_FILTER_ID;
-  const selectedLabel = viewingAll
-    ? CLASSROOM_ALL_STUDENTS_LABEL
-    : sorted.find((c) => c.id === classId)?.name ?? 'Class';
-
-  return (
-    <MonitorCategoryPopover
-      design={design}
-      isFullscreen={isFullscreen}
-      icon={viewingAll ? Users : GraduationCap}
-      label={selectedLabel}
-      contentClassName="w-56"
-    >
-      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Class</p>
-      <div className="space-y-1">
-        <button
-          type="button"
-          className={cn(
-            'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
-            viewingAll && 'bg-primary/10 ring-1 ring-primary/30',
-          )}
-          onClick={() => onChange(CLASSROOM_ALL_STUDENTS_FILTER_ID)}
-        >
-          <span className="font-semibold">{CLASSROOM_ALL_STUDENTS_LABEL}</span>
-          <span className="block text-xs text-muted-foreground">Every student you can see</span>
-        </button>
-        {sorted.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={cn(
-              'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
-              classId === c.id && 'bg-primary/10 ring-1 ring-primary/30',
-            )}
-            onClick={() => onChange(c.id)}
-          >
-            <span className="font-semibold">{c.name}</span>
-          </button>
-        ))}
+      <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        className={cn(
+          'inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold hover:brightness-105',
+          inkClass,
+        )}
+        style={{ backgroundColor: actionTint }}
+        onClick={toggleRun}
+      >
+        {running ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
+        {running ? 'Pause' : elapsedMs > 0 ? 'Resume' : 'Start'}
+      </button>
+      <button
+        type="button"
+        className={cn(
+          'inline-flex items-center justify-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold hover:brightness-105',
+          inkClass,
+        )}
+        style={{ backgroundColor: actionTint }}
+        onClick={() => {
+          startedAtRef.current = null;
+          setRunning(false);
+          setElapsedMs(0);
+        }}
+      >
+        Reset
+      </button>
       </div>
-    </MonitorCategoryPopover>
+    </div>
   );
 }
 
 export function ClassroomMonitorQuickControls({
   design,
   prefs,
-  classes,
-  classId,
   isFullscreen = false,
+  placement = 'top',
   editMode = false,
-  rewardsPillarOn = false,
   onChange,
-  onClassChange,
-  onResetSessionDisplay,
-  classScreenUrl,
   onToggleEditMode,
-  onUndo,
-  onRedo,
-  undoDisabled = false,
-  redoDisabled = false,
-  undoTitle = 'Undo',
-  redoTitle = 'Redo',
-  awardActions,
-  behaviorNotesTipsOn,
-  onBehaviorNotesTipsChange,
+  liveAwardActions,
+  onSeatEveryone,
+  onRandomPick,
+  interactionMode = 'award',
+  attendanceEnabled = false,
+  attendanceSource = 'card-scan',
+  onAttendanceSourceChange,
+  onStartNewClass,
+  groups,
+  onAssignGroups,
+  onClearGroups,
+  notesEnabled = true,
+  shortcutHint = null,
+  showRaffle = false,
+  raffleOpen = false,
+  onOpenRaffle,
+  behaviorOpen = false,
+  onOpenBehavior,
+  setupOpen = false,
+  onOpenSetup,
 }: {
   design: ClassroomDesign;
   prefs: ClassroomSeatingPrefs;
-  classes: Class[];
-  classId: string;
+  classes?: unknown;
+  classId?: string;
   isFullscreen?: boolean;
+  placement?: MonitorToolbarPlacement;
   editMode?: boolean;
   rewardsPillarOn?: boolean;
   onChange: (patch: Partial<ClassroomSeatingPrefs>) => void;
   onClassChange?: (classId: string) => void;
-  onResetSessionDisplay?: () => void;
-  /** Read-only projector mirror — omit when class screen launch is disabled. */
-  classScreenUrl?: string | null;
   onToggleEditMode?: () => void;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  undoDisabled?: boolean;
-  redoDisabled?: boolean;
-  undoTitle?: string;
-  redoTitle?: string;
   awardActions?: ReactNode;
-  behaviorNotesTipsOn: boolean;
-  onBehaviorNotesTipsChange: (on: boolean) => void;
+  liveAwardActions?: ReactNode;
+  onSeatEveryone?: () => void;
+  onRandomPick?: () => void;
+  interactionMode?: ClassroomInteractionMode;
+  onInteractionModeChange?: (mode: ClassroomInteractionMode) => void;
+  attendanceEnabled?: boolean;
+  attendanceSource?: ClassroomAttendanceSource;
+  onAttendanceSourceChange?: (source: ClassroomAttendanceSource) => void;
+  onStartNewClass?: () => void;
+  groups?: ClassroomGroupAssignment;
+  onAssignGroups?: (count: number) => void;
+  onClearGroups?: () => void;
+  notesEnabled?: boolean;
+  shortcutHint?: ClassroomSeatingShortcutsHintState | null;
+  behaviorNotesTipsOn?: boolean;
+  onBehaviorNotesTipsChange?: (on: boolean) => void;
+  classScreenUrl?: string | null;
+  onResetSessionDisplay?: () => void;
+  showRaffle?: boolean;
+  raffleOpen?: boolean;
+  onOpenRaffle?: () => void;
+  behaviorOpen?: boolean;
+  onOpenBehavior?: () => void;
+  setupOpen?: boolean;
+  onOpenSetup?: () => void;
 }) {
-  const activeDesign = normalizeClassroomDesign(prefs.design);
-  const tabs = normalizeMonitorMenuTabs(prefs.monitorMenuTabs);
-  const flyUpValue = !prefs.showKioskFlyUp ? 'off' : prefs.kioskFlyUpSize;
+  const isLeft = placement === 'left';
+  const { iconOnly, requestExpand } = useClassroomLiveSidebarChrome();
+  const showIconRail = isLeft && iconOnly;
+  void shortcutHint;
+  void notesEnabled;
 
   if (!isFullscreen) return null;
 
-  const sessionToolbarButtons = (
-    <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-border/50 bg-muted/20 p-0.5">
-      {onToggleEditMode ? (
-        <button
-          type="button"
-          className={cn(
-            monitorSelectTriggerClass(design, isFullscreen),
-            'inline-flex items-center gap-1 border-0 px-2 py-1.5 shadow-none sm:px-2.5',
-            editMode && 'bg-primary/15 text-primary ring-1 ring-primary/30',
-          )}
-          aria-label={editMode ? 'Done arranging' : 'Arrange seats'}
-          title={editMode ? 'Done arranging seats' : 'Arrange seats — drag desks to match your room'}
-          onClick={onToggleEditMode}
-        >
-          <GripVertical className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="hidden sm:inline">{editMode ? 'Done' : 'Arrange'}</span>
-        </button>
-      ) : null}
-      {!editMode && onUndo && onRedo ? (
-        <>
-          <button
-            type="button"
-            className={cn(
-              monitorSelectTriggerClass(design, isFullscreen),
-              'inline-flex items-center justify-center border-0 px-2 py-1.5 shadow-none',
-            )}
-            aria-label={undoTitle}
-            title={undoTitle}
-            disabled={undoDisabled}
-            onClick={onUndo}
-          >
-            <Undo2 className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-          <button
-            type="button"
-            className={cn(
-              monitorSelectTriggerClass(design, isFullscreen),
-              'inline-flex items-center justify-center border-0 px-2 py-1.5 shadow-none',
-            )}
-            aria-label={redoTitle}
-            title={redoTitle}
-            disabled={redoDisabled}
-            onClick={onRedo}
-          >
-            <Redo2 className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-        </>
-      ) : null}
-    </div>
-  );
+  const arrangeLook = monitorSelectTriggerLook(design, isFullscreen, 'arrange');
+  const soundLook = monitorSelectTriggerLook(design, isFullscreen, 'sound');
+  const randomLook = monitorSelectTriggerLook(design, isFullscreen, 'random');
+  const raffleLook = monitorSelectTriggerLook(design, isFullscreen, 'raffle');
+  const behaviorLook = monitorSelectTriggerLook(design, isFullscreen, 'behavior');
+  const attendanceLook = monitorSelectTriggerLook(design, isFullscreen, 'attendance');
+  const goldLook = monitorSelectTriggerLook(design, isFullscreen, 'gold');
+  const groupsLook = monitorSelectTriggerLook(design, isFullscreen, 'groups');
+  const iconInk = (ink: 'light' | 'dark' | 'amber') =>
+    ink === 'dark' ? 'text-slate-900' : ink === 'amber' ? 'text-amber-300' : 'text-white';
 
-  if (editMode) {
+  if (showIconRail) {
+    const cardScan = attendanceSource === 'card-scan' && interactionMode !== 'attendance';
     return (
-      <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 sm:items-center sm:gap-2">
-        {sessionToolbarButtons}
-      </div>
+      <MonitorToolbarPlacementContext.Provider value={placement}>
+        <motion.div
+          key="classroom-monitor-icon-rail"
+          layoutId="classroom-monitor-tabs"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: { opacity: 1, transition: { ...spring, staggerChildren: 0.04 } },
+          }}
+          className="flex h-full min-h-0 w-full flex-col items-center justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
+          data-testid="classroom-monitor-icon-rail"
+        >
+          {onToggleEditMode ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="arrange"
+              label={editMode ? 'Done arranging' : 'Arrange seats'}
+              title={editMode ? 'Done arranging seats' : 'Arrange seats — drag desks to match your room'}
+              active={editMode}
+              onClick={onToggleEditMode}
+            >
+              <GripVertical className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {liveAwardActions ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="gold"
+              label="Awards"
+              title="Hover to open awards and class tools"
+              onClick={requestExpand}
+            >
+              <Sparkles className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onRandomPick ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="random"
+              label="Random student picker"
+              title="Pick a random student (R)"
+              onClick={onRandomPick}
+            >
+              <Shuffle className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {showRaffle && onOpenRaffle ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="raffle"
+              label="Raffle"
+              title="Run a raffle for this class"
+              active={raffleOpen}
+              onClick={onOpenRaffle}
+            >
+              <Dices className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onOpenBehavior ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="behavior"
+              label="Behavior"
+              title="Behavior notes for this class"
+              active={behaviorOpen}
+              onClick={onOpenBehavior}
+            >
+              <BookOpenCheck className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {attendanceEnabled && onAttendanceSourceChange ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="attendance"
+              label={
+                interactionMode === 'attendance'
+                  ? 'Attendance: manual roll call. Open settings'
+                  : cardScan
+                    ? 'Attendance: Badge reader active. Open settings'
+                    : 'Attendance settings'
+              }
+              title="Choose card scan or manual roll call — hover open for options"
+              active={interactionMode === 'attendance'}
+              onClick={requestExpand}
+            >
+              {cardScan ? <IdCard className="h-4 w-4" aria-hidden /> : <ClipboardCheck className="h-4 w-4" aria-hidden />}
+            </CollapsedToolIcon>
+          ) : null}
+          <CollapsedToolIcon
+            design={design}
+            tone="sound"
+            label={prefs.awardSounds !== false ? 'Turn award sounds off' : 'Turn award sounds on'}
+            title={prefs.awardSounds !== false ? 'Award sounds on — click to mute' : 'Award sounds off — click to unmute'}
+            active={prefs.awardSounds === false}
+            onClick={() => onChange({ awardSounds: prefs.awardSounds === false })}
+          >
+            {prefs.awardSounds !== false ? (
+              <Volume2 className="h-4 w-4" aria-hidden />
+            ) : (
+              <VolumeX className="h-4 w-4" aria-hidden />
+            )}
+          </CollapsedToolIcon>
+          <ClassroomGroupTimer design={design} isFullscreen={isFullscreen} iconOnly />
+          {onAssignGroups && onClearGroups ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="groups"
+              label="Groups"
+              title="Make classroom groups — hover open for options"
+              active={Boolean(groups)}
+              onClick={requestExpand}
+            >
+              <Users className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+          {onOpenSetup ? (
+            <CollapsedToolIcon
+              design={design}
+              tone="menu"
+              label="Setup and settings"
+              title="School rules, poster TV, raffle setup, and more"
+              active={setupOpen}
+              onClick={onOpenSetup}
+            >
+              <Settings2 className="h-4 w-4" aria-hidden />
+            </CollapsedToolIcon>
+          ) : null}
+        </motion.div>
+      </MonitorToolbarPlacementContext.Provider>
     );
   }
 
+  const arrangeButton = onToggleEditMode ? (
+    <button
+      type="button"
+      data-look={design}
+      style={arrangeLook.style}
+      className={cn(
+        arrangeLook.className,
+        'inline-flex items-center gap-1 px-2 py-1.5 sm:px-2.5',
+        isLeft && 'w-full justify-start',
+        editMode && 'classroom-on-dark !bg-[#102033] !text-white ring-2 ring-[#f5c518]',
+      )}
+      aria-label={editMode ? 'Done arranging' : 'Arrange seats'}
+      title={editMode ? 'Done arranging seats' : 'Arrange seats — drag desks to match your room'}
+      onClick={onToggleEditMode}
+    >
+      <GripVertical className={cn('h-4 w-4 shrink-0', editMode ? 'text-white' : iconInk(arrangeLook.ink))} aria-hidden />
+      <span>{editMode ? 'Done' : 'Arrange seats'}</span>
+    </button>
+  ) : null;
+
+  const soundsButton = (
+    <button
+      type="button"
+      data-look={design}
+      style={soundLook.style}
+      className={cn(
+        soundLook.className,
+        'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+        prefs.awardSounds === false && 'opacity-80',
+      )}
+      aria-label={prefs.awardSounds !== false ? 'Turn award sounds off' : 'Turn award sounds on'}
+      title={prefs.awardSounds !== false ? 'Award sounds on — click to mute' : 'Award sounds off — click to unmute'}
+      onClick={() => onChange({ awardSounds: prefs.awardSounds === false })}
+    >
+      {prefs.awardSounds !== false ? (
+        <Volume2 className={cn('h-4 w-4 shrink-0', iconInk(soundLook.ink))} aria-hidden />
+      ) : (
+        <VolumeX className={cn('h-4 w-4 shrink-0', iconInk(soundLook.ink))} aria-hidden />
+      )}
+      <span>Sound effects {prefs.awardSounds === false ? 'off' : 'on'}</span>
+    </button>
+  );
+
+  const randomPickerButton = onRandomPick ? (
+    <button
+      type="button"
+      data-look={design}
+      style={randomLook.style}
+      className={cn(
+        randomLook.className,
+        'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+      )}
+      aria-label="Random student picker"
+      title="Pick a random student (R)"
+      onClick={onRandomPick}
+    >
+      <Shuffle className={cn('h-4 w-4 shrink-0', iconInk(randomLook.ink))} aria-hidden />
+      <span>Random student</span>
+    </button>
+  ) : null;
+
+  const raffleButton = showRaffle && onOpenRaffle ? (
+    <button
+      type="button"
+      data-look={design}
+      style={raffleLook.style}
+      className={cn(
+        raffleLook.className,
+        'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+        raffleOpen && 'ring-2 ring-white/80',
+      )}
+      aria-label="Raffle"
+      title="Run a raffle for this class"
+      onClick={onOpenRaffle}
+    >
+      <Dices className={cn('h-4 w-4 shrink-0', iconInk(raffleLook.ink))} aria-hidden />
+      <span>Raffle</span>
+    </button>
+  ) : null;
+
+  const behaviorButton = onOpenBehavior ? (
+    <button
+      type="button"
+      data-look={design}
+      style={behaviorLook.style}
+      className={cn(
+        behaviorLook.className,
+        'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+        behaviorOpen && 'ring-2 ring-white/80',
+      )}
+      aria-label="Behavior"
+      title="Behavior notes for this class"
+      onClick={onOpenBehavior}
+    >
+      <BookOpenCheck className={cn('h-4 w-4 shrink-0', iconInk(behaviorLook.ink))} aria-hidden />
+      <span>Behavior</span>
+    </button>
+  ) : null;
+
+  const setupLook = monitorSelectTriggerLook(design, isFullscreen, 'groups');
+  const setupButton = onOpenSetup ? (
+    <button
+      type="button"
+      data-look={design}
+      style={setupLook.style}
+      className={cn(
+        setupLook.className,
+        'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+        setupOpen && 'ring-2 ring-white/80',
+      )}
+      aria-label="Setup and settings"
+      title="School rules, poster TV, raffle setup, and more"
+      onClick={onOpenSetup}
+    >
+      <Settings2 className={cn('h-4 w-4 shrink-0', iconInk(setupLook.ink))} aria-hidden />
+      <span>Setup &amp; more</span>
+    </button>
+  ) : null;
+
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-start gap-1.5 sm:items-center sm:gap-2">
-      <ClassroomMonitorToolbarOptionsMenu
-        design={design}
-        prefs={prefs}
-        isFullscreen={isFullscreen}
-        rewardsPillarOn={rewardsPillarOn}
-        onChange={onChange}
-        classScreenUrl={classScreenUrl}
-        onResetSessionDisplay={onResetSessionDisplay}
-        behaviorNotesTipsOn={behaviorNotesTipsOn}
-        onBehaviorNotesTipsChange={onBehaviorNotesTipsChange}
-      />
-
-      {sessionToolbarButtons}
-
-      {onClassChange ? (
-        <ClassroomMonitorClassMenu
-          design={design}
-          classes={classes}
-          classId={classId}
-          isFullscreen={isFullscreen}
-          onChange={onClassChange}
-        />
-      ) : null}
-
-      {tabs.style ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Palette}
-          label="Chart style"
-          contentClassName="w-56"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Chart style</p>
-          <div className="space-y-1">
-            {CLASSROOM_DESIGNS.map((d) => (
-              <button
-                key={d.id}
-                type="button"
-                className={cn(
-                  'w-full rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-muted',
-                  activeDesign === d.id && 'bg-primary/10 ring-1 ring-primary/30',
-                )}
-                onClick={() => onChange({ design: d.id })}
-              >
-                <span className="font-semibold">{d.label}</span>
-                <span className="block text-xs text-muted-foreground">{d.description}</span>
-              </button>
-            ))}
-          </div>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.deskDisplay ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Monitor}
-          label="Desk display"
-          contentClassName="w-72"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Desk display</p>
-          <div className="space-y-2">
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={prefs.showPointBalances}
-                onCheckedChange={(v) => onChange({ showPointBalances: v === true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">
-                  {rewardsPillarOn ? 'Point balances' : 'Classroom balances'}
-                </span>{' '}
-                — {rewardsPillarOn ? 'rewards total' : 'classroom points total'} on each desk.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={prefs.showSessionTotals}
-                onCheckedChange={(v) => onChange({ showSessionTotals: v === true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Session badges</span> — session points earned on this screen.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={prefs.showSessionLastAward ?? true}
-                disabled={!prefs.showSessionTotals}
-                onCheckedChange={(v) => onChange({ showSessionLastAward: v === true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Last award label</span> — latest quick-award phrase on session
-                badges.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={prefs.showLastName}
-                onCheckedChange={(v) => onChange({ showLastName: v === true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Last names</span> — append surname after each desk label.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <Checkbox
-                className="mt-0.5"
-                checked={prefs.showStudentEmoji}
-                onCheckedChange={(v) => onChange({ showStudentEmoji: v === true })}
-              />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Student emoji</span> — sticker or theme emoji on avatars.
-              </span>
-            </label>
-          </div>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.tapMode ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Zap}
-          label="Tap mode"
-          contentClassName="w-64"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Tap mode</p>
-          <RadioGroup
-            value={prefs.instantTap ? 'quick' : 'menu'}
-            onValueChange={(v) => {
-              if (v === 'quick' || v === 'menu') onChange({ instantTap: v === 'quick' });
-            }}
-            className="gap-2"
-          >
-            <label className="flex cursor-pointer items-start gap-2">
-              <RadioGroupItem value="quick" className="mt-0.5" aria-label="Quick select" />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Quick select</span> — one tap awards default points.
-              </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2">
-              <RadioGroupItem value="menu" className="mt-0.5" aria-label="Show awards menu" />
-              <span className="text-xs leading-snug">
-                <span className="font-semibold">Show awards menu</span> — tap opens the full awards menu.
-              </span>
-            </label>
-          </RadioGroup>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.effects ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Sparkles}
-          label="Effects"
-          contentClassName="w-64"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Kiosk fly-up</p>
-          <RadioGroup
-            value={flyUpValue}
-            onValueChange={(v) => {
-              if (v === 'off') {
-                onChange({ showKioskFlyUp: false });
-                return;
-              }
-              onChange({
-                showKioskFlyUp: true,
-                kioskFlyUpSize: v as ClassroomSeatingPrefs['kioskFlyUpSize'],
-              });
-            }}
-            className="mb-4 gap-1"
-          >
-            {(['off', 'small', 'medium', 'large'] as const).map((size) => (
-              <label key={size} className="flex cursor-pointer items-center gap-2">
-                <RadioGroupItem value={size} aria-label={size === 'off' ? 'Fly-up off' : `${size} fly-up`} />
-                <span className="text-xs font-medium capitalize">
-                  {size === 'off' ? 'Off' : `${size} fly-up`}
-                </span>
-              </label>
-            ))}
-          </RadioGroup>
-
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Celebration</p>
-          <RadioGroup
-            value={prefs.celebrationEffect}
-            onValueChange={(v) => onChange({ celebrationEffect: v as ClassroomCelebrationEffect })}
-            className="grid grid-cols-2 gap-1"
-          >
-            {(Object.keys(CELEBRATION_LABELS) as ClassroomCelebrationEffect[]).map((key) => (
-              <label key={key} className="flex cursor-pointer items-center gap-2">
-                <RadioGroupItem value={key} aria-label={CELEBRATION_LABELS[key]} />
-                <span className="text-xs font-medium">{CELEBRATION_LABELS[key]}</span>
-              </label>
-            ))}
-          </RadioGroup>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.defaults ? (
-        <MonitorCategoryPopover
-          design={design}
-          isFullscreen={isFullscreen}
-          icon={Hash}
-          label="Default points"
-          contentClassName="w-48"
-        >
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">Default points</p>
-          <Input
-            type="number"
-            min={1}
-            className="h-9 rounded-lg font-bold"
-            value={prefs.defaultPoints}
-            onChange={(e) =>
-              onChange({ defaultPoints: Math.max(1, Number(e.target.value) || prefs.defaultPoints) })
-            }
-          />
-          <p className="mt-2 text-[10px] text-muted-foreground">
-            Used for quick tap, class award, and burst awards.
-          </p>
-        </MonitorCategoryPopover>
-      ) : null}
-
-      {tabs.sounds ? (
-        <button
-          type="button"
-          className={cn(
-            monitorSelectTriggerClass(design, isFullscreen),
-            'inline-flex items-center justify-center px-2 py-2 sm:px-2.5',
-            prefs.awardSounds === false && 'opacity-60',
-          )}
-          aria-label={prefs.awardSounds !== false ? 'Turn award sounds off' : 'Turn award sounds on'}
-          title={prefs.awardSounds !== false ? 'Award sounds on — click to mute' : 'Award sounds off — click to unmute'}
-          onClick={() => onChange({ awardSounds: prefs.awardSounds === false })}
-        >
-          {prefs.awardSounds !== false ? (
-            <Volume2 className="h-4 w-4 shrink-0" aria-hidden />
-          ) : (
-            <VolumeX className="h-4 w-4 shrink-0" aria-hidden />
-          )}
-        </button>
-      ) : null}
-
-      <button
-        type="button"
-        className={cn(
-          monitorSelectTriggerClass(design, isFullscreen),
-          'inline-flex items-center justify-center px-2 py-2 sm:px-2.5',
-          !behaviorNotesTipsOn && 'opacity-60',
-        )}
-        aria-label={
-          behaviorNotesTipsOn ? 'Hide behavior notes tips' : 'Show behavior notes tips'
-        }
-        title={
-          behaviorNotesTipsOn
-            ? 'Behavior notes tips on — click to hide shortcut reminders'
-            : 'Behavior notes tips off — click to show shortcut reminders'
-        }
-        onClick={() => onBehaviorNotesTipsChange(!behaviorNotesTipsOn)}
+    <MonitorToolbarPlacementContext.Provider value={placement}>
+      <motion.div
+        key="classroom-monitor-full-panel"
+        layoutId="classroom-monitor-tabs"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0, x: isLeft ? -12 : 0 },
+          visible: {
+            opacity: 1,
+            x: 0,
+            transition: { ...spring, staggerChildren: 0.05 },
+          },
+        }}
+        className="flex h-full min-h-0 w-full flex-col items-stretch justify-start gap-1.5 overflow-x-hidden overflow-y-auto"
+        data-testid="classroom-monitor-full-panel"
       >
-        <NotebookPen className="h-4 w-4 shrink-0" aria-hidden />
-      </button>
-
-      {awardActions ? (
-        <>
-          <span className="hidden h-7 w-px shrink-0 bg-border/70 sm:inline" aria-hidden />
-          <div className="ml-auto flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">{awardActions}</div>
-        </>
-      ) : null}
-    </div>
+        {editMode ? (
+          <motion.section
+            variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: spring } }}
+            className="space-y-2"
+          >
+            <p className="px-0.5 text-[11px] font-black uppercase tracking-wide !text-foreground">
+              Arrange classroom
+            </p>
+            {arrangeButton}
+            {onSeatEveryone ? (
+              <button
+                type="button"
+                data-look={design}
+                style={goldLook.style}
+                className={cn(
+                  goldLook.className,
+                  'inline-flex w-full items-center justify-start gap-2 px-2 py-2 sm:px-2.5',
+                )}
+                aria-label="Seat everyone"
+                title="Put every student in this class back on a desk"
+                onClick={onSeatEveryone}
+              >
+                <Users className={cn('h-4 w-4 shrink-0', iconInk(goldLook.ink))} aria-hidden />
+                <span>Seat everyone</span>
+              </button>
+            ) : null}
+            <p className="px-0.5 text-[11px] font-semibold leading-snug !text-foreground">
+              Drag desks to match your room. Tap Done when you are finished.
+            </p>
+          </motion.section>
+        ) : (
+          <>
+            <motion.section
+              variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: spring } }}
+              className="space-y-1.5"
+            >
+              {arrangeButton}
+              {liveAwardActions ? (
+                <div className="flex w-full flex-col items-stretch gap-1.5 [&_.classroom-monitor-action]:w-full [&_.classroom-whole-class-award]:w-full">
+                  {liveAwardActions}
+                </div>
+              ) : null}
+              {randomPickerButton}
+              {raffleButton}
+              {behaviorButton}
+              {attendanceEnabled && onAttendanceSourceChange ? (
+                <ClassroomAttendanceSourceControl
+                  design={design}
+                  isFullscreen={isFullscreen}
+                  triggerStyle={attendanceLook.style}
+                  triggerClassName={cn(
+                    attendanceLook.className,
+                    'inline-flex w-full items-center justify-start gap-2 px-2 py-1.5',
+                  )}
+                  source={attendanceSource}
+                  takingAttendance={interactionMode === 'attendance'}
+                  onSourceChange={onAttendanceSourceChange}
+                  onStartNewClass={onStartNewClass}
+                />
+              ) : null}
+              {soundsButton}
+              <ClassroomGroupTimer design={design} isFullscreen={isFullscreen} />
+              {onAssignGroups && onClearGroups ? (
+                <ClassroomGroupsTool
+                  triggerStyle={groupsLook.style}
+                  triggerClassName={cn(
+                    groupsLook.className,
+                    'inline-flex w-full items-center justify-start gap-1.5 px-2 py-1.5',
+                  )}
+                  groups={groups}
+                  onAssign={onAssignGroups}
+                  onClear={onClearGroups}
+                />
+              ) : null}
+              {setupButton ? (
+                <motion.div
+                  variants={{ hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: spring } }}
+                  className="mt-1 border-t border-black/10 pt-1.5"
+                >
+                  {setupButton}
+                </motion.div>
+              ) : null}
+            </motion.section>
+          </>
+        )}
+      </motion.div>
+    </MonitorToolbarPlacementContext.Provider>
   );
 }

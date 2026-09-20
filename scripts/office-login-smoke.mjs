@@ -1,12 +1,23 @@
 /**
- * Smoke test: office host redirects to portal login with an office-safe `next` URL.
+ * Smoke test: School Office entry URL (main site or optional office subdomain).
  * Usage:
  *   node scripts/office-login-smoke.mjs
- *   OFFICE_BASE_URL=https://office.leveluprewards.app OFFICE_SCHOOL_ID=yeshiva node scripts/office-login-smoke.mjs
+ *   OFFICE_BASE_URL=https://portal.leveluprewards.app OFFICE_SCHOOL_ID=yeshiva node scripts/office-login-smoke.mjs
  */
-const officeBase = (process.env.OFFICE_BASE_URL || 'https://office.leveluprewards.app').replace(/\/+$/, '');
+const officeBase = (process.env.OFFICE_BASE_URL || 'https://portal.leveluprewards.app').replace(/\/+$/, '');
 const schoolId = (process.env.OFFICE_SCHOOL_ID || 'yeshiva').trim().toLowerCase();
 const portalBase = (process.env.PORTAL_BASE_URL || 'https://portal.leveluprewards.app').replace(/\/+$/, '');
+const useMainSiteOfficePath = process.env.OFFICE_MAIN_SITE_PATH !== '0';
+
+function officeSchoolUrl() {
+  return useMainSiteOfficePath
+    ? `${officeBase}/${schoolId}/office`
+    : `${officeBase}/${schoolId}`;
+}
+
+function expectedLoginNextUrl() {
+  return officeSchoolUrl();
+}
 
 function fail(message, detail = '') {
   console.error(`[office-login-smoke] FAIL: ${message}`);
@@ -19,10 +30,10 @@ function ok(message) {
 }
 
 async function main() {
-  const officeSchoolUrl = `${officeBase}/${schoolId}`;
-  console.log(`[office-login-smoke] Checking ${officeSchoolUrl} (no cookies)`);
+  const targetUrl = officeSchoolUrl();
+  console.log(`[office-login-smoke] Checking ${targetUrl} (no cookies)`);
 
-  const res = await fetch(officeSchoolUrl, { redirect: 'manual' });
+  const res = await fetch(targetUrl, { redirect: 'manual' });
   if (res.status >= 300 && res.status < 400) {
     const location = res.headers.get('location') || '';
     if (!location) fail('Redirect had no Location header');
@@ -40,7 +51,7 @@ async function main() {
       fail(`Login school param mismatch: ${school} (expected ${schoolId})`);
     }
 
-    const expectedOfficeNext = `${officeBase}/${schoolId}`;
+    const expectedOfficeNext = expectedLoginNextUrl();
     if (next !== expectedOfficeNext) {
       fail(`Login next param should be office URL`, `got: ${next}\nexpected: ${expectedOfficeNext}`);
     }
@@ -55,12 +66,16 @@ async function main() {
     fail(`Unexpected HTTP ${res.status} from office school URL`);
   }
 
-  const rootRes = await fetch(`${officeBase}/`, { redirect: 'manual' });
-  const rootLocation = rootRes.headers.get('location') || '';
-  if (rootRes.status < 300 || rootRes.status >= 400 || !rootLocation.includes('office-bootstrap')) {
-    fail(`Office root should redirect to office-bootstrap`, `status=${rootRes.status} location=${rootLocation}`);
+  if (!useMainSiteOfficePath) {
+    const rootRes = await fetch(`${officeBase}/`, { redirect: 'manual' });
+    const rootLocation = rootRes.headers.get('location') || '';
+    if (rootRes.status < 300 || rootRes.status >= 400 || !rootLocation.includes('office-bootstrap')) {
+      fail(`Office root should redirect to office-bootstrap`, `status=${rootRes.status} location=${rootLocation}`);
+    }
+    ok(`Office root → ${rootLocation}`);
+  } else {
+    ok(`Main-site mode — skipping office-bootstrap root check (${portalBase})`);
   }
-  ok(`Office root → ${rootLocation}`);
 
   console.log('[office-login-smoke] All checks passed.');
 }

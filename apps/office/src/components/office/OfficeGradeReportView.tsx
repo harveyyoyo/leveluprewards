@@ -10,6 +10,7 @@ import type { OfficeGradeEntry } from '@/lib/office/types';
 import { collectOfficeTermOptions, downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 
 type OfficeGradeReportViewProps = {
   schoolId: string;
@@ -51,6 +52,10 @@ export function OfficeGradeReportView({
       setTerm(termParam);
     }
   }, [searchParams]);
+
+  useOfficeUrlSync({
+    student: studentFilter !== 'all' ? studentFilter : undefined,
+  });
 
   const terms = useMemo(
     () =>
@@ -166,6 +171,21 @@ export function OfficeGradeReportView({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          ) : null}
+          {studentFilter !== 'all' ? (
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">Student</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-lg gap-1.5"
+                onClick={() => setStudentFilter('all')}
+              >
+                {studentLabelById.get(studentFilter) ?? 'Selected student'}
+                <span aria-hidden>×</span>
+              </Button>
             </div>
           ) : null}
           <Button

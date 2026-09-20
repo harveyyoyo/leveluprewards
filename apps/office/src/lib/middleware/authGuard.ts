@@ -77,9 +77,9 @@ export async function checkAuthGuard(
     }
 
     const gateSecret = getAuthGateSecret();
-    let allowed = !!fbUid;
+    let allowed = false;
 
-    if (allowed && gateSecret) {
+    if (fbUid && gateSecret) {
       const gateRaw = request.cookies.get(SCHOOL_GATE_COOKIE_NAME)?.value;
       const gate = gateRaw ? await verifySchoolGateJwt(gateRaw, gateSecret) : null;
       const school = gated.schoolId.trim().toLowerCase();
@@ -90,6 +90,8 @@ export async function checkAuthGuard(
         schoolPathAllowedByGate(sessionPathname, gated.schoolId, gate.scopes)
       );
     }
+    // No gateSecret configured means the school/role check above cannot run at all -
+    // fail closed rather than let any signed-in Firebase user through unchecked.
 
     if (!allowed) {
       if (isOfficeHostname(forwardedHost)) {
