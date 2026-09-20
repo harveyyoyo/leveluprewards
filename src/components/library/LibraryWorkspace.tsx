@@ -99,6 +99,8 @@ import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
+import { LibraryInteractiveGuide } from './LibraryInteractiveGuide';
+import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import type { LibraryLabelFormat } from '@/lib/library/libraryScanCode';
@@ -173,6 +175,7 @@ export function LibraryWorkspace({
     (next: string) => {
       if (navSoundEnabled) playSound('click');
       setTab(next);
+      setHubHome(false);
     },
     [navSoundEnabled, playSound],
   );
@@ -220,6 +223,7 @@ export function LibraryWorkspace({
   const [search, setSearch] = useState('');
   // The book a scan/search found, kept on screen after the search box auto-clears.
   const [pinnedItemId, setPinnedItemId] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchAutoClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -916,24 +920,44 @@ export function LibraryWorkspace({
 
   if (hubHome) {
     return (
-      <LibraryPortalHub
-        schoolName={schoolName}
-        libraryName={locations.length > 1 ? activeLibrary.name : undefined}
-        overdueCount={overdueLoans.length}
-        catalogCount={activeCopies.length}
-        backToPortalHref={backToPortalHref}
-        chooseLibraryHref={chooseLibraryHref}
-        onSelect={(nextTab) => {
-          if (navSoundEnabled) playSound('click');
-          setTab(nextTab);
-          setHubHome(false);
-        }}
-        onOpenSettings={() => {
-          if (navSoundEnabled) playSound('click');
-          setTab('settings');
-          setHubHome(false);
-        }}
-      />
+      <>
+        <LibraryPortalHub
+          schoolName={schoolName}
+          libraryName={locations.length > 1 ? activeLibrary.name : undefined}
+          overdueCount={overdueLoans.length}
+          catalogCount={activeCopies.length}
+          backToPortalHref={backToPortalHref}
+          chooseLibraryHref={chooseLibraryHref}
+          onSelect={(nextTab) => {
+            if (navSoundEnabled) playSound('click');
+            setTab(nextTab);
+            setHubHome(false);
+          }}
+          onOpenSettings={() => {
+            if (navSoundEnabled) playSound('click');
+            setTab('settings');
+            setHubHome(false);
+          }}
+          onOpenGuide={() => setGuideOpen(true)}
+        />
+        <LibraryInteractiveGuide
+          open={guideOpen}
+          onOpenChange={setGuideOpen}
+          theme={currentTheme}
+          onNavigateTab={(nextTab) => {
+            switchTab(nextTab);
+            setGuideOpen(false);
+          }}
+          onStartTour={(tourId) => {
+            setGuideOpen(false);
+            if (tourId === 'library') {
+              activateLibraryTour(updateSettings);
+            } else {
+              updateSettings({ activeTourId: tourId });
+            }
+          }}
+        />
+      </>
     );
   }
 
@@ -970,6 +994,7 @@ export function LibraryWorkspace({
           setHubHome(true);
         }}
         onOpenSettings={() => switchTab('settings')}
+        onOpenGuide={() => setGuideOpen(true)}
       />
 
       {/* Main Column: Top Bar + Content */}
@@ -2616,6 +2641,24 @@ export function LibraryWorkspace({
           </div>
         </DialogContent>
       </Dialog>
+
+      <LibraryInteractiveGuide
+        open={guideOpen}
+        onOpenChange={setGuideOpen}
+        theme={currentTheme}
+        onNavigateTab={(nextTab) => {
+          switchTab(nextTab);
+          setGuideOpen(false);
+        }}
+        onStartTour={(tourId) => {
+          setGuideOpen(false);
+          if (tourId === 'library') {
+            activateLibraryTour(updateSettings);
+          } else {
+            updateSettings({ activeTourId: tourId });
+          }
+        }}
+      />
     </div>
   );
 }

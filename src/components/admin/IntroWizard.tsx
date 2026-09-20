@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useSettings } from '@/components/providers/SettingsProvider';
-import { ArrowRight, MousePointerClick } from 'lucide-react';
+import { ArrowRight, MousePointerClick, Minus, Maximize2, Compass } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { springCinematic } from '@/lib/animation';
 import { cn } from '@/lib/utils';
@@ -230,6 +230,7 @@ export function IntroWizard() {
   const pathname = usePathname();
   const [stepIndex, setStepIndex] = useState(0);
   const [measureTick, setMeasureTick] = useState(0);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   const activeTourId = settings.activeTourId;
   const steps = useMemo(() => getTourSteps(activeTourId), [activeTourId]);
@@ -344,46 +345,128 @@ export function IntroWizard() {
     <>
       <IntroTourSpotlight
         targetId={currentStep.target}
-        active={Boolean(currentStep.target) && !isFirstStep}
+        active={!isMinimized && Boolean(currentStep.target) && !isFirstStep}
       />
       <AnimatePresence>
-        <motion.div
-          key={stepIndex}
-          initial={{ opacity: 0, y: 40, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 24, scale: 0.96 }}
-          transition={{ ...springCinematic, duration: 0.55 }}
-          className={tourCardPlacement.className}
-          style={tourCardPlacement.style}
-        >
-          <Card className="shadow-2xl border-2 border-primary/50 bg-card text-card-foreground ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
-            <Progress value={progressPercent} className="h-1.5 rounded-none bg-primary/20" />
-            
-            <CardHeader className="pb-3 space-y-2 pt-5">
-              <div className="flex justify-between items-start gap-3">
-                <CardTitle className="text-lg font-bold leading-snug pr-2 text-foreground">
-                  {currentStep.title}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 shrink-0 rounded-full px-3 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                  onClick={handleDismiss}
-                >
-                  Skip Tour
-                </Button>
-              </div>
-              <p className="text-base font-medium leading-relaxed text-foreground">{description}</p>
-              {!isFirstStep ? (
-                <div
-                  className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary"
-                  aria-hidden
-                >
-                  <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
-                  Try it out now
+        {isMinimized ? (
+          <motion.div
+            key="minimized-pill"
+            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[200]"
+          >
+            <Button
+              onClick={() => setIsMinimized(false)}
+              className="shadow-2xl rounded-full px-5 py-3 h-auto font-bold bg-primary text-primary-foreground flex items-center gap-2.5 border-2 border-primary-foreground/20 hover:scale-105 transition-all shadow-primary/30"
+            >
+              <Compass className="w-5 h-5" />
+              <span>Resume Tour ({stepIndex + 1}/{steps.length})</span>
+              <Maximize2 className="w-4 h-4 opacity-80" />
+            </Button>
+          </motion.div>
+        ) : (
+          <motion.div
+            key={stepIndex}
+            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.96 }}
+            transition={{ ...springCinematic, duration: 0.55 }}
+            className={tourCardPlacement.className}
+            style={tourCardPlacement.style}
+          >
+            <Card className="shadow-2xl border-2 border-primary/50 bg-card text-card-foreground ring-1 ring-black/10 dark:ring-white/10 overflow-hidden">
+              <Progress value={progressPercent} className="h-1.5 rounded-none bg-primary/20" />
+              
+              <CardHeader className="pb-3 space-y-2.5 pt-5">
+                <div className="flex justify-between items-start gap-3">
+                  <CardTitle className="text-lg font-bold leading-snug pr-2 text-foreground">
+                    {currentStep.title}
+                  </CardTitle>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted"
+                      onClick={() => setIsMinimized(true)}
+                      title="Minimize tour"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-full px-3 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                      onClick={handleDismiss}
+                    >
+                      Skip Tour
+                    </Button>
+                  </div>
                 </div>
-              ) : null}
-            </CardHeader>
+
+                {/* Step topic jump dropdown */}
+                {steps.length > 1 && (
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <label htmlFor="tour-step-jump" className="text-xs font-semibold text-muted-foreground shrink-0">
+                      Jump to:
+                    </label>
+                    <select
+                      id="tour-step-jump"
+                      aria-label="Jump to step"
+                      value={stepIndex}
+                      onChange={(e) => {
+                        const nextIdx = Number(e.target.value);
+                        setStepIndex(nextIdx);
+                        if (activeTourId) persistStep(nextIdx, activeTourId);
+                      }}
+                      className="w-full text-xs font-semibold rounded-lg border border-border bg-muted/60 text-foreground px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                    >
+                      {steps.map((s, idx) => (
+                        <option key={`step-option-${idx}`} value={idx}>
+                          {idx + 1}. {s.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Clickable step indicator dots */}
+                {steps.length > 1 && (
+                  <div className="flex items-center justify-center gap-1.5 py-1">
+                    {steps.map((s, idx) => (
+                      <button
+                        key={`step-dot-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          setStepIndex(idx);
+                          if (activeTourId) persistStep(idx, activeTourId);
+                        }}
+                        title={`Go to step ${idx + 1}: ${s.title}`}
+                        className={cn(
+                          'h-2 rounded-full transition-all duration-200 cursor-pointer',
+                          idx === stepIndex
+                            ? 'w-6 bg-primary'
+                            : idx < stepIndex
+                            ? 'w-2 bg-primary/60 hover:bg-primary/80'
+                            : 'w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60'
+                        )}
+                        aria-label={`Jump to step ${idx + 1}: ${s.title}`}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                <p className="text-base font-medium leading-relaxed text-foreground">{description}</p>
+                {!isFirstStep ? (
+                  <div
+                    className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-primary"
+                    aria-hidden
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
+                    Try it out now
+                  </div>
+                ) : null}
+              </CardHeader>
             <CardContent className="pt-0 pb-5">
               <div className="flex justify-between items-center w-full gap-3 mt-4">
                 <div className="text-xs font-semibold text-foreground/80 shrink-0">
@@ -451,6 +534,7 @@ export function IntroWizard() {
             </CardContent>
           </Card>
         </motion.div>
+      )}
       </AnimatePresence>
     </>
   );

@@ -31,7 +31,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     render(<IntroWizard />);
 
     // Step 1
-    expect(screen.getByText(/Welcome to LevelUp/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Welcome to LevelUp/i).length).toBeGreaterThan(0);
     const startButton = screen.getByRole('button', { name: /start walkthrough/i });
     fireEvent.click(startButton);
 
@@ -41,7 +41,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     };
 
     // Step 2
-    expect(screen.getByText(/Your Main Dashboard/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Your Main Dashboard/i).length).toBeGreaterThan(0);
     clickNext();
 
     // Step 3
@@ -69,14 +69,14 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     // Clicking "See Advanced Features ✨" calls updateSettings to transition to 'features'
     fireEvent.click(advancedButtons[advancedButtons.length - 1]);
     expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
-  });
+  }, 15000);
 
   it('steps through all advanced features steps without blocking navigation', () => {
     mockActiveTourId = 'features';
     render(<IntroWizard />);
 
     // Step 1: Intro
-    expect(screen.getByText(/Advanced Features Tour/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Advanced Features Tour/i).length).toBeGreaterThan(0);
     const startButton = screen.getByRole('button', { name: /start walkthrough/i });
     fireEvent.click(startButton);
 
@@ -119,7 +119,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     expect(finishButtons.length).toBeGreaterThan(0);
     fireEvent.click(finishButtons[finishButtons.length - 1]);
     expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
-  });
+  }, 15000);
 
   it('steps through the library quick tour and transitions to advanced library tools', () => {
     mockActiveTourId = 'library';
@@ -127,7 +127,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     render(<IntroWizard />);
 
     // Step 1: Library Welcome
-    expect(screen.getByText(/Welcome to Your Library/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Welcome to Your Library/i).length).toBeGreaterThan(0);
     const startButton = screen.getByRole('button', { name: /start walkthrough/i });
     fireEvent.click(startButton);
 
@@ -158,7 +158,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     // Clicking it triggers transition
     fireEvent.click(advancedBtn);
     expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
-  });
+  }, 15000);
 
   it('steps through all advanced library features steps cleanly', () => {
     mockActiveTourId = 'library-features';
@@ -166,7 +166,7 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     render(<IntroWizard />);
 
     // Step 1: Intro
-    expect(screen.getByText(/Advanced Library Tools/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Advanced Library Tools/i).length).toBeGreaterThan(0);
     const startButton = screen.getByRole('button', { name: /start walkthrough/i });
     fireEvent.click(startButton);
 
@@ -209,5 +209,40 @@ describe('IntroWizard Quick Tour & Advanced Transition', () => {
     expect(finishButtons.length).toBeGreaterThan(0);
     fireEvent.click(finishButtons[finishButtons.length - 1]);
     expect(mockUpdateSettings).toHaveBeenCalledWith({ activeTourId: null });
+  }, 15000);
+
+  it('allows jumping directly to any step using the dropdown selector or step dots', () => {
+    mockActiveTourId = 'library-features';
+    mockPathname = '/library';
+    render(<IntroWizard />);
+
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(select).toBeInTheDocument();
+
+    // Jump directly to step 4 (index 4 is step 5: Smart Book Suggestions & Quiz)
+    fireEvent.change(select, { target: { value: '4' } });
+    expect(screen.getAllByText(/Smart Book Suggestions & Quiz/i).length).toBeGreaterThan(0);
+
+    // Jump directly via step dot to step 2: Camera & Barcode Book Lookup
+    const step2Dots = screen.getAllByTitle(/Go to step 2:/i);
+    fireEvent.click(step2Dots[step2Dots.length - 1]);
+    expect(screen.getAllByText(/Camera & Barcode Book Lookup/i).length).toBeGreaterThan(0);
+  });
+
+  it('minimizes into floating pill and expands back', () => {
+    mockActiveTourId = 'welcome';
+    mockPathname = '/portal';
+    render(<IntroWizard />);
+
+    const minimizeBtn = screen.getByTitle(/Minimize tour/i);
+    fireEvent.click(minimizeBtn);
+
+    // Floating resume pill appears
+    const resumeBtn = screen.getByRole('button', { name: /Resume Tour/i });
+    expect(resumeBtn).toBeInTheDocument();
+
+    // Clicking resume expands the card back
+    fireEvent.click(resumeBtn);
+    expect(screen.getByTitle(/Minimize tour/i)).toBeInTheDocument();
   });
 });

@@ -77,6 +77,7 @@ export interface LibraryPortalHubProps {
   chooseLibraryHref?: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
+  onOpenGuide?: () => void;
 }
 
 /**
@@ -93,6 +94,7 @@ export function LibraryPortalHub({
   chooseLibraryHref,
   onSelect,
   onOpenSettings,
+  onOpenGuide,
 }: LibraryPortalHubProps) {
   const { settings, updateSettings } = useSettings();
   const theme = resolveLibraryTheme(settings.libraryTheme as LibraryThemeId, settings.libraryBoxOpacity);
@@ -134,6 +136,7 @@ export function LibraryPortalHub({
         onNavigate={onSelect}
         onHome={() => {}}
         onOpenSettings={onOpenSettings}
+        onOpenGuide={onOpenGuide}
       />
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
@@ -236,7 +239,7 @@ export function LibraryPortalHub({
           })}
         </motion.div>
 
-        <div className="mt-8 flex justify-center lg:mt-12">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:mt-12">
           <Button
             type="button"
             variant="outline"
@@ -247,6 +250,18 @@ export function LibraryPortalHub({
             <Compass className="mr-2 h-4 w-4 text-primary/80" />
             Take a Quick Tour
           </Button>
+          {onOpenGuide && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenGuide}
+              className="rounded-full px-5 py-2 text-xs font-bold text-foreground/85 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
+            >
+              <BookOpen className="mr-2 h-4 w-4 text-primary/80" />
+              Library Handbook & Guide
+            </Button>
+          )}
         </div>
         </div>
       </main>
