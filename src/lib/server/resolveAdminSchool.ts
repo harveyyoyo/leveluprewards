@@ -2,6 +2,11 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getDeveloperGoogleEmailAllowlist } from '@/lib/developerAccess';
 import { isAllowedGoogleEmailOnAllowlist } from '@/lib/google/googleAllowlist';
 
+export type ResolvedAdminSchool = {
+  id: string;
+  name: string;
+};
+
 function isGoogleAuthenticated(firebase: Record<string, unknown> | undefined): boolean {
   const provider = String(firebase?.sign_in_provider ?? '');
   if (provider === 'google.com') return true;
@@ -26,31 +31,50 @@ async function isDeveloperUid(db: Firestore, uid: string): Promise<boolean> {
   }
 }
 
+function schoolDisplayName(id: string, data: Record<string, unknown> | undefined): string {
+  const name = typeof data?.name === 'string' ? data.name.trim() : '';
+  return name || id;
+}
+
 /**
- * Find the single school (if any) that lists this Google email as an admin
- * (`schools/{id}.adminEmails`), so the login page can skip "which school?" for
- * everyone except the platform's own developer/owner accounts — they legitimately
- * manage many schools and keep the manual picker.
+ * List every school that includes this Google email on `schools/{id}.adminEmails`.
+ * Platform developer/owner accounts keep the manual school picker (empty list).
+ */
+export async function listAdminSchoolsForGoogleUser(
+  db: Firestore,
+  args: { uid: string; email: string; firebase: Record<string, unknown> | undefined },
+): Promise<ResolvedAdminSchool[]> {
+  const googleAuth = isGoogleAuthenticated(args.firebase);
+  if (!googleAuth) return [];
+
+  const email = args.email.trim().toLowerCase();
+  if (!email) return [];
+
+  // Developers/owners intentionally keep the manual school picker.
+  if (isAllowedGoogleAdminBypass(email, googleAuth) || (await isDeveloperUid(db, args.uid))) {
+    return [];
+  }
+
+  const snap = await db.collection('schools').where('adminEmails', 'array-contains', email).limit(25).get();
+  if (snap.empty) return [];
+
+  return snap.docs
+    .map((doc) => ({
+      id: doc.id,
+      name: schoolDisplayName(doc.id, doc.data() as Record<string, unknown>),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
+/**
+ * Find the single school (if any) that lists this Google email as an admin.
+ * Returns null when zero or more than one school matches.
  */
 export async function resolveAdminSchoolForGoogleUser(
   db: Firestore,
   args: { uid: string; email: string; firebase: Record<string, unknown> | undefined },
 ): Promise<string | null> {
-  const googleAuth = isGoogleAuthenticated(args.firebase);
-  if (!googleAuth) return null;
-
-  const email = args.email.trim().toLowerCase();
-  if (!email) return null;
-
-  // Developers/owners intentionally keep the manual school picker.
-  if (isAllowedGoogleAdminBypass(email, googleAuth) || (await isDeveloperUid(db, args.uid))) {
-    return null;
-  }
-
-  const snap = await db.collection('schools').where('adminEmails', 'array-contains', email).limit(2).get();
-  // Zero matches (not registered anywhere) or more than one (ambiguous) — fall back
-  // to the manual school picker rather than guessing.
-  if (snap.size !== 1) return null;
-
-  return snap.docs[0]!.id;
+  const schools = await listAdminSchoolsForGoogleUser(db, args);
+  if (schools.length !== 1) return null;
+  return schools[0]!.id;
 }
