@@ -176,10 +176,6 @@ export function formatGradeDisplay(entry: Pick<OfficeGradeEntry, 'letterGrade' |
   return parts.length ? parts.join(' · ') : '—';
 }
 
-export function isInvoiceOpen(inv: OfficeInvoice): boolean {
-  return inv.status === 'sent' || inv.status === 'partial' || inv.status === 'draft';
-}
-
 export function billingStatusForAccount(
   accountId: string,
   invoices: OfficeInvoice[],

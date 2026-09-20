@@ -8,10 +8,10 @@ export function isGoogleOwnerEmail(email: string): boolean {
   return GOOGLE_OWNER_EMAILS.includes(normalized);
 }
 
+/** Owners always pass; otherwise the email must be explicitly present in the env allowlist. An empty/unset allowlist allows nobody but owners - it must never be treated as "allow all". */
 export function isAllowedGoogleEmailOnAllowlist(email: string, allowlist: string[]): boolean {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
   if (isGoogleOwnerEmail(normalized)) return true;
-  if (allowlist.length === 0) return true;
   return allowlist.includes(normalized);
 }

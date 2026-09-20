@@ -17,7 +17,7 @@ const MAX_BODY_BYTES = 4 * 1024;
 export async function POST(req: NextRequest) {
   try {
     if (!sameOrigin(req)) return jsonError(403, 'Forbidden');
-    if (!rateLimit(`staff-passcode:${clientIp(req)}`, 30)) {
+    if (!rateLimit(`office-staff-passcode-set:${clientIp(req)}`, 30)) {
       return jsonError(429, 'Too many requests');
     }
 
@@ -45,6 +45,26 @@ export async function POST(req: NextRequest) {
     }
 
     const db = await getFirebaseAdminFirestore();
+
+    // staffAccounts is a collection shared with the Rewards app (secretary/prizeClerk/
+    // reports/librarian/houseCoordinator desk roles live there too) - an office/admin
+    // caller for this school must only ever be able to set the passcode on an
+    // office-role account. If the id already belongs to some other role, refuse; if it
+    // doesn't exist yet, this is a brand-new office account being created and is fine.
+    const accountSnap = await db
+      .collection('schools')
+      .doc(schoolId)
+      .collection('staffAccounts')
+      .doc(accountId)
+      .get();
+    if (accountSnap.exists) {
+      const data = accountSnap.data() as { role?: string; roles?: string[] } | undefined;
+      const roles = data?.roles?.length ? data.roles : [data?.role];
+      if (!roles.includes('office')) {
+        return jsonError(403, 'That account is not a School Office staff account.');
+      }
+    }
+
     await writePasscodeSecret(db, schoolId, staffPasscodeSecretId(accountId), passcode);
 
     return NextResponse.json({ success: true });
