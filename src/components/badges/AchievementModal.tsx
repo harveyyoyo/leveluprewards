@@ -51,13 +51,14 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
 
     useEffect(() => {
         if (isOpen) {
-            if (achievement) { // Edit mode
-                setName(achievement.name);
-                setDescription(achievement.description);
-                setIcon(achievement.icon);
-                setType(achievement.criteria.type);
-                setThreshold(achievement.criteria.threshold.toString());
-                setCategoryId(achievement.criteria.categoryId || '');
+            if (achievement) {
+                setName(achievement.name || '');
+                setDescription(achievement.description || '');
+                setIcon(achievement.icon || 'Trophy');
+                const rawType = achievement.criteria?.type || 'lifetimePoints';
+                setType(rawType === 'points' || rawType === 'manual' ? 'lifetimePoints' : rawType);
+                setThreshold((achievement.criteria?.threshold || 0).toString());
+                setCategoryId(achievement.criteria?.categoryId || '');
                 setBonusPoints((achievement.bonusPoints || 0).toString());
                 setTier(achievement.tier || '');
                 setAccentColor(achievement.accentColor || '');
@@ -67,7 +68,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                 setName('');
                 setDescription('');
                 setIcon('Trophy');
-                setType('points');
+                setType('lifetimePoints');
                 setThreshold('100');
                 setCategoryId('');
                 setBonusPoints('0');
@@ -77,7 +78,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                 setWheelSegments(['', '', '', '', '', '']);
             }
         }
-    }, [achievement, isOpen]);
+    }, [achievement, isOpen, isEditing]);
 
     const handleSave = async () => {
         const thresholdValue = parseInt(threshold);
@@ -181,10 +182,8 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                             <div>
                                 <p className="font-bold text-sm leading-tight">{name || 'Unnamed milestone'}</p>
                                 <p className="text-xs text-muted-foreground leading-tight mt-1">
-                                    {type === 'points' && `Current points ≥ ${threshold || 0}`}
-                                    {type === 'lifetimePoints' && `Lifetime points ≥ ${threshold || 0}`}
-                                    {type === 'coupons' && `Category threshold ${threshold || 0}`}
-                                    {type === 'manual' && 'Manual award only'}
+                                    {type === 'lifetimePoints' && `All-time points ≥ ${threshold || 0}`}
+                                    {type === 'coupons' && `Category goal ≥ ${threshold || 0}`}
                                     {tier && ` · ${tier}`}
                                     {(parseInt(bonusPoints) || 0) >= 1 && ` · +${bonusPoints} bonus pts`}
                                     {enableWheelSpin && ` · 🎡 Wheel Spin`}
@@ -309,22 +308,18 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="points">Current Points</SelectItem>
-                                            <SelectItem value="lifetimePoints">Total Lifetime Points</SelectItem>
-                                            <SelectItem value="coupons">Category Threshold</SelectItem>
-                                            <SelectItem value="manual">Manual Award Only</SelectItem>
+                                            <SelectItem value="lifetimePoints">All-Time Points (Total earned all year)</SelectItem>
+                                            <SelectItem value="coupons">Category Points Goal</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <p className="text-[10px] text-muted-foreground mt-1">
-                                        {type === 'points' && "Unlocked when current points reach threshold."}
-                                        {type === 'lifetimePoints' && "Unlocked when total points earned reach threshold."}
-                                        {type === 'coupons' && "Unlocked when points in a specific category reach threshold."}
-                                        {type === 'manual' && "This achievement must be awarded by a teacher manually."}
+                                        {type === 'lifetimePoints' && "Unlocked when total points earned all year reaches target."}
+                                        {type === 'coupons' && "Unlocked when points earned in a specific category reach target."}
                                     </p>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label>Threshold</Label>
-                                    <Input type="number" value={threshold} onChange={e => setThreshold(e.target.value)} disabled={type === 'manual'} placeholder="100" />
+                                    <Label>{type === 'coupons' ? 'Points needed in category' : 'All-time target points'}</Label>
+                                    <Input type="number" value={threshold} onChange={e => setThreshold(e.target.value)} placeholder="100" />
                                 </div>
                             </div>
 

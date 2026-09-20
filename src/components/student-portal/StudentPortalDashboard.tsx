@@ -191,10 +191,22 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="font-headline text-5xl font-black tabular-nums text-primary">{student.points ?? 0}</p>
-          {Number.isFinite(student.lifetimePoints) ? (
-            <p className="text-sm text-muted-foreground mt-2">Lifetime: {student.lifetimePoints}</p>
-          ) : null}
+          <div className="grid grid-cols-2 gap-4 pb-2">
+            <div className="rounded-2xl border bg-primary/5 p-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Spendable Balance</p>
+              <p className="font-headline text-4xl sm:text-5xl font-black tabular-nums text-primary mt-1">
+                {(student.points ?? 0).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">To spend on prizes</p>
+            </div>
+            <div className="rounded-2xl border bg-muted/40 p-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">All-Time Points</p>
+              <p className="font-headline text-4xl sm:text-5xl font-black tabular-nums text-foreground mt-1">
+                {((student.lifetimePoints ?? student.points) ?? 0).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-medium">Earned all year</p>
+            </div>
+          </div>
           <div className="mt-4">
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Point types</p>
             {pointTypeTotals.length > 0 ? (

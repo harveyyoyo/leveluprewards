@@ -8,13 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
 export type BathroomPassTimerSettingsPatch = Partial<
-  Pick<Settings, 'enableBathroomTimer' | 'bathroomMaxMinutes' | 'bathroomRequirePresent'>
+  Pick<Settings, 'enableBathroomTimer' | 'bathroomMaxMinutes' | 'bathroomMaxStudentsOut' | 'bathroomRequirePresent'>
 >;
 
 type BathroomPassTimerSettingsProps = {
   classSignInEnabled: boolean;
   enableBathroomTimer: boolean;
   bathroomMaxMinutes: number;
+  bathroomMaxStudentsOut?: number;
   bathroomRequirePresent: boolean;
   canEdit: boolean;
   onChange: (patch: BathroomPassTimerSettingsPatch) => void;
@@ -24,6 +25,7 @@ export function BathroomPassTimerSettings({
   classSignInEnabled,
   enableBathroomTimer,
   bathroomMaxMinutes,
+  bathroomMaxStudentsOut = 2,
   bathroomRequirePresent,
   canEdit,
   onChange,
@@ -62,7 +64,7 @@ export function BathroomPassTimerSettings({
           aria-label="Enable bathroom timer on seating chart"
         />
       </div>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="bathroom-max-min">Max minutes (warning)</Label>
           <Input
@@ -80,10 +82,28 @@ export function BathroomPassTimerSettings({
           />
           <p className="text-xs text-muted-foreground">Timer turns red after this many minutes.</p>
         </div>
-        <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3 md:mt-6">
+        <div className="space-y-2">
+          <Label htmlFor="bathroom-max-students">Max students out at once</Label>
+          <Input
+            id="bathroom-max-students"
+            type="number"
+            min={0}
+            max={10}
+            disabled={!canEdit || !enableBathroomTimer}
+            value={bathroomMaxStudentsOut ?? 2}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              onChange({
+                bathroomMaxStudentsOut: Number.isFinite(val) ? Math.max(0, Math.min(10, val)) : 2,
+              });
+            }}
+          />
+          <p className="text-xs text-muted-foreground">0 = unlimited. Standard is 1 or 2.</p>
+        </div>
+        <div className="flex items-center justify-between rounded-xl border bg-muted/20 px-4 py-3 sm:mt-6">
           <div>
-            <p className="text-sm font-bold">Require attendance sign-in</p>
-            <p className="text-xs text-muted-foreground">Only present students can leave.</p>
+            <p className="text-sm font-bold">Require sign-in</p>
+            <p className="text-xs text-muted-foreground">Must be present to leave.</p>
           </div>
           <Switch
             checked={bathroomRequirePresent}

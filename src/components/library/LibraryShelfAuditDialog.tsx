@@ -368,22 +368,24 @@ export function LibraryShelfAuditDialog({
             </div>
 
             {existingShelves.length > 0 && !targetShelf && (
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                <span className="text-xs text-muted-foreground mr-1 self-center">Existing:</span>
-                {existingShelves.slice(0, 10).map(s => (
-                  <Button
-                    key={s}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs rounded-lg"
-                    onClick={() => {
-                      setShelfInput(s);
-                      setTargetShelf(s);
-                    }}
-                  >
-                    {s}
-                  </Button>
-                ))}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-xs text-muted-foreground font-medium">Existing shelves in catalog:</span>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1.5 border rounded-xl bg-muted/20">
+                  {existingShelves.map(s => (
+                    <Button
+                      key={s}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs rounded-lg font-medium"
+                      onClick={() => {
+                        setShelfInput(s);
+                        setTargetShelf(s);
+                      }}
+                    >
+                      {s}
+                    </Button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

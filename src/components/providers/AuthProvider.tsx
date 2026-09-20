@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, getDocFromServer, onSnapshot, type DocumentReference, type DocumentData, type DocumentSnapshot } from 'firebase/firestore';
+import { signOut, signInAnonymously } from 'firebase/auth';
 import { schoolPublicDocRef } from '@/lib/schoolPublic';
 import { getReadableErrorMessage, OFFLINE_USER_MESSAGE } from '@/lib/errorMessage';
 import { loginErr, loginOk, type LoginResult } from '@/lib/loginResult';
@@ -27,6 +28,7 @@ import {
     clearSchoolGateCookie,
 } from '@/lib/auth/syncFirebaseSessionCookie';
 import {
+  hasUrlSchoolLoginLibraryIntent,
   hasUrlSchoolLoginOfficeIntent,
   resolveSchoolLoginNextUrl,
 } from '@/lib/auth/schoolLoginRedirect';
@@ -358,6 +360,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoginState('loggedOut');
             setIsAdmin(false);
             clearFirebaseSessionCookieSync();
+            if (auth && (isGoogleSignedInUser(auth.currentUser) || !auth.currentUser?.isAnonymous)) {
+                void (async () => {
+                    try {
+                        await signOut(auth);
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.warn('Could not reset auth on developer logout:', e);
+                    }
+                })();
+            }
             router.push('/');
         } else if (
             loginState === 'admin' ||
@@ -416,9 +428,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
             setLoginState('loggedOut');
             setSchoolId(null);
+            if (auth && isGoogleSignedInUser(auth.currentUser)) {
+                void (async () => {
+                    try {
+                        await signOut(auth);
+                        await signInAnonymously(auth);
+                    } catch (e) {
+                        console.warn('Could not reset auth on logout:', e);
+                    }
+                })();
+            }
             router.push('/');
         }
-    }, [loginState, returnToSchoolSession, router, schoolId]);
+    }, [auth, loginState, returnToSchoolSession, router, schoolId]);
 
     const clearSchoolChooserSession = useCallback(() => {
         setIsAdmin(false);
@@ -441,6 +463,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('teacherDocId');
         localStorage.removeItem(DEVELOPER_SUPPORT_SESSION_KEY);
         void clearSchoolGateCookie();
+        if (auth && isGoogleSignedInUser(auth.currentUser)) {
+            void (async () => {
+                try {
+                    await signOut(auth);
+                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.warn('Could not reset auth on clearSchoolChooserSession:', e);
+                }
+            })();
+        }
     }, [auth]);
 
     // Auto-logout logic moved to AppContextBridge in AppProvider.tsx to allow for configurable timeouts from SettingsProvider.
@@ -827,11 +859,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const schoolParam = (params.get('school') || schoolId || '').trim().toLowerCase();
             if (!schoolParam) return;
             const hasNext = Boolean(params.get('next'));
-            if (!hasNext && !hasUrlSchoolLoginOfficeIntent(params)) return;
+            if (
+              !hasNext &&
+              !hasUrlSchoolLoginOfficeIntent(params) &&
+              !hasUrlSchoolLoginLibraryIntent(params)
+            ) {
+              return;
+            }
             const target = resolveSchoolLoginNextUrl(schoolParam);
             // If edge middleware rejects the session cookie, it sends us back to
             // `/login?next=`. Trying that jump again would loop forever.
-            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}`;
+            const bounceKey = `lvlup:login-next:${schoolParam}:${params.get('next') || ''}:${params.get('library') || ''}`;
             try {
                 if (sessionStorage.getItem(bounceKey) === '1') return;
                 sessionStorage.setItem(bounceKey, '1');

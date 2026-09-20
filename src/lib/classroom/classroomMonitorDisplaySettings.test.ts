@@ -36,6 +36,7 @@ describe('classroomMonitorDisplaySettings', () => {
       showSessionTotals: true,
       showSessionLastAward: false,
       showLastName: true,
+      showStudentPhotos: true,
       showStudentEmoji: false,
     });
   });
@@ -51,6 +52,7 @@ describe('classroomMonitorDisplaySettings', () => {
       showSessionTotals: false,
       showSessionLastAward: true,
       showLastName: false,
+      showStudentPhotos: true,
       showStudentEmoji: false,
     });
   });
@@ -66,7 +68,17 @@ describe('classroomMonitorDisplaySettings', () => {
       showSessionTotals: false,
       showSessionLastAward: true,
       showLastName: false,
+      showStudentPhotos: true,
       showStudentEmoji: false,
     });
+  });
+
+  it('lets the teacher hide student photos on desks', () => {
+    expect(
+      resolveEffectiveDeskDisplayPrefs(undefined, {
+        ...DEFAULT_CLASSROOM_PREFS,
+        showStudentPhotos: false,
+      }),
+    ).toMatchObject({ showStudentPhotos: false });
   });
 });

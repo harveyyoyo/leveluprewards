@@ -63,7 +63,8 @@ export interface LibraryItem {
 /** Primary organization hierarchy for library book shelving and catalog grouping. */
 export type LibraryOrganizationScheme =
   | 'genre_then_author'
-  | 'author_then_title';
+  | 'author_then_title'
+  | 'reading_level_then_author';
 
 
 export type LibraryItemInput = Pick<
@@ -502,6 +503,8 @@ export interface Achievement {
   enableWheelSpin?: boolean;
   /** Exact point values for the 6 wheel segments. If omitted, falls back to computed segments based on bonusPoints. */
   wheelSegments?: number[];
+  /** When false, milestone evaluation is paused. Defaults to true. */
+  enabled?: boolean;
 }
 
 /** Real badge: earned for reaching a points threshold in a specific category within a time period (e.g. Good Behavior badge = 50 Good Behavior points this month). */
@@ -559,6 +562,8 @@ export interface AttendanceSettings {
   attendanceTimeZone?: string;
   /** Optional owner for per-teacher attendance configuration. */
   teacherId?: string;
+  /** Minutes after bell to mute kiosk sign-in audio (-1 for always play sound). */
+  attendanceQuietAfterMinutes?: number;
 }
 
 /** One sign-in event stored for admin reporting. */
@@ -569,11 +574,14 @@ export interface AttendanceLogEntry {
   signedInAt: number;
   pointsAwarded: number;
   onTime: boolean;
+  status?: 'on-time' | 'late' | 'excused';
   periodLabel?: string;
   /** A deterministic per-session key used to prevent double sign-ins. */
   sessionId?: string;
-   /** Optional owning teacher when using per-teacher attendance configs. */
+  /** Optional owning teacher when using per-teacher attendance configs. */
   teacherId?: string;
+  manual?: boolean;
+  note?: string;
 }
 
 /** Student currently out on a bathroom pass (one doc per student). */
@@ -677,14 +685,40 @@ export interface BackupInfo {
 }
 
 /** Per-category (or per-printed-coupon) currency/design override. */
+export interface IdCardCustomOptions {
+  orientation?: 'landscape' | 'portrait';
+  cardFinish?: 'none' | 'gloss' | 'hologram' | 'matte';
+  showSchoolName?: boolean;
+  schoolNameOverride?: string;
+  showSchoolLogo?: boolean;
+  showAppName?: boolean;
+  showAppTagline?: boolean;
+  showDomain?: boolean;
+  nameFormat?: 'full' | 'first_only' | 'nickname_preferred';
+  nameCasing?: 'standard' | 'uppercase' | 'titlecase';
+  showClass?: boolean;
+  classPrefix?: string;
+  showIdNumber?: boolean;
+  idNumberLabel?: string;
+  showPointsBadge?: boolean;
+  photoShape?: 'rounded' | 'circle' | 'square';
+  photoBorder?: boolean;
+  showEmoji?: boolean;
+  showValidThru?: boolean;
+  validThruText?: string;
+  showSecurityChip?: boolean;
+  showBarcodeDigits?: boolean;
+}
+
 export type CategoryCurrencyOverride = Partial<CurrencySettings> & {
   mode: CurrencySettings['mode'];
 };
 
 export interface CurrencySettings {
-  mode: 'points' | 'money';
+  mode: 'points' | 'money' | 'coins';
   pointsDesign?: string;
   moneyDesign?: string;
+  coinDesign?: string;
   
   // Points coupon design
   couponBgColor?: string;
@@ -706,6 +740,17 @@ export interface CurrencySettings {
   moneyShowSerial?: boolean;
   moneyShowGuilloche?: boolean;
   moneyShowSchoolName?: boolean;
+  moneyWatermark?: string;
+  moneySignatureTitle?: string;
+  moneyDenominationColors?: Record<string, { bg: string; accent: string; text: string }>;
+
+  // Coins & tokens design
+  coinFinish?: 'gold' | 'silver' | 'bronze' | 'copper' | 'emerald';
+  coinRimStyle?: 'ridged' | 'smooth' | 'stars';
+  coinTopText?: string;
+  coinBottomText?: string;
+  coinShowSchoolName?: boolean;
+  coinShowValue?: boolean;
 }
 
 export interface Database {

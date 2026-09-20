@@ -20,5 +20,5 @@ export type IntroStep = {
   /** Open this content section tab when the step is shown (e.g. print coupons). */
   selectSection?: string;
   /** Optional follow-up tour offered on the final step. */
-  offerNextTour?: 'features' | 'teacher-features' | 'student-features';
+  offerNextTour?: 'features' | 'teacher-features' | 'student-features' | 'library-features';
 };

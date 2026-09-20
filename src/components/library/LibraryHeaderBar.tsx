@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Home, Library, BookOpen, Monitor, Settings } from 'lucide-react';
+import { Home, Library, BookOpen, Monitor, Settings, Compass } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import LevelUpLogoMark from '@/components/logos/Logo';
 import type { LibraryTheme } from '@/lib/library/libraryThemes';
@@ -27,20 +27,26 @@ export function LibraryHeaderBar({
   schoolName,
   productLabel = 'Library',
   backToPortalHref,
+  chooseLibraryHref,
   activeTab,
   onNavigate,
   onHome,
   onOpenSettings,
+  onOpenGuide,
   children,
 }: {
   theme: LibraryTheme;
   schoolName: string;
   productLabel?: string;
   backToPortalHref: string;
+  /** When a school has more than one library, the logo/name link opens the "which library"
+   * picker instead of leaving the library section entirely. */
+  chooseLibraryHref?: string;
   activeTab: LibraryHeaderTab;
   onNavigate: (tab: LibraryHeaderNavTab) => void;
   onHome: () => void;
   onOpenSettings: () => void;
+  onOpenGuide?: () => void;
   /** Extra content rendered below the main row. */
   children?: ReactNode;
 }) {
@@ -48,7 +54,11 @@ export function LibraryHeaderBar({
     <div className={cn('relative z-10 w-full border-b backdrop-blur-md px-2 sm:px-6 py-2.5 sm:py-3 space-y-2', theme.classes.header)}>
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <Link href={backToPortalHref} title="Back to LevelUp" className="flex items-center gap-2 sm:gap-3 shrink-0 group">
+          <Link
+            href={backToPortalHref}
+            title="Back to LevelUp"
+            className="group flex items-center shrink-0"
+          >
             <span
               className={cn(
                 'grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl border-2 p-1 shadow-sm transition-transform group-hover:-translate-y-0.5',
@@ -57,10 +67,14 @@ export function LibraryHeaderBar({
             >
               <LevelUpLogoMark className="h-full w-full" />
             </span>
-            <span className="hidden sm:flex flex-col leading-tight">
-              <span className="font-black text-base">{schoolName}</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
-            </span>
+          </Link>
+          <Link
+            href={chooseLibraryHref || backToPortalHref}
+            title={chooseLibraryHref ? 'Switch library' : 'Back to LevelUp'}
+            className="hidden sm:flex flex-col leading-tight"
+          >
+            <span className="font-black text-base">{schoolName}</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.28em] opacity-70">{productLabel}</span>
           </Link>
           <button
             type="button"
@@ -94,19 +108,37 @@ export function LibraryHeaderBar({
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          title="Library settings"
-          aria-label="Library settings"
-          className={cn(
-            'h-9 w-9 rounded-full border-2 flex items-center justify-center shadow-sm transition-all hover:-translate-y-0.5 shrink-0',
-            theme.classes.card,
-            activeTab === 'settings' && 'text-primary',
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onOpenGuide && (
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              title="Library Guide & Handbook"
+              aria-label="Library Guide"
+              className={cn(
+                'h-9 px-3 rounded-full border-2 flex items-center gap-1.5 shadow-sm transition-all hover:-translate-y-0.5 text-xs font-bold shrink-0',
+                theme.classes.card,
+              )}
+            >
+              <Compass className="h-4 w-4 text-primary" />
+              <span className="hidden sm:inline">Guide</span>
+            </button>
           )}
-        >
-          <Settings className="h-4 w-4" />
-        </button>
+
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            title="Library settings"
+            aria-label="Library settings"
+            className={cn(
+              'h-9 w-9 rounded-full border-2 flex items-center justify-center shadow-sm transition-all hover:-translate-y-0.5 shrink-0',
+              theme.classes.card,
+              activeTab === 'settings' && 'text-primary',
+            )}
+          >
+            <Settings className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {children}
     </div>

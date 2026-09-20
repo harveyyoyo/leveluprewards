@@ -45,7 +45,16 @@ import { useFirestore } from '@/firebase';
 import { isClassroomPillarOn, isParentPortalOn, isPillarOn } from '@/lib/productPillars';
 import { useTodayAttendanceMap } from '@/hooks/useTodayAttendanceMap';
 import { useActiveBathroomPasses } from '@/hooks/useActiveBathroomPasses';
+import { useActiveRecessPasses } from '@/hooks/useActiveRecessPasses';
 import { endBathroomPass } from '@/lib/db/bathroom';
+import { endRecessCheckout } from '@/lib/db/recess';
+import { resolveRecessMaxMinutes } from '@/lib/recess/recessKioskSettings';
+import {
+  classroomWhosOutDisplayName,
+  classroomWhosOutPassLabel,
+  classroomWhosOutShowsPassType,
+  mergeClassroomWhosOutPasses,
+} from '@/lib/classroom/classroomWhosOutPasses';
 import { formatBathroomElapsed, isBathroomOverLimit } from '@/lib/bathroom/formatBathroomElapsed';
 import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import { buildClassroomFullscreenUrl } from '@/lib/classroomPointsUrl';
@@ -109,7 +118,8 @@ export function ClassroomCommandCenter({
 
   // Real-time school attendance & bathroom passes
   const attendanceMap = useTodayAttendanceMap(schoolId, attendanceOn);
-  const activePasses = useActiveBathroomPasses(schoolId, true);
+  const bathroomPasses = useActiveBathroomPasses(schoolId, true);
+  const recessPasses = useActiveRecessPasses(schoolId, true);
 
   // Active view & modals
   const [activeTab, setActiveTab] = useState<ClassroomWorkbenchTab>(initialTab);
@@ -180,30 +190,38 @@ export function ClassroomCommandCenter({
     return { present, late, absent };
   }, [classStudents, attendanceMap]);
 
-  // Active bathroom passes in current class
   const classActivePasses = useMemo(() => {
     const classStudentIds = new Set(classStudents.map((s) => s.id));
-    const list: { studentId: string; studentName: string; startedAt: number }[] = [];
-    for (const [studentId, pass] of activePasses.entries()) {
-      if (classStudentIds.has(studentId)) {
+    return mergeClassroomWhosOutPasses({
+      recess: recessPasses,
+      bathroom: bathroomPasses,
+      nameFor: (studentId, fallbackName) => {
         const s = classStudents.find((stud) => stud.id === studentId);
-        list.push({
-          studentId,
-          studentName: s ? getStudentNickname(s) : 'Student',
-          startedAt: pass.startedAt || Date.now(),
-        });
-      }
-    }
-    return list;
-  }, [classStudents, activePasses]);
+        return s ? getStudentNickname(s) : fallbackName || 'Student';
+      },
+      recessMaxMinutes: resolveRecessMaxMinutes(settings),
+      bathroomMaxMinutes: settings.bathroomMaxMinutes || 5,
+    }).filter((p) => classStudentIds.has(p.studentId));
+  }, [bathroomPasses, classStudents, recessPasses, settings]);
 
-  // Handle ending a bathroom pass
   const handleEndPass = async (studentId: string) => {
     try {
-      await endBathroomPass(firestore, schoolId, studentId, settings.bathroomMaxMinutes || 5);
+      const [recessLog, bathroomLog] = await Promise.all([
+        endRecessCheckout(firestore, schoolId, studentId, resolveRecessMaxMinutes(settings)),
+        endBathroomPass(firestore, schoolId, studentId, settings.bathroomMaxMinutes || 5),
+      ]);
+      if (!recessLog && !bathroomLog) {
+        toast({
+          variant: 'destructive',
+          title: 'Error ending pass',
+          description: 'That pass may already be closed.',
+        });
+        return;
+      }
+      const label = recessLog ? classroomWhosOutPassLabel(recessLog.reason) : 'Bathroom';
       toast({
         title: 'Pass Ended',
-        description: 'Student has returned to the classroom.',
+        description: `${label} pass ended. Student is back in class.`,
       });
     } catch {
       toast({
@@ -412,9 +430,13 @@ export function ClassroomCommandCenter({
                 🚻
               </span>
               <div className="text-xs">
-                <span className="font-bold text-amber-900 dark:text-amber-200">Active Restroom Passes:</span>{' '}
+                <span className="font-bold text-amber-900 dark:text-amber-200">Who&apos;s out:</span>{' '}
                 <span className="text-amber-800 dark:text-amber-300">
-                  {classActivePasses.map((p) => p.studentName).join(', ')}
+                  {classActivePasses
+                    .map((p) =>
+                      classroomWhosOutDisplayName(p, classroomWhosOutShowsPassType(classActivePasses)),
+                    )
+                    .join(', ')}
                 </span>
               </div>
             </div>
@@ -430,7 +452,11 @@ export function ClassroomCommandCenter({
                   className="h-7 text-[11px] font-bold rounded-lg border-amber-500/40 bg-background hover:bg-amber-500/20 text-amber-900 dark:text-amber-100"
                 >
                   <Check className="mr-1 h-3 w-3 text-emerald-500" />
-                  Return {p.studentName}
+                  Return{' '}
+                  {classroomWhosOutDisplayName(
+                    p,
+                    classroomWhosOutShowsPassType(classActivePasses),
+                  )}
                 </Button>
               ))}
             </div>

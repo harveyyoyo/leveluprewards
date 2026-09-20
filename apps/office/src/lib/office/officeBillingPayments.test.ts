@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   accountBalanceFromInvoices,
+  applyInvoiceAmountEdit,
   autoAllocatePayment,
   invoiceBalanceDueCents,
   invoicePaidCents,
@@ -43,11 +44,51 @@ describe('officeBillingPayments', () => {
   it('caps paid/remaining and resolves to paid when an invoice amount is edited below what was already paid', () => {
     // e.g. a $10 invoice with an $8 partial payment gets corrected down to $5.
     const original = inv({ id: 'a', accountId: 'fam', amountCents: 10_000, status: 'partial', paidCents: 8_000 });
-    const edited = { ...original, amountCents: 5_000 };
-    const cappedPaid = Math.min(invoicePaidCents(original), edited.amountCents);
-    expect(cappedPaid).toBe(5_000);
-    expect(resolveInvoiceStatusAfterPayment(edited, cappedPaid)).toBe('paid');
-    expect(invoiceRemainingCents({ ...edited, paidCents: cappedPaid, status: 'paid' })).toBe(0);
+    const edited = applyInvoiceAmountEdit(original, {
+      amountCents: 5_000,
+      label: 'Tuition',
+      dueDate: original.dueDate,
+      saveAsDraft: false,
+    });
+    expect(edited.paidCents).toBe(5_000);
+    expect(edited.status).toBe('paid');
+    expect(invoiceRemainingCents(edited)).toBe(0);
+    expect(accountBalanceFromInvoices('fam', [edited])).toBe(0);
+  });
+
+  it('keeps leftover payment when a partially paid invoice is increased', () => {
+    const original = inv({ id: 'a', accountId: 'fam', amountCents: 5_000, status: 'partial', paidCents: 4_000 });
+    const edited = applyInvoiceAmountEdit(original, {
+      amountCents: 10_000,
+      label: 'Tuition',
+      dueDate: original.dueDate,
+      saveAsDraft: false,
+    });
+    expect(edited.paidCents).toBe(4_000);
+    expect(edited.status).toBe('partial');
+    expect(invoiceRemainingCents(edited)).toBe(6_000);
+    expect(accountBalanceFromInvoices('fam', [edited])).toBe(6_000);
+  });
+
+  it('leaves drafts as drafts until they are sent', () => {
+    const original = inv({ id: 'a', accountId: 'fam', amountCents: 10_000, status: 'draft' });
+    const stillDraft = applyInvoiceAmountEdit(original, {
+      amountCents: 8_000,
+      label: 'Tuition',
+      dueDate: original.dueDate,
+      saveAsDraft: true,
+    });
+    expect(stillDraft.status).toBe('draft');
+    expect(accountBalanceFromInvoices('fam', [stillDraft])).toBe(0);
+
+    const sent = applyInvoiceAmountEdit(original, {
+      amountCents: 8_000,
+      label: 'Tuition',
+      dueDate: original.dueDate,
+      saveAsDraft: false,
+    });
+    expect(sent.status).toBe('sent');
+    expect(accountBalanceFromInvoices('fam', [sent])).toBe(8_000);
   });
 
   it('derives account balance from remaining invoice amounts', () => {

@@ -73,6 +73,8 @@ import {
 } from '@/lib/teacherBudget';
 
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
+import { AttendanceTodayBoard } from '@/components/attendance/AttendanceTodayBoard';
+import { AttendanceHistorySection } from '@/components/attendance/AttendanceHistorySection';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
 import {
@@ -1409,16 +1411,18 @@ function MyCoupons({ schoolId, teacherId, teacherName, students }: { schoolId: s
 function TeacherAttendanceTab({
     teacherId,
     classes,
+    students,
     periods,
     categories,
 }: {
     teacherId: string;
     classes: Class[];
+    students: Student[];
     periods: AttendanceScheduleSlot[];
     categories: Category[];
 }) {
     const { schoolId } = useAppContext();
-    const [mainSection, setMainSection] = useState<'setup' | 'recess'>('setup');
+    const [mainSection, setMainSection] = useState<'today' | 'rules' | 'recess' | 'history'>('today');
 
     return (
         <StaffPortalTabPanel
@@ -1434,22 +1438,33 @@ function TeacherAttendanceTab({
                 <StaffPortalSectionCardContent className="p-4 md:p-6 space-y-6">
                     <ContentSectionTreeNav
                         items={[
-                            { id: 'setup', label: 'Setup' },
+                            { id: 'today', label: "Today in My Classes" },
+                            { id: 'rules', label: 'Reward Rules' },
                             { id: 'recess', label: 'Room passes' },
+                            { id: 'history', label: 'Past Days' },
                         ]}
                         value={mainSection}
-                        onValueChange={(id) => setMainSection(id as 'setup' | 'recess')}
+                        onValueChange={(id) => setMainSection(id as 'today' | 'rules' | 'recess' | 'history')}
                         className="mb-2"
                     />
 
-                    {mainSection === 'recess' && schoolId ? (
-                        <RecessAttendanceSection schoolId={schoolId} variant="teacher" />
+                    {mainSection === 'today' && schoolId ? (
+                        <div className="animate-in fade-in-50 duration-200">
+                            <AttendanceTodayBoard
+                                schoolId={schoolId}
+                                students={students}
+                                classes={classes}
+                                periods={periods}
+                                teacherIdScope={teacherId}
+                                variant="teacher"
+                            />
+                        </div>
                     ) : null}
 
-                    {mainSection === 'setup' ? (
-                        <>
+                    {mainSection === 'rules' ? (
+                        <div className="animate-in fade-in-50 duration-200 space-y-4">
                             <p className="max-w-prose text-sm text-muted-foreground">
-                                New setup takes one rule: class, period, points. Use the walkthrough for a quick test.
+                                Set custom sign-in points, on-time bonuses, and period schedules for your classes.
                             </p>
                             <TeacherAttendanceRewardsPanel
                                 teacherId={teacherId}
@@ -1457,7 +1472,24 @@ function TeacherAttendanceTab({
                                 periods={periods}
                                 categories={categories}
                             />
-                        </>
+                        </div>
+                    ) : null}
+
+                    {mainSection === 'recess' && schoolId ? (
+                        <div className="animate-in fade-in-50 duration-200">
+                            <RecessAttendanceSection schoolId={schoolId} variant="teacher" />
+                        </div>
+                    ) : null}
+
+                    {mainSection === 'history' && schoolId ? (
+                        <div className="animate-in fade-in-50 duration-200">
+                            <AttendanceHistorySection
+                                schoolId={schoolId}
+                                students={students}
+                                classes={classes}
+                                teacherIdScope={teacherId}
+                            />
+                        </div>
                     ) : null}
                 </StaffPortalSectionCardContent>
             </StaffPortalSectionCard>
@@ -2284,7 +2316,8 @@ function TeacherPrinterInnerBody({
                             <TeacherPortalTabPane tabId="attendance" activeTab={resolvedTeacherTab} className={teacherPortalTabContentClassName}>
                                 <TeacherAttendanceTab
                                     teacherId={teacherId}
-                                    classes={classes || []}
+                                    classes={classesForTeacherUi}
+                                    students={studentsForTeacherActions}
                                     periods={periods || []}
                                     categories={categories || []}
                                 />

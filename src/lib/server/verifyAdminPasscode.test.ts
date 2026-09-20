@@ -202,4 +202,46 @@ describe('verifyAdminPasscodeServer', () => {
       process.env.NEXT_PUBLIC_DEVELOPER_GOOGLE_EMAIL_ALLOWLIST = prev;
     }
   });
+
+  it('allows empty passcode for school-authorized admin Google account', async () => {
+    const { db, adminSet } = createMockDb({
+      schoolData: {
+        adminPasscode: '1234',
+        adminEmails: ['eli7teitelbaum@gmail.com'],
+      },
+    });
+
+    await verifyAdminPasscodeServer(db, {
+      uid: 'uid-elisheva',
+      email: 'eli7teitelbaum@gmail.com',
+      firebase: { sign_in_provider: 'google.com' },
+      schoolId: 'elisheva',
+      passcode: '',
+    });
+
+    expect(adminSet).toHaveBeenCalledWith({ role: 'admin' });
+  });
+
+  it('rejects unauthorized Google user not in school adminEmails', async () => {
+    const { db } = createMockDb({
+      schoolData: {
+        adminPasscode: '1234',
+        adminEmails: ['eli7teitelbaum@gmail.com'],
+      },
+    });
+
+    await expect(
+      verifyAdminPasscodeServer(db, {
+        uid: 'uid-random',
+        email: 'unauthorized@example.com',
+        firebase: { sign_in_provider: 'google.com' },
+        schoolId: 'elisheva',
+        passcode: '',
+      }),
+    ).rejects.toMatchObject({
+      code: 'permission-denied',
+      message: expect.stringContaining('not authorized as an administrator for this school'),
+    } satisfies Partial<VerifyAdminPasscodeError>);
+  });
 });
+

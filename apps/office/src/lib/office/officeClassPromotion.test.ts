@@ -46,4 +46,14 @@ describe('planOfficeClassPromotion', () => {
     expect(plan.skipped).toHaveLength(1);
     expect(plan.skipped[0].classId).toBe('c3');
   });
+
+  it('skips a rename that would collide with another class name', () => {
+    const plan = planOfficeClassPromotion([
+      { id: 'c11', name: 'Grade 11' },
+      { id: 'c12', name: 'Grade 12' },
+    ]);
+    expect(plan.changes).toEqual([]);
+    expect(plan.skipped.some((row) => row.classId === 'c11' && /collide/i.test(row.reason))).toBe(true);
+    expect(plan.skipped.some((row) => row.classId === 'c12')).toBe(true);
+  });
 });

@@ -752,7 +752,9 @@ export function LibraryStudentSelfCheckoutPortal({
       void (async () => {
         try {
           const found = await findLibraryItemByUpc(firestore, schoolId, code, {
-            allowIsbn: libraryPolicy.allowIsbnCheckout,
+            allowIsbn: mode === 'return' ? true : libraryPolicy.allowIsbnCheckout,
+            allowBarcode: mode === 'return' ? true : libraryPolicy.allowBarcodeCheckout,
+            checkoutBarcodeMode: mode === 'return' ? undefined : libraryPolicy.checkoutBarcodeMode,
             preferredStatus: mode === 'return' ? 'checked_out' : 'available',
             studentId: studentId || undefined,
           });
@@ -782,7 +784,8 @@ export function LibraryStudentSelfCheckoutPortal({
 
             // 1. First check if this barcode is for an item currently checked out (on loan)
             const returnCandidate = await findLibraryItemByUpc(firestore, schoolId, code, {
-              allowIsbn: libraryPolicy.allowIsbnCheckout,
+              allowIsbn: true,
+              allowBarcode: true,
               preferredStatus: 'checked_out',
             });
 
@@ -811,6 +814,8 @@ export function LibraryStudentSelfCheckoutPortal({
             // 2. Otherwise, check for an available book to borrow
             const borrowCandidate = await findLibraryItemByUpc(firestore, schoolId, code, {
               allowIsbn: libraryPolicy.allowIsbnCheckout,
+              allowBarcode: libraryPolicy.allowBarcodeCheckout,
+              checkoutBarcodeMode: libraryPolicy.checkoutBarcodeMode,
               preferredStatus: 'available',
             });
 
@@ -832,6 +837,11 @@ export function LibraryStudentSelfCheckoutPortal({
             // A book-shaped barcode (ISBN) that matched nothing above is a book that isn't in
             // this school's catalog — not a student ID, even though it also didn't match one.
             if (isRetailIsbnBarcode(code)) {
+              if (libraryPolicy.checkoutBarcodeMode === 'barcode_only') {
+                playSound('error');
+                reportScanError('Please scan the printed barcode sticker on the book, not the ISBN.');
+                return;
+              }
               playSound('error');
               reportScanError('Book not in the catalog. Ask library staff for help.');
               return;
@@ -840,7 +850,7 @@ export function LibraryStudentSelfCheckoutPortal({
             await processStudent(code);
           } else if (found) {
             await processBook(code);
-          } else if (!isRetailIsbnBarcode(code)) {
+          } else if (!isRetailIsbnBarcode(code) && !isSchoolLibraryBarcode(code)) {
             // Scanning the next student's card explicitly starts their session.
             const id = await lookupStudentId(firestore, schoolId, code);
             if (!id) throw new Error('Book or student not found. Ask library staff for help.');
@@ -848,6 +858,10 @@ export function LibraryStudentSelfCheckoutPortal({
             setLastAction(null);
             setMode('checkout');
             await processStudent(code);
+          } else if (isSchoolLibraryBarcode(code) && libraryPolicy.checkoutBarcodeMode === 'isbn_only') {
+            throw new Error('Please scan the book\'s ISBN barcode on the back cover, not the sticker.');
+          } else if (isRetailIsbnBarcode(code) && libraryPolicy.checkoutBarcodeMode === 'barcode_only') {
+            throw new Error('Please scan the printed barcode sticker on the book, not the ISBN.');
           } else {
             throw new Error('Book not in the catalog. Ask library staff for help.');
           }
@@ -865,7 +879,7 @@ export function LibraryStudentSelfCheckoutPortal({
         }
       })();
     },
-    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, playSound, toast, studentId, reportScanError],
+    [step, mode, processBook, processStudent, processDropBoxReturn, selectStudent, students, dropBoxOn, shouldAcceptScan, firestore, schoolId, libraryPolicy.allowIsbnCheckout, libraryPolicy.allowBarcodeCheckout, libraryPolicy.checkoutBarcodeMode, playSound, toast, studentId, reportScanError],
   );
 
   const { inputRef, scanBuffer, setScanBuffer, submitScan, clearBuffer, focusReader } = useBarcodeReaderWedge({
@@ -1069,6 +1083,30 @@ export function LibraryStudentSelfCheckoutPortal({
                       studentLabel
                     )}
                   </p>
+
+                  {/* Student Loan Limit Indicator Badge */}
+                  <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border transition-colors shadow-xs',
+                        effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts
+                          ? 'bg-rose-50 border-rose-300 text-rose-800 dark:bg-rose-950/60 dark:border-rose-800 dark:text-rose-200'
+                          : effectiveMaxCheckouts > 0 && studentLoans.length === effectiveMaxCheckouts - 1
+                            ? 'bg-amber-50 border-amber-300 text-amber-800 dark:bg-amber-950/60 dark:border-amber-800 dark:text-amber-200'
+                            : 'bg-primary/10 border-primary/20 text-primary'
+                      )}
+                    >
+                      <BookOpen className="h-3.5 w-3.5" />
+                      {effectiveMaxCheckouts === 0
+                        ? `${studentLoans.length} book${studentLoans.length === 1 ? '' : 's'} borrowed`
+                        : `${studentLoans.length} of ${effectiveMaxCheckouts} book${effectiveMaxCheckouts === 1 ? '' : 's'} borrowed`}
+                    </span>
+                    {effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts ? (
+                      <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                        (Limit reached)
+                      </span>
+                    ) : null}
+                  </div>
                   {autoResetSeconds > 0 && (
                     <div
                       className={cn(
@@ -1382,6 +1420,16 @@ export function LibraryStudentSelfCheckoutPortal({
           </div>
         )}
 
+        {/* Loan Limit Warning Notice */}
+        {studentId && step === 'book' && effectiveMaxCheckouts > 0 && studentLoans.length >= effectiveMaxCheckouts && (
+          <div
+            role="status"
+            className="flex w-full max-w-md items-center gap-2.5 rounded-2xl border border-rose-300 bg-rose-50 p-3 text-rose-950 text-xs sm:text-sm font-semibold shadow-xs dark:border-rose-900 dark:bg-rose-950/70 dark:text-rose-200 text-center justify-center"
+          >
+            <span>You have reached your limit of {effectiveMaxCheckouts} books. Please return a book first to borrow another.</span>
+          </div>
+        )}
+
         {/* Camera Scanner Viewfinder (Enabled via Library Settings) */}
         {cameraSettingEnabled && (
           <div className="w-full space-y-2">
@@ -1468,7 +1516,7 @@ export function LibraryStudentSelfCheckoutPortal({
                   {nameMatches.map((s) => {
                     const initials = ((s.firstName?.[0] || '') + (s.lastName?.[0] || '')).toUpperCase() || 'ST';
                     return (
-                      <li key={s.id} role="option">
+                      <li key={s.id} role="option" aria-selected={studentId === s.id}>
                         <button
                           type="button"
                           className="group flex w-full items-center gap-3 rounded-xl p-2.5 sm:p-3 text-left text-base transition-all hover:bg-accent/80 text-foreground"

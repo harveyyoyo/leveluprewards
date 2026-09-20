@@ -22,6 +22,10 @@ const auth = {
   preparingExperience: 'מכין את חוויית הפרסים של בית הספר',
   schoolSignInAria: '{appName} — כניסת בית ספר',
   enterSchoolIdHint: 'הזינו את מזהה בית הספר כדי לפתוח אפשרויות כניסה לתלמידים ולצוות.',
+  enterLibrarySchoolIdHint:
+    'הקלידו את שם בית הספר בתיבה הריקה, ואז את קוד הדלת. תעברו ישר לספרייה של אותו בית ספר.',
+  openTheLibrary: 'כניסה לספרייה',
+  openingLibrary: 'פותח את הספרייה…',
   developerPasscode: 'קוד מפתח מקומי',
   signedInAsGoogle: 'מחובר/ת עם Google כ',
   yourAccount: 'החשבון שלך',
@@ -46,6 +50,9 @@ const auth = {
   demoSchoolPasscodeHint: 'הזינו את קוד הגישה של בית הספר כדי להמשיך.',
   openingGoogle: 'פותח Google…',
   useDifferentGoogleAccount: 'השתמשו בחשבון Google אחר',
+  signOutGoogle: 'התנתקות מחשבון Google',
+  signedOutOfGoogleTitle: 'התנתקת מחשבון Google',
+  signedOutOfGoogleDescription: 'חשבון Google שלך נותק מ-Level Up.',
   googleNotEnabled: 'Google לא מופעל',
   developerOnlyPasscodeHint:
     'היכנסו עם קוד מפתח מקומי (ללא Google) או עם חשבון Google מורשה. צוות בית הספר צריך להשתמש ב-',

@@ -504,7 +504,7 @@ function LayoutClientWrapperInner({
                         isPresentationPage && 'overflow-hidden',
                         (appShellNoPageScroll || isStudentKioskSurface) &&
                             'overflow-hidden overflow-x-hidden',
-                        isPortalChoosePage && 'overflow-x-hidden',
+                        isPortalChoosePage && 'overflow-hidden',
                     )}
                 >
                     {isPortalChoosePage ? <PortalChooseBackdrop /> : null}

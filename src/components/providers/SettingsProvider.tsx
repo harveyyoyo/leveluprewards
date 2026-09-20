@@ -51,7 +51,7 @@ import {
     type BarcodeNumberScheme,
     DEFAULT_LIBRARY_PLACEMENT_ZONES,
 } from '@/lib/library/libraryClassification';
-import type { LibraryOrganizationScheme } from '@/lib/types';
+import type { LibraryOrganizationScheme, IdCardCustomOptions } from '@/lib/types';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { isDisplaySettingsRoute } from '@/lib/displays/displayLiveSettings';
 import { displaysFeatureEnabled } from '@/lib/displays/displayRoutes';
@@ -100,6 +100,7 @@ interface Settings {
     enableStudentThemes: boolean;
     // Engagement
     enableAchievements: boolean;
+    achievementsStarterSeeded?: boolean;
     enableBadges: boolean;
     enableLevels: boolean;
     enableStreaks: boolean;
@@ -230,10 +231,16 @@ interface Settings {
     idCardPaperId?: string;
     /** Student ID card corners: rounded (ID-1 look) or rectangular (easier to cut on plain paper). */
     idCardCornerStyle?: 'rounded' | 'rectangular';
+    /** Card print layout: landscape (horizontal) or portrait (vertical badge). */
+    idCardOrientation?: 'landscape' | 'portrait';
+    /** Detailed visual styling options for student ID cards. */
+    idCardCustomOptions?: IdCardCustomOptions;
     /** Student ID card design layout. */
     idCardLayout?: 'classic' | 'credit_card' | 'modern' | 'minimalist' | 'high_vis';
     /** When on, student/staff/prize shelf ID cards show a QR code instead of a Code 128 barcode. */
     idCardUseQrCode?: boolean;
+    /** Optional custom message printed at the bottom of sheets or cards. */
+    printFooterNote?: string;
     /** When on, printed coupons show a QR code on the left instead of a bottom barcode strip. */
     couponUseQrCode?: boolean;
     /** Optional staff reminder for prize redeem slips and printed coupon sheets. */
@@ -336,11 +343,15 @@ interface Settings {
     enableBathroomTimer?: boolean;
     /** Max minutes before a bathroom pass is flagged as over limit. */
     bathroomMaxMinutes?: number;
+    /** Max students allowed out of the classroom at the same time (0 or undefined = unlimited). */
+    bathroomMaxStudentsOut?: number;
     /** When true, only students who signed in today can start a bathroom pass. */
     bathroomRequirePresent?: boolean;
+    /** Minutes after class period starts to mute attendance sign-in sound (-1 = always play sound, 0 = at bell, 1 = 1m in, etc.). */
+    attendanceQuietAfterMinutes?: number;
     // Guidance
     enableHelperMode: boolean;
-    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | null;
+    activeTourId?: 'welcome' | 'features' | 'admin' | 'teacher' | 'student' | 'teacher-features' | 'student-features' | 'library' | 'library-features' | null;
     // Workflow
     enableTeacherBudgets: boolean;
     /** Teacher portal: show a "Coupons" feature tab listing coupons created by the teacher. */
@@ -382,6 +393,8 @@ interface Settings {
     classroomMonitorIncludeLastName?: boolean;
     /** Show student sticker / theme emoji on desk avatars. */
     classroomMonitorIncludeStudentEmoji?: boolean;
+    /** Show student photos on seating chart desks. Default on when unset. */
+    classroomMonitorIncludeStudentPhotos?: boolean;
     /** Show behavior-notes shortcut tips on the live monitor by default. Default on when unset. */
     classroomMonitorShowBehaviorNotesTips?: boolean;
     /** Seconds of kiosk inactivity before AI Fun is hidden until the next interaction. */
@@ -550,6 +563,8 @@ interface Settings {
     libraryAllowRenewIfOverdue?: boolean;
     /** Allow a student to borrow multiple copies of the same book title. */
     libraryAllowMultipleCopiesOfSameTitle?: boolean;
+    /** Allowed barcode types when checking out books: 'both', 'barcode_only', or 'isbn_only'. */
+    libraryCheckoutBarcodeMode?: 'both' | 'barcode_only' | 'isbn_only';
     /** Allow taking out / checking out books using the published ISBN barcode in addition to copy barcodes. */
     libraryAllowIsbnCheckout?: boolean;
     /** Maximum fine or deduction cap per book (0 = no limit). */
@@ -813,6 +828,7 @@ const defaultSettings: Settings = {
     enableThemeAnimations: false,
     enableStudentThemes: true,
     enableAchievements: false,
+    achievementsStarterSeeded: false,
     enableBadges: false,
     enableLevels: false,
     enableStreaks: false,
@@ -836,6 +852,7 @@ const defaultSettings: Settings = {
     libraryRenewalDays: 14,
     libraryAllowRenewIfOverdue: false,
     libraryAllowMultipleCopiesOfSameTitle: false,
+    libraryCheckoutBarcodeMode: 'both',
     libraryAllowIsbnCheckout: true,
     libraryMaxFineCap: 20,
     libraryRequireWaiverReason: true,
@@ -916,8 +933,11 @@ const defaultSettings: Settings = {
     idCardPrinterFamily: 'browser_sheet',
     idCardPaperId: defaultPaperForFamily('browser_sheet'),
     idCardCornerStyle: 'rounded',
+    idCardOrientation: 'landscape',
+    idCardCustomOptions: undefined,
     idCardLayout: 'classic',
     idCardUseQrCode: false,
+    printFooterNote: '',
     couponUseQrCode: false,
     printerReminderPrizeVouchers: '',
     prizeVoucherPaperFormat: 'label_50x70',
@@ -959,7 +979,9 @@ const defaultSettings: Settings = {
     enableAttendance: false,
     enableBathroomTimer: true,
     bathroomMaxMinutes: 5,
+    bathroomMaxStudentsOut: 2,
     bathroomRequirePresent: true,
+    attendanceQuietAfterMinutes: -1,
     enableHelperMode: true,
     activeTourId: null,
     enableTeacherBudgets: false,
@@ -995,6 +1017,7 @@ const defaultSettings: Settings = {
     classroomMonitorIncludeSessionLastAward: true,
     classroomMonitorIncludeLastName: false,
     classroomMonitorIncludeStudentEmoji: false,
+    classroomMonitorIncludeStudentPhotos: true,
     classroomMonitorShowBehaviorNotesTips: true,
     kioskAiFunIdleOffSec: 360,
     studentSignInThrottleEnabled: false,

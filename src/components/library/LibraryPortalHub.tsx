@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
 import { resolveLibraryHubCopy } from '@/lib/library/libraryHubCopy';
-import { activateLibraryTour } from '@/lib/tours/startLibraryTour';
+import { Button } from '@/components/ui/button';
 import { LibraryBackdrop } from './LibraryBackdrop';
 import { LibraryHeaderBar, type LibraryHeaderNavTab } from './LibraryHeaderBar';
 import { SiteFooter } from '@/components/layout/SiteFooter';
@@ -67,11 +67,16 @@ function useIsLargeScreen() {
 
 export interface LibraryPortalHubProps {
   schoolName?: string;
+  /** Name of the specific library currently open (e.g. "School Library" or "test") — shown in the welcome heading. */
+  libraryName?: string;
   overdueCount?: number;
   catalogCount?: number;
   backToPortalHref: string;
+  /** When a school has more than one library, the logo/name link opens the "which library" picker. */
+  chooseLibraryHref?: string;
   onSelect: (tab: LibraryHeaderNavTab) => void;
   onOpenSettings: () => void;
+  onOpenGuide?: () => void;
 }
 
 /**
@@ -81,11 +86,14 @@ export interface LibraryPortalHubProps {
  */
 export function LibraryPortalHub({
   schoolName = 'School Library',
+  libraryName,
   overdueCount = 0,
   catalogCount,
   backToPortalHref,
+  chooseLibraryHref,
   onSelect,
   onOpenSettings,
+  onOpenGuide,
 }: LibraryPortalHubProps) {
   const { settings, updateSettings } = useSettings();
   const theme = resolveLibraryTheme(settings.libraryTheme as LibraryThemeId, settings.libraryBoxOpacity);
@@ -122,19 +130,21 @@ export function LibraryPortalHub({
         schoolName={schoolName}
         productLabel={copy.headerProduct}
         backToPortalHref={backToPortalHref}
+        chooseLibraryHref={chooseLibraryHref}
         activeTab="hub"
         onNavigate={onSelect}
         onHome={() => {}}
         onOpenSettings={onOpenSettings}
+        onOpenGuide={onOpenGuide}
       />
 
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
         <div className="m-auto w-full">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
-          <span className="block sm:inline">{copy.welcomeLead}</span>
-          {copy.welcomeHighlight ? (
+          <span className="block sm:inline">{copy.welcomeLead}{' '}</span>
+          {libraryName || copy.welcomeHighlight ? (
             <span className="relative mt-1 sm:mt-0 sm:ml-3 inline-block">
-              {copy.welcomeHighlight}
+              {libraryName || copy.welcomeHighlight}
               <svg
                 aria-hidden
                 viewBox="0 0 200 12"
@@ -228,14 +238,20 @@ export function LibraryPortalHub({
           })}
         </motion.div>
 
-        <button
-          type="button"
-          onClick={() => activateLibraryTour(updateSettings)}
-          className="mt-8 lg:mt-12 inline-flex items-center gap-1.5 text-xs font-bold underline decoration-dotted underline-offset-4 opacity-60 transition-opacity hover:opacity-100"
-        >
-          <Compass className="h-3.5 w-3.5" />
-          Take a quick tour
-        </button>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3 lg:mt-12">
+          {onOpenGuide && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onOpenGuide}
+              className="rounded-full px-6 py-2.5 text-xs font-bold text-foreground/90 shadow-sm transition-all hover:bg-secondary/60 hover:text-foreground"
+            >
+              <Compass className="mr-2 h-4 w-4 text-primary" />
+              Library Handbook & Guide
+            </Button>
+          )}
+        </div>
         </div>
       </main>
       <SiteFooter />

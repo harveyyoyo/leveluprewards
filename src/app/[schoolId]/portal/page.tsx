@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useAppContext } from '@/components/AppProvider';
 import { normalizeSchoolId } from '@/lib/schoolId';
 import { useAdminGooglePasscodeBypass } from '@/hooks/useAdminGooglePasscodeBypass';
-import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen } from 'lucide-react';
+import { GraduationCap, Home, Printer, UserCog, Users, Loader2, ShieldCheck, ArrowUpRight, HelpCircle, BookOpen, Compass } from 'lucide-react';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useTranslation } from '@/components/providers/LocaleProvider';
 import { useArcadeSound } from '@/hooks/useArcadeSound';
@@ -384,7 +384,7 @@ export default function PortalPage() {
     });
     const hubCardCount = visiblePortals.length;
     const hubDenseLayout = hubCardCount >= 4;
-    const showWelcomeTourFooter = settings.enableHelperMode === true;
+    const showWelcomeTourFooter = settings.enableHelperMode !== false;
 
     const startPortalTour = (tourId: PortalTourId) => {
         playSound('click');
@@ -450,26 +450,23 @@ export default function PortalPage() {
     };
 
     return (
-        <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans">
+        <div className="text-foreground relative min-h-0 h-full w-full bg-transparent font-sans overflow-hidden">
             {/* Positioning on a plain div so Framer does not override translate-based centering */}
-            {/* Main layout: app mode can scroll within the shell when browser chrome leaves little height. */}
+            {/* Main layout: always fits on screen, centered without vertical scrolling */}
             <div
                 className={cn(
-                    'relative z-[10] flex h-full min-h-0 w-full flex-col',
-                    compactDisplay || hubDenseLayout || showWelcomeTourFooter
-                        ? 'overflow-x-hidden overflow-y-auto overscroll-contain'
-                        : 'overflow-hidden',
+                    'relative z-[10] flex h-full min-h-0 w-full flex-col justify-center overflow-hidden',
                     compactDisplay
-                        ? 'px-4 pb-3 pt-2 sm:pb-4 sm:pt-4 md:py-10'
+                        ? 'px-3 py-2 sm:px-4 sm:py-3'
                         : hubDenseLayout
-                          ? 'px-4 pb-3 pt-6 sm:pt-8 md:pb-4 md:pt-10'
-                          : 'px-4 pb-4 pt-10 sm:pt-12 md:pb-6 md:pt-16',
+                          ? 'px-3 py-2 sm:px-4 sm:py-2.5 md:px-6 md:py-3'
+                          : 'px-4 py-2 sm:px-6 sm:py-3 md:py-4',
                     portalChoosePageShellClass(kioskPortrait, compactDisplay),
                 )}
             >
                 <div
                     className={cn(
-                        'flex min-h-full w-full flex-1 flex-col items-center',
+                        'flex h-full max-h-full w-full flex-1 min-h-0 flex-col items-center justify-center',
                         portalHubOuterGapClass(hubCardCount, compactDisplay),
                     )}
                 >
@@ -632,10 +629,16 @@ export default function PortalPage() {
                                     </div>
                                     ) : (
                                     <div className="relative z-10 flex flex-col">
-                                        <div className="flex flex-col items-center justify-center gap-2.5 text-center md:gap-4">
+                                        <div
+                                            className={cn(
+                                                'flex flex-col items-center justify-center text-center',
+                                                hubDenseLayout ? 'gap-1.5 sm:gap-2 md:gap-2.5' : 'gap-2 md:gap-3',
+                                            )}
+                                        >
                                             <motion.div
                                                 className={cn(
-                                                    'portal-choose-icon shrink-0 rounded-xl p-3 md:p-4',
+                                                    'portal-choose-icon shrink-0 rounded-xl',
+                                                    hubDenseLayout ? 'p-2 sm:p-2.5 md:p-3' : 'p-2.5 sm:p-3 md:p-3.5',
                                                     portalCardHoverEffects && 'portal-choose-icon--hoverable',
                                                 )}
                                                 style={{
@@ -644,17 +647,32 @@ export default function PortalPage() {
                                                 }}
                                             >
                                                 <Icon
-                                                    className={cn('h-8 w-8 md:h-9 md:w-9', !isLibraryCard && 'text-white')}
+                                                    className={cn(
+                                                        hubDenseLayout
+                                                            ? 'h-6 w-6 sm:h-7 sm:w-7 md:h-7.5 md:w-7.5'
+                                                            : 'h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9',
+                                                        !isLibraryCard && 'text-white',
+                                                    )}
                                                     style={libraryIconColor ? { color: libraryIconColor } : undefined}
                                                 />
                                             </motion.div>
-                                            <div className="min-w-0 max-w-prose space-y-1.5 px-0.5 z-20">
-                                                <h3 className="text-base font-black leading-tight tracking-tight sm:text-lg md:text-xl pointer-events-none">
+                                            <div className={cn('min-w-0 max-w-prose px-0.5 z-20', hubDenseLayout ? 'space-y-0.5' : 'space-y-1')}>
+                                                <h3
+                                                    className={cn(
+                                                        'font-black leading-tight tracking-tight pointer-events-none',
+                                                        hubDenseLayout
+                                                            ? 'text-sm sm:text-base md:text-lg'
+                                                            : 'text-base sm:text-lg md:text-xl',
+                                                    )}
+                                                >
                                                     <span style={{ color: portalPrimaryColor }}>{area.title}</span>
                                                 </h3>
                                                 <p
                                                     className={cn(
-                                                        'text-xs font-semibold leading-snug sm:text-sm md:text-base pointer-events-none',
+                                                        'font-semibold leading-snug pointer-events-none line-clamp-2',
+                                                        hubDenseLayout
+                                                            ? 'text-[11px] sm:text-xs md:text-sm'
+                                                            : 'text-xs sm:text-sm md:text-base',
                                                         !isLibraryCard && 'text-muted-foreground/85',
                                                     )}
                                                     style={libraryBodyColor ? { color: libraryBodyColor } : undefined}
@@ -742,17 +760,28 @@ export default function PortalPage() {
                 {showWelcomeTourFooter ? (
                     <div
                         className={cn(
-                            'relative z-10 flex w-full shrink-0 justify-center pb-2 sm:pb-4',
-                            hubDenseLayout ? 'mt-2' : 'mt-6 md:mt-8',
+                            'relative z-10 flex w-full shrink-0 justify-center',
+                            hubDenseLayout ? 'mt-1 pb-1' : 'mt-2 pb-2 sm:mt-4 sm:pb-3',
                         )}
                     >
                         <Button
                             variant="ghost"
-                            className="rounded-full px-6 font-semibold text-foreground/80 transition-all hover:bg-secondary/60"
-                            onClick={startWelcomeTour}
+                            size={hubDenseLayout ? 'sm' : 'default'}
+                            className={cn(
+                                'rounded-full font-semibold text-foreground/85 transition-all hover:bg-secondary/60 cursor-pointer',
+                                hubDenseLayout ? 'h-7 px-4 text-xs' : 'px-6',
+                            )}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                playSound('click');
+                                if (typeof window !== 'undefined') {
+                                    window.dispatchEvent(new CustomEvent('open-rewards-guide'));
+                                }
+                            }}
                         >
-                            <HelpCircle className="mr-2 h-4 w-4 text-primary/70" />
-                            Start Welcome Tour
+                            <Compass className={cn('text-primary/80', hubDenseLayout ? 'mr-1.5 h-3.5 w-3.5' : 'mr-2 h-4 w-4')} />
+                            Rewards Handbook & Guide
                         </Button>
                     </div>
                 ) : null}

@@ -66,6 +66,8 @@ type ClassAwardsLiveSettingsSectionProps = {
   parentPortalOn: boolean;
   principalTimelineOn: boolean;
   behaviorNotesRefresh?: number;
+  /** Hide launch buttons when already on the live teaching board. */
+  embeddedLive?: boolean;
 };
 
 function SettingsPanel({
@@ -107,6 +109,7 @@ export function ClassAwardsLiveSettingsSection({
   parentPortalOn,
   principalTimelineOn,
   behaviorNotesRefresh = 0,
+  embeddedLive = false,
 }: ClassAwardsLiveSettingsSectionProps) {
   const classroomAutoExitOn = settings.classroomAutoLogoutEnabled !== false;
   const classroomIdleMin = classroomSessionTimeoutMinFromSettings(settings);
@@ -116,6 +119,7 @@ export function ClassAwardsLiveSettingsSection({
   const includeSessionLastAward = settings.classroomMonitorIncludeSessionLastAward !== false;
   const includeLastName = settings.classroomMonitorIncludeLastName === true;
   const includeStudentEmoji = settings.classroomMonitorIncludeStudentEmoji === true;
+  const includeStudentPhotos = settings.classroomMonitorIncludeStudentPhotos !== false;
   const behaviorNotesTipsOn = settings.classroomMonitorShowBehaviorNotesTips !== false;
   const balanceLabel = rewardsPillarOn ? 'LevelUp reward balance' : 'Classroom point balance';
   const classSignInEnabled = isPillarOn(settings, 'payAttendance') && !!settings.enableClassSignIn;
@@ -132,29 +136,31 @@ export function ClassAwardsLiveSettingsSection({
     <div className="relative space-y-6">
       <div className="pointer-events-none absolute top-0 right-0 -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-violet-500/10 to-amber-500/10 blur-3xl" />
 
-      <div className="rounded-3xl border border-violet-500/25 bg-muted/15 p-5 md:p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <ClassroomLaunchMonitorButton
-            schoolId={schoolId}
-            seatingScope={_seatingScope}
-            classes={classes}
-            audience="teacher"
-          />
-          {studentDisplayOn ? (
+      {!embeddedLive ? (
+        <div className="rounded-3xl border border-violet-500/25 bg-muted/15 p-5 md:p-6">
+          <div className="flex flex-wrap items-center gap-3">
             <ClassroomLaunchMonitorButton
               schoolId={schoolId}
               seatingScope={_seatingScope}
               classes={classes}
-              audience="student"
+              audience="teacher"
             />
-          ) : null}
+            {studentDisplayOn ? (
+              <ClassroomLaunchMonitorButton
+                schoolId={schoolId}
+                seatingScope={_seatingScope}
+                classes={classes}
+                audience="student"
+              />
+            ) : null}
+          </div>
+          <p className="mt-3 max-w-2xl text-[11px] leading-relaxed !text-muted-foreground">
+            Open the teacher monitor for quick awards during the lesson. Use{' '}
+            <span className="font-semibold !text-foreground">Launch for class screen</span> on your projector
+            — it mirrors the chart live but hides behavior comments and notes.
+          </p>
         </div>
-        <p className="mt-3 max-w-2xl text-[11px] leading-relaxed !text-muted-foreground">
-          Open the teacher monitor for quick awards during the lesson. Use{' '}
-          <span className="font-semibold !text-foreground">Launch for class screen</span> on your projector
-          — it mirrors the chart live but hides behavior comments and notes.
-        </p>
-      </div>
+      ) : null}
 
       <p className="text-sm font-bold tracking-tight text-foreground">Settings</p>
 
@@ -336,6 +342,22 @@ export function ClassAwardsLiveSettingsSection({
               </div>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-0.5">
+                  <Label htmlFor="classroom-include-student-photos" className="text-sm font-bold">
+                    Student photos
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground">
+                    Show the student&apos;s picture on the desk when they have one.
+                  </p>
+                </div>
+                <Switch
+                  id="classroom-include-student-photos"
+                  checked={includeStudentPhotos}
+                  disabled={!canEdit}
+                  onCheckedChange={(v) => updateSettings({ classroomMonitorIncludeStudentPhotos: v })}
+                />
+              </div>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 space-y-0.5">
                   <Label htmlFor="classroom-include-last-name" className="text-sm font-bold">
                     Last names
                   </Label>
@@ -354,7 +376,7 @@ export function ClassAwardsLiveSettingsSection({
                     Student emoji
                   </Label>
                   <p className="text-[11px] text-muted-foreground">
-                    Sticker or theme emoji on avatars (photo still wins when set).
+                    Sticker or theme emoji when photos are off or the student has no picture.
                   </p>
                 </div>
                 <Switch
@@ -461,6 +483,7 @@ export function ClassAwardsLiveSettingsSection({
           classSignInEnabled={classSignInEnabled}
           enableBathroomTimer={settings.enableBathroomTimer ?? true}
           bathroomMaxMinutes={settings.bathroomMaxMinutes ?? 5}
+          bathroomMaxStudentsOut={settings.bathroomMaxStudentsOut ?? 2}
           bathroomRequirePresent={settings.bathroomRequirePresent ?? true}
           canEdit={canEdit}
           onChange={updateSettings}

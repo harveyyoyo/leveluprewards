@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, User } from 'lucide-react';
+import { BookOpen, Camera, CheckCircle2, ChevronDown, Clock, CopyPlus, Loader2, MapPin, Printer, Search, Sparkles, Trash2, Upload, User, X } from 'lucide-react';
+import { useFirebase } from '@/firebase';
+import { uploadLibraryBookCover } from '@/lib/library/libraryCoverUpload';
 import {
   Dialog,
   DialogContent,
@@ -128,6 +130,32 @@ export function LibraryItemModal({
   const confirm = useConfirm();
   const playSound = useArcadeSound();
   const { setLibraryStickersToPrint } = usePrint();
+  const { storage } = useFirebase();
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsUploadingCover(true);
+      const url = await uploadLibraryBookCover(storage, schoolId, file, item?.id);
+      setCoverUrl(url);
+      playSound('success');
+      toast({ title: 'Book cover updated', description: 'Cover photo attached to this book.' });
+    } catch (err: any) {
+      playSound('error');
+      toast({
+        variant: 'destructive',
+        title: 'Could not upload cover',
+        description: err?.message || 'Please try another photo.',
+      });
+    } finally {
+      setIsUploadingCover(false);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = '';
+    }
+  };
+
   const isEditing = !!item;
 
   useEffect(() => {
@@ -552,7 +580,7 @@ export function LibraryItemModal({
         </DialogHeader>
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <div className="flex flex-col sm:flex-row gap-4 mb-4 p-3.5 rounded-2xl border bg-muted/20 items-center sm:items-start">
-            <div className="shrink-0">
+            <div className="shrink-0 flex flex-col items-center gap-1.5">
               <LibraryBookCover
                 coverUrl={coverUrl}
                 isbn={isbn}
@@ -564,10 +592,45 @@ export function LibraryItemModal({
                   setCoverUrl((prev) => prev.trim() || url);
                 }}
               />
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleCoverFileChange}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={isUploadingCover}
+                onClick={() => coverFileInputRef.current?.click()}
+                className="h-7 text-[11px] gap-1 px-2 rounded-lg font-medium shadow-xs"
+                title="Upload an image file or take a photo of the book cover"
+              >
+                {isUploadingCover ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Camera className="h-3 w-3" />
+                )}
+                <span>{coverUrl ? 'Change' : 'Photo'}</span>
+              </Button>
             </div>
             <div className="flex-1 min-w-0 space-y-2 w-full">
               <div className="space-y-1">
-                <Label htmlFor="lib-cover-url" className="text-xs">Cover Image URL</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="lib-cover-url" className="text-xs">Cover Image URL</Label>
+                  {coverUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => setCoverUrl('')}
+                      className="text-[11px] text-muted-foreground hover:text-destructive transition-colors inline-flex items-center gap-0.5 font-medium"
+                    >
+                      <X className="h-3 w-3" />
+                      Remove cover
+                    </button>
+                  ) : null}
+                </div>
                 <Input
                   id="lib-cover-url"
                   value={coverUrl}

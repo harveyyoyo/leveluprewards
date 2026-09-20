@@ -31,14 +31,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install School Office dependencies
+        run: npm ci --prefix apps/office
+
       - name: Lint
         run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Typecheck School Office
+        run: npm run typecheck --prefix apps/office
+
       - name: Unit tests
         run: npm test
+
+      - name: School Office unit tests
+        run: npm test --prefix apps/office
 
       - name: Firebase release confirmation tests
         run: node --test scripts/assert-firebase-release.test.cjs
@@ -54,8 +63,14 @@ jobs:
 
       # Dev-login is gated by this flag; keep it off in CI builds so the dev
       # toggle doesn't leak into a production-style bundle.
-      - name: Build (production)
+      - name: Build Rewards (production)
         run: npm run build
+        env:
+          NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
+          NODE_ENV: production
+
+      - name: Build School Office (production)
+        run: npm run build:office
         env:
           NEXT_PUBLIC_ENABLE_DEV_LOGIN: 'false'
           NODE_ENV: production

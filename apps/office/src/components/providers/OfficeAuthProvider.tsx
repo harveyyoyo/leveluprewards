@@ -23,6 +23,7 @@ import {
 import { verifyAdminPasscodeLogin } from '@/lib/adminPasscodeLogin';
 import { verifyStaffDeskLogin } from '@/lib/staffDeskLogin';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
+import { waitForAuthUser } from '@/lib/google/googleAuthSession';
 
 export type OfficeLoginState = 'loggedOut' | 'developer' | 'admin' | 'office';
 
@@ -195,7 +196,11 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
       type: 'admin' | 'office',
       credentials: { schoolId: string; passcode?: string; username?: string },
     ): Promise<LoginResult> => {
-      if (!auth?.currentUser || !firestore || !functions) {
+      if (!auth || !firestore || !functions) {
+        return loginErr('No Firebase session yet. Refresh the page and try again.');
+      }
+      const sessionUser = auth.currentUser ?? (await waitForAuthUser(auth, 8000));
+      if (!sessionUser) {
         return loginErr('No Firebase session yet. Refresh the page and try again.');
       }
 
@@ -209,7 +214,7 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
           });
           if (!result.ok) return loginErr(result.message);
 
-          const adminRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', auth.currentUser.uid);
+          const adminRef = doc(firestore, 'schools', lowerSchoolId, 'roles_admin', sessionUser.uid);
           const adminDoc = await getDoc(adminRef);
           if (!adminDoc.exists()) {
             return loginErr('Admin role not found for this account.');
@@ -221,7 +226,7 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
           setIsAdmin(true);
           setIsOffice(false);
           setUserName('Admin');
-          setUserId(auth.currentUser.uid);
+          setUserId(sessionUser.uid);
           localStorage.setItem('loginState', 'admin');
           localStorage.setItem('schoolId', lowerSchoolId);
           localStorage.setItem('userName', 'Admin');
@@ -243,7 +248,7 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
             role: 'office',
           });
 
-          const officeRef = doc(firestore, 'schools', lowerSchoolId, 'roles_office', auth.currentUser.uid);
+          const officeRef = doc(firestore, 'schools', lowerSchoolId, 'roles_office', sessionUser.uid);
           const roleDoc = await getDoc(officeRef);
           if (!roleDoc.exists() && !isPublicSampleSchoolId(lowerSchoolId)) {
             return loginErr('Office role not found for this account.');
@@ -258,7 +263,7 @@ export function OfficeAuthProvider({ children }: { children: React.ReactNode }) 
           setIsAdmin(false);
           setIsOffice(true);
           setUserName(displayName);
-          setUserId(auth.currentUser.uid);
+          setUserId(sessionUser.uid);
           localStorage.setItem('loginState', 'office');
           localStorage.setItem('schoolId', lowerSchoolId);
           localStorage.setItem('userName', displayName);

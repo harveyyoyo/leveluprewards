@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   AlertTriangle,
@@ -13,19 +13,23 @@ import {
   CheckCircle2,
   Coins,
   Edit2,
+  Layers,
   Library,
   MapPin,
   MessageSquare,
   Play,
   Plus,
   Printer,
+  QrCode,
   RefreshCw,
   RotateCcw,
   ScanBarcode,
+  Search,
   Sparkles,
   Trash2,
   Volume2,
   VolumeX,
+  X,
 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
@@ -69,6 +73,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   LIBRARY_REWARD_MODE_LABELS,
   resolveLibraryRewardMode,
+  resolveLibraryCheckoutBarcodeMode,
   type LibraryRewardMode,
 } from '@/lib/library/libraryPolicy';
 import {
@@ -93,9 +98,130 @@ import type { Category } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+type SettingsSectionDef = {
+  id: string;
+  title: string;
+  description: string;
+  keywords: string[];
+};
+
+const LIBRARY_SETTINGS_SECTIONS: SettingsSectionDef[] = [
+  {
+    id: 'circulation',
+    title: 'Circulation & Loan Policies',
+    description: 'Configure borrowing limits, renewal rules, loan duration, and barcode requirements.',
+    keywords: [
+      'borrow', 'loan', 'loan period', 'days', 'due date', 'max books', 'quota', 'limit',
+      'renewal', 'renew', 'grace period', 'overdue', 'multiple copies',
+      'barcode', 'isbn', 'printed barcode', 'stickers', 'checkout', 'smart auto-detect',
+      'checkout requirement', 'code requirement', 'book requirement',
+    ],
+  },
+  {
+    id: 'sync',
+    title: 'Sync with LevelUp App',
+    description: 'Connect library loans, points, and fines to the student rewards system.',
+    keywords: [
+      'sync', 'rewards', 'points', 'app', 'levelup', 'school points', 'balance', 'fines only',
+      'category', 'connected', 'integrate',
+    ],
+  },
+  {
+    id: 'hardware',
+    title: 'Hardware, Scanners & Kiosks',
+    description: 'Setup barcode readers, camera scanners, student check-in desks, and self-checkout stations.',
+    keywords: [
+      'hardware', 'scanner', 'camera', 'webcam', 'kiosk', 'self checkout', 'self-checkout',
+      'drop box', 'dropbox', 'drop-box', 'station', 'portal', 'scan speed', 'wedge', 'reader',
+    ],
+  },
+  {
+    id: 'audio',
+    title: 'Audio & Return Responses',
+    description: 'Configure chime sound effects and congratulatory messages displayed when books are returned.',
+    keywords: [
+      'audio', 'sound', 'sounds', 'sfx', 'chime', 'volume', 'voice', 'return message',
+      'on-time return', 'congratulations', 'feedback', 'cheer', 'celebrate',
+    ],
+  },
+  {
+    id: 'fines',
+    title: 'Late Fees & Rewards',
+    description: 'Decide if late fees apply, how many points are charged, and reward points for on-time returns.',
+    keywords: [
+      'fine', 'fines', 'late fee', 'late fees', 'penalty', 'points per day', 'cap', 'max fine',
+      'on-time points', 'bonus points', 'waiver', 'waive reason',
+    ],
+  },
+  {
+    id: 'cataloging',
+    title: 'Labels & Spine Stickers',
+    description: 'Choose label printing sizes and information printed on your book spine stickers.',
+    keywords: [
+      'label', 'labels', 'sticker', 'stickers', 'print', 'printer', 'spine', 'avery 5160',
+      'avery 5167', 'avery 5163', 'thermal', 'pocket slip', 'bookplate', 'call number', 'dewey',
+      'banner', 'color banner', 'barcode scheme',
+    ],
+  },
+  {
+    id: 'genre',
+    title: 'Genres & Shelving Zones',
+    description: 'Manage physical shelving places in your library and set color-coded book categories.',
+    keywords: [
+      'genre', 'genres', 'shelves', 'shelf', 'shelving', 'location', 'place', 'furniture',
+      'stacks', 'color', 'prefix', 'call prefix', 'categories', 'zones',
+    ],
+  },
+  {
+    id: 'alerts',
+    title: 'Overdue Alerts & Reminders',
+    description: 'Configure automated reminder notices and milestone celebrations for student reading.',
+    keywords: [
+      'alert', 'alerts', 'reminder', 'reminders', 'notice', 'email', 'teacher', 'overdue notice',
+      'milestones', 'reading goals', 'celebration',
+    ],
+  },
+];
+
+const QUICK_SEARCH_CHIPS = [
+  { label: 'Barcodes & ISBN', query: 'barcode' },
+  { label: 'Loan Period', query: 'loan' },
+  { label: 'Late Fees & Fines', query: 'fine' },
+  { label: 'Return Sounds', query: 'sound' },
+  { label: 'Stickers & Labels', query: 'label' },
+  { label: 'Kiosks & Scanners', query: 'scanner' },
+  { label: 'Shelves & Places', query: 'shelf' },
+];
+
 export function LibraryPolicySettingsCard({ categories }: { categories?: Category[] | null }) {
   const { settings, updateSettings } = useSettings();
   const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [openSections, setOpenSections] = useState<string[]>([]);
+  const checkoutBarcodeMode = resolveLibraryCheckoutBarcodeMode(settings);
+
+  const trimmedSearch = searchQuery.trim().toLowerCase();
+  const matchingSections = useMemo(() => {
+    if (!trimmedSearch) return null;
+    const words = trimmedSearch.split(/\s+/).filter(Boolean);
+    return LIBRARY_SETTINGS_SECTIONS.filter((sec) => {
+      const hay = `${sec.title} ${sec.description} ${sec.keywords.join(' ')}`.toLowerCase();
+      return words.every((word) => hay.includes(word));
+    });
+  }, [trimmedSearch]);
+
+  const matchingSectionIds = useMemo(() => {
+    if (!matchingSections) return null;
+    return new Set(matchingSections.map((s) => s.id));
+  }, [matchingSections]);
+
+  const effectiveOpenSections = useMemo(() => {
+    if (matchingSections !== null) {
+      return matchingSections.map((s) => s.id);
+    }
+    return openSections;
+  }, [matchingSections, openSections]);
+
   const [testingSound, setTestingSound] = useState<string | null>(null);
   const enabledLabelOptions = enabledLibraryLabelOptions(settings.libraryLabelFormatsEnabled);
   const enabledLabelFormats = enabledLibraryLabelFormats(settings.libraryLabelFormatsEnabled);
@@ -194,7 +320,6 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
 
   const [newShelfName, setNewShelfName] = useState('');
   const [isAddingShelf, setIsAddingShelf] = useState(false);
-  const [showShelfExtras, setShowShelfExtras] = useState(false);
   const [editingShelfIndex, setEditingShelfIndex] = useState<number | null>(null);
   const [editingShelfValue, setEditingShelfValue] = useState('');
   const genres = getActiveLibraryGenres(settings.libraryGenreDefinitions);
@@ -344,9 +469,105 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
   };
 
   return (
-    <Accordion type="multiple" className="space-y-3">
-      {/* 1. Circulation & Loan Policies */}
-      <AccordionItem value="circulation" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
+    <div className="space-y-4">
+      {/* Search Header */}
+      <div className="rounded-2xl border bg-card/80 p-4 shadow-xs space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search library settings (e.g., barcode, isbn, loan period, fines, stickers)..."
+            className="pl-9 pr-9 h-10 rounded-xl bg-background text-sm border-border/80 focus-visible:ring-primary/40"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-0.5 rounded-full"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Quick Filter Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[11px] text-muted-foreground font-medium mr-1">Quick find:</span>
+          {QUICK_SEARCH_CHIPS.map((chip) => {
+            const isActive = trimmedSearch === chip.query;
+            return (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() => setSearchQuery(isActive ? '' : chip.query)}
+                className={cn(
+                  'text-[11px] font-semibold px-2.5 py-1 rounded-lg border transition-all',
+                  isActive
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    : 'bg-muted/50 text-muted-foreground border-border/60 hover:bg-muted hover:text-foreground',
+                )}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {trimmedSearch && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t border-border/40">
+            <span>
+              {matchingSections && matchingSections.length > 0 ? (
+                <>
+                  Found <strong className="text-foreground">{matchingSections.length}</strong> matching {matchingSections.length === 1 ? 'section' : 'sections'} for &ldquo;{searchQuery}&rdquo;
+                </>
+              ) : (
+                <>No settings matching &ldquo;{searchQuery}&rdquo;</>
+              )}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery('')}
+              className="h-6 px-2 text-xs font-bold text-primary hover:text-primary hover:bg-primary/10"
+            >
+              Clear search
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {matchingSections !== null && matchingSections.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-8 text-center bg-card/40 space-y-2">
+          <Search className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
+          <p className="font-bold text-sm text-foreground">No settings match &ldquo;{searchQuery}&rdquo;</p>
+          <p className="text-xs text-muted-foreground">
+            Try searching for terms like barcode, isbn, loan period, fines, sounds, or stickers.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSearchQuery('')}
+            className="mt-3 text-xs font-bold rounded-xl"
+          >
+            Clear search
+          </Button>
+        </div>
+      ) : (
+        <Accordion
+          type="multiple"
+          value={effectiveOpenSections}
+          onValueChange={(val) => {
+            if (!trimmedSearch) {
+              setOpenSections(val);
+            }
+          }}
+          className="space-y-3"
+        >
+          {/* 1. Circulation & Loan Policies */}
+          {(!matchingSectionIds || matchingSectionIds.has('circulation')) && (
+            <AccordionItem value="circulation" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
             <div className="flex items-center gap-2 text-left">
@@ -499,23 +720,158 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-3 py-2.5">
-              <div>
-                <p className="text-xs font-bold">Allow checkout by ISBN number</p>
+            {/* Checkout Barcode Option (Both vs Printed Barcodes vs ISBN) */}
+            <div className="space-y-3 rounded-xl border border-border/80 bg-muted/20 p-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <ScanBarcode className="h-4 w-4 text-primary" />
+                  <Label className="text-xs font-bold text-foreground">
+                    Book Checkout Barcode Requirement
+                  </Label>
+                </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Allow taking out books by scanning or typing the book's printed ISBN number, automatically assigning an available copy.
+                  Choose what codes students and staff can scan to check out books.
                 </p>
               </div>
-              <Switch
-                checked={allowIsbnCheckoutOn}
-                onCheckedChange={(v) => updateSettings({ libraryAllowIsbnCheckout: v })}
-              />
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {/* Option 1: Both */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    updateSettings({
+                      libraryCheckoutBarcodeMode: 'both',
+                      libraryAllowIsbnCheckout: true,
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      updateSettings({
+                        libraryCheckoutBarcodeMode: 'both',
+                        libraryAllowIsbnCheckout: true,
+                      });
+                    }
+                  }}
+                  className={cn(
+                    'cursor-pointer rounded-xl border p-3.5 text-left transition-all relative flex flex-col justify-between',
+                    checkoutBarcodeMode === 'both'
+                      ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                      : 'border-border/60 bg-background/50 hover:bg-background/80 hover:border-border',
+                  )}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+                        <Layers className="h-3.5 w-3.5 text-primary" />
+                        <span>Both (Stickers or ISBN)</span>
+                      </div>
+                      {checkoutBarcodeMode === 'both' && (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Either printed library barcode stickers or the book&apos;s ISBN barcode work for checking out.
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="text-[9px] font-semibold mt-2.5 w-fit bg-primary/15 text-primary">
+                    Recommended
+                  </Badge>
+                </div>
+
+                {/* Option 2: Printed barcodes only */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    updateSettings({
+                      libraryCheckoutBarcodeMode: 'barcode_only',
+                      libraryAllowIsbnCheckout: false,
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      updateSettings({
+                        libraryCheckoutBarcodeMode: 'barcode_only',
+                        libraryAllowIsbnCheckout: false,
+                      });
+                    }
+                  }}
+                  className={cn(
+                    'cursor-pointer rounded-xl border p-3.5 text-left transition-all relative flex flex-col justify-between',
+                    checkoutBarcodeMode === 'barcode_only'
+                      ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                      : 'border-border/60 bg-background/50 hover:bg-background/80 hover:border-border',
+                  )}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+                        <QrCode className="h-3.5 w-3.5 text-primary" />
+                        <span>Printed Barcodes Only</span>
+                      </div>
+                      {checkoutBarcodeMode === 'barcode_only' && (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Must scan the printed library barcode sticker on the book. Scanning publisher ISBN barcodes will not check out books.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Option 3: ISBN only */}
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    updateSettings({
+                      libraryCheckoutBarcodeMode: 'isbn_only',
+                      libraryAllowIsbnCheckout: true,
+                    });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      updateSettings({
+                        libraryCheckoutBarcodeMode: 'isbn_only',
+                        libraryAllowIsbnCheckout: true,
+                      });
+                    }
+                  }}
+                  className={cn(
+                    'cursor-pointer rounded-xl border p-3.5 text-left transition-all relative flex flex-col justify-between',
+                    checkoutBarcodeMode === 'isbn_only'
+                      ? 'border-primary bg-primary/10 shadow-sm ring-1 ring-primary/40'
+                      : 'border-border/60 bg-background/50 hover:bg-background/80 hover:border-border',
+                  )}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-xs text-foreground">
+                        <BookOpen className="h-3.5 w-3.5 text-primary" />
+                        <span>ISBN Only</span>
+                      </div>
+                      {checkoutBarcodeMode === 'isbn_only' && (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      Must scan the printed ISBN barcode on the book cover. Printed barcode stickers cannot be used for checkout.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* Sync with LevelUp App — one place to decide what connects to the main app */}
+      {(!matchingSectionIds || matchingSectionIds.has('sync')) && (
       <AccordionItem value="sync" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -637,8 +993,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 2. Self-Checkout Station & Hardware Scanning */}
+      {(!matchingSectionIds || matchingSectionIds.has('hardware')) && (
       <AccordionItem value="hardware" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -894,8 +1252,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 3. Return Audio Sounds & Student Responses */}
+      {(!matchingSectionIds || matchingSectionIds.has('audio')) && (
       <AccordionItem value="audio" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -1187,8 +1547,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 4. Fines, Rewards & Point Balances */}
+      {(!matchingSectionIds || matchingSectionIds.has('fines')) && (
       <AccordionItem value="fines" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -1347,8 +1709,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           ) : null}
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 4. Cataloging & Label Printing Defaults */}
+      {(!matchingSectionIds || matchingSectionIds.has('cataloging')) && (
       <AccordionItem value="cataloging" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -1557,8 +1921,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 5. Book Shelving Hierarchy, Physical Locations & Genre Classification */}
+      {(!matchingSectionIds || matchingSectionIds.has('genre')) && (
       <AccordionItem value="genre" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -1589,7 +1955,62 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </Button>
         </div>
 
-        <AccordionContent className="px-4 space-y-5 pt-1">
+        <AccordionContent className="px-4 space-y-5 pt-2">
+          {/* Room Organization & Lineup Style */}
+          <div className="rounded-xl border bg-muted/40 p-3.5 space-y-2.5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="lib-org-scheme" className="text-xs font-bold flex items-center gap-1.5">
+                  <span>How books are lined up in the room</span>
+                </Label>
+                <Select
+                  value={orgScheme}
+                  onValueChange={(v) => updateSettings({ libraryOrganizationScheme: v as LibraryOrganizationScheme })}
+                >
+                  <SelectTrigger id="lib-org-scheme" className="rounded-xl text-xs font-semibold bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => (
+                      <SelectItem key={key} value={key} className="text-xs">
+                        {LIBRARY_ORGANIZATION_SCHEMES[key].label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  {LIBRARY_ORGANIZATION_SCHEMES[orgScheme]?.description || 'Choose how books are ordered on the shelves.'}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold flex items-center gap-1.5">
+                  <span>Book number &amp; sticker style</span>
+                </Label>
+                <Select
+                  value={barcodeScheme}
+                  onValueChange={(v) => updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })}
+                >
+                  <SelectTrigger id="lib-barcode-scheme" className="rounded-xl text-xs font-semibold bg-background">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="genre_code" className="text-xs">Genre code (FIC-823-0001)</SelectItem>
+                    <SelectItem value="dewey_numeric" className="text-xs">Dewey number (823-0001)</SelectItem>
+                    <SelectItem value="prefix_genre" className="text-xs">School prefix (LIB-FIC-0001)</SelectItem>
+                    <SelectItem value="classic_random" className="text-xs">Random school number</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Example:{' '}
+                  <span className="font-mono font-semibold text-foreground">
+                    {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 1 })}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div>
               <p className="text-xs font-bold">Step 1 · Name the furniture</p>
@@ -1886,67 +2307,12 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
               })}
             </motion.div>
           </div>
-
-          <div className="space-y-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-7 px-0 text-xs text-muted-foreground"
-              onClick={() => setShowShelfExtras((open) => !open)}
-            >
-              {showShelfExtras ? 'Hide extra lineup options' : 'More · lineup and number style'}
-            </Button>
-            {showShelfExtras ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="lib-org-scheme" className="text-xs font-bold">How books are lined up</Label>
-                  <Select
-                    value={orgScheme}
-                    onValueChange={(v) => updateSettings({ libraryOrganizationScheme: v as LibraryOrganizationScheme })}
-                  >
-                    <SelectTrigger id="lib-org-scheme" className="rounded-xl text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {(Object.keys(LIBRARY_ORGANIZATION_SCHEMES) as LibraryOrganizationScheme[]).map((key) => (
-                        <SelectItem key={key} value={key} className="text-xs">
-                          {LIBRARY_ORGANIZATION_SCHEMES[key].label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="lib-barcode-scheme" className="text-xs font-bold">How new book numbers look</Label>
-                  <Select
-                    value={barcodeScheme}
-                    onValueChange={(v) => updateSettings({ libraryBarcodeNumberScheme: v as BarcodeNumberScheme })}
-                  >
-                    <SelectTrigger id="lib-barcode-scheme" className="rounded-xl text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="genre_code" className="text-xs">Genre code (FIC-823-0001)</SelectItem>
-                      <SelectItem value="dewey_numeric" className="text-xs">Dewey number (823-0001)</SelectItem>
-                      <SelectItem value="prefix_genre" className="text-xs">School prefix (LIB-FIC-0001)</SelectItem>
-                      <SelectItem value="classic_random" className="text-xs">Random school number</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[11px] text-muted-foreground">
-                    Example:{' '}
-                    <span className="font-mono font-semibold text-foreground">
-                      {generateGenreBarcode({ category: 'Fiction', scheme: barcodeScheme, sequenceNumber: 1 })}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            ) : null}
-          </div>
         </AccordionContent>
       </AccordionItem>
+      )}
 
       {/* 6. Alerts & Behavior Feedback */}
+      {(!matchingSectionIds || matchingSectionIds.has('alerts')) && (
       <AccordionItem value="alerts" className="rounded-xl border border-dashed shadow-[0_18px_50px_-12px_rgba(15,23,42,0.28),0_6px_18px_-6px_rgba(15,23,42,0.14)] overflow-hidden" style={boxStyle}>
         <div className="flex items-center gap-2 pr-3">
           <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline">
@@ -2011,7 +2377,10 @@ export function LibraryPolicySettingsCard({ categories }: { categories?: Categor
           </div>
         </AccordionContent>
       </AccordionItem>
+      )}
     </Accordion>
+    )}
+  </div>
   );
 }
 

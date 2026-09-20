@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { GoogleFontLoader } from './GoogleFontLoader';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useArcadeSound } from '@/hooks/useArcadeSound';
 import { useAppContext } from '@/components/AppProvider';
 import { useAuthFetch } from '@/lib/authFetch';
 import type { Student } from '@/lib/types';
@@ -67,12 +68,13 @@ function StudentPortalThemePreview({
     const fontScale = effective.fontScale ?? DEFAULT_STUDENT_THEME_FONT_SCALE;
     const previewStyle: CSSProperties = {
         ...vars,
+        ['--theme-font-scale' as string]: String(fontScale),
         background:
             effective.backgroundStyle ||
             `radial-gradient(circle at top left, ${vars['--theme-primary']}22 0, transparent 45%), radial-gradient(circle at bottom right, ${vars['--theme-accent']}22 0, ${themeBg} 55%)`,
         color: 'var(--theme-page-text)',
         fontFamily: effective.fontFamily || undefined,
-        fontSize: fontScale !== 1 ? `${fontScale}em` : undefined,
+        fontSize: `calc(1rem * var(--theme-font-scale, 1))`,
     };
 
     return (
@@ -297,6 +299,20 @@ export function ThemeGeneratorModal({
         canUndo,
         canRedo,
     } = useThemeEditorHistory(initialTheme);
+    const playSound = useArcadeSound();
+
+    const handleUndo = useCallback(() => {
+        if (!canUndo) return;
+        playSound('click');
+        undoTheme();
+    }, [canUndo, playSound, undoTheme]);
+
+    const handleRedo = useCallback(() => {
+        if (!canRedo) return;
+        playSound('click');
+        redoTheme();
+    }, [canRedo, playSound, redoTheme]);
+
     const [model, setModel] = useState<string>(DEFAULT_ARCADE_AI_MODEL);
     const [animatePreview, setAnimatePreview] = useState(false);
     const { toast } = useToast();
@@ -418,7 +434,16 @@ export function ThemeGeneratorModal({
             }
 
             const generatedTheme: StudentTheme = await response.json();
-            commitTheme(generatedTheme);
+            commitThemeFrom((prev) => ({
+                ...prev,
+                ...generatedTheme,
+                idCardLayout: generatedTheme.idCardLayout ?? prev?.idCardLayout,
+                idCardUseQr: generatedTheme.idCardUseQr ?? prev?.idCardUseQr,
+                fontScale: generatedTheme.fontScale ?? prev?.fontScale,
+                fontTracking: generatedTheme.fontTracking ?? prev?.fontTracking,
+                fontStyle: generatedTheme.fontStyle ?? prev?.fontStyle,
+                fontWeight: generatedTheme.fontWeight ?? prev?.fontWeight,
+            }));
             toast({
                 title: 'Theme Generated',
                 description: 'Preview the new theme below before saving.',
@@ -497,17 +522,17 @@ export function ThemeGeneratorModal({
             if (!mod) return;
             if (e.key === 'z' && !e.shiftKey) {
                 e.preventDefault();
-                undoTheme();
+                handleUndo();
                 return;
             }
             if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) {
                 e.preventDefault();
-                redoTheme();
+                handleRedo();
             }
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
-    }, [isOpen, undoTheme, redoTheme]);
+    }, [isOpen, handleUndo, handleRedo]);
 
     const handleRemoveTheme = async () => {
         if (!canRemoveThemeFromWizard) return;
@@ -590,7 +615,37 @@ export function ThemeGeneratorModal({
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent wide className="max-h-[min(92dvh,92vh)]" data-settings-open="true">
                 <DialogHeader>
-                    <DialogTitle>Generate theme for {displayTitleName}</DialogTitle>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <DialogTitle className="text-xl font-black tracking-tight">Generate theme for {displayTitleName}</DialogTitle>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={!canUndo}
+                                onClick={handleUndo}
+                                title="Undo theme change (Ctrl+Z)"
+                                aria-label="Undo theme change"
+                                className="h-8 gap-1.5 px-3 text-xs font-bold"
+                            >
+                                <Undo2 className="h-3.5 w-3.5" />
+                                <span>Undo</span>
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={!canRedo}
+                                onClick={handleRedo}
+                                title="Redo theme change (Ctrl+Y)"
+                                aria-label="Redo theme change"
+                                className="h-8 gap-1.5 px-3 text-xs font-bold"
+                            >
+                                <Redo2 className="h-3.5 w-3.5" />
+                                <span>Redo</span>
+                            </Button>
+                        </div>
+                    </div>
                     <DialogDescription>
                         Describe a theme and let AI generate a custom look. Themes can include gradients/patterns, and even “animated vibe” ideas (moving colors or playful motion like an emoji popping in/out).
                         After generating, you can also fine‑tune specific parts like the emoji and colors.
@@ -601,7 +656,7 @@ export function ThemeGeneratorModal({
                 <div className="grid gap-6 py-4">
                     <div className="grid gap-6 lg:grid-cols-[360px_1fr] lg:items-start">
                         <div className="space-y-6">
-                            {showIdCardScanOverride && previewTheme ? (
+                            {previewTheme ? (
                                 <div className="space-y-1.5 rounded-xl border border-border/70 bg-muted/20 p-3">
                                     <Label htmlFor="theme-id-card-layout" className="flex items-center gap-2">
                                         <LayoutTemplate className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
@@ -636,7 +691,9 @@ export function ThemeGeneratorModal({
                                         </SelectContent>
                                     </Select>
                                     <p className="text-[10px] leading-snug text-muted-foreground">
-                                        Overrides the school-wide branding layout for this student's printed ID card only.
+                                        {previewStudent
+                                            ? "Overrides the school-wide branding layout for this student's printed ID card only."
+                                            : "Choose the card layout to display with this theme."}
                                     </p>
                                 </div>
                             ) : null}
@@ -731,8 +788,38 @@ export function ThemeGeneratorModal({
 
                             {previewTheme ? (
                                 <div className="space-y-3">
-                                    <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground">
-                                        Fine‑tune
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-muted-foreground">
+                                            Fine‑tune
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={!canUndo}
+                                                onClick={handleUndo}
+                                                title="Undo change (Ctrl+Z)"
+                                                aria-label="Undo theme change"
+                                                className="h-7 px-2.5 text-xs font-semibold gap-1"
+                                            >
+                                                <Undo2 className="h-3 w-3" />
+                                                <span>Undo</span>
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={!canRedo}
+                                                onClick={handleRedo}
+                                                title="Redo change (Ctrl+Y)"
+                                                aria-label="Redo theme change"
+                                                className="h-7 px-2.5 text-xs font-semibold gap-1"
+                                            >
+                                                <Redo2 className="h-3 w-3" />
+                                                <span>Redo</span>
+                                            </Button>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div className="space-y-1">
@@ -1240,22 +1327,26 @@ export function ThemeGeneratorModal({
                                             variant="outline"
                                             size="sm"
                                             disabled={!canUndo}
-                                            onClick={undoTheme}
-                                            title="Undo (Ctrl+Z)"
+                                            onClick={handleUndo}
+                                            title="Undo change (Ctrl+Z)"
                                             aria-label="Undo theme change"
+                                            className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
                                         >
-                                            <Undo2 className="h-4 w-4" />
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                            <span>Undo</span>
                                         </Button>
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
                                             disabled={!canRedo}
-                                            onClick={redoTheme}
-                                            title="Redo (Ctrl+Y)"
+                                            onClick={handleRedo}
+                                            title="Redo change (Ctrl+Y)"
                                             aria-label="Redo theme change"
+                                            className="h-8 gap-1.5 px-2.5 text-xs font-semibold"
                                         >
-                                            <Redo2 className="h-4 w-4" />
+                                            <Redo2 className="h-3.5 w-3.5" />
+                                            <span>Redo</span>
                                         </Button>
                                     </div>
                                 </div>
@@ -1361,7 +1452,35 @@ export function ThemeGeneratorModal({
                                         </Button>
                                     ) : null}
                                 </div>
-                                <div className="flex w-full justify-end gap-2 sm:w-auto">
+                                <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+                                    <div className="flex items-center gap-1.5 mr-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={!canUndo}
+                                            onClick={handleUndo}
+                                            title="Undo change (Ctrl+Z)"
+                                            aria-label="Undo theme change"
+                                            className="h-9 gap-1.5 px-3 text-xs font-semibold"
+                                        >
+                                            <Undo2 className="h-3.5 w-3.5" />
+                                            <span>Undo</span>
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={!canRedo}
+                                            onClick={handleRedo}
+                                            title="Redo change (Ctrl+Y)"
+                                            aria-label="Redo theme change"
+                                            className="h-9 gap-1.5 px-3 text-xs font-semibold"
+                                        >
+                                            <Redo2 className="h-3.5 w-3.5" />
+                                            <span>Redo</span>
+                                        </Button>
+                                    </div>
                                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                                         Cancel
                                     </Button>

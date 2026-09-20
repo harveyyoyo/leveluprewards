@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Download, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import type { OfficeGradeEntry } from '@/lib/office/types';
 import { collectOfficeTermOptions, downloadCsv, formatGradeDisplay } from '@/lib/office/officeUtils';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 
 type OfficeGradeReportViewProps = {
   schoolId: string;
@@ -29,8 +30,6 @@ export function OfficeGradeReportView({
   embedded = false,
 }: OfficeGradeReportViewProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const { term: activeTerm, configuredTerms } = useOfficeTerm(schoolId);
   const { settings } = useOfficeSettings(schoolId);
   const [term, setTerm] = useState(activeTerm);
@@ -54,17 +53,9 @@ export function OfficeGradeReportView({
     }
   }, [searchParams]);
 
-  const clearStudentFilter = useCallback(() => {
-    setStudentFilter('all');
-    // Also drop ?student= from the URL - otherwise a reload (or anything else that
-    // re-reads searchParams) silently re-applies the filter this just cleared.
-    if (searchParams.get('student')) {
-      const next = new URLSearchParams(searchParams.toString());
-      next.delete('student');
-      const q = next.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
-    }
-  }, [pathname, router, searchParams]);
+  useOfficeUrlSync({
+    student: studentFilter !== 'all' ? studentFilter : undefined,
+  });
 
   const terms = useMemo(
     () =>
@@ -190,7 +181,7 @@ export function OfficeGradeReportView({
                 variant="outline"
                 size="sm"
                 className="h-9 rounded-lg gap-1.5"
-                onClick={clearStudentFilter}
+                onClick={() => setStudentFilter('all')}
               >
                 {studentLabelById.get(studentFilter) ?? 'Selected student'}
                 <span aria-hidden>×</span>

@@ -74,36 +74,36 @@ export function portalHubGridClass(count: number, compactDisplay: boolean, portr
 }
 
 export function portalHubGapClass(count: number, compactDisplay: boolean): string {
-  if (compactDisplay) return 'gap-3';
-  if (count <= 3) return 'gap-3 md:gap-5';
-  if (count === 4) return 'gap-2.5 md:gap-4';
-  return 'gap-2 md:gap-3';
+  if (compactDisplay) return 'gap-2 sm:gap-2.5';
+  if (count <= 3) return 'gap-3 md:gap-4 lg:gap-5';
+  if (count === 4) return 'gap-2 sm:gap-3 md:gap-3.5';
+  return 'gap-1.5 sm:gap-2 md:gap-2.5';
 }
 
 export function portalHubOuterGapClass(count: number, compactDisplay: boolean): string {
-  if (compactDisplay) return 'justify-start gap-3 sm:gap-4 md:justify-center md:gap-8';
-  if (count <= 3) return 'justify-start gap-10 sm:gap-12 md:gap-16';
-  if (count === 4) return 'justify-start gap-6 sm:gap-8 md:gap-10';
-  return 'justify-start gap-4 sm:gap-6 md:gap-8';
+  if (compactDisplay) return 'justify-center gap-2 sm:gap-3 md:gap-4';
+  if (count <= 3) return 'justify-center gap-4 sm:gap-6 md:gap-8';
+  if (count === 4) return 'justify-center gap-2 sm:gap-3 md:gap-3.5 lg:gap-4';
+  return 'justify-center gap-1.5 sm:gap-2 md:gap-2.5';
 }
 
 export function portalHubTitleClass(count: number, compactDisplay: boolean, portrait: boolean): string {
   if (portrait) return portalChooseTitleClass(portrait, compactDisplay);
   if (compactDisplay) {
-    if (count >= 5) return 'px-2 py-1 text-4xl sm:text-5xl md:text-6xl';
-    if (count === 4) return 'px-2 py-1 text-4xl sm:text-5xl md:text-6xl';
-    return 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl';
+    if (count >= 5) return 'px-2 py-0.5 text-2xl sm:text-3xl md:text-4xl';
+    if (count === 4) return 'px-2 py-0.5 text-2xl sm:text-3xl md:text-4xl';
+    return 'px-2 py-1 text-3xl sm:text-4xl md:text-5xl';
   }
-  if (count >= 5) return 'px-2 py-2 text-4xl sm:text-5xl md:text-6xl';
-  if (count === 4) return 'px-2 py-2 text-5xl sm:text-6xl md:text-7xl';
-  return 'px-2 py-3 text-6xl sm:text-7xl md:text-8xl';
+  if (count >= 5) return 'px-2 py-1 text-3xl sm:text-4xl md:text-5xl';
+  if (count === 4) return 'px-2 py-1 text-3xl sm:text-4xl md:text-5xl lg:text-5xl';
+  return 'px-2 py-1.5 text-4xl sm:text-5xl md:text-6xl lg:text-7xl';
 }
 
 export function portalHubCardPaddingClass(count: number, compactDisplay: boolean): string {
-  if (compactDisplay) return 'px-4 py-4 sm:px-5 sm:py-5';
-  if (count <= 3) return 'min-h-[12rem] px-3 py-3.5 sm:min-h-[clamp(200px,24vw,300px)] sm:px-5 sm:py-5 md:min-h-[clamp(220px,24vw,300px)]';
-  if (count === 4) return 'min-h-[10rem] px-3 py-3 sm:min-h-[clamp(160px,18vw,220px)] sm:px-4 sm:py-4 md:min-h-[clamp(170px,16vw,230px)]';
-  return 'min-h-[9rem] px-2.5 py-2.5 sm:min-h-[clamp(130px,14vw,190px)] sm:px-3.5 sm:py-3.5 md:min-h-[clamp(140px,13vw,200px)]';
+  if (compactDisplay) return 'px-3 py-2 sm:px-4 sm:py-2.5';
+  if (count <= 3) return 'min-h-[7rem] px-3 py-3 sm:min-h-[clamp(130px,16vh,190px)] sm:px-5 sm:py-4 md:min-h-[clamp(140px,18vh,210px)]';
+  if (count === 4) return 'min-h-[5.5rem] px-3 py-2.5 sm:min-h-[clamp(100px,13vh,140px)] sm:px-4 sm:py-3 md:min-h-[clamp(110px,14vh,150px)]';
+  return 'min-h-[5rem] px-2.5 py-2 sm:min-h-[clamp(85px,11vh,120px)] sm:px-3 sm:py-2.5 md:min-h-[clamp(95px,12vh,130px)]';
 }
 
 export function portalHubGridMaxWidthClass(count: number, compactDisplay: boolean, portrait: boolean): string {

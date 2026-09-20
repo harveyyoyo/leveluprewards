@@ -77,7 +77,13 @@ import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeSho
 import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
-import { studentCanAffordPrizeByCategory, studentPrizeCategoryBalance, prizeHasCategoryRestriction } from '@/lib/prizes/prizeCategoryEligibility';
+import {
+    studentCanAffordPrizeByCategory,
+    studentSpendablePointsForPrize,
+    prizeRequiredCategoryLabel,
+    shownBalanceAfterPrizePurchase,
+    describePrizeShortage,
+} from '@/lib/prizes/prizeCategoryEligibility';
 import { resolvePrizeShelfScanForStudent } from '@/lib/prizes/prizeShelfScan';
 import { buildPrizeRedeemTicketPayload } from '@/lib/prizes/buildPrizeRedeemTicket';
 import { isPrizeVoucherScanCode } from '@/lib/prizes/prizeVoucherScanCode';
@@ -242,10 +248,9 @@ function ConfirmRedemptionDialog({
 
     const studentPoints = student && typeof student.points === 'number' ? student.points : 0;
     const spendablePoints =
-        student && prize && prizeHasCategoryRestriction(prize)
-            ? studentPrizeCategoryBalance(student, prize, categories)
-            : studentPoints;
+        student && prize ? studentSpendablePointsForPrize(student, prize, categories) : studentPoints;
     const prizePoints = prize && typeof prize.points === 'number' ? prize.points : 0;
+    const categoryLabel = prize ? prizeRequiredCategoryLabel(prize, categories) : '';
     const aiPrize = isAiFunPrize(prize);
     const pickerSurprise = prize?.aiFunReward === 'picker';
     /** Free (0 pt) prizes are not limited by balance; cap + optional stock count. */
@@ -274,7 +279,13 @@ function ConfirmRedemptionDialog({
     const effectiveQty = aiPrize ? 1 : quantity;
     const totalCost = prizePoints * effectiveQty;
     const canAfford = studentCanAffordPrizeByCategory(student, prize, categories, effectiveQty);
-    const remainingPoints = studentPoints - totalCost;
+    const remainingPoints = shownBalanceAfterPrizePurchase(
+        studentPoints,
+        spendablePoints,
+        totalCost,
+        canAfford,
+    );
+    const shortageMessage = describePrizeShortage(student, prize, categories, effectiveQty);
 
     const handleQuantityChange = (amount: number) => {
         const newQuantity = Math.min(maxQuantity, Math.max(1, quantity + amount));
@@ -348,13 +359,19 @@ function ConfirmRedemptionDialog({
                                 </Button>
                             </div>
                             {quantity >= maxQuantity && (
-                                <p className={cn("text-xs text-center", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
-                                    {maxByStock !== Number.POSITIVE_INFINITY && quantity >= maxByStock
-                                        ? `Only ${maxByStock} in stock.`
-                                        : prizePoints > 0
-                                            ? `Max you can afford: ${maxByPoints}.`
-                                            : `Limit: ${FREE_PRIZE_MAX_QTY} per redemption.`}
-                                </p>
+                                maxByStock !== Number.POSITIVE_INFINITY && quantity >= maxByStock ? (
+                                    <p className={cn("text-xs text-center", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
+                                        {`Only ${maxByStock} in stock.`}
+                                    </p>
+                                ) : prizePoints > 0 && maxByPoints >= 1 ? (
+                                    <p className={cn("text-xs text-center", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
+                                        {`Max you can afford: ${maxByPoints}.`}
+                                    </p>
+                                ) : prizePoints <= 0 ? (
+                                    <p className={cn("text-xs text-center", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
+                                        {`Limit: ${FREE_PRIZE_MAX_QTY} per redemption.`}
+                                    </p>
+                                ) : null
                             )}
                         </>
                     ) : pickerSurprise ? (
@@ -395,10 +412,22 @@ function ConfirmRedemptionDialog({
                                 <span className="font-bold" style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>{prize.stockCount}</span>
                             </div>
                         )}
+                        {categoryLabel ? (
+                            <div className={cn("flex justify-between text-xs font-semibold", !hasTheme && "text-muted-foreground")} style={mutedTextStyle}>
+                                <span>You can use for this ({categoryLabel})</span>
+                                <span className="font-bold" style={hasTheme ? { color: 'var(--theme-text)' } : undefined}>{spendablePoints.toLocaleString()} pts</span>
+                            </div>
+                        ) : null}
                         <div className="flex justify-between"><span>Total Cost:</span> <span className="font-bold">{totalCost.toLocaleString()} pts</span></div>
-                        <div className={`flex justify-between ${!canAfford ? 'text-destructive' : ''}`}><span>Your balance after:</span> <span className="font-bold">{remainingPoints.toLocaleString()} pts</span></div>
+                        {canAfford ? (
+                            <div className="flex justify-between"><span>Your balance after:</span> <span className="font-bold">{remainingPoints.toLocaleString()} pts</span></div>
+                        ) : (
+                            <div className="flex justify-between text-destructive"><span>Still short:</span> <span className="font-bold">{Math.abs(Math.min(0, remainingPoints)).toLocaleString()} pts</span></div>
+                        )}
                     </div>
-                    {!canAfford && <p className="text-sm text-destructive font-bold text-center" role="alert">You don&apos;t have enough points for this quantity.</p>}
+                    {!canAfford && shortageMessage ? (
+                        <p className="text-sm text-destructive font-bold text-center" role="alert">{shortageMessage}</p>
+                    ) : null}
                 </div>
                 <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
                     <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isRedeeming} className="w-full sm:w-auto">
@@ -1166,6 +1195,7 @@ export function PrizeDashboard({
             ['--theme-primary-foreground' as string]: primaryForeground,
             ['--theme-card' as string]: themeCard,
             ['--theme-accent' as string]: activeTheme.accent || 'hsl(var(--accent))',
+            ['--theme-font-scale' as string]: String(fontScale),
             ...(activeTheme.backgroundStyle
                 ? { background: activeTheme.backgroundStyle }
                 : {
@@ -1377,7 +1407,18 @@ export function PrizeDashboard({
                                             <StudentPrizeShopCard
                                                 key={prize.id}
                                                 prize={prize}
-                                                studentPoints={student.points ?? 0}
+                                                studentPoints={studentSpendablePointsForPrize(
+                                                    student,
+                                                    prize,
+                                                    categories || [],
+                                                )}
+                                                affordHint={
+                                                    describePrizeShortage(
+                                                        student,
+                                                        prize,
+                                                        categories || [],
+                                                    ) ?? undefined
+                                                }
                                                 themed={!!activeTheme}
                                                 primaryForeground={primaryForeground}
                                                 wholeCardClick

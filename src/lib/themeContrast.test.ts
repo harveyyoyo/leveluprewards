@@ -195,6 +195,17 @@ describe('getStudentThemeCssVars', () => {
     expect(out.vars['--theme-text']).toMatch(/^#/);
     expect(contrastRatio(out.vars['--theme-text'], out.vars['--theme-card'])).toBeGreaterThanOrEqual(4.5);
     expect(contrastRatio(out.vars['--theme-page-text'], out.vars['--theme-bg'])).toBeGreaterThanOrEqual(4.5);
+    expect(out.vars['--theme-font-scale']).toBe('1.1');
+
+    const scaled = getStudentThemeCssVars({
+      background: '#001f3f',
+      text: '#ffffff',
+      primary: '#2563eb',
+      cardBackground: '#003366',
+      accent: '#60a5fa',
+      fontScale: 1.25,
+    })!;
+    expect(scaled.vars['--theme-font-scale']).toBe('1.25');
   });
 });
 
