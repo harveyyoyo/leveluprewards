@@ -561,6 +561,8 @@ export interface AttendanceSettings {
   attendanceTimeZone?: string;
   /** Optional owner for per-teacher attendance configuration. */
   teacherId?: string;
+  /** Minutes after bell to mute kiosk sign-in audio (-1 for always play sound). */
+  attendanceQuietAfterMinutes?: number;
 }
 
 /** One sign-in event stored for admin reporting. */

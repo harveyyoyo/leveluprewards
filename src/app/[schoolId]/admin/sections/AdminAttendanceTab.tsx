@@ -8,6 +8,7 @@ import {
 } from '@/components/staff/StaffPortalSection';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { AttendanceSetupWizard } from '@/components/attendance/AttendanceSetupWizard';
+import { AttendanceHeadcountPrintDialog } from '@/components/attendance/AttendanceHeadcountPrintDialog';
 import { RecessAttendanceSection } from '@/components/recess/RecessAttendanceSection';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { AttendanceTodayBoard } from '@/components/attendance/AttendanceTodayBoard';
@@ -43,6 +44,9 @@ export function AdminAttendanceTab(props: any) {
     handleSaveAttendanceConfig,
     getAttendanceConfig,
     setAttendanceConfig,
+    schoolName,
+    settings,
+    updateSettings,
   } = props;
 
   const [mainSection, setMainSection] = React.useState<'today' | 'periods' | 'rules' | 'recess' | 'history'>('today');
@@ -53,6 +57,11 @@ export function AdminAttendanceTab(props: any) {
       trailing={
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <TabWalkthroughHeaderAction />
+          <AttendanceHeadcountPrintDialog
+            schoolName={schoolName || 'School'}
+            students={students || []}
+            classes={classes || []}
+          />
           <AttendanceSetupWizard variant="admin" />
         </div>
       }
@@ -125,6 +134,8 @@ export function AdminAttendanceTab(props: any) {
                 handleSaveAttendanceConfig={handleSaveAttendanceConfig}
                 getAttendanceConfig={getAttendanceConfig}
                 setAttendanceConfig={setAttendanceConfig}
+                settings={settings}
+                updateSettings={updateSettings}
               />
             </div>
           )}

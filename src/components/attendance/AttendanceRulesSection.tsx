@@ -9,6 +9,8 @@ import {
   Users,
   Zap,
   Sliders,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +52,8 @@ export interface AttendanceRulesSectionProps {
   handleSaveAttendanceConfig: () => void;
   getAttendanceConfig?: () => Promise<AttendanceSettings | null>;
   setAttendanceConfig?: (s: AttendanceSettings) => Promise<void>;
+  settings?: any;
+  updateSettings?: (patch: any) => Promise<any> | void;
 }
 
 export function AttendanceRulesSection(props: AttendanceRulesSectionProps) {
@@ -79,6 +83,8 @@ export function AttendanceRulesSection(props: AttendanceRulesSectionProps) {
     handleSaveAttendanceConfig,
     getAttendanceConfig,
     setAttendanceConfig,
+    settings,
+    updateSettings,
   } = props;
 
   const [activeTab, setActiveTab] = useState<'defaults' | 'teacher'>('defaults');
@@ -255,8 +261,46 @@ export function AttendanceRulesSection(props: AttendanceRulesSectionProps) {
                 </p>
               </div>
 
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Quiet Mode (Late Arrivals)</Label>
+                <Select
+                  value={String(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1)}
+                  onValueChange={(v) => {
+                    const val = parseInt(v, 10);
+                    updateSchoolConfig({
+                      attendanceQuietAfterMinutes: val,
+                    });
+                    if (updateSettings) {
+                      void updateSettings({ attendanceQuietAfterMinutes: val });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Always play sound" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="-1">Always play sound</SelectItem>
+                    <SelectItem value="0">Mute at bell (0 min)</SelectItem>
+                    <SelectItem value="1">Mute 1 min after bell</SelectItem>
+                    <SelectItem value="2">Mute 2 min after bell</SelectItem>
+                    <SelectItem value="5">Mute 5 min after bell</SelectItem>
+                  </SelectContent>
+                </Select>
+                {(attendanceConfig?.attendanceQuietAfterMinutes ?? settings?.attendanceQuietAfterMinutes ?? -1) >= 0 ? (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium pt-0.5">
+                    <VolumeX className="w-3.5 h-3.5 shrink-0" />
+                    Chime mutes after bell to protect teaching.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium pt-0.5">
+                    <Volume2 className="w-3.5 h-3.5 shrink-0" />
+                    Chime rings aloud on every sign-in.
+                  </p>
+                )}
+              </div>
+
               {getAttendanceConfig && setAttendanceConfig && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 sm:col-span-2">
                   <AttendanceTimeZoneField
                     schoolId={schoolId}
                     getAttendanceConfig={getAttendanceConfig}

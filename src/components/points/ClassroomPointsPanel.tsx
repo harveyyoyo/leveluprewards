@@ -1930,6 +1930,9 @@ function ClassroomPointsPanelInner({
     setDragIndex(null);
   };
 
+  const bathroomRequirePresent = settings.bathroomRequirePresent;
+  const bathroomMaxStudentsOut = settings.bathroomMaxStudentsOut ?? 2;
+
   const handleBathroomToggle = useCallback(
     async (studentId: string) => {
       if (!bathroomEnabled) return;
@@ -1943,6 +1946,17 @@ function ClassroomPointsPanelInner({
             variant: 'destructive',
             title: 'Not signed in',
             description: 'This student still has a red dot. Mark them present or late first.',
+          });
+          return;
+        }
+      }
+
+      if (!isOut) {
+        if (bathroomMaxStudentsOut > 0 && activeBathroomPasses.size >= bathroomMaxStudentsOut) {
+          toast({
+            variant: 'destructive',
+            title: 'Room pass limit reached',
+            description: `Maximum ${bathroomMaxStudentsOut} student${bathroomMaxStudentsOut === 1 ? '' : 's'} can be out at once. Please wait for someone to return.`,
           });
           return;
         }
@@ -1983,13 +1997,14 @@ function ClassroomPointsPanelInner({
       activeBathroomPasses,
       bathroomEnabled,
       bathroomMaxMinutes,
+      bathroomMaxStudentsOut,
+      bathroomRequirePresent,
       effectiveClassId,
       viewingAllStudents,
       firestore,
       operatorId,
       operatorName,
       schoolId,
-      settings.bathroomRequirePresent,
       studentById,
       displayAttendance,
       toast,
@@ -1998,10 +2013,6 @@ function ClassroomPointsPanelInner({
 
   gridHandlersRef.current = {
     onDeskTap: handleDeskTap,
-    onDeskMenu:
-      prefs.instantTap && interactionMode !== 'attendance' && !isStudentAudience
-        ? handleDeskMenu
-        : undefined,
     onDeduct: undefined,
     onBehaviorNote: (studentId, shortcutKey, fromHeldKey) => {
       const s = studentById.get(studentId);
@@ -2387,6 +2398,8 @@ function ClassroomPointsPanelInner({
       scope: storageScope,
     });
   };
+
+  const pendingStudentStatus = pendingStudent && attendanceEnabled ? (todayAttendance.get(pendingStudent.id) ?? 'absent') : undefined;
 
   const awardMenu =
     pendingAward && pendingStudent ? (

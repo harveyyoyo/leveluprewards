@@ -78,7 +78,7 @@ export function AchievementModal({ isOpen, setIsOpen, achievement, categories, o
                 setWheelSegments(['', '', '', '', '', '']);
             }
         }
-    }, [achievement, isOpen]);
+    }, [achievement, isOpen, isEditing]);
 
     const handleSave = async () => {
         const thresholdValue = parseInt(threshold);
