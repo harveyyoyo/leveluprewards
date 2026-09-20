@@ -4,6 +4,10 @@ import { CinematicPromo } from "./CinematicPromo";
 import { LongFeaturePromo, LONG_PROMO_DURATION } from "./LongFeaturePromo";
 import { RetroGamingVerticalPromo } from "./RetroGamingVerticalPromo";
 import {
+  PillarsShortPromo,
+  PILLARS_PROMO_TOTAL_FRAMES,
+} from "./PillarsShortPromo";
+import {
   WidescreenPromo,
   WidescreenPromoSchema,
   defaultWidescreenPromoProps,
@@ -85,6 +89,32 @@ export const RemotionRoot: React.FC = () => {
         fps={30}
         width={1080}
         height={1920}
+      />
+
+      {/* Product Pillars Short Promo (Rewards, Attendance, Library, Classroom) */}
+      <Composition
+        id="PillarsShortPromo"
+        component={PillarsShortPromo}
+        durationInFrames={PILLARS_PROMO_TOTAL_FRAMES}
+        fps={30}
+        width={1920}
+        height={1080}
+      />
+      <Composition
+        id="PillarsShortPromoVertical"
+        component={PillarsShortPromo}
+        durationInFrames={PILLARS_PROMO_TOTAL_FRAMES}
+        fps={30}
+        width={1080}
+        height={1920}
+      />
+      <Composition
+        id="PillarsShortPromoSquare"
+        component={PillarsShortPromo}
+        durationInFrames={PILLARS_PROMO_TOTAL_FRAMES}
+        fps={30}
+        width={1080}
+        height={1080}
       />
 
       {/* Long Feature Showcase Promo */}

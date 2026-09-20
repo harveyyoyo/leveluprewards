@@ -53,7 +53,9 @@
     "render:feature:arcade": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts FeaturePromoArcade ../assets/levelup-promo-feature-arcade.mp4 --concurrency=1\"",
     "render:feature:themes": "npm run render:feature:aurora && npm run render:feature:chalkboard && npm run render:feature:arcade",
     "render:feature:all": "npm run render:feature:epic && npm run render:feature:warm && npm run render:feature:pro && npm run render:feature:hype && npm run render:feature:story && npm run render:feature:themes",
-    "render:new": "npm run render:teaser && npm run render:square && npm run render:extended"
+    "render:new": "npm run render:teaser && npm run render:square && npm run render:extended",
+    "render:pillars": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts PillarsShortPromo ../assets/levelup-promo-pillars.mp4 --concurrency=1\"",
+    "render:pillars:vertical": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-below-normal.ps1 -Command \"npx remotion render src/index.ts PillarsShortPromoVertical ../assets/levelup-promo-pillars-vertical.mp4 --concurrency=1\""
   },
   "sideEffects": [
     "*.css"
