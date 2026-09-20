@@ -436,7 +436,7 @@ export function LibraryWorkspace({
     reportPermissionErrors: false,
   });
 
-  const { locations } = useLibraryLocations(schoolId);
+  const { locations, isLoading: locationsLoading } = useLibraryLocations(schoolId);
   const { active: activeLibrary, setActive: setActiveLibrary, needsChoice: needsLibraryChoice } = useActiveLibraryLocation(
     schoolId,
     locations,
@@ -829,10 +829,16 @@ export function LibraryWorkspace({
     });
   };
 
-  if (!isInitialized || !schoolId) {
+  if (!isInitialized || !schoolId || locationsLoading) {
     return (
-      <div className="grid min-h-screen place-items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Loading library" />
+      <div
+        className={cn(
+          'library-readable relative grid min-h-screen place-items-center transition-colors duration-500',
+          currentTheme.classes.wrapper,
+        )}
+      >
+        <LibraryBackdrop theme={currentTheme} />
+        <Loader2 className="relative z-10 h-8 w-8 animate-spin text-primary" aria-label="Loading library" />
       </div>
     );
   }

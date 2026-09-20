@@ -141,7 +141,7 @@ export function LibraryPortalHub({
       <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 min-h-0 flex-col items-center overflow-y-auto px-4 sm:px-6 py-12 lg:py-24 text-center">
         <div className="m-auto w-full">
         <h1 className="text-[1.75rem] leading-[1.15] lg:text-5xl font-black lg:leading-[1.05]">
-          <span className="block sm:inline">{copy.welcomeLead}</span>
+          <span className="block sm:inline">{copy.welcomeLead}{' '}</span>
           {libraryName || copy.welcomeHighlight ? (
             <span className="relative mt-1 sm:mt-0 sm:ml-3 inline-block">
               {libraryName || copy.welcomeHighlight}

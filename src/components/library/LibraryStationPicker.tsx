@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, BookOpen, Library } from 'lucide-react';
+import { ArrowLeft, BookOpen, Library, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -36,6 +37,13 @@ export function LibraryStationPicker({
 }) {
   const { settings } = useSettings();
   const activeTheme = theme ?? resolveLibraryTheme(settings.libraryTheme);
+  const [pickingId, setPickingId] = useState<string | null>(null);
+
+  const handlePick = (id: string) => {
+    if (pickingId) return;
+    setPickingId(id);
+    onPick(id);
+  };
 
   return (
     <div
@@ -68,7 +76,6 @@ export function LibraryStationPicker({
           {locations.map((location) => (
             <motion.div
               key={location.id}
-              layoutId={`station-${location.id}`}
               variants={{
                 hidden: { opacity: 0, y: 12 },
                 show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 280, damping: 22 } },
@@ -77,18 +84,29 @@ export function LibraryStationPicker({
               <Button
                 type="button"
                 variant="outline"
-                className="h-auto w-full justify-start gap-4 rounded-2xl border-border/80 bg-card/90 p-5 text-left shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:shadow-md"
-                onClick={() => onPick(location.id)}
+                disabled={Boolean(pickingId)}
+                className={cn(
+                  'h-auto w-full justify-start gap-4 rounded-2xl border-border/80 bg-card/90 p-5 text-left shadow-sm backdrop-blur-sm transition-all hover:border-primary/50 hover:shadow-md',
+                  pickingId === location.id && 'ring-2 ring-primary border-primary bg-primary/5 shadow-md',
+                  pickingId && pickingId !== location.id && 'opacity-60',
+                )}
+                onClick={() => handlePick(location.id)}
               >
-                <span className="rounded-2xl border bg-muted/60 p-3 text-primary">
-                  {location.kind === 'classroom' ? <BookOpen className="h-6 w-6" /> : <Library className="h-6 w-6" />}
+                <span className="rounded-2xl border bg-muted/60 p-3 text-primary shrink-0">
+                  {pickingId === location.id ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : location.kind === 'classroom' ? (
+                    <BookOpen className="h-6 w-6" />
+                  ) : (
+                    <Library className="h-6 w-6" />
+                  )}
                 </span>
-                <span>
+                <span className="flex-1">
                   <span className="block text-lg font-bold text-foreground">
                     {libraryLocationLabel(location, classNames?.[location.id])}
                   </span>
                   <span className="block text-sm font-medium text-muted-foreground">
-                    {libraryLocationKindLabel(location.kind)}
+                    {pickingId === location.id ? 'Opening…' : libraryLocationKindLabel(location.kind)}
                   </span>
                 </span>
               </Button>
