@@ -13,6 +13,11 @@ import {
   formatOfficeAiHelpContextBlock,
   type OfficeAiHelpContext,
 } from '@/lib/office/officeHelpContext';
+import {
+  formatLibraryAiHelpContextBlock,
+  parseLibraryAiHelpContext,
+  type LibraryAiHelpContext,
+} from '@/lib/library/libraryHelpContext';
 
 const MAX_MESSAGES = 10;
 const MAX_CONTENT_LEN = 2000;
@@ -40,6 +45,7 @@ function buildSystemPrompt(context: {
   loginState?: string;
   product?: string;
   officeContext?: OfficeAiHelpContext;
+  libraryContext?: LibraryAiHelpContext;
   userMessage: string;
 }): string {
   const pathLine = context.pathname?.trim()
@@ -48,12 +54,16 @@ function buildSystemPrompt(context: {
   const roleLine = context.loginState?.trim()
     ? `Their sign-in role in the app is: ${context.loginState.trim()}.`
     : 'Their sign-in role was not provided.';
+  const onLibrary =
+    context.product === 'library' || (context.pathname || '').includes('/library');
   const productLine =
     context.product === 'office'
       ? 'They are using the **School Office** pillar (roster, billing, grades/marks, family profiles — not the rewards Admin portal).'
+      : onLibrary
+        ? 'They are using the **Library** pillar (catalog, librarian desk, loans, labels, kiosk — not the rewards Admin portal).'
       : context.product?.trim()
         ? `Product context: ${context.product.trim()}.`
-        : 'Product context was not provided (assume rewards Admin/Teacher unless the path includes /office/).';
+        : 'Product context was not provided (assume rewards Admin/Teacher unless the path includes /office/ or /library/).';
 
   const base = loadProductKnowledgeMarkdown();
   const { block: codeBlock, files: codeFiles } = buildStaffHelpCodeContextBlock({
@@ -79,6 +89,13 @@ function buildSystemPrompt(context: {
     '',
     '**Response style**',
     '- Be brief: short paragraphs or bullets; avoid long preamble.',
+    ...(onLibrary
+      ? [
+          '- Prefer Library screens: Home, Librarian, Catalog, Kiosk, and Settings (gear).',
+          '- Point staff to the Library Guide handbook for click-through tours.',
+          '- Never invent student names or borrower details.',
+        ]
+      : []),
   ];
 
   if (codeBlock) {
@@ -87,6 +104,10 @@ function buildSystemPrompt(context: {
 
   if (context.product === 'office' && context.officeContext) {
     sections.push('', formatOfficeAiHelpContextBlock(context.officeContext));
+  }
+
+  if (onLibrary && context.libraryContext) {
+    sections.push('', formatLibraryAiHelpContextBlock(context.libraryContext));
   }
 
   return sections.join('\n');
@@ -198,6 +219,10 @@ export async function POST(req: NextRequest) {
       product === 'office' && body.officeContext && typeof body.officeContext === 'object'
         ? (body.officeContext as OfficeAiHelpContext)
         : undefined;
+    const libraryContext =
+      (product === 'library' || (typeof pathname === 'string' && pathname.includes('/library')))
+        ? parseLibraryAiHelpContext(body.libraryContext)
+        : undefined;
 
     if (loginState && !canAccessStaffAiHelp(loginState)) {
       return NextResponse.json(
@@ -221,6 +246,7 @@ export async function POST(req: NextRequest) {
       loginState,
       product,
       officeContext,
+      libraryContext,
       userMessage: lastUserMessage,
     });
 

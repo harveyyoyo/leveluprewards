@@ -4,14 +4,15 @@ description: Keep the in-app staff AI assistant aligned with the product
 
 # Update staff help AI
 
-The floating **Help and support** assistant uses a server prompt built from:
+The floating **Help and support** assistant (and the Library **Ask** helper) uses a server prompt built from:
 
 1. **`docs/staff-ai-product-knowledge.md`** — static product map, workflows, and rules (edit this for most changes).
-2. **`src/app/api/staff-help-chat/route.ts`** — auth, models, message limits, and per-request context (pathname, role, school id). Touch this only for plumbing or dynamic context.
+2. **`src/app/api/staff-help-chat/route.ts`** — auth, models, message limits, and per-request context (pathname, role, school id, Office/Library live snapshots). Touch this only for plumbing or dynamic context.
+3. **Library live snapshot** — `src/lib/library/libraryHelpContext.ts` (counts and overdue titles only; no student names).
 
 ## When to update
 
-- New or renamed **Admin / Teacher / Portal** areas staff ask about.
+- New or renamed **Admin / Teacher / Portal / Library** areas staff ask about.
 - New integrations (notifications, printing, imports, etc.).
 - Behavior that is easy to get wrong if the model guesses (enable flags, where toggles live).
 

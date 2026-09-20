@@ -41,6 +41,14 @@ describe('staffHelpCodeContext', () => {
     expect(paths[0]).toBe('src/app/[schoolId]/teacher/page.tsx');
   });
 
+  it('attaches library helper sources on library pages', () => {
+    const paths = selectStaffHelpSourcePaths({
+      pathname: '/demo-school/library',
+      userMessage: 'how do I add a book',
+    });
+    expect(paths.some((p) => p.includes('LibraryWorkspace') || p.includes('LibraryAiHelpButton'))).toBe(true);
+  });
+
   it('builds a non-empty context block when sources exist', () => {
     const { block, files } = buildStaffHelpCodeContextBlock({
       pathname: '/demo-school/admin',

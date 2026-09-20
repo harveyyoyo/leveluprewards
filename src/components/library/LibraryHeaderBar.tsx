@@ -6,6 +6,7 @@ import { Home, Library, BookOpen, Monitor, Settings, Compass } from 'lucide-reac
 import { cn } from '@/lib/utils';
 import LevelUpLogoMark from '@/components/logos/Logo';
 import type { LibraryTheme } from '@/lib/library/libraryThemes';
+import { LibraryAiHelpButton } from '@/components/library/LibraryAiHelpButton';
 
 export type LibraryHeaderTab = 'hub' | 'desk' | 'catalog' | 'kiosk' | 'reports' | 'settings';
 export type LibraryHeaderNavTab = 'desk' | 'catalog' | 'kiosk' | 'reports';
@@ -124,6 +125,8 @@ export function LibraryHeaderBar({
               <span className="hidden sm:inline">Guide</span>
             </button>
           )}
+
+          <LibraryAiHelpButton theme={theme} hideFloating={activeTab === 'kiosk'} />
 
           <button
             type="button"

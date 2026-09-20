@@ -37,7 +37,7 @@ const STATUS_META: Record<
     icon: 'check',
   },
   ai_guess: {
-    label: 'AI best guess — confirm below',
+    label: 'AI best guess — confirm in the popup',
     className: 'border-violet-500/40 bg-violet-500/10 text-violet-700 dark:text-violet-400',
     icon: 'sparkles',
   },

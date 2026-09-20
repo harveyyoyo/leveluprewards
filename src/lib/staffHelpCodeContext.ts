@@ -186,8 +186,11 @@ const FEATURE_SOURCE_INDEX: { keys: string[]; paths: string[] }[] = [
     paths: ['src/components/providers/SettingsProvider.tsx'],
   },
   {
-    keys: ['help', 'ai help', 'support'],
-    paths: ['src/components/StaffAiHelpButton.tsx'],
+    keys: ['help', 'ai help', 'support', 'library helper', 'ask'],
+    paths: [
+      'src/components/support/StaffAiHelpButton.tsx',
+      'src/components/library/LibraryAiHelpButton.tsx',
+    ],
   },
   {
     keys: ['insights', 'analytics', 'stats'],
@@ -216,6 +219,7 @@ const PATHNAME_ROUTE_FILES: { pattern: RegExp; paths: string[] }[] = [
   { pattern: /\/office(?:\/|$)/i, paths: ['src/app/[schoolId]/office/page.tsx'] },
   { pattern: /\/classroom(?:-realm)?/i, paths: ['src/components/classroom/ClassroomTabLauncher.tsx', 'src/components/classroom/ClassroomLiveMonitor.tsx'] },
   { pattern: /\/classroom(?:\/|$)/i, paths: ['src/components/classroom/ClassroomLiveMonitor.tsx'] },
+  { pattern: /\/library(?:\/|$)/i, paths: ['src/components/library/LibraryWorkspace.tsx', 'src/components/library/LibraryAiHelpButton.tsx'] },
   { pattern: /\/librarian/i, paths: ['src/app/[schoolId]/librarian/page.tsx'] },
   { pattern: /\/secretary/i, paths: ['src/app/[schoolId]/secretary/page.tsx'] },
   { pattern: /\/prize-clerk/i, paths: ['src/app/[schoolId]/prize-clerk/page.tsx'] },

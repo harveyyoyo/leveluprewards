@@ -65,7 +65,8 @@ import { callLibrary, forceReturnLibraryItem, findLibraryItemByUpc } from '@/lib
 import { allocateNextGenreBarcode, duplicateCheckoutItemIds, isCatalogCheckoutCodeTaken } from '@/lib/library/libraryIntakeHelpers';
 import { normalizeLibraryUpc } from '@/lib/library/libraryScanCode';
 import { isRetailIsbnBarcode } from '@/lib/library/libraryCatalogLookup';
-import { formatDueDate, computeDaysOverdue } from '@/lib/library/libraryPolicy';
+import { formatDueDate, computeDaysOverdue, getLibraryPolicyFromSettings, isLibraryStandaloneSelfCheckoutEnabled } from '@/lib/library/libraryPolicy';
+import { buildLibraryAiHelpContext, resolveLibraryAiHelpScreen } from '@/lib/library/libraryHelpContext';
 import { filterLibraryCatalog, downloadLibraryCsv, libraryCopyNeedsProcessing, type LibraryLoan } from '@/lib/library/libraryWorkspace';
 import {
   groupBooksByOrganizationScheme,
@@ -99,6 +100,7 @@ import { LibraryPortalHub } from './LibraryPortalHub';
 import { LibraryStationPicker } from './LibraryStationPicker';
 import { LibraryReportsCard } from './LibraryReportsCard';
 import { LibraryHeaderBar } from './LibraryHeaderBar';
+import { LibraryAiHelpButton, LibraryAiHelpProvider } from './LibraryAiHelpButton';
 import { LibraryInteractiveGuide } from './LibraryInteractiveGuide';
 import { SiteFooter } from '@/components/layout/SiteFooter';
 import { resolveLibraryTheme, type LibraryThemeId } from '@/lib/library/libraryThemes';
@@ -638,6 +640,23 @@ export function LibraryWorkspace({
     () => activeLoans.filter((i) => i.dueAt && computeDaysOverdue(i.dueAt) > 0),
     [activeLoans],
   );
+  const libraryPolicy = useMemo(
+    () => getLibraryPolicyFromSettings(settings, categories),
+    [settings, categories],
+  );
+  const libraryAiHelpContext = useMemo(
+    () =>
+      buildLibraryAiHelpContext({
+        libraryName: activeLibrary.name,
+        libraryCount: locations.length,
+        copies: scopedItems,
+        overdueCopies: overdueLoans,
+        policy: libraryPolicy,
+        currentScreen: resolveLibraryAiHelpScreen(hubHome, tab),
+        selfCheckoutEnabled: isLibraryStandaloneSelfCheckoutEnabled(settings),
+      }),
+    [activeLibrary.name, hubHome, libraryPolicy, locations.length, overdueLoans, scopedItems, settings, tab],
+  );
 
   // Filtered loans list for Loans tab
   const filteredLoans = useMemo(() => {
@@ -905,14 +924,17 @@ export function LibraryWorkspace({
   // device hasn't chosen before) — ask instead of silently opening the school's main library.
   if (needsLibraryChoice) {
     return (
-      <LibraryStationPicker
-        locations={locations}
-        onPick={setActiveLibrary}
-        title="Which library do you want to open?"
-        subtitle="Choose one to continue — you can switch later from Library settings."
-        backHref={backToPortalHref}
-        backLabel="Back to portal"
-      />
+      <LibraryAiHelpProvider context={{ ...libraryAiHelpContext, currentScreen: 'picker' }}>
+        <LibraryStationPicker
+          locations={locations}
+          onPick={setActiveLibrary}
+          title="Which library do you want to open?"
+          subtitle="Choose one to continue — you can switch later from Library settings."
+          backHref={backToPortalHref}
+          backLabel="Back to portal"
+        />
+        <LibraryAiHelpButton theme={currentTheme} hideHeader />
+      </LibraryAiHelpProvider>
     );
   }
 
@@ -933,7 +955,7 @@ export function LibraryWorkspace({
 
   if (hubHome) {
     return (
-      <>
+      <LibraryAiHelpProvider context={libraryAiHelpContext}>
         <LibraryPortalHub
           schoolName={schoolName}
           libraryName={locations.length > 1 ? activeLibrary.name : undefined}
@@ -962,11 +984,12 @@ export function LibraryWorkspace({
             setGuideOpen(false);
           }}
         />
-      </>
+      </LibraryAiHelpProvider>
     );
   }
 
   return (
+    <LibraryAiHelpProvider context={libraryAiHelpContext}>
     <div
       className={cn(
         'library-readable relative min-h-dvh flex flex-col transition-colors duration-300 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in fade-in duration-300',
@@ -2657,5 +2680,6 @@ export function LibraryWorkspace({
         }}
       />
     </div>
+    </LibraryAiHelpProvider>
   );
 }
