@@ -12,6 +12,7 @@ function student(partial: Partial<Student> & Pick<Student, 'id'>): Student {
     firstName: 'Ada',
     lastName: 'Lovelace',
     points: 0,
+    nfcId: '',
     ...partial,
   };
 }
