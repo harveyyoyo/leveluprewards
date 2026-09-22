@@ -313,7 +313,7 @@ export function Coupon({
         !isColored && !style.borderColor && 'border-slate-400 text-slate-800',
         (!style.backgroundColor || style.backgroundColor === '#ffffff') && 'bg-white',
       )}
-      bodyClassName={compact ? 'px-[0.4em] py-[0.14em]' : 'px-[0.45em] py-[0.22em]'}
+      bodyClassName={compact ? 'px-[0.4em] pt-[0.12em] pb-[0.2em]' : 'px-[0.45em] py-[0.22em]'}
     >
       {isNew && (
         <div className="absolute top-[0.25em] right-[0.25em] z-[1] bg-primary/80 text-white text-[0.5625em] px-[0.375em] py-[0.125em] rounded-full font-bold leading-none">
