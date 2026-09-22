@@ -46,6 +46,15 @@
   max-height: 1.1em;
 }
 
+.coupon-barcode.coupon-barcode--with-dates.print-barcode .print-barcode-svg {
+  max-height: 0.92em;
+}
+
+.coupon-scalable {
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
 .library-barcode-sticker-code.print-barcode .print-barcode-svg {
   max-height: 0.22in;
 }
