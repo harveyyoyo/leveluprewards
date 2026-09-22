@@ -1263,6 +1263,12 @@ function AdminDashboardInner() {
     return classes?.find((c) => c.id === classId)?.name || 'Unassigned';
   };
 
+  // Empty string (not 'Unassigned') when a student has no class, so ID cards
+  // and their previews hide the classroom line instead of printing a placeholder.
+  const getIdCardClassLabel = (classId: string) => {
+    return classes?.find((c) => c.id === classId)?.name || '';
+  };
+
   const getStudentName = (studentId?: string) => {
     if (!studentId) return 'N/A';
     const student = students?.find(s => s.id === studentId);
@@ -2674,7 +2680,7 @@ function AdminDashboardInner() {
               `${themeStudent.firstName}${themeStudent.lastName ? ` ${themeStudent.lastName}` : ''}`.trim() || themeStudent.firstName
             }
             previewStudent={themeStudent}
-            classLabel={getClassName(themeStudent.classId || '')}
+            classLabel={getIdCardClassLabel(themeStudent.classId || '')}
             currentTheme={themeStudent.theme}
             onSave={async (theme) => {
               try {
@@ -2720,7 +2726,7 @@ function AdminDashboardInner() {
                     student={idPreviewStudent}
                     schoolName={schoolData?.name?.trim() || 'School'}
                     schoolLogoUrl={schoolData?.logoUrl ?? null}
-                    className={getClassName(idPreviewStudent.classId || '')}
+                    className={getIdCardClassLabel(idPreviewStudent.classId || '')}
                     isColorEnabled={settings.enableColorPrinting}
                     appLogoUrl={appConfigGlobal?.appLogoUrl ?? null}
                     appName={appConfigGlobal?.appName?.trim() || undefined}

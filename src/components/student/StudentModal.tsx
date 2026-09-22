@@ -951,8 +951,8 @@ export function StudentModal({
           }}
           classLabel={
             classId === 'none'
-              ? 'Unassigned'
-              : (allClasses.find((c) => c.id === classId)?.name ?? 'Unassigned')
+              ? ''
+              : (allClasses.find((c) => c.id === classId)?.name ?? '')
           }
           currentTheme={theme}
           onSave={(newTheme) => {

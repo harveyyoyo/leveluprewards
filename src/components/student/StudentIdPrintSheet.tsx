@@ -77,8 +77,10 @@ export function StudentIdPrintSheet({
     return new Map(classes.map(c => [c.id, c.name]));
   }, [classes]);
 
+  // Empty string (not 'Unassigned') when a student has no class, so the
+  // ID card hides the classroom line instead of printing a placeholder.
   const getClassName = (classId: string) => {
-    return classMap.get(classId) || 'Unassigned';
+    return classMap.get(classId) || '';
   };
 
   // Always show the exact school name stored in Firestore.
