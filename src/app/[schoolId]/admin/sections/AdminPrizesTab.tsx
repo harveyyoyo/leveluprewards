@@ -916,7 +916,7 @@ export function AdminPrizesTab({
                 <Link href={`/${schoolId}/prize`}><ShoppingBag className="mr-2 h-4 w-4" /> Open Rewards Shop</Link>
                 </Button>
                 <Button asChild variant="outline" className="justify-start">
-                  <Link href={`/${schoolId}/student`}><GraduationCap className="mr-2 h-4 w-4" /> Open Student Page</Link>
+                  <Link href={`/${schoolId}/student`} target="_blank" rel="noopener noreferrer"><GraduationCap className="mr-2 h-4 w-4" /> Open Student Page</Link>
                 </Button>
               </div>
             </div>
