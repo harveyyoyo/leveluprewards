@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, increment, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,13 @@ import { Copy, Download, Mail, Pencil, Plus, Trash2, Wand2, Phone, MessageSquare
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { OfficeFamilyStatementButton } from '@/components/office/OfficeFamilyStatement';
+import { OfficeBillingSummaryChart } from '@/components/office/OfficeBillingSummaryChart';
+import { buildOfficeReceiptHtml, openOfficePrintDocument } from '@/lib/office/officePrintUtils';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import { formatCents } from '@/lib/office/officeNav';
 import {
+  addMonthsToIsoDate,
   billingStatusForAccount,
   buildInvoiceReminderMailto,
   defaultDueDateIso,
@@ -29,6 +33,7 @@ import {
   isInvoiceDueSoon,
   isInvoiceOverdue,
   parseUsdToCents,
+  splitCentsIntoInstallments,
 } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
@@ -39,7 +44,6 @@ import type { OfficeBillingAccount, OfficeFamily, OfficeInvoice, OfficePaymentMe
 import type { OfficeStudent } from '@/lib/office/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  accountBalanceFromInvoices,
   autoAllocatePayment,
   invoiceBalanceDueCents,
   invoicePaidCents,
@@ -94,6 +98,8 @@ export function OfficeBillingView({
   const [contactPhone, setContactPhone] = useState('');
   const [accountNotes, setAccountNotes] = useState('');
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
+  const [discountLabel, setDiscountLabel] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('');
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [payAccount, setPayAccount] = useState<OfficeBillingAccount | null>(null);
@@ -109,6 +115,13 @@ export function OfficeBillingView({
   const [bulkAmount, setBulkAmount] = useState('');
   const [bulkDue, setBulkDue] = useState(defaultDueDateIso());
   const [bulkSaveAsDraft, setBulkSaveAsDraft] = useState(false);
+
+  const [planOpen, setPlanOpen] = useState(false);
+  const [planAccount, setPlanAccount] = useState<OfficeBillingAccount | null>(null);
+  const [planLabel, setPlanLabel] = useState('Tuition');
+  const [planTotal, setPlanTotal] = useState('');
+  const [planInstallments, setPlanInstallments] = useState('4');
+  const [planStartDate, setPlanStartDate] = useState(defaultDueDateIso());
 
   const homeroomNames = useMemo(() => {
     const set = new Set<string>();
@@ -182,6 +195,8 @@ export function OfficeBillingView({
     setContactPhone('');
     setAccountNotes('');
     setAccountStudentSearch('');
+    setDiscountLabel('');
+    setDiscountPercent('');
     setEditAccountId(null);
   };
 
@@ -195,6 +210,11 @@ export function OfficeBillingView({
   useOfficeUrlSync({
     filter: invoiceFilter === 'all' ? undefined : invoiceFilter,
   });
+
+  const invoiceAccountDiscount = useMemo(() => {
+    const account = accounts.find((a) => a.id === invoiceAccountId);
+    return account?.discountPercent ? account : null;
+  }, [accounts, invoiceAccountId]);
 
   const resetInvoiceForm = () => {
     setEditInvoiceId(null);
@@ -245,6 +265,8 @@ export function OfficeBillingView({
     setContactEmail(account.contactEmail ?? '');
     setContactPhone(account.contactPhone ?? '');
     setAccountNotes(account.notes ?? '');
+    setDiscountLabel(account.discountLabel ?? '');
+    setDiscountPercent(account.discountPercent != null ? String(account.discountPercent) : '');
     setAccountOpen(true);
   };
 
@@ -389,6 +411,14 @@ export function OfficeBillingView({
       toast({ variant: 'destructive', title: 'Family name is required.' });
       return;
     }
+    const parsedDiscountPercent = discountPercent.trim() ? Number.parseFloat(discountPercent.trim()) : null;
+    if (
+      discountPercent.trim() &&
+      (!Number.isFinite(parsedDiscountPercent) || (parsedDiscountPercent as number) < 0 || (parsedDiscountPercent as number) > 100)
+    ) {
+      toast({ variant: 'destructive', title: 'Discount must be a percent between 0 and 100.' });
+      return;
+    }
     setBusy(true);
     try {
       const payload = {
@@ -397,6 +427,8 @@ export function OfficeBillingView({
         contactEmail: contactEmail.trim() || null,
         contactPhone: contactPhone.trim() || null,
         notes: accountNotes.trim() || null,
+        discountLabel: discountLabel.trim() || null,
+        discountPercent: parsedDiscountPercent,
         updatedAt: Date.now(),
       };
       if (editAccountId) {
@@ -460,11 +492,13 @@ export function OfficeBillingView({
             status === 'sent' || status === 'partial'
               ? Math.max(0, cents - invoicePaidCents(existing))
               : 0;
-          let balanceCents = account.balanceCents || 0;
+          // A signed change to the balance, applied atomically below — not an absolute value
+          // computed from a possibly-stale `account.balanceCents` read.
+          let deltaCents = 0;
           if (existing.status === 'sent' || existing.status === 'partial') {
-            balanceCents = Math.max(0, balanceCents - oldRemaining + newRemaining);
+            deltaCents = newRemaining - oldRemaining;
           } else if (status === 'sent' && existing.status === 'draft') {
-            balanceCents += cents;
+            deltaCents = cents;
           }
           const resolvedStatus = resolveInvoiceStatusAfterPayment(updatedInvoice, invoicePaidCents(updatedInvoice));
           if (resolvedStatus !== status) {
@@ -473,7 +507,7 @@ export function OfficeBillingView({
             });
           }
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', existing.accountId), {
-            balanceCents,
+            balanceCents: increment(deltaCents),
             status: billingStatusForAccount(existing.accountId, nextInvoices, account.status),
             updatedAt: Date.now(),
           });
@@ -505,7 +539,7 @@ export function OfficeBillingView({
             },
           ];
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', invoiceAccountId), {
-            balanceCents: (account.balanceCents || 0) + cents,
+            balanceCents: increment(cents),
             status: billingStatusForAccount(invoiceAccountId, nextInvoices, account.status),
             updatedAt: Date.now(),
           });
@@ -538,7 +572,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'void' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: Math.max(0, (account.balanceCents || 0) - balanceReduction),
+          balanceCents: increment(-balanceReduction),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -561,7 +595,7 @@ export function OfficeBillingView({
           i.id === inv.id ? { ...i, status: 'sent' as const } : i,
         );
         await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', inv.accountId), {
-          balanceCents: (account.balanceCents || 0) + (inv.amountCents || 0),
+          balanceCents: increment(inv.amountCents || 0),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
         });
@@ -617,6 +651,65 @@ export function OfficeBillingView({
     }
   };
 
+  const openPaymentPlan = (account: OfficeBillingAccount) => {
+    setPlanAccount(account);
+    setPlanLabel('Tuition');
+    setPlanTotal('');
+    setPlanInstallments('4');
+    setPlanStartDate(defaultDueDateIso());
+    setPlanOpen(true);
+  };
+
+  const handleCreatePaymentPlan = async () => {
+    if (!firestore || !planAccount) return;
+    const totalCents = parseUsdToCents(planTotal);
+    const count = Number.parseInt(planInstallments, 10);
+    if (totalCents == null || totalCents <= 0) {
+      toast({ variant: 'destructive', title: 'Enter a valid total amount.' });
+      return;
+    }
+    if (!Number.isFinite(count) || count < 1 || count > 24) {
+      toast({ variant: 'destructive', title: 'Number of payments must be between 1 and 24.' });
+      return;
+    }
+    if (!planLabel.trim()) {
+      toast({ variant: 'destructive', title: 'Give the plan a label, like "Tuition".' });
+      return;
+    }
+    setBusy(true);
+    try {
+      const amounts = splitCentsIntoInstallments(totalCents, count);
+      const batch = writeBatch(firestore);
+      const now = Date.now();
+      for (let i = 0; i < count; i += 1) {
+        const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
+        batch.set(ref, {
+          accountId: planAccount.id,
+          label: `${planLabel.trim()} (${i + 1} of ${count})`,
+          amountCents: amounts[i],
+          dueDate: addMonthsToIsoDate(planStartDate, i),
+          status: 'sent',
+          createdAt: now + i,
+        });
+      }
+      batch.update(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', planAccount.id), {
+        balanceCents: increment(totalCents),
+        updatedAt: now,
+      });
+      await batch.commit();
+      toast({
+        title: 'Payment plan created',
+        description: `${count} invoices of ${formatCents(amounts[0])} for ${planAccount.familyName}, one per month starting ${planStartDate}.`,
+      });
+      setPlanOpen(false);
+      setPlanAccount(null);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not create payment plan', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const togglePayInvoice = (invoiceId: string, checked: boolean) => {
     setPaySelectedIds((prev) => {
       const next = checked ? [...prev, invoiceId] : prev.filter((id) => id !== invoiceId);
@@ -666,6 +759,10 @@ export function OfficeBillingView({
         createdAt: now,
       });
 
+      // `paidCents`/`balanceCents` are applied as atomic deltas (`increment`) rather than
+      // absolute values computed from the locally cached `invoices`/`payAccount` props — two
+      // payments landing on the same account/invoice close together would otherwise have the
+      // second overwrite the first's effect on these running totals.
       let nextInvoices = [...invoices];
       for (const alloc of allocations) {
         const inv = invoices.find((i) => i.id === alloc.invoiceId);
@@ -673,7 +770,7 @@ export function OfficeBillingView({
         const newPaid = invoicePaidCents(inv) + alloc.amountCents;
         const status = resolveInvoiceStatusAfterPayment(inv, newPaid);
         batch.update(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
-          paidCents: newPaid,
+          paidCents: increment(alloc.amountCents),
           status,
           paidAt: status === 'paid' ? now : inv.paidAt ?? null,
           paymentMethod: status === 'paid' ? paymentMethod : inv.paymentMethod ?? null,
@@ -693,19 +790,44 @@ export function OfficeBillingView({
       }
 
       batch.update(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', payAccount.id), {
-        balanceCents: accountBalanceFromInvoices(payAccount.id, nextInvoices),
+        balanceCents: increment(-paymentCents),
         status: billingStatusForAccount(payAccount.id, nextInvoices, payAccount.status),
         updatedAt: now,
       });
 
       await batch.commit();
+
+      const printReceipt = () => {
+        const receiptHtml = buildOfficeReceiptHtml({
+          account: payAccount,
+          amountCents: paymentCents,
+          method: paymentMethod,
+          note: paymentNote,
+          allocations: allocations.map((a) => ({
+            label: invoices.find((i) => i.id === a.invoiceId)?.label ?? 'Payment',
+            amountCents: a.amountCents,
+          })),
+          schoolLabel: officeSettings?.statementSchoolName?.trim() || 'School Office',
+          paidAt: now,
+        });
+        if (!openOfficePrintDocument(receiptHtml)) {
+          toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Allow pop-ups to print.' });
+        }
+      };
+
       toast({
         title: 'Payment recorded',
         description:
           allocations.length > 1
             ? `${formatCents(paymentCents)} applied across ${allocations.length} invoices.`
             : `${formatCents(paymentCents)} applied.`,
+        action: (
+          <ToastAction altText="Print receipt" onClick={printReceipt}>
+            Print receipt
+          </ToastAction>
+        ),
       });
+
       setPayOpen(false);
       setPayAccount(null);
       setPaymentAmount('');
@@ -782,6 +904,8 @@ export function OfficeBillingView({
         </div>
       </div>
 
+      {!isLoading ? <OfficeBillingSummaryChart invoices={invoices} /> : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <OfficeSearchInput value={search} onChange={setSearch} placeholder="Search family or student…" />
         <div className="flex flex-wrap gap-2">
@@ -855,7 +979,14 @@ export function OfficeBillingView({
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-bold">{account.familyName}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-bold">{account.familyName}</h3>
+                      {account.discountPercent ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                          {account.discountLabel || 'Discount'} · {account.discountPercent}%
+                        </span>
+                      ) : null}
+                    </div>
                     <p className="text-sm text-muted-foreground">{linked || 'No students linked'}</p>
                     <p
                       className={cn(
@@ -894,6 +1025,15 @@ export function OfficeBillingView({
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
                       Invoice
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs"
+                      onClick={() => openPaymentPlan(account)}
+                    >
+                      Payment plan
                     </Button>
                     <Button
                       type="button"
@@ -1099,6 +1239,32 @@ export function OfficeBillingView({
               <Label>Notes (optional)</Label>
               <Input value={accountNotes} onChange={(e) => setAccountNotes(e.target.value)} className="rounded-xl" />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Discount / scholarship (optional)</Label>
+                <Input
+                  value={discountLabel}
+                  onChange={(e) => setDiscountLabel(e.target.value)}
+                  placeholder="e.g. Sibling discount"
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Percent off</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(e.target.value)}
+                  placeholder="e.g. 20"
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-2">
+              Shown as a reminder when you create an invoice for this family — it never changes an invoice amount by itself.
+            </p>
             <div className="space-y-2">
               <Label>Link students</Label>
               <OfficeSearchInput
@@ -1338,6 +1504,27 @@ export function OfficeBillingView({
                 <Input type="date" value={invoiceDue} onChange={(e) => setInvoiceDue(e.target.value)} className="rounded-xl" />
               </div>
             </div>
+            {invoiceAccountDiscount ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+                <span>
+                  {invoiceAccountDiscount.discountLabel || 'Discount'} on file: {invoiceAccountDiscount.discountPercent}% off
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-lg bg-white text-xs dark:bg-transparent"
+                  onClick={() => {
+                    const cents = parseUsdToCents(invoiceAmount);
+                    if (cents == null) return;
+                    const discounted = Math.round(cents * (1 - (invoiceAccountDiscount.discountPercent ?? 0) / 100));
+                    setInvoiceAmount((discounted / 100).toFixed(2));
+                  }}
+                >
+                  Apply discount
+                </Button>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInvoiceOpen(false)}>
@@ -1345,6 +1532,85 @@ export function OfficeBillingView({
             </Button>
             <Button onClick={() => void handleSaveInvoice()} disabled={busy}>
               {editInvoiceId ? 'Save changes' : 'Create invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={planOpen}
+        onOpenChange={(open) => {
+          setPlanOpen(open);
+          if (!open) setPlanAccount(null);
+        }}
+      >
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Set up a payment plan</DialogTitle>
+          </DialogHeader>
+          {planAccount ? (
+            <p className="text-sm text-muted-foreground">
+              Splits a total into equal monthly invoices for {planAccount.familyName}. No online charging — these are
+              regular invoices families still pay by check, cash, or transfer.
+            </p>
+          ) : null}
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Label</Label>
+              <Input value={planLabel} onChange={(e) => setPlanLabel(e.target.value)} className="rounded-xl" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Total amount (USD)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={planTotal}
+                  onChange={(e) => setPlanTotal(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Number of payments</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={planInstallments}
+                  onChange={(e) => setPlanInstallments(e.target.value)}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>First due date</Label>
+              <Input
+                type="date"
+                value={planStartDate}
+                onChange={(e) => setPlanStartDate(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            {planTotal && planInstallments ? (
+              <p className="text-xs text-muted-foreground">
+                {planInstallments} payments of about{' '}
+                {(() => {
+                  const cents = parseUsdToCents(planTotal);
+                  const count = Number.parseInt(planInstallments, 10);
+                  if (cents == null || !Number.isFinite(count) || count < 1) return '—';
+                  return formatCents(splitCentsIntoInstallments(cents, count)[0]);
+                })()}
+                , one per month.
+              </p>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlanOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => void handleCreatePaymentPlan()} disabled={busy}>
+              Create payment plan
             </Button>
           </DialogFooter>
         </DialogContent>

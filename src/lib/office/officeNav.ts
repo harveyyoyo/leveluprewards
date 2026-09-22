@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CreditCard, FileText, GraduationCap, Home, LayoutGrid, Settings, UserRound, Users } from 'lucide-react';
+import { CalendarCheck, CreditCard, FileText, GraduationCap, Home, LayoutGrid, Megaphone, Settings, UserRound, Users } from 'lucide-react';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeMarksLabels } from '@/lib/office/officeTerminology';
 import type { OfficeSettings } from '@/lib/office/types';
@@ -10,6 +10,8 @@ export type OfficeNavId =
   | 'classes'
   | 'teachers'
   | 'grades'
+  | 'attendance'
+  | 'communication'
   | 'reports'
   | 'billing'
   | 'settings';
@@ -61,6 +63,20 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       icon: GraduationCap,
     },
     {
+      id: 'attendance',
+      label: 'Attendance',
+      description: 'Daily present / absent',
+      href: (schoolId) => officePublicHref(schoolId, 'attendance'),
+      icon: CalendarCheck,
+    },
+    {
+      id: 'communication',
+      label: 'Communication',
+      description: 'Announcements & forms',
+      href: (schoolId) => officePublicHref(schoolId, 'communication'),
+      icon: Megaphone,
+    },
+    {
       id: 'reports',
       label: 'Reports',
       description: 'Filtered views and exports',
@@ -104,6 +120,8 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
   if (rest.startsWith('classes')) return 'classes';
   if (rest.startsWith('teachers')) return 'teachers';
   if (rest.startsWith('grades')) return 'grades';
+  if (rest.startsWith('attendance')) return 'attendance';
+  if (rest.startsWith('communication')) return 'communication';
   if (rest.startsWith('reports')) return 'reports';
   if (rest.startsWith('billing')) return 'billing';
   if (rest.startsWith('settings')) return 'settings';

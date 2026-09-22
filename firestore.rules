@@ -513,6 +513,26 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      match /officeAttendance/{entryId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeForms/{formId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      match /officeEvents/{eventId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      // Document metadata only (name, size, upload date). Reads are allowed so the UI can list
+      // a student's documents; writes go only through the upload/delete API routes (Admin SDK,
+      // which also manages the underlying Storage file), never directly from the client.
+      match /officeStudentDocuments/{documentId} {
+        allow read: if canAccessOffice(schoolId);
+        allow write: if false;
+      }
+
       match /officeBillingAccounts/{accountId} {
         allow read, write: if canAccessOffice(schoolId);
       }

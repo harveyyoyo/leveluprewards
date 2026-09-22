@@ -5,13 +5,15 @@ import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
-import { ArrowUpRight, ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
-import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
+import { AlertTriangle, ArrowUpRight, ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -50,6 +52,7 @@ export function OfficeClassesView({
 }: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const write = useOfficeWrite(schoolId);
   const { openStudent, openClass } = useOfficeEntityNav();
 
   const exportClassRoster = () => {
@@ -97,6 +100,8 @@ export function OfficeClassesView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
+  const [classCapacity, setClassCapacity] = useState('');
+  const [classNotes, setClassNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const promotionPlan = useMemo(() => planOfficeClassPromotion(classes), [classes]);
@@ -104,6 +109,8 @@ export function OfficeClassesView({
   const openNewClass = () => {
     setEditingClass(null);
     setClassName('');
+    setClassCapacity('');
+    setClassNotes('');
     setDialogOpen(true);
   };
 
@@ -111,33 +118,35 @@ export function OfficeClassesView({
     e.stopPropagation();
     setEditingClass(cls);
     setClassName(cls.name);
+    setClassCapacity(cls.capacity != null ? String(cls.capacity) : '');
+    setClassNotes(cls.notes ?? '');
     setDialogOpen(true);
   };
 
   const handleSaveClass = async () => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     if (!className.trim()) {
       toast({ variant: 'destructive', title: 'Class name is required.' });
       return;
     }
+    const parsedCapacity = classCapacity.trim() ? Number.parseInt(classCapacity.trim(), 10) : null;
+    if (classCapacity.trim() && (!Number.isFinite(parsedCapacity) || (parsedCapacity ?? 0) <= 0)) {
+      toast({ variant: 'destructive', title: 'Capacity must be a positive number.' });
+      return;
+    }
     setBusy(true);
     try {
-      if (editingClass) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeClasses', editingClass.id), {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class renamed' });
-      } else {
-        const ref = doc(collection(firestore, 'schools', schoolId, 'officeClasses'));
-        await setDoc(ref, {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class created' });
-      }
+      await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
+        name: className.trim(),
+        teacherId: editingClass?.teacherId ?? null,
+        capacity: parsedCapacity,
+        notes: classNotes.trim() || null,
+      });
+      toast({ title: editingClass ? 'Class updated' : 'Class created' });
       setDialogOpen(false);
       setClassName('');
+      setClassCapacity('');
+      setClassNotes('');
       setEditingClass(null);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save class', description: (e as Error).message });
@@ -192,7 +201,7 @@ export function OfficeClassesView({
 
   const handleDeleteClass = async (cls: OfficeClass, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore) return;
+    if (!write.ctx) return;
 
     const classStudents = students.filter((s) => s.classId === cls.id);
     const hasStudents = classStudents.length > 0;
@@ -206,17 +215,11 @@ export function OfficeClassesView({
 
     setBusy(true);
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'schools', schoolId, 'officeClasses', cls.id));
-
-      for (const s of classStudents) {
-        batch.update(doc(firestore, 'schools', schoolId, 'officeStudents', s.id), {
-          classId: null,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await batch.commit();
+      await write.deleteOfficeClassBatch(
+        write.ctx,
+        cls,
+        classStudents.map((s) => s.id),
+      );
       toast({ title: 'Class deleted successfully' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -348,7 +351,16 @@ export function OfficeClassesView({
                   ) : (
                     <OfficeEntityLink kind="class" id={cls.id} label={cls.name} className="text-base" />
                   )}
-                  <span className="ml-2 text-sm text-muted-foreground">{list.length} students</span>
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {list.length}
+                    {cls.capacity ? `/${cls.capacity}` : ''} students
+                  </span>
+                  {cls.capacity && list.length > cls.capacity ? (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                      <AlertTriangle className="h-3 w-3" aria-hidden />
+                      Over capacity
+                    </span>
+                  ) : null}
                 </span>
                 <div className="flex items-center gap-1">
                   {cls.id !== '__unassigned__' && (
@@ -511,6 +523,28 @@ export function OfficeClassesView({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') void handleSaveClass();
                 }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="class-capacity-input">Capacity (optional)</Label>
+              <Input
+                id="class-capacity-input"
+                type="number"
+                min={1}
+                value={classCapacity}
+                onChange={(e) => setClassCapacity(e.target.value)}
+                placeholder="e.g. 20"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="class-notes-input">Notes (optional)</Label>
+              <Textarea
+                id="class-notes-input"
+                value={classNotes}
+                onChange={(e) => setClassNotes(e.target.value)}
+                placeholder="Supply list, room number, schedule quirks…"
+                className="rounded-xl"
               />
             </div>
           </div>

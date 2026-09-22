@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Users } from 'lucide-react';
+import { AlertTriangle, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -53,17 +53,32 @@ export function OfficeClassSheet({
         <SheetHeader>
           <SheetTitle className="text-xl font-bold">{officeClass.name}</SheetTitle>
           <SheetDescription>
-            {classStudents.length} student{classStudents.length === 1 ? '' : 's'}
+            {classStudents.length}
+            {officeClass.capacity ? `/${officeClass.capacity}` : ''} student{classStudents.length === 1 ? '' : 's'}
             {teacherIds.length > 0 ? ` · ${teacherIds.length} teacher${teacherIds.length === 1 ? '' : 's'}` : ''}
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-6 space-y-6">
+          {officeClass.capacity && classStudents.length > officeClass.capacity ? (
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200">
+              <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />
+              Over capacity — {classStudents.length} students, capacity is {officeClass.capacity}.
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" size="sm" className="h-8 rounded-lg text-xs">
               <Link href={classesHref}>Open on Classes</Link>
             </Button>
           </div>
+
+          {officeClass.notes?.trim() ? (
+            <section>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Notes</h3>
+              <p className="mt-2 text-sm bg-muted/20 border rounded-xl p-3">{officeClass.notes}</p>
+            </section>
+          ) : null}
 
           {teacherIds.length > 0 ? (
             <section>

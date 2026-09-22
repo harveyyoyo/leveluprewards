@@ -7,6 +7,8 @@ export type OfficePublicSegment =
   | 'classes'
   | 'teachers'
   | 'grades'
+  | 'attendance'
+  | 'communication'
   | 'billing'
   | 'reports'
   | 'settings';

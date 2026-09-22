@@ -63,6 +63,10 @@ export type OfficeStudent = {
   /** Student-level bus override; family `busRoute` is the default. */
   busRoute?: string | null;
   notes?: string | null;
+  /** Free-form labels (e.g. "needs a ride", "scholarship") shown as chips. */
+  tags?: string[] | null;
+  /** Defaults to `active` when unset. Withdrawn/graduated students are hidden from the main roster by default. */
+  status?: 'active' | 'withdrawn' | 'graduated' | null;
   updatedAt: number;
 };
 
@@ -71,7 +75,25 @@ export type OfficeClass = {
   name: string;
   /** Homeroom / primary teacher for this class (`officeTeachers` doc id). */
   teacherId?: string | null;
+  notes?: string | null;
+  /** Soft cap used to show an over-capacity warning; no enforcement. */
+  capacity?: number | null;
   updatedAt: number;
+};
+
+export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+/** One student's attendance mark for one class on one day (`schools/{id}/officeAttendance`). */
+export type OfficeAttendanceEntry = {
+  id: string;
+  studentId: string;
+  classId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  status: OfficeAttendanceStatus;
+  notes?: string | null;
+  updatedAt: number;
+  updatedBy?: string | null;
 };
 
 export type OfficeGradeEntry = {
@@ -100,6 +122,10 @@ export type OfficeBillingAccount = {
   contactEmail?: string | null;
   contactPhone?: string | null;
   notes?: string | null;
+  /** Standing discount/scholarship applied when staff create new invoices for this family. */
+  discountLabel?: string | null;
+  /** 0–100. Informational — staff apply it manually per invoice, it never changes amounts silently. */
+  discountPercent?: number | null;
   updatedAt: number;
 };
 
@@ -162,6 +188,10 @@ export type OfficeAuditEntityType =
   | 'officeGradeEntry'
   | 'officeBillingAccount'
   | 'officeInvoice'
+  | 'officeAttendanceEntry'
+  | 'officeForm'
+  | 'officeEvent'
+  | 'officeStudentDocument'
   | 'officeSettings';
 
 /** Append-only change log (`schools/{id}/officeAuditLog`). */
@@ -175,6 +205,54 @@ export type OfficeAuditLogEntry = {
   after?: Record<string, unknown> | null;
   changedBy?: string | null;
   changedAt: number;
+};
+
+export type OfficeFormResponseStatus = 'sent' | 'returned' | 'declined';
+
+/**
+ * A permission slip / form sent home for a class or the whole school
+ * (`schools/{id}/officeForms`). Per-student status lives inline since target lists are small.
+ */
+export type OfficeForm = {
+  id: string;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  /** `'all'` or a specific `officeClasses` doc id. */
+  targetClassId: string;
+  /** studentId -> status, seeded to `sent` for every targeted student when created. */
+  responses: Record<string, OfficeFormResponseStatus>;
+  createdAt: number;
+  updatedAt: number;
+  updatedBy?: string | null;
+};
+
+/**
+ * Metadata for a file uploaded for a student (report card, medical form, signed permission
+ * slip, etc.) — `schools/{id}/officeStudentDocuments`. The actual file lives in Storage and is
+ * never publicly readable; `storagePath` is only resolved to a real URL server-side, on demand,
+ * after checking the requester's staff role for this school.
+ */
+export type OfficeStudentDocument = {
+  id: string;
+  studentId: string;
+  name: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: number;
+  uploadedBy?: string | null;
+};
+
+/** A school calendar event (`schools/{id}/officeEvents`). */
+export type OfficeEvent = {
+  id: string;
+  title: string;
+  description?: string | null;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  updatedAt: number;
+  updatedBy?: string | null;
 };
 
 /** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */

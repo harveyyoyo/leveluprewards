@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import {
   AlertCircle,
+  CalendarCheck,
   CheckCircle2,
   CreditCard,
   FileText,
   GraduationCap,
   LayoutGrid,
+  Megaphone,
   Plus,
   RefreshCw,
   Settings,
@@ -123,11 +125,25 @@ export function OfficeDashboard({
       tint: 'bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300',
     },
     {
+      href: officePublicHref(schoolId, 'attendance'),
+      title: 'Attendance',
+      subtitle: 'Daily present / absent',
+      icon: CalendarCheck,
+      tint: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
+    },
+    {
       href: officePublicHref(schoolId, 'billing'),
       title: 'Billing',
       subtitle: `${formatCents(insights.openBalanceCents)} open balance`,
       icon: CreditCard,
       tint: 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+    },
+    {
+      href: officePublicHref(schoolId, 'communication'),
+      title: 'Communication',
+      subtitle: 'Announcements & forms',
+      icon: Megaphone,
+      tint: 'bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300',
     },
     {
       href: officePublicHref(schoolId, 'reports'),

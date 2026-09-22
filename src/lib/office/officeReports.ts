@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { AlertCircle, CreditCard, GraduationCap, LayoutGrid, Users } from 'lucide-react';
+import { AlertCircle, Activity, CreditCard, GraduationCap, LayoutGrid, Users } from 'lucide-react';
 
-export type OfficeReportId = 'grades' | 'billing' | 'students' | 'classes' | 'overdue';
+export type OfficeReportId = 'health' | 'grades' | 'billing' | 'students' | 'classes' | 'overdue';
 
 export type OfficeReportDefinition = {
   id: OfficeReportId;
@@ -11,6 +11,12 @@ export type OfficeReportDefinition = {
 };
 
 export const OFFICE_REPORTS: OfficeReportDefinition[] = [
+  {
+    id: 'health',
+    label: 'School health',
+    description: 'Enrollment, money, grades & attendance at a glance',
+    icon: Activity,
+  },
   {
     id: 'grades',
     label: 'Grade report',
@@ -44,7 +50,13 @@ export const OFFICE_REPORTS: OfficeReportDefinition[] = [
 ];
 
 export function parseOfficeReportId(value: string | null | undefined): OfficeReportId {
-  if (value === 'billing' || value === 'students' || value === 'classes' || value === 'overdue') {
+  if (
+    value === 'health' ||
+    value === 'billing' ||
+    value === 'students' ||
+    value === 'classes' ||
+    value === 'overdue'
+  ) {
     return value;
   }
   return 'grades';

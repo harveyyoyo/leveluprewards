@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { OfficeGradeReportView } from '@/components/office/OfficeGradeReportView';
+import { OfficeSchoolHealthReport } from '@/components/office/OfficeSchoolHealthReport';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { formatCents } from '@/lib/office/officeNav';
@@ -311,6 +312,17 @@ export function OfficeReportsView({
           );
         })}
       </div>
+
+      {reportId === 'health' ? (
+        <OfficeSchoolHealthReport
+          schoolId={schoolId}
+          students={students}
+          classes={classes}
+          gradeEntries={gradeEntries}
+          billingAccounts={billingAccounts}
+          invoices={invoices}
+        />
+      ) : null}
 
       {reportId === 'grades' ? (
         <OfficeGradeReportView

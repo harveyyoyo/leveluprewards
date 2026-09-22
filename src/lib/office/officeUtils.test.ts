@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addMonthsToIsoDate,
+  buildAnnouncementMailto,
   defaultDueDateIso,
   getOfficeStudentFullName,
   getOfficeStudentLabel,
   isInvoiceDueSoon,
   parseUsdToCents,
+  splitCentsIntoInstallments,
   studentIdsWithGradesForTerm,
   studentsWithoutGradesForTerm,
   uniqueGradeSubjects,
@@ -106,5 +109,28 @@ describe('officeUtils', () => {
     ]);
     expect(subjects).toContain('Math');
     expect(subjects).toContain('Chumash');
+  });
+
+  it('addMonthsToIsoDate advances the month, rolling the year when needed', () => {
+    expect(addMonthsToIsoDate('2026-01-15', 1)).toBe('2026-02-15');
+    expect(addMonthsToIsoDate('2026-11-15', 3)).toBe('2027-02-15');
+    expect(addMonthsToIsoDate('2026-01-15', 0)).toBe('2026-01-15');
+  });
+
+  it('splitCentsIntoInstallments divides evenly and puts the remainder on the last one', () => {
+    expect(splitCentsIntoInstallments(1000, 4)).toEqual([250, 250, 250, 250]);
+    expect(splitCentsIntoInstallments(1000, 3)).toEqual([333, 333, 334]);
+    expect(splitCentsIntoInstallments(1000, 3).reduce((a, b) => a + b, 0)).toBe(1000);
+  });
+
+  it('buildAnnouncementMailto puts recipients in bcc, not to', () => {
+    const link = buildAnnouncementMailto({
+      emails: ['a@x.com', 'b@x.com'],
+      subject: 'Picture day',
+      body: "Don't forget!",
+    });
+    expect(link.startsWith('mailto:?bcc=')).toBe(true);
+    expect(link).toContain(encodeURIComponent('a@x.com,b@x.com'));
+    expect(link).toContain(`subject=${encodeURIComponent('Picture day')}`);
   });
 });

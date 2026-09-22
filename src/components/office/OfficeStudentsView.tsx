@@ -29,7 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'name-asc' | 'name-desc' | 'class';
-type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned' | 'no-teacher';
+type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned' | 'no-teacher' | 'withdrawn' | 'graduated';
 
 type OfficeStudentsViewProps = {
   schoolId: string;
@@ -72,20 +72,35 @@ export function OfficeStudentsView({
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [classes]);
 
+  // The default roster view is "active students" — withdrawn/graduated students have their
+  // own dedicated filter chips instead of cluttering the main list and its counts.
+  const activeStudents = useMemo(
+    () => students.filter((s) => (s.status ?? 'active') === 'active'),
+    [students],
+  );
+  const withdrawnCount = useMemo(() => students.filter((s) => s.status === 'withdrawn').length, [students]);
+  const graduatedCount = useMemo(() => students.filter((s) => s.status === 'graduated').length, [students]);
+
   const gradedForTerm = useMemo(
     () => studentIdsWithGradesForTerm(gradeEntries, activeTerm),
     [gradeEntries, activeTerm],
   );
 
-  const missingGradesCount = students.length - gradedForTerm.size;
+  const missingGradesCount = activeStudents.length - activeStudents.filter((s) => gradedForTerm.has(s.id)).length;
   const noBillingCount = useMemo(
-    () => students.filter((s) => !billingAccountForStudent(billingAccounts, s.id)).length,
-    [students, billingAccounts],
+    () => activeStudents.filter((s) => !billingAccountForStudent(billingAccounts, s.id)).length,
+    [activeStudents, billingAccounts],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = students.filter((s) => {
+    const base =
+      rosterFilter === 'withdrawn'
+        ? students.filter((s) => s.status === 'withdrawn')
+        : rosterFilter === 'graduated'
+          ? students.filter((s) => s.status === 'graduated')
+          : activeStudents;
+    const list = base.filter((s) => {
       if (homeroomFilter !== 'all' && s.teacherId !== homeroomFilter) return false;
       if (rosterFilter === 'unassigned' && s.classId) return false;
       if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
@@ -110,11 +125,29 @@ export function OfficeStudentsView({
       }
       return getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b));
     });
-  }, [students, query, classFilter, homeroomFilter, rosterFilter, sortBy, classNameById, gradedForTerm, billingAccounts]);
+  }, [
+    students,
+    activeStudents,
+    query,
+    classFilter,
+    homeroomFilter,
+    rosterFilter,
+    sortBy,
+    classNameById,
+    gradedForTerm,
+    billingAccounts,
+  ]);
 
   useEffect(() => {
     const f = searchParams.get('filter')?.trim();
-    if (f === 'missing-grades' || f === 'no-billing' || f === 'unassigned' || f === 'no-teacher') {
+    if (
+      f === 'missing-grades' ||
+      f === 'no-billing' ||
+      f === 'unassigned' ||
+      f === 'no-teacher' ||
+      f === 'withdrawn' ||
+      f === 'graduated'
+    ) {
       setRosterFilter(f);
       if (f === 'unassigned') setClassFilter('__unassigned__');
     }
@@ -136,10 +169,10 @@ export function OfficeStudentsView({
       classFilter === 'all' || classFilter === '__unassigned__' ? undefined : classFilter,
   });
 
-  const unassignedCount = useMemo(() => students.filter((s) => !s.classId).length, [students]);
+  const unassignedCount = useMemo(() => activeStudents.filter((s) => !s.classId).length, [activeStudents]);
   const noTeacherCount = useMemo(
-    () => students.filter((s) => !officeStudentHasTeacher(s)).length,
-    [students],
+    () => activeStudents.filter((s) => !officeStudentHasTeacher(s)).length,
+    [activeStudents],
   );
 
   const rosterFilterOptions: { id: RosterFilter; label: string }[] = [
@@ -152,6 +185,8 @@ export function OfficeStudentsView({
     ...(noTeacherCount > 0
       ? [{ id: 'no-teacher' as const, label: `No teacher (${noTeacherCount})` }]
       : []),
+    ...(withdrawnCount > 0 ? [{ id: 'withdrawn' as const, label: `Withdrawn (${withdrawnCount})` }] : []),
+    ...(graduatedCount > 0 ? [{ id: 'graduated' as const, label: `Graduated (${graduatedCount})` }] : []),
   ];
 
   if (isLoading) {

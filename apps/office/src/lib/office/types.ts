@@ -20,6 +20,15 @@ export type OfficeStudent = {
   /** Legacy free-text; prefer `teacherId`. Kept for old rows and CSV until migrated. */
   teacherName?: string | null;
   notes?: string | null;
+  /** Background details shown behind a "More" toggle in the student sheet. */
+  dateOfBirth?: string | null;
+  gender?: string | null;
+  address?: string | null;
+  homeLanguage?: string | null;
+  enrollmentDate?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  medicalNotes?: string | null;
   updatedAt: number;
 };
 

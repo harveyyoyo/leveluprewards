@@ -402,6 +402,22 @@ export function defaultDueDateIso(daysAhead = 30): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** Adds whole calendar months to an ISO `YYYY-MM-DD` date, used to space out payment-plan installments. */
+export function addMonthsToIsoDate(iso: string, months: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(Date.UTC(y, (m - 1) + months, d));
+  return date.toISOString().slice(0, 10);
+}
+
+/** Splits a total into `count` whole-cent installments; any leftover cent(s) go on the last one. */
+export function splitCentsIntoInstallments(totalCents: number, count: number): number[] {
+  if (count <= 0) return [];
+  const base = Math.floor(totalCents / count);
+  const installments = Array.from({ length: count }, () => base);
+  installments[count - 1] += totalCents - base * count;
+  return installments;
+}
+
 export function parseUsdToCents(amount: string): number | null {
   const cents = Math.round(parseFloat(amount) * 100);
   if (!Number.isFinite(cents) || cents < 0) return null;
@@ -435,6 +451,18 @@ export function buildInvoiceReminderMailto(params: {
       `${params.invoiceLabel}: ${amount}\nDue date: ${params.dueDate}\n\nPlease contact the office if you have questions.\n\nThank you.`,
   );
   return `mailto:${params.email}?subject=${subject}&body=${body}`;
+}
+
+/**
+ * Bulk announcement `mailto:` link — opens the office user's own email client with the
+ * recipients pre-filled in BCC, the same way `buildInvoiceReminderMailto` does for one family.
+ * Nothing is sent server-side; the staff member still has to hit send.
+ */
+export function buildAnnouncementMailto(params: { emails: string[]; subject: string; body: string }): string {
+  const bcc = encodeURIComponent(params.emails.join(','));
+  const subject = encodeURIComponent(params.subject);
+  const body = encodeURIComponent(params.body);
+  return `mailto:?bcc=${bcc}&subject=${subject}&body=${body}`;
 }
 
 export function exportOfficeStudentsCsv(

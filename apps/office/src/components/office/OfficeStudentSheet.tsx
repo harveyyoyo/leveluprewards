@@ -3,9 +3,10 @@ import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Copy, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -59,7 +60,17 @@ export function OfficeStudentSheet({
   const [classId, setClassId] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [notes, setNotes] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [gender, setGender] = useState('');
+  const [address, setAddress] = useState('');
+  const [homeLanguage, setHomeLanguage] = useState('');
+  const [enrollmentDate, setEnrollmentDate] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [medicalNotes, setMedicalNotes] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showMoreEdit, setShowMoreEdit] = useState(false);
+  const [showBackground, setShowBackground] = useState(false);
 
   // Firestore's live snapshot hands us a new `student` object on every background
   // update, not just when the sheet is opened for a different student. Re-seeding
@@ -74,6 +85,14 @@ export function OfficeStudentSheet({
     classId: string;
     teacherId: string;
     notes: string;
+    dateOfBirth: string;
+    gender: string;
+    address: string;
+    homeLanguage: string;
+    enrollmentDate: string;
+    emergencyContactName: string;
+    emergencyContactPhone: string;
+    medicalNotes: string;
   } | null>(null);
 
   const isDirty = useCallback(() => {
@@ -85,9 +104,32 @@ export function OfficeStudentSheet({
       nickname !== seed.nickname ||
       classId !== seed.classId ||
       teacherId !== seed.teacherId ||
-      notes !== seed.notes
+      notes !== seed.notes ||
+      dateOfBirth !== seed.dateOfBirth ||
+      gender !== seed.gender ||
+      address !== seed.address ||
+      homeLanguage !== seed.homeLanguage ||
+      enrollmentDate !== seed.enrollmentDate ||
+      emergencyContactName !== seed.emergencyContactName ||
+      emergencyContactPhone !== seed.emergencyContactPhone ||
+      medicalNotes !== seed.medicalNotes
     );
-  }, [firstName, lastName, nickname, classId, teacherId, notes]);
+  }, [
+    firstName,
+    lastName,
+    nickname,
+    classId,
+    teacherId,
+    notes,
+    dateOfBirth,
+    gender,
+    address,
+    homeLanguage,
+    enrollmentDate,
+    emergencyContactName,
+    emergencyContactPhone,
+    medicalNotes,
+  ]);
 
   useEffect(() => {
     if (!open || !student) {
@@ -115,6 +157,14 @@ export function OfficeStudentSheet({
       classId: student.classId ?? '',
       teacherId: student.teacherId ?? '',
       notes: student.notes ?? '',
+      dateOfBirth: student.dateOfBirth ?? '',
+      gender: student.gender ?? '',
+      address: student.address ?? '',
+      homeLanguage: student.homeLanguage ?? '',
+      enrollmentDate: student.enrollmentDate ?? '',
+      emergencyContactName: student.emergencyContactName ?? '',
+      emergencyContactPhone: student.emergencyContactPhone ?? '',
+      medicalNotes: student.medicalNotes ?? '',
     };
     setFirstName(student.firstName ?? '');
     setLastName(student.lastName ?? '');
@@ -122,7 +172,17 @@ export function OfficeStudentSheet({
     setClassId(student.classId ?? '');
     setTeacherId(student.teacherId ?? '');
     setNotes(student.notes ?? '');
+    setDateOfBirth(student.dateOfBirth ?? '');
+    setGender(student.gender ?? '');
+    setAddress(student.address ?? '');
+    setHomeLanguage(student.homeLanguage ?? '');
+    setEnrollmentDate(student.enrollmentDate ?? '');
+    setEmergencyContactName(student.emergencyContactName ?? '');
+    setEmergencyContactPhone(student.emergencyContactPhone ?? '');
+    setMedicalNotes(student.medicalNotes ?? '');
     setIsEditing(false);
+    setShowMoreEdit(false);
+    setShowBackground(false);
   }, [student, open, isEditing, onOpenChange, isDirty]);
 
   if (!student) return null;
@@ -151,6 +211,14 @@ export function OfficeStudentSheet({
         teacherId: teacherId || null,
         teacherName: null,
         notes: notes.trim() || null,
+        dateOfBirth: dateOfBirth || null,
+        gender: gender.trim() || null,
+        address: address.trim() || null,
+        homeLanguage: homeLanguage.trim() || null,
+        enrollmentDate: enrollmentDate || null,
+        emergencyContactName: emergencyContactName.trim() || null,
+        emergencyContactPhone: emergencyContactPhone.trim() || null,
+        medicalNotes: medicalNotes.trim() || null,
         updatedAt: Date.now(),
       });
       toast({ title: 'Student profile updated' });
@@ -336,6 +404,92 @@ export function OfficeStudentSheet({
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="rounded-xl" />
             </div>
 
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 px-2 text-xs text-muted-foreground"
+                onClick={() => setShowMoreEdit((v) => !v)}
+              >
+                {showMoreEdit ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                {showMoreEdit ? 'Hide background details' : 'More background details'}
+              </Button>
+            </div>
+
+            {showMoreEdit && (
+              <div className="space-y-4 rounded-xl border bg-muted/20 p-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Date of birth (optional)</Label>
+                    <Input
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Gender (optional)</Label>
+                    <Input value={gender} onChange={(e) => setGender(e.target.value)} className="rounded-xl" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Address (optional)</Label>
+                  <Input value={address} onChange={(e) => setAddress(e.target.value)} className="rounded-xl" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Home language (optional)</Label>
+                    <Input
+                      value={homeLanguage}
+                      onChange={(e) => setHomeLanguage(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Enrollment date (optional)</Label>
+                    <Input
+                      type="date"
+                      value={enrollmentDate}
+                      onChange={(e) => setEnrollmentDate(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label>Emergency contact name (optional)</Label>
+                    <Input
+                      value={emergencyContactName}
+                      onChange={(e) => setEmergencyContactName(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Emergency contact phone (optional)</Label>
+                    <Input
+                      value={emergencyContactPhone}
+                      onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label>Allergies / medical notes (optional)</Label>
+                  <Textarea
+                    value={medicalNotes}
+                    onChange={(e) => setMedicalNotes(e.target.value)}
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="pt-4 border-t space-y-2">
               <div className="flex gap-2">
                 <Button type="button" className="flex-1 rounded-xl" onClick={() => void handleSave()} disabled={busy}>
@@ -443,9 +597,57 @@ export function OfficeStudentSheet({
               </section>
             )}
 
+            <section>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1 px-2 text-xs text-muted-foreground"
+                onClick={() => setShowBackground((v) => !v)}
+              >
+                {showBackground ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                {showBackground ? 'Hide background' : 'More'}
+              </Button>
+
+              {showBackground && (
+                <div className="mt-2 space-y-2 rounded-xl border bg-muted/20 p-3 text-sm">
+                  <BackgroundRow label="Date of birth" value={student.dateOfBirth} />
+                  <BackgroundRow label="Gender" value={student.gender} />
+                  <BackgroundRow label="Address" value={student.address} />
+                  <BackgroundRow label="Home language" value={student.homeLanguage} />
+                  <BackgroundRow label="Enrollment date" value={student.enrollmentDate} />
+                  <BackgroundRow label="Emergency contact" value={student.emergencyContactName} />
+                  <BackgroundRow label="Emergency phone" value={student.emergencyContactPhone} />
+                  <BackgroundRow label="Allergies / medical notes" value={student.medicalNotes} />
+                  {!student.dateOfBirth &&
+                    !student.gender &&
+                    !student.address &&
+                    !student.homeLanguage &&
+                    !student.enrollmentDate &&
+                    !student.emergencyContactName &&
+                    !student.emergencyContactPhone &&
+                    !student.medicalNotes && (
+                      <p className="text-muted-foreground">
+                        No background details yet. Select the pencil above to add some.
+                      </p>
+                    )}
+                </div>
+              )}
+            </section>
+
           </div>
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+function BackgroundRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value?.trim()) return null;
+  return (
+    <div className="flex justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{value}</span>
+    </div>
   );
 }

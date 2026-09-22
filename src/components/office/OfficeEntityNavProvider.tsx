@@ -14,6 +14,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeStudentSheet } from '@/components/office/OfficeStudentSheet';
 import { OfficeTeacherSheet } from '@/components/office/OfficeTeacherSheet';
 import { OfficeClassSheet } from '@/components/office/OfficeClassSheet';
+import { OfficeFamilySheet } from '@/components/office/OfficeFamilySheet';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
@@ -23,6 +24,7 @@ type OfficeEntityNavContextValue = {
   openStudent: (target: OfficeStudent | string) => void;
   openTeacher: (target: OfficeTeacher | string) => void;
   openClass: (target: OfficeClass | string) => void;
+  openFamily: (familyId: string) => void;
   closeAll: () => void;
   selectedStudentId: string | null;
   selectedTeacherId: string | null;
@@ -55,6 +57,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<string | null>(null);
   const hydratedFromQuery = useRef(false);
 
   const replaceEntityQuery = useCallback(
@@ -84,6 +87,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedStudentId(id);
       setSelectedTeacherId(null);
       setSelectedClassId(null);
+      setSelectedFamilyId(null);
       replaceEntityQuery({ student: id, teacher: null, classSheet: null });
     },
     [replaceEntityQuery],
@@ -95,6 +99,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedTeacherId(id);
       setSelectedStudentId(null);
       setSelectedClassId(null);
+      setSelectedFamilyId(null);
       replaceEntityQuery({ teacher: id, student: null, classSheet: null });
     },
     [replaceEntityQuery],
@@ -106,15 +111,24 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedClassId(id);
       setSelectedStudentId(null);
       setSelectedTeacherId(null);
+      setSelectedFamilyId(null);
       replaceEntityQuery({ classSheet: id, student: null, teacher: null });
     },
     [replaceEntityQuery],
   );
 
+  const openFamily = useCallback((familyId: string) => {
+    setSelectedFamilyId(familyId);
+    setSelectedStudentId(null);
+    setSelectedTeacherId(null);
+    setSelectedClassId(null);
+  }, []);
+
   const closeAll = useCallback(() => {
     setSelectedStudentId(null);
     setSelectedTeacherId(null);
     setSelectedClassId(null);
+    setSelectedFamilyId(null);
     replaceEntityQuery({ student: null, teacher: null, classSheet: null });
   }, [replaceEntityQuery]);
 
@@ -167,18 +181,36 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
     () => shared.classes.find((c) => c.id === selectedClassId) ?? null,
     [shared.classes, selectedClassId],
   );
+  const selectedFamily = useMemo(
+    () => shared.families.find((f) => f.id === selectedFamilyId) ?? null,
+    [shared.families, selectedFamilyId],
+  );
+  const selectedFamilyBillingAccount = useMemo(
+    () => (selectedFamily ? billingAccounts.find((a) => a.familyId === selectedFamily.id) ?? null : null),
+    [billingAccounts, selectedFamily],
+  );
 
   const value = useMemo(
     () => ({
       openStudent,
       openTeacher,
       openClass,
+      openFamily,
       closeAll,
       selectedStudentId,
       selectedTeacherId,
       selectedClassId,
     }),
-    [openStudent, openTeacher, openClass, closeAll, selectedStudentId, selectedTeacherId, selectedClassId],
+    [
+      openStudent,
+      openTeacher,
+      openClass,
+      openFamily,
+      closeAll,
+      selectedStudentId,
+      selectedTeacherId,
+      selectedClassId,
+    ],
   );
 
   return (
@@ -200,6 +232,8 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         activeTerm={term}
         classes={shared.classes}
         teachers={shared.teachers}
+        allStudents={shared.students}
+        families={shared.families}
       />
       <OfficeTeacherSheet
         schoolId={schoolId}
@@ -229,6 +263,16 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         }}
         students={shared.students}
         teacherNameById={shared.teacherNameById}
+      />
+      <OfficeFamilySheet
+        schoolId={schoolId}
+        family={selectedFamily}
+        students={shared.students}
+        billingAccount={selectedFamilyBillingAccount}
+        open={!!selectedFamily}
+        onOpenChange={(open) => {
+          if (!open) setSelectedFamilyId(null);
+        }}
       />
     </OfficeEntityNavContext.Provider>
   );
