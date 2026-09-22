@@ -3,9 +3,9 @@ import { STAFF_REUSABLE_COUPON_PRINT_NOTE } from './reusableCoupon';
 
 export function normalizeRedemptionScope(
   coupon: Pick<Coupon, 'redemptionScope'>
-): 'school' | 'creator' | 'classes' | 'teachers' {
+): CouponRedemptionScope {
   const s = coupon.redemptionScope;
-  if (s === 'creator' || s === 'classes' || s === 'teachers') return s;
+  if (s === 'creator' || s === 'classes' || s === 'teachers' || s === 'students') return s;
   return 'school';
 }
 
@@ -61,6 +61,17 @@ export function studentMayRedeemCoupon(
     };
   }
 
+  if (scope === 'students') {
+    const ids = (coupon.allowedStudentIds || []).filter(Boolean);
+    if (ids.length === 0) {
+      return { ok: false, message: 'This coupon is not set up correctly (no students).' };
+    }
+    if (!ids.includes(student.id)) {
+      return { ok: false, message: 'This coupon is only for selected students.' };
+    }
+    return { ok: true };
+  }
+
   return { ok: true };
 }
 
@@ -71,6 +82,10 @@ export function describeCouponRedemptionSummary(coupon: Coupon): string | null {
   if (scope === 'classes') {
     const n = coupon.allowedClassIds?.length ?? 0;
     return n ? `Redeem: ${n} selected class(es) only` : 'Redeem: selected classes';
+  }
+  if (scope === 'students') {
+    const n = coupon.allowedStudentIds?.length ?? 0;
+    return n ? `Redeem: ${n} selected student(s) only` : 'Redeem: selected students';
   }
   const n = coupon.allowedTeacherIds?.length ?? 0;
   return n ? `Redeem: ${n} selected teacher(s) only` : 'Redeem: selected teachers';
@@ -89,6 +104,7 @@ export function buildRedemptionPrintNote(input: {
   issuingTeacherDisplayName: string;
   classNamesInOrder: string[];
   teacherNamesInOrder: string[];
+  studentNamesInOrder?: string[];
   maxLength?: number;
   reusable?: boolean;
 }): string | undefined {
@@ -107,6 +123,14 @@ export function buildRedemptionPrintNote(input: {
       const lead = names.slice(0, 4).join(', ');
       const extra = names.length > 4 ? ` (+${names.length - 4} more)` : '';
       scopeNote = `Redeem only if your class is: ${lead}${extra}`;
+    }
+  } else if (input.scope === 'students') {
+    const names = (input.studentNamesInOrder || []).filter(Boolean);
+    if (names.length === 0) scopeNote = 'Redeem only for selected students.';
+    else {
+      const lead = names.slice(0, 3).join(', ');
+      const extra = names.length > 3 ? ` (+${names.length - 3} more)` : '';
+      scopeNote = `Redeem only for: ${lead}${extra}`;
     }
   } else {
     const names = input.teacherNamesInOrder.filter(Boolean);

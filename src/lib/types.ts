@@ -364,7 +364,7 @@ export interface Student {
 }
 
 /** Who may redeem the coupon at the student kiosk. Omit or `school` = any student. */
-export type CouponRedemptionScope = 'school' | 'creator' | 'classes' | 'teachers';
+export type CouponRedemptionScope = 'school' | 'creator' | 'classes' | 'teachers' | 'students';
 
 export interface Coupon {
   id: string;
@@ -390,6 +390,8 @@ export interface Coupon {
   allowedClassIds?: string[];
   /** When `redemptionScope` is `teachers`, student must match via `teacherIds` or class `primaryTeacherId`. */
   allowedTeacherIds?: string[];
+  /** When `redemptionScope` is `students`, only these student ids may redeem. */
+  allowedStudentIds?: string[];
   /** Human-readable redemption limits for printing on the coupon (set when generated). */
   redemptionPrintNote?: string;
   /** When true, staff-printed coupon can be redeemed repeatedly (keep the slip). */

@@ -585,7 +585,7 @@ async function redeemCouponForStudent(
         if (typeof cd.primaryTeacherId === "string") classPrimaryTeacherId = cd.primaryTeacherId;
       }
     }
-    const gate = studentMayRedeemCouponData(coupon, s, classPrimaryTeacherId);
+    const gate = studentMayRedeemCouponData(coupon, { ...s, id: studentId }, classPrimaryTeacherId);
     if (!gate.ok) {
       throw new functions.https.HttpsError("failed-precondition", gate.message || "Not eligible to redeem this coupon.");
     }
@@ -1223,6 +1223,7 @@ exports.getCouponSnapshot = functions.https.onCall(
         createdByTeacherId: typeof c.createdByTeacherId === "string" ? c.createdByTeacherId : undefined,
         allowedClassIds: Array.isArray(c.allowedClassIds) ? c.allowedClassIds : undefined,
         allowedTeacherIds: Array.isArray(c.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
+        allowedStudentIds: Array.isArray(c.allowedStudentIds) ? c.allowedStudentIds : undefined,
         reusable,
         reusableSample: c.reusableSample === true || isReusableSample,
       });

@@ -366,6 +366,7 @@ function AppContextBridge({ children }: { children: React.ReactNode }) {
             createdByTeacherId: typeof c?.createdByTeacherId === 'string' ? c.createdByTeacherId : undefined,
             allowedClassIds: Array.isArray(c?.allowedClassIds) ? c.allowedClassIds : undefined,
             allowedTeacherIds: Array.isArray(c?.allowedTeacherIds) ? c.allowedTeacherIds : undefined,
+            allowedStudentIds: Array.isArray(c?.allowedStudentIds) ? c.allowedStudentIds : undefined,
             reusable: c?.reusable === true,
             reusableSample: c?.reusableSample === true,
           };

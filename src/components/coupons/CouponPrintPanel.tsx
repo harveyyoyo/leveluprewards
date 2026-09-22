@@ -52,11 +52,15 @@ import {
   resolveTeacherBudgetPeriod,
   teacherBudgetRemainingPhrase,
 } from '@/lib/teacherBudget';
-import type { Category, Class, Coupon, CouponRedemptionScope, Teacher } from '@/lib/types';
+import type { Category, Class, Coupon, CouponRedemptionScope, Student, Teacher } from '@/lib/types';
 import { resolveCategoryCurrency } from '@/lib/currency/resolveCategoryCurrency';
 import { cn } from '@/lib/utils';
 
 const MAX_COUPON_PRINT_SHEETS = 100;
+
+function couponStudentLabel(student: Pick<Student, 'id' | 'firstName' | 'lastName'>): string {
+  return [student.firstName, student.lastName].filter(Boolean).join(' ').trim() || student.id;
+}
 
 export type CouponPrintRedemptionUi = 'admin' | 'teacher';
 
@@ -70,6 +74,8 @@ export type CouponPrintPanelProps = {
   categories: Category[] | null | undefined;
   classes: Class[] | null | undefined;
   teachers: Teacher[] | null | undefined;
+  /** Roster used for “specific students” redemption (teacher roster or schoolwide). */
+  students?: Student[] | null | undefined;
   issuerDisplayName?: string;
   className?: string;
   redemptionUi?: CouponPrintRedemptionUi;
@@ -137,6 +143,7 @@ export function CouponPrintPanel({
   categories,
   classes,
   teachers,
+  students,
   issuerDisplayName = 'Admin',
   className,
   redemptionUi = 'admin',
@@ -161,6 +168,7 @@ export function CouponPrintPanel({
   const categoryList = useMemo(() => categories ?? [], [categories]);
   const classList = useMemo(() => classFilterList ?? classes ?? [], [classFilterList, classes]);
   const teacherList = useMemo(() => teachers ?? [], [teachers]);
+  const studentList = useMemo(() => students ?? [], [students]);
 
   const [printCategoryId, setPrintCategoryId] = useState('');
   const [printValue, setPrintValue] = useState('10');
@@ -176,6 +184,8 @@ export function CouponPrintPanel({
   );
   const [printScopeClassIds, setPrintScopeClassIds] = useState<string[]>([]);
   const [printScopeTeacherIds, setPrintScopeTeacherIds] = useState<string[]>([]);
+  const [printScopeStudentIds, setPrintScopeStudentIds] = useState<string[]>([]);
+  const [studentScopeSearch, setStudentScopeSearch] = useState('');
   const [isPrintCategoryDialogOpen, setIsPrintCategoryDialogOpen] = useState(false);
   const [newPrintCategoryName, setNewPrintCategoryName] = useState('');
   const [newPrintCategoryPoints, setNewPrintCategoryPoints] = useState('10');
@@ -218,11 +228,42 @@ export function CouponPrintPanel({
   }, [teacherList]);
 
   useEffect(() => {
+    const valid = new Set(studentList.map((s) => s.id));
+    setPrintScopeStudentIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [studentList]);
+
+  useEffect(() => {
     if (!isTeacherRedemption) return;
     if (printRedemptionScope === 'teachers') {
       setPrintRedemptionScope('creator');
     }
   }, [isTeacherRedemption, printRedemptionScope]);
+
+  const sortedStudents = useMemo(
+    () =>
+      studentList
+        .slice()
+        .sort((a, b) => couponStudentLabel(a).localeCompare(couponStudentLabel(b))),
+    [studentList],
+  );
+
+  const filteredScopeStudents = useMemo(() => {
+    const q = studentScopeSearch.trim().toLowerCase();
+    if (!q) return sortedStudents;
+    return sortedStudents.filter((s) => {
+      const name = couponStudentLabel(s).toLowerCase();
+      const nick = (s.nickname || '').toLowerCase();
+      return name.includes(q) || nick.includes(q);
+    });
+  }, [sortedStudents, studentScopeSearch]);
+
+  const selectedStudentNames = useMemo(
+    () =>
+      sortedStudents
+        .filter((s) => printScopeStudentIds.includes(s.id))
+        .map((s) => couponStudentLabel(s)),
+    [sortedStudents, printScopeStudentIds],
+  );
 
   const computeStartsAt = useCallback(() => {
     if (!printStartsOn) return undefined;
@@ -366,6 +407,15 @@ export function CouponPrintPanel({
         });
         return;
       }
+      if (printRedemptionScope === 'students' && printScopeStudentIds.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Select students',
+          description: 'Choose at least one student, or switch redemption to another option.',
+        });
+        return;
+      }
       if (printRedemptionScope === 'creator' && !creatorTeacherId) {
         playSound('error');
         toast({
@@ -394,6 +444,15 @@ export function CouponPrintPanel({
         });
         return;
       }
+      if (printRedemptionScope === 'students' && printScopeStudentIds.length === 0) {
+        playSound('error');
+        toast({
+          variant: 'destructive',
+          title: 'Select students',
+          description: 'Choose at least one student, or switch assignment to another option.',
+        });
+        return;
+      }
     }
 
     const startsAt = computeStartsAt();
@@ -409,26 +468,34 @@ export function CouponPrintPanel({
     }
 
     const codes = generateUniqueCouponCodes(couponCount);
-    const scopeExtra: Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds'>> =
-      isTeacherRedemption
-        ? printRedemptionScope === 'classes'
-          ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+    const scopeExtra: Partial<
+      Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds' | 'allowedStudentIds'>
+    > = isTeacherRedemption
+      ? printRedemptionScope === 'classes'
+        ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+        : printRedemptionScope === 'students'
+          ? { redemptionScope: 'students', allowedStudentIds: [...printScopeStudentIds] }
           : printRedemptionScope === 'school'
             ? { redemptionScope: 'school' }
             : { redemptionScope: 'creator' }
-        : printRedemptionScope === 'classes'
-          ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
-          : printRedemptionScope === 'teachers'
-            ? { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] }
+      : printRedemptionScope === 'classes'
+        ? { redemptionScope: 'classes', allowedClassIds: [...printScopeClassIds] }
+        : printRedemptionScope === 'teachers'
+          ? { redemptionScope: 'teachers', allowedTeacherIds: [...printScopeTeacherIds] }
+          : printRedemptionScope === 'students'
+            ? { redemptionScope: 'students', allowedStudentIds: [...printScopeStudentIds] }
             : { redemptionScope: 'school' };
 
     const redemptionScopeForNote: CouponRedemptionScope = isTeacherRedemption
       ? printRedemptionScope === 'classes' ||
           printRedemptionScope === 'creator' ||
-          printRedemptionScope === 'school'
+          printRedemptionScope === 'school' ||
+          printRedemptionScope === 'students'
         ? printRedemptionScope
         : 'creator'
-      : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+      : printRedemptionScope === 'classes' ||
+          printRedemptionScope === 'teachers' ||
+          printRedemptionScope === 'students'
         ? printRedemptionScope
         : 'school';
 
@@ -443,6 +510,7 @@ export function CouponPrintPanel({
         .filter((t) => printScopeTeacherIds.includes(t.id))
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((t) => t.name),
+      studentNamesInOrder: selectedStudentNames,
       reusable: isReusablePrint,
     });
 
@@ -495,10 +563,13 @@ export function CouponPrintPanel({
   const redemptionPreviewScope: CouponRedemptionScope = isTeacherRedemption
     ? printRedemptionScope === 'classes' ||
         printRedemptionScope === 'creator' ||
-        printRedemptionScope === 'school'
+        printRedemptionScope === 'school' ||
+        printRedemptionScope === 'students'
       ? printRedemptionScope
       : 'creator'
-    : printRedemptionScope === 'classes' || printRedemptionScope === 'teachers'
+    : printRedemptionScope === 'classes' ||
+        printRedemptionScope === 'teachers' ||
+        printRedemptionScope === 'students'
       ? printRedemptionScope
       : 'school';
   const redemptionPreviewNote = buildRedemptionPrintNote({
@@ -512,24 +583,44 @@ export function CouponPrintPanel({
       .filter((t) => printScopeTeacherIds.includes(t.id))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((t) => t.name),
+    studentNamesInOrder: selectedStudentNames,
     reusable: isReusablePrint,
   });
   const previewScopeFields = useMemo<
-    Partial<Pick<Coupon, 'redemptionScope' | 'allowedClassIds' | 'allowedTeacherIds' | 'createdByTeacherId'>>
+    Partial<
+      Pick<
+        Coupon,
+        | 'redemptionScope'
+        | 'allowedClassIds'
+        | 'allowedTeacherIds'
+        | 'allowedStudentIds'
+        | 'createdByTeacherId'
+      >
+    >
   >(
     () =>
       isTeacherRedemption
         ? printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
-          : printRedemptionScope === 'school'
-            ? { redemptionScope: 'school' as const }
-            : { redemptionScope: 'creator' as const }
+          : printRedemptionScope === 'students'
+            ? { redemptionScope: 'students' as const, allowedStudentIds: [...printScopeStudentIds] }
+            : printRedemptionScope === 'school'
+              ? { redemptionScope: 'school' as const }
+              : { redemptionScope: 'creator' as const }
         : printRedemptionScope === 'classes'
           ? { redemptionScope: 'classes' as const, allowedClassIds: [...printScopeClassIds] }
           : printRedemptionScope === 'teachers'
             ? { redemptionScope: 'teachers' as const, allowedTeacherIds: [...printScopeTeacherIds] }
-            : { redemptionScope: 'school' as const },
-    [isTeacherRedemption, printRedemptionScope, printScopeClassIds, printScopeTeacherIds],
+            : printRedemptionScope === 'students'
+              ? { redemptionScope: 'students' as const, allowedStudentIds: [...printScopeStudentIds] }
+              : { redemptionScope: 'school' as const },
+    [
+      isTeacherRedemption,
+      printRedemptionScope,
+      printScopeClassIds,
+      printScopeTeacherIds,
+      printScopeStudentIds,
+    ],
   );
 
   const previewStartsAt = computeStartsAt();
@@ -905,6 +996,14 @@ export function CouponPrintPanel({
                     selected={printRedemptionScope === 'teachers'}
                     isGraphic={isGraphic}
                   />
+                  <RedemptionChoice
+                    id="admin-crs-students"
+                    value="students"
+                    title="Specific students"
+                    description="Only the students you pick by name."
+                    selected={printRedemptionScope === 'students'}
+                    isGraphic={isGraphic}
+                  />
                 </RadioGroup>
                 {printRedemptionScope === 'classes' && (
                   <div className="space-y-2">
@@ -960,6 +1059,46 @@ export function CouponPrintPanel({
                     </ScrollArea>
                   </div>
                 )}
+                {printRedemptionScope === 'students' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        Students{printScopeStudentIds.length ? ` (${printScopeStudentIds.length})` : ''}
+                      </p>
+                    </div>
+                    <Input
+                      value={studentScopeSearch}
+                      onChange={(e) => setStudentScopeSearch(e.target.value)}
+                      placeholder="Search students…"
+                      className={cn('text-sm', fieldClass)}
+                    />
+                    <ScrollArea
+                      className={cn('h-44 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}
+                    >
+                      <div className="space-y-2 pr-3">
+                        {filteredScopeStudents.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={printScopeStudentIds.includes(s.id)}
+                              onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                setPrintScopeStudentIds((prev) =>
+                                  ch === true ? [...prev, s.id] : prev.filter((id) => id !== s.id),
+                                )
+                              }
+                            />
+                            <span>{couponStudentLabel(s)}</span>
+                          </label>
+                        ))}
+                        {sortedStudents.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-1 py-2">No students in this school yet.</p>
+                        )}
+                        {sortedStudents.length > 0 && filteredScopeStudents.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-1 py-2">No students match that search.</p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
               </div>
               )}
 
@@ -995,6 +1134,14 @@ export function CouponPrintPanel({
                     isGraphic={isGraphic}
                   />
                   <RedemptionChoice
+                    id="crs-students"
+                    value="students"
+                    title="Specific students"
+                    description="Only the students you pick by name from your roster."
+                    selected={printRedemptionScope === 'students'}
+                    isGraphic={isGraphic}
+                  />
+                  <RedemptionChoice
                     id="crs-school"
                     value="school"
                     title="Schoolwide"
@@ -1027,6 +1174,46 @@ export function CouponPrintPanel({
                           <p className="text-xs text-muted-foreground px-1 py-2">
                             No classes linked to you yet. Claim a class under Attendance or ask an admin to set a primary teacher.
                           </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+                {printRedemptionScope === 'students' && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Students{printScopeStudentIds.length ? ` (${printScopeStudentIds.length})` : ''}
+                    </p>
+                    <Input
+                      value={studentScopeSearch}
+                      onChange={(e) => setStudentScopeSearch(e.target.value)}
+                      placeholder="Search students…"
+                      className={cn('text-sm', fieldClass)}
+                    />
+                    <ScrollArea
+                      className={cn('h-44 rounded-xl border p-2', isGraphic ? 'border-white/10 bg-card/30' : 'bg-background')}
+                    >
+                      <div className="space-y-2 pr-3">
+                        {filteredScopeStudents.map((s) => (
+                          <label key={s.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                            <Checkbox
+                              checked={printScopeStudentIds.includes(s.id)}
+                              onCheckedChange={(ch: boolean | 'indeterminate') =>
+                                setPrintScopeStudentIds((prev) =>
+                                  ch === true ? [...prev, s.id] : prev.filter((id) => id !== s.id),
+                                )
+                              }
+                            />
+                            <span>{couponStudentLabel(s)}</span>
+                          </label>
+                        ))}
+                        {sortedStudents.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-1 py-2">
+                            No students on your roster yet.
+                          </p>
+                        )}
+                        {sortedStudents.length > 0 && filteredScopeStudents.length === 0 && (
+                          <p className="text-xs text-muted-foreground px-1 py-2">No students match that search.</p>
                         )}
                       </div>
                     </ScrollArea>
