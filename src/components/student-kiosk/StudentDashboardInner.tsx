@@ -451,8 +451,8 @@ export function StudentDashboardInner({
     ? 'Scan a coupon with the device camera. Use Logout on this card to exit.'
     : 'Scan or type a coupon code to add points. Use Logout on this card to exit.';
   const studentClassLabel = useMemo(() => {
-    if (!student?.classId || !classes?.length) return 'Unassigned';
-    return classes.find((c) => c.id === student.classId)?.name ?? 'Unassigned';
+    if (!student?.classId || !classes?.length) return '';
+    return classes.find((c) => c.id === student.classId)?.name ?? '';
   }, [student?.classId, classes]);
 
   const rewardGridRef = useRef<HTMLDivElement>(null);

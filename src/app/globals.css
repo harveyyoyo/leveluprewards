@@ -1723,6 +1723,20 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   border-radius: 0;
 }
 
+/* Portrait (lanyard badge) size for on-screen previews — mirrors the
+   @media print override below so the Branding studio and any other
+   screen preview show the correct proportions, not the landscape ID-1 box. */
+.print-id-card--portrait {
+  width: 2.125in;
+  height: 3.375in;
+  max-width: 2.125in;
+  max-height: 3.375in;
+  aspect-ratio: 2.125 / 3.375;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 0.12in 0.1in 0.08in 0.1in;
+}
+
 /* ============================================================
    Credit Card Layout
    Three stacked zones on an ISO ID-1 card:

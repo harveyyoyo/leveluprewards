@@ -38,7 +38,7 @@ type Props = {
   themed?: boolean;
 };
 
-export function StudentKioskOptionsMenu({ schoolId, student, classLabel = 'Unassigned', themed }: Props) {
+export function StudentKioskOptionsMenu({ schoolId, student, classLabel = '', themed }: Props) {
   const { settings, updateSettings } = useSettings();
   const playSound = useArcadeSound();
   const { functions } = useFirebase();

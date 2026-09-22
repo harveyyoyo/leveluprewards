@@ -34,7 +34,7 @@ type Props = {
 export function StudentKioskThemeButton({
   schoolId,
   student,
-  classLabel = 'Unassigned',
+  classLabel = '',
   themed,
   primaryForeground = '#ffffff',
   layout = 'inline',

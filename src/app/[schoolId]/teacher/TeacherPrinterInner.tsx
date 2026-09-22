@@ -944,7 +944,7 @@ function TeacherRosterTab({
                                 student={studentIdPreview}
                                 schoolName={schoolName}
                                 schoolLogoUrl={schoolData?.logoUrl ?? null}
-                                className={classMap.get(studentIdPreview.classId || '')?.name || 'Unassigned'}
+                                className={classMap.get(studentIdPreview.classId || '')?.name || ''}
                                 isColorEnabled={settings.enableColorPrinting}
                                 appLogoUrl={appLogoUrl}
                                 appName={appName}
@@ -1014,7 +1014,7 @@ function TeacherRosterTab({
               'Student'
             }
             previewStudent={idCardThemeStudent}
-            classLabel={classMap.get(idCardThemeStudent.classId || '')?.name || 'Unassigned'}
+            classLabel={classMap.get(idCardThemeStudent.classId || '')?.name || ''}
             currentTheme={idCardThemeStudent.theme}
             onSave={async (theme: StudentTheme) => {
               const normalized = normalizeStudentTheme(theme) ?? theme;

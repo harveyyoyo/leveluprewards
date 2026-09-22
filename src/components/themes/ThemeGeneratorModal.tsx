@@ -281,7 +281,7 @@ export function ThemeGeneratorModal({
     currentTheme,
     studentName,
     previewStudent,
-    classLabel = 'Unassigned',
+    classLabel = '',
     onRemoveTheme,
 }: ThemeGeneratorModalProps) {
     const { settings } = useSettings();
