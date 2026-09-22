@@ -659,12 +659,16 @@ export interface Goal {
   startDate?: number;
   endDate?: number;
   
-  // Reward upon completion
+  // Reward upon completion (for class goals: bonus given to each student)
   bonusPointsReward?: number;
   
   // Status tracking
   status: 'active' | 'completed' | 'expired';
   createdAt: number;
+  completedAt?: number;
+  createdByStudent?: boolean;
+  archived?: boolean;
+  almostThereNotifiedAt?: number;
 }
 
 export interface HomeworkAssignment {

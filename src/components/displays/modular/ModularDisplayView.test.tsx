@@ -4,6 +4,14 @@ import { ModularDisplayView } from "./ModularDisplayView";
 import { READY_MADE_PRESET_SCREENS } from "@/lib/displays/modularDisplaySchema";
 import type { DisplaysLiveFeed } from "@/hooks/useDisplaysLiveFeed";
 import type { Student } from "@/lib/types";
+
+vi.mock("@/components/providers/SettingsProvider", () => ({
+  useSettings: () => ({
+    settings: { goalsOptions: undefined },
+    updateSettings: vi.fn(),
+  }),
+}));
+
 const feed: DisplaysLiveFeed = {
   schoolId: "demo",
   now: new Date(2026, 8, 11),

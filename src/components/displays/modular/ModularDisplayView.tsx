@@ -18,6 +18,9 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn, displayStudentNameOnSharedBoard } from "@/lib/utils";
+import { useSettings } from "@/components/providers/SettingsProvider";
+import { resolveGoalsOptions } from "@/lib/goals/goalsOptions";
+import { isRecentCompletion } from "@/lib/goals/goalHelpers";
 import type { DisplaysLiveFeed } from "@/hooks/useDisplaysLiveFeed";
 import {
   DISPLAY_MODULE_CATALOG,
@@ -205,6 +208,7 @@ export function ModularDisplayView({
   className,
   style,
 }: ModularDisplayViewProps) {
+  const { settings } = useSettings();
   const theme = resolveScreenTheme(config.theme);
   const enabled = useMemo(
     () => new Set(config.enabledModules),
@@ -587,6 +591,31 @@ export function ModularDisplayView({
         );
         break;
       case "schoolGoal": {
+        const goalsOpts = resolveGoalsOptions(settings.goalsOptions);
+        const recentFinished = goalsOpts.hallwaySpotlight
+          ? [...feed.goals]
+              .filter((item) => isRecentCompletion(item))
+              .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0))[0]
+          : undefined;
+        if (recentFinished) {
+          content = (
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                Just finished!
+              </p>
+              <p className="text-base font-bold">{recentFinished.title}</p>
+              <p className="text-sm">
+                Target {Number(recentFinished.targetPoints || 0).toLocaleString()} pts
+              </p>
+              {recentFinished.classId ? (
+                <p className="text-xs">
+                  {feed.classes.find((item) => item.id === recentFinished.classId)?.name || "Class"}
+                </p>
+              ) : null}
+            </div>
+          );
+          break;
+        }
         // Goal cards must not compare an unrelated school balance against a personal goal.
         const goal = feed.goals.find(
           (item) =>

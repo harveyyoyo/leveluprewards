@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Award, Search, Undo2 } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useSettings } from '@/components/providers/SettingsProvider';
+import { useFirestore } from '@/firebase';
+import { syncAndPresentGoalsForStudents } from '@/lib/goals/presentGoalEvents';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Helper } from '@/components/ui/helper';
@@ -75,7 +77,8 @@ export function ManualPointsAwardDialog({
   const { toast } = useToast();
   const playSound = useArcadeSound();
   const { settings } = useSettings();
-  const { awardPointsToMultipleStudents, deductPointsFromMultipleStudents } = useAppContext();
+  const firestore = useFirestore();
+  const { awardPointsToMultipleStudents, deductPointsFromMultipleStudents, schoolId } = useAppContext();
 
   const [open, setOpen] = useState(false);
   const [awardMode, setAwardMode] = useState<'award' | 'deduct'>('award');
@@ -268,6 +271,14 @@ export function ManualPointsAwardDialog({
               ? `Golden ticket — ${points} points to ${result.count} student(s).`
               : `Awarded ${points} points to ${result.count} student(s).`,
         });
+        if (!queued && settings.enableGoals && schoolId && firestore) {
+          void syncAndPresentGoalsForStudents(firestore, schoolId, selectedStudentIds, {
+            enabled: true,
+            options: settings.goalsOptions,
+            toast,
+            playSound: () => playSound('success'),
+          });
+        }
         if (!queued) {
           setLastAction({
             mode: 'award',

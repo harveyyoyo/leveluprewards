@@ -308,10 +308,23 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     subtitle: 'Student targets and progress',
     steps: [
       {
-        title: 'Set school goals',
+        title: 'Create a goal',
         checklist: [
-          'Create goals with titles, targets, and optional class scope.',
-          'Teachers track progress from their Goals tab when enabled.',
+          'Use a quick-start template, habit idea, or Copy recent goals.',
+          'Optional: category filter, dates, and a bonus when the goal finishes (class bonus goes to each student).',
+        ],
+      },
+      {
+        title: 'Track and tidy',
+        checklist: [
+          'Switch Active / Finished / Past due / Archived to find the right list (empty ones can hide).',
+          'Edit details, extend past-due by a week, archive finished goals, or confirm before deleting.',
+        ],
+      },
+      {
+        title: 'Options',
+        checklist: [
+          'Open Options to turn classroom rings, cheers, hallway spotlight, and shop “need more” on or off.',
         ],
       },
     ],

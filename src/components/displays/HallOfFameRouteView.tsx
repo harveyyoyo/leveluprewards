@@ -13,6 +13,8 @@ import type { Student, Class, House, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
+import { resolveGoalsOptions } from '@/lib/goals/goalsOptions';
+import { isRecentCompletion } from '@/lib/goals/goalHelpers';
 import { isCompactDisplayMode } from '@/lib/displayMode';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import {
@@ -406,7 +408,8 @@ export default function HallOfFamePage({
                 description: g.description || '',
                 status: g.status,
                 goalType: g.type,
-                bonusReward: g.bonusPointsReward
+                bonusReward: g.bonusPointsReward,
+                completedAt: g.completedAt,
             }));
         }
     }, [
@@ -830,13 +833,34 @@ export default function HallOfFamePage({
                                                 <div className="flex justify-between items-start gap-4 mb-2">
                                                     <div>
                                                         <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-1 rounded-full font-black uppercase tracking-wider">
-                                                            {item.goalType} Goal
+                                                            {item.goalType === 'prize_savings'
+                                                              ? 'Savings'
+                                                              : item.goalType === 'class'
+                                                                ? 'Class'
+                                                                : item.goalType === 'personal'
+                                                                  ? 'Personal'
+                                                                  : 'Goal'}
                                                         </span>
                                                         <span className={cn(
                                                             "text-[10px] ml-2 px-2.5 py-1 rounded-full font-black uppercase tracking-wider",
                                                             item.status === 'completed' ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
                                                         )}>
-                                                            {item.status}
+                                                            {item.status === 'completed'
+                                                              ? (resolveGoalsOptions(settings.goalsOptions).hallwaySpotlight &&
+                                                                isRecentCompletion({
+                                                                  status: 'completed',
+                                                                  completedAt: item.completedAt,
+                                                                  createdAt: 0,
+                                                                  id: item.id,
+                                                                  title: item.name,
+                                                                  type: 'personal',
+                                                                  targetPoints: item.targetPoints,
+                                                                })
+                                                                  ? 'Just finished!'
+                                                                  : 'Finished')
+                                                              : item.status === 'expired'
+                                                                ? 'Past due'
+                                                                : 'In progress'}
                                                         </span>
                                                     </div>
                                                     {item.bonusReward ? (

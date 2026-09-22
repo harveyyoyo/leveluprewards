@@ -159,6 +159,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
+import { useStudentWishlist } from '@/hooks/useStudentWishlist';
+import { resolveGoalsOptions } from '@/lib/goals/goalsOptions';
+import { presentGoalSyncEvents } from '@/lib/goals/presentGoalEvents';
 import { StudentIncentivesCard } from '@/components/incentives/StudentIncentivesCard';
 import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
@@ -782,6 +785,30 @@ export function StudentDashboardInner({
   const [fullPrizeShopOpen, setFullPrizeShopOpen] = useState(false);
   const [kioskMobileTab, setKioskMobileTab] = useState<'redeem' | 'prizes' | 'info'>('redeem');
 
+  const wishlist = useStudentWishlist({
+    schoolId,
+    studentId,
+    enabled: settings.enableGoals === true,
+  });
+  const goalsOpts = resolveGoalsOptions(settings.goalsOptions);
+
+  const syncStudentGoalsWithCheer = useCallback(() => {
+    if (!settings.enableGoals || !schoolId || !firestore || !student?.id) return;
+    void import('@/lib/goalsProgress').then(async (m) => {
+      try {
+        const events = await m.syncGoalsForStudent(firestore, schoolId, student.id);
+        presentGoalSyncEvents(events, {
+          options: goalsOpts,
+          toast,
+          playSound: () => playSound('success'),
+          forStudent: true,
+        });
+      } catch {
+        /* ignore */
+      }
+    });
+  }, [settings.enableGoals, schoolId, firestore, student?.id, goalsOpts, toast, playSound]);
+
   const openFullPrizeShop = useCallback(() => {
     playSound('click');
     setFullPrizeShopOpen(true);
@@ -1162,9 +1189,7 @@ export function StudentDashboardInner({
           });
         }
         if (settings.enableGoals && schoolId && firestore) {
-          void import('@/lib/goalsProgress').then((m) =>
-            m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
-          );
+          syncStudentGoalsWithCheer();
         }
       } else {
         playSound('error');
@@ -1202,6 +1227,7 @@ export function StudentDashboardInner({
     handlePrizeShelfScan,
     handlePickupVoucherScan,
     handleStudentIdScan,
+    syncStudentGoalsWithCheer,
   ]);
 
   const handleRedeemPrizePickupVoucher = useCallback(async () => {
@@ -1231,9 +1257,7 @@ export function StudentDashboardInner({
       });
 
       if (settings.enableGoals && schoolId && firestore) {
-        void import('@/lib/goalsProgress').then((m) =>
-          m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
-        );
+        syncStudentGoalsWithCheer();
       }
 
       setPrizeTicketData(
@@ -1269,6 +1293,7 @@ export function StudentDashboardInner({
     student,
     studentId,
     toast,
+    syncStudentGoalsWithCheer,
   ]);
 
   usePrizeShelfWedgeScan({
@@ -1308,9 +1333,7 @@ export function StudentDashboardInner({
       });
 
       if (settings.enableGoals && schoolId && firestore) {
-        void import('@/lib/goalsProgress').then((m) =>
-          m.syncGoalsForStudent(firestore, schoolId, student.id).catch(() => {}),
-        );
+        syncStudentGoalsWithCheer();
       }
 
       const { activityId, redeemedAt, totalCost } = result;
@@ -1425,7 +1448,7 @@ export function StudentDashboardInner({
     } finally {
       setIsRedeemingPrize(false);
     }
-  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunActive]);
+  }, [authFetch, confirmingFunKind, confirmingPrize, playSound, redeemPrize, resetLogoutTimer, schoolId, settings.defaultStudentTheme, settings.enableStudentThemes, settings.enablePrizeAiSurprise, settings.enableStudentEmojiOnPrizeTickets, settings.enableGoals, student, toast, firestore, kioskAiFunActive, syncStudentGoalsWithCheer]);
 
   const handlePrintPrizeTicket = useCallback(() => {
     if (!prizeTicketData) return;
@@ -2054,6 +2077,11 @@ export function StudentDashboardInner({
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
                       wholeCardClick
+                      enableWishlist={wishlist.enableWishlist}
+                      wishlistActive={wishlist.activeWishlistPrizeId === reward.id}
+                      wishlistBusy={wishlist.wishlistBusyPrizeId === reward.id}
+                      onToggleWishlist={() => void wishlist.toggleWishlist(reward.id)}
+                      showNeedMore={goalsOpts.showNeedMoreInShop}
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -2231,6 +2259,11 @@ export function StudentDashboardInner({
                           themed={!!effectiveTheme}
                           primaryForeground={primaryForeground}
                           wholeCardClick
+                          enableWishlist={wishlist.enableWishlist}
+                          wishlistActive={wishlist.activeWishlistPrizeId === reward.id}
+                          wishlistBusy={wishlist.wishlistBusyPrizeId === reward.id}
+                          onToggleWishlist={() => void wishlist.toggleWishlist(reward.id)}
+                          showNeedMore={goalsOpts.showNeedMoreInShop}
                           onRedeem={() => {
                             playSound('click');
                             setConfirmingPrize(reward);

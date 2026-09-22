@@ -159,10 +159,10 @@ const TEACHER_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
     subtitle: 'Track student targets',
     steps: [
       {
-        title: 'Monitor progress',
+        title: 'Create and watch progress',
         checklist: [
-          'Review active goals assigned to your students.',
-          'Update or celebrate completion when a student reaches a target.',
+          'Add personal, savings, or class goals for your students.',
+          'Check Active for “Almost there,” celebrate finishes, and archive when done.',
         ],
       },
     ],

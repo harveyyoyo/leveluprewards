@@ -806,12 +806,20 @@ export interface Goal {
   startDate?: number;
   endDate?: number;
   
-  // Reward upon completion
+  // Reward upon completion (for class goals: bonus given to each student)
   bonusPointsReward?: number;
   
   // Status tracking
   status: 'active' | 'completed' | 'expired';
   createdAt: number;
+  /** When the goal first reached its target. */
+  completedAt?: number;
+  /** Student (or kiosk) created this savings wishlist item. */
+  createdByStudent?: boolean;
+  /** Soft-hidden from the main staff lists. */
+  archived?: boolean;
+  /** Set when staff/students were alerted that progress crossed ~80%. */
+  almostThereNotifiedAt?: number;
 }
 
 export interface HomeworkAssignment {
