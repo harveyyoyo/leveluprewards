@@ -26,6 +26,8 @@ export type StudentPrizeShopCardProps = {
   wishlistActive?: boolean;
   wishlistBusy?: boolean;
   onToggleWishlist?: () => void;
+  /** Show “Need X more” instead of only a percent when locked. */
+  showNeedMore?: boolean;
 };
 
 export function StudentPrizeShopCard({
@@ -41,13 +43,17 @@ export function StudentPrizeShopCard({
   wishlistActive = false,
   wishlistBusy = false,
   onToggleWishlist,
+  showNeedMore = false,
 }: StudentPrizeShopCardProps) {
   const canAfford = studentPoints >= (prize.points || 0);
   const displayName = stripLeadingEmojiFromPrizeName(prize.name) || prize.name;
   const pctTowardCost = Math.min(100, Math.floor((studentPoints / (prize.points || 1)) * 100));
+  const needMore = Math.max(0, (prize.points || 0) - studentPoints);
   const lockedTitle =
     affordHint ||
-    `You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`;
+    (needMore > 0
+      ? `Need ${needMore.toLocaleString()} more points (have ${pctTowardCost}% of ${(prize.points || 0).toLocaleString()}).`
+      : `You have ${pctTowardCost}% of the points this prize costs (need ${(prize.points || 0).toLocaleString()} pts).`);
 
   const prizeTitle = (
     <h3
@@ -158,7 +164,9 @@ export function StudentPrizeShopCard({
               }
               title={lockedTitle}
             >
-              {pctTowardCost}%
+              {showNeedMore && needMore > 0
+                ? `Need ${needMore.toLocaleString()} more`
+                : `${pctTowardCost}%`}
             </Badge>
           ) : null}
           {typeof prize.stockCount === 'number' ? (

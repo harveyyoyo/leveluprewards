@@ -13,6 +13,8 @@ import type { Student, Class, House, Category, Goal } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { cn, displayStudentNameOnSharedBoard } from '@/lib/utils';
+import { resolveGoalsOptions } from '@/lib/goals/goalsOptions';
+import { isRecentCompletion } from '@/lib/goals/goalHelpers';
 import { isCompactDisplayMode } from '@/lib/displayMode';
 import { canAccessHallOfFameRoute } from '@/lib/hallOfFameAccess';
 import {
@@ -844,7 +846,16 @@ export default function HallOfFamePage({
                                                             item.status === 'completed' ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
                                                         )}>
                                                             {item.status === 'completed'
-                                                              ? (item.completedAt && Date.now() - item.completedAt <= 7 * 24 * 60 * 60 * 1000
+                                                              ? (resolveGoalsOptions(settings.goalsOptions).hallwaySpotlight &&
+                                                                isRecentCompletion({
+                                                                  status: 'completed',
+                                                                  completedAt: item.completedAt,
+                                                                  createdAt: 0,
+                                                                  id: item.id,
+                                                                  title: item.name,
+                                                                  type: 'personal',
+                                                                  targetPoints: item.targetPoints,
+                                                                })
                                                                   ? 'Just finished!'
                                                                   : 'Finished')
                                                               : item.status === 'expired'

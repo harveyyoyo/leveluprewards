@@ -106,6 +106,8 @@ interface Settings {
     enableLevels: boolean;
     enableStreaks: boolean;
     enableGoals: boolean;
+    /** Optional Goals extras (classroom rings, cheers, hallway spotlight, …). */
+    goalsOptions?: Partial<import('@/lib/goals/goalsOptions').GoalsOptions>;
     /** Recess tab: check students out for a break/bathroom with live timers and a return log. */
     enableRecess?: boolean;
     /** Student kiosk: self-service bathroom/break checkout card after sign-in. */
@@ -850,6 +852,7 @@ const defaultSettings: Settings = {
     enableLevels: false,
     enableStreaks: false,
     enableGoals: false,
+    goalsOptions: undefined,
     enableRecess: true,
     recessStudentKioskEnabled: true,
     recessMaxMinutes: 10,

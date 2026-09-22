@@ -21,6 +21,16 @@ import {
   titleForPrizeSavings,
   type GoalListBucket,
 } from '@/lib/goals/goalHelpers';
+import {
+  extendedEndDate,
+  isGoalCrushed,
+  payloadForCopiedGoal,
+  pickGoalsToCopy,
+  resolveGoalsOptions,
+  suggestGoalsFromHabits,
+} from '@/lib/goals/goalsOptions';
+import { GoalsOptionsPanel } from '@/components/goals/GoalsOptionsPanel';
+import { useSettings } from '@/components/providers/SettingsProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -28,7 +38,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
+import { Archive, CalendarPlus, Copy, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -102,7 +112,7 @@ function formFromGoal(goal: Goal): GoalFormState {
   };
 }
 
-type SectionId = 'create' | GoalListBucket;
+type SectionId = 'create' | 'options' | GoalListBucket;
 
 export function GoalsManager(props: {
   schoolId: string;
@@ -118,6 +128,8 @@ export function GoalsManager(props: {
   const { schoolId, variant, teacherId, secretaryMode, students, classes, categories, prizes, isGraphic } = props;
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { settings, updateSettings } = useSettings();
+  const goalsOpts = resolveGoalsOptions(settings.goalsOptions);
 
   const goalsQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'goals') : null),
@@ -205,18 +217,20 @@ export function GoalsManager(props: {
   useEffect(() => {
     if (!baselineReady) return;
     for (const { goal, progress } of progressRows) {
-      if (goal.status === 'completed' && !celebratedIds.has(goal.id)) {
+      if (goal.status === 'completed' && !celebratedIds.has(goal.id) && goalsOpts.celebrateOnAward) {
         setCelebratedIds((prev) => new Set(prev).add(goal.id));
-        confetti({ particleCount: 90, spread: 70, origin: { y: 0.65 } });
+        const party = goal.type === 'class' && goalsOpts.classPartyMode;
+        confetti({ particleCount: party ? 160 : 90, spread: party ? 100 : 70, origin: { y: 0.65 } });
         toast({
-          title: 'Goal finished!',
+          title: party ? 'Class goal party!' : 'Goal finished!',
           description: `"${goal.title}" — ${goalAudienceLabel(goal, students, classes)} made it.`,
         });
       }
       if (
         goal.status === 'active' &&
         isAlmostThere(progress, goal.targetPoints) &&
-        !alertedAlmostIds.has(goal.id)
+        !alertedAlmostIds.has(goal.id) &&
+        goalsOpts.teacherAlmostThereNudge
       ) {
         setAlertedAlmostIds((prev) => new Set(prev).add(goal.id));
         toast({
@@ -225,7 +239,18 @@ export function GoalsManager(props: {
         });
       }
     }
-  }, [progressRows, celebratedIds, alertedAlmostIds, toast, students, classes, baselineReady]);
+  }, [
+    progressRows,
+    celebratedIds,
+    alertedAlmostIds,
+    toast,
+    students,
+    classes,
+    baselineReady,
+    goalsOpts.celebrateOnAward,
+    goalsOpts.classPartyMode,
+    goalsOpts.teacherAlmostThereNudge,
+  ]);
 
   const counts = useMemo(() => {
     const c = { active: 0, finished: 0, past_due: 0, archived: 0 };
@@ -235,21 +260,35 @@ export function GoalsManager(props: {
     return c;
   }, [filteredGoals]);
 
-  const sectionItems = useMemo(
-    () => [
+  const sectionItems = useMemo(() => {
+    const items: { id: SectionId; label: string; badge?: number }[] = [
       { id: 'create', label: 'Create' },
       { id: 'active', label: 'Active', badge: counts.active },
-      { id: 'finished', label: 'Finished', badge: counts.finished },
-      { id: 'past_due', label: 'Past due', badge: counts.past_due },
-      { id: 'archived', label: 'Archived', badge: counts.archived },
-    ],
-    [counts],
-  );
+    ];
+    const hideEmpty = goalsOpts.hideEmptySections;
+    if (!hideEmpty || counts.finished > 0) items.push({ id: 'finished', label: 'Finished', badge: counts.finished });
+    if (!hideEmpty || counts.past_due > 0) items.push({ id: 'past_due', label: 'Past due', badge: counts.past_due });
+    if (!hideEmpty || counts.archived > 0) items.push({ id: 'archived', label: 'Archived', badge: counts.archived });
+    items.push({ id: 'options', label: 'Options' });
+    return items;
+  }, [counts, goalsOpts.hideEmptySections]);
+
+  // If the active section was hidden (empty), fall back to Active.
+  useEffect(() => {
+    if (section === 'options' || section === 'create' || section === 'active') return;
+    const stillVisible = sectionItems.some((i) => i.id === section);
+    if (!stillVisible) setSection('active');
+  }, [section, sectionItems]);
 
   const listedGoals = useMemo(() => {
-    if (section === 'create') return [];
+    if (section === 'create' || section === 'options') return [];
     return filteredGoals.filter((g) => bucketForGoal(g) === section);
   }, [filteredGoals, section]);
+
+  const habitSuggestions = useMemo(
+    () => (goalsOpts.suggestFromHabits ? suggestGoalsFromHabits(students, categories || []) : []),
+    [goalsOpts.suggestFromHabits, students, categories],
+  );
 
   const visibleStudents = useMemo(
     () => filterStudentsByQuery(students, studentSearch),
@@ -294,6 +333,68 @@ export function GoalsManager(props: {
     }));
     setSection('create');
     toast({ title: 'Template applied', description: 'Adjust the details, then create the goal.' });
+  };
+
+  const applyHabitSuggestion = (id: string) => {
+    const s = habitSuggestions.find((x) => x.id === id);
+    if (!s) return;
+    setForm((f) => ({
+      ...f,
+      goalType: s.type,
+      title: s.title,
+      description: s.description,
+      targetPoints: String(s.targetPoints),
+      categoryId: s.categoryId || '__none__',
+      prizeId: '__none__',
+    }));
+    setSection('create');
+    toast({ title: 'Suggestion applied', description: 'Pick a student, then create the goal.' });
+  };
+
+  const handleCopyLastMonth = async () => {
+    if (!firestore || !schoolId) return;
+    const toCopy = pickGoalsToCopy(filteredGoals);
+    if (toCopy.length === 0) {
+      toast({ title: 'Nothing to copy', description: 'Create a few goals first, then try again next month.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      let n = 0;
+      for (const g of toCopy) {
+        await addGoal(firestore, schoolId, payloadForCopiedGoal(g));
+        n += 1;
+      }
+      toast({ title: 'Goals copied', description: `Added ${n} goal${n === 1 ? '' : 's'} with fresh dates.` });
+      setSection('active');
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not copy',
+        description: e instanceof Error ? e.message : 'Try again.',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleExtendWeek = async (goal: Goal) => {
+    if (!firestore || !schoolId) return;
+    try {
+      await updateGoal(firestore, schoolId, goal.id, {
+        status: 'active',
+        endDate: extendedEndDate(goal),
+        clearFields: goal.archived ? ['archived'] : undefined,
+      });
+      toast({ title: 'Extended one week', description: `"${goal.title}" is active again.` });
+      setSection('active');
+    } catch (e: unknown) {
+      toast({
+        variant: 'destructive',
+        title: 'Could not extend',
+        description: e instanceof Error ? e.message : 'Try again.',
+      });
+    }
   };
 
   const validateForm = (state: GoalFormState): string | null => {
@@ -651,7 +752,12 @@ export function GoalsManager(props: {
         className="mb-6"
       />
 
-      {section === 'create' ? (
+      {section === 'options' ? (
+        <GoalsOptionsPanel
+          value={settings.goalsOptions}
+          onChange={(next) => updateSettings({ goalsOptions: next })}
+        />
+      ) : section === 'create' ? (
         <Card
           className={cn(
             'border-t-8 transition-all duration-500 max-w-2xl',
@@ -686,8 +792,39 @@ export function GoalsManager(props: {
                     {t.label}
                   </Button>
                 ))}
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-xl"
+                  disabled={saving}
+                  onClick={() => void handleCopyLastMonth()}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copy recent goals
+                </Button>
               </div>
             </div>
+
+            {goalsOpts.suggestFromHabits && habitSuggestions.length > 0 ? (
+              <div className="space-y-2">
+                <Label>Ideas from class habits</Label>
+                <div className="flex flex-wrap gap-2">
+                  {habitSuggestions.map((s) => (
+                    <Button
+                      key={s.id}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl"
+                      onClick={() => applyHabitSuggestion(s.id)}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {renderFormFields(form, 'create', visibleStudents, studentSearch, setStudentSearch)}
 
@@ -737,6 +874,7 @@ export function GoalsManager(props: {
                     const p = progressFor(g);
                     const pct = progressPercent(p, g.targetPoints);
                     const almost = g.status === 'active' && isAlmostThere(p, g.targetPoints);
+                    const crushed = isGoalCrushed(p, g.targetPoints) || g.status === 'completed';
                     return (
                       <li key={g.id} className="rounded-2xl border bg-muted/15 p-4 space-y-2">
                         <div className="flex justify-between gap-2 items-start">
@@ -747,13 +885,29 @@ export function GoalsManager(props: {
                               {goalStatusLabel(g.status)}
                               {g.createdByStudent ? ' · Student wishlist' : ''}
                             </p>
-                            {almost ? (
+                            {crushed && g.status !== 'expired' ? (
+                              <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                                Goal crushed!
+                              </p>
+                            ) : almost ? (
                               <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-1">
                                 Almost there!
                               </p>
                             ) : null}
                           </div>
                           <div className="flex shrink-0 gap-0.5">
+                            {section === 'past_due' ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => void handleExtendWeek(g)}
+                                aria-label="Extend one week"
+                                title="Extend one week"
+                              >
+                                <CalendarPlus className="w-4 h-4" />
+                              </Button>
+                            ) : null}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -799,9 +953,9 @@ export function GoalsManager(props: {
                           <span>
                             {p.toLocaleString()} / {Number(g.targetPoints ?? 0).toLocaleString()} pts
                           </span>
-                          <span>{pct}%</span>
+                          <span>{crushed && pct >= 100 ? `${Math.max(pct, progressPercent(p, g.targetPoints))}%+` : `${pct}%`}</span>
                         </div>
-                        <Progress value={pct} className="h-2" />
+                        <Progress value={Math.min(100, pct)} className="h-2" />
                       </li>
                     );
                   })}

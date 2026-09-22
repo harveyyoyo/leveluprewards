@@ -310,16 +310,21 @@ const ADMIN_TAB_WALKTHROUGHS: Record<string, TabWalkthroughConfig> = {
       {
         title: 'Create a goal',
         checklist: [
-          'Use a quick-start template or fill in the form (personal, savings, or class).',
+          'Use a quick-start template, habit idea, or Copy recent goals.',
           'Optional: category filter, dates, and a bonus when the goal finishes (class bonus goes to each student).',
         ],
       },
       {
         title: 'Track and tidy',
         checklist: [
-          'Switch Active / Finished / Past due / Archived to find the right list.',
-          'Edit details, archive finished goals, or confirm before deleting.',
-          'Cheer students when they are almost there or when a goal finishes.',
+          'Switch Active / Finished / Past due / Archived to find the right list (empty ones can hide).',
+          'Edit details, extend past-due by a week, archive finished goals, or confirm before deleting.',
+        ],
+      },
+      {
+        title: 'Options',
+        checklist: [
+          'Open Options to turn classroom rings, cheers, hallway spotlight, and shop “need more” on or off.',
         ],
       },
     ],

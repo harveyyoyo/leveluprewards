@@ -51,6 +51,13 @@ export function useStudentWishlist(args: {
           }
           toast({ title: 'Wishlist cleared', description: 'You can pick another reward anytime.' });
         } else {
+          if (activeWishlistPrizeId && activeWishlistPrizeId !== prizeId) {
+            const ok =
+              typeof window !== 'undefined'
+                ? window.confirm('You already have a savings goal. Replace it with this reward?')
+                : true;
+            if (!ok) return;
+          }
           const result = await setStudentWishlist(auth, { schoolId, studentId, prizeId });
           if (!result.ok) {
             toast({ variant: 'destructive', title: 'Could not save wishlist', description: result.error });
