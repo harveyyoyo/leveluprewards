@@ -184,6 +184,15 @@ export function GoalsManager(props: {
         }
         const progress = await computeGoalProgress(firestore, schoolId, goal, viewer, roster, categories);
         out.push({ goal, progress });
+        // Catch goals that already meet the target (e.g. created after points were earned).
+        if (goal.status === 'active' && progress >= Number(goal.targetPoints || 0) && Number(goal.targetPoints || 0) > 0) {
+          const syncId = goal.studentId || roster[0]?.id;
+          if (syncId) {
+            void import('@/lib/goalsProgress').then((m) =>
+              m.syncGoalsForStudent(firestore, schoolId, syncId).catch(() => {}),
+            );
+          }
+        }
       }
       if (!cancelled) setProgressRows(out);
     })().catch(() => {});
@@ -338,6 +347,19 @@ export function GoalsManager(props: {
     setSaving(true);
     try {
       await addGoal(firestore, schoolId, toGoalPayload(form));
+      const payload = toGoalPayload(form);
+      if (payload.studentId) {
+        void import('@/lib/goalsProgress').then((m) =>
+          m.syncGoalsForStudent(firestore, schoolId, payload.studentId!).catch(() => {}),
+        );
+      } else if (payload.type === 'class' && payload.classId) {
+        const roster = rosterForClass(payload.classId);
+        if (roster[0]) {
+          void import('@/lib/goalsProgress').then((m) =>
+            m.syncGoalsForStudent(firestore, schoolId, roster[0]!.id).catch(() => {}),
+          );
+        }
+      }
       toast({ title: 'Goal created' });
       setForm(emptyForm());
       setStudentSearch('');
