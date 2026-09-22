@@ -176,7 +176,7 @@ export function CouponPrintPanel({
   const knownCategoryIdsRef = useRef<Set<string>>(new Set());
   const [printStartsOn, setPrintStartsOn] = useState('');
   const [printExpiresOn, setPrintExpiresOn] = useState('');
-  const [printSheetCount, setPrintSheetCount] = useState('1');
+  const [printCouponCount, setPrintCouponCount] = useState(String(COUPONS_PER_PRINT_PAGE));
   const [printCouponsPerPage, setPrintCouponsPerPage] = useState<CouponPrintPageSize>(COUPONS_PER_PRINT_PAGE);
   const [printCornerStyle, setPrintCornerStyle] = useState<CouponCornerStyle>(DEFAULT_COUPON_CORNER_STYLE);
   const [printRedemptionScope, setPrintRedemptionScope] = useState<CouponRedemptionScope>(() =>
@@ -318,9 +318,11 @@ export function CouponPrintPanel({
     toast({ title: 'Category Added' });
   };
 
+  const maxCouponsPerPrint = MAX_COUPON_PRINT_SHEETS * printCouponsPerPage;
+
   const handlePrintSheet = async () => {
     const value = parseInt(printValue, 10);
-    const sheets = parseInt(printSheetCount, 10);
+    const requestedCount = parseInt(printCouponCount, 10);
     if (!teacherName) {
       playSound('error');
       toast({ variant: 'destructive', title: 'An error occurred. Please try again.' });
@@ -335,16 +337,19 @@ export function CouponPrintPanel({
       });
       return;
     }
-    if (!isReusablePrint && (Number.isNaN(sheets) || sheets < 1 || sheets > MAX_COUPON_PRINT_SHEETS)) {
+    if (
+      !isReusablePrint &&
+      (Number.isNaN(requestedCount) || requestedCount < 1 || requestedCount > maxCouponsPerPrint)
+    ) {
       playSound('error');
       toast({
         variant: 'destructive',
-        title: 'Invalid sheet count',
-        description: `Enter between 1 and ${MAX_COUPON_PRINT_SHEETS} sheets (${printCouponsPerPage} coupons per sheet).`,
+        title: 'Invalid coupon count',
+        description: `Enter between 1 and ${maxCouponsPerPrint} coupons (full page is ${printCouponsPerPage}).`,
       });
       return;
     }
-    const couponCount = isReusablePrint ? 1 : sheets * printCouponsPerPage;
+    const couponCount = isReusablePrint ? 1 : requestedCount;
     const selectedCategory = categoryList.find((c) => c.id === printCategoryId);
     if (!selectedCategory) {
       playSound('error');
@@ -662,9 +667,9 @@ export function CouponPrintPanel({
     [teacherList],
   );
 
-  const totalCoupons = isReusablePrint
-    ? 1
-    : (parseInt(printSheetCount, 10) || 0) * printCouponsPerPage;
+  const totalCoupons = isReusablePrint ? 1 : parseInt(printCouponCount, 10) || 0;
+  const printPageEstimate =
+    totalCoupons > 0 ? Math.ceil(totalCoupons / printCouponsPerPage) : 0;
   const budgetTeacher = teacherBudget?.currentTeacher ?? null;
   const printValueNum = parseInt(printValue, 10) || 0;
   const budgetHint =
@@ -713,7 +718,7 @@ export function CouponPrintPanel({
             <StaffPortalTabInfoPopover
               sections={[
                 staffPortalTabInfoSection(
-                  'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category. Choose 10 or 30 coupons per letter page, set how many sheets to print, and match each cell to the preview layout. Check “Make this reusable” at the top right to print one staff slip that can be scanned many times.',
+                  'Generate printable coupons for student kiosk redemption. Point-earning display cards are set on each category. Choose 10 or 30 coupons per letter page, then set how many coupons to print (defaults to a full page). You can print fewer than a full page. Check “Make this reusable” at the top right to print one staff slip that can be scanned many times.',
                 ),
               ]}
               ariaLabel="About print coupons"
@@ -883,7 +888,18 @@ export function CouponPrintPanel({
                   <Label className={labelClass}>Coupons per page</Label>
                   <Select
                     value={String(printCouponsPerPage)}
-                    onValueChange={(value) => setPrintCouponsPerPage(normalizeCouponPrintPageSize(Number(value)))}
+                    onValueChange={(value) => {
+                      const next = normalizeCouponPrintPageSize(Number(value));
+                      setPrintCouponCount((current) => {
+                        const parsed = parseInt(current, 10);
+                        // Keep “full page” as the default when the layout size changes.
+                        if (Number.isNaN(parsed) || parsed === printCouponsPerPage) {
+                          return String(next);
+                        }
+                        return current;
+                      });
+                      setPrintCouponsPerPage(next);
+                    }}
                   >
                     <SelectTrigger className={cn('text-sm font-bold min-w-0 [&>span]:min-w-0', fieldClass)}>
                       <SelectValue />
@@ -919,17 +935,24 @@ export function CouponPrintPanel({
                 </div>
                 {!isReusablePrint && (
                 <div className="space-y-2 min-w-0">
-                  <Label className={labelClass}>Sheets</Label>
+                  <Label htmlFor="coupon-print-count" className={labelClass}>
+                    How many coupons
+                  </Label>
                   <Input
+                    id="coupon-print-count"
                     type="number"
                     min={1}
-                    max={MAX_COUPON_PRINT_SHEETS}
-                    value={printSheetCount}
-                    onChange={(e) => setPrintSheetCount(e.target.value)}
+                    max={maxCouponsPerPrint}
+                    value={printCouponCount}
+                    onChange={(e) => setPrintCouponCount(e.target.value)}
                     className={cn('text-lg font-black', fieldClass)}
                   />
                   <p className="text-[11px] text-muted-foreground px-0.5">
-                    Total: {totalCoupons} coupons{budgetHint}
+                    Full page is {printCouponsPerPage}
+                    {printPageEstimate > 0
+                      ? ` · ~${printPageEstimate} page${printPageEstimate === 1 ? '' : 's'}`
+                      : ''}
+                    {budgetHint}
                   </p>
                 </div>
                 )}
