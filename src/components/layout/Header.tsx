@@ -259,14 +259,10 @@ export default function Header() {
               <Link
                 key={id}
                 href={href}
+                target={id === 'redeem' ? '_blank' : undefined}
+                rel={id === 'redeem' ? 'noopener noreferrer' : undefined}
                 className={cn('flex flex-col items-center px-3 py-1 transition-all', activeClass)}
-                onClick={(e) => {
-                  playSound('click');
-                  if (id === 'redeem' && loginState === 'admin') {
-                    e.preventDefault();
-                    logout({ staffNavigateTo: 'student' });
-                  }
-                }}
+                onClick={() => playSound('click')}
               >
                 <Icon className="h-6 w-6" />
                 <span className="mt-1 text-[10px] font-bold uppercase tracking-wider">{label}</span>
