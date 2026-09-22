@@ -1227,6 +1227,7 @@ export function StudentDashboardInner({
     handlePrizeShelfScan,
     handlePickupVoucherScan,
     handleStudentIdScan,
+    syncStudentGoalsWithCheer,
   ]);
 
   const handleRedeemPrizePickupVoucher = useCallback(async () => {
@@ -1292,6 +1293,7 @@ export function StudentDashboardInner({
     student,
     studentId,
     toast,
+    syncStudentGoalsWithCheer,
   ]);
 
   usePrizeShelfWedgeScan({

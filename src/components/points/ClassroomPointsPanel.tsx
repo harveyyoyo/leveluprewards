@@ -1415,6 +1415,7 @@ function ClassroomPointsPanelInner({
       isSecretary,
       settings.enableTeacherOfflineAwardQueue,
       playClassroomSound,
+      playSound,
       toast,
       schoolId,
       effectiveClassId,
@@ -1431,6 +1432,8 @@ function ClassroomPointsPanelInner({
       deferredStudents,
       label,
       icon,
+      settings.enableGoals,
+      settings.goalsOptions,
     ],
   );
 
