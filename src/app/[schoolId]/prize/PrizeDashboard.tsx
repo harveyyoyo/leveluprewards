@@ -74,6 +74,7 @@ import {
   StudentKioskWarmBackdrop,
 } from '@/components/student-kiosk/StudentKioskRedeemUI';
 import { StudentPrizeShopCard } from '@/components/student-kiosk/StudentPrizeShopCard';
+import { useStudentWishlist } from '@/hooks/useStudentWishlist';
 import type { PrizeRedeemTicket } from '@/components/prizes/PrizeRedeemTicketPrintSheet';
 
 import { prizeIsListed, studentSeesPrizeByTeachers } from '@/lib/prizes/prizeUtils';
@@ -494,6 +495,11 @@ export function PrizeDashboard({
     );
     const kioskAutoLogoutOn = settings.kioskAutoLogoutEnabled !== false;
     const kioskAiFunInShop = settings.enablePrizeAiSurprise === true && kioskAiFunActive;
+    const wishlist = useStudentWishlist({
+        schoolId,
+        studentId,
+        enabled: settings.enableGoals === true,
+    });
     const animBackdrop = globalAnimatedBackdropActive(settings);
     const [confirmingPrize, setConfirmingPrize] = useState<Prize | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -1422,6 +1428,10 @@ export function PrizeDashboard({
                                                 themed={!!activeTheme}
                                                 primaryForeground={primaryForeground}
                                                 wholeCardClick
+                                                enableWishlist={wishlist.enableWishlist}
+                                                wishlistActive={wishlist.activeWishlistPrizeId === prize.id}
+                                                wishlistBusy={wishlist.wishlistBusyPrizeId === prize.id}
+                                                onToggleWishlist={() => void wishlist.toggleWishlist(prize.id)}
                                                 onRedeem={() => {
                                                     playSound('click');
                                                     setConfirmingPrize(prize);

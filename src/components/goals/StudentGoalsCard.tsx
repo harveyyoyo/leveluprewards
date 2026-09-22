@@ -1,15 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
+import confetti from 'canvas-confetti';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Category, Goal, Student } from '@/lib/types';
 import { computeGoalProgress } from '@/lib/goalsProgress';
+import { isAlmostThere, progressPercent } from '@/lib/goals/goalHelpers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 type GoalRow = { goal: Goal; progress: number };
 
@@ -22,6 +25,10 @@ export function StudentGoalsCard(props: {
 }) {
   const { schoolId, student, enabled, themeForeground, themed } = props;
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const celebratedRef = useRef<Set<string>>(new Set());
+  const almostRef = useRef<Set<string>>(new Set());
+  const baselineRef = useRef(false);
 
   const categoriesQuery = useMemoFirebase(
     () => (schoolId ? collection(firestore, 'schools', schoolId, 'categories') : null),
@@ -38,6 +45,7 @@ export function StudentGoalsCard(props: {
   const visible = useMemo(() => {
     if (!allGoals) return [];
     return allGoals
+      .filter((g) => !g.archived)
       .filter((g) => g.status === 'active' || g.status === 'completed')
       .filter(
         (g) =>
@@ -49,6 +57,15 @@ export function StudentGoalsCard(props: {
 
   const [rows, setRows] = useState<GoalRow[]>([]);
   const [computing, setComputing] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || !allGoals || baselineRef.current) return;
+    for (const g of allGoals) {
+      if (g.status === 'completed') celebratedRef.current.add(g.id);
+      if (g.almostThereNotifiedAt) almostRef.current.add(g.id);
+    }
+    baselineRef.current = true;
+  }, [enabled, allGoals]);
 
   useEffect(() => {
     if (!enabled || !firestore || !schoolId || visible.length === 0 || !categories) {
@@ -86,6 +103,31 @@ export function StudentGoalsCard(props: {
       cancelled = true;
     };
   }, [enabled, firestore, schoolId, visible, student, categories]);
+
+  useEffect(() => {
+    if (!baselineRef.current) return;
+    for (const { goal, progress } of rows) {
+      if (goal.status === 'completed' && !celebratedRef.current.has(goal.id)) {
+        celebratedRef.current.add(goal.id);
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        toast({
+          title: 'You did it!',
+          description: `"${goal.title}" is finished. Great work!`,
+        });
+      }
+      if (
+        goal.status === 'active' &&
+        isAlmostThere(progress, goal.targetPoints) &&
+        !almostRef.current.has(goal.id)
+      ) {
+        almostRef.current.add(goal.id);
+        toast({
+          title: 'Almost there!',
+          description: `"${goal.title}" is so close — keep going!`,
+        });
+      }
+    }
+  }, [rows, toast]);
 
   if (!enabled) return null;
 
@@ -130,12 +172,15 @@ export function StudentGoalsCard(props: {
       <CardContent className="space-y-4 pt-4">
         {rows.map(({ goal, progress }) => {
           const target = Number(goal.targetPoints ?? 0);
-          const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
+          const pct = progressPercent(progress, target);
+          const almost = goal.status === 'active' && isAlmostThere(progress, target);
           const label =
             goal.type === 'class'
               ? 'Class goal'
               : goal.type === 'prize_savings'
-                ? 'Savings goal'
+                ? goal.createdByStudent
+                  ? 'Your wishlist'
+                  : 'Savings goal'
                 : 'Personal goal';
           return (
             <div key={goal.id} className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
@@ -156,7 +201,9 @@ export function StudentGoalsCard(props: {
               </div>
               <Progress value={pct} className="h-2" />
               {goal.status === 'completed' ? (
-                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Completed</p>
+                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Completed — nice work!</p>
+              ) : almost ? (
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Almost there!</p>
               ) : null}
             </div>
           );

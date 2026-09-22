@@ -159,6 +159,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Helper } from '@/components/ui/helper';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StudentGoalsCard } from '@/components/goals/StudentGoalsCard';
+import { useStudentWishlist } from '@/hooks/useStudentWishlist';
 import { StudentIncentivesCard } from '@/components/incentives/StudentIncentivesCard';
 import { EarnedBadgesShowcase } from '@/components/badges/EarnedBadgesShowcase';
 import { FaceMismatchBanner } from '@/components/student/FaceMismatchBanner';
@@ -781,6 +782,12 @@ export function StudentDashboardInner({
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const [fullPrizeShopOpen, setFullPrizeShopOpen] = useState(false);
   const [kioskMobileTab, setKioskMobileTab] = useState<'redeem' | 'prizes' | 'info'>('redeem');
+
+  const wishlist = useStudentWishlist({
+    schoolId,
+    studentId,
+    enabled: settings.enableGoals === true,
+  });
 
   const openFullPrizeShop = useCallback(() => {
     playSound('click');
@@ -2054,6 +2061,10 @@ export function StudentDashboardInner({
                       themed={!!effectiveTheme}
                       primaryForeground={primaryForeground}
                       wholeCardClick
+                      enableWishlist={wishlist.enableWishlist}
+                      wishlistActive={wishlist.activeWishlistPrizeId === reward.id}
+                      wishlistBusy={wishlist.wishlistBusyPrizeId === reward.id}
+                      onToggleWishlist={() => void wishlist.toggleWishlist(reward.id)}
                       onRedeem={() => {
                         playSound('click');
                         setConfirmingPrize(reward);
@@ -2231,6 +2242,10 @@ export function StudentDashboardInner({
                           themed={!!effectiveTheme}
                           primaryForeground={primaryForeground}
                           wholeCardClick
+                          enableWishlist={wishlist.enableWishlist}
+                          wishlistActive={wishlist.activeWishlistPrizeId === reward.id}
+                          wishlistBusy={wishlist.wishlistBusyPrizeId === reward.id}
+                          onToggleWishlist={() => void wishlist.toggleWishlist(reward.id)}
                           onRedeem={() => {
                             playSound('click');
                             setConfirmingPrize(reward);
