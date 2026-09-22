@@ -3389,9 +3389,8 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
   }
 
   .print-coupon-wrapper .coupon-scalable-body {
-    width: 100% !important;
-    height: 100% !important;
-    max-height: 100% !important;
+    width: 100%;
+    max-height: 100%;
   }
 
   .print-coupon-wrapper--rounded .coupon-scalable, .print-coupon-wrapper--rounded .money-bill-scalable,
@@ -3412,7 +3411,7 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     gap: 0.04em !important;
     padding-top: 0.16em !important;
     padding-bottom: 0.14em !important;
-    height: 100% !important;
+    max-height: 100%;
   }
 
   .coupon-print-page--30 .print-coupon-wrapper .coupon-title {
