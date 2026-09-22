@@ -40,8 +40,9 @@ export function OfficeClassSheet({
     for (const student of classStudents) {
       if (student.teacherId?.trim()) set.add(student.teacherId.trim());
     }
+    if (set.size === 0 && officeClass?.teacherId?.trim()) set.add(officeClass.teacherId.trim());
     return Array.from(set);
-  }, [classStudents]);
+  }, [classStudents, officeClass]);
 
   if (!officeClass) return null;
 
@@ -122,7 +123,8 @@ export function OfficeClassSheet({
 
           <section className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
             <Users className="mb-2 h-4 w-4 text-teal-700" aria-hidden />
-            Assign students to this class from Students or Classes. Teacher assignment is on each student profile.
+            Assign students to this class from Students or Classes. Set the class&apos;s teacher from the pencil icon on
+            Classes — it updates everyone currently in the class at once.
           </section>
         </div>
       </SheetContent>

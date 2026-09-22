@@ -220,7 +220,10 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_VERSION: `beta-1.1.0`,
     NEXT_PUBLIC_BUILD_TIME: formatBuildTimeEastern(),
-    NEXT_PUBLIC_OFFICE_DEV_ORIGIN: process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN || 'http://127.0.0.1:3001',
+    // Unset: School Office is part of this app, not a separate one — `npm run dev` serves its
+    // /office pages directly, the same way production does. Only set this if some future split
+    // deploy needs local dev to hand off /office to a different origin.
+    NEXT_PUBLIC_OFFICE_DEV_ORIGIN: process.env.NEXT_PUBLIC_OFFICE_DEV_ORIGIN || '',
   },
 };
 

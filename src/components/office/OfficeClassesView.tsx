@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
+import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   Select,
   SelectContent,
@@ -39,6 +39,7 @@ type OfficeClassesViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classes: OfficeClass[];
+  teachers?: OfficeTeacher[];
   teacherNameById: Map<string, string>;
   isLoading: boolean;
 };
@@ -47,6 +48,7 @@ export function OfficeClassesView({
   schoolId,
   students,
   classes,
+  teachers = [],
   teacherNameById,
   isLoading,
 }: OfficeClassesViewProps) {
@@ -100,6 +102,7 @@ export function OfficeClassesView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
+  const [classTeacherId, setClassTeacherId] = useState('');
   const [classCapacity, setClassCapacity] = useState('');
   const [classNotes, setClassNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -109,6 +112,7 @@ export function OfficeClassesView({
   const openNewClass = () => {
     setEditingClass(null);
     setClassName('');
+    setClassTeacherId('');
     setClassCapacity('');
     setClassNotes('');
     setDialogOpen(true);
@@ -118,6 +122,7 @@ export function OfficeClassesView({
     e.stopPropagation();
     setEditingClass(cls);
     setClassName(cls.name);
+    setClassTeacherId(cls.teacherId ?? '');
     setClassCapacity(cls.capacity != null ? String(cls.capacity) : '');
     setClassNotes(cls.notes ?? '');
     setDialogOpen(true);
@@ -134,17 +139,44 @@ export function OfficeClassesView({
       toast({ variant: 'destructive', title: 'Capacity must be a positive number.' });
       return;
     }
+    const nextTeacherId = classTeacherId || null;
+    const teacherChanged = editingClass ? (editingClass.teacherId ?? null) !== nextTeacherId : !!nextTeacherId;
     setBusy(true);
     try {
-      await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
+      const classId = await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
         name: className.trim(),
-        teacherId: editingClass?.teacherId ?? null,
+        teacherId: nextTeacherId,
         capacity: parsedCapacity,
         notes: classNotes.trim() || null,
       });
-      toast({ title: editingClass ? 'Class updated' : 'Class created' });
+
+      let updatedStudentCount = 0;
+      if (teacherChanged && editingClass) {
+        const classStudents = students.filter((s) => s.classId === classId);
+        if (classStudents.length > 0) {
+          const batch = writeBatch(firestore!);
+          for (const student of classStudents) {
+            batch.update(doc(firestore!, 'schools', schoolId, 'officeStudents', student.id), {
+              teacherId: nextTeacherId,
+              teacherName: null,
+              updatedAt: Date.now(),
+            });
+          }
+          await batch.commit();
+          updatedStudentCount = classStudents.length;
+        }
+      }
+
+      toast({
+        title: editingClass ? 'Class updated' : 'Class created',
+        description:
+          updatedStudentCount > 0
+            ? `Also updated the teacher for ${updatedStudentCount} student${updatedStudentCount === 1 ? '' : 's'} in this class.`
+            : undefined,
+      });
       setDialogOpen(false);
       setClassName('');
+      setClassTeacherId('');
       setClassCapacity('');
       setClassNotes('');
       setEditingClass(null);
@@ -159,9 +191,13 @@ export function OfficeClassesView({
     if (!firestore) return;
     const cid = nextClassId === '__none__' ? null : nextClassId;
     if (cid === (student.classId ?? null)) return;
+    // Moving into a class that already has a teacher assigned carries that teacher over,
+    // the same way a new student joining a homeroom would pick up its teacher.
+    const targetClass = cid ? classes.find((c) => c.id === cid) : null;
     try {
       await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
         classId: cid,
+        ...(targetClass?.teacherId ? { teacherId: targetClass.teacherId, teacherName: null } : {}),
         updatedAt: Date.now(),
       });
       toast({ title: 'Class updated' });
@@ -354,6 +390,7 @@ export function OfficeClassesView({
                   <span className="ml-2 text-sm text-muted-foreground">
                     {list.length}
                     {cls.capacity ? `/${cls.capacity}` : ''} students
+                    {cls.teacherId ? ` · ${teacherNameById.get(cls.teacherId) ?? 'Teacher'}` : ''}
                   </span>
                   {cls.capacity && list.length > cls.capacity ? (
                     <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-red-800 dark:bg-red-950/50 dark:text-red-200">
@@ -509,7 +546,7 @@ export function OfficeClassesView({
       >
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingClass ? 'Edit class name' : 'New class'}</DialogTitle>
+            <DialogTitle>{editingClass ? 'Edit class' : 'New class'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
@@ -524,6 +561,27 @@ export function OfficeClassesView({
                   if (e.key === 'Enter') void handleSaveClass();
                 }}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Teacher (optional)</Label>
+              <Select value={classTeacherId || '__none__'} onValueChange={(v) => setClassTeacherId(v === '__none__' ? '' : v)}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="No teacher assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No teacher</SelectItem>
+                  {teachers.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editingClass ? (
+                <p className="text-xs text-muted-foreground">
+                  Changing this updates the teacher for every student currently in this class.
+                </p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="class-capacity-input">Capacity (optional)</Label>

@@ -22,6 +22,7 @@ import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { compareOfficeTermLabels, getSuggestedTermLabel } from '@/lib/office/officeUtils';
 import { defaultOfficeFeatureFlags } from '@/lib/office/officeTerminology';
+import { getOfficeNavItems, type OfficeNavId } from '@/lib/office/officeNav';
 import type { OfficeFeatureFlags } from '@/lib/office/types';
 import { Switch } from '@/components/ui/switch';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
@@ -82,8 +83,15 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [officeSections, setOfficeSections] = useState<OfficeNavId[]>([]);
   const [staffBusy, setStaffBusy] = useState(false);
   const [copiedId, setCopiedId] = useState('');
+
+  const assignableSections = useMemo(
+    () => getOfficeNavItems(settings).filter((item) => item.id !== 'home'),
+    [settings],
+  );
+  const allSectionIds = useMemo(() => assignableSections.map((s) => s.id), [assignableSections]);
 
   useEffect(() => {
     setDefaultTerm(settings?.defaultActiveTerm?.trim() || '');
@@ -149,6 +157,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     setUsername('');
     setPasscode('');
     setDisplayName('');
+    setOfficeSections(allSectionIds);
     setDialogOpen(true);
   };
 
@@ -157,7 +166,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     setUsername(account.username);
     setPasscode(account.passcode);
     setDisplayName(account.displayName);
+    setOfficeSections((account.officeSections as OfficeNavId[] | undefined) ?? allSectionIds);
     setDialogOpen(true);
+  };
+
+  const toggleOfficeSection = (id: OfficeNavId) => {
+    setOfficeSections((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
   const handleSaveStaff = async () => {
@@ -169,6 +183,11 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
       toast({ variant: 'destructive', title: 'Name, username, and passcode are required.' });
       return;
     }
+    if (officeSections.length === 0) {
+      toast({ variant: 'destructive', title: 'Give this account access to at least one section.' });
+      return;
+    }
+    const sectionsToSave = officeSections.length === allSectionIds.length ? null : officeSections;
     const taken = (staffRaw ?? []).some(
       (a) => a.id !== editing?.id && (a.username ?? '').trim().toLowerCase() === cleanUsername,
     );
@@ -187,6 +206,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           displayName: cleanDisplayName,
           role: 'office',
           roles: ['office'],
+          officeSections: sectionsToSave,
         };
         await updateStaffAccount(firestore, schoolId, updated);
         const merged = (staffRaw ?? []).map((row) => (row.id === updated.id ? updated : row));
@@ -199,6 +219,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           displayName: cleanDisplayName,
           role: 'office',
           roles: ['office'],
+          officeSections: sectionsToSave,
         });
         void syncSchoolStaffDirectory(firestore, schoolId, [], [...(staffRaw ?? []), created]).catch(
           () => undefined,
@@ -429,6 +450,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                   <p className="font-semibold">{account.displayName}</p>
                   <p className="text-xs text-muted-foreground">
                     Username: <span className="font-mono">{account.username}</span>
+                    {account.officeSections?.length
+                      ? ` · ${account.officeSections.length} of ${allSectionIds.length} sections`
+                      : ' · Full access'}
                   </p>
                 </div>
                 {canManageStaff ? (
@@ -504,6 +528,25 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 onChange={(e) => setPasscode(e.target.value)}
                 className="rounded-xl"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>What can this account see?</Label>
+              <p className="text-xs text-muted-foreground">
+                Unchecked sections are hidden from this account&apos;s menu. Leave everything checked for full access.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl border p-3">
+                {assignableSections.map((section) => (
+                  <label key={section.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={officeSections.includes(section.id)}
+                      onChange={() => toggleOfficeSection(section.id)}
+                      className="h-4 w-4 accent-teal-700"
+                    />
+                    {section.label}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

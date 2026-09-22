@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Building2, LogOut, Maximize2, Menu, Minimize2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
 import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
+import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeUniversalSearch } from '@/components/office/OfficeUniversalSearch';
 import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
@@ -45,8 +46,20 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
 
   const displaySchool = schoolName?.trim() || schoolId;
   const { settings, marksLabels } = useOfficePortalChrome();
-  const navItems = getOfficeNavItems(settings);
+  const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
+  const navItems = useMemo(() => {
+    const all = getOfficeNavItems(settings);
+    if (!allowedSections) return all;
+    return all.filter((item) => item.id === 'home' || allowedSections.includes(item.id));
+  }, [settings, allowedSections]);
   const activeNav = navItems.find((i) => i.id === activeId);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeId !== 'home' && !navItems.some((i) => i.id === activeId)) {
+      router.replace(navItems[0]?.href(schoolId) ?? `/${schoolId}/office`);
+    }
+  }, [activeId, navItems, router, schoolId]);
   const { term: workingTerm } = useOfficeTerm(schoolId);
   const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
 
@@ -66,7 +79,10 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
         <div
           className={cn(
             OFFICE_LAYOUT_PANE_CLASS,
-            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:flex-row dark:bg-slate-950',
+            // `lg:overflow-y-auto` + `lg:h-screen` make this the actual scrolling container on
+            // desktop (instead of the window), which is what lets the sidebar below stick to
+            // the viewport via `position: sticky` rather than stretching with the page.
+            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:h-screen lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
             isWide
               ? 'max-w-none border-0 shadow-none'
               : 'max-w-5xl shadow-none sm:min-h-[calc(100vh-3rem)] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:shadow-xl dark:sm:border-slate-800',
@@ -75,7 +91,11 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
         <aside
           className={cn(
             OFFICE_SIDEBAR_PANE_CLASS,
-            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:inset-auto lg:z-0 lg:shrink-0 lg:translate-x-0',
+            // On desktop the sidebar is pinned to the viewport (sticky + its own height/scroll)
+            // instead of stretching to match the main content's height — otherwise a long page
+            // (e.g. a big student roster) drags the sidebar's own bottom section far below the
+            // fold, leaving a blank gap where the nav used to be as you scroll.
+            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shrink-0 lg:translate-x-0 lg:overflow-y-auto',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
