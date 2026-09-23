@@ -4,8 +4,11 @@ export const OFFICE_ROOT_FONT_PX = 16;
 /** Left navigation rem baseline — Tailwind `rem` units resolve against this on `html`. */
 export const OFFICE_SIDEBAR_FONT_PX = 18;
 
-/** Target body size for the right-hand workspace (applied via zoom, see OFFICE_MAIN_ZOOM). */
-export const OFFICE_MAIN_FONT_PX = 14;
+/**
+ * Target rem size for the right-hand workspace (applied via zoom, see OFFICE_MAIN_ZOOM).
+ * 16px keeps Tailwind's standard sizes (text-xs 12px, text-sm 14px); 14px made small print ~10px.
+ */
+export const OFFICE_MAIN_FONT_PX = 16;
 
 /** Scales the main pane so rem-based Tailwind type/spacing shrink vs the sidebar. */
 export const OFFICE_MAIN_ZOOM = OFFICE_MAIN_FONT_PX / OFFICE_SIDEBAR_FONT_PX;

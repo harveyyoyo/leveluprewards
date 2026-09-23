@@ -131,7 +131,7 @@ export function OfficeGradeReportView({
         ) : (
           <div>
             <h3 className="text-base font-bold">Grade report</h3>
-            <p className="text-sm text-muted-foreground">Filter by term, class, or student, then print or export CSV.</p>
+            <p className="text-sm text-muted-foreground">Filter by term, class, or student, then print or download.</p>
           </div>
         )}
         <div className="flex flex-wrap items-end gap-3">
@@ -185,7 +185,7 @@ export function OfficeGradeReportView({
             onClick={handleExportCsv}
           >
             <Download className="h-4 w-4" />
-            Export CSV
+            Download spreadsheet
           </Button>
           <Button type="button" className="rounded-xl gap-2" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />

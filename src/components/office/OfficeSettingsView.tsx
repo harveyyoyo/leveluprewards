@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { addStaffAccount, deleteStaffAccount, updateStaffAccount } from '@/lib/db/staffAccounts';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
@@ -47,6 +48,7 @@ type OfficeSettingsViewProps = {
 export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const { loginState, isAdmin, isOffice, userName } = useAppContext();
   const { settings, isLoading: settingsLoading } = useOfficeSettings(schoolId);
   const { gradeEntries, billingAccounts } = useOfficePortalData();
@@ -152,6 +154,23 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     }
   };
 
+  /** On/off switches save immediately — a separate Save button is easy to miss after flipping one. */
+  const saveSwitch = async (patch: { useMarksTerminology?: boolean; features?: Required<OfficeFeatureFlags> }) => {
+    if (!firestore) return;
+    setPrefsBusy(true);
+    try {
+      await saveOfficeSettings(firestore, schoolId, patch, userName);
+      toast({ title: 'Saved' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
+      // Put the switches back to what is actually stored.
+      setUseMarksTerminology(settings?.useMarksTerminology === true);
+      setFeatures({ ...defaultOfficeFeatureFlags(), ...(settings?.features ?? {}) });
+    } finally {
+      setPrefsBusy(false);
+    }
+  };
+
   const openNewStaff = () => {
     setEditing(null);
     setUsername('');
@@ -236,7 +255,13 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
 
   const handleDeleteStaff = async (account: StaffAccount) => {
     if (!firestore || !canManageStaff) return;
-    if (!confirm(`Remove ${account.displayName}? They will no longer be able to sign in to School Office.`)) return;
+    const ok = await confirm({
+      title: `Remove ${account.displayName}?`,
+      description: 'They will no longer be able to sign in to the School Office. Everything they did stays in the change history.',
+      confirmLabel: 'Remove sign-in',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
       await deleteStaffAccount(firestore, schoolId, account.id);
       const merged = (staffRaw ?? []).filter((a) => a.id !== account.id);
@@ -253,6 +278,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
 
   return (
     <div className="space-y-8">
+      {confirmDialog}
       <p className="text-sm text-muted-foreground max-w-2xl">
         School-wide defaults for grades and billing, plus desk accounts for front-office staff to sign in here.
       </p>
@@ -345,20 +371,27 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
             <Switch
               id="office-use-marks"
               checked={useMarksTerminology}
-              onCheckedChange={setUseMarksTerminology}
+              disabled={prefsBusy}
+              onCheckedChange={(checked) => {
+                setUseMarksTerminology(checked);
+                void saveSwitch({ useMarksTerminology: checked });
+              }}
             />
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold">Feature sections</p>
+            <div>
+              <p className="text-sm font-semibold">Sections</p>
+              <p className="text-xs text-muted-foreground">Switches save as soon as you flip them.</p>
+            </div>
             {(
               [
                 ['familyProfiles', 'Family profiles', 'Household contacts, grandparents, and family notes'],
                 ['studentPhotos', 'Student photos', 'Upload student pictures on roster profiles'],
                 ['busInfo', 'Bus & transport', 'Bus route fields on families and students'],
                 ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
-                ['aiHelp', 'AI help button', 'Floating assistant in the Office header'],
-                ['auditLog', 'Change history', 'Append-only audit log for Office record changes'],
+                ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
+                ['aiHelp', 'Help button', 'An assistant in the top bar that answers questions'],
               ] as const
             ).map(([key, title, description]) => (
               <div key={key} className="flex items-center justify-between gap-4 rounded-xl border p-3">
@@ -368,7 +401,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 </div>
                 <Switch
                   checked={features[key]}
-                  onCheckedChange={(checked) => setFeatures((prev) => ({ ...prev, [key]: checked }))}
+                  disabled={prefsBusy}
+                  onCheckedChange={(checked) => {
+                    const next = { ...features, [key]: checked };
+                    setFeatures(next);
+                    void saveSwitch({ features: next });
+                  }}
                   aria-label={title}
                 />
               </div>
@@ -382,7 +420,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           disabled={prefsBusy}
           onClick={() => void handleSavePrefs()}
         >
-          {prefsBusy ? 'Saving…' : 'Save preferences'}
+          {prefsBusy ? 'Saving…' : 'Save term & name changes'}
         </Button>
       </section>
 
@@ -407,7 +445,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
               Office staff accounts
             </h2>
             <p className="mt-1 text-xs text-muted-foreground max-w-xl">
-              Each person gets a username and passcode for School Office sign-in. They only access grades and billing.
+              Each person gets a username and passcode for School Office sign-in. You choose which pages each person can open.
               {isAdmin ? ' School admins can also manage all desk staff from Admin → Teachers.' : null}
             </p>
           </div>

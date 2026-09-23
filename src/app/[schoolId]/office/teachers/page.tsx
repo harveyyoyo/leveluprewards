@@ -15,6 +15,7 @@ export default function OfficeTeachersPage() {
       schoolId={schoolId}
       teachers={shared.teachers}
       students={shared.students}
+      classes={shared.classes}
       isLoading={shared.isLoading}
     />
   );

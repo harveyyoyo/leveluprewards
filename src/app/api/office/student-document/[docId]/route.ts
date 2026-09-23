@@ -68,16 +68,17 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ d
     if (!snap.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const data = snap.data() as { storagePath: string; name: string; studentId: string };
-    await admin.storage(app).bucket().file(data.storagePath).delete({ ignoreNotFound: true });
-    await ref.delete();
+    // Office records are never erased: the file and its record are kept and only hidden.
+    const archivedAt = Date.now();
+    await ref.update({ archived: true, archivedAt, archivedBy: auth.uid });
 
     await firestore.collection('schools').doc(schoolId!).collection('officeAuditLog').add({
       entityType: 'officeStudentDocument',
       entityId: docId,
       action: 'delete',
-      summary: `Deleted document "${data.name}"`,
+      summary: `Archived document "${data.name}"`,
       before: { name: data.name, studentId: data.studentId },
-      after: null,
+      after: { archived: true, archivedAt },
       changedBy: auth.uid,
       changedAt: Date.now(),
     });

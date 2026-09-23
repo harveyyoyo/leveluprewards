@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { FileText, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useAuthFetch } from '@/lib/authFetch';
 import { useOfficeStudentDocuments } from '@/lib/office/useOfficeStudentDocuments';
 import type { OfficeStudentDocument } from '@/lib/office/types';
@@ -27,6 +28,7 @@ export function OfficeStudentDocumentsPanel({ schoolId, studentId, enabled }: Of
   const inputRef = useRef<HTMLInputElement>(null);
   const authFetch = useAuthFetch();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const { documents, isLoading } = useOfficeStudentDocuments(schoolId, studentId, enabled);
   const [busy, setBusy] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
@@ -86,21 +88,28 @@ export function OfficeStudentDocumentsPanel({ schoolId, studentId, enabled }: Of
   };
 
   const handleDelete = async (doc: OfficeStudentDocument) => {
-    if (!confirm(`Delete "${doc.name}"? This can't be undone.`)) return;
+    const ok = await confirm({
+      title: `Remove “${doc.name}”?`,
+      description: 'It will be hidden from this profile. The file is kept and the removal is recorded in the change history.',
+      confirmLabel: 'Remove',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
       const res = await authFetch(`/api/office/student-document/${doc.id}?schoolId=${encodeURIComponent(schoolId)}`, {
         method: 'DELETE',
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error || 'Delete failed');
-      toast({ title: 'Document deleted' });
+      if (!res.ok) throw new Error(data.error || 'Could not remove');
+      toast({ title: 'Document removed' });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Delete failed', description: e instanceof Error ? e.message : undefined });
+      toast({ variant: 'destructive', title: 'Could not remove', description: e instanceof Error ? e.message : undefined });
     }
   };
 
   return (
     <div className="space-y-2">
+      {confirmDialog}
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-medium text-muted-foreground">Documents</p>
         <Button

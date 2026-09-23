@@ -18,7 +18,11 @@ vi.mock('@/hooks/use-toast', () => ({
 }));
 
 const EMPTY_ATTENDANCE: never[] = [];
-const attendanceHook = vi.fn(() => ({ entries: EMPTY_ATTENDANCE, isLoading: false, error: null }));
+const attendanceHook = vi.fn((..._args: unknown[]) => ({
+  entries: EMPTY_ATTENDANCE,
+  isLoading: false,
+  error: null as Error | null,
+}));
 vi.mock('@/lib/office/useOfficeAttendance', () => ({
   useOfficeAttendanceForDate: (...args: unknown[]) => attendanceHook(...args),
 }));
@@ -68,7 +72,7 @@ describe('OfficeAttendanceView', () => {
     });
     render(<OfficeAttendanceView schoolId="yeshiva" students={students} classes={classes} isLoading={false} />);
 
-    expect(screen.getByText(/Attendance isn’t unlocked on the live site yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/Attendance is almost ready/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /save attendance/i })).not.toBeInTheDocument();
   });
 });

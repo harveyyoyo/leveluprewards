@@ -7,6 +7,11 @@ import type {
 } from '@/lib/office/types';
 import { invoiceBalanceDueCents } from '@/lib/office/officeBillingPayments';
 
+/** Drops removed (archived) Office records from working lists; they stay stored for history. */
+export function withoutArchived<T extends { archived?: boolean }>(rows: T[] | null | undefined): T[] {
+  return (rows ?? []).filter((row) => !row.archived);
+}
+
 /** Trimmed string from legacy Firestore rows that may omit or mistype name fields. */
 function officeStudentNamePart(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';

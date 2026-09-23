@@ -6,19 +6,19 @@ import {
   CalendarCheck,
   CheckCircle2,
   CreditCard,
-  FileText,
   GraduationCap,
-  LayoutGrid,
-  Megaphone,
+  History,
   Plus,
   RefreshCw,
-  Settings,
   Upload,
-  UserRound,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
+import { OfficeHistoryEntryRow } from '@/components/office/OfficeHistoryEntryRow';
+import { useOfficeHistory } from '@/lib/office/useOfficeHistory';
+import { useOfficeHistoryNames } from '@/lib/office/useOfficeHistoryNames';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import type { OfficeGradeEntry } from '@/lib/office/types';
 import { formatCents } from '@/lib/office/officeNav';
@@ -42,14 +42,15 @@ type OfficeDashboardProps = {
   gradeEntries?: OfficeGradeEntry[];
   schoolDefaultTerm?: string | null;
   configuredTerms?: string[];
+  showAttendance?: boolean;
 };
 
-type NavTile = {
+type StatTile = {
   href: string;
-  title: string;
-  subtitle: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tint: string;
+  label: string;
+  value: string;
+  note: string;
+  icon: LucideIcon;
 };
 
 export function OfficeDashboard({
@@ -66,6 +67,7 @@ export function OfficeDashboard({
   gradeEntries,
   schoolDefaultTerm,
   configuredTerms,
+  showAttendance = true,
 }: OfficeDashboardProps) {
   const gradePct =
     insights.termSubjects.length > 0
@@ -95,70 +97,42 @@ export function OfficeDashboard({
   const allClear = attentionItems.length === 0 && studentCount > 0;
   const isEmpty = studentCount === 0;
 
-  const tiles: NavTile[] = [
+  // A few numbers at a glance — the side menu already lists every page, so Home doesn't repeat it.
+  const stats: StatTile[] = [
     {
       href: officePublicHref(schoolId, 'students'),
-      title: 'Students',
-      subtitle: `${studentCount} on roster`,
+      label: 'Students',
+      value: String(studentCount),
+      note: `${classCount} ${classCount === 1 ? 'class' : 'classes'} · ${teacherCount} ${teacherCount === 1 ? 'teacher' : 'teachers'}`,
       icon: Users,
-      tint: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300',
-    },
-    {
-      href: officePublicHref(schoolId, 'classes'),
-      title: 'Classes',
-      subtitle: `${classCount} ${classCount === 1 ? 'group' : 'groups'}`,
-      icon: LayoutGrid,
-      tint: 'bg-violet-50 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300',
-    },
-    {
-      href: officePublicHref(schoolId, 'teachers'),
-      title: 'Teachers',
-      subtitle: `${teacherCount} homeroom`,
-      icon: UserRound,
-      tint: 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
     },
     {
       href: `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`,
-      title: 'Grades',
-      subtitle: studentCount > 0 ? `${gradePct}% done for ${activeTerm}` : 'Record term grades',
+      label: 'Grades done',
+      value: `${gradePct}%`,
+      note: activeTerm,
       icon: GraduationCap,
-      tint: 'bg-teal-50 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300',
-    },
-    {
-      href: officePublicHref(schoolId, 'attendance'),
-      title: 'Attendance',
-      subtitle: 'Daily present / absent',
-      icon: CalendarCheck,
-      tint: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300',
     },
     {
       href: officePublicHref(schoolId, 'billing'),
-      title: 'Billing',
-      subtitle: `${formatCents(insights.openBalanceCents)} open balance`,
+      label: 'Still owed',
+      value: formatCents(insights.openBalanceCents),
+      note: insights.overdueInvoiceCount > 0 ? `${insights.overdueInvoiceCount} overdue` : 'Nothing overdue',
       icon: CreditCard,
-      tint: 'bg-rose-50 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
     },
+  ];
+
+  const quickActions = [
+    { href: officePublicHref(schoolId, 'students'), label: 'Add student', icon: Users },
     {
-      href: officePublicHref(schoolId, 'communication'),
-      title: 'Communication',
-      subtitle: 'Announcements & forms',
-      icon: Megaphone,
-      tint: 'bg-pink-50 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300',
+      href: `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`,
+      label: 'Record grades',
+      icon: GraduationCap,
     },
-    {
-      href: officePublicHref(schoolId, 'reports'),
-      title: 'Reports',
-      subtitle: 'Grades, billing, rosters',
-      icon: FileText,
-      tint: 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
-    },
-    {
-      href: officePublicHref(schoolId, 'settings'),
-      title: 'Settings',
-      subtitle: 'Terms, staff & import',
-      icon: Settings,
-      tint: 'bg-slate-100 text-slate-700 dark:bg-slate-800/60 dark:text-slate-300',
-    },
+    { href: `${officePublicHref(schoolId, 'billing')}?action=new-invoice`, label: 'New invoice', icon: CreditCard },
+    ...(showAttendance
+      ? [{ href: officePublicHref(schoolId, 'attendance'), label: 'Take attendance', icon: CalendarCheck }]
+      : []),
   ];
 
   return (
@@ -245,26 +219,19 @@ export function OfficeDashboard({
         />
       ) : (
         <>
-          <section className="grid gap-2.5 sm:grid-cols-2">
-            {tiles.map((tile) => (
-              <NavTileLink key={tile.href} {...tile} />
+          <section className="grid gap-2.5 sm:grid-cols-3">
+            {stats.map((stat) => (
+              <StatTileLink key={stat.href} {...stat} />
             ))}
           </section>
 
-          <section className="rounded-2xl bg-slate-50/80 px-4 py-3.5 dark:bg-slate-900/40">
-            <p className="mb-2.5 text-xs font-medium text-muted-foreground">Quick actions</p>
-            <div className="flex flex-wrap gap-2">
-              <QuickAction href={officePublicHref(schoolId, 'students')} label="Add student" />
-              <QuickAction
-                href={`${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`}
-                label="Record grade"
-              />
-              <QuickAction
-                href={`${officePublicHref(schoolId, 'billing')}?action=new-invoice`}
-                label="New invoice"
-              />
-            </div>
+          <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4" aria-label="Quick actions">
+            {quickActions.map((action) => (
+              <QuickAction key={action.href} {...action} />
+            ))}
           </section>
+
+          <OfficeRecentChanges schoolId={schoolId} />
         </>
       )}
 
@@ -285,36 +252,62 @@ export function OfficeDashboard({
   );
 }
 
-function NavTileLink({ href, title, subtitle, icon: Icon, tint }: NavTile) {
+function StatTileLink({ href, label, value, note, icon: Icon }: StatTile) {
   return (
     <Link
       href={href}
-      className="group flex items-center gap-3.5 rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition-all hover:ring-teal-300/70 hover:shadow-md dark:bg-slate-900/80 dark:ring-slate-800 dark:hover:ring-teal-800/60"
+      className="group rounded-2xl bg-white px-4 py-3.5 shadow-sm ring-1 ring-slate-200/70 transition-all hover:shadow-md hover:ring-teal-300/70 dark:bg-slate-900/80 dark:ring-slate-800 dark:hover:ring-teal-800/60"
     >
-      <span
-        className={cn(
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-          tint,
-        )}
-      >
-        <Icon className="h-5 w-5" aria-hidden />
+      <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+        {label}
       </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
-        <span className="block text-xs text-muted-foreground">{subtitle}</span>
+      <span className="mt-1 block text-2xl font-semibold tracking-tight text-slate-900 tabular-nums dark:text-white">
+        {value}
       </span>
+      <span className="block truncate text-xs text-muted-foreground">{note}</span>
     </Link>
   );
 }
 
-function QuickAction({ href, label }: { href: string; label: string }) {
+function QuickAction({ href, label, icon: Icon }: { href: string; label: string; icon: LucideIcon }) {
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm ring-1 ring-slate-200/80 transition-colors hover:bg-teal-50 hover:text-teal-900 hover:ring-teal-200/80 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-teal-950/40 dark:hover:text-teal-100"
+      className="flex items-center gap-2.5 rounded-2xl bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm ring-1 ring-slate-200/70 transition-colors hover:bg-teal-50 hover:text-teal-900 hover:ring-teal-200/80 dark:bg-slate-900/80 dark:text-slate-100 dark:ring-slate-800 dark:hover:bg-teal-950/40"
     >
-      <Plus className="h-3 w-3" aria-hidden />
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
       {label}
     </Link>
+  );
+}
+
+/** The last few changes anyone made, with a link to the full history. */
+function OfficeRecentChanges({ schoolId }: { schoolId: string }) {
+  const { entries, isLoading } = useOfficeHistory(schoolId, 6);
+  const nameFor = useOfficeHistoryNames(schoolId);
+  if (isLoading || entries.length === 0) return null;
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-1.5 text-sm font-medium">
+          <History className="h-4 w-4 text-muted-foreground" aria-hidden />
+          Recent changes
+        </p>
+        <Link
+          href={`${officePublicHref(schoolId, 'reports')}?report=history`}
+          className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+        >
+          See all history
+        </Link>
+      </div>
+      <ul className="space-y-1.5">
+        {entries.map((entry) => (
+          <OfficeHistoryEntryRow key={entry.id} entry={entry} showDate compact nameFor={nameFor} />
+        ))}
+      </ul>
+    </section>
   );
 }

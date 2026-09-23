@@ -30,6 +30,7 @@ export default function OfficeReportsPage() {
         studentLabelById={shared.studentLabelById}
         classNameById={shared.classNameById}
         teacherNameById={shared.teacherNameById}
+        teachers={shared.teachers}
       />
     </Suspense>
   );

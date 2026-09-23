@@ -1,12 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { AlertTriangle, Users } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
+import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeStudentFullName, getOfficeTeacherLabel, officeStudentsForClass } from '@/lib/office/officeUtils';
 import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
@@ -36,13 +37,18 @@ export function OfficeClassSheet({
   );
 
   const teacherIds = useMemo(() => {
-    const set = new Set<string>();
-    for (const student of classStudents) {
-      if (student.teacherId?.trim()) set.add(student.teacherId.trim());
+    if (officeClass?.teacherIds && officeClass.teacherIds.length > 0) {
+      return officeClass.teacherIds;
     }
-    if (set.size === 0 && officeClass?.teacherId?.trim()) set.add(officeClass.teacherId.trim());
-    return Array.from(set);
-  }, [classStudents, officeClass]);
+    if (officeClass?.teacherId) {
+      return [officeClass.teacherId];
+    }
+    return [];
+  }, [officeClass]);
+
+  const teacherNames = useMemo(() => {
+    return teacherIds.map((id) => teacherNameById.get(id)).filter(Boolean).join(', ');
+  }, [teacherIds, teacherNameById]);
 
   if (!officeClass) return null;
 
@@ -56,7 +62,7 @@ export function OfficeClassSheet({
           <SheetDescription>
             {classStudents.length}
             {officeClass.capacity ? `/${officeClass.capacity}` : ''} student{classStudents.length === 1 ? '' : 's'}
-            {teacherIds.length > 0 ? ` · ${teacherIds.length} teacher${teacherIds.length === 1 ? '' : 's'}` : ''}
+            {teacherNames ? ` · ${teacherNames}` : ''}
           </SheetDescription>
         </SheetHeader>
 
@@ -121,11 +127,7 @@ export function OfficeClassSheet({
             )}
           </section>
 
-          <section className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
-            <Users className="mb-2 h-4 w-4 text-teal-700" aria-hidden />
-            Assign students to this class from Students or Classes. Set the class&apos;s teacher from the pencil icon on
-            Classes — it updates everyone currently in the class at once.
-          </section>
+          <OfficeEntityHistorySection schoolId={schoolId} entityId={officeClass.id} />
         </div>
       </SheetContent>
     </Sheet>

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeEvent } from '@/lib/office/types';
+import { withoutArchived } from '@/lib/office/officeUtils';
 
 export function useOfficeEvents(schoolId: string | null) {
   const firestore = useFirestore();
@@ -16,6 +17,6 @@ export function useOfficeEvents(schoolId: string | null) {
   const { data, isLoading, error } = useCollection<OfficeEvent>(eventsQuery, {
     reportPermissionErrors: false,
   });
-  const events = useMemo(() => (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)), [data]);
+  const events = useMemo(() => withoutArchived(data).sort((a, b) => a.date.localeCompare(b.date)), [data]);
   return { events, isLoading, error };
 }

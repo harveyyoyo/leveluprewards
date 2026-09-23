@@ -28,6 +28,7 @@ import {
   buildOverdueFamiliesDigest,
   getOfficeStudentFullName,
   getOfficeTeacherLabel,
+  getTeacherIds,
   isInvoiceOverdue,
 } from '@/lib/office/officeUtils';
 import { OFFICE_REPORTS, parseOfficeReportId, type OfficeReportId } from '@/lib/office/officeReports';
@@ -37,7 +38,9 @@ import type {
   OfficeGradeEntry,
   OfficeInvoice,
   OfficeStudent,
+  OfficeTeacher,
 } from '@/lib/office/types';
+import { OfficeHistoryView } from '@/components/office/OfficeHistoryView';
 import { cn } from '@/lib/utils';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +56,7 @@ type OfficeReportsViewProps = {
   studentLabelById: Map<string, string>;
   classNameById: Map<string, string>;
   teacherNameById: Map<string, string>;
+  teachers?: OfficeTeacher[];
 };
 
 export function OfficeReportsView({
@@ -66,6 +70,7 @@ export function OfficeReportsView({
   studentLabelById,
   classNameById,
   teacherNameById,
+  teachers = [],
 }: OfficeReportsViewProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -179,7 +184,7 @@ export function OfficeReportsView({
       .map(
         (student) => {
           const teachersText = getTeacherIds(student).length > 0
-            ? getTeacherIds(student).map(id => teacherNameById.get(id) || 'Teacher').join(', ')
+            ? getTeacherIds(student).map((id: string) => teacherNameById.get(id) || 'Teacher').join(', ')
             : '—';
           
           return `
@@ -215,7 +220,7 @@ export function OfficeReportsView({
             .map(
               (student) => {
                 const teachersText = getTeacherIds(student).length > 0
-                  ? getTeacherIds(student).map(id => teacherNameById.get(id) || 'Teacher').join(', ')
+                  ? getTeacherIds(student).map((id: string) => teacherNameById.get(id) || 'Teacher').join(', ')
                   : '';
                 return `<li>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}${
                   teachersText
@@ -322,6 +327,15 @@ export function OfficeReportsView({
           );
         })}
       </div>
+
+      {reportId === 'history' ? (
+        <OfficeHistoryView
+          schoolId={schoolId}
+          studentIds={new Set(students.map((s) => s.id))}
+          teacherIds={new Set(teachers.map((t) => t.id))}
+          classIds={new Set(classes.map((c) => c.id))}
+        />
+      ) : null}
 
       {reportId === 'health' ? (
         <OfficeSchoolHealthReport
@@ -431,7 +445,7 @@ export function OfficeReportsView({
                     <td className="py-2">
                       {getTeacherIds(student).length > 0 ? (
                         <div className="flex flex-col gap-0.5">
-                          {getTeacherIds(student).map((tId) => (
+                          {getTeacherIds(student).map((tId: string) => (
                             <OfficeEntityLink
                               key={tId}
                               kind="teacher"

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { collection, query, where } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeStudentDocument } from '@/lib/office/types';
+import { withoutArchived } from '@/lib/office/officeUtils';
 
 export function useOfficeStudentDocuments(schoolId: string | null, studentId: string | null, enabled: boolean) {
   const firestore = useFirestore();
@@ -22,6 +23,6 @@ export function useOfficeStudentDocuments(schoolId: string | null, studentId: st
   const { data, isLoading, error } = useCollection<OfficeStudentDocument>(docsQuery, {
     reportPermissionErrors: false,
   });
-  const documents = useMemo(() => (data ?? []).slice().sort((a, b) => b.uploadedAt - a.uploadedAt), [data]);
+  const documents = useMemo(() => withoutArchived(data).sort((a, b) => b.uploadedAt - a.uploadedAt), [data]);
   return { documents, isLoading, error };
 }

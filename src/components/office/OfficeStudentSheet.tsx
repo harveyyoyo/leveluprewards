@@ -7,16 +7,18 @@ import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { formatCents } from '@/lib/office/officeNav';
 import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
-import { useOfficeEntityHistory } from '@/lib/office/useOfficeEntityHistory';
+import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { useOfficeAttendanceForStudent } from '@/lib/office/useOfficeAttendance';
 import {
   billingAccountForStudent,
   formatGradeDisplay,
   getOfficeTeacherLabel,
+  getTeacherIds,
   gradesForStudent,
   getOfficeStudentFullName,
 } from '@/lib/office/officeUtils';
@@ -65,6 +67,7 @@ export function OfficeStudentSheet({
   families = [],
 }: OfficeStudentSheetProps) {
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { features } = useOfficePortalChrome();
 
@@ -109,7 +112,6 @@ export function OfficeStudentSheet({
     return allStudents.filter((s) => s.id !== student.id && s.familyId === student.familyId);
   }, [allStudents, student]);
 
-  const { entries: historyEntries } = useOfficeEntityHistory(schoolId, student?.id ?? null, open && !!student);
   const { entries: attendanceEntries } = useOfficeAttendanceForStudent(schoolId, student?.id ?? null, open && !!student);
 
   const recentAbsences = useMemo(() => {
@@ -174,9 +176,14 @@ export function OfficeStudentSheet({
 
   const handleDelete = async () => {
     if (!write.ctx) return;
-    if (!confirm(`Are you sure you want to permanently delete ${name}? All grade entries and billing linkages will be cleaned up. If you just want to remove them from the active roster, use Status → Withdrawn or Graduated instead.`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: `Remove ${name}?`,
+      description:
+        'They will be hidden from every list. Their grades, bills, and history are kept and can still be looked up. If they left or finished school, set their Status to Withdrawn or Graduated instead.',
+      confirmLabel: 'Remove student',
+      tone: 'caution',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const studentGradeIds = gradeEntries.filter((g) => g.studentId === student.id).map((g) => g.id);
@@ -184,12 +191,12 @@ export function OfficeStudentSheet({
         .filter((a) => a.studentIds.includes(student.id))
         .map((a) => ({ accountId: a.id, studentIds: a.studentIds.filter((id) => id !== student.id) }));
 
-      await write.deleteOfficeStudentBatch(write.ctx, {
+      await write.archiveOfficeStudentBatch(write.ctx, {
         student,
         gradeEntryIds: studentGradeIds,
         billingUpdates,
       });
-      toast({ title: 'Student deleted successfully' });
+      toast({ title: 'Student removed', description: 'Their records are kept in the change history.' });
       onOpenChange(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -201,6 +208,7 @@ export function OfficeStudentSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+        {confirmDialog}
         <SheetHeader className="relative">
           {isEditing ? (
             <SheetTitle>Edit Student Details</SheetTitle>
@@ -279,7 +287,7 @@ export function OfficeStudentSheet({
               {getTeacherIds(student).length > 0 ? (
                 <>
                   <span>·</span>
-                  {getTeacherIds(student).map((tId, idx) => (
+                  {getTeacherIds(student).map((tId: string, idx: number) => (
                     <span key={tId} className="flex items-center gap-1">
                       {idx > 0 && <span>, </span>}
                       <OfficeEntityLink
@@ -419,7 +427,7 @@ export function OfficeStudentSheet({
                 onClick={() => void handleDelete()}
                 disabled={busy}
               >
-                <Trash2 className="h-4 w-4" /> Delete Student
+                <Trash2 className="h-4 w-4" /> Remove student
               </Button>
             </div>
           </div>
@@ -634,24 +642,7 @@ export function OfficeStudentSheet({
                     </div>
                   ) : null}
 
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground">History</p>
-                    {historyEntries.length > 0 ? (
-                      <ul className="mt-1 space-y-1.5">
-                        {historyEntries.slice(0, 20).map((entry) => (
-                          <li key={entry.id} className="rounded-lg border px-2.5 py-1.5 text-xs">
-                            <p className="font-medium">{entry.summary}</p>
-                            <p className="text-muted-foreground">
-                              {new Date(entry.changedAt).toLocaleString()}
-                              {entry.changedBy ? ` · ${safeString(entry.changedBy)}` : ''}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="mt-1 text-xs text-muted-foreground">No recorded changes yet.</p>
-                    )}
-                  </div>
+                  <OfficeEntityHistorySection schoolId={schoolId} entityId={student.id} />
                 </div>
               ) : null}
             </section>

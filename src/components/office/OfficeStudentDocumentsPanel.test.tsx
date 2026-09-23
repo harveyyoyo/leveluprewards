@@ -44,20 +44,20 @@ describe('OfficeStudentDocumentsPanel', () => {
     openSpy.mockRestore();
   });
 
-  it('calls the delete endpoint when confirmed', async () => {
+  it('asks first, then calls the remove endpoint when confirmed', async () => {
     documents = [
       { id: 'd1', studentId: 's1', name: 'report-card.pdf', storagePath: 'x', contentType: 'application/pdf', sizeBytes: 2048, uploadedAt: 0 },
     ];
     authFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true }) });
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<OfficeStudentDocumentsPanel schoolId="yeshiva" studentId="s1" enabled />);
     fireEvent.click(screen.getByLabelText('Delete report-card.pdf'));
 
+    expect(authFetch).not.toHaveBeenCalledWith('/api/office/student-document/d1?schoolId=yeshiva', { method: 'DELETE' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Remove' }));
+
     await waitFor(() => {
       expect(authFetch).toHaveBeenCalledWith('/api/office/student-document/d1?schoolId=yeshiva', { method: 'DELETE' });
     });
-
-    confirmSpy.mockRestore();
   });
 });

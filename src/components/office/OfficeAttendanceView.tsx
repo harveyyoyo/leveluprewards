@@ -135,8 +135,8 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
     return (
       <OfficeEmptyState
         icon={CalendarCheck}
-        title="Attendance isn’t unlocked on the live site yet"
-        description="This page is ready in the app, but the live data locks for it still need to be published. Home, Students, Billing, and the other older Office pages still work."
+        title="Attendance is almost ready"
+        description="Daily attendance will open here after the next update. Everything else in the office works as usual."
       />
     );
   }

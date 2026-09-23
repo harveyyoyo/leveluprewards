@@ -6,6 +6,8 @@ export type OfficeTeacher = {
   name: string;
   email?: string | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeFamilyContactRole =
@@ -42,6 +44,8 @@ export type OfficeFamily = {
   generalNotes?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 /** Office student roster. */
@@ -70,6 +74,8 @@ export type OfficeStudent = {
   /** Defaults to `active` when unset. Withdrawn/graduated students are hidden from the main roster by default. */
   status?: 'active' | 'withdrawn' | 'graduated' | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeClass = {
@@ -83,6 +89,8 @@ export type OfficeClass = {
   /** Soft cap used to show an over-capacity warning; no enforcement. */
   capacity?: number | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -111,6 +119,8 @@ export type OfficeGradeEntry = {
   notes?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeBillingAccountStatus = 'active' | 'past_due' | 'closed';
@@ -131,6 +141,8 @@ export type OfficeBillingAccount = {
   /** 0–100. Informational — staff apply it manually per invoice, it never changes amounts silently. */
   discountPercent?: number | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeInvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void';
@@ -165,6 +177,8 @@ export type OfficeInvoice = {
   /** How payment was recorded when marked paid outside Stripe. */
   paymentMethod?: OfficePaymentMethod | null;
   paymentNote?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeGradeEntryInput = Omit<OfficeGradeEntry, 'id' | 'updatedAt' | 'updatedBy'>;
@@ -180,6 +194,7 @@ export type OfficeFeatureFlags = {
   medicalNotes?: boolean;
   aiHelp?: boolean;
   auditLog?: boolean;
+  attendance?: boolean;
 };
 
 export type OfficeAuditAction = 'create' | 'update' | 'delete';
@@ -192,6 +207,7 @@ export type OfficeAuditEntityType =
   | 'officeGradeEntry'
   | 'officeBillingAccount'
   | 'officeInvoice'
+  | 'officePayment'
   | 'officeAttendanceEntry'
   | 'officeForm'
   | 'officeEvent'
@@ -229,6 +245,8 @@ export type OfficeForm = {
   createdAt: number;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 /**
@@ -246,6 +264,8 @@ export type OfficeStudentDocument = {
   sizeBytes: number;
   uploadedAt: number;
   uploadedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 /** A school calendar event (`schools/{id}/officeEvents`). */
@@ -257,6 +277,8 @@ export type OfficeEvent = {
   date: string;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 /** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { collection } from 'firebase/firestore';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeForm } from '@/lib/office/types';
+import { withoutArchived } from '@/lib/office/officeUtils';
 
 export function useOfficeForms(schoolId: string | null) {
   const firestore = useFirestore();
@@ -17,7 +18,7 @@ export function useOfficeForms(schoolId: string | null) {
     reportPermissionErrors: false,
   });
   const forms = useMemo(
-    () => (data ?? []).slice().sort((a, b) => b.createdAt - a.createdAt),
+    () => withoutArchived(data).sort((a, b) => b.createdAt - a.createdAt),
     [data],
   );
   return { forms, isLoading, error };

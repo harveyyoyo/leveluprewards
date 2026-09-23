@@ -12,9 +12,9 @@ vi.mock('@/lib/office/useOfficeWrite', () => ({
     ready: true,
     createOfficeForm,
     setOfficeFormResponse: vi.fn(),
-    deleteOfficeForm: vi.fn(),
+    archiveOfficeForm: vi.fn(),
     upsertOfficeEvent,
-    deleteOfficeEvent: vi.fn(),
+    archiveOfficeEvent: vi.fn(),
   }),
 }));
 

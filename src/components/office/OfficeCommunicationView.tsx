@@ -16,7 +16,9 @@ import {
 } from '@/components/ui/dialog';
 import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeForms } from '@/lib/office/useOfficeForms';
 import { useOfficeEvents } from '@/lib/office/useOfficeEvents';
 import { buildAnnouncementMailto, getOfficeStudentFullName, officeStudentsForClass } from '@/lib/office/officeUtils';
@@ -80,23 +82,34 @@ function AnnouncementsPanel({
     [students, audience],
   );
 
+  const { billingAccounts } = useOfficePortalData();
+
   const emails = useMemo(() => {
     const familyIds = new Set(targetStudents.map((s) => s.familyId).filter((id): id is string => !!id));
+    const studentIds = new Set(targetStudents.map((s) => s.id));
     const set = new Set<string>();
     for (const family of families) {
       if (!familyIds.has(family.id)) continue;
       for (const contact of family.contacts ?? []) {
-        if (contact.email?.trim()) set.add(contact.email.trim());
+        if (contact.email?.trim()) set.add(contact.email.trim().toLowerCase());
       }
     }
+    // Many schools only have a parent email on the billing account, so include those too.
+    for (const account of billingAccounts) {
+      if (!account.contactEmail?.trim()) continue;
+      const linked =
+        (account.familyId && familyIds.has(account.familyId)) ||
+        (account.studentIds ?? []).some((id) => studentIds.has(id));
+      if (linked) set.add(account.contactEmail.trim().toLowerCase());
+    }
     return Array.from(set);
-  }, [targetStudents, families]);
+  }, [targetStudents, families, billingAccounts]);
 
   return (
     <div className="space-y-4 rounded-2xl border bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <p className="text-sm text-muted-foreground">
-        Opens your own email app with everyone&apos;s address filled in — nothing is sent from here. Nobody sees any
-        other family&apos;s address (they go in Bcc).
+        Opens your own email app with everyone&apos;s address filled in — nothing is sent from here. Families can&apos;t
+        see each other&apos;s addresses.
       </p>
       <div className="space-y-2">
         <Label>Send to</Label>
@@ -178,6 +191,7 @@ function FormsPanel({
   classes: OfficeClass[];
 }) {
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { forms, isLoading } = useOfficeForms(schoolId);
   const [open, setOpen] = useState(false);
@@ -221,12 +235,19 @@ function FormsPanel({
   };
 
   const handleDelete = async (form: OfficeForm) => {
-    if (!write.ctx || !confirm(`Delete "${form.title}"? This removes everyone's tracked responses.`)) return;
+    if (!write.ctx) return;
+    const ok = await confirm({
+      title: `Remove “${form.title}”?`,
+      description: 'It will be hidden from this list. Who returned it stays saved in the change history.',
+      confirmLabel: 'Remove form',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
-      await write.deleteOfficeForm(write.ctx, form);
-      toast({ title: 'Form deleted' });
+      await write.archiveOfficeForm(write.ctx, form);
+      toast({ title: 'Form removed' });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not delete form', description: (e as Error).message });
+      toast({ variant: 'destructive', title: 'Could not remove form', description: (e as Error).message });
     }
   };
 
@@ -236,6 +257,7 @@ function FormsPanel({
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <div className="flex justify-end">
         <Button type="button" className="rounded-xl gap-2" onClick={() => setOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -369,6 +391,7 @@ function FormsPanel({
 
 function EventsPanel({ schoolId }: { schoolId: string }) {
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { events, isLoading } = useOfficeEvents(schoolId);
   const [open, setOpen] = useState(false);
@@ -411,6 +434,7 @@ function EventsPanel({ schoolId }: { schoolId: string }) {
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <div className="flex justify-end">
         <Button type="button" className="rounded-xl gap-2" onClick={openNew}>
           <Plus className="h-4 w-4" />
@@ -451,11 +475,17 @@ function EventsPanel({ schoolId }: { schoolId: string }) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive"
-                  aria-label="Delete event"
-                  onClick={() => {
-                    if (!write.ctx || !confirm(`Delete "${event.title}"?`)) return;
-                    void write.deleteOfficeEvent(write.ctx, event);
+                  className="h-8 w-8 text-muted-foreground hover:text-amber-800"
+                  aria-label={`Remove ${event.title}`}
+                  onClick={async () => {
+                    if (!write.ctx) return;
+                    const ok = await confirm({
+                      title: `Remove “${event.title}”?`,
+                      description: 'It will be hidden from the calendar and kept in the change history.',
+                      confirmLabel: 'Remove event',
+                      tone: 'caution',
+                    });
+                    if (ok) await write.archiveOfficeEvent(write.ctx, event);
                   }}
                 >
                   <Trash2 className="h-4 w-4" />

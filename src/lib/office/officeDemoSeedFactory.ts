@@ -1,4 +1,4 @@
-import type { Class, StaffAccount, Student } from '@/lib/types';
+import type { Class, StaffAccount, Student, Teacher } from '@/lib/types';
 import type {
   OfficeBillingAccount,
   OfficeClass,
@@ -17,7 +17,8 @@ export type OfficeDemoVariant = 'schoolabc' | 'yeshiva';
 export type OfficeDemoSeedInput = {
   variant: OfficeDemoVariant;
   students: Pick<Student, 'id' | 'firstName' | 'lastName' | 'nickname' | 'classId'>[];
-  classes: Pick<Class, 'id' | 'name'>[];
+  classes: Pick<Class, 'id' | 'name' | 'primaryTeacherId'>[];
+  teachers?: Pick<Teacher, 'id' | 'name' | 'email'>[];
 };
 
 export type OfficeDemoSeedPayload = {
@@ -108,30 +109,60 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
   const teacherNames =
     input.variant === 'yeshiva' ? TEACHER_NAMES_YESHIVA : TEACHER_NAMES_SCHOOLABC;
 
-  const officeClasses: OfficeClass[] = input.classes.map((c) => ({
-    id: c.id,
-    name: c.name?.trim() || 'Class',
-    updatedAt: now,
-  }));
+  // 1. Create office teachers from rewards teachers if available, else fallback to presets.
+  const officeTeachers: OfficeTeacher[] = input.teachers?.length 
+    ? input.teachers.map(t => ({
+        id: t.id,
+        name: t.name,
+        email: t.email ?? null,
+        updatedAt: now
+      }))
+    : teacherNames.map((teacherName, index) => ({
+        id: `oteacher-${input.variant}-${index + 1}`,
+        name: teacherName,
+        email: null,
+        updatedAt: now,
+      }));
 
-  const officeTeachers: OfficeTeacher[] = teacherNames.map((teacherName, index) => ({
-    id: `oteacher-${input.variant}-${index + 1}`,
-    name: teacherName,
-    email: null,
-    updatedAt: now,
-  }));
+  const officeTeacherById = new Map(officeTeachers.map(t => [t.id, t]));
 
-  const officeStudents: OfficeStudent[] = input.students.map((s) => ({
-    id: s.id,
-    firstName: s.firstName?.trim() || 'Student',
-    lastName: s.lastName?.trim() || '',
-    nickname: s.nickname?.trim() || null,
-    classId: s.classId ?? null,
-    teacherId: officeTeachers[hashToIndex(s.id, officeTeachers.length)]?.id ?? null,
-    teacherName: null,
-    notes: null,
-    updatedAt: now,
-  }));
+  // 2. Create office classes, assigning the teacher from the rewards class record.
+  const officeClasses: OfficeClass[] = input.classes.map((c, index) => {
+    // Try to find the teacher assigned to this class in rewards.
+    let teacherId: string | null = null;
+    if (c.primaryTeacherId && officeTeacherById.has(c.primaryTeacherId)) {
+      teacherId = c.primaryTeacherId;
+    } else {
+      // Fallback to round-robin if mapping fails.
+      teacherId = officeTeachers[index % officeTeachers.length]?.id ?? null;
+    }
+    
+    return {
+      id: c.id,
+      name: c.name?.trim() || 'Class',
+      teacherId,
+      updatedAt: now,
+    };
+  });
+
+  const officeClassById = new Map(officeClasses.map(c => [c.id, c]));
+
+  // 3. Create office students, assigning them to the teacher of their class.
+  const officeStudents: OfficeStudent[] = input.students.map((s) => {
+    const cls = s.classId ? officeClassById.get(s.classId) : null;
+    return {
+      id: s.id,
+      firstName: s.firstName?.trim() || 'Student',
+      lastName: s.lastName?.trim() || '',
+      nickname: s.nickname?.trim() || null,
+      classId: s.classId ?? null,
+      // Assign the teacher from the class, with NO random fallback.
+      teacherId: cls?.teacherId ?? null,
+      teacherName: null,
+      notes: null,
+      updatedAt: now,
+    };
+  });
 
   const gradeEntries: OfficeGradeEntry[] = [];
   for (const student of officeStudents) {

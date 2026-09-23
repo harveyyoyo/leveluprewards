@@ -19,6 +19,7 @@ import {
   getOfficeStudentFullName,
   getOfficeStudentLabel,
   getOfficeTeacherLabel,
+  getTeacherIds,
   officeStudentHasTeacher,
   studentIdsWithGradesForTerm,
 } from '@/lib/office/officeUtils';
@@ -199,7 +200,7 @@ export function OfficeStudentsView({
         <OfficeEmptyState
           icon={Users}
           title="No office students yet"
-          description="Add students manually or import a CSV roster."
+          description="Add students one at a time, or import a spreadsheet."
         />
         <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />
       </div>
@@ -222,7 +223,7 @@ export function OfficeStudentsView({
           }}
         >
           <Download className="h-4 w-4" />
-          Export CSV
+          Download spreadsheet
         </Button>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -324,7 +325,7 @@ export function OfficeStudentsView({
                 <td className="px-4 py-3 hidden md:table-cell">
                   {getTeacherIds(s).length > 0 ? (
                     <div className="flex flex-col gap-0.5">
-                      {getTeacherIds(s).map((tId) => (
+                      {getTeacherIds(s).map((tId: string) => (
                         <OfficeEntityLink
                           key={tId}
                           kind="teacher"
@@ -343,12 +344,14 @@ export function OfficeStudentsView({
                 </td>
                 <td className="px-4 py-3 hidden lg:table-cell">
                   {gradedForTerm.has(s.id) ? (
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
                       Graded
                     </span>
                   ) : (
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                      Missing
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden />
+                      Not yet
                     </span>
                   )}
                 </td>
@@ -359,7 +362,7 @@ export function OfficeStudentsView({
         {filtered.length === 0 ? (
           <p className="p-8 text-center text-sm text-muted-foreground">
             {students.length === 0
-              ? 'No office students yet. Add students or import a CSV.'
+              ? 'No students yet. Add students or import a spreadsheet.'
               : 'No students match your filters.'}
           </p>
         ) : null}

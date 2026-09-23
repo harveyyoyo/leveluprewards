@@ -4,14 +4,14 @@ import { OfficeStudentSheet } from './OfficeStudentSheet';
 import type { OfficeFamily, OfficeStudent } from '@/lib/office/types';
 
 const updateOfficeStudent = vi.fn();
-const deleteOfficeStudentBatch = vi.fn();
+const archiveOfficeStudentBatch = vi.fn();
 
 vi.mock('@/lib/office/useOfficeWrite', () => ({
   useOfficeWrite: () => ({
     ctx: { firestore: {}, schoolId: 'yeshiva' },
     ready: true,
     updateOfficeStudent,
-    deleteOfficeStudentBatch,
+    archiveOfficeStudentBatch,
   }),
 }));
 
@@ -34,6 +34,10 @@ vi.mock('@/components/office/OfficePortalChrome', () => ({
       auditLog: true,
     },
   }),
+}));
+
+vi.mock('@/lib/office/useOfficeHistoryNames', () => ({
+  useOfficeHistoryNames: () => () => undefined,
 }));
 
 vi.mock('@/lib/office/useOfficeEntityHistory', () => ({
@@ -134,6 +138,10 @@ describe('OfficeStudentSheet', () => {
     fireEvent.click(screen.getByRole('button', { name: /more \(tags, documents & history\)/i }));
 
     expect(screen.getByText('scholarship')).toBeInTheDocument();
+    expect(screen.queryByText(/updated student akiva klein/i)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /^history$/i }));
+
     expect(screen.getByText(/updated student akiva klein/i)).toBeInTheDocument();
   });
 

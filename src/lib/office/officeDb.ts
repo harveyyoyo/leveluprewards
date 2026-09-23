@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   increment,
@@ -39,22 +38,47 @@ function sid(schoolId: string): string {
   return schoolId.trim().toLowerCase();
 }
 
-async function audit(
+/**
+ * Office records are never erased — "removing" one only hides it, so every past record stays
+ * available for lookups and history. Returns the fields written, for the audit entry.
+ */
+async function archiveOfficeDoc(
   ctx: OfficeWriteContext,
-  params: {
-    entityType: OfficeAuditEntityType;
-    entityId: string;
-    action: 'create' | 'update' | 'delete';
-    summary: string;
-    before?: Record<string, unknown> | null;
-    after?: Record<string, unknown> | null;
-  },
-): Promise<void> {
+  collectionName: string,
+  id: string,
+): Promise<{ archived: true; archivedAt: number }> {
+  const now = Date.now();
+  const fields = { archived: true as const, archivedAt: now };
+  await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), collectionName, id), {
+    ...fields,
+    updatedAt: now,
+  });
+  return fields;
+}
+
+export type OfficeChangeParams = {
+  entityType: OfficeAuditEntityType;
+  entityId: string;
+  action: 'create' | 'update' | 'delete';
+  summary: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+};
+
+async function audit(ctx: OfficeWriteContext, params: OfficeChangeParams): Promise<void> {
   if (!ctx.auditLog) return;
   await writeOfficeAuditEntry(ctx.firestore, sid(ctx.schoolId), {
     ...params,
     changedBy: ctx.changedBy,
   });
+}
+
+/**
+ * Adds a change-history entry for a save made outside this module (e.g. Billing's own
+ * multi-invoice payment flow). Every Office save must leave one of these behind.
+ */
+export async function logOfficeChange(ctx: OfficeWriteContext, params: OfficeChangeParams): Promise<void> {
+  await audit(ctx, params);
 }
 
 /** Creates a student and auto-provisions an `officeFamilies` row when none is supplied. */
@@ -120,7 +144,7 @@ export async function updateOfficeStudent(
   });
 }
 
-export async function deleteOfficeStudentBatch(
+export async function archiveOfficeStudentBatch(
   ctx: OfficeWriteContext,
   params: {
     student: OfficeStudent;
@@ -129,14 +153,23 @@ export async function deleteOfficeStudentBatch(
   },
 ): Promise<void> {
   const batch = writeBatch(ctx.firestore);
-  batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', params.student.id));
+  const now = Date.now();
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', params.student.id), {
+    archived: true,
+    archivedAt: now,
+    updatedAt: now,
+  });
   for (const gid of params.gradeEntryIds) {
-    batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', gid));
+    batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', gid), {
+      archived: true,
+      archivedAt: now,
+      updatedAt: now,
+    });
   }
   for (const u of params.billingUpdates) {
     batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', u.accountId), {
       studentIds: u.studentIds,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   await batch.commit();
@@ -144,9 +177,9 @@ export async function deleteOfficeStudentBatch(
     entityType: 'officeStudent',
     entityId: params.student.id,
     action: 'delete',
-    summary: `Deleted student ${params.student.firstName} ${params.student.lastName}`.trim(),
+    summary: `Archived student ${params.student.firstName} ${params.student.lastName}`.trim(),
     before: officeAuditSnapshot(params.student as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
   });
 }
 
@@ -179,18 +212,19 @@ export async function upsertOfficeFamily(
   return id;
 }
 
-export async function deleteOfficeFamily(ctx: OfficeWriteContext, familyId: string): Promise<void> {
+export async function archiveOfficeFamily(ctx: OfficeWriteContext, familyId: string): Promise<void> {
   const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeFamilies', familyId);
   const beforeSnap = await getDoc(ref);
   const before = beforeSnap.exists() ? (beforeSnap.data() as OfficeFamily) : null;
-  await deleteDoc(ref);
+  const now = Date.now();
+  await updateDoc(ref, { archived: true, archivedAt: now, updatedAt: now });
   await audit(ctx, {
     entityType: 'officeFamily',
     entityId: familyId,
     action: 'delete',
-    summary: `Deleted family ${before?.displayName ?? familyId}`,
+    summary: `Archived family ${before?.displayName ?? familyId}`,
     before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
   });
 }
 
@@ -225,17 +259,22 @@ export async function upsertOfficeClass(
   return id;
 }
 
-export async function deleteOfficeClassBatch(
+export async function archiveOfficeClassBatch(
   ctx: OfficeWriteContext,
   cls: OfficeClass,
   unassignStudentIds: string[],
 ): Promise<void> {
   const batch = writeBatch(ctx.firestore);
-  batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id));
+  const now = Date.now();
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    archived: true,
+    archivedAt: now,
+    updatedAt: now,
+  });
   for (const studentId of unassignStudentIds) {
     batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', studentId), {
       classId: null,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   await batch.commit();
@@ -243,9 +282,9 @@ export async function deleteOfficeClassBatch(
     entityType: 'officeClass',
     entityId: cls.id,
     action: 'delete',
-    summary: `Deleted class ${cls.name}`,
+    summary: `Archived class ${cls.name}`,
     before: officeAuditSnapshot(cls as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
   });
 }
 
@@ -277,18 +316,18 @@ export async function upsertOfficeTeacher(
   return id;
 }
 
-export async function deleteOfficeTeacher(
+export async function archiveOfficeTeacher(
   ctx: OfficeWriteContext,
   teacher: OfficeTeacher,
 ): Promise<void> {
-  await deleteDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeTeachers', teacher.id));
+  const fields = await archiveOfficeDoc(ctx, 'officeTeachers', teacher.id);
   await audit(ctx, {
     entityType: 'officeTeacher',
     entityId: teacher.id,
     action: 'delete',
-    summary: `Deleted teacher ${teacher.name}`,
+    summary: `Archived teacher ${teacher.name}`,
     before: officeAuditSnapshot(teacher as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -305,16 +344,15 @@ export async function linkStudentsToFamily(
   );
 }
 
-export async function deleteOfficeBillingAccount(ctx: OfficeWriteContext, account: OfficeBillingAccount): Promise<void> {
-  const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', account.id);
-  await deleteDoc(ref);
+export async function archiveOfficeBillingAccount(ctx: OfficeWriteContext, account: OfficeBillingAccount): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeBillingAccounts', account.id);
   await audit(ctx, {
     entityType: 'officeBillingAccount',
     entityId: account.id,
     action: 'delete',
-    summary: `Deleted billing account ${account.familyName}`,
+    summary: `Archived billing account ${account.familyName}`,
     before: officeAuditSnapshot(account as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -615,16 +653,15 @@ export async function createOfficeGradeEntry(
   return ref.id;
 }
 
-export async function deleteOfficeGradeEntry(ctx: OfficeWriteContext, entry: OfficeGradeEntry): Promise<void> {
-  const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', entry.id);
-  await deleteDoc(ref);
+export async function archiveOfficeGradeEntry(ctx: OfficeWriteContext, entry: OfficeGradeEntry): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeGradeEntries', entry.id);
   await audit(ctx, {
     entityType: 'officeGradeEntry',
     entityId: entry.id,
     action: 'delete',
-    summary: `Deleted grade entry ${entry.subject} · ${entry.termLabel}`,
+    summary: `Archived grade entry ${entry.subject} · ${entry.termLabel}`,
     before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -721,7 +758,8 @@ export async function bulkSetOfficeAttendance(
     entityId: `${params.classId}_${params.date}`,
     action: 'update',
     summary: `Recorded attendance for ${params.marks.length} student${params.marks.length === 1 ? '' : 's'} on ${params.date}`,
-    after: officeAuditSnapshot({ classId: params.classId, date: params.date, counts }),
+    // Keep each student's mark so earlier marks on the same day remain traceable after a re-mark.
+    after: officeAuditSnapshot({ classId: params.classId, date: params.date, counts, marks: params.marks }),
   });
   return params.marks.length;
 }
@@ -773,15 +811,15 @@ export async function setOfficeFormResponse(
   });
 }
 
-export async function deleteOfficeForm(ctx: OfficeWriteContext, form: OfficeForm): Promise<void> {
-  await deleteDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeForms', form.id));
+export async function archiveOfficeForm(ctx: OfficeWriteContext, form: OfficeForm): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeForms', form.id);
   await audit(ctx, {
     entityType: 'officeForm',
     entityId: form.id,
     action: 'delete',
-    summary: `Deleted form "${form.title}"`,
+    summary: `Archived form "${form.title}"`,
     before: officeAuditSnapshot(form as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -814,15 +852,15 @@ export async function upsertOfficeEvent(
   return id;
 }
 
-export async function deleteOfficeEvent(ctx: OfficeWriteContext, event: OfficeEvent): Promise<void> {
-  await deleteDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeEvents', event.id));
+export async function archiveOfficeEvent(ctx: OfficeWriteContext, event: OfficeEvent): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeEvents', event.id);
   await audit(ctx, {
     entityType: 'officeEvent',
     entityId: event.id,
     action: 'delete',
-    summary: `Deleted event ${event.title}`,
+    summary: `Archived event ${event.title}`,
     before: officeAuditSnapshot(event as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 

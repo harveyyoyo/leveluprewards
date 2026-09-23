@@ -9,7 +9,9 @@ import { AlertTriangle, ArrowUpRight, ChevronRight, Download, Plus, Pencil, Tras
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { officeAuditSnapshot } from '@/lib/office/officeAuditLog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,6 +56,7 @@ export function OfficeClassesView({
 }: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { openStudent, openClass } = useOfficeEntityNav();
 
@@ -93,9 +96,10 @@ export function OfficeClassesView({
     }
   }, [searchParams, classes, students, isLoading]);
 
+  // `student` in the URL belongs to the profile sheet (OfficeEntityNavProvider); writing it here
+  // re-added it right after the sheet closed and reopened the profile.
   useOfficeUrlSync({
     class: expandedClassId ?? undefined,
-    student: highlightStudentId ?? undefined,
   });
 
   // Class Dialog State
@@ -171,6 +175,17 @@ export function OfficeClassesView({
           }
           await batch.commit();
           updatedStudentCount = classStudents.length;
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeClass',
+            entityId: classId,
+            action: 'update',
+            summary: `Updated the teacher for ${classStudents.length} student${classStudents.length === 1 ? '' : 's'} in ${className.trim()}`,
+            before: officeAuditSnapshot({ teacherIds: oldTeacherIds }),
+            after: officeAuditSnapshot({
+              teacherIds: nextTeacherIds ?? [],
+              studentIds: classStudents.map((s) => s.id),
+            }),
+          });
         }
       }
 
@@ -194,25 +209,6 @@ export function OfficeClassesView({
     }
   };
 
-  const assignStudentToClass = async (student: OfficeStudent, nextClassId: string) => {
-    if (!firestore) return;
-    const cid = nextClassId === '__none__' ? null : nextClassId;
-    if (cid === (student.classId ?? null)) return;
-    // Moving into a class that already has a teacher assigned carries that teacher over,
-    // the same way a new student joining a homeroom would pick up its teacher.
-    const targetClass = cid ? classes.find((c) => c.id === cid) : null;
-    try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
-        classId: cid,
-        ...(targetClass?.teacherId ? { teacherId: targetClass.teacherId, teacherName: null } : {}),
-        updatedAt: Date.now(),
-      });
-      toast({ title: 'Class updated' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not move student', description: (e as Error).message });
-    }
-  };
-
   const handleApplyPromotion = async () => {
     if (!firestore || promotionPlan.changes.length === 0) return;
     setBusy(true);
@@ -226,6 +222,19 @@ export function OfficeClassesView({
         });
       }
       await batch.commit();
+      if (write.ctx) {
+        for (const row of promotionPlan.changes) {
+          const before = classes.find((c) => c.id === row.classId);
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeClass',
+            entityId: row.classId,
+            action: 'update',
+            summary: `Advanced class ${before?.name ?? row.classId} → ${row.nextName} for next year`,
+            before: officeAuditSnapshot({ name: before?.name ?? null }),
+            after: officeAuditSnapshot({ name: row.nextName }),
+          });
+        }
+      }
       toast({
         title: 'Class names advanced',
         description: `${promotionPlan.changes.length} class${promotionPlan.changes.length === 1 ? '' : 'es'} updated for next year.`,
@@ -249,23 +258,26 @@ export function OfficeClassesView({
     const classStudents = students.filter((s) => s.classId === cls.id);
     const hasStudents = classStudents.length > 0;
 
-    let msg = `Are you sure you want to delete the class "${cls.name}"?`;
-    if (hasStudents) {
-      msg = `The class "${cls.name}" has ${classStudents.length} student(s) assigned. Deleting it will unassign these students. Are you sure you want to proceed?`;
-    }
-
-    if (!confirm(msg)) return;
+    const ok = await confirm({
+      title: `Remove the class “${cls.name}”?`,
+      description: hasStudents
+        ? `Its ${classStudents.length} student${classStudents.length === 1 ? '' : 's'} will move to “No class” so you can place them again. The class stays in the change history.`
+        : 'The class stays in the change history.',
+      confirmLabel: 'Remove class',
+      tone: 'caution',
+    });
+    if (!ok) return;
 
     setBusy(true);
     try {
-      await write.deleteOfficeClassBatch(
+      await write.archiveOfficeClassBatch(
         write.ctx,
         cls,
         classStudents.map((s) => s.id),
       );
-      toast({ title: 'Class deleted successfully' });
+      toast({ title: 'Class removed' });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
+      toast({ variant: 'destructive', title: 'Could not remove class', description: (e as Error).message });
     } finally {
       setBusy(false);
     }
@@ -325,6 +337,7 @@ export function OfficeClassesView({
 
   return (
     <div className="space-y-4">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
         <div>
           <p className="text-sm text-muted-foreground">
@@ -407,30 +420,6 @@ export function OfficeClassesView({
                   ) : null}
                 </span>
                 <div className="flex items-center gap-1">
-                  {cls.id !== '__unassigned__' && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => openEditClass(cls, e)}
-                        aria-label="Edit class name"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-muted/80 text-destructive hover:text-destructive/80"
-                        onClick={(e) => void handleDeleteClass(cls, e)}
-                        aria-label="Delete class"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
                   <ChevronRight className={cn('h-5 w-5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
                 </div>
               </div>
@@ -455,22 +444,6 @@ export function OfficeClassesView({
                       >
                           {getOfficeStudentLabel(s)} {s.lastName}
                       </button>
-                      <Select
-                        value={s.classId && classes.some((c) => c.id === s.classId) ? s.classId : '__none__'}
-                        onValueChange={(v) => void assignStudentToClass(s, v)}
-                      >
-                        <SelectTrigger className="h-8 w-36 rounded-lg text-xs" onClick={(e) => e.stopPropagation()}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Unassigned</SelectItem>
-                          {classes.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </li>
                   ))}
                   {list.length === 0 ? (
@@ -638,13 +611,27 @@ export function OfficeClassesView({
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void handleSaveClass()} disabled={busy}>
-              {editingClass ? 'Save changes' : 'Create class'}
-            </Button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+            {editingClass ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => editingClass && void handleDeleteClass(editingClass, e)}
+                disabled={busy}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete class
+              </Button>
+            ) : <div />}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => void handleSaveClass()} disabled={busy} className="rounded-xl">
+                {editingClass ? 'Save changes' : 'Create class'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -24,8 +24,10 @@ export type OfficeNavItem = {
   icon: LucideIcon;
 };
 
-export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTerminology'> | null): OfficeNavItem[] {
+export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTerminology' | 'features'> | null): OfficeNavItem[] {
   const marks = getOfficeMarksLabels(settings);
+  const showAttendance = settings?.features?.attendance !== false;
+
   return [
     {
       id: 'home',
@@ -62,13 +64,17 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       href: (schoolId) => officePublicHref(schoolId, 'grades'),
       icon: GraduationCap,
     },
-    {
-      id: 'attendance',
-      label: 'Attendance',
-      description: 'Daily present / absent',
-      href: (schoolId) => officePublicHref(schoolId, 'attendance'),
-      icon: CalendarCheck,
-    },
+    ...(showAttendance
+      ? [
+          {
+            id: 'attendance' as const,
+            label: 'Attendance',
+            description: 'Daily present / absent',
+            href: (schoolId: string) => officePublicHref(schoolId, 'attendance'),
+            icon: CalendarCheck,
+          },
+        ]
+      : []),
     {
       id: 'communication',
       label: 'Communication',

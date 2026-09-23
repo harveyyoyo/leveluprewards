@@ -12,6 +12,7 @@ import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav'
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
+import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import type {
   OfficeBillingAccount,
   OfficeFamily,
@@ -324,6 +325,8 @@ export function OfficeFamilySheet({
               </Button>
             </div>
           ) : null}
+
+          {family ? <OfficeEntityHistorySection schoolId={schoolId} entityId={family.id} /> : null}
 
           <div className="flex gap-2 pt-2 border-t">
             <Button type="button" className="flex-1 rounded-xl" disabled={busy} onClick={() => void handleSave()}>

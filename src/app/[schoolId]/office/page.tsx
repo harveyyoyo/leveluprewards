@@ -93,6 +93,7 @@ export default function OfficeHomePage() {
       gradeEntries={gradeEntries}
       schoolDefaultTerm={settings?.defaultActiveTerm}
       configuredTerms={configuredTerms}
+      showAttendance={settings?.features?.attendance !== false}
     />
   );
 }

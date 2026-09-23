@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,7 +16,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronRight, Download, Layers, Pencil, Plus, Printer, Trash2 } from 'lucide-react';
+import { ChevronRight, Download, Layers, MoreHorizontal, Pencil, Plus, Printer, Trash2, Upload } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
@@ -69,6 +77,7 @@ export function OfficeGradesView({
 }: OfficeGradesViewProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { marksLabels } = useOfficePortalChrome();
   const { term: activeTerm, setTerm: setActiveTerm, configuredTerms } = useOfficeTerm(schoolId);
@@ -84,7 +93,11 @@ export function OfficeGradesView({
     notes: '',
   });
   const [busy, setBusy] = useState(false);
-  const [filterTerm, setFilterTerm] = useState('all');
+  // One term picker: it sets the working term (used for adding grades and "missing") and the list
+  // shows that term, unless "All terms" is picked.
+  const [showAllTerms, setShowAllTerms] = useState(false);
+  const openGradesImport = useRef<(() => void) | null>(null);
+  const filterTerm = showAllTerms ? 'all' : activeTerm;
   const [filterClass, setFilterClass] = useState('all');
   const [search, setSearch] = useState('');
   const [showMissingPanel, setShowMissingPanel] = useState(false);
@@ -189,15 +202,19 @@ export function OfficeGradesView({
 
   useEffect(() => {
     const term = searchParams.get('term')?.trim();
-    if (term) setFilterTerm(term);
+    if (term) {
+      setShowAllTerms(false);
+      if (term !== activeTerm) setActiveTerm(term);
+    }
     const cls = searchParams.get('class')?.trim();
     if (cls && (cls === 'all' || classOptions.some((c) => c.id === cls))) {
       setFilterClass(cls);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to the address changing
   }, [searchParams, classOptions]);
 
   useOfficeUrlSync({
-    term: filterTerm !== 'all' ? filterTerm : undefined,
+    term: showAllTerms ? undefined : activeTerm,
     class: filterClass !== 'all' ? filterClass : undefined,
   });
 
@@ -271,14 +288,20 @@ export function OfficeGradesView({
   };
 
   const handleDelete = async (id: string) => {
-    if (!write.ctx || !confirm(`Delete this ${marksLabels.singular.toLowerCase()} entry?`)) return;
     const entry = entries.find((e) => e.id === id);
-    if (!entry) return;
+    if (!write.ctx || !entry) return;
+    const ok = await confirm({
+      title: `Remove this ${marksLabels.singular.toLowerCase()}?`,
+      description: `${studentLabelById.get(entry.studentId) ?? 'Student'} · ${entry.subject} · ${entry.termLabel}. It stays in the change history.`,
+      confirmLabel: 'Remove',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
-      await write.deleteOfficeGradeEntry(write.ctx, entry);
+      await write.archiveOfficeGradeEntry(write.ctx, entry);
       toast({ title: `${marksLabels.singular} removed` });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
+      toast({ variant: 'destructive', title: 'Could not remove', description: (e as Error).message });
     }
   };
 
@@ -351,34 +374,82 @@ export function OfficeGradesView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground max-w-xl">
-          Term: <span className="font-semibold text-foreground">{activeTerm}</span> — grades and reports filter to this term
-        </p>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button variant="outline" className="rounded-xl gap-2" asChild>
-            <Link href={`${officePublicHref(schoolId, 'reports')}?report=grades&term=${encodeURIComponent(activeTerm)}`}>
-              <Printer className="h-4 w-4" />
-              Print report
-            </Link>
-          </Button>
-          <Button variant="outline" className="rounded-xl gap-2" onClick={exportCsv} disabled={sorted.length === 0}>
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
-          <OfficeCsvImportDialog
-            schoolId={schoolId}
-            mode="grades"
-            students={students}
-            userName={userName}
-            disabled={students.length === 0}
-          />
-          {missingForTerm.length > 0 ? (
-            <Button variant="outline" className="rounded-xl gap-2" onClick={() => setBulkOpen(true)}>
-              <Layers className="h-4 w-4" />
-              Bulk fill ({missingForTerm.length})
-            </Button>
-          ) : null}
+      {confirmDialog}
+      <div className="flex flex-wrap items-center gap-2">
+        <OfficeSearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search student or subject…"
+          className="min-w-[14rem] flex-1 sm:max-w-sm"
+        />
+        <Select
+          value={showAllTerms ? 'all' : activeTerm}
+          onValueChange={(v) => {
+            if (v === 'all') {
+              setShowAllTerms(true);
+            } else {
+              setShowAllTerms(false);
+              setActiveTerm(v);
+            }
+          }}
+        >
+          <SelectTrigger className="h-9 w-40 rounded-lg" aria-label="Term">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {filterTermOptions.map((t) => (
+              <SelectItem key={t} value={t}>
+                {t}
+              </SelectItem>
+            ))}
+            <SelectItem value="all">All terms</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterClass} onValueChange={setFilterClass}>
+          <SelectTrigger className="h-9 w-40 rounded-lg" aria-label="Class">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All classes</SelectItem>
+            {classOptions.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="ml-auto flex gap-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl gap-2">
+                <MoreHorizontal className="h-4 w-4" />
+                More
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 rounded-xl">
+              {missingForTerm.length > 0 ? (
+                <DropdownMenuItem onSelect={() => setBulkOpen(true)}>
+                  <Layers className="mr-2 h-4 w-4" />
+                  Fill in missing grades ({missingForTerm.length})
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem asChild>
+                <Link href={`${officePublicHref(schoolId, 'reports')}?report=grades&term=${encodeURIComponent(activeTerm)}`}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print report
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={students.length === 0} onSelect={() => openGradesImport.current?.()}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import from a spreadsheet
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={sorted.length === 0} onSelect={exportCsv}>
+                <Download className="mr-2 h-4 w-4" />
+                Download spreadsheet
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button className="rounded-xl gap-2" onClick={() => openAdd()}>
             <Plus className="h-4 w-4" />
             Add grade
@@ -386,85 +457,26 @@ export function OfficeGradesView({
         </div>
       </div>
 
-      <OfficeSearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search student or subject…"
-        className="max-w-lg"
+      <OfficeCsvImportDialog
+        schoolId={schoolId}
+        mode="grades"
+        students={students}
+        userName={userName}
+        disabled={students.length === 0}
+        openRef={openGradesImport}
       />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <Button
+      {missingForTerm.length > 0 ? (
+        <button
           type="button"
-          variant={filterTerm === activeTerm ? 'default' : 'outline'}
-          size="sm"
-          className="rounded-lg h-9"
-          onClick={() => setFilterTerm(activeTerm)}
+          onClick={() => setShowMissingPanel((v) => !v)}
+          aria-expanded={showMissingPanel}
+          className="text-sm text-amber-800 hover:underline dark:text-amber-300"
         >
-          This term
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-lg h-9"
-          onClick={() => setFilterTerm('all')}
-        >
-          All terms
-        </Button>
-        {missingForTerm.length > 0 ? (
-          <Button
-            type="button"
-            variant={showMissingPanel ? 'default' : 'outline'}
-            size="sm"
-            className="rounded-lg h-9 text-amber-900 border-amber-200 dark:text-amber-200"
-            onClick={() => setShowMissingPanel((v) => !v)}
-          >
-            {missingForTerm.length} missing grades
-          </Button>
-        ) : null}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">Filter term</Label>
-          <Select value={filterTerm} onValueChange={setFilterTerm}>
-            <SelectTrigger className="w-36 h-9 rounded-lg">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All terms</SelectItem>
-              {filterTermOptions.map((t) => (
-                <SelectItem key={t} value={t}>
-                  {t}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">Filter class</Label>
-          <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-40 h-9 rounded-lg">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All classes</SelectItem>
-              {classOptions.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <OfficeWorkingTermSelect
-          label="Term"
-          value={activeTerm}
-          onValueChange={setActiveTerm}
-          gradeEntries={entries}
-          schoolDefaultTerm={settings?.defaultActiveTerm}
-          configuredTerms={configuredTerms}
-          id="office-grades-working-term"
-        />
-      </div>
+          {missingForTerm.length} student{missingForTerm.length === 1 ? ' has' : 's have'} no grades for {activeTerm} yet
+          {showMissingPanel ? ' — hide list' : ' — show list'}
+        </button>
+      ) : null}
 
       <p className="text-xs text-muted-foreground">
         {groupedByStudent.length} student{groupedByStudent.length === 1 ? '' : 's'}

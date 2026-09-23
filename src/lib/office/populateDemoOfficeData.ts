@@ -17,8 +17,8 @@ import {
 
 type RewardsRosterSnapshot = {
   students: Pick<Student, 'id' | 'firstName' | 'lastName' | 'nickname' | 'classId'>[];
-  classes: Pick<Class, 'id' | 'name'>[];
-  teachers: Teacher[];
+  classes: Pick<Class, 'id' | 'name' | 'primaryTeacherId'>[];
+  teachers: Pick<Teacher, 'id' | 'name' | 'email'>[];
 };
 
 export type PopulateDemoOfficeDataResult = OfficeDemoSeedPayload & {
@@ -34,7 +34,7 @@ async function readRewardsRoster(firestore: Firestore, schoolId: string): Promis
 
   const students = studentSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as RewardsRosterSnapshot['students'];
   const classes = classSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as RewardsRosterSnapshot['classes'];
-  const teachers = teacherSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as Teacher[];
+  const teachers = teacherSnap.docs.map((d) => ({ id: d.id, ...d.data() })) as RewardsRosterSnapshot['teachers'];
 
   if (students.length && classes.length) {
     return { students, classes, teachers };
@@ -46,9 +46,9 @@ async function readRewardsRoster(firestore: Firestore, schoolId: string): Promis
       : (await import('@/lib/schoolData')).SCHOOL_DATA;
 
   return {
-    students: students.length ? students : sampleData.students ?? [],
-    classes: classes.length ? classes : sampleData.classes ?? [],
-    teachers: teachers.length ? teachers : sampleData.teachers ?? [],
+    students: students.length ? (students as RewardsRosterSnapshot['students']) : (sampleData.students as RewardsRosterSnapshot['students']) ?? [],
+    classes: classes.length ? (classes as RewardsRosterSnapshot['classes']) : (sampleData.classes as unknown as RewardsRosterSnapshot['classes']) ?? [],
+    teachers: teachers.length ? (teachers as RewardsRosterSnapshot['teachers']) : (sampleData.teachers as unknown as RewardsRosterSnapshot['teachers']) ?? [],
   };
 }
 
@@ -70,6 +70,7 @@ export async function populateDemoOfficeDataForSchool(
     variant: cleanId as OfficeDemoVariant,
     students,
     classes,
+    teachers,
   });
 
   const schoolRef = doc(firestore, 'schools', cleanId);

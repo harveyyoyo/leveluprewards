@@ -1,21 +1,30 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { Check, ExternalLink, Mail, Pencil, Trash2, Users } from 'lucide-react';
+import { Check, ExternalLink, Mail, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
+import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
 import {
   formatGradeDisplay,
   getOfficeStudentFullName,
+  getTeacherIds,
   gradesForStudent,
   officeStudentsForTeacher,
   studentIdsWithGradesForTerm,
@@ -45,8 +54,9 @@ export function OfficeTeacherSheet({
   gradeEntries,
   activeTerm,
 }: OfficeTeacherSheetProps) {
-  const firestore = useFirestore();
+  const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const { openStudent } = useOfficeEntityNav();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
@@ -66,6 +76,14 @@ export function OfficeTeacherSheet({
     [students, teacher],
   );
 
+  const assignedClasses = useMemo(() => {
+    if (!teacher) return [];
+    return classes.filter((c) => {
+      const ids = c.teacherIds && c.teacherIds.length > 0 ? c.teacherIds : (c.teacherId ? [c.teacherId] : []);
+      return ids.includes(teacher.id);
+    });
+  }, [classes, teacher]);
+
   const gradedForTerm = useMemo(
     () => studentIdsWithGradesForTerm(gradeEntries, activeTerm),
     [gradeEntries, activeTerm],
@@ -77,17 +95,14 @@ export function OfficeTeacherSheet({
   const gradesHref = `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`;
 
   const handleSave = async () => {
-    if (!firestore || !name.trim()) {
+    if (!write.ctx || !name.trim()) {
       toast({ variant: 'destructive', title: 'Teacher name is required.' });
       return;
     }
     setBusy(true);
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', teacher.id), {
-        name: name.trim(),
-        email: email.trim() || null,
-        updatedAt: Date.now(),
-      });
+      // upsertOfficeTeacher also writes the change-history entry.
+      await write.upsertOfficeTeacher(write.ctx, teacher.id, { name: name.trim(), email: email.trim() || null });
       toast({ title: 'Teacher updated' });
       setIsEditing(false);
     } catch (e) {
@@ -98,20 +113,28 @@ export function OfficeTeacherSheet({
   };
 
   const handleDelete = async () => {
-    if (!firestore) return;
-    if (assignedStudents.length > 0) {
+    if (!write.ctx) return;
+    if (assignedStudents.length > 0 || assignedClasses.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Teacher has students',
-        description: `Reassign ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'} before deleting.`,
+        title: 'Teacher is assigned',
+        description: assignedClasses.length > 0 
+          ? `This teacher is assigned to ${assignedClasses.length} class${assignedClasses.length === 1 ? '' : 'es'}. Remove them from the classes first.`
+          : `Reassign ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'} before deleting.`,
       });
       return;
     }
-    if (!confirm(`Remove ${teacher.name} from the office teacher list?`)) return;
+    const ok = await confirm({
+      title: `Remove ${teacher.name}?`,
+      description: 'They will be hidden from the teacher list. Their past records stay in the change history.',
+      confirmLabel: 'Remove teacher',
+      tone: 'caution',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', teacher.id));
-      toast({ title: 'Teacher removed' });
+      await write.archiveOfficeTeacher(write.ctx, teacher);
+      toast({ title: 'Teacher removed', description: 'Their past records are kept in the change history.' });
       onOpenChange(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -123,6 +146,7 @@ export function OfficeTeacherSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        {confirmDialog}
         <SheetHeader className="relative">
           {isEditing ? (
             <SheetTitle>Edit teacher</SheetTitle>
@@ -159,7 +183,16 @@ export function OfficeTeacherSheet({
           )}
           {!isEditing ? (
             <SheetDescription>
-              {assignedStudents.length} student{assignedStudents.length === 1 ? '' : 's'} assigned
+              {assignedClasses.length > 0 ? (
+                <>
+                  Assigned to {assignedClasses.map(c => c.name).join(', ')}
+                  {assignedStudents.length > 0 ? ` · ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'}` : ''}
+                </>
+              ) : (
+                <>
+                  {assignedStudents.length} student{assignedStudents.length === 1 ? '' : 's'} assigned
+                </>
+              )}
               {teacher.email ? ` · ${teacher.email}` : ''}
             </SheetDescription>
           ) : null}
@@ -197,7 +230,7 @@ export function OfficeTeacherSheet({
                 disabled={busy}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete teacher
+                Remove teacher
               </Button>
             </div>
           </div>
@@ -258,11 +291,11 @@ export function OfficeTeacherSheet({
                             <span
                               className={
                                 gradedForTerm.has(student.id)
-                                  ? 'rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800'
-                                  : 'rounded-full bg-amber-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-amber-900'
+                                  ? 'shrink-0 text-xs text-emerald-800 dark:text-emerald-300'
+                                  : 'shrink-0 text-xs text-muted-foreground'
                               }
                             >
-                              {gradedForTerm.has(student.id) ? 'Graded' : 'Missing'}
+                              {gradedForTerm.has(student.id) ? 'Graded' : 'Not yet'}
                             </span>
                           </div>
                           {termGrades.length > 0 ? (
@@ -285,11 +318,7 @@ export function OfficeTeacherSheet({
               )}
             </section>
 
-            <section className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
-              <Users className="mb-2 h-4 w-4 text-teal-700" aria-hidden />
-              Homeroom teachers are separate from rewards staff in Admin. Assign this teacher when editing a student
-              profile.
-            </section>
+            <OfficeEntityHistorySection schoolId={schoolId} entityId={teacher.id} />
           </div>
         )}
       </SheetContent>

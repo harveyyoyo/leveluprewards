@@ -60,6 +60,12 @@ export function OfficeTeacherSelect({
     }
   };
 
+  const makePrimary = (idToMakePrimary: string) => {
+    // No-op - primary feature removed to simplify for schools
+  };
+
+  const currentTeacherId = multiple ? (currentValues[0] ?? '') : (value || '');
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
@@ -97,17 +103,22 @@ export function OfficeTeacherSelect({
         </Select>
         
         {multiple && currentValues.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {currentValues.map((id) => (
-              <div key={id} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
-                <span>{teachers.find(t => t.id === id)?.name || 'Unknown'}</span>
-                <button 
-                  type="button" 
-                  onClick={() => removeValue(id)}
-                  className="text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
+          <div className="flex flex-col gap-2 mt-2">
+            {currentValues.map((id, index) => (
+              <div key={id} className="flex items-center justify-between gap-1 bg-slate-50 border px-3 py-2 rounded-xl text-sm dark:bg-slate-900/50">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{teachers.find(t => t.id === id)?.name || 'Unknown'}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    type="button" 
+                    onClick={() => removeValue(id)}
+                    className="text-muted-foreground hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                    aria-label="Remove teacher"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -118,6 +129,11 @@ export function OfficeTeacherSelect({
           Add classroom teachers under Teachers so students can be assigned before recording grades.
         </p>
       ) : null}
+      {!multiple && currentTeacherId && (
+        <p className="text-xs text-muted-foreground italic">
+          This teacher is assigned to this student only. To assign a whole class, use the Classes tab.
+        </p>
+      )}
     </div>
   );
 }

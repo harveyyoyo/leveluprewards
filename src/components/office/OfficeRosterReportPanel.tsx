@@ -76,7 +76,7 @@ export function OfficeRosterReportPanel({
           className="max-w-md"
         />
         <Button type="button" variant="outline" className="rounded-xl" onClick={exportCsv}>
-          Export CSV
+          Download spreadsheet
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">{filtered.length} students in this view.</p>

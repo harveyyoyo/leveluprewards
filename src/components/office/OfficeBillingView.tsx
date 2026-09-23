@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, increment, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, increment, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,14 +15,42 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useSearchParams } from 'next/navigation';
-import { Copy, Download, Mail, Pencil, Plus, Trash2, Wand2, Phone, MessageSquare, AlertCircle } from 'lucide-react';
+import {
+  Archive,
+  Ban,
+  CalendarClock,
+  Copy,
+  Download,
+  Mail,
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Phone,
+  Plus,
+  Printer,
+  Wand2,
+  AlertCircle,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
-import { OfficeFamilyStatementButton } from '@/components/office/OfficeFamilyStatement';
 import { OfficeBillingSummaryChart } from '@/components/office/OfficeBillingSummaryChart';
-import { buildOfficeReceiptHtml, openOfficePrintDocument } from '@/lib/office/officePrintUtils';
+import {
+  buildOfficeFamilyStatementHtml,
+  buildOfficeReceiptHtml,
+  openOfficePrintDocument,
+} from '@/lib/office/officePrintUtils';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { officeAuditSnapshot } from '@/lib/office/officeAuditLog';
 import { formatCents } from '@/lib/office/officeNav';
 import {
   addMonthsToIsoDate,
@@ -55,6 +83,15 @@ import {
 } from '@/lib/office/officeBillingPayments';
 import { cn } from '@/lib/utils';
 
+/** Plain words for invoice states ("sent" means the family owes it). */
+const INVOICE_STATUS_LABEL: Record<OfficeInvoiceStatus, string> = {
+  draft: 'Draft',
+  sent: 'Unpaid',
+  partial: 'Partly paid',
+  paid: 'Paid',
+  void: 'Cancelled',
+};
+
 type OfficeBillingViewProps = {
   schoolId: string;
   students: OfficeStudent[];
@@ -77,8 +114,22 @@ export function OfficeBillingView({
   classNameById,
 }: OfficeBillingViewProps) {
   const firestore = useFirestore();
+  const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
   const { settings: officeSettings } = useOfficeSettings(schoolId);
+
+  const printFamilyStatement = (account: OfficeBillingAccount, studentLabels: string[]) => {
+    const html = buildOfficeFamilyStatementHtml({
+      account,
+      invoices,
+      studentLabels,
+      schoolLabel: officeSettings?.statementSchoolName?.trim() || 'School Office',
+    });
+    if (!openOfficePrintDocument(html)) {
+      toast({ variant: 'destructive', title: 'Pop-up blocked', description: 'Allow pop-ups to print.' });
+    }
+  };
   const [accountOpen, setAccountOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [familyName, setFamilyName] = useState('');
@@ -336,9 +387,18 @@ export function OfficeBillingView({
             },
           ];
           await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', account.id), {
-            balanceCents: (account.balanceCents || 0) + cents,
+            balanceCents: increment(cents),
             status: billingStatusForAccount(account.id, nextInvoices, account.status),
             updatedAt: Date.now(),
+          });
+        }
+        if (write.ctx) {
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeInvoice',
+            entityId: invoiceRef.id,
+            action: 'create',
+            summary: `Created invoice ${invoiceDoc.label} for ${account.familyName} · ${formatCents(cents)}`,
+            after: officeAuditSnapshot(invoiceDoc),
           });
         }
       });
@@ -390,6 +450,15 @@ export function OfficeBillingView({
         createdAt: Date.now(),
         status: 'pending',
       });
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officeInvoice',
+          entityId: inv.id,
+          action: 'update',
+          summary: `Sent ${channel === 'sms' ? 'text' : 'WhatsApp'} reminder for ${inv.label} to ${account.familyName}`,
+          after: officeAuditSnapshot({ channel, to: phone }),
+        });
+      }
 
       toast({
         title: `${channel === 'sms' ? 'SMS' : 'WhatsApp'} Alert Queued`,
@@ -433,18 +502,32 @@ export function OfficeBillingView({
       };
       if (editAccountId) {
         const existing = accounts.find((a) => a.id === editAccountId);
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), {
-          ...payload,
-          balanceCents: existing?.balanceCents ?? 0,
-          status: existing?.status ?? 'active',
-        });
+        // Balance/status are left alone: they only change through invoices and payments.
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), payload);
+        if (write.ctx) {
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeBillingAccount',
+            entityId: editAccountId,
+            action: 'update',
+            summary: `Updated billing ${payload.familyName}`,
+            before: existing ? officeAuditSnapshot(existing as unknown as Record<string, unknown>) : null,
+            after: officeAuditSnapshot({ ...(existing ?? {}), ...payload } as unknown as Record<string, unknown>),
+          });
+        }
         toast({ title: 'Account updated' });
       } else {
-        await setDoc(doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts')), {
-          ...payload,
-          balanceCents: 0,
-          status: 'active',
-        });
+        const ref = doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts'));
+        const created = { ...payload, balanceCents: 0, status: 'active' as const };
+        await setDoc(ref, created);
+        if (write.ctx) {
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeBillingAccount',
+            entityId: ref.id,
+            action: 'create',
+            summary: `Created billing ${payload.familyName}`,
+            after: officeAuditSnapshot(created as unknown as Record<string, unknown>),
+          });
+        }
         toast({ title: 'Billing account created' });
       }
       setAccountOpen(false);
@@ -512,19 +595,49 @@ export function OfficeBillingView({
             updatedAt: Date.now(),
           });
         }
+        if (write.ctx) {
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeInvoice',
+            entityId: editInvoiceId,
+            action: 'update',
+            summary: `Updated invoice ${invoiceLabel.trim()}${
+              existing.amountCents !== cents
+                ? ` · ${formatCents(existing.amountCents || 0)} → ${formatCents(cents)}`
+                : ''
+            }`,
+            before: officeAuditSnapshot(existing as unknown as Record<string, unknown>),
+            after: officeAuditSnapshot({
+              ...existing,
+              label: invoiceLabel.trim(),
+              amountCents: cents,
+              dueDate: due,
+              status,
+            } as unknown as Record<string, unknown>),
+          });
+        }
         toast({ title: 'Invoice updated' });
       } else {
         const ref = doc(collection(firestore, 'schools', schoolId, 'officeInvoices'));
         const status = saveAsDraft ? 'draft' : 'sent';
-        await setDoc(ref, {
+        const created = {
           accountId: invoiceAccountId,
           label: invoiceLabel.trim(),
           amountCents: cents,
           dueDate: due,
           status,
           createdAt: Date.now(),
-        });
+        };
+        await setDoc(ref, created);
         const account = accounts.find((a) => a.id === invoiceAccountId);
+        if (write.ctx) {
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeInvoice',
+            entityId: ref.id,
+            action: 'create',
+            summary: `Created invoice ${created.label}${account ? ` for ${account.familyName}` : ''} · ${formatCents(cents)}`,
+            after: officeAuditSnapshot(created),
+          });
+        }
         if (account && !saveAsDraft) {
           const nextInvoices: OfficeInvoice[] = [
             ...invoices,
@@ -560,7 +673,15 @@ export function OfficeBillingView({
   };
 
   const voidInvoice = async (inv: OfficeInvoice) => {
-    if (!firestore || !confirm('Void this invoice? Balance will be adjusted.')) return;
+    if (!firestore) return;
+    const ok = await confirm({
+      title: `Cancel “${inv.label}”?`,
+      description: `The ${formatCents(invoiceRemainingCents(inv))} still owed is taken off the family's balance. The invoice stays in their history marked as cancelled.`,
+      confirmLabel: 'Cancel invoice',
+      cancelLabel: 'Keep it',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
       await updateDoc(doc(firestore, 'schools', schoolId, 'officeInvoices', inv.id), {
         status: 'void',
@@ -575,6 +696,16 @@ export function OfficeBillingView({
           balanceCents: increment(-balanceReduction),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
+        });
+      }
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officeInvoice',
+          entityId: inv.id,
+          action: 'update',
+          summary: `Voided invoice ${inv.label}${account ? ` for ${account.familyName}` : ''} · ${formatCents(inv.amountCents || 0)}`,
+          before: officeAuditSnapshot(inv as unknown as Record<string, unknown>),
+          after: officeAuditSnapshot({ ...inv, status: 'void' } as unknown as Record<string, unknown>),
         });
       }
       toast({ title: 'Invoice voided' });
@@ -598,6 +729,16 @@ export function OfficeBillingView({
           balanceCents: increment(inv.amountCents || 0),
           status: billingStatusForAccount(inv.accountId, nextInvoices, account.status),
           updatedAt: Date.now(),
+        });
+      }
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officeInvoice',
+          entityId: inv.id,
+          action: 'update',
+          summary: `Sent draft invoice ${inv.label}${account ? ` to ${account.familyName}` : ''}`,
+          before: officeAuditSnapshot(inv as unknown as Record<string, unknown>),
+          after: officeAuditSnapshot({ ...inv, status: 'sent' } as unknown as Record<string, unknown>),
         });
       }
       toast({ title: 'Invoice sent', description: 'Balance updated.' });
@@ -697,6 +838,15 @@ export function OfficeBillingView({
         updatedAt: now,
       });
       await batch.commit();
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officeBillingAccount',
+          entityId: planAccount.id,
+          action: 'update',
+          summary: `Created payment plan ${planLabel.trim()} for ${planAccount.familyName} · ${count} × ${formatCents(amounts[0])}`,
+          after: officeAuditSnapshot({ label: planLabel.trim(), totalCents, count, amounts, startDate: planStartDate }),
+        });
+      }
       toast({
         title: 'Payment plan created',
         description: `${count} invoices of ${formatCents(amounts[0])} for ${planAccount.familyName}, one per month starting ${planStartDate}.`,
@@ -797,6 +947,25 @@ export function OfficeBillingView({
 
       await batch.commit();
 
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officePayment',
+          entityId: paymentRef.id,
+          action: 'create',
+          summary: `Recorded ${paymentMethod} payment of ${formatCents(paymentCents)} from ${payAccount.familyName}`,
+          after: officeAuditSnapshot({
+            accountId: payAccount.id,
+            amountCents: paymentCents,
+            method: paymentMethod,
+            note: paymentNote.trim() || null,
+            allocations: allocations.map((a) => ({
+              ...a,
+              label: invoices.find((i) => i.id === a.invoiceId)?.label ?? null,
+            })),
+          }),
+        });
+      }
+
       const printReceipt = () => {
         const receiptHtml = buildOfficeReceiptHtml({
           account: payAccount,
@@ -867,10 +1036,18 @@ export function OfficeBillingView({
   };
 
   const handleDeleteAccount = async (id: string) => {
-    if (!firestore || !confirm('Delete this billing account?')) return;
+    const account = accounts.find((a) => a.id === id);
+    if (!write.ctx || !account) return;
+    const ok = await confirm({
+      title: `Remove the ${account.familyName} account?`,
+      description: 'It will be hidden from Billing. Its invoices, payments, and history are kept and can still be looked up.',
+      confirmLabel: 'Remove account',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', id));
-      toast({ title: 'Account removed' });
+      await write.archiveOfficeBillingAccount(write.ctx, account);
+      toast({ title: 'Account removed', description: 'Its history is kept in the change history.' });
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
     }
@@ -878,29 +1055,39 @@ export function OfficeBillingView({
 
   return (
     <div className="space-y-6">
+      {confirmDialog}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground max-w-xl">
-          Family accounts and invoices live in the office pillar only. Record partial payments, split one check across
-          multiple invoices, and track check, cash, or transfer payments here; online card payments (Stripe) can be added
-          later.
+          Family bills and payments. Record checks, cash, or transfers — one payment can cover several bills.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="rounded-xl gap-2" onClick={exportBillingCsv} disabled={invoices.length === 0}>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button variant="outline" className="rounded-xl gap-2" onClick={openNewAccount}>
-            <Plus className="h-4 w-4" />
-            New account
-          </Button>
-          <Button variant="outline" className="rounded-xl gap-2 border-teal-200/80 bg-teal-50/30 text-teal-800 hover:bg-teal-100 hover:text-teal-900 dark:border-teal-900/50 dark:bg-teal-950/20 dark:text-teal-300 dark:hover:bg-teal-900/40" onClick={() => setBulkOpen(true)} disabled={accounts.length === 0}>
-            <Wand2 className="h-4 w-4" />
-            Bulk invoice
-          </Button>
           <Button className="rounded-xl gap-2" onClick={() => openNewInvoice()} disabled={accounts.length === 0}>
             <Plus className="h-4 w-4" />
             New invoice
           </Button>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-xl gap-2">
+                <MoreHorizontal className="h-4 w-4" />
+                More
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 rounded-xl">
+              <DropdownMenuItem onSelect={openNewAccount}>
+                <Plus className="mr-2 h-4 w-4" />
+                New family account
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={accounts.length === 0} onSelect={() => setBulkOpen(true)}>
+                <Wand2 className="mr-2 h-4 w-4" />
+                Bill many families at once
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={invoices.length === 0} onSelect={exportBillingCsv}>
+                <Download className="mr-2 h-4 w-4" />
+                Download spreadsheet
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -997,15 +1184,7 @@ export function OfficeBillingView({
                       Balance: {formatCents(account.balanceCents || 0)}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    <OfficeFamilyStatementButton
-                      account={account}
-                      invoices={invoices}
-                      studentLabels={(account.studentIds ?? [])
-                        .map((id) => studentLabelById.get(id))
-                        .filter((x): x is string => Boolean(x))}
-                      statementSchoolName={officeSettings?.statementSchoolName}
-                    />
+                  <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="outline"
@@ -1016,44 +1195,54 @@ export function OfficeBillingView({
                     >
                       Record payment
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-lg text-xs"
-                      onClick={() => openNewInvoice(account.id)}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Invoice
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 rounded-lg text-xs"
-                      onClick={() => openPaymentPlan(account)}
-                    >
-                      Payment plan
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEditAccount(account)}
-                      aria-label="Edit account"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => void handleDeleteAccount(account.id)}
-                      aria-label="Delete account"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg"
+                          aria-label={`More for ${account.familyName}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                        <DropdownMenuItem onSelect={() => openNewInvoice(account.id)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          New invoice
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => openPaymentPlan(account)}>
+                          <CalendarClock className="mr-2 h-4 w-4" />
+                          Payment plan
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() =>
+                            printFamilyStatement(
+                              account,
+                              (account.studentIds ?? [])
+                                .map((id) => studentLabelById.get(id))
+                                .filter((x): x is string => Boolean(x)),
+                            )
+                          }
+                        >
+                          <Printer className="mr-2 h-4 w-4" />
+                          Print statement
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => openEditAccount(account)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit family details
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-amber-800 focus:text-amber-900 dark:text-amber-300"
+                          onSelect={() => void handleDeleteAccount(account.id)}
+                        >
+                          <Archive className="mr-2 h-4 w-4" />
+                          Remove account
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
                 {acctInvoices.length > 0 ? (
@@ -1069,25 +1258,23 @@ export function OfficeBillingView({
                             </span>
                           ) : null}
                         </span>
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-1.5">
                           {isInvoiceOverdue(inv) ? (
-                            <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold uppercase text-red-800">
+                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
                               Overdue
                             </span>
                           ) : null}
                           <span
                             className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-semibold uppercase',
+                              'rounded-full px-2 py-0.5 text-xs font-medium',
                               inv.status === 'paid'
-                                ? 'bg-emerald-100 text-emerald-800'
+                                ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
                                 : inv.status === 'partial'
-                                  ? 'bg-sky-100 text-sky-900'
-                                : inv.status === 'sent'
-                                  ? 'bg-amber-100 text-amber-900'
-                                  : 'bg-slate-100 text-slate-600',
+                                  ? 'bg-sky-50 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200'
+                                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
                             )}
                           >
-                            {inv.status}
+                            {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
                           </span>
                           {inv.status === 'draft' ? (
                             <Button
@@ -1100,56 +1287,67 @@ export function OfficeBillingView({
                               Send
                             </Button>
                           ) : null}
-                          {isInvoicePayable(inv) ? (
-                            <>
-                              {isInvoiceOverdue(inv) && account.contactEmail?.trim() ? (
-                                <Button asChild type="button" size="sm" variant="outline" className="h-7 rounded-lg gap-1">
-                                  <a
-                                    href={buildInvoiceReminderMailto({
-                                      email: account.contactEmail.trim(),
-                                      familyName: account.familyName,
-                                      invoiceLabel: inv.label,
-                                      amountCents: invoiceRemainingCents(inv),
-                                      dueDate: inv.dueDate,
-                                    })}
-                                  >
-                                    <Mail className="h-3 w-3" />
-                                    Remind
-                                  </a>
-                                </Button>
-                              ) : null}
-                              {inv.status === 'sent' || inv.status === 'partial' ? (
-                                <>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 rounded-lg gap-1 border-emerald-200 bg-emerald-50/20 text-emerald-800 hover:bg-emerald-100 hover:text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
-                                    onClick={() => void handleSendTextAlert(inv, account, 'sms')}
-                                    title="Send SMS billing reminder to parents"
-                                  >
-                                    <Phone className="h-3 w-3" />
-                                    SMS
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 rounded-lg gap-1 border-teal-200 bg-teal-50/20 text-teal-800 hover:bg-teal-100 hover:text-teal-950 dark:border-teal-900/50 dark:bg-teal-950/20 dark:text-teal-300 dark:hover:bg-teal-900/40"
-                                    onClick={() => void handleSendTextAlert(inv, account, 'whatsapp')}
-                                    title="Send WhatsApp billing reminder to parents"
-                                  >
-                                    <MessageSquare className="h-3 w-3" />
-                                    WhatsApp
-                                  </Button>
-                                </>
-                              ) : null}
+                          {isInvoicePayable(inv) && inv.status !== 'draft' ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 rounded-lg text-xs"
+                              onClick={() => openRecordPayment(account, inv)}
+                            >
+                              Record payment
+                            </Button>
+                          ) : null}
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
                               <Button
                                 type="button"
-                                size="sm"
+                                size="icon"
                                 variant="ghost"
-                                className="h-7 rounded-lg"
-                                onClick={() =>
+                                className="h-7 w-7 rounded-lg"
+                                aria-label={`More for ${inv.label}`}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                              {inv.status === 'sent' || inv.status === 'partial' ? (
+                                <>
+                                  {account.contactEmail?.trim() ? (
+                                    <DropdownMenuItem asChild>
+                                      <a
+                                        href={buildInvoiceReminderMailto({
+                                          email: account.contactEmail.trim(),
+                                          familyName: account.familyName,
+                                          invoiceLabel: inv.label,
+                                          amountCents: invoiceRemainingCents(inv),
+                                          dueDate: inv.dueDate,
+                                        })}
+                                      >
+                                        <Mail className="mr-2 h-4 w-4" />
+                                        Email a reminder
+                                      </a>
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                  <DropdownMenuItem onSelect={() => void handleSendTextAlert(inv, account, 'sms')}>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    Text a reminder
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => void handleSendTextAlert(inv, account, 'whatsapp')}>
+                                    <MessageSquare className="mr-2 h-4 w-4" />
+                                    WhatsApp a reminder
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              ) : null}
+                              {inv.status === 'draft' || inv.status === 'sent' || inv.status === 'partial' ? (
+                                <DropdownMenuItem onSelect={() => openEditInvoice(inv)}>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit invoice
+                                </DropdownMenuItem>
+                              ) : null}
+                              <DropdownMenuItem
+                                onSelect={() =>
                                   openNewInvoice(account.id, {
                                     ...inv,
                                     label: inv.label,
@@ -1157,40 +1355,23 @@ export function OfficeBillingView({
                                   })
                                 }
                               >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                              {inv.status === 'draft' || inv.status === 'sent' || inv.status === 'partial' ? (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 rounded-lg"
-                                  onClick={() => openEditInvoice(inv)}
-                                  aria-label="Edit invoice"
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
+                                <Copy className="mr-2 h-4 w-4" />
+                                Copy as a new invoice
+                              </DropdownMenuItem>
+                              {isInvoicePayable(inv) ? (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-amber-800 focus:text-amber-900 dark:text-amber-300"
+                                    onSelect={() => void voidInvoice(inv)}
+                                  >
+                                    <Ban className="mr-2 h-4 w-4" />
+                                    Cancel this invoice
+                                  </DropdownMenuItem>
+                                </>
                               ) : null}
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 rounded-lg"
-                                onClick={() => openRecordPayment(account, inv)}
-                              >
-                                Record payment
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 rounded-lg text-destructive"
-                                onClick={() => void voidInvoice(inv)}
-                              >
-                                Void
-                              </Button>
-                            </>
-                          ) : null}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </span>
                       </li>
                     ))}

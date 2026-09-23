@@ -120,13 +120,14 @@ export function OfficeAiHelpButton() {
       <Button
         type="button"
         variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0 rounded-lg"
+        size="sm"
+        className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs"
         onClick={() => setOpen(true)}
-        aria-label="Office AI help"
-        title="AI help"
+        aria-label="Get help"
+        title="Ask a question about the School Office"
       >
         <Sparkles className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Help</span>
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>

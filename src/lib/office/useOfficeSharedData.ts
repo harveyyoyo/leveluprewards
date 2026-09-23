@@ -6,7 +6,7 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { OfficeClass, OfficeFamily, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { getOfficeStudentFullName, withoutArchived } from '@/lib/office/officeUtils';
 import { safeString } from '@/lib/safeDisplayValue';
 
 /** Office roster collections (`officeStudents`, `officeClasses`, `officeTeachers`). */
@@ -38,36 +38,38 @@ export function useOfficeSharedData(schoolId: string | null, enabled: boolean) {
   const { data: teachersRaw, isLoading: teachersLoading } = useCollection<OfficeTeacher>(teachersQuery);
   const { data: familiesRaw, isLoading: familiesLoading } = useCollection<OfficeFamily>(familiesQuery);
 
-  const students = useMemo(() => studentsRaw ?? [], [studentsRaw]);
-  const classes = useMemo(() => classesRaw ?? [], [classesRaw]);
-  const teachers = useMemo(() => teachersRaw ?? [], [teachersRaw]);
-  const families = useMemo(() => familiesRaw ?? [], [familiesRaw]);
+  // Removed records are hidden from lists, but the name lookups below keep them so
+  // history and past records still show who they were.
+  const students = useMemo(() => withoutArchived(studentsRaw), [studentsRaw]);
+  const classes = useMemo(() => withoutArchived(classesRaw), [classesRaw]);
+  const teachers = useMemo(() => withoutArchived(teachersRaw), [teachersRaw]);
+  const families = useMemo(() => withoutArchived(familiesRaw), [familiesRaw]);
 
   const classNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const c of classes) map.set(c.id, safeString(c.name));
+    for (const c of classesRaw ?? []) map.set(c.id, safeString(c.name));
     return map;
-  }, [classes]);
+  }, [classesRaw]);
 
   const studentLabelById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const s of students) {
+    for (const s of studentsRaw ?? []) {
       map.set(s.id, getOfficeStudentFullName(s));
     }
     return map;
-  }, [students]);
+  }, [studentsRaw]);
 
   const teacherNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const t of teachers) map.set(t.id, safeString(t.name));
+    for (const t of teachersRaw ?? []) map.set(t.id, safeString(t.name));
     return map;
-  }, [teachers]);
+  }, [teachersRaw]);
 
   const familyById = useMemo(() => {
     const map = new Map<string, OfficeFamily>();
-    for (const f of families) map.set(f.id, f);
+    for (const f of familiesRaw ?? []) map.set(f.id, f);
     return map;
-  }, [families]);
+  }, [familiesRaw]);
 
   return {
     students,
