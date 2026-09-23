@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { BookOpen, ChevronRight, Gift, TableProperties } from 'lucide-react';
+import { BookOpen, ChevronRight, Clock, Gift, LayoutGrid, TableProperties } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   StaffPortalSectionCard,
@@ -330,15 +330,22 @@ export function StaffPortalWelcomeTab({
   const trimmedSchoolName = schoolName?.trim() || null;
   const trimmedStaffName = staffName?.trim() || null;
 
-  // Tab values that move into the Rewards pillar box
+  // Tab values that move into pillar boxes
   const REWARDS_PILLAR_VALUES = new Set(['prizes', 'categories', 'bonuspoints', 'goals', 'houses']);
-  // Tab values that move into the Library pillar box
+  const CLASSROOM_PILLAR_VALUES = new Set(['classroom']);
+  const ATTENDANCE_PILLAR_VALUES = new Set(['attendance']);
   const LIBRARY_PILLAR_VALUES = new Set(['library']);
-  // Combined set for filtering out of core/addon grids
-  const PILLAR_VALUES = new Set([...REWARDS_PILLAR_VALUES, ...LIBRARY_PILLAR_VALUES]);
 
-  // Filter core and addon lists to remove items shown in pillar boxes
-  const filteredCore = core.filter((t) => !PILLAR_VALUES.has(t.value));
+  // Combined set for filtering out of core/addon grids
+  const PILLAR_VALUES = new Set([
+    ...REWARDS_PILLAR_VALUES,
+    ...CLASSROOM_PILLAR_VALUES,
+    ...ATTENDANCE_PILLAR_VALUES,
+    ...LIBRARY_PILLAR_VALUES,
+  ]);
+
+  // Filter core and addon lists to remove welcome itself and items shown in pillar boxes
+  const filteredCore = core.filter((t) => t.value !== 'welcome' && !PILLAR_VALUES.has(t.value));
   const filteredAddons = addons.filter((t) => !PILLAR_VALUES.has(t.value));
 
   // Build rewards pillar links from enabled tabs
@@ -359,6 +366,36 @@ export function StaffPortalWelcomeTab({
           description: staffPortalTabDescription(tab),
         };
       });
+  }, [core, addons]);
+
+  // Build classroom pillar links
+  const classroomPillarLinks = useMemo(() => {
+    const allTabs = [...core, ...addons];
+    const classroomTab = allTabs.find((t) => t.value === 'classroom');
+    if (!classroomTab) return [];
+    return [
+      {
+        tabValue: classroomTab.value,
+        icon: classroomTab.icon,
+        label: classroomTab.label,
+        description: staffPortalTabDescription(classroomTab),
+      },
+    ];
+  }, [core, addons]);
+
+  // Build attendance pillar links
+  const attendancePillarLinks = useMemo(() => {
+    const allTabs = [...core, ...addons];
+    const attendanceTab = allTabs.find((t) => t.value === 'attendance');
+    if (!attendanceTab) return [];
+    return [
+      {
+        tabValue: attendanceTab.value,
+        icon: attendanceTab.icon,
+        label: attendanceTab.label,
+        description: staffPortalTabDescription(attendanceTab),
+      },
+    ];
   }, [core, addons]);
 
   // Build library pillar links
@@ -425,14 +462,36 @@ export function StaffPortalWelcomeTab({
 
         {/* Pillar boxes */}
         <section className="grid gap-4 sm:grid-cols-2">
-          <PillarBox
-            icon={Gift}
-            gradient="from-amber-500 to-orange-600"
-            title="Rewards"
-            subtitle="Points, prizes, coupons, milestones, and competitions."
-            links={rewardsPillarLinks}
-            onGoToTab={onGoToTab}
-          />
+          {rewardsPillarLinks.length > 0 ? (
+            <PillarBox
+              icon={Gift}
+              gradient="from-amber-500 to-orange-600"
+              title="Rewards"
+              subtitle="Points, prizes, coupons, milestones, and competitions."
+              links={rewardsPillarLinks}
+              onGoToTab={onGoToTab}
+            />
+          ) : null}
+          {classroomPillarLinks.length > 0 ? (
+            <PillarBox
+              icon={LayoutGrid}
+              gradient="from-emerald-500 to-teal-600"
+              title="Classroom"
+              subtitle="Seating charts, behavior notes, quick awards, and room display."
+              links={classroomPillarLinks}
+              onGoToTab={onGoToTab}
+            />
+          ) : null}
+          {attendancePillarLinks.length > 0 ? (
+            <PillarBox
+              icon={Clock}
+              gradient="from-blue-500 to-indigo-600"
+              title="Attendance"
+              subtitle="Sign-in rules, period slots, room passes, and attendance reporting."
+              links={attendancePillarLinks}
+              onGoToTab={onGoToTab}
+            />
+          ) : null}
           {libraryPillarLinks.length > 0 ? (
             <PillarBox
               icon={BookOpen}
