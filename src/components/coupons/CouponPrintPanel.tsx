@@ -782,7 +782,7 @@ export function CouponPrintPanel({
             </p>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-8 items-start">
+          <div className="flex flex-col 2xl:flex-row gap-8 items-start">
             <div className="flex-1 w-full min-w-0 space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2 sm:col-span-2 min-w-0">
@@ -1260,7 +1260,7 @@ export function CouponPrintPanel({
               </Button>
             </div>
 
-            <div className="w-full lg:w-[28rem] xl:w-[32rem] lg:sticky lg:top-8 shrink-0">
+            <div className="order-first w-full max-w-md mx-auto 2xl:order-none 2xl:mx-0 2xl:w-[26rem] 2xl:sticky 2xl:top-8 shrink-0">
               <div
                 className={cn(
                   'rounded-2xl border p-6 flex flex-col items-center shadow-sm',
