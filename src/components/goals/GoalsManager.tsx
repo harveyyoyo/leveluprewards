@@ -42,7 +42,6 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import {
   AlertDialog,
@@ -791,7 +790,7 @@ export function GoalsManager(props: {
   );
 
   return (
-    <StaffPortalTabPanel tabValue="goals" trailing={<TabWalkthroughHeaderAction />}>
+    <StaffPortalTabPanel tabValue="goals">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <p className="text-sm text-muted-foreground">See who is working toward a goal and what comes next.</p>
         <div className="flex gap-2">
