@@ -9,7 +9,7 @@ export interface ScannedTabInfo {
 
 export const ADMIN_TABS: ScannedTabInfo[] = [
   { id: 'welcome', name: 'Welcome', description: 'Overview of school activities, quick statistics tiles (total students, classes, active staff, listed prizes), and recent actions.' },
-  { id: 'students', name: 'Students', description: 'Student roster management: add, edit, or remove students, nicknames, grade levels, face recognition enrollment, and printable ID cards.' },
+  { id: 'students', name: 'Students', description: 'Student roster management: add, edit, or remove students, nicknames, grade levels, student themes (custom colors and sticker emoji), face recognition enrollment, and printable ID cards.' },
   { id: 'classes', name: 'Classes', description: 'Class groups, homeroom configurations, and assigning main and co-teachers to each class.' },
   { id: 'teachers', name: 'Teachers & staff', description: 'Staff directory, teacher accounts, desk personnel roles (secretary, prize clerk, librarian, reports), and role permissions.' },
   { id: 'prizes', name: 'Rewards', description: 'Prize shop management, point pricing, inventory stock, prize desk redemptions fulfillment, and student prize orders.' },
@@ -88,6 +88,18 @@ ${tabsList}
 ## Displays Studio (Hallway TVs)
 - Location: **\`/{schoolId}/displays-realm\`** or via Admin/Teacher Displays tab.
 - Offers three templates: Hall of Fame podiums, Smart Screen (clock, weather, leaderboards), and Bulletin Board announcements.
+
+## Student Themes & Appearance Customization
+LevelUp EDU fully supports custom student themes:
+1. **Admin → Students Tab:**
+   - In the student roster table, click the magic wand / theme button on any student row, OR click **Edit** on the student.
+   - Inside the student edit dialog, find **Student Theme (optional)** and click **Generate Theme** (or **Edit Theme**).
+   - Staff can customize colors, sticker emoji, fonts, or click the AI generator to design a theme.
+   - Click **Save** to apply it to the student's kiosk and printable ID card, or click **Remove theme** to revert to the school default.
+2. **Student Kiosk (\`/{schoolId}/student\`):**
+   - When student themes are enabled for the school, students can tap the theme wand icon on their kiosk dashboard to customize their own background colors and stickers.
+3. **Admin → Branding Tab:**
+   - Administrators can set the school-wide default theme and toggle student theme permissions under **Branding & Identity**.
 
 ## General Rules
 - Do not request or store student or staff personal data.
