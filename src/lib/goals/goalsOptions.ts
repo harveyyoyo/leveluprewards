@@ -11,16 +11,8 @@ export type GoalsOptions = {
   teacherAlmostThereNudge: boolean;
   /** Hallway screens highlight recent finishes. */
   hallwaySpotlight: boolean;
-  /** Offer goal ideas from how the class earns points. */
-  suggestFromHabits: boolean;
-  /** Hide Finished / Past due / Archived when empty. */
-  hideEmptySections: boolean;
   /** Prize shop shows “Need X more points”. */
   showNeedMoreInShop: boolean;
-  /** Softer wording on the student home portal. */
-  familyFriendlyPortal: boolean;
-  /** Bigger celebration when a class goal finishes. */
-  classPartyMode: boolean;
 };
 
 export const DEFAULT_GOALS_OPTIONS: GoalsOptions = {
@@ -28,11 +20,7 @@ export const DEFAULT_GOALS_OPTIONS: GoalsOptions = {
   celebrateOnAward: true,
   teacherAlmostThereNudge: true,
   hallwaySpotlight: true,
-  suggestFromHabits: true,
-  hideEmptySections: true,
   showNeedMoreInShop: true,
-  familyFriendlyPortal: true,
-  classPartyMode: true,
 };
 
 export const GOALS_OPTION_FIELDS: Array<{
@@ -43,52 +31,38 @@ export const GOALS_OPTION_FIELDS: Array<{
   {
     key: 'celebrateOnAward',
     label: 'Cheer when a goal finishes',
-    hint: 'Confetti and a short message after points land.',
+    hint: 'Show confetti and a congratulations message when a goal is completed. Students also see encouragement when they are close. Turn this off to hide these celebrations and student messages.',
   },
   {
     key: 'teacherAlmostThereNudge',
     label: 'Nudge teachers when someone is close',
-    hint: 'A tip after awarding if a student is near a goal.',
+    hint: 'Show the teacher an “Almost there!” message after awarding points when a goal reaches 80% of its target — for example, 80 out of 100 points. Turn this off to hide that reminder.',
   },
   {
     key: 'showOnClassroom',
     label: 'Show progress on classroom seats',
-    hint: 'Small rings on the seating chart.',
+    hint: 'Add a small progress ring to each student’s seat on the classroom seating chart so teachers can see how close they are to a goal. Turn this off to hide the rings.',
   },
   {
     key: 'showNeedMoreInShop',
     label: 'Show “need more points” in the shop',
-    hint: 'Kids see how many points they still need.',
+    hint: 'In the student prize shop, show how many more points a student needs for a prize. For example, a 100-point prize says “Need 30 more points” if they have 70. Turn this off to hide that extra message.',
   },
   {
     key: 'hallwaySpotlight',
     label: 'Spotlight finishes on hallway screens',
-    hint: 'Recently finished goals get a “Just finished!” callout.',
-  },
-  {
-    key: 'classPartyMode',
-    label: 'Class goal party',
-    hint: 'Extra cheer when the whole class hits a goal.',
-  },
-  {
-    key: 'suggestFromHabits',
-    label: 'Suggest goals from class habits',
-    hint: 'Quick ideas based on how points are earned.',
-  },
-  {
-    key: 'hideEmptySections',
-    label: 'Hide empty lists',
-    hint: 'Skip Finished / Past due / Archived when they have nothing.',
-  },
-  {
-    key: 'familyFriendlyPortal',
-    label: 'Family-friendly home portal words',
-    hint: 'Softer labels for students and families at home.',
+    hint: 'Highlight recently completed goals on hallway displays with a “Just finished!” message. Turn this off to stop highlighting those finishes on the screens.',
   },
 ];
 
 export function resolveGoalsOptions(partial?: Partial<GoalsOptions> | null): GoalsOptions {
-  return { ...DEFAULT_GOALS_OPTIONS, ...(partial || {}) };
+  const out = { ...DEFAULT_GOALS_OPTIONS };
+  // Copy only current switches; schools may still have retired ones saved.
+  for (const key of Object.keys(out) as (keyof GoalsOptions)[]) {
+    const value = partial?.[key];
+    if (typeof value === 'boolean') out[key] = value;
+  }
+  return out;
 }
 
 export function pointsStillNeeded(progress: number, targetPoints: number): number {
@@ -128,6 +102,8 @@ export function familyGoalTypeLabel(type: GoalType | string | undefined): string
       return 'Saving for a reward';
     case 'class':
       return 'Class challenge';
+    case 'school':
+      return 'School challenge';
     default:
       return 'Goal';
   }
@@ -275,7 +251,7 @@ export function activeGoalsForStudent(
     (g) =>
       !g.archived &&
       g.status === 'active' &&
-      (g.studentId === student.id || (g.type === 'class' && g.classId && g.classId === student.classId)),
+      (g.type === 'school' || g.studentId === student.id || (g.type === 'class' && g.classId && g.classId === student.classId)),
   );
 }
 

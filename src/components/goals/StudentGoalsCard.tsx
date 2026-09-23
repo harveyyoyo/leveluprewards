@@ -12,6 +12,8 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@/components/providers/SettingsProvider';
+import { resolveGoalsOptions } from '@/lib/goals/goalsOptions';
 import { useToast } from '@/hooks/use-toast';
 
 type GoalRow = { goal: Goal; progress: number };
@@ -26,6 +28,8 @@ export function StudentGoalsCard(props: {
   const { schoolId, student, enabled, themeForeground, themed } = props;
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { settings } = useSettings();
+  const options = resolveGoalsOptions(settings.goalsOptions);
   const celebratedRef = useRef<Set<string>>(new Set());
   const almostRef = useRef<Set<string>>(new Set());
   const baselineRef = useRef(false);
@@ -46,10 +50,10 @@ export function StudentGoalsCard(props: {
     if (!allGoals) return [];
     return allGoals
       .filter((g) => !g.archived)
-      .filter((g) => g.status === 'active' || g.status === 'completed')
+      .filter((g) => (g.status === 'active' || g.status === 'completed') && !g.hiddenFromStudents)
       .filter(
         (g) =>
-          g.studentId === student.id ||
+          g.type === 'school' || g.studentId === student.id ||
           (g.type === 'class' && g.classId && g.classId === student.classId),
       )
       .sort((a, b) => (a.status === 'active' ? -1 : 1) - (b.status === 'active' ? -1 : 1));
@@ -107,9 +111,9 @@ export function StudentGoalsCard(props: {
   useEffect(() => {
     if (!baselineRef.current) return;
     for (const { goal, progress } of rows) {
-      if (goal.status === 'completed' && !celebratedRef.current.has(goal.id)) {
+      if (goal.status === 'completed' && !celebratedRef.current.has(goal.id) && options.celebrateOnAward) {
         celebratedRef.current.add(goal.id);
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+        confetti({ particleCount: goal.type === 'class' || goal.type === 'school' ? 160 : 90, spread: 80, origin: { y: 0.6 } });
         toast({
           title: 'You did it!',
           description: `"${goal.title}" is finished. Great work!`,
@@ -117,6 +121,7 @@ export function StudentGoalsCard(props: {
       }
       if (
         goal.status === 'active' &&
+        options.celebrateOnAward &&
         isAlmostThere(progress, goal.targetPoints) &&
         !almostRef.current.has(goal.id)
       ) {
@@ -127,7 +132,7 @@ export function StudentGoalsCard(props: {
         });
       }
     }
-  }, [rows, toast]);
+  }, [rows, toast, options.celebrateOnAward]);
 
   if (!enabled) return null;
 
@@ -175,7 +180,7 @@ export function StudentGoalsCard(props: {
           const pct = progressPercent(progress, target);
           const almost = goal.status === 'active' && isAlmostThere(progress, target);
           const label =
-            goal.type === 'class'
+            goal.type === 'school' ? 'Whole school goal' : goal.type === 'class'
               ? 'Class goal'
               : goal.type === 'prize_savings'
                 ? goal.createdByStudent
