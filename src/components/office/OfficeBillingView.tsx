@@ -14,7 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
+import { dollarsParamToCents } from '@/lib/office/officeAssistantView';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import {
   Archive,
   Ban,
@@ -140,6 +143,11 @@ export function OfficeBillingView({
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'overdue' | 'open' | 'due-soon'>('all');
+  const [askLabel, setAskLabel] = useState('');
+  const [minOwedCents, setMinOwedCents] = useState<number | null>(null);
+  const [maxOwedCents, setMaxOwedCents] = useState<number | null>(null);
+  const router = useRouter();
+  const pathname = usePathname();
   const [saveAsDraft, setSaveAsDraft] = useState(false);
   const searchParams = useSearchParams();
   const openedInvoiceFromQuery = useRef(false);
@@ -215,9 +223,18 @@ export function OfficeBillingView({
 
   const dueSoonCount = useMemo(() => invoices.filter((i) => isInvoiceDueSoon(i)).length, [invoices]);
 
+  // What each family still owes (open invoices minus payments), for "owes more/less than" views.
+  const owedByAccount = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const inv of invoices) map.set(inv.accountId, (map.get(inv.accountId) ?? 0) + invoiceBalanceDueCents(inv));
+    return map;
+  }, [invoices]);
+
   const filteredAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = accounts;
+    if (minOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) > minOwedCents);
+    if (maxOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) < maxOwedCents);
     if (invoiceFilter === 'overdue') {
       list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceOverdue(i)));
     } else if (invoiceFilter === 'due-soon') {
@@ -236,7 +253,7 @@ export function OfficeBillingView({
       const linked = (a.studentIds ?? []).map((id) => studentLabelById.get(id) ?? '').join(' ');
       return (a.familyName ?? '').toLowerCase().includes(q) || linked.toLowerCase().includes(q);
     });
-  }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount]);
+  }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount, minOwedCents, maxOwedCents, owedByAccount]);
 
   const resetAccountForm = () => {
     setFamilyName('');
@@ -256,6 +273,49 @@ export function OfficeBillingView({
       setInvoiceFilter(f);
     }
   }, [searchParams]);
+
+  // A list opened from Help → Ask ("families owing more than $100"). Applied once per question.
+  const appliedAskAt = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
+  useEffect(() => {
+    const askAt = searchParams.get('askAt');
+    const ask = searchParams.get('ask')?.trim();
+    if (!askAt || !ask || appliedAskAt.current === askAt) return;
+    appliedAskAt.current = askAt;
+    const f = searchParams.get('filter')?.trim();
+    setReportAskAt(askAt);
+    setAskLabel(ask);
+    setMinOwedCents(dollarsParamToCents(searchParams.get('minOwed')));
+    setMaxOwedCents(dollarsParamToCents(searchParams.get('maxOwed')));
+    setSearch(searchParams.get('q')?.trim() ?? '');
+    setInvoiceFilter(f === 'due-soon' || f === 'overdue' || f === 'open' ? f : 'all');
+  }, [searchParams]);
+
+  // Tell the Help chat what this list shows (largest balance first), so it can answer with it.
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
+    status: 'ready',
+    total: filteredAccounts.length,
+    noun: ['family', 'families'],
+    rows: filteredAccounts
+      .map((a) => ({ a, owed: owedByAccount.get(a.id) ?? 0 }))
+      .sort((x, y) => y.owed - x.owed)
+      .slice(0, OFFICE_ASSISTANT_CHAT_ROWS)
+      .map(({ a, owed }) => ({
+        id: a.id,
+        name: a.familyName?.trim() || 'Family',
+        detail: owed > 0 ? `owes ${formatCents(owed)}` : 'nothing owed',
+      })),
+  }));
+
+  const clearAsk = () => {
+    setReportAskAt(null);
+    setAskLabel('');
+    setMinOwedCents(null);
+    setMaxOwedCents(null);
+    setSearch('');
+    setInvoiceFilter('all');
+    router.replace(pathname, { scroll: false });
+  };
 
   useOfficeUrlSync({
     filter: invoiceFilter === 'all' ? undefined : invoiceFilter,
@@ -1055,6 +1115,7 @@ export function OfficeBillingView({
   return (
     <div className="space-y-3">
       {confirmDialog}
+      {askLabel ? <OfficeAssistantBanner label={askLabel} onClear={clearAsk} /> : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
@@ -1062,14 +1123,11 @@ export function OfficeBillingView({
               ? `${accounts.length} family ${accounts.length === 1 ? 'account' : 'accounts'}`
               : `${filteredAccounts.length} of ${accounts.length} family accounts`}
           </span>
-          {invoiceFilter !== 'all' || search.trim() ? (
+          {invoiceFilter !== 'all' || search.trim() || minOwedCents != null || maxOwedCents != null ? (
             <button
               type="button"
               className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
-              onClick={() => {
-                setSearch('');
-                setInvoiceFilter('all');
-              }}
+              onClick={clearAsk}
             >
               Clear
             </button>

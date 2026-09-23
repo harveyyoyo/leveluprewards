@@ -1,7 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CalendarCheck } from 'lucide-react';
+import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
+import {
+  ATTENDANCE_STATUS_OPTIONS,
+  findClassByAskedName,
+  type OfficeAssistantAttendanceStatus,
+} from '@/lib/office/officeAssistantView';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,6 +37,8 @@ const STATUS_OPTIONS: { id: OfficeAttendanceStatus; label: string }[] = [
   { id: 'excused', label: 'Excused' },
 ];
 
+const STATUS_LABEL = Object.fromEntries(STATUS_OPTIONS.map((o) => [o.id, o.label])) as Record<OfficeAttendanceStatus, string>;
+
 const STATUS_STYLES: Record<OfficeAttendanceStatus, string> = {
   present: 'bg-emerald-600 text-white hover:bg-emerald-600/90',
   absent: 'bg-red-600 text-white hover:bg-red-600/90',
@@ -36,9 +46,18 @@ const STATUS_STYLES: Record<OfficeAttendanceStatus, string> = {
   excused: 'bg-slate-500 text-white hover:bg-slate-500/90',
 };
 
+/** Today on this computer's calendar (not UTC, which is already tomorrow on a US evening). */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+const ASK_STATUS_LABEL: Record<OfficeAssistantAttendanceStatus, string> = {
+  absent: 'absent',
+  late: 'late',
+  excused: 'excused',
+  'not-present': 'absent, late, or excused',
+};
 
 export function OfficeAttendanceView({ schoolId, students, classes, isLoading }: OfficeAttendanceViewProps) {
   const { toast } = useToast();
@@ -47,6 +66,55 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
   const [date, setDate] = useState(todayIso());
   const [busy, setBusy] = useState(false);
   const [marks, setMarks] = useState<Record<string, OfficeAttendanceStatus>>({});
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // A day opened from Help → Ask ("who is absent today?"): one list across classes instead of
+  // the class-by-class taking screen, until Clear. Applied once per question.
+  const appliedAskAt = useRef<string | null>(null);
+  const pendingAskClass = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
+  const [askLabel, setAskLabel] = useState('');
+  const [askStatus, setAskStatus] = useState<OfficeAssistantAttendanceStatus>('absent');
+  const [askClassId, setAskClassId] = useState<string | null>(null);
+  useEffect(() => {
+    const askAt = searchParams.get('askAt');
+    const ask = searchParams.get('ask')?.trim();
+    if (isLoading || !askAt || !ask || appliedAskAt.current === askAt) return;
+    appliedAskAt.current = askAt;
+    const askedDate = searchParams.get('date');
+    const status = searchParams.get('status');
+    const cls = findClassByAskedName(classes, searchParams.get('className'));
+    setReportAskAt(askAt);
+    setAskLabel(ask);
+    setDate(askedDate && /^\d{4}-\d{2}-\d{2}$/.test(askedDate) ? askedDate : todayIso());
+    setAskStatus(
+      (ATTENDANCE_STATUS_OPTIONS as readonly string[]).includes(status ?? '')
+        ? (status as OfficeAssistantAttendanceStatus)
+        : 'absent',
+    );
+    setAskClassId(cls?.id ?? null);
+    if (cls) setClassId(cls.id);
+    // The class list can arrive a moment after the page first shows; pick the class up then.
+    pendingAskClass.current = cls ? null : searchParams.get('className')?.trim() || null;
+  }, [searchParams, classes, isLoading]);
+
+  useEffect(() => {
+    const cls = findClassByAskedName(classes, pendingAskClass.current);
+    if (!cls) return;
+    pendingAskClass.current = null;
+    setAskClassId(cls.id);
+    setClassId(cls.id);
+  }, [classes]);
+
+  const clearAsk = () => {
+    setReportAskAt(null);
+    setAskLabel('');
+    setAskClassId(null);
+    setDate(todayIso());
+    router.replace(pathname, { scroll: false });
+  };
 
   const sortedClasses = useMemo(
     () => classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
@@ -94,6 +162,38 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
     });
   }, [classStudents, existingForClass]);
 
+  const classNameById = useMemo(() => new Map(classes.map((c) => [c.id, c.name ?? ''])), [classes]);
+  const askMatches = useMemo(() => {
+    if (!askLabel) return [];
+    const studentById = new Map(students.map((s) => [s.id, s]));
+    return dayEntries
+      .filter((e) => (askStatus === 'not-present' ? e.status !== 'present' : e.status === askStatus))
+      .filter((e) => !askClassId || e.classId === askClassId)
+      .map((e) => {
+        const s = studentById.get(e.studentId);
+        return { entry: e, name: s ? getOfficeStudentFullName(s) : 'Student', className: classNameById.get(e.classId) ?? '' };
+      })
+      .sort((a, b) => a.className.localeCompare(b.className) || a.name.localeCompare(b.name));
+  }, [askLabel, askStatus, askClassId, dayEntries, students, classNameById]);
+
+  // Tell the Help chat what this day shows, so it can answer with the same names.
+  useReportOfficeAssistantResults(reportAskAt, !!attendanceError || (!isLoading && !attendanceLoading), () =>
+    attendanceError
+      ? { status: 'unavailable', message: 'Attendance isn’t open yet — it opens after the next update.' }
+      : {
+          status: 'ready',
+          total: askMatches.length,
+          noun: ['student', 'students'],
+          rows: askMatches.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((m) => ({
+            id: m.entry.id,
+            name: m.name,
+            detail: [m.className, askStatus === 'not-present' ? STATUS_LABEL[m.entry.status] : null]
+              .filter(Boolean)
+              .join(' · '),
+          })),
+        },
+  );
+
   const counts = useMemo(() => {
     const c: Record<OfficeAttendanceStatus, number> = { present: 0, absent: 0, late: 0, excused: 0 };
     for (const status of Object.values(marks)) c[status] += 1;
@@ -133,11 +233,52 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
 
   if (attendanceError) {
     return (
-      <OfficeEmptyState
-        icon={CalendarCheck}
-        title="Attendance is almost ready"
-        description="Daily attendance will open here after the next update. Everything else in the office works as usual."
-      />
+      <div className="space-y-3">
+        {askLabel ? <OfficeAssistantBanner label={askLabel} onClear={clearAsk} /> : null}
+        <OfficeEmptyState
+          icon={CalendarCheck}
+          title="Attendance is almost ready"
+          description="Daily attendance will open here after the next update. Everything else in the office works as usual."
+        />
+      </div>
+    );
+  }
+
+  if (askLabel) {
+    const dayLabel = new Date(`${date}T12:00:00`).toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    });
+    return (
+      <div className="space-y-3">
+        <OfficeAssistantBanner label={askLabel} onClear={clearAsk} />
+        <p className="text-sm text-muted-foreground">
+          {dayLabel}
+          {askClassId ? ` · ${classNameById.get(askClassId)}` : ' · all classes'}
+        </p>
+        {attendanceLoading ? (
+          <OfficeLoadingRows cols={2} rows={4} />
+        ) : askMatches.length === 0 ? (
+          <p className="rounded-2xl border border-dashed bg-white px-4 py-8 text-center text-sm text-muted-foreground dark:border-slate-800 dark:bg-slate-900">
+            No one was marked {ASK_STATUS_LABEL[askStatus]} this day.
+          </p>
+        ) : (
+          <ul className="divide-y overflow-hidden rounded-2xl border bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+            {askMatches.map((m) => (
+              <li key={m.entry.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{m.name}</p>
+                  {m.className ? <p className="text-xs text-muted-foreground">{m.className}</p> : null}
+                </div>
+                <span className={cn('rounded-lg px-2.5 py-1 text-xs font-semibold', STATUS_STYLES[m.entry.status])}>
+                  {STATUS_LABEL[m.entry.status]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     );
   }
 

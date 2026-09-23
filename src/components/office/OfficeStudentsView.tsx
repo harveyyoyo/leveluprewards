@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
+import { officeAddressMatches } from '@/lib/office/officeAddress';
+import { findClassByAskedName } from '@/lib/office/officeAssistantView';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -61,7 +65,27 @@ function SortHeader({
     </button>
   );
 }
-type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned' | 'no-teacher' | 'withdrawn' | 'graduated';
+type RosterFilter =
+  | 'all'
+  | 'missing-grades'
+  | 'no-billing'
+  | 'unassigned'
+  | 'no-teacher'
+  | 'no-family'
+  | 'allergies'
+  | 'withdrawn'
+  | 'graduated';
+
+const ROSTER_FILTERS: RosterFilter[] = [
+  'missing-grades',
+  'no-billing',
+  'unassigned',
+  'no-teacher',
+  'no-family',
+  'allergies',
+  'withdrawn',
+  'graduated',
+];
 
 type OfficeStudentsViewProps = {
   schoolId: string;
@@ -82,7 +106,7 @@ export function OfficeStudentsView({
   students,
   classes,
   teachers,
-  families: _families = [],
+  families = [],
   classNameById,
   teacherNameById,
   gradeEntries,
@@ -100,6 +124,20 @@ export function OfficeStudentsView({
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
   const openedHomeroomFromQuery = useRef(false);
   const importRef = useRef<(() => void) | null>(null);
+  // Set when Help → Ask opened this page with a list (e.g. students living in Brooklyn).
+  const [askLabel, setAskLabel] = useState('');
+  const [addressText, setAddressText] = useState('');
+  const [teacherText, setTeacherText] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
+  const teacherIdsMatchingText = useMemo(() => {
+    const q = teacherText.trim().toLowerCase();
+    if (!q) return null;
+    return new Set(
+      [...teacherNameById.entries()].filter(([, name]) => name.toLowerCase().includes(q)).map(([id]) => id),
+    );
+  }, [teacherText, teacherNameById]);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
@@ -139,6 +177,13 @@ export function OfficeStudentsView({
       if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
       if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
       if (rosterFilter === 'no-billing' && billingAccountForStudent(billingAccounts, s.id)) return false;
+      if (rosterFilter === 'no-family' && s.familyId) return false;
+      if (rosterFilter === 'allergies' && !s.allergies?.trim()) return false;
+      if (teacherIdsMatchingText && !getTeacherIds(s).some((id) => teacherIdsMatchingText.has(id))) return false;
+      if (addressText.trim()) {
+        const address = s.familyId ? familyById.get(s.familyId)?.homeAddress : null;
+        if (!officeAddressMatches(address, addressText)) return false;
+      }
       if (classFilter === '__unassigned__' && s.classId) return false;
       if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;
       if (!q) return true;
@@ -169,22 +214,73 @@ export function OfficeStudentsView({
     classNameById,
     gradedForTerm,
     billingAccounts,
+    teacherIdsMatchingText,
+    addressText,
+    familyById,
   ]);
 
   useEffect(() => {
     const f = searchParams.get('filter')?.trim();
-    if (
-      f === 'missing-grades' ||
-      f === 'no-billing' ||
-      f === 'unassigned' ||
-      f === 'no-teacher' ||
-      f === 'withdrawn' ||
-      f === 'graduated'
-    ) {
-      setRosterFilter(f);
+    if (f && (ROSTER_FILTERS as string[]).includes(f)) {
+      setRosterFilter(f as RosterFilter);
       if (f === 'unassigned') setClassFilter('__unassigned__');
     }
   }, [searchParams]);
+
+  // A list opened from Help → Ask. Applied once per question, after the roster has loaded.
+  const appliedAskAt = useRef<string | null>(null);
+  const pendingAskClass = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
+  useEffect(() => {
+    const askAt = searchParams.get('askAt');
+    const ask = searchParams.get('ask')?.trim();
+    if (isLoading || !askAt || !ask || appliedAskAt.current === askAt) return;
+    appliedAskAt.current = askAt;
+    const f = searchParams.get('filter')?.trim() ?? '';
+    const cls = findClassByAskedName(classes, searchParams.get('className'));
+    setReportAskAt(askAt);
+    setAskLabel(ask);
+    setQuery(searchParams.get('q')?.trim() ?? '');
+    setTeacherText(searchParams.get('teacher')?.trim() ?? '');
+    setAddressText(searchParams.get('address')?.trim() ?? '');
+    setHomeroomFilter('all');
+    setRosterFilter((ROSTER_FILTERS as string[]).includes(f) ? (f as RosterFilter) : 'all');
+    setClassFilter(f === 'unassigned' ? '__unassigned__' : cls ? cls.id : 'all');
+    // The class list can arrive a moment after the page first shows; pick the class up then.
+    const askedClass = searchParams.get('className')?.trim();
+    pendingAskClass.current = !cls && askedClass && f !== 'unassigned' ? askedClass : null;
+  }, [searchParams, classes, isLoading]);
+
+  useEffect(() => {
+    const cls = findClassByAskedName(classes, pendingAskClass.current);
+    if (!cls) return;
+    pendingAskClass.current = null;
+    setClassFilter(cls.id);
+  }, [classes]);
+
+  // Tell the Help chat what this list shows, so it can answer with the same names.
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
+    status: 'ready',
+    total: filtered.length,
+    noun: ['student', 'students'],
+    rows: filtered.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((s) => ({
+      id: s.id,
+      name: getOfficeStudentFullName(s),
+      detail: (s.classId && classNameById.get(s.classId)) || undefined,
+    })),
+  }));
+
+  const clearAll = () => {
+    setReportAskAt(null);
+    setAskLabel('');
+    setQuery('');
+    setTeacherText('');
+    setAddressText('');
+    setRosterFilter('all');
+    setClassFilter('all');
+    setHomeroomFilter('all');
+    router.replace(pathname, { scroll: false });
+  };
 
   useEffect(() => {
     if (openedHomeroomFromQuery.current) return;
@@ -207,6 +303,8 @@ export function OfficeStudentsView({
     () => activeStudents.filter((s) => !officeStudentHasTeacher(s)).length,
     [activeStudents],
   );
+  const noFamilyCount = useMemo(() => activeStudents.filter((s) => !s.familyId).length, [activeStudents]);
+  const allergiesCount = useMemo(() => activeStudents.filter((s) => !!s.allergies?.trim()).length, [activeStudents]);
 
   const rosterFilterOptions: { id: RosterFilter; label: string }[] = [
     { id: 'all', label: 'All students' },
@@ -218,6 +316,8 @@ export function OfficeStudentsView({
     ...(noTeacherCount > 0
       ? [{ id: 'no-teacher' as const, label: `No teacher (${noTeacherCount})` }]
       : []),
+    ...(noFamilyCount > 0 ? [{ id: 'no-family' as const, label: `No family (${noFamilyCount})` }] : []),
+    ...(allergiesCount > 0 ? [{ id: 'allergies' as const, label: `Has allergies (${allergiesCount})` }] : []),
     ...(withdrawnCount > 0 ? [{ id: 'withdrawn' as const, label: `Withdrawn (${withdrawnCount})` }] : []),
     ...(graduatedCount > 0 ? [{ id: 'graduated' as const, label: `Graduated (${graduatedCount})` }] : []),
   ];
@@ -239,10 +339,17 @@ export function OfficeStudentsView({
     );
   }
 
-  const isFiltered = rosterFilter !== 'all' || classFilter !== 'all' || homeroomFilter !== 'all' || !!query.trim();
+  const isFiltered =
+    rosterFilter !== 'all' ||
+    classFilter !== 'all' ||
+    homeroomFilter !== 'all' ||
+    !!query.trim() ||
+    !!teacherText.trim() ||
+    !!addressText.trim();
 
   return (
     <div className="space-y-3">
+      {askLabel ? <OfficeAssistantBanner label={askLabel} onClear={clearAll} /> : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
@@ -254,12 +361,7 @@ export function OfficeStudentsView({
             <button
               type="button"
               className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
-              onClick={() => {
-                setQuery('');
-                setRosterFilter('all');
-                setClassFilter('all');
-                setHomeroomFilter('all');
-              }}
+              onClick={clearAll}
             >
               Clear
             </button>
