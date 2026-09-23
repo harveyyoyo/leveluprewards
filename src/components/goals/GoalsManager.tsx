@@ -816,20 +816,33 @@ export function GoalsManager(props: {
         Goal name: <span className="font-semibold">{goalTitleFor(state) || 'Set a target to name this goal'}</span>
       </p>
 
-      {state.goalType === 'prize_savings' ? (
+      {state.goalType === 'prize_savings' && (
         <p className="rounded-xl bg-muted p-3 text-sm">This is a student wishlist goal. It uses the student’s current balance, so spending points can lower progress until it is finished.</p>
-      ) : (
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {state.goalType !== 'prize_savings' && (
+          <div className="space-y-2">
+            <Label htmlFor={`goal-start-${target}`}>Start date (optional)</Label>
+            <Input
+              type="date"
+              className="rounded-xl"
+              id={`goal-start-${target}`} value={state.startDate}
+              onChange={(e) => patchForm({ startDate: e.target.value }, target)}
+            />
+            <p className="text-sm text-muted-foreground">Only points earned from this date count. Leave blank to include earlier points; the goal may already be reached.</p>
+          </div>
+        )}
         <div className="space-y-2">
-          <Label htmlFor={`goal-start-${target}`}>Start date (optional)</Label>
+          <Label htmlFor={`goal-end-${target}`}>End date (optional)</Label>
           <Input
             type="date"
             className="rounded-xl"
-            id={`goal-start-${target}`} value={state.startDate}
-            onChange={(e) => patchForm({ startDate: e.target.value }, target)}
+            id={`goal-end-${target}`} value={state.endDate}
+            onChange={(e) => patchForm({ endDate: e.target.value }, target)}
           />
-          <p className="text-sm text-muted-foreground">Only points earned from this date count. Leave blank to include earlier points; the goal may already be reached.</p>
+          <p className="text-sm text-muted-foreground">Leave blank for no deadline. Unfinished goals move to Past due after this date.</p>
         </div>
-      )}
+      </div>
       </div>}
       {(target === 'edit' || createStep === 3) && <div className="space-y-4">
         <div className="space-y-2 rounded-xl border p-4">
@@ -874,19 +887,6 @@ export function GoalsManager(props: {
           />
         </div>
         <p className="text-sm text-muted-foreground">{state.goalType === 'school' ? 'Every student in the school receives this many extra points when the shared target is reached.' : state.goalType === 'class' ? 'Each student in the class receives this many extra points when the shared target is reached.' : 'These extra points are added after the goal is completed. Leave blank for no extra points.'}</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-        <div className="space-y-2">
-          <Label htmlFor={`goal-end-${target}`}>End date (optional)</Label>
-          <Input
-            type="date"
-            className="rounded-xl"
-            id={`goal-end-${target}`} value={state.endDate}
-            onChange={(e) => patchForm({ endDate: e.target.value }, target)}
-          />
-          <p className="text-sm text-muted-foreground">Leave blank for no deadline. Unfinished goals move to Past due after this date.</p>
-        </div>
-      </div>
       <details open={target === 'edit'} className="rounded-xl border p-3"><summary className="cursor-pointer font-medium">More options: description</summary><div className="pt-3">      <div className="space-y-2">
         <Label htmlFor={`goal-desc-${target}`}>Description (optional)</Label>
         <Textarea
@@ -949,10 +949,10 @@ export function GoalsManager(props: {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="w-5 h-5 text-chart-2" />
-              {createStep === 1 ? '1. Who is this for?' : createStep === 2 ? '2. What are they working toward?' : '3. When and what happens next?'}
+              {createStep === 1 ? '1. Who is this for?' : createStep === 2 ? '2. What are they working toward?' : '3. Bonus and who sees it'}
             </CardTitle>
             <CardDescription>
-              {createStep === 1 ? 'Choose one student, a class, or the whole school working together.' : createStep === 2 ? 'Choose the target and the points that count toward it.' : 'Set an optional deadline and bonus, then check the details.'}
+              {createStep === 1 ? 'Choose one student, a class, or the whole school working together.' : createStep === 2 ? 'Choose the category, target, and dates that count toward it.' : 'Add an optional bonus, choose who sees the goal, then check the details.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
