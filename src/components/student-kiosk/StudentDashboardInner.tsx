@@ -1917,6 +1917,7 @@ export function StudentDashboardInner({
                   logoutTimer={logoutTimer}
                   sessionTimeoutSec={settings.kioskSessionTimeoutSec ?? 10}
                   onLogout={handleManualLogout}
+                  onStaySignedIn={resetLogoutTimer}
                 />
               </div>
             }
@@ -1935,7 +1936,7 @@ export function StudentDashboardInner({
         <div className="relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
         <div
           className={cn(
-            'relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+            'relative z-10 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-y-auto pb-[max(0.75rem,env(safe-area-inset-bottom))]',
             '[@media(max-height:760px)]:gap-3 [@media(max-height:760px)]:pb-2',
             fullPrizeShopOpen && 'hidden',
           )}
@@ -1948,6 +1949,16 @@ export function StudentDashboardInner({
               primaryForeground={primaryForeground}
               maxMinutes={recessMaxMinutes}
               onActivity={resetLogoutTimer}
+            />
+          ) : null}
+
+          {settings.enableGoals ? (
+            <StudentGoalsCard
+              schoolId={schoolId!}
+              student={student}
+              enabled
+              themed={!!effectiveTheme}
+              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
             />
           ) : null}
 
@@ -1988,7 +1999,7 @@ export function StudentDashboardInner({
                 }
               >
                 <Wallet className="w-4 h-4" />
-                <span>Redeem</span>
+                <span>Scan</span>
               </button>
               <button
                 type="button"
@@ -2044,34 +2055,46 @@ export function StudentDashboardInner({
                 }
               >
                 <Clock className="w-4 h-4" />
-                <span>My Info</span>
+                <span>Your points</span>
               </button>
             </div>
           </div>
 
           <div
             className={cn(
-              'grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-hidden xl:gap-5',
-              'grid-cols-1 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,15rem)] lg:items-stretch',
+              'grid w-full min-w-0 shrink-0 gap-4 xl:gap-5',
+              'grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.48fr)] lg:items-start',
               '[@media(max-height:760px)]:gap-2',
             )}
           >
-          {/* Left prize rail (desktop) */}
-          <aside className="order-2 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-1 lg:flex lg:max-w-[15rem]">
+          {/* Prize preview row (desktop) */}
+          <aside className="order-3 hidden min-w-0 flex-col gap-3 lg:col-span-2 lg:flex">
+            <div className="flex items-center justify-between gap-3">
             <p
-              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+              className="shrink-0 text-left text-lg font-bold"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
             >
-              Eligible prizes
+              Prizes you can get
             </p>
-            <StudentKioskFadeScrollPane themed={!!effectiveTheme} contentRef={rewardGridRef}>
+            <StudentKioskMorePrizesButton
+              className="h-10 w-auto sm:h-10 sm:text-sm"
+              themed={{ active: !!effectiveTheme }}
+              primaryForeground={primaryForeground}
+              schoolId={schoolId}
+              studentId={student.id}
+              onClick={openFullPrizeShop}
+            />
+            </div>
+            <div ref={rewardGridRef} className="grid grid-cols-2 gap-4 2xl:grid-cols-3">
               {prizesLoading
                 ? [...Array(4)].map((_, i) => (
                     <Skeleton key={i} className="min-h-[15rem] w-full shrink-0 rounded-2xl" />
                   ))
-                : eligibleRewards.map((reward) => (
+                : eligibleRewards.slice(0, 3).map((reward, index) => (
                     <StudentPrizeShopCard
                       key={reward.id}
+                      compact
+                      className={index === 2 ? 'hidden 2xl:flex' : undefined}
                       prize={reward}
                       studentPoints={student.points ?? 0}
                       themed={!!effectiveTheme}
@@ -2088,20 +2111,14 @@ export function StudentDashboardInner({
                       }}
                     />
                   ))}
-            </StudentKioskFadeScrollPane>
-            <StudentKioskMorePrizesButton
-              themed={{ active: !!effectiveTheme }}
-              primaryForeground={primaryForeground}
-              schoolId={schoolId}
-              studentId={student.id}
-              onClick={openFullPrizeShop}
-            />
+            </div>
+
           </aside>
 
-          {/* Center: redeem coupon (primary focus) */}
+          {/* Scanner and recent activity */}
           <div
             className={cn(
-              'order-1 flex min-h-0 min-w-0 flex-1 flex-col px-4 sm:px-6 lg:order-2 lg:min-h-full lg:px-8',
+              'order-1 flex min-w-0 flex-col',
               studentKioskCenterStackClass,
               kioskMobileTab !== 'redeem' && 'hidden lg:flex',
             )}
@@ -2152,21 +2169,17 @@ export function StudentDashboardInner({
 
           </div>
 
-          <aside className="order-3 hidden min-h-0 min-w-0 flex-col gap-2 overflow-hidden lg:order-3 lg:flex lg:max-w-[15rem]">
+          <aside className="order-2 hidden min-w-0 flex-col gap-2 lg:flex">
             <p
-              className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+              className="shrink-0 text-left text-lg font-bold"
               style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
             >
-              Other info
+              Your points
             </p>
-            <StudentKioskFadeScrollPane themed={!!effectiveTheme}>
+            <div className="flex flex-col gap-3">
               {libraryBlock}
               {profileExtrasBlock}
-              <StudentKioskPointCategoriesPanel
-                themed={!!effectiveTheme}
-                totals={pointTypeTotals}
-                footer={portalRaffleFooter}
-              />
+
               {schoolId ? (
                 <StudentKioskActivityPreview
                   schoolId={schoolId}
@@ -2180,9 +2193,15 @@ export function StudentDashboardInner({
                   }}
                 />
               ) : null}
-            </StudentKioskFadeScrollPane>
+              <StudentKioskPointCategoriesPanel
+                themed={!!effectiveTheme}
+                totals={pointTypeTotals}
+                footer={portalRaffleFooter}
+              />
+            </div>
             {schoolId ? (
               <StudentKioskMoreActivityButton
+                className="h-10 sm:h-10 sm:text-sm"
                 themed={{ active: !!effectiveTheme }}
                 primaryForeground={primaryForeground}
                 onClick={() => {
@@ -2202,10 +2221,10 @@ export function StudentDashboardInner({
             {kioskMobileTab === 'info' && (
               <>
                 <p
-                  className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] opacity-80 sm:text-sm"
+                  className="shrink-0 text-left text-lg font-bold"
                   style={effectiveTheme ? { color: 'var(--theme-page-text)' } : undefined}
                 >
-                  Other info
+                  Your points
                 </p>
                 {libraryBlock}
                 {profileExtrasBlock}
@@ -2243,7 +2262,7 @@ export function StudentDashboardInner({
             {kioskMobileTab === 'prizes' && (
               <>
                 <p className="shrink-0 text-center text-xs font-black uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">
-                  Eligible prizes
+                  Prizes you can get
                 </p>
                 <StudentKioskFadeScrollPane themed={!!effectiveTheme} className="min-h-[12rem]">
                   <div className="grid grid-cols-2 gap-3">
@@ -2307,15 +2326,7 @@ export function StudentDashboardInner({
           </div>
           </div>
 
-          {settings.enableGoals ? (
-            <StudentGoalsCard
-              schoolId={schoolId!}
-              student={student}
-              enabled
-              themed={!!effectiveTheme}
-              themeForeground={effectiveTheme ? 'var(--theme-primary)' : undefined}
-            />
-          ) : null}
+
 
           {schoolId ? (
             <StudentIncentivesCard

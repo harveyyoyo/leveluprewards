@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { ChevronRight, TableProperties } from 'lucide-react';
+import { BookOpen, ChevronRight, Gift, TableProperties } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   StaffPortalSectionCard,
@@ -138,6 +138,95 @@ function TabLinkRow({
   );
 }
 
+type PillarBoxLink = {
+  tabValue: string;
+  icon: LucideIcon;
+  label: string;
+  description: string;
+};
+
+function PillarLinkRow({
+  icon: Icon,
+  label,
+  description,
+  onOpen,
+}: {
+  icon: LucideIcon;
+  label: string;
+  description: string;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(
+        'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+        'hover:bg-muted/40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/35',
+      )}
+    >
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-ring/10 text-ring transition-colors group-hover:bg-ring/20"
+        aria-hidden
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold leading-snug text-foreground">{label}</p>
+        <p className="mt-0.5 line-clamp-1 text-xs leading-snug text-muted-foreground">{description}</p>
+      </div>
+      <ChevronRight
+        className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground"
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+function PillarBox({
+  icon: Icon,
+  gradient,
+  title,
+  subtitle,
+  links,
+  onGoToTab,
+}: {
+  icon: LucideIcon;
+  gradient: string;
+  title: string;
+  subtitle: string;
+  links: PillarBoxLink[];
+  onGoToTab: (tabValue: string) => void;
+}) {
+  if (links.length === 0) return null;
+
+  return (
+    <div className="space-y-4 rounded-2xl border bg-background p-5 sm:p-6">
+      <div className="flex items-center gap-3">
+        <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md bg-gradient-to-br', gradient)}>
+          <Icon className="h-6 w-6 text-white" aria-hidden />
+        </div>
+        <div>
+          <h3 className="text-xl font-black tracking-tight text-foreground">{title}</h3>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      <div className="divide-y divide-border/50">
+        {links.map((link) => (
+          <PillarLinkRow
+            key={link.tabValue}
+            icon={link.icon}
+            label={link.label}
+            description={link.description}
+            onOpen={() => onGoToTab(link.tabValue)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function StaffPortalWelcomeHero({
   schoolName,
   staffName,
@@ -241,6 +330,52 @@ export function StaffPortalWelcomeTab({
   const trimmedSchoolName = schoolName?.trim() || null;
   const trimmedStaffName = staffName?.trim() || null;
 
+  // Tab values that move into the Rewards pillar box
+  const REWARDS_PILLAR_VALUES = new Set(['prizes', 'categories', 'bonuspoints', 'goals', 'houses']);
+  // Tab values that move into the Library pillar box
+  const LIBRARY_PILLAR_VALUES = new Set(['library']);
+  // Combined set for filtering out of core/addon grids
+  const PILLAR_VALUES = new Set([...REWARDS_PILLAR_VALUES, ...LIBRARY_PILLAR_VALUES]);
+
+  // Filter core and addon lists to remove items shown in pillar boxes
+  const filteredCore = core.filter((t) => !PILLAR_VALUES.has(t.value));
+  const filteredAddons = addons.filter((t) => !PILLAR_VALUES.has(t.value));
+
+  // Build rewards pillar links from enabled tabs
+  const rewardsPillarLinks = useMemo(() => {
+    // Order: Rewards, Coupons, Bonus Points, Goals, Houses
+    const orderedValues = ['prizes', 'categories', 'bonuspoints', 'goals', 'houses'];
+    const allTabs = [...core, ...addons];
+    const enabledMap = new Map(allTabs.map((t) => [t.value, t]));
+
+    return orderedValues
+      .filter((v) => enabledMap.has(v))
+      .map((v) => {
+        const tab = enabledMap.get(v)!;
+        return {
+          tabValue: tab.value,
+          icon: tab.icon,
+          label: tab.label,
+          description: staffPortalTabDescription(tab),
+        };
+      });
+  }, [core, addons]);
+
+  // Build library pillar links
+  const libraryPillarLinks = useMemo(() => {
+    const allTabs = [...core, ...addons];
+    const libraryTab = allTabs.find((t) => t.value === 'library');
+    if (!libraryTab) return [];
+    return [
+      {
+        tabValue: libraryTab.value,
+        icon: libraryTab.icon,
+        label: libraryTab.label,
+        description: staffPortalTabDescription(libraryTab),
+      },
+    ];
+  }, [core, addons]);
+
   const heroDescription =
     role === 'teacher' ? TEACHER_WELCOME_DESCRIPTION : ADMIN_WELCOME_DESCRIPTION;
 
@@ -268,13 +403,13 @@ export function StaffPortalWelcomeTab({
 
         {role === 'admin' && onBulkRoster ? <ImportRosterCard onOpen={onBulkRoster} /> : null}
 
-        {core.length > 0 ? (
+        {filteredCore.length > 0 ? (
           <section className="space-y-3">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Main areas
             </h4>
             <div className="grid gap-2.5 sm:grid-cols-2">
-              {core.map((tab) => (
+              {filteredCore.map((tab) => (
                 <TabLinkRow
                   key={tab.value}
                   icon={tab.icon}
@@ -288,7 +423,29 @@ export function StaffPortalWelcomeTab({
           </section>
         ) : null}
 
-        {addons.length > 0 ? (
+        {/* Pillar boxes */}
+        <section className="grid gap-4 sm:grid-cols-2">
+          <PillarBox
+            icon={Gift}
+            gradient="from-amber-500 to-orange-600"
+            title="Rewards"
+            subtitle="Points, prizes, coupons, milestones, and competitions."
+            links={rewardsPillarLinks}
+            onGoToTab={onGoToTab}
+          />
+          {libraryPillarLinks.length > 0 ? (
+            <PillarBox
+              icon={BookOpen}
+              gradient="from-indigo-600 to-sky-500"
+              title="Library"
+              subtitle="Look up books, check them in and out, and let students check out on their own."
+              links={libraryPillarLinks}
+              onGoToTab={onGoToTab}
+            />
+          ) : null}
+        </section>
+
+        {filteredAddons.length > 0 ? (
           <section className="space-y-2.5">
             <div>
               <h4 className="text-sm font-medium text-foreground">More tools</h4>
@@ -297,7 +454,7 @@ export function StaffPortalWelcomeTab({
               </p>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {addons.map((tab) => (
+              {filteredAddons.map((tab) => (
                 <TabLinkRow
                   key={tab.value}
                   icon={tab.icon}
