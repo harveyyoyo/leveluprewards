@@ -151,6 +151,7 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
           status: 'ready',
           total: shown.length,
           noun: ['entry', 'entries'],
+          studentIds: [...new Set(shown.map((e) => e.studentId))],
           rows: shown.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((e) => ({
             id: e.id,
             name: nameOf(e.studentId),

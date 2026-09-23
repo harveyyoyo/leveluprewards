@@ -16,6 +16,7 @@ type OfficePortalChromeValue = {
   searchIndex: OfficeSearchResult[];
   features: {
     aiHelp: boolean;
+    aiRecords: boolean;
     familyProfiles: boolean;
     studentPhotos: boolean;
     busInfo: boolean;
@@ -61,6 +62,7 @@ export function OfficePortalChromeProvider({
       searchIndex,
       features: {
         aiHelp: isOfficeFeatureEnabled(settings, 'aiHelp'),
+        aiRecords: isOfficeFeatureEnabled(settings, 'aiRecords'),
         familyProfiles: isOfficeFeatureEnabled(settings, 'familyProfiles'),
         studentPhotos: isOfficeFeatureEnabled(settings, 'studentPhotos'),
         busInfo: isOfficeFeatureEnabled(settings, 'busInfo'),

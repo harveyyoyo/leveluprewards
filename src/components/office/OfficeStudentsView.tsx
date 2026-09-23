@@ -133,6 +133,8 @@ export function OfficeStudentsView({
   const [firstStarts, setFirstStarts] = useState('');
   /** 1–12, from "birthdays in March". */
   const [birthMonth, setBirthMonth] = useState<number | null>(null);
+  /** The students a Help answer was about (from reading records). */
+  const [idsFilter, setIdsFilter] = useState<Set<string> | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
@@ -192,6 +194,7 @@ export function OfficeStudentsView({
       if (lastStarts && !(s.lastName ?? '').trim().toLowerCase().startsWith(lastStarts.toLowerCase())) return false;
       if (firstStarts && !(s.firstName ?? '').trim().toLowerCase().startsWith(firstStarts.toLowerCase())) return false;
       if (birthMonth && Number(s.dateOfBirth?.slice(5, 7)) !== birthMonth) return false;
+      if (idsFilter && !idsFilter.has(s.id)) return false;
       if (classFilter === '__unassigned__' && s.classId) return false;
       if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;
       if (!q) return true;
@@ -228,6 +231,7 @@ export function OfficeStudentsView({
     lastStarts,
     firstStarts,
     birthMonth,
+    idsFilter,
   ]);
 
   useEffect(() => {
@@ -258,6 +262,8 @@ export function OfficeStudentsView({
     setFirstStarts(searchParams.get('firstStarts')?.trim() ?? '');
     const month = Number(searchParams.get('birthMonth'));
     setBirthMonth(Number.isInteger(month) && month >= 1 && month <= 12 ? month : null);
+    const ids = searchParams.get('ids');
+    setIdsFilter(ids ? new Set(ids.split(',').filter(Boolean)) : null);
     setHomeroomFilter('all');
     setRosterFilter((ROSTER_FILTERS as string[]).includes(f) ? (f as RosterFilter) : 'all');
     setClassFilter(f === 'unassigned' ? '__unassigned__' : cls ? cls.id : 'all');
@@ -278,6 +284,7 @@ export function OfficeStudentsView({
     status: 'ready',
     total: filtered.length,
     noun: ['student', 'students'],
+    studentIds: filtered.map((s) => s.id),
     rows: filtered.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((s) => ({
       id: s.id,
       name: getOfficeStudentFullName(s),
@@ -304,6 +311,7 @@ export function OfficeStudentsView({
     setLastStarts('');
     setFirstStarts('');
     setBirthMonth(null);
+    setIdsFilter(null);
     setRosterFilter('all');
     setClassFilter('all');
     setHomeroomFilter('all');
@@ -376,7 +384,8 @@ export function OfficeStudentsView({
     !!addressText.trim() ||
     !!lastStarts ||
     !!firstStarts ||
-    !!birthMonth;
+    !!birthMonth ||
+    !!idsFilter;
 
   return (
     <div className="space-y-3">

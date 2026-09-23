@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { officePublicHref } from '@/lib/officePublicUrl';
+import { officeReasonRequestSchema, type OfficeReasonRequest } from '@/lib/office/officeAssistantReason';
 
 /**
  * "Show me …" questions in Help → Ask become one of these views. The AI only chooses filters from
@@ -103,13 +104,23 @@ export const officeAssistantViewSchema = z.discriminatedUnion('page', [
 ]);
 export type OfficeAssistantView = z.infer<typeof officeAssistantViewSchema>;
 
-/** What the AI returns: a view to show, or "this needs a written answer". */
-export type OfficeAssistantDecision = { type: 'view'; view: OfficeAssistantView } | { type: 'answer' };
+/**
+ * What the AI returns: a view to show (no records involved), a question that needs the assistant
+ * to read records ("reason"), or "this needs a written answer".
+ */
+export type OfficeAssistantDecision =
+  | { type: 'view'; view: OfficeAssistantView }
+  | { type: 'reason'; reason: OfficeReasonRequest }
+  | { type: 'answer' };
 
 /** Validates the AI's JSON; anything unexpected falls back to a written answer. */
 export function parseOfficeAssistantDecision(raw: unknown): OfficeAssistantDecision {
   if (!raw || typeof raw !== 'object') return { type: 'answer' };
   const obj = raw as Record<string, unknown>;
+  if (obj.type === 'reason') {
+    const parsed = officeReasonRequestSchema.safeParse(obj.reason);
+    return parsed.success ? { type: 'reason', reason: parsed.data } : { type: 'answer' };
+  }
   if (obj.type !== 'view') return { type: 'answer' };
   const parsed = officeAssistantViewSchema.safeParse(obj.view);
   if (!parsed.success) return { type: 'answer' };
@@ -287,12 +298,23 @@ export function officeAssistantSystemPrompt(params: {
   classNames: string[];
   /** The list on screen from the last question, so a follow-up can narrow or change it. */
   previous?: OfficeAssistantView | null;
+  /** The school allows Help to read records for questions that need thinking. */
+  canReason?: boolean;
+  /** A student's card is open right now ("this student"). */
+  studentOpen?: boolean;
 }): string {
   return [
     'You turn a school office staff member\'s question into a filtered list the app can show.',
-    'Reply with JSON only, in one of these two shapes:',
+    `Reply with JSON only, in one of these ${params.canReason ? 'three' : 'two'} shapes:`,
     '{"type":"answer"}  — for how-to questions, opinions, or anything that is not a request to list/find/show records.',
     '{"type":"view","view":{...}} — when they want to see, list, find, or count records the app can filter.',
+    ...(params.canReason
+      ? [
+          '{"type":"reason","reason":{"scope":"...","names":[...],"topics":[...]}} — when answering needs judgment over records that no single filter gives: summarize, compare, explain, spot patterns or trends, or read notes (e.g. "summarize this student", "compare Mason and Emma\'s attendance", "who has falling grades and more absences?", "any patterns in these students\' late arrivals?"). Never for a plain list or count a view can show.',
+          `   - scope: "current-student" = the student whose card is open${params.studentOpen ? ' (one is open now)' : ' (none is open now, so do not use it)'}; "list-on-screen" = the students in the list shown now${params.previous ? ' (a list is on screen)' : ' (no list is on screen, so do not use it)'}; "named-students" = students named in the question, with their names in "names"; "school" = all students.`,
+          '   - topics: which records to read, only what the question needs — "attendance", "grades", "frontdesk" (late arrivals and early pickups), "notes" (staff notes and comments), "health" (allergies, health notes, nurse visits).',
+        ]
+      : []),
     '',
     'Views (use null for anything not asked for; never invent names):',
     '1. Students: {"page":"students","label":"...","text":null|"part of a student name","lastNameStarts":null|"letters","firstNameStarts":null|"letters","birthMonth":null|1-12,"className":null|"class name","teacher":null|"teacher name","address":null|"town, street or zip","show":null|"missing-grades"|"no-billing"|"unassigned"|"no-teacher"|"no-family"|"allergies"|"withdrawn"|"graduated"}',

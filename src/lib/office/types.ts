@@ -263,6 +263,11 @@ export type OfficeFeatureFlags = {
   busInfo?: boolean;
   medicalNotes?: boolean;
   aiHelp?: boolean;
+  /**
+   * Help may read records (as codes, without names or contact details) to answer questions that
+   * need thinking, like "summarize this student". Off keeps every record away from the AI.
+   */
+  aiRecords?: boolean;
   auditLog?: boolean;
   attendance?: boolean;
   /** Late arrivals, early pickups, and nurse visits log. */
@@ -285,7 +290,9 @@ export type OfficeAuditEntityType =
   | 'officeForm'
   | 'officeEvent'
   | 'officeStudentDocument'
-  | 'officeSettings';
+  | 'officeSettings'
+  /** Help read student records to answer a question (who asked, how many students, which kinds). */
+  | 'officeAssistant';
 
 /** Append-only change log (`schools/{id}/officeAuditLog`). */
 export type OfficeAuditLogEntry = {

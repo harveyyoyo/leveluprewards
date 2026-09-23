@@ -184,6 +184,7 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
           status: 'ready',
           total: askMatches.length,
           noun: ['student', 'students'],
+          studentIds: [...new Set(askMatches.map((m) => m.entry.studentId))],
           rows: askMatches.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((m) => ({
             id: m.entry.id,
             name: m.name,

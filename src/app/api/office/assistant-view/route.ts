@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
     // The list already on screen (filters only, no records), so "only grade 8" can narrow it.
     const previousParsed = officeAssistantViewSchema.safeParse(body.previous);
     const previous = previousParsed.success ? previousParsed.data : null;
+    // Whether Help may read records for "thinking" questions (the reading itself re-checks the
+    // school's switch and the person's access on the server).
+    const canReason = body.canReason === true;
+    const studentOpen = body.studentOpen === true;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -54,7 +58,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 250,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: officeAssistantSystemPrompt({ today, classNames, previous }) },
+        { role: 'system', content: officeAssistantSystemPrompt({ today, classNames, previous, canReason, studentOpen }) },
         { role: 'user', content: question },
       ],
     });
@@ -65,7 +69,8 @@ export async function POST(req: NextRequest) {
     } catch {
       raw = null;
     }
-    return NextResponse.json(parseOfficeAssistantDecision(raw));
+    const decision = parseOfficeAssistantDecision(raw);
+    return NextResponse.json(decision.type === 'reason' && !canReason ? { type: 'answer' } : decision);
   } catch (e) {
     console.error('office assistant-view:', e);
     // Any failure just means "answer in words" — the normal chat still works.

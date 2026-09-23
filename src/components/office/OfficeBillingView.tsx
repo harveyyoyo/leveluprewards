@@ -296,6 +296,7 @@ export function OfficeBillingView({
     status: 'ready',
     total: filteredAccounts.length,
     noun: ['family', 'families'],
+    studentIds: [...new Set(filteredAccounts.flatMap((a) => a.studentIds ?? []))],
     rows: filteredAccounts
       .map((a) => ({ a, owed: owedByAccount.get(a.id) ?? 0 }))
       .sort((x, y) => y.owed - x.owed)

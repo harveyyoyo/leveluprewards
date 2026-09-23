@@ -37,6 +37,7 @@ import {
   type OfficeAssistantOpenTarget,
   type OfficeAssistantResults,
 } from '@/lib/office/officeAssistantResults';
+import { officePublicHref } from '@/lib/officePublicUrl';
 import { useRouter } from 'next/navigation';
 
 /**
@@ -52,7 +53,24 @@ type ChatList = {
   results: OfficeAssistantResults | null;
   timedOut?: boolean;
 };
-type ChatMessage = { role: 'user' | 'assistant'; content: string; list?: ChatList };
+/** Set when Help read records to answer ("summarize…", "who has falling grades…"). */
+type ChatReading = {
+  studentIds: string[];
+  read?: { students: number; topics: string[] };
+};
+type ChatMessage = { role: 'user' | 'assistant'; content: string; list?: ChatList; reading?: ChatReading };
+
+const TOPIC_WORDS: Record<string, string> = {
+  attendance: 'attendance',
+  grades: 'grades',
+  frontdesk: 'front desk entries',
+  notes: 'notes',
+  health: 'health details',
+};
+
+function joinWords(words: string[]): string {
+  return words.length <= 1 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+}
 
 /** How long to wait for the page to report before just pointing at it. */
 const RESULTS_WAIT_MS = 10_000;
@@ -125,19 +143,48 @@ function ChatListAnswer({
   );
 }
 
-/** Keeps the model's line breaks and turns `**bold**` into bold instead of showing the stars. */
-function ChatText({ text }: { text: string }) {
+/**
+ * Keeps the model's line breaks, turns `**bold**` into bold instead of showing the stars, and
+ * shows `[[student:ID]]` (from an answer that read records) as that student's name — looked up
+ * here in the app, since the AI never had names.
+ */
+function ChatText({
+  text,
+  nameOf,
+  onOpenStudent,
+}: {
+  text: string;
+  nameOf?: (id: string) => string | null;
+  onOpenStudent?: (id: string) => void;
+}) {
   return (
     <span className="whitespace-pre-line">
-      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-        part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+      {text.split(/(\[\[student:[^\]]+\]\]|\*\*[^*]+\*\*)/g).map((part, i) => {
+        const student = /^\[\[student:([^\]]+)\]\]$/.exec(part);
+        if (student) {
+          const id = student[1]!;
+          const name = nameOf?.(id) ?? 'a student';
+          return onOpenStudent ? (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onOpenStudent(id)}
+              className="font-medium text-teal-800 hover:underline dark:text-teal-300"
+            >
+              {name}
+            </button>
+          ) : (
+            <span key={i}>{name}</span>
+          );
+        }
+        return part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
           <strong key={i} className="font-semibold">
             {part.slice(2, -2)}
           </strong>
         ) : (
           part.replace(/^#{1,6}\s+/gm, '')
-        ),
-      )}
+        );
+      })}
     </span>
   );
 }
@@ -167,9 +214,13 @@ export function OfficeAiHelpButton() {
     () => ({
       role: 'assistant',
       content:
-        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me for a list — like “families who owe more than $100” or “who is absent today” — and I'll answer here and open it in the app. Then narrow it down, like “only Grade 5”. Click a name to open their card. You can also ask how to do anything in the office.`,
+        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me for a list — like “families who owe more than $100” or “who is absent today” — and I'll answer here and open it in the app. Then narrow it down, like “only Grade 5”. Click a name to open their card.${
+          features.aiRecords
+            ? ' I can also think it through — like “summarize Mason Hall’s attendance and grades” or “which of these students are having a harder time lately?”'
+            : ''
+        } You can also ask how to do anything in the office.`,
     }),
-    [userName],
+    [userName, features.aiRecords],
   );
 
   const [open, setOpen] = useState(false);
@@ -228,6 +279,27 @@ export function OfficeAiHelpButton() {
     [router],
   );
 
+  const studentNameById = useMemo(
+    () => new Map(shared.students.map((s) => [s.id, [s.firstName, s.lastName].filter(Boolean).join(' ')])),
+    [shared.students],
+  );
+  const nameOf = useCallback((id: string) => studentNameById.get(id) ?? null, [studentNameById]);
+  const openStudentCard = useCallback((id: string) => openCard({ kind: 'student', id }), [openCard]);
+
+  /** Shows the students an answer was about on the Students page, behind Help. */
+  const showStudentsInApp = useCallback(
+    (studentIds: string[]) => {
+      if (!schoolId || studentIds.length === 0) return;
+      const params = new URLSearchParams({
+        ask: `Students from Help's answer (${studentIds.length})`,
+        ids: studentIds.join(','),
+        askAt: String(Date.now()),
+      });
+      router.push(`${officePublicHref(schoolId, 'students')}?${params.toString()}`);
+    },
+    [router, schoolId],
+  );
+
   const showAgain = useCallback(
     (index: number) => {
       const list = messages[index]?.list;
@@ -249,6 +321,8 @@ export function OfficeAiHelpButton() {
 
     const userMsg: ChatMessage = { role: 'user', content: text };
     const nextForApi = [...messages, userMsg];
+    const lastList = [...messages].reverse().find((m) => m.list)?.list ?? null;
+    const openStudentId = new URLSearchParams(window.location.search).get('student');
     setMessages(nextForApi);
     setInput('');
     setSending(true);
@@ -266,11 +340,55 @@ export function OfficeAiHelpButton() {
           today,
           classNames: shared.classes.map((c) => c.name),
           // Only the filters of the last list (never its names), for follow-ups like "only grade 8".
-          previous: [...messages].reverse().find((m) => m.list)?.list?.view ?? null,
+          previous: lastList?.view ?? null,
+          // Whether "thinking" questions may read records (re-checked on the server) and
+          // whether "this student" means anyone.
+          canReason: features.aiRecords,
+          studentOpen: !!openStudentId,
         }),
       });
       // Re-check the reply here too: only known pages and filters are ever opened.
       const decision = viewRes.ok ? parseOfficeAssistantDecision(await viewRes.json().catch(() => null)) : null;
+
+      if (decision?.type === 'reason' && features.aiRecords) {
+        const { scope } = decision.reason;
+        const listIds = lastList?.results?.status === 'ready' ? (lastList.results.studentIds ?? []) : [];
+        const studentIds = scope === 'current-student' ? (openStudentId ? [openStudentId] : []) : scope === 'list-on-screen' ? listIds : [];
+        const res = await authFetch('/api/office/assistant-reason', {
+          method: 'POST',
+          body: JSON.stringify({ schoolId, question: text, today, reason: decision.reason, studentIds, changedBy: userName ?? null }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          type?: string;
+          answer?: string;
+          message?: string;
+          name?: string;
+          studentIds?: string[];
+          read?: { students: number; topics: string[] };
+          error?: string;
+        };
+        const reply: ChatMessage =
+          data.type === 'answer' && data.answer
+            ? { role: 'assistant', content: data.answer, reading: { studentIds: data.studentIds ?? [], read: data.read } }
+            : data.type === 'off'
+              ? {
+                  role: 'assistant',
+                  content: 'Reading records is turned off for this school. It can be turned on in Settings → “Assistant can read records”.',
+                }
+              : data.type === 'clarify'
+                ? {
+                    role: 'assistant',
+                    content: `I found more than one student named “${data.name}”: ${(data.studentIds ?? [])
+                      .map((id) => `[[student:${id}]]`)
+                      .join(', ')}. Ask again with the full name.`,
+                  }
+                : { role: 'assistant', content: data.message || data.error || 'I couldn’t work that out. Try asking another way.' };
+        setMessages((prev) => [...prev, reply]);
+        setSending(false);
+        // Show the students the answer is about in the app too (one student: their name is a link).
+        if (reply.reading && reply.reading.studentIds.length > 1) showStudentsInApp(reply.reading.studentIds);
+        return;
+      }
       if (decision?.type === 'view') {
         const page = OFFICE_ASSISTANT_PAGE_LABEL[decision.view.page];
         const turnedOff =
@@ -355,6 +473,9 @@ export function OfficeAiHelpButton() {
     stopWaitingLater,
     settings?.features?.attendance,
     settings?.features?.frontDesk,
+    features.aiRecords,
+    userName,
+    showStudentsInApp,
   ]);
 
   const showAsk = features.aiHelp;
@@ -426,9 +547,29 @@ export function OfficeAiHelpButton() {
                       : 'mr-4 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100',
                   )}
                 >
-                  <ChatText text={m.content} />
+                  <ChatText text={m.content} nameOf={nameOf} onOpenStudent={openStudentCard} />
                   {m.list ? (
                     <ChatListAnswer list={m.list} onShowAgain={() => showAgain(i)} onOpen={openCard} />
+                  ) : null}
+                  {m.reading ? (
+                    <div className="mt-1.5 space-y-1">
+                      {m.reading.read ? (
+                        <p className="text-xs text-muted-foreground">
+                          Read {joinWords(m.reading.read.topics.map((t) => TOPIC_WORDS[t] ?? t))} for{' '}
+                          {countLabel(m.reading.read.students, ['student', 'students'])}. Names and contact details
+                          weren&apos;t shared with the AI.
+                        </p>
+                      ) : null}
+                      {m.reading.studentIds.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => showStudentsInApp(m.reading!.studentIds)}
+                          className="block text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+                        >
+                          Show these {m.reading.studentIds.length} students in the app
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               ))}
