@@ -30,9 +30,8 @@ export function GoalsOptionsPanel(props: {
       </CardHeader>
       <CardContent className="space-y-4">
         {[
-          { title: 'Celebrations and reminders', keys: ['celebrateOnAward', 'teacherAlmostThereNudge', 'classPartyMode'] },
+          { title: 'Celebrations and reminders', keys: ['celebrateOnAward', 'teacherAlmostThereNudge'] },
           { title: 'Where progress appears', keys: ['showOnClassroom', 'showNeedMoreInShop', 'hallwaySpotlight'] },
-          { title: 'Page appearance', keys: [ 'hideEmptySections', 'familyFriendlyPortal'] },
         ].map((group) => <section key={group.title} className="space-y-3">
           <h3 className="font-semibold text-base">{group.title}</h3>
           {GOALS_OPTION_FIELDS.filter((field) => group.keys.includes(field.key)).map((field) => (

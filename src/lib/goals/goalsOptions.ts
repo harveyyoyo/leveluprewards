@@ -11,16 +11,8 @@ export type GoalsOptions = {
   teacherAlmostThereNudge: boolean;
   /** Hallway screens highlight recent finishes. */
   hallwaySpotlight: boolean;
-  /** Offer goal ideas from how the class earns points. */
-  suggestFromHabits: boolean;
-  /** Use a shorter empty-list message while keeping every list tab visible. */
-  hideEmptySections: boolean;
   /** Prize shop shows “Need X more points”. */
   showNeedMoreInShop: boolean;
-  /** Softer wording on the student home portal. */
-  familyFriendlyPortal: boolean;
-  /** Bigger celebration when a class goal finishes. */
-  classPartyMode: boolean;
 };
 
 export const DEFAULT_GOALS_OPTIONS: GoalsOptions = {
@@ -28,11 +20,7 @@ export const DEFAULT_GOALS_OPTIONS: GoalsOptions = {
   celebrateOnAward: true,
   teacherAlmostThereNudge: true,
   hallwaySpotlight: true,
-  suggestFromHabits: true,
-  hideEmptySections: true,
   showNeedMoreInShop: true,
-  familyFriendlyPortal: true,
-  classPartyMode: true,
 };
 
 export const GOALS_OPTION_FIELDS: Array<{
@@ -65,25 +53,16 @@ export const GOALS_OPTION_FIELDS: Array<{
     label: 'Spotlight finishes on hallway screens',
     hint: 'Highlight recently completed goals on hallway displays with a “Just finished!” message. Turn this off to stop highlighting those finishes on the screens.',
   },
-  {
-    key: 'classPartyMode',
-    label: 'Class goal party',
-    hint: 'Use a bigger confetti celebration when a shared class goal is completed. “Cheer when a goal finishes” must also be on. Turn this off to use the regular celebration; it does not change rewards.',
-  },
-  {
-    key: 'hideEmptySections',
-    label: 'Keep empty lists simple',
-    hint: 'When a list has no goals, show only “No goals in this list yet.” Turn this off to also show tips for adding or finding goals. Current, Finished, Past due, and Archived always stay visible.',
-  },
-  {
-    key: 'familyFriendlyPortal',
-    label: 'Family-friendly home portal words',
-    hint: 'Use friendlier goal labels and progress messages on the student home page, such as “Saving for a reward” and “Needs 20 more points.” Turn this off to use the standard wording. Points and rewards stay the same.',
-  },
 ];
 
 export function resolveGoalsOptions(partial?: Partial<GoalsOptions> | null): GoalsOptions {
-  return { ...DEFAULT_GOALS_OPTIONS, ...(partial || {}) };
+  const out = { ...DEFAULT_GOALS_OPTIONS };
+  // Copy only current switches; schools may still have retired ones saved.
+  for (const key of Object.keys(out) as (keyof GoalsOptions)[]) {
+    const value = partial?.[key];
+    if (typeof value === 'boolean') out[key] = value;
+  }
+  return out;
 }
 
 export function pointsStillNeeded(progress: number, targetPoints: number): number {

@@ -278,10 +278,10 @@ export function GoalsManager(props: {
     for (const { goal, progress } of progressRows) {
       if (goal.status === 'completed' && !celebratedIds.has(goal.id) && goalsOpts.celebrateOnAward) {
         setCelebratedIds((prev) => new Set(prev).add(goal.id));
-        const party = goal.type === 'class' && goalsOpts.classPartyMode;
+        const party = goal.type === 'class' || goal.type === 'school';
         confetti({ particleCount: party ? 160 : 90, spread: party ? 100 : 70, origin: { y: 0.65 } });
         toast({
-          title: party ? 'Class goal party!' : 'Goal finished!',
+          title: party ? 'Team goal party!' : 'Goal finished!',
           description: `"${goal.title}" — ${goalAudienceLabel(goal, students, classes)} made it.`,
         });
       }
@@ -307,7 +307,6 @@ export function GoalsManager(props: {
     classes,
     baselineReady,
     goalsOpts.celebrateOnAward,
-    goalsOpts.classPartyMode,
     goalsOpts.teacherAlmostThereNudge,
   ]);
 
@@ -922,7 +921,7 @@ export function GoalsManager(props: {
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             ) : listedGoals.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">{goalsOpts.hideEmptySections ? 'No goals in this list yet.' : 'No goals in this list yet. Choose Add goal to get started, or look in another list above.'}</p>
+              <p className="text-sm text-muted-foreground py-6 text-center">No goals in this list yet.</p>
             ) : (
               <ScrollArea className="h-[calc(100vh-22rem)] pr-1">
                 <ul className="space-y-3">

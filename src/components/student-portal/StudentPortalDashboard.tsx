@@ -24,7 +24,6 @@ import { STUDENT_PORTAL_PREVIEW_DEVICE_ID } from '@/lib/kiosk/kioskScreenTypes';
 import {
   familyGoalStatusLine,
   familyGoalTypeLabel,
-  resolveGoalsOptions,
 } from '@/lib/goals/goalsOptions';
 
 type Props = {
@@ -243,24 +242,13 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
               const target = Math.max(0, Number(goal.targetPoints || 0));
               const progress = Math.max(0, Number(goal.progress || 0));
               const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
-              const family = resolveGoalsOptions(settings.goalsOptions).familyFriendlyPortal;
-              const label = family
-                ? familyGoalTypeLabel(goal.type as string)
-                : goal.type === 'school' ? 'Whole school' : goal.type === 'class'
-                  ? 'Class goal'
-                  : goal.type === 'prize_savings'
-                    ? 'Savings goal'
-                    : 'Personal goal';
-              const statusLine = family
-                ? familyGoalStatusLine({
-                    status: goal.status as string,
-                    progress,
-                    targetPoints: target,
-                    createdByStudent: Boolean((goal as { createdByStudent?: boolean }).createdByStudent),
-                  })
-                : goal.status === 'completed'
-                  ? 'Completed'
-                  : null;
+              const label = familyGoalTypeLabel(goal.type as string);
+              const statusLine = familyGoalStatusLine({
+                status: goal.status as string,
+                progress,
+                targetPoints: target,
+                createdByStudent: Boolean((goal as { createdByStudent?: boolean }).createdByStudent),
+              });
               return (
                 <div key={goal.id} className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
                   <div className="flex items-start justify-between gap-3">

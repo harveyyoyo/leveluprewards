@@ -113,7 +113,7 @@ export function StudentGoalsCard(props: {
     for (const { goal, progress } of rows) {
       if (goal.status === 'completed' && !celebratedRef.current.has(goal.id) && options.celebrateOnAward) {
         celebratedRef.current.add(goal.id);
-        confetti({ particleCount: goal.type === 'class' && options.classPartyMode ? 160 : 90, spread: 80, origin: { y: 0.6 } });
+        confetti({ particleCount: goal.type === 'class' || goal.type === 'school' ? 160 : 90, spread: 80, origin: { y: 0.6 } });
         toast({
           title: 'You did it!',
           description: `"${goal.title}" is finished. Great work!`,
@@ -132,7 +132,7 @@ export function StudentGoalsCard(props: {
         });
       }
     }
-  }, [rows, toast, options.celebrateOnAward, options.classPartyMode]);
+  }, [rows, toast, options.celebrateOnAward]);
 
   if (!enabled) return null;
 
