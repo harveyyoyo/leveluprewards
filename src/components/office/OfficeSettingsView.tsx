@@ -31,11 +31,28 @@ import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSe
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
 import { OfficeStudentFieldsSettings } from '@/components/office/OfficeStudentFieldsSettings';
 import { OfficeDemoDataSection } from '@/components/office/OfficeDemoDataSection';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import { useSearchParams } from 'next/navigation';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import type { StaffAccount } from '@/lib/types';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+
+type SettingsTab = 'school' | 'fields' | 'staff' | 'import';
+
+/** Short tabs so everyday choices aren't buried under one-time setup. */
+const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'school', label: 'School' },
+  { id: 'fields', label: 'Student fields' },
+  { id: 'staff', label: 'Staff sign-ins' },
+  { id: 'import', label: 'Import' },
+];
+
+function parseSettingsTab(value: string | null | undefined): SettingsTab {
+  return SETTINGS_TABS.some((t) => t.id === value) ? (value as SettingsTab) : 'school';
+}
 
 function isOfficeStaffAccount(account: StaffAccount): boolean {
   const roles = account.roles?.length ? account.roles : [account.role];
@@ -51,6 +68,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const firestore = useFirestore();
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get('tab')));
+  useEffect(() => {
+    setTab(parseSettingsTab(searchParams.get('tab')));
+  }, [searchParams]);
+  useOfficeUrlSync({ tab: tab === 'school' ? undefined : tab });
   const { loginState, isAdmin, isOffice, userName } = useAppContext();
   const { settings, isLoading: settingsLoading } = useOfficeSettings(schoolId);
   const { gradeEntries, billingAccounts } = useOfficePortalData();
@@ -279,12 +302,16 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {confirmDialog}
-      <p className="text-sm text-muted-foreground max-w-2xl">
-        School-wide defaults for grades and billing, plus desk accounts for front-office staff to sign in here.
-      </p>
+      <ContentSectionTreeNav
+        items={SETTINGS_TABS}
+        value={tab}
+        onValueChange={(v) => setTab(v as SettingsTab)}
+        aria-label="Settings section"
+      />
 
+      {tab === 'school' ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-base font-bold flex items-center gap-2">
           <Building2 className="h-4 w-4 text-teal-700" />
@@ -425,12 +452,13 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           {prefsBusy ? 'Saving…' : 'Save term & name changes'}
         </Button>
       </section>
+      ) : null}
 
-      {roleVerified ? (
+      {tab === 'fields' && roleVerified ? (
         <OfficeStudentFieldsSettings schoolId={schoolId} fields={settings?.studentCustomFields ?? []} />
       ) : null}
 
-      {roleVerified ? (
+      {tab === 'import' && roleVerified ? (
         <OfficeAiImportSection
           schoolId={schoolId}
           classes={shared.classes}
@@ -443,6 +471,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
         />
       ) : null}
 
+      {tab === 'import' && roleVerified ? <OfficeDemoDataSection schoolId={schoolId} /> : null}
+
+      {tab === 'staff' ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -538,6 +569,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           </ul>
         )}
       </section>
+      ) : null}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md rounded-2xl">
@@ -603,8 +635,6 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {roleVerified ? <OfficeDemoDataSection schoolId={schoolId} /> : null}
     </div>
   );
 }

@@ -41,7 +41,6 @@ import {
 import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
-import { OfficeBillingSummaryChart } from '@/components/office/OfficeBillingSummaryChart';
 import {
   buildOfficeFamilyStatementHtml,
   buildOfficeReceiptHtml,
@@ -214,7 +213,7 @@ export function OfficeBillingView({
 
   const overdueCount = useMemo(() => invoices.filter((i) => isInvoiceOverdue(i)).length, [invoices]);
 
-  const paidCount = useMemo(() => invoices.filter((i) => i.status === 'paid').length, [invoices]);
+  const dueSoonCount = useMemo(() => invoices.filter((i) => isInvoiceDueSoon(i)).length, [invoices]);
 
   const filteredAccounts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1054,22 +1053,33 @@ export function OfficeBillingView({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {confirmDialog}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground max-w-xl">
-          Family bills and payments. Record checks, cash, or transfers — one payment can cover several bills.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button className="rounded-xl gap-2" onClick={() => openNewInvoice()} disabled={accounts.length === 0}>
-            <Plus className="h-4 w-4" />
-            New invoice
-          </Button>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            {filteredAccounts.length === accounts.length
+              ? `${accounts.length} family ${accounts.length === 1 ? 'account' : 'accounts'}`
+              : `${filteredAccounts.length} of ${accounts.length} family accounts`}
+          </span>
+          {invoiceFilter !== 'all' || search.trim() ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+              onClick={() => {
+                setSearch('');
+                setInvoiceFilter('all');
+              }}
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2">
+              <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl" aria-label="More options">
                 <MoreHorizontal className="h-4 w-4" />
-                More
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 rounded-xl">
@@ -1088,52 +1098,41 @@ export function OfficeBillingView({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button className="rounded-xl gap-2" onClick={() => openNewInvoice()} disabled={accounts.length === 0}>
+            <Plus className="h-4 w-4" />
+            New invoice
+          </Button>
         </div>
       </div>
 
-      {!isLoading ? <OfficeBillingSummaryChart invoices={invoices} /> : null}
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <OfficeSearchInput value={search} onChange={setSearch} placeholder="Search family or student…" />
-        <div className="flex flex-wrap gap-2">
-          {(['all', 'open', 'due-soon', 'overdue'] as const).map((key) => (
-            <Button
-              key={key}
-              type="button"
-              size="sm"
-              variant={invoiceFilter === key ? 'default' : 'outline'}
-              className="rounded-lg h-9 capitalize"
-              onClick={() => setInvoiceFilter(key)}
-            >
-              {key === 'all' ? 'All accounts' : key === 'due-soon' ? 'Due soon' : key}
-            </Button>
-          ))}
-        </div>
+      {/* Three numbers that double as filters — tap one to see just those families. */}
+      <div className="grid grid-cols-3 gap-2.5">
+        {(
+          [
+            { key: 'open', label: 'Still owed', value: formatCents(openBalanceCents), tone: 'text-slate-900 dark:text-white' },
+            { key: 'overdue', label: 'Overdue', value: `${overdueCount} invoice${overdueCount === 1 ? '' : 's'}`, tone: overdueCount > 0 ? 'text-amber-800 dark:text-amber-300' : 'text-slate-900 dark:text-white' },
+            { key: 'due-soon', label: 'Due soon', value: `${dueSoonCount} invoice${dueSoonCount === 1 ? '' : 's'}`, tone: 'text-slate-900 dark:text-white' },
+          ] as const
+        ).map((tile) => (
+          <button
+            key={tile.key}
+            type="button"
+            aria-pressed={invoiceFilter === tile.key}
+            onClick={() => setInvoiceFilter(invoiceFilter === tile.key ? 'all' : tile.key)}
+            className={cn(
+              'rounded-2xl bg-white px-4 py-3 text-left shadow-sm ring-1 transition-all hover:shadow-md dark:bg-slate-900/80',
+              invoiceFilter === tile.key
+                ? 'ring-2 ring-teal-600 dark:ring-teal-400'
+                : 'ring-slate-200/70 hover:ring-teal-300/70 dark:ring-slate-800',
+            )}
+          >
+            <span className="block text-xs font-medium text-muted-foreground">{tile.label}</span>
+            <span className={cn('mt-0.5 block text-lg font-semibold tabular-nums sm:text-xl', tile.tone)}>{tile.value}</span>
+          </button>
+        ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Open invoices</p>
-          <p className="text-xl font-bold text-teal-800 dark:text-teal-300">{formatCents(openBalanceCents)}</p>
-        </div>
-        <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Billing accounts</p>
-          <p className="text-xl font-bold">{accounts.length}</p>
-        </div>
-        <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Overdue</p>
-          <p className="text-xl font-bold text-amber-800 dark:text-amber-300">{overdueCount}</p>
-        </div>
-        <div className="rounded-2xl border bg-white p-4 shadow-sm dark:bg-slate-900 dark:border-slate-800">
-          <p className="text-xs font-bold uppercase text-muted-foreground">Paid invoices</p>
-          <p className="text-xl font-bold text-emerald-800 dark:text-emerald-300">{paidCount}</p>
-        </div>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        {filteredAccounts.length === accounts.length
-          ? `${accounts.length} billing ${accounts.length === 1 ? 'account' : 'accounts'}`
-          : `${filteredAccounts.length} of ${accounts.length} accounts`}
-      </p>
+      <OfficeSearchInput value={search} onChange={setSearch} placeholder="Search families or students…" />
 
       {isLoading ? (
         <OfficeLoadingRows cols={3} />

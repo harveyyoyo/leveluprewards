@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, LogOut, Maximize2, Menu, Minimize2, X } from 'lucide-react';
+import { Building2, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -67,7 +67,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
     }
   }, [activeId, navItems, router, schoolId]);
   const { term: workingTerm } = useOfficeTerm(schoolId);
-  const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
+  const { isWide } = useOfficeLayoutMode();
 
   return (
     <div
@@ -227,17 +227,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                 <OfficeUniversalSearch />
                 <OfficeInterfaceSettingsSheet schoolId={schoolId} />
                 <OfficeAiHelpButton />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="hidden h-8 w-8 rounded-lg sm:inline-flex"
-                  onClick={toggleLayoutMode}
-                  aria-label={isWide ? 'Use standard centered layout' : 'Use wide full-screen layout'}
-                  title={isWide ? 'Standard layout' : 'Wide layout'}
-                >
-                  {isWide ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                </Button>
               </div>
             </div>
           </header>

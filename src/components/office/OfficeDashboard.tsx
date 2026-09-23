@@ -204,7 +204,7 @@ export function OfficeDashboard({
                 </Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full gap-1.5">
-                <Link href={`${officePublicHref(schoolId, 'settings')}#import`}>
+                <Link href={`${officePublicHref(schoolId, 'settings')}?tab=import`}>
                   <Upload className="h-4 w-4" />
                   Import spreadsheet
                 </Link>

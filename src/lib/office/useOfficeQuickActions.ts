@@ -60,7 +60,7 @@ export function buildOfficeQuickActions(params: {
     base('record-payment', hrefFor('billing', 'filter=open'), 'Record payment', loginState === 'office' ? 3 : 0),
     base('family-profile', hrefFor('students', 'action=family'), 'Family profile', 1),
     base('reports', hrefFor('reports'), 'Reports', 0),
-    base('import', `${hrefFor('settings')}#import`, 'Import data', loginState === 'admin' ? 2 : 0),
+    base('import', `${hrefFor('settings')}?tab=import`, 'Import data', loginState === 'admin' ? 2 : 0),
   ];
 
   return all.sort((a, b) => b.score - a.score).slice(0, 4);

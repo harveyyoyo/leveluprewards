@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle, CalendarCheck, CheckCircle2, CreditCard, GraduationCap, Users } from 'lucide-react';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
+import { OfficeBillingSummaryChart } from '@/components/office/OfficeBillingSummaryChart';
 import { useOfficeAttendanceSince } from '@/lib/office/useOfficeAttendance';
 import { useOfficeForms } from '@/lib/office/useOfficeForms';
 import { formatCents } from '@/lib/office/officeNav';
@@ -115,6 +116,8 @@ export function OfficeSchoolHealthReport({
           );
         })}
       </div>
+
+      {invoices.length > 0 ? <OfficeBillingSummaryChart invoices={invoices} /> : null}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Also worth a look</p>
