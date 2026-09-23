@@ -7,7 +7,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
-import { schoolPortalHref } from '@/lib/officePublicUrl';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
@@ -95,7 +94,10 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             // instead of stretching to match the main content's height — otherwise a long page
             // (e.g. a big student roster) drags the sidebar's own bottom section far below the
             // fold, leaving a blank gap where the nav used to be as you scroll.
-            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shrink-0 lg:translate-x-0 lg:overflow-y-auto',
+            // Fixed height, no overflow of its own — the header and footer below always stay
+            // put, and only the nav list (which has its own `overflow-y-auto`) scrolls if
+            // there isn't room for every section.
+            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shrink-0 lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -119,7 +121,10 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             </Button>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          {/* `min-h-0` overrides a flex item's default `min-height: auto`, which otherwise
+              forces this nav to grow to fit every item instead of shrinking and scrolling —
+              the classic reason a flex child with `overflow-y-auto` refuses to actually scroll. */}
+          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeId;
@@ -161,12 +166,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               <LogOut className="h-4 w-4" />
               Sign out
             </Button>
-            <Link
-              href={schoolPortalHref(schoolId)}
-              className="block rounded-lg px-3 py-2 text-center text-xs text-teal-200/80 hover:bg-white/5"
-            >
-              Back to main portal
-            </Link>
             <p className="px-2 pt-1 text-[10px] text-teal-200/50 text-center">
               v{process.env.NEXT_PUBLIC_VERSION}
               {process.env.NEXT_PUBLIC_BUILD_TIME ? ` · ${process.env.NEXT_PUBLIC_BUILD_TIME}` : ''}
