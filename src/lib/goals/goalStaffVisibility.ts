@@ -13,9 +13,23 @@ export function canManageGoal(goal: Goal, viewer: GoalStaffViewer): boolean {
 
 export function canSeeStaffGoal(goal: Goal, viewer: GoalStaffViewer): boolean {
   if (viewer.isAdmin || viewer.seeAll) return true;
-  return goal.staffVisibility === 'all' || canManageGoal(goal, viewer);
+  if (goal.staffVisibility === 'all') return true;
+  if (canManageGoal(goal, viewer)) return true;
+  if (goal.staffVisibility === 'specific' && Array.isArray(goal.sharedStaffIds)) {
+    if (viewer.staffId && goal.sharedStaffIds.includes(viewer.staffId)) return true;
+    if (viewer.teacherId) {
+      if (goal.sharedStaffIds.includes(viewer.teacherId)) return true;
+      if (goal.sharedStaffIds.includes(`teacher:${viewer.teacherId}`)) return true;
+    }
+    if (viewer.staffId) {
+      const stripped = viewer.staffId.replace(/^(teacher|staff|admin):/, '');
+      if (stripped && goal.sharedStaffIds.includes(stripped)) return true;
+    }
+  }
+  return false;
 }
 
-export function goalStaffVisibility(goal: Goal): 'creator' | 'all' {
+export function goalStaffVisibility(goal: Goal): 'creator' | 'all' | 'specific' {
+  if (goal.staffVisibility === 'specific') return 'specific';
   return goal.staffVisibility ?? (goal.teacherId || goal.assignedByStaffId ? 'creator' : 'all');
 }

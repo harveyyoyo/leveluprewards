@@ -2359,6 +2359,7 @@ function TeacherPrinterInnerBody({
                                                 classes={classesForTeacherUi}
                                                 categories={categories ?? []}
                                                 prizes={prizes ?? []}
+                                                teachers={teachers || []}
                                                 isGraphic={isGraphic}
                                             />
                                     </TeacherPortalTabPane>

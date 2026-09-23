@@ -37,4 +37,19 @@ describe('staff goal lists', () => {
     expect(canSeeStaffGoal(unknown, admin)).toBe(true);
     expect(canManageGoal(unknown, admin)).toBe(true);
   });
+  it('shares a goal with specific staff members while hiding from others', () => {
+    const specific = { ...base, staffVisibility: 'specific' as const, sharedStaffIds: ['two'] };
+    const third = { staffId: 'teacher:three', teacherId: 'three', isAdmin: false };
+    expect(canSeeStaffGoal(specific, other)).toBe(true);
+    expect(canManageGoal(specific, other)).toBe(false);
+    expect(canSeeStaffGoal(specific, third)).toBe(false);
+    expect(canSeeStaffGoal(specific, teacher)).toBe(true);
+    expect(canManageGoal(specific, teacher)).toBe(true);
+    expect(canSeeStaffGoal(specific, admin)).toBe(true);
+    expect(canSeeStaffGoal(specific, office)).toBe(true);
+  });
+  it('recognizes staffId with teacher prefix in sharedStaffIds', () => {
+    const specific = { ...base, staffVisibility: 'specific' as const, sharedStaffIds: ['teacher:two'] };
+    expect(canSeeStaffGoal(specific, other)).toBe(true);
+  });
 });

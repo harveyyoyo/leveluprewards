@@ -2255,6 +2255,7 @@ function AdminDashboardInner() {
               classes={classes || []}
               categories={categories || []}
               prizes={prizes || []}
+              teachers={teachers || []}
             />
           </TabsContent>
 
