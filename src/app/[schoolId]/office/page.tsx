@@ -11,12 +11,12 @@ import { useAppContext } from '@/components/AppProvider';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
-import { populateDemoOfficeDataForSchool } from '@/lib/office/populateDemoOfficeData';
+import { addDemoFamiliesToSchool, populateDemoOfficeDataForSchool } from '@/lib/office/populateDemoOfficeData';
 
 export default function OfficeHomePage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { schoolId, isAdmin, loginState } = useAppContext();
+  const { schoolId, isAdmin, loginState, userName } = useAppContext();
   const { gradeEntries, billingAccounts, invoices, isOfficeDataLoading } = useOfficePortalData();
   const shared = useOfficeSharedData(schoolId, true);
   const { term, setTerm, configuredTerms } = useOfficeTerm(schoolId);
@@ -76,8 +76,33 @@ export default function OfficeHomePage() {
     }
   };
 
+  const studentsWithoutFamily = shared.students.filter((s) => !s.familyId).length;
+
+  const handleAddDemoFamilies = async () => {
+    if (!firestore || !schoolId || isPopulatingDemoData) return;
+    setIsPopulatingDemoData(true);
+    try {
+      const result = await addDemoFamiliesToSchool(firestore, schoolId, {
+        students: shared.students,
+        families: shared.families,
+        billingAccounts,
+        changedBy: userName,
+      });
+      toast({
+        title: 'Demo families added',
+        description: `${result.familiesAdded} families, ${result.studentsLinked} students linked.`,
+      });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not add demo families', description: (e as Error).message });
+    } finally {
+      setIsPopulatingDemoData(false);
+    }
+  };
+
   return (
     <OfficeDashboard
+      demoStudentsWithoutFamily={canPopulateDemoData ? studentsWithoutFamily : 0}
+      onAddDemoFamilies={() => void handleAddDemoFamilies()}
       schoolId={schoolId}
       studentCount={shared.students.length}
       classCount={shared.classes.length}

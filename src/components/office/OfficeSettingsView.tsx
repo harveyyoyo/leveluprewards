@@ -29,6 +29,7 @@ import { Switch } from '@/components/ui/switch';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
+import { OfficeStudentFieldsSettings } from '@/components/office/OfficeStudentFieldsSettings';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
@@ -423,6 +424,10 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           {prefsBusy ? 'Saving…' : 'Save term & name changes'}
         </Button>
       </section>
+
+      {roleVerified ? (
+        <OfficeStudentFieldsSettings schoolId={schoolId} fields={settings?.studentCustomFields ?? []} />
+      ) : null}
 
       {roleVerified ? (
         <OfficeAiImportSection

@@ -37,6 +37,8 @@ export type OfficeFamily = {
   id: string;
   displayName: string;
   contacts: OfficeFamilyContact[];
+  /** Home address on one line, e.g. "12 Oak St, Springfield, NJ 07081". */
+  homeAddress?: string | null;
   medicalNotes?: string | null;
   legalNotes?: string | null;
   busRoute?: string | null;
@@ -73,9 +75,34 @@ export type OfficeStudent = {
   tags?: string[] | null;
   /** Defaults to `active` when unset. Withdrawn/graduated students are hidden from the main roster by default. */
   status?: 'active' | 'withdrawn' | 'graduated' | null;
+  /** Optional details — see `OFFICE_STUDENT_DETAIL_FIELDS`. */
+  studentNumber?: string | null;
+  gender?: string | null;
+  /** ISO date `YYYY-MM-DD`. */
+  enrollmentDate?: string | null;
+  previousSchool?: string | null;
+  homeLanguage?: string | null;
+  allergies?: string | null;
+  healthNotes?: string | null;
+  pickupNotes?: string | null;
+  /** Values for school-defined fields, keyed by `OfficeCustomFieldDef.id`. */
+  customFields?: Record<string, OfficeCustomFieldValue> | null;
   updatedAt: number;
   archived?: boolean;
   archivedAt?: number;
+};
+
+export type OfficeCustomFieldType = 'text' | 'longText' | 'number' | 'date' | 'yesNo' | 'choice';
+export type OfficeCustomFieldValue = string | number | boolean | null;
+
+/** A school-defined student field, created in Settings. Never deleted — hiding keeps saved values. */
+export type OfficeCustomFieldDef = {
+  id: string;
+  label: string;
+  type: OfficeCustomFieldType;
+  /** Choices for `choice` fields. */
+  options?: string[];
+  archived?: boolean;
 };
 
 export type OfficeClass = {
@@ -305,6 +332,8 @@ export type OfficeSettings = {
   /** When true, UI says "Marks" instead of "Grades". */
   useMarksTerminology?: boolean;
   features?: OfficeFeatureFlags | null;
+  /** Extra student fields this school added in Settings. */
+  studentCustomFields?: OfficeCustomFieldDef[] | null;
   updatedAt: number;
   updatedBy?: string | null;
 };

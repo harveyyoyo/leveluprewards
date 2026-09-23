@@ -28,6 +28,17 @@ import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { OfficeStudentPhotoUpload } from '@/components/office/OfficeStudentPhotoUpload';
 import { OfficeStudentDocumentsPanel } from '@/components/office/OfficeStudentDocumentsPanel';
 import { safeString } from '@/lib/safeDisplayValue';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { OfficeCustomFieldInput } from '@/components/office/OfficeCustomFieldInput';
+import {
+  OFFICE_STUDENT_DETAIL_FIELDS,
+  officeStudentFilledDetails,
+  parseOfficeFieldInput,
+  type OfficeStudentDetailKey,
+} from '@/lib/office/officeStudentFields';
+import type { OfficeCustomFieldValue } from '@/lib/office/types';
 
 type StudentStatus = NonNullable<OfficeStudent['status']>;
 
@@ -70,6 +81,7 @@ export function OfficeStudentSheet({
   const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
   const { features } = useOfficePortalChrome();
+  const { openFamily } = useOfficeEntityNav();
 
   const teacherNameById = useMemo(() => new Map(teachers.map((t) => [t.id, t.name])), [teachers]);
 
@@ -85,9 +97,26 @@ export function OfficeStudentSheet({
   const [tagsText, setTagsText] = useState('');
   const [busy, setBusy] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [details, setDetails] = useState<Partial<Record<OfficeStudentDetailKey, string>>>({});
+  const [customValues, setCustomValues] = useState<Record<string, string | boolean | null>>({});
+  const { settings: officeSettings } = useOfficePortalChrome();
+  const activeCustomDefs = useMemo(
+    () => (officeSettings?.studentCustomFields ?? []).filter((d) => !d.archived),
+    [officeSettings?.studentCustomFields],
+  );
 
   useEffect(() => {
     if (student) {
+      setDetails(
+        Object.fromEntries(OFFICE_STUDENT_DETAIL_FIELDS.map((f) => [f.key, student[f.key] ?? ''])) as Partial<
+          Record<OfficeStudentDetailKey, string>
+        >,
+      );
+      setCustomValues(
+        Object.fromEntries(
+          Object.entries(student.customFields ?? {}).map(([k, v]) => [k, typeof v === 'boolean' ? v : v == null ? '' : String(v)]),
+        ),
+      );
       setFirstName(student.firstName ?? '');
       setLastName(student.lastName ?? '');
       setNickname(student.nickname ?? '');
@@ -125,6 +154,7 @@ export function OfficeStudentSheet({
   if (!student) return null;
 
   const name = getOfficeStudentFullName(student);
+  const filledDetails = officeStudentFilledDetails(student, officeSettings?.studentCustomFields ?? []);
   const grades = gradesForStudent(gradeEntries, student.id);
   const termGrades = grades.filter((g) => g.termLabel === activeTerm);
   const account = billingAccountForStudent(billingAccounts, student.id);
@@ -147,6 +177,21 @@ export function OfficeStudentSheet({
         .split(',')
         .map((t) => t.trim())
         .filter(Boolean);
+      const detailPatch = Object.fromEntries(
+        OFFICE_STUDENT_DETAIL_FIELDS.map((f) => [f.key, details[f.key]?.trim() || null]),
+      ) as Partial<Record<OfficeStudentDetailKey, string | null>>;
+      // Start from what's stored so values of hidden custom fields are never lost.
+      const nextCustom: Record<string, OfficeCustomFieldValue> = { ...(student.customFields ?? {}) };
+      for (const def of activeCustomDefs) {
+        nextCustom[def.id] = parseOfficeFieldInput(def.type, customValues[def.id] ?? null);
+      }
+      // Name the extra details that changed, so the history says what was edited.
+      const changedLabels = [
+        ...OFFICE_STUDENT_DETAIL_FIELDS.filter((f) => (student[f.key] ?? null) !== detailPatch[f.key]).map((f) => f.label),
+        ...activeCustomDefs
+          .filter((d) => (student.customFields?.[d.id] ?? null) !== (nextCustom[d.id] ?? null))
+          .map((d) => d.label),
+      ];
       await write.updateOfficeStudent(
         write.ctx,
         student.id,
@@ -162,13 +207,57 @@ export function OfficeStudentSheet({
           dateOfBirth: dateOfBirth || null,
           status,
           tags: tags.length > 0 ? tags : null,
+          ...detailPatch,
+          customFields: nextCustom,
         },
-        `Updated student ${firstName.trim()} ${lastName.trim()}`.trim(),
+        `Updated student ${firstName.trim()} ${lastName.trim()}${changedLabels.length ? ` · ${changedLabels.join(', ')}` : ''}`.trim(),
       );
       toast({ title: 'Student profile updated' });
       setIsEditing(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Update failed', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createFamilyForStudent = async () => {
+    if (!write.ctx) return;
+    setBusy(true);
+    try {
+      const familyId = await write.upsertOfficeFamily(write.ctx, null, {
+        displayName: `${student.lastName?.trim() || student.firstName} family`,
+        contacts: [],
+        medicalNotes: null,
+        legalNotes: null,
+        busRoute: student.busRoute ?? null,
+        busNotes: null,
+        generalNotes: null,
+      });
+      await write.updateOfficeStudent(write.ctx, student.id, { familyId }, `Linked ${name} to a new family`);
+      toast({ title: 'Family created', description: 'Open it to add parents and contacts.' });
+      openFamily(familyId);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not create the family', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const joinFamily = async (familyId: string) => {
+    if (!write.ctx) return;
+    const target = families.find((f) => f.id === familyId);
+    setBusy(true);
+    try {
+      await write.updateOfficeStudent(
+        write.ctx,
+        student.id,
+        { familyId },
+        `Added ${name} to ${safeString(target?.displayName) || 'a family'}`,
+      );
+      toast({ title: `Added to ${safeString(target?.displayName) || 'family'}` });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not add to the family', description: (e as Error).message });
     } finally {
       setBusy(false);
     }
@@ -228,6 +317,15 @@ export function OfficeStudentSheet({
                   >
                     <AlertTriangle className="h-3 w-3" aria-hidden />
                     Medical
+                  </span>
+                ) : null}
+                {student.allergies?.trim() ? (
+                  <span
+                    className="flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-amber-900 dark:bg-amber-950/50 dark:text-amber-200"
+                    title={`Allergies: ${student.allergies}`}
+                  >
+                    <AlertTriangle className="h-3 w-3" aria-hidden />
+                    Allergies
                   </span>
                 ) : null}
               </div>
@@ -368,19 +466,61 @@ export function OfficeStudentSheet({
                 onClick={() => setShowMore((v) => !v)}
               >
                 {showMore ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                {showMore ? 'Hide tags' : 'More (tags)'}
+                {showMore ? 'Hide more details' : 'More details (ID, health, pickup…)'}
               </Button>
             </div>
 
             {showMore ? (
-              <div className="space-y-1.5 rounded-xl border bg-muted/20 p-3">
-                <Label>Tags (optional, comma-separated)</Label>
-                <Input
-                  value={tagsText}
-                  onChange={(e) => setTagsText(e.target.value)}
-                  placeholder="e.g. needs a ride, scholarship"
-                  className="rounded-xl"
-                />
+              <div className="space-y-3 rounded-xl border bg-muted/20 p-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {OFFICE_STUDENT_DETAIL_FIELDS.map((f) => (
+                    <div key={f.key} className={cn('space-y-1.5', f.type === 'longText' && 'col-span-2')}>
+                      <Label htmlFor={`student-${f.key}`}>{f.label}</Label>
+                      {f.type === 'longText' ? (
+                        <Textarea
+                          id={`student-${f.key}`}
+                          value={details[f.key] ?? ''}
+                          onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
+                          placeholder={f.placeholder}
+                          className="min-h-[64px] rounded-xl"
+                        />
+                      ) : (
+                        <Input
+                          id={`student-${f.key}`}
+                          type={f.type === 'date' ? 'date' : 'text'}
+                          value={details[f.key] ?? ''}
+                          onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
+                          placeholder={f.placeholder}
+                          className="rounded-xl"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {activeCustomDefs.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3 border-t pt-3">
+                    {activeCustomDefs.map((def) => (
+                      <OfficeCustomFieldInput
+                        key={def.id}
+                        def={def}
+                        value={customValues[def.id] ?? null}
+                        onChange={(v) => setCustomValues((c) => ({ ...c, [def.id]: v }))}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="space-y-1.5 border-t pt-3">
+                  <Label>Tags (comma-separated)</Label>
+                  <Input
+                    value={tagsText}
+                    onChange={(e) => setTagsText(e.target.value)}
+                    placeholder="e.g. needs a ride, scholarship"
+                    className="rounded-xl"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">Need another field? Add your own in Settings → Student fields.</p>
               </div>
             ) : null}
 
@@ -444,6 +584,9 @@ export function OfficeStudentSheet({
                 {family ? (
                   <div className="mt-2 rounded-xl border bg-muted/30 p-3 text-sm space-y-2">
                     <p className="font-semibold">{safeString(family.displayName)}</p>
+                    {family.homeAddress?.trim() ? (
+                      <p className="text-muted-foreground">{family.homeAddress}</p>
+                    ) : null}
                     {primaryContact ? (
                       <div className="space-y-1 text-muted-foreground">
                         <p>{safeString(primaryContact.name)}</p>
@@ -481,7 +624,40 @@ export function OfficeStudentSheet({
                     ) : null}
                   </div>
                 ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">No family profile linked yet.</p>
+                  <div className="mt-2 space-y-2 rounded-xl border border-dashed p-3">
+                    <p className="text-sm text-muted-foreground">
+                      No family yet. A family keeps parents&apos; contacts and notes in one place for all siblings.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-lg text-xs"
+                        disabled={busy}
+                        onClick={() => void createFamilyForStudent()}
+                      >
+                        Create family
+                      </Button>
+                      {families.length > 0 ? (
+                        <Select value="" onValueChange={(id) => id && void joinFamily(id)} disabled={busy}>
+                          <SelectTrigger className="h-8 w-52 rounded-lg text-xs" aria-label="Add to an existing family">
+                            <SelectValue placeholder="Or add to a family…" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {families
+                              .slice()
+                              .sort((a, b) => safeString(a.displayName).localeCompare(safeString(b.displayName)))
+                              .map((f) => (
+                                <SelectItem key={f.id} value={f.id}>
+                                  {safeString(f.displayName)}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      ) : null}
+                    </div>
+                  </div>
                 )}
               </section>
             ) : null}
@@ -575,6 +751,30 @@ export function OfficeStudentSheet({
                 <p className="mt-2 text-sm text-muted-foreground">No attendance recorded yet.</p>
               )}
             </section>
+
+            {student.allergies?.trim() || filledDetails.length > 0 ? (
+              <section>
+                <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Details</h3>
+                {student.allergies?.trim() ? (
+                  <p className="mt-2 flex items-start gap-1.5 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                    <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>
+                      <span className="font-medium">Allergies:</span> {student.allergies}
+                    </span>
+                  </p>
+                ) : null}
+                {filledDetails.length > 0 ? (
+                  <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    {filledDetails.map((row) => (
+                      <div key={row.label} className={cn(row.long && 'col-span-2')}>
+                        <dt className="text-xs text-muted-foreground">{row.label}</dt>
+                        <dd className="whitespace-pre-wrap break-words">{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </section>
+            ) : null}
 
             {student.notes?.trim() && (
               <section>

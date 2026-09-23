@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
+import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
 import type {
   OfficeBillingAccount,
   OfficeFamily,
@@ -70,6 +71,7 @@ export function OfficeFamilySheet({
 
   const [displayName, setDisplayName] = useState('');
   const [contacts, setContacts] = useState<OfficeFamilyContact[]>([]);
+  const [homeAddress, setHomeAddress] = useState('');
   const [medicalNotes, setMedicalNotes] = useState('');
   const [legalNotes, setLegalNotes] = useState('');
   const [busRoute, setBusRoute] = useState('');
@@ -80,6 +82,7 @@ export function OfficeFamilySheet({
     if (!open) return;
     setDisplayName(family ? safeString(family.displayName) : '');
     setContacts(family?.contacts?.length ? family.contacts : [newContact()]);
+    setHomeAddress(family ? safeString(family.homeAddress) : '');
     setMedicalNotes(family ? safeString(family.medicalNotes) : '');
     setLegalNotes(family ? safeString(family.legalNotes) : '');
     setBusRoute(family ? safeString(family.busRoute) : '');
@@ -124,6 +127,7 @@ export function OfficeFamilySheet({
       await write.upsertOfficeFamily(write.ctx, family?.id ?? null, {
         displayName: displayName.trim(),
         contacts: cleanedContacts,
+        homeAddress: homeAddress.trim() || null,
         medicalNotes: medicalNotes.trim() || null,
         legalNotes: legalNotes.trim() || null,
         busRoute: busRoute.trim() || null,
@@ -165,6 +169,10 @@ export function OfficeFamilySheet({
               <div className="space-y-1.5">
                 <Label>Family / household name</Label>
                 <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="office-family-address">Home address</Label>
+                <OfficeAddressInput id="office-family-address" value={homeAddress} onChange={setHomeAddress} />
               </div>
               {linkedStudents.length > 0 ? (
                 <div className="rounded-xl border p-3 text-sm">

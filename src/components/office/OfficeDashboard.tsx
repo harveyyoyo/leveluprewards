@@ -39,6 +39,9 @@ type OfficeDashboardProps = {
   schoolDefaultTerm?: string | null;
   configuredTerms?: string[];
   showAttendance?: boolean;
+  /** Demo schools only: students still without a family, and the action that fills them in. */
+  demoStudentsWithoutFamily?: number;
+  onAddDemoFamilies?: () => void;
 };
 
 type StatTile = {
@@ -60,6 +63,8 @@ export function OfficeDashboard({
   onPopulateDemoData,
   activeTerm,
   showAttendance = true,
+  demoStudentsWithoutFamily = 0,
+  onAddDemoFamilies,
 }: OfficeDashboardProps) {
   const gradePct =
     insights.termSubjects.length > 0
@@ -222,8 +227,21 @@ export function OfficeDashboard({
             onClick={onPopulateDemoData}
           >
             <RefreshCw className={cn('h-3 w-3', isPopulatingDemoData && 'animate-spin')} />
-            {isPopulatingDemoData ? 'Loading demo data…' : 'Load demo office data'}
+            {isPopulatingDemoData ? 'Working…' : 'Load demo office data'}
           </button>
+          {demoStudentsWithoutFamily > 0 && onAddDemoFamilies ? (
+            <>
+              {' · '}
+              <button
+                type="button"
+                className="underline-offset-2 hover:underline disabled:opacity-50"
+                disabled={isPopulatingDemoData}
+                onClick={onAddDemoFamilies}
+              >
+                Add demo families ({demoStudentsWithoutFamily} students)
+              </button>
+            </>
+          ) : null}
         </p>
       ) : null}
     </div>

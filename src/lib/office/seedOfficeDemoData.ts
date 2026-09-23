@@ -24,6 +24,7 @@ export const OFFICE_DEMO_COLLECTIONS = [
   'officeTeachers',
   'officeStudents',
   'officeClasses',
+  'officeFamilies',
   'officeGradeEntries',
   'officeBillingAccounts',
   'officeInvoices',
@@ -61,6 +62,10 @@ export async function writeOfficeDemoSeedToFirestore(
   for (const c of payload.officeClasses) {
     const { id, ...data } = c;
     ops.push({ collection: 'officeClasses', id, data });
+  }
+  for (const f of payload.officeFamilies) {
+    const { id, ...data } = f;
+    ops.push({ collection: 'officeFamilies', id, data });
   }
   for (const s of payload.officeStudents) {
     const { id, ...data } = s;
