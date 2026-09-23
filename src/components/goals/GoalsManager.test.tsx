@@ -86,6 +86,33 @@ describe('Goals manager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ hiddenFromStudents: true })));
   });
+  it('raises the target of a finished goal and makes it current again', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = { ...original, status: 'completed', ...{ completedAt: 5, completedProgress: 50 } };
+    try {
+      await act(async () => { showGoals(); });
+      fireEvent.click(screen.getByRole('button', { name: /Finished/ }));
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Raise target' }));
+      expect(screen.getByLabelText('New target points')).toHaveValue('100');
+      fireEvent.change(screen.getByLabelText('New target points'), { target: { value: '40' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Raise target' }).at(-1)!);
+      expect(updateGoal).not.toHaveBeenCalled();
+      fireEvent.change(screen.getByLabelText('New target points'), { target: { value: '100' } });
+      fireEvent.click(screen.getAllByRole('button', { name: 'Raise target' }).at(-1)!);
+      await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({
+        status: 'active', targetPoints: 100, targetRaises: 1,
+        clearFields: expect.arrayContaining(['completedAt', 'completedProgress']),
+      })));
+    } finally { fixtures.goals[0] = original; }
+  });
+  it('names a goal from its target and category, with no title box', async () => {
+    await act(async () => { showGoals(); });
+    openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
+    expect(screen.getByText('50 Kindness points')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: '50 Kindness points' })));
+  });
   it('requires a category for a points goal', async () => {
     const original = fixtures.goals[0];
     fixtures.goals[0] = { ...original, ...{ categoryId: undefined as unknown as string } };
@@ -106,7 +133,7 @@ describe('Goals manager', () => {
         render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={rewards} />);
       });
       openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
-      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
       expect(screen.getByLabelText('How do they get the prize?')).toHaveTextContent('Give it to them free when they finish');
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({
@@ -123,7 +150,7 @@ describe('Goals manager', () => {
         render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={rewards} />);
       });
       openGoal(/Old name/); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
-      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: 'Save for Lunch with Teacher' })));
     } finally { fixtures.goals[0] = original; }
@@ -139,15 +166,14 @@ describe('Goals manager', () => {
   });
   it('opens existing details and saves edits while clearing optional values', async () => {
     await act(async () => { showGoals(); });
-    expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Title/)).not.toBeInTheDocument();
     expect(screen.getByText(/Alex Sample/)).toBeInTheDocument();
     openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
-    expect(screen.getByLabelText('Title')).toHaveValue('Kindness target');
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New target' } });
+    fireEvent.change(screen.getByLabelText('Target points'), { target: { value: '80' } });
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Bonus on completion (optional)'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
-    await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: 'New target', clearFields: expect.arrayContaining(['description', 'bonusPointsReward']) })));
+    await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: '80 Kindness points', clearFields: expect.arrayContaining(['description', 'bonusPointsReward']) })));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 

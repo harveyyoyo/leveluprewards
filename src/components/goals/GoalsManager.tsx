@@ -37,7 +37,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, CalendarPlus, Check, ChevronDown, ChevronsUpDown, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
+import { Archive, CalendarPlus, Check, ChevronDown, ChevronsUpDown, Loader2, Pencil, Plus, RotateCcw, Target, Trash2, TrendingUp } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Progress } from '@/components/ui/progress';
@@ -210,6 +210,9 @@ export function GoalsManager(props: {
   const [editForm, setEditForm] = useState<GoalFormState>(emptyForm);
   const [editStudentSearch, setEditStudentSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Goal | null>(null);
+  const [raiseTarget, setRaiseTarget] = useState<Goal | null>(null);
+  const [raiseValue, setRaiseValue] = useState('');
+  const [raiseEndDate, setRaiseEndDate] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [studentPickerOpen, setStudentPickerOpen] = useState<'create' | 'edit' | null>(null);
   const [expandedGoalIds, setExpandedGoalIds] = useState<Set<string>>(() => new Set());
@@ -357,7 +360,13 @@ export function GoalsManager(props: {
     if (prize) {
       return state.goalType === 'prize_savings' ? titleForPrizeSavings(prize) : `Earn ${(prize.name || 'reward').trim()}`;
     }
-    return state.title.trim();
+    // Student wishlist goals whose reward was removed keep their saved title.
+    if (state.goalType === 'prize_savings') return state.title.trim();
+    // Otherwise the system names it from the target and category, e.g. "50 Kindness points".
+    const tp = Number(state.targetPoints);
+    const category = categories?.find((c) => c.id === state.categoryId)?.name;
+    if (!Number.isSafeInteger(tp) || tp <= 0) return '';
+    return `${tp.toLocaleString()} ${category ? `${category} ` : ''}points`;
   };
 
   const applyPrizeAutofill = (prizeId: string, target: 'create' | 'edit') => {
@@ -396,8 +405,11 @@ export function GoalsManager(props: {
     if (state.goalType === 'prize_savings' && !goalTitleFor(state)) {
       return 'Choose the reward they are saving for.';
     }
-    if (!goalTitleFor(state) || !Number.isSafeInteger(tp) || tp <= 0) {
-      return 'Enter a title and a positive target.';
+    if (!Number.isSafeInteger(tp) || tp <= 0) {
+      return 'Enter a target of 1 point or more.';
+    }
+    if (!goalTitleFor(state)) {
+      return 'Choose the reward they are saving for.';
     }
     if (state.goalType !== 'prize_savings' && (!state.categoryId || state.categoryId === '__none__')) {
       return 'Choose which category counts toward this goal.';
@@ -554,6 +566,44 @@ export function GoalsManager(props: {
     }
   };
 
+  const openRaise = (goal: Goal) => {
+    if (!canManageGoal(goal, staffViewer)) return;
+    setRaiseTarget(goal);
+    setRaiseValue(String(Number(goal.targetPoints || 0) * 2));
+    // A deadline that already passed would send the goal straight to Past due.
+    setRaiseEndDate(goal.endDate && goal.endDate > Date.now() ? dateInputFromMs(goal.endDate) : '');
+  };
+
+  const handleRaise = async () => {
+    if (!firestore || !schoolId || !raiseTarget || !canManageGoal(raiseTarget, staffViewer)) return;
+    const next = Number(raiseValue);
+    if (!Number.isSafeInteger(next) || next <= Number(raiseTarget.targetPoints || 0)) {
+      toast({ variant: 'destructive', title: 'Check the new target', description: `Enter a number higher than ${raiseTarget.targetPoints}.` });
+      return;
+    }
+    const endDate = msFromDateInput(raiseEndDate, true);
+    setSaving(true);
+    try {
+      const clearFields: Array<keyof Goal> = ['completedAt', 'completedProgress', 'prizeAwardProblem'];
+      if (!endDate) clearFields.push('endDate');
+      await updateGoal(firestore, schoolId, raiseTarget.id, {
+        status: 'active',
+        targetPoints: next,
+        title: goalTitleFor({ ...formFromGoal(raiseTarget), targetPoints: String(next) }) || raiseTarget.title,
+        targetRaises: (raiseTarget.targetRaises ?? 0) + 1,
+        ...(endDate ? { endDate } : {}),
+        clearFields,
+      });
+      toast({ title: 'Target raised', description: `"${raiseTarget.title}" is back in Current goals, now aiming for ${next.toLocaleString()} points.` });
+      setRaiseTarget(null);
+      setSection('active');
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Could not raise the target', description: e instanceof Error ? e.message : 'Try again.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleArchive = async (goal: Goal, archived: boolean) => {
     if (!firestore || !schoolId || !canManageGoal(goal, staffViewer)) return;
     try {
@@ -691,7 +741,14 @@ export function GoalsManager(props: {
             ) : null}
           </SelectContent>
         </Select>
-        <p className="text-sm text-muted-foreground">Only points earned in this category, such as Kindness, count toward the goal.</p>
+        <p className="text-sm text-muted-foreground">
+          {(() => {
+            const picked = categories?.find((c) => c.id === state.categoryId)?.name;
+            return picked
+              ? `Only points earned in ${picked} count toward this goal.`
+              : 'Only points earned in the category you choose count toward this goal.';
+          })()}
+        </p>
       </div>}
 
       <div className="space-y-2">
@@ -719,7 +776,7 @@ export function GoalsManager(props: {
         <p className="text-sm text-muted-foreground">
           {state.prizeId !== '__none__'
             ? 'The goal is named after this prize, and the target is set to its cost.'
-            : 'Pick a prize to name the goal after it, or leave it off and write your own title.'}
+            : 'Optional. Pick a prize they are working toward, or leave it off.'}
         </p>
       </div>
 
@@ -741,16 +798,6 @@ export function GoalsManager(props: {
         </p>
       </div>}
 
-      {state.prizeId === '__none__' && <div className="space-y-2">
-        <Label htmlFor={`goal-title-${target}`}>Title</Label>
-        <Input
-          id={`goal-title-${target}`}
-          className="rounded-xl"
-          value={state.title}
-          onChange={(e) => patchForm({ title: e.target.value }, target)}
-          placeholder="e.g. 50 kindness points this month"
-        />
-      </div>}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -764,6 +811,10 @@ export function GoalsManager(props: {
           />
         </div>
       </div>
+
+      <p className="rounded-xl bg-muted px-3 py-2 text-sm">
+        Goal name: <span className="font-semibold">{goalTitleFor(state) || 'Set a target to name this goal'}</span>
+      </p>
 
       {state.goalType === 'prize_savings' ? (
         <p className="rounded-xl bg-muted p-3 text-sm">This is a student wishlist goal. It uses the student’s current balance, so spending points can lower progress until it is finished.</p>
@@ -1031,6 +1082,17 @@ export function GoalsManager(props: {
                               <p className="text-sm font-medium">{g.status === 'completed' ? 'Finished — well done!' : `${Math.max(0, Number(g.targetPoints) - p).toLocaleString()} more points to go`}</p>
                             </div>
                           {canManageGoal(g, staffViewer) && <div className="flex flex-wrap gap-1">
+                            {g.status === 'completed' && !g.archived && g.type !== 'prize_savings' ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 gap-1 px-2"
+                                onClick={() => openRaise(g)}
+                                aria-label="Raise target"
+                              >
+                                <TrendingUp className="w-4 h-4" />Raise target
+                              </Button>
+                            ) : null}
                             {section === 'past_due' ? (
                               <Button
                                 variant="ghost"
@@ -1109,6 +1171,57 @@ export function GoalsManager(props: {
             <Button onClick={handleSaveEdit} disabled={saving}>
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!raiseTarget} onOpenChange={(open) => !open && !saving && setRaiseTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Raise the target</DialogTitle>
+            <DialogDescription>
+              Keep going from here. Points already earned still count, so progress picks up from{' '}
+              {Number(raiseTarget?.targetPoints ?? 0).toLocaleString()} toward the new target.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="goal-raise-target">New target points</Label>
+              <Input
+                id="goal-raise-target"
+                className="rounded-xl"
+                inputMode="numeric"
+                value={raiseValue}
+                onChange={(e) => setRaiseValue(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="goal-raise-end">New end date (optional)</Label>
+              <Input
+                id="goal-raise-end"
+                type="date"
+                className="rounded-xl"
+                value={raiseEndDate}
+                onChange={(e) => setRaiseEndDate(e.target.value)}
+              />
+            </div>
+            {(!!raiseTarget?.bonusPointsReward || (raiseTarget?.prizeId && raiseTarget.prizeReward === 'free')) && (
+              <p className="rounded-xl bg-muted p-3 text-sm">
+                When they reach the new target, they get{' '}
+                {[
+                  raiseTarget?.bonusPointsReward ? `the ${raiseTarget.bonusPointsReward}-point bonus` : null,
+                  raiseTarget?.prizeId && raiseTarget.prizeReward === 'free' ? 'the free prize' : null,
+                ].filter(Boolean).join(' and ')}{' '}
+                again. To change that, edit the goal after raising it.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" disabled={saving} onClick={() => setRaiseTarget(null)}>Cancel</Button>
+            <Button disabled={saving} onClick={() => void handleRaise()}>
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Raise target
             </Button>
           </DialogFooter>
         </DialogContent>

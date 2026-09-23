@@ -136,7 +136,7 @@ async function giveGoalPrize(
   for (const studentId of recipients) {
     try {
       await redeemPrize(firestore, schoolId, studentId, prize, 1, 0, {
-        receiptId: `goal-prize-${goal.id}`,
+        receiptId: `goal-prize-${goalRoundKey(goal)}`,
         historyNote: '(goal prize)',
         skipGoalSync: true,
       }, categories);
@@ -148,6 +148,11 @@ async function giveGoalPrize(
   return recipients.length === 1
     ? `The free prize could not be given automatically. Hand out "${prize.name}" yourself.`
     : `${missed} of ${recipients.length} students could not get "${prize.name}" automatically. Hand those out yourself.`;
+}
+
+/** Receipt key for this goal's current round, so a raised target pays its bonus/prize again (once). */
+function goalRoundKey(goal: Goal): string {
+  return goal.targetRaises ? `${goal.id}-r${goal.targetRaises}` : goal.id;
 }
 
 export type GoalSyncEvent = {
@@ -244,7 +249,7 @@ export async function syncGoalsForStudent(
               [],
               categories,
               [],
-              { skipGoalSync: true, goalRewardId: goal.id },
+              { skipGoalSync: true, goalRewardId: goalRoundKey(goal) },
             );
             if (!result.success) throw new Error(result.message);
           }
@@ -260,7 +265,7 @@ export async function syncGoalsForStudent(
               [],
               categories,
               [],
-              { skipGoalSync: true, goalRewardId: goal.id },
+              { skipGoalSync: true, goalRewardId: goalRoundKey(goal) },
             );
             if (!result.success) throw new Error(result.message);
           }
