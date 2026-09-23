@@ -106,7 +106,6 @@ import { StaffPortalSidebarTabRow } from '@/components/staff/StaffPortalSidebarT
 import { StaffPortalShellFrame } from '@/components/staff/StaffPortalShellFrame';
 import { StaffPortalContentWidth } from '@/components/staff/StaffPortalContentWidth';
 import { StaffPortalWorkspace } from '@/components/staff/StaffPortalWorkspace';
-import { StaffPortalTeacherToolNotice } from '@/components/staff/StaffPortalTeacherToolNotice';
 import { StaffPortalLayoutProvider } from '@/components/staff/StaffPortalLayoutContext';
 import {
   staffPortalAddOnTabTriggerClassName,
@@ -1857,7 +1856,6 @@ function AdminDashboardInner() {
           >
           <TabWalkthroughProvider scope="admin" tabId={activeMainTab}>
           <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col">
-          <StaffPortalTeacherToolNotice activeTab={activeMainTab} />
           <TabsContent value="welcome" className={scrollingAdminTabClassName}>
             <StaffPortalWelcomeTab
               role="admin"
@@ -2255,6 +2253,7 @@ function AdminDashboardInner() {
               classes={classes || []}
               categories={categories || []}
               prizes={prizes || []}
+              teachers={teachers || []}
             />
           </TabsContent>
 
