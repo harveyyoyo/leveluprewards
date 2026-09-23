@@ -532,6 +532,17 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /officeBusRoutes/{routeId} {
+        allow read, write: if canAccessOffice(schoolId);
+      }
+
+      // Bus runs: live location plus who got on and off. Kept permanently, like the front-desk
+      // log, so the record of every child's ride stays available.
+      match /officeBusTrips/{tripId} {
+        allow read, create, update: if canAccessOffice(schoolId);
+        allow delete: if false;
+      }
+
       match /officeForms/{formId} {
         allow read, write: if canAccessOffice(schoolId);
       }

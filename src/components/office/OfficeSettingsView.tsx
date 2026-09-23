@@ -417,7 +417,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
               [
                 ['familyProfiles', 'Family profiles', 'Household contacts, grandparents, and family notes'],
                 ['studentPhotos', 'Student photos', 'Upload student pictures on roster profiles'],
-                ['busInfo', 'Bus & transport', 'Bus route fields on families and students'],
+                ['busInfo', 'Transportation', 'Bus routes, the live bus map, and how each student gets home'],
                 ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
                 ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
                 ['frontDesk', 'Front desk', 'Log late arrivals, early pickups, and nurse visits'],

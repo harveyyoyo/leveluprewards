@@ -1,5 +1,7 @@
 import {
+  arrayUnion,
   collection,
+  deleteField,
   doc,
   getDoc,
   increment,
@@ -14,6 +16,12 @@ import type {
   OfficeAttendanceEntry,
   OfficeAuditEntityType,
   OfficeBillingAccount,
+  OfficeBusLocation,
+  OfficeBusRiderStatus,
+  OfficeBusRoute,
+  OfficeBusRun,
+  OfficeBusTrip,
+  OfficeBusTripAlert,
   OfficeClass,
   OfficeDeskLogEntry,
   OfficeEvent,
@@ -883,6 +891,209 @@ export async function archiveOfficeDeskLog(
     summary: `Removed ${DESK_KIND_LABEL[entry.kind].toLowerCase()} for ${studentName} (${entry.date} ${entry.time})`,
     before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
     after: officeAuditSnapshot(fields),
+  });
+}
+
+function busLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): string {
+  return route.busNumber?.trim() ? `Bus ${route.busNumber.trim()} (${route.name})` : route.name;
+}
+
+const RUN_WORD: Record<OfficeBusRun, string> = { am: 'morning', pm: 'afternoon' };
+
+export async function upsertOfficeBusRoute(
+  ctx: OfficeWriteContext,
+  data: Omit<OfficeBusRoute, 'id' | 'updatedAt' | 'updatedBy'> & { id?: string },
+): Promise<string> {
+  const col = collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusRoutes');
+  const ref = data.id ? doc(col, data.id) : doc(col);
+  const beforeSnap = data.id ? await getDoc(ref) : null;
+  const before = beforeSnap?.exists() ? (beforeSnap.data() as OfficeBusRoute) : null;
+  const { id: _id, ...rest } = data;
+  const payload = { ...rest, updatedAt: Date.now(), updatedBy: ctx.changedBy?.trim() || null };
+  await setDoc(ref, payload, { merge: true });
+  await audit(ctx, {
+    entityType: 'officeBusRoute',
+    entityId: ref.id,
+    action: before ? 'update' : 'create',
+    summary: before ? `Updated bus route ${busLabel(data)}` : `Added bus route ${busLabel(data)}`,
+    before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
+    after: officeAuditSnapshot(payload as unknown as Record<string, unknown>),
+  });
+  return ref.id;
+}
+
+export async function archiveOfficeBusRoute(ctx: OfficeWriteContext, route: OfficeBusRoute): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeBusRoutes', route.id);
+  await audit(ctx, {
+    entityType: 'officeBusRoute',
+    entityId: route.id,
+    action: 'delete',
+    summary: `Removed bus route ${busLabel(route)}`,
+    before: officeAuditSnapshot(route as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
+  });
+}
+
+/** Sets how several students get home in one save (e.g. assigning riders to a route). */
+export async function setOfficeStudentsTransport(
+  ctx: OfficeWriteContext,
+  changes: Array<{
+    student: OfficeStudent;
+    studentName: string;
+    patch: Pick<OfficeStudent, 'transportMode' | 'busRouteId' | 'busStopId'>;
+  }>,
+  describe: (studentName: string) => string,
+): Promise<void> {
+  if (changes.length === 0) return;
+  const batch = writeBatch(ctx.firestore);
+  const now = Date.now();
+  for (const c of changes) {
+    batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', c.student.id), { ...c.patch, updatedAt: now });
+  }
+  await batch.commit();
+  for (const c of changes) {
+    await audit(ctx, {
+      entityType: 'officeStudent',
+      entityId: c.student.id,
+      action: 'update',
+      summary: describe(c.studentName),
+      before: officeAuditSnapshot({
+        transportMode: c.student.transportMode ?? null,
+        busRouteId: c.student.busRouteId ?? null,
+        busStopId: c.student.busStopId ?? null,
+      }),
+      after: officeAuditSnapshot(c.patch as Record<string, unknown>),
+    });
+  }
+}
+
+function tripRef(ctx: OfficeWriteContext, tripId: string) {
+  return doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBusTrips', tripId);
+}
+
+/** Starts (or resumes) a run. Returns the trip id. */
+export async function startOfficeBusTrip(
+  ctx: OfficeWriteContext,
+  route: OfficeBusRoute,
+  params: { tripId: string; date: string; run: OfficeBusRun },
+): Promise<string> {
+  const ref = tripRef(ctx, params.tripId);
+  const snap = await getDoc(ref);
+  const now = Date.now();
+  if (snap.exists()) {
+    await updateDoc(ref, { status: 'active', endedAt: null, updatedAt: now });
+  } else {
+    await setDoc(ref, {
+      routeId: route.id,
+      date: params.date,
+      run: params.run,
+      status: 'active',
+      driverName: ctx.changedBy?.trim() || route.driverName || null,
+      startedAt: now,
+      endedAt: null,
+      location: null,
+      stopArrivals: {},
+      riders: {},
+      alerts: [],
+      childCheckDone: null,
+      updatedAt: now,
+    } satisfies Omit<OfficeBusTrip, 'id'>);
+  }
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: params.tripId,
+    action: snap.exists() ? 'update' : 'create',
+    summary: `${busLabel(route)} ${snap.exists() ? 'resumed' : 'started'} the ${RUN_WORD[params.run]} run`,
+  });
+  return params.tripId;
+}
+
+/** Live position from the driver's phone. Sent often, so it is not written to the change history. */
+export async function updateOfficeBusTripLocation(
+  ctx: OfficeWriteContext,
+  tripId: string,
+  location: OfficeBusLocation,
+  reachedStopId?: string | null,
+): Promise<void> {
+  const patch: Record<string, unknown> = { location, updatedAt: Date.now() };
+  if (reachedStopId) patch[`stopArrivals.${reachedStopId}`] = location.at;
+  await updateDoc(tripRef(ctx, tripId), patch);
+}
+
+export async function setOfficeBusStopReached(
+  ctx: OfficeWriteContext,
+  tripId: string,
+  stopId: string,
+  reached: boolean,
+): Promise<void> {
+  await updateDoc(tripRef(ctx, tripId), {
+    [`stopArrivals.${stopId}`]: reached ? Date.now() : deleteField(),
+    updatedAt: Date.now(),
+  });
+}
+
+const RIDER_WORD: Record<OfficeBusRiderStatus, string> = { on: 'got on', off: 'got off', absent: 'was marked not riding' };
+
+/** Who got on or off. Filed under the student so it shows on their card's History. */
+export async function setOfficeBusRiders(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+  route: OfficeBusRoute,
+  changes: Array<{ studentId: string; studentName: string; status: OfficeBusRiderStatus | null }>,
+): Promise<void> {
+  if (changes.length === 0) return;
+  const now = Date.now();
+  const patch: Record<string, unknown> = { updatedAt: now };
+  for (const c of changes) patch[`riders.${c.studentId}`] = c.status ? { status: c.status, at: now } : deleteField();
+  await updateDoc(tripRef(ctx, trip.id), patch);
+  for (const c of changes) {
+    await audit(ctx, {
+      entityType: 'officeBusTrip',
+      entityId: c.studentId,
+      action: 'update',
+      summary: c.status
+        ? `${c.studentName} ${RIDER_WORD[c.status]} ${busLabel(route)} (${RUN_WORD[trip.run]})`
+        : `Cleared ${c.studentName}'s ride mark on ${busLabel(route)} (${RUN_WORD[trip.run]})`,
+      after: officeAuditSnapshot({ tripId: trip.id, status: c.status }),
+    });
+  }
+}
+
+export async function addOfficeBusTripAlert(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+  route: OfficeBusRoute,
+  alert: Omit<OfficeBusTripAlert, 'id' | 'at' | 'by'>,
+): Promise<void> {
+  const entry: OfficeBusTripAlert = {
+    ...alert,
+    id: `alert-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    at: Date.now(),
+    by: ctx.changedBy?.trim() || null,
+  };
+  await updateDoc(tripRef(ctx, trip.id), { alerts: arrayUnion(entry), updatedAt: Date.now() });
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: trip.id,
+    action: 'update',
+    summary: `${busLabel(route)} reported: ${alert.kind === 'delay' ? `running late${alert.minutes ? ` (${alert.minutes} min)` : ''}` : alert.kind}${alert.message ? ` — ${alert.message}` : ''}`,
+    after: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
+  });
+}
+
+export async function endOfficeBusTrip(
+  ctx: OfficeWriteContext,
+  trip: Pick<OfficeBusTrip, 'id' | 'run'>,
+  route: OfficeBusRoute,
+  childCheckDone: boolean,
+): Promise<void> {
+  const now = Date.now();
+  await updateDoc(tripRef(ctx, trip.id), { status: 'done', endedAt: now, childCheckDone, updatedAt: now });
+  await audit(ctx, {
+    entityType: 'officeBusTrip',
+    entityId: trip.id,
+    action: 'update',
+    summary: `${busLabel(route)} finished the ${RUN_WORD[trip.run]} run${childCheckDone ? ' · bus checked, nobody left on' : ' · end-of-run bus check not confirmed'}`,
   });
 }
 

@@ -9,6 +9,7 @@ export type OfficeHistoryGroup =
   | 'grades'
   | 'billing'
   | 'attendance'
+  | 'transportation'
   | 'communication'
   | 'settings'
   | 'assistant';
@@ -21,6 +22,7 @@ export const OFFICE_HISTORY_GROUPS: Array<{ id: OfficeHistoryGroup; label: strin
   { id: 'grades', label: 'Grades' },
   { id: 'billing', label: 'Billing' },
   { id: 'attendance', label: 'Attendance & front desk' },
+  { id: 'transportation', label: 'Transportation' },
   { id: 'communication', label: 'Forms & events' },
   { id: 'settings', label: 'Settings' },
   { id: 'assistant', label: 'Help reading records' },
@@ -38,6 +40,8 @@ const GROUP_BY_TYPE: Record<OfficeAuditEntityType, OfficeHistoryGroup> = {
   officePayment: 'billing',
   officeAttendanceEntry: 'attendance',
   officeDeskLog: 'attendance',
+  officeBusRoute: 'transportation',
+  officeBusTrip: 'transportation',
   officeForm: 'communication',
   officeEvent: 'communication',
   officeSettings: 'settings',
@@ -71,6 +75,9 @@ const FIELD_LABELS: Record<string, string> = {
   notes: 'Notes',
   tags: 'Tags',
   busRoute: 'Bus route',
+  transportMode: 'Gets home by',
+  busRouteId: 'Bus route',
+  busStopId: 'Bus stop',
   name: 'Name',
   email: 'Email',
   capacity: 'Class size limit',

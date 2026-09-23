@@ -85,6 +85,12 @@ export type OfficeStudent = {
   allergies?: string | null;
   healthNotes?: string | null;
   pickupNotes?: string | null;
+  /** How the student gets to and from school (Transportation page). Unset = not chosen yet. */
+  transportMode?: OfficeTransportMode | null;
+  /** Bus route they ride (`officeBusRoutes` doc id) when `transportMode` is `bus`. */
+  busRouteId?: string | null;
+  /** Their stop on that route (`OfficeBusStop.id`). */
+  busStopId?: string | null;
   /** Values for school-defined fields, keyed by `OfficeCustomFieldDef.id`. */
   customFields?: Record<string, OfficeCustomFieldValue> | null;
   updatedAt: number;
@@ -161,6 +167,92 @@ export type OfficeDeskLogEntry = {
   createdAt: number;
   archived?: boolean;
   archivedAt?: number;
+};
+
+export type OfficeTransportMode = 'bus' | 'car' | 'walk' | 'aftercare';
+
+/** One pickup / drop-off point on a bus route. */
+export type OfficeBusStop = {
+  id: string;
+  name: string;
+  address?: string | null;
+  lat: number;
+  lng: number;
+  /** Planned morning time, 24-hour "HH:MM". */
+  amTime?: string | null;
+  /** Planned afternoon time, 24-hour "HH:MM". */
+  pmTime?: string | null;
+  /** The school itself: the end of the morning run and the start of the afternoon run. */
+  isSchool?: boolean;
+};
+
+/** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */
+export type OfficeBusRoute = {
+  id: string;
+  name: string;
+  busNumber?: string | null;
+  /** Hex colour for the map and chips. */
+  color: string;
+  driverName?: string | null;
+  driverPhone?: string | null;
+  /** Seats on the bus; used for the "full" warning only. */
+  capacity?: number | null;
+  stops: OfficeBusStop[];
+  notes?: string | null;
+  updatedAt: number;
+  updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+export type OfficeBusRun = 'am' | 'pm';
+export type OfficeBusRiderStatus = 'on' | 'off' | 'absent';
+export type OfficeBusAlertKind = 'delay' | 'breakdown' | 'accident' | 'behavior' | 'other';
+
+export type OfficeBusTripAlert = {
+  id: string;
+  kind: OfficeBusAlertKind;
+  message?: string | null;
+  /** Delay reports: extra minutes expected. */
+  minutes?: number | null;
+  at: number;
+  by?: string | null;
+};
+
+export type OfficeBusLocation = {
+  lat: number;
+  lng: number;
+  /** Metres. */
+  accuracy?: number | null;
+  /** Metres per second. */
+  speed?: number | null;
+  heading?: number | null;
+  at: number;
+};
+
+/**
+ * One bus run on one day (`schools/{id}/officeBusTrips`, id `{date}_{routeId}_{run}`):
+ * live location, stops reached, and who got on and off. Never erased.
+ */
+export type OfficeBusTrip = {
+  id: string;
+  routeId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  run: OfficeBusRun;
+  status: 'active' | 'done';
+  driverName?: string | null;
+  startedAt: number;
+  endedAt?: number | null;
+  location?: OfficeBusLocation | null;
+  /** stopId -> time the bus reached it. */
+  stopArrivals?: Record<string, number> | null;
+  /** studentId -> latest status on this run. */
+  riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
+  alerts?: OfficeBusTripAlert[] | null;
+  /** Driver walked the bus at the end and confirmed nobody was left on. */
+  childCheckDone?: boolean | null;
+  updatedAt: number;
 };
 
 export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -260,6 +352,7 @@ export type OfficeInvoiceInput = Omit<OfficeInvoice, 'id' | 'createdAt' | 'paidA
 export type OfficeFeatureFlags = {
   familyProfiles?: boolean;
   studentPhotos?: boolean;
+  /** Bus fields on families and students, and the Transportation page. */
   busInfo?: boolean;
   medicalNotes?: boolean;
   aiHelp?: boolean;
@@ -287,6 +380,8 @@ export type OfficeAuditEntityType =
   | 'officePayment'
   | 'officeAttendanceEntry'
   | 'officeDeskLog'
+  | 'officeBusRoute'
+  | 'officeBusTrip'
   | 'officeForm'
   | 'officeEvent'
   | 'officeStudentDocument'
@@ -372,6 +467,8 @@ export type OfficeSettings = {
   features?: OfficeFeatureFlags | null;
   /** Extra student fields this school added in Settings. */
   studentCustomFields?: OfficeCustomFieldDef[] | null;
+  /** Where the school is, so the Transportation map opens there. */
+  transportSchoolLocation?: { address?: string | null; lat: number; lng: number } | null;
   updatedAt: number;
   updatedBy?: string | null;
 };

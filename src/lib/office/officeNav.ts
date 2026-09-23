@@ -5,6 +5,7 @@ import {
   DoorOpen,
   FileText,
   GraduationCap,
+  Bus,
   Home,
   LayoutGrid,
   Megaphone,
@@ -24,6 +25,7 @@ export type OfficeNavId =
   | 'grades'
   | 'attendance'
   | 'frontdesk'
+  | 'transportation'
   | 'communication'
   | 'reports'
   | 'billing'
@@ -43,6 +45,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
   const marks = getOfficeMarksLabels(settings);
   const showAttendance = settings?.features?.attendance !== false;
   const showFrontDesk = settings?.features?.frontDesk !== false;
+  const showTransportation = settings?.features?.busInfo !== false;
 
   return [
     {
@@ -109,6 +112,18 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
           },
         ]
       : []),
+    ...(showTransportation
+      ? [
+          {
+            id: 'transportation' as const,
+            label: 'Transportation',
+            description: 'Buses, routes, and live map',
+            explainer: 'See every bus live on a map, set up routes and stops, choose how each student gets home, and look back at past trips. Drivers use Drive on their phone.',
+            href: (schoolId: string) => officePublicHref(schoolId, 'transportation'),
+            icon: Bus,
+          },
+        ]
+      : []),
     {
       id: 'communication',
       label: 'Communication',
@@ -166,6 +181,7 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
   if (rest.startsWith('grades')) return 'grades';
   if (rest.startsWith('attendance')) return 'attendance';
   if (rest.startsWith('front-desk')) return 'frontdesk';
+  if (rest.startsWith('transportation')) return 'transportation';
   if (rest.startsWith('communication')) return 'communication';
   if (rest.startsWith('reports')) return 'reports';
   if (rest.startsWith('billing')) return 'billing';
