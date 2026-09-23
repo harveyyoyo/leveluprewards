@@ -29,6 +29,9 @@ const students = [{ id: 'student', firstName: 'Alex', lastName: 'Sample' }] as S
 const classes: [] = [];
 const categories: [] = [];
 const prizes: [] = [];
+function openGoal() {
+  fireEvent.click(screen.getByRole('button', { name: /Kindness target/ }));
+}
 function showGoals() {
   return render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={prizes} />);
 }
@@ -40,7 +43,7 @@ describe('Goals manager', () => {
     try {
       await act(async () => { showGoals(); });
       expect(screen.getByText('Kindness target')).toBeInTheDocument();
-      expect(screen.getByText(/Assigned by: Other Teacher/)).toBeInTheDocument();
+      openGoal(); expect(screen.getByText(/Assigned by: Other Teacher/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Edit goal' })).toBeInTheDocument();
     } finally { fixtures.goals[0] = original; }
   });
@@ -49,7 +52,7 @@ describe('Goals manager', () => {
     fixtures.goals[0] = { ...original, ...{ assignedByStaffId: 'admin:admin-one', assignedByName: 'Original Admin Name', assignedByRole: 'admin', staffVisibility: 'all' } };
     try {
       await act(async () => { showGoals(); });
-      fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
       await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ assignedByStaffId: 'admin:admin-one', assignedByName: 'Original Admin Name', staffVisibility: 'all' })));
     } finally { fixtures.goals[0] = original; }
@@ -59,7 +62,7 @@ describe('Goals manager', () => {
     fixtures.goals[0] = { ...original, type: 'prize_savings', ...{ categoryId: 'old-category', startDate: 1 } };
     try {
       await act(async () => { showGoals(); });
-      fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
       expect(screen.getByLabelText('Who is this for?')).toHaveTextContent('One student');
       expect(screen.getByLabelText('What are they working toward?')).toHaveTextContent('Save points for a prize');
       expect(screen.queryByLabelText('Start date (optional)')).not.toBeInTheDocument();
@@ -77,7 +80,7 @@ describe('Goals manager', () => {
   });
   it('rejects an end date before the start date', async () => {
     await act(async () => { showGoals(); });
-    fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
     fireEvent.change(screen.getByLabelText('Start date (optional)'), { target: { value: '2026-10-10' } });
     fireEvent.change(screen.getByLabelText('End date (optional)'), { target: { value: '2026-10-01' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -88,7 +91,7 @@ describe('Goals manager', () => {
     await act(async () => { showGoals(); });
     expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
     expect(screen.getByText(/Alex Sample/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
     expect(screen.getByLabelText('Title')).toHaveValue('Kindness target');
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'New target' } });
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: '' } });
@@ -100,7 +103,7 @@ describe('Goals manager', () => {
 
   it('does not delete a goal until the warning is confirmed', async () => {
     await act(async () => { showGoals(); });
-    fireEvent.click(screen.getByRole('button', { name: 'Delete goal' }));
+    openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Delete goal' }));
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
     expect(deleteGoal).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Keep it' }));

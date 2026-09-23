@@ -36,7 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, CalendarPlus, Check, ChevronsUpDown, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
+import { Archive, CalendarPlus, Check, ChevronDown, ChevronsUpDown, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Progress } from '@/components/ui/progress';
@@ -180,6 +180,14 @@ export function GoalsManager(props: {
   const [deleteTarget, setDeleteTarget] = useState<Goal | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [studentPickerOpen, setStudentPickerOpen] = useState<'create' | 'edit' | null>(null);
+  const [expandedGoalIds, setExpandedGoalIds] = useState<Set<string>>(() => new Set());
+  const toggleGoalDetails = (goalId: string) =>
+    setExpandedGoalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(goalId)) next.delete(goalId);
+      else next.add(goalId);
+      return next;
+    });
   const [celebratedIds, setCelebratedIds] = useState<Set<string>>(() => new Set());
   const [alertedAlmostIds, setAlertedAlmostIds] = useState<Set<string>>(() => new Set());
   const [baselineReady, setBaselineReady] = useState(false);
@@ -898,36 +906,54 @@ export function GoalsManager(props: {
                     const pct = progressPercent(p, g.targetPoints);
                     const almost = g.status === 'active' && isAlmostThere(p, g.targetPoints);
                     const crushed = isGoalCrushed(p, g.targetPoints);
+                    const open = expandedGoalIds.has(g.id);
                     return (
-                      <li key={g.id} className="rounded-2xl border bg-muted/15 p-4 space-y-2">
-                        <div className="flex flex-col sm:flex-row justify-between gap-3 items-start">
-                          <div className="min-w-0">
-                            <p className="font-bold break-words">{g.title}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {goalTypeLabel(g.type)} · {goalAudienceLabel(g, listStudents, listClasses)} ·{' '}
-                              {goalStatusLabel(g.status)}
-                              {g.createdByStudent ? ' · Student wishlist' : ''}
-                            </p>
-                            {g.description && <p className="text-sm text-muted-foreground mt-1">{g.description}</p>}
-                            <p className="text-sm text-muted-foreground">Assigned by: {g.assignedByName || (g.teacherId ? 'Teacher (older goal)' : g.createdByStudent ? 'Student' : 'Not recorded (older goal)')} · {g.staffVisibility === 'all' ? 'Shown to all staff' : g.assignedByStaffId || g.teacherId ? 'Only the assigner and admins' : 'Older goal'}</p>
-                            {g.type === 'prize_savings' ? <p className="text-sm text-muted-foreground">Counts available points to spend.</p> : <>
-                              <p className="text-sm text-muted-foreground">Category: {g.categoryId ? categories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
-                              <p className="text-sm text-muted-foreground">{g.startDate ? `Counts points earned from ${new Date(g.startDate).toLocaleDateString()}.` : 'Includes points already earned.'} {g.type === 'school' ? 'One shared school total.' : g.type === 'class' ? 'One shared class total.' : ''}</p>
-                            </>}
-                            <p className="text-sm text-muted-foreground">{g.endDate ? `Due ${new Date(g.endDate).toLocaleDateString()}` : 'No deadline'}</p>
-                            {g.prizeId && <p className="text-sm">Saving for: {prizes.find((p) => p.id === g.prizeId)?.name ?? 'Reward no longer available'}</p>}
-                            {!!g.bonusPointsReward && <p className="text-sm">{(g.type === 'class' || g.type === 'school') ? 'Bonus for each student' : 'Completion bonus'}: {g.bonusPointsReward} points</p>}
-                            {crushed && g.status !== 'expired' ? (
-                              <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                                Goal crushed!
+                      <li key={g.id} className="rounded-xl border bg-muted/15">
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={`goal-details-${g.id}`}
+                          onClick={() => toggleGoalDetails(g.id)}
+                          className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-bold truncate">
+                                {g.title}
+                                {crushed && g.status !== 'expired' ? (
+                                  <span className="ml-2 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Goal crushed!</span>
+                                ) : almost ? (
+                                  <span className="ml-2 text-[11px] font-bold text-amber-600 dark:text-amber-400">Almost there!</span>
+                                ) : null}
                               </p>
-                            ) : almost ? (
-                              <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-1">
-                                Almost there!
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {goalTypeLabel(g.type)} · {goalAudienceLabel(g, listStudents, listClasses)} ·{' '}
+                                {goalStatusLabel(g.status)}
+                                {g.createdByStudent ? ' · Student wishlist' : ''}
                               </p>
-                            ) : null}
+                            </div>
+                            <span className="shrink-0 text-xs font-bold tabular-nums">
+                              {p.toLocaleString()} / {Number(g.targetPoints ?? 0).toLocaleString()} pts · {pct}%
+                            </span>
+                            <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
                           </div>
-                          {canManageGoal(g, staffViewer) && <div className="flex flex-wrap justify-end gap-1">
+                          <Progress value={Math.min(100, pct)} className="mt-2 h-1.5" />
+                        </button>
+                        {open && (
+                          <div id={`goal-details-${g.id}`} className="space-y-3 border-t px-3 py-3">
+                            <div className="space-y-0.5">
+                              {g.description && <p className="text-sm text-muted-foreground mt-1">{g.description}</p>}
+                            <p className="text-sm text-muted-foreground">Assigned by: {g.assignedByName || (g.teacherId ? 'Teacher (older goal)' : g.createdByStudent ? 'Student' : 'Not recorded (older goal)')} · {g.staffVisibility === 'all' ? 'Shown to all staff' : g.assignedByStaffId || g.teacherId ? 'Only the assigner and admins' : 'Older goal'}</p>
+                              {g.type === 'prize_savings' ? <p className="text-sm text-muted-foreground">Counts available points to spend.</p> : <>
+                                <p className="text-sm text-muted-foreground">Category: {g.categoryId ? categories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
+                                <p className="text-sm text-muted-foreground">{g.startDate ? `Counts points earned from ${new Date(g.startDate).toLocaleDateString()}.` : 'Includes points already earned.'} {g.type === 'school' ? 'One shared school total.' : g.type === 'class' ? 'One shared class total.' : ''}</p>
+                              </>}
+                            <p className="text-sm text-muted-foreground">{g.endDate ? `Due ${new Date(g.endDate).toLocaleDateString()}` : 'No deadline'}</p>
+                              {g.prizeId && <p className="text-sm">Saving for: {prizes.find((p) => p.id === g.prizeId)?.name ?? 'Reward no longer available'}</p>}
+                              {!!g.bonusPointsReward && <p className="text-sm">{(g.type === 'class' || g.type === 'school') ? 'Bonus for each student' : 'Completion bonus'}: {g.bonusPointsReward} points</p>}
+                              <p className="text-sm font-medium">{g.status === 'completed' ? 'Finished — well done!' : `${Math.max(0, Number(g.targetPoints) - p).toLocaleString()} more points to go`}</p>
+                            </div>
+                          {canManageGoal(g, staffViewer) && <div className="flex flex-wrap gap-1">
                             {section === 'past_due' ? (
                               <Button
                                 variant="ghost"
@@ -980,15 +1006,8 @@ export function GoalsManager(props: {
                               <Trash2 className="w-4 h-4" />Delete
                             </Button>
                           </div>}
-                        </div>
-                        <div className="flex justify-between text-xs font-bold">
-                          <span>
-                            {p.toLocaleString()} / {Number(g.targetPoints ?? 0).toLocaleString()} pts
-                          </span>
-                          <span>{pct}%</span>
-                        </div>
-                        <Progress value={Math.min(100, pct)} className="h-3" />
-                        <p className="text-sm font-medium">{g.status === 'completed' ? 'Finished — well done!' : `${Math.max(0, Number(g.targetPoints) - p).toLocaleString()} more points to go`}</p>
+                          </div>
+                        )}
                       </li>
                     );
                   })}
