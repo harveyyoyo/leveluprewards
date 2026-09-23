@@ -15,6 +15,7 @@ import type {
   OfficeAuditEntityType,
   OfficeBillingAccount,
   OfficeClass,
+  OfficeDeskLogEntry,
   OfficeEvent,
   OfficeFamily,
   OfficeForm,
@@ -326,6 +327,8 @@ export async function setOfficeClassTeachers(
   const parts = [
     added.length ? `added ${added.join(', ')}` : '',
     removed.length ? `removed ${removed.join(', ')}` : '',
+    // The first teacher is the class's main teacher.
+    teacherIds[0] && teacherIds[0] !== before[0] ? `main teacher is now ${nameOf(teacherIds[0])}` : '',
   ].filter(Boolean);
   await audit(ctx, {
     entityType: 'officeClass',
@@ -831,6 +834,56 @@ export async function bulkSetOfficeAttendance(
     after: officeAuditSnapshot({ classId: params.classId, date: params.date, counts, marks: params.marks }),
   });
   return params.marks.length;
+}
+
+const DESK_KIND_LABEL: Record<OfficeDeskLogEntry['kind'], string> = {
+  late_arrival: 'Late arrival',
+  early_pickup: 'Early pickup',
+  nurse_visit: 'Nurse visit',
+};
+
+/**
+ * Logs a front-desk event. The history entry is filed under the student so it shows on their
+ * card's History as well as the school-wide change history.
+ */
+export async function createOfficeDeskLog(
+  ctx: OfficeWriteContext,
+  data: Omit<OfficeDeskLogEntry, 'id' | 'createdAt' | 'recordedBy'>,
+  studentName: string,
+): Promise<string> {
+  const ref = doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeDeskLog'));
+  const payload = { ...data, createdAt: Date.now(), recordedBy: ctx.changedBy?.trim() || null };
+  await setDoc(ref, payload);
+  const detail =
+    data.kind === 'early_pickup' && data.pickedUpBy
+      ? ` · picked up by ${data.pickedUpBy}`
+      : data.reason
+        ? ` · ${data.reason}`
+        : '';
+  await audit(ctx, {
+    entityType: 'officeDeskLog',
+    entityId: data.studentId,
+    action: 'create',
+    summary: `${DESK_KIND_LABEL[data.kind]}: ${studentName} at ${data.time} on ${data.date}${detail}`,
+    after: officeAuditSnapshot({ ...payload, logId: ref.id }),
+  });
+  return ref.id;
+}
+
+export async function archiveOfficeDeskLog(
+  ctx: OfficeWriteContext,
+  entry: OfficeDeskLogEntry,
+  studentName: string,
+): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeDeskLog', entry.id);
+  await audit(ctx, {
+    entityType: 'officeDeskLog',
+    entityId: entry.studentId,
+    action: 'delete',
+    summary: `Removed ${DESK_KIND_LABEL[entry.kind].toLowerCase()} for ${studentName} (${entry.date} ${entry.time})`,
+    before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
+  });
 }
 
 export async function createOfficeForm(

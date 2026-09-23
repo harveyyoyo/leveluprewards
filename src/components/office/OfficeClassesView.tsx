@@ -409,7 +409,9 @@ export function OfficeClassesView({
                     {(() => {
                       const ids = cls.teacherIds?.length ? cls.teacherIds : cls.teacherId ? [cls.teacherId] : [];
                       const names = ids.map((id) => teacherNameById.get(id)).filter(Boolean);
-                      return names.length ? ` · ${names.join(', ')}` : '';
+                      if (names.length === 0) return '';
+                      // First teacher is the main one; say so only when there's more than one.
+                      return names.length === 1 ? ` · ${names[0]}` : ` · ${names[0]} (main), ${names.slice(1).join(', ')}`;
                     })()}
                   </span>
                   {cls.capacity && list.length > cls.capacity ? (

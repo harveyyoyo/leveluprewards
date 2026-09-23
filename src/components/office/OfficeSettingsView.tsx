@@ -420,6 +420,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 ['busInfo', 'Bus & transport', 'Bus route fields on families and students'],
                 ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
                 ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
+                ['frontDesk', 'Front desk', 'Log late arrivals, early pickups, and nurse visits'],
                 ['aiHelp', 'Help button', 'An assistant in the top bar that answers questions'],
               ] as const
             ).map(([key, title, description]) => (

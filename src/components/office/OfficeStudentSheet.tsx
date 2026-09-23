@@ -14,6 +14,7 @@ import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { useOfficeAttendanceForStudent } from '@/lib/office/useOfficeAttendance';
+import { useOfficeDeskLogForStudent } from '@/lib/office/useOfficeDeskLog';
 import {
   billingAccountForStudent,
   formatGradeDisplay,
@@ -142,6 +143,29 @@ export function OfficeStudentSheet({
   }, [allStudents, student]);
 
   const { entries: attendanceEntries } = useOfficeAttendanceForStudent(schoolId, student?.id ?? null, open && !!student);
+
+  const { entries: deskEntries } = useOfficeDeskLogForStudent(
+    schoolId,
+    student?.id ?? null,
+    open && !!student && features.frontDesk,
+  );
+  const deskSummary = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffIso = cutoff.toISOString().slice(0, 10);
+    const recent = deskEntries.filter((e) => e.date >= cutoffIso);
+    const count = (kind: string, one: string, many: string) => {
+      const n = recent.filter((e) => e.kind === kind).length;
+      return n ? `${n} ${n === 1 ? one : many}` : null;
+    };
+    return [
+      count('late_arrival', 'late arrival', 'late arrivals'),
+      count('early_pickup', 'early pickup', 'early pickups'),
+      count('nurse_visit', 'nurse visit', 'nurse visits'),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  }, [deskEntries]);
 
   const recentAbsences = useMemo(() => {
     const cutoff = new Date();
@@ -750,6 +774,14 @@ export function OfficeStudentSheet({
               ) : (
                 <p className="mt-2 text-sm text-muted-foreground">No attendance recorded yet.</p>
               )}
+              {deskSummary ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Front desk, last 30 days: {deskSummary}{' '}
+                  <Link href={officePublicHref(schoolId, 'front-desk')} className="font-medium text-teal-800 hover:underline dark:text-teal-300">
+                    Open
+                  </Link>
+                </p>
+              ) : null}
             </section>
 
             {student.allergies?.trim() || filledDetails.length > 0 ? (

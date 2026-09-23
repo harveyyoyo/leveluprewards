@@ -135,7 +135,35 @@ export type OfficeScheduleBlock = {
   room?: string | null;
 };
 
-export type OfficeAttendanceStatus ='present' | 'absent' | 'late' | 'excused';
+export type OfficeDeskLogKind = 'late_arrival' | 'early_pickup' | 'nurse_visit';
+
+/** One front-desk event (`schools/{id}/officeDeskLog`): late arrival, early pickup, or nurse visit. */
+export type OfficeDeskLogEntry = {
+  id: string;
+  kind: OfficeDeskLogKind;
+  studentId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  /** 24-hour "HH:MM". */
+  time: string;
+  /** Why they were late / leaving / came to the nurse. */
+  reason?: string | null;
+  /** Early pickup: who took the student. */
+  pickedUpBy?: string | null;
+  /** Early pickup: whether that person is on the family's contact list. */
+  pickupApproved?: boolean | null;
+  /** Nurse: what was done (ice pack, rest, medication given…). */
+  nurseAction?: string | null;
+  parentContacted?: boolean | null;
+  sentHome?: boolean | null;
+  notes?: string | null;
+  recordedBy?: string | null;
+  createdAt: number;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
 
 /** One student's attendance mark for one class on one day (`schools/{id}/officeAttendance`). */
 export type OfficeAttendanceEntry = {
@@ -237,6 +265,8 @@ export type OfficeFeatureFlags = {
   aiHelp?: boolean;
   auditLog?: boolean;
   attendance?: boolean;
+  /** Late arrivals, early pickups, and nurse visits log. */
+  frontDesk?: boolean;
 };
 
 export type OfficeAuditAction = 'create' | 'update' | 'delete';
@@ -251,6 +281,7 @@ export type OfficeAuditEntityType =
   | 'officeInvoice'
   | 'officePayment'
   | 'officeAttendanceEntry'
+  | 'officeDeskLog'
   | 'officeForm'
   | 'officeEvent'
   | 'officeStudentDocument'

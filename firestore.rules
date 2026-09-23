@@ -517,6 +517,13 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      // Front-desk log (late arrivals, early pickups, nurse visits). Entries are hidden, never
+      // erased, so the record of who left with whom stays permanent.
+      match /officeDeskLog/{entryId} {
+        allow read, create, update: if canAccessOffice(schoolId);
+        allow delete: if false;
+      }
+
       match /officeForms/{formId} {
         allow read, write: if canAccessOffice(schoolId);
       }

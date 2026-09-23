@@ -192,7 +192,17 @@ export function OfficeTeacherSheet({
             <SheetDescription>
               {assignedClasses.length > 0 ? (
                 <>
-                  Assigned to {assignedClasses.map(c => c.name).join(', ')}
+                  {(() => {
+                    // The first teacher on a class is its main teacher.
+                    const main = assignedClasses.filter((c) => getTeacherIds(c)[0] === teacher.id).map((c) => c.name);
+                    const also = assignedClasses.filter((c) => getTeacherIds(c)[0] !== teacher.id).map((c) => c.name);
+                    return [
+                      main.length ? `Main teacher of ${main.join(', ')}` : '',
+                      also.length ? `${main.length ? 'also teaches' : 'Teaches'} ${also.join(', ')}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ');
+                  })()}
                   {assignedStudents.length > 0 ? ` · ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'}` : ''}
                 </>
               ) : (

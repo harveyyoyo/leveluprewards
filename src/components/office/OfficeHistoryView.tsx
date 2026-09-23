@@ -57,7 +57,9 @@ export function OfficeHistoryView({ schoolId, studentIds, teacherIds, classIds }
   }, [filtered]);
 
   const openerFor = (entry: OfficeAuditLogEntry): (() => void) | undefined => {
-    if (entry.entityType === 'officeStudent' && studentIds.has(entry.entityId)) return () => openStudent(entry.entityId);
+    if ((entry.entityType === 'officeStudent' || entry.entityType === 'officeDeskLog') && studentIds.has(entry.entityId)) {
+      return () => openStudent(entry.entityId);
+    }
     if (entry.entityType === 'officeTeacher' && teacherIds.has(entry.entityId)) return () => openTeacher(entry.entityId);
     if (entry.entityType === 'officeClass' && classIds.has(entry.entityId)) return () => openClass(entry.entityId);
     return undefined;

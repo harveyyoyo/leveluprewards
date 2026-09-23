@@ -1,5 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
-import { CalendarCheck, CreditCard, FileText, GraduationCap, Home, LayoutGrid, Megaphone, Settings, UserRound, Users } from 'lucide-react';
+import {
+  CalendarCheck,
+  CreditCard,
+  DoorOpen,
+  FileText,
+  GraduationCap,
+  Home,
+  LayoutGrid,
+  Megaphone,
+  Settings,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeMarksLabels } from '@/lib/office/officeTerminology';
 import type { OfficeSettings } from '@/lib/office/types';
@@ -11,6 +23,7 @@ export type OfficeNavId =
   | 'teachers'
   | 'grades'
   | 'attendance'
+  | 'frontdesk'
   | 'communication'
   | 'reports'
   | 'billing'
@@ -27,6 +40,7 @@ export type OfficeNavItem = {
 export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTerminology' | 'features'> | null): OfficeNavItem[] {
   const marks = getOfficeMarksLabels(settings);
   const showAttendance = settings?.features?.attendance !== false;
+  const showFrontDesk = settings?.features?.frontDesk !== false;
 
   return [
     {
@@ -72,6 +86,17 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
             description: 'Daily present / absent',
             href: (schoolId: string) => officePublicHref(schoolId, 'attendance'),
             icon: CalendarCheck,
+          },
+        ]
+      : []),
+    ...(showFrontDesk
+      ? [
+          {
+            id: 'frontdesk' as const,
+            label: 'Front desk',
+            description: 'Late arrivals, early pickups, nurse visits',
+            href: (schoolId: string) => officePublicHref(schoolId, 'front-desk'),
+            icon: DoorOpen,
           },
         ]
       : []),
@@ -127,6 +152,7 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
   if (rest.startsWith('teachers')) return 'teachers';
   if (rest.startsWith('grades')) return 'grades';
   if (rest.startsWith('attendance')) return 'attendance';
+  if (rest.startsWith('front-desk')) return 'frontdesk';
   if (rest.startsWith('communication')) return 'communication';
   if (rest.startsWith('reports')) return 'reports';
   if (rest.startsWith('billing')) return 'billing';

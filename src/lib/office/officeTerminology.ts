@@ -48,6 +48,7 @@ export function defaultOfficeFeatureFlags(): Required<NonNullable<OfficeSettings
     aiHelp: true,
     auditLog: true,
     attendance: true,
+    frontDesk: true,
   };
 }
 

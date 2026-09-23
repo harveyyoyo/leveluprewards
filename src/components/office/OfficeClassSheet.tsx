@@ -127,12 +127,26 @@ export function OfficeClassSheet({
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Teachers</h3>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              {teacherIds.map((teacherId) => (
+              {teacherIds.map((teacherId, index) => (
                 <span
                   key={teacherId}
                   className="inline-flex items-center gap-1 rounded-full border bg-white py-0.5 pl-3 pr-1 text-sm dark:border-slate-700 dark:bg-slate-900"
                 >
                   <OfficeEntityLink kind="teacher" id={teacherId} label={teacherNameById.get(teacherId) ?? 'Teacher'} />
+                  {index === 0 ? (
+                    <span className="rounded-full bg-teal-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-950/50 dark:text-teal-200">
+                      Main
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void saveTeachers([teacherId, ...teacherIds.filter((id) => id !== teacherId)])}
+                      className="rounded-full px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-slate-100 hover:text-foreground disabled:opacity-50 dark:hover:bg-slate-800"
+                    >
+                      Make main
+                    </button>
+                  )}
                   <button
                     type="button"
                     disabled={busy}

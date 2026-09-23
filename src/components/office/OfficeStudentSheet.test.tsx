@@ -36,6 +36,10 @@ vi.mock('@/components/office/OfficePortalChrome', () => ({
   }),
 }));
 
+vi.mock('@/lib/office/useOfficeDeskLog', () => ({
+  useOfficeDeskLogForStudent: () => ({ entries: [], isLoading: false, error: null }),
+}));
+
 vi.mock('@/lib/office/useOfficeHistoryNames', () => ({
   useOfficeHistoryNames: () => () => undefined,
 }));

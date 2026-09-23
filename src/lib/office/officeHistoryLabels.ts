@@ -19,7 +19,7 @@ export const OFFICE_HISTORY_GROUPS: Array<{ id: OfficeHistoryGroup; label: strin
   { id: 'teachers', label: 'Teachers' },
   { id: 'grades', label: 'Grades' },
   { id: 'billing', label: 'Billing' },
-  { id: 'attendance', label: 'Attendance' },
+  { id: 'attendance', label: 'Attendance & front desk' },
   { id: 'communication', label: 'Forms & events' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -35,6 +35,7 @@ const GROUP_BY_TYPE: Record<OfficeAuditEntityType, OfficeHistoryGroup> = {
   officeInvoice: 'billing',
   officePayment: 'billing',
   officeAttendanceEntry: 'attendance',
+  officeDeskLog: 'attendance',
   officeForm: 'communication',
   officeEvent: 'communication',
   officeSettings: 'settings',
