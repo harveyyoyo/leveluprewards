@@ -3,10 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
-import { Download } from 'lucide-react';
+import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeRosterManager } from '@/components/office/OfficeRosterManager';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
@@ -30,6 +35,32 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'name-asc' | 'name-desc' | 'class';
+
+/** Column heading that sorts the list when clicked (replaces a separate Sort box). */
+function SortHeader({
+  label,
+  active,
+  descending,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  descending?: boolean;
+  onClick: () => void;
+}) {
+  const Arrow = descending ? ArrowUp : ArrowDown;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn('inline-flex items-center gap-1 hover:text-foreground', active && 'text-foreground')}
+      aria-label={`Sort by ${label.toLowerCase()}`}
+    >
+      {label}
+      {active ? <Arrow className="h-3 w-3" aria-hidden /> : null}
+    </button>
+  );
+}
 type RosterFilter = 'all' | 'missing-grades' | 'no-billing' | 'unassigned' | 'no-teacher' | 'withdrawn' | 'graduated';
 
 type OfficeStudentsViewProps = {
@@ -68,6 +99,7 @@ export function OfficeStudentsView({
   const [rosterFilter, setRosterFilter] = useState<RosterFilter>('all');
   const [sortBy, setSortBy] = useState<SortKey>('name-asc');
   const openedHomeroomFromQuery = useRef(false);
+  const importRef = useRef<(() => void) | null>(null);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
@@ -177,12 +209,12 @@ export function OfficeStudentsView({
   );
 
   const rosterFilterOptions: { id: RosterFilter; label: string }[] = [
-    { id: 'all', label: 'All' },
+    { id: 'all', label: 'All students' },
     ...(missingGradesCount > 0
       ? [{ id: 'missing-grades' as const, label: `Missing grades (${missingGradesCount})` }]
       : []),
     ...(noBillingCount > 0 ? [{ id: 'no-billing' as const, label: `No billing (${noBillingCount})` }] : []),
-    ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `Unassigned (${unassignedCount})` }] : []),
+    ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `No class (${unassignedCount})` }] : []),
     ...(noTeacherCount > 0
       ? [{ id: 'no-teacher' as const, label: `No teacher (${noTeacherCount})` }]
       : []),
@@ -207,94 +239,118 @@ export function OfficeStudentsView({
     );
   }
 
+  const isFiltered = rosterFilter !== 'all' || classFilter !== 'all' || homeroomFilter !== 'all' || !!query.trim();
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="rounded-xl gap-2"
-          disabled={students.length === 0}
-          onClick={() => {
-            exportOfficeStudentsCsv(schoolId, filtered, classNameById, teacherNameById);
-            toast({ title: 'Roster exported', description: `${filtered.length} rows.` });
-          }}
-        >
-          <Download className="h-4 w-4" />
-          Download spreadsheet
-        </Button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {rosterFilterOptions.map((opt) => (
-          <Button
-            key={opt.id}
-            type="button"
-            size="sm"
-            variant={rosterFilter === opt.id ? 'default' : 'outline'}
-            className="rounded-lg h-8"
-            onClick={() => {
-              setRosterFilter(opt.id);
-              if (opt.id === 'unassigned') setClassFilter('__unassigned__');
-              else if (classFilter === '__unassigned__') setClassFilter('all');
-            }}
-          >
-            {opt.label}
-          </Button>
-        ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            {filtered.length === students.length
+              ? `${students.length} student${students.length === 1 ? '' : 's'}`
+              : `${filtered.length} of ${students.length} students`}
+          </span>
+          {isFiltered ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+              onClick={() => {
+                setQuery('');
+                setRosterFilter('all');
+                setClassFilter('all');
+                setHomeroomFilter('all');
+              }}
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-xl" aria-label="More options">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 rounded-xl">
+              <DropdownMenuItem onSelect={() => importRef.current?.()}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import from a spreadsheet
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  exportOfficeStudentsCsv(schoolId, filtered, classNameById, teacherNameById);
+                  toast({ title: 'Spreadsheet downloaded', description: `${filtered.length} students.` });
+                }}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download this list
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} importRef={importRef} />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search by name or class…" className="flex-1" />
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">Class</Label>
-          <Select value={classFilter} onValueChange={setClassFilter}>
-            <SelectTrigger className="w-44 h-11 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All classes</SelectItem>
-              {unassignedCount > 0 ? (
-                <SelectItem value="__unassigned__">Unassigned ({unassignedCount})</SelectItem>
-              ) : null}
-              {classOptions.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">Sort</Label>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortKey)}>
-            <SelectTrigger className="w-36 h-11 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name-asc">Name A → Z</SelectItem>
-              <SelectItem value="name-desc">Name Z → A</SelectItem>
-              <SelectItem value="class">By class</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <OfficeSearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search students…"
+          className="basis-full sm:basis-auto sm:min-w-[12rem] sm:flex-1"
+        />
+        <Select
+          value={rosterFilter}
+          onValueChange={(v) => {
+            const next = v as RosterFilter;
+            setRosterFilter(next);
+            if (next === 'unassigned') setClassFilter('__unassigned__');
+            else if (classFilter === '__unassigned__') setClassFilter('all');
+          }}
+        >
+          <SelectTrigger className="h-10 min-w-0 flex-1 rounded-xl sm:w-44 sm:flex-none" aria-label="Show">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {rosterFilterOptions.map((opt) => (
+              <SelectItem key={opt.id} value={opt.id}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={classFilter} onValueChange={setClassFilter}>
+          <SelectTrigger className="h-10 min-w-0 flex-1 rounded-xl sm:w-40 sm:flex-none" aria-label="Class">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All classes</SelectItem>
+            {unassignedCount > 0 ? <SelectItem value="__unassigned__">No class ({unassignedCount})</SelectItem> : null}
+            {classOptions.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
-      <p className="text-xs text-muted-foreground">
-        {filtered.length === students.length
-          ? `${students.length} student${students.length === 1 ? '' : 's'}`
-          : `${filtered.length} of ${students.length} students`}
-      </p>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground dark:bg-slate-800/50">
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3 hidden sm:table-cell">Class</th>
-              <th className="px-4 py-3 hidden md:table-cell">Teacher</th>
-              <th className="px-4 py-3 hidden lg:table-cell">Billing</th>
-              <th className="px-4 py-3 hidden lg:table-cell">{activeTerm}</th>
+            <tr className="border-b text-left text-xs font-medium text-muted-foreground dark:border-slate-800">
+              <th className="px-4 py-2.5">
+                <SortHeader
+                  label="Student"
+                  active={sortBy === 'name-asc' || sortBy === 'name-desc'}
+                  descending={sortBy === 'name-desc'}
+                  onClick={() => setSortBy(sortBy === 'name-asc' ? 'name-desc' : 'name-asc')}
+                />
+              </th>
+              <th className="px-4 py-2.5 hidden sm:table-cell">
+                <SortHeader label="Class" active={sortBy === 'class'} onClick={() => setSortBy('class')} />
+              </th>
+              <th className="px-4 py-2.5 hidden md:table-cell">Teacher</th>
             </tr>
           </thead>
           <tbody>
@@ -336,23 +392,7 @@ export function OfficeStudentsView({
                       ))}
                     </div>
                   ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">
-                  {billingAccountForStudent(billingAccounts, s.id)?.familyName ?? '—'}
-                </td>
-                <td className="px-4 py-3 hidden lg:table-cell">
-                  {gradedForTerm.has(s.id) ? (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-                      Graded
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="h-1.5 w-1.5 rounded-full bg-slate-300 dark:bg-slate-600" aria-hidden />
-                      Not yet
-                    </span>
+                    <span className="text-muted-foreground">—</span>
                   )}
                 </td>
               </tr>

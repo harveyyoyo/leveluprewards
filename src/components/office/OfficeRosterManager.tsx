@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type MutableRefObject } from 'react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,11 @@ type OfficeRosterManagerProps = {
   schoolId: string;
   classes: OfficeClass[];
   teachers: OfficeTeacher[];
+  /** When given, the spreadsheet import has no button of its own; open it via `importRef.current()` (e.g. from a menu). */
+  importRef?: MutableRefObject<(() => void) | null>;
 };
 
-export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRosterManagerProps) {
+export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: OfficeRosterManagerProps) {
   const { toast } = useToast();
   const write = useOfficeWrite(schoolId);
   const [open, setOpen] = useState(false);
@@ -87,6 +89,7 @@ export function OfficeRosterManager({ schoolId, classes, teachers }: OfficeRoste
         classes={classes}
         teachers={teachers}
         disabled={busy}
+        openRef={importRef}
       />
       <Button type="button" className="rounded-xl gap-2" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" />

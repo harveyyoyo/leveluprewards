@@ -30,6 +30,8 @@ import { countOfficeStudentsByTeacher, getTeacherIds } from '@/lib/office/office
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { officePublicHref } from '@/lib/officePublicUrl';
+import Link from 'next/link';
 import { handleSelectableRowClick } from '@/lib/ui/selectableRowClick';
 import { cn } from '@/lib/utils';
 
@@ -207,23 +209,28 @@ export function OfficeTeachersView({ schoolId, teachers, students, classes, isLo
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {confirmDialog}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground max-w-xl">
-          Click a teacher to see their classes and students.
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {teachers.length} {teachers.length === 1 ? 'teacher' : 'teachers'}
+          {noTeacherCount > 0 ? (
+            <>
+              {' · '}
+              <Link
+                href={`${officePublicHref(schoolId, 'students')}?filter=no-teacher`}
+                className="text-amber-800 hover:underline dark:text-amber-300"
+              >
+                {noTeacherCount} student{noTeacherCount === 1 ? '' : 's'} without a teacher
+              </Link>
+            </>
+          ) : null}
         </p>
         <Button type="button" className="rounded-xl gap-2" onClick={openNew}>
           <Plus className="h-4 w-4" />
           Add teacher
         </Button>
       </div>
-
-      {noTeacherCount > 0 ? (
-        <p className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
-          {noTeacherCount} student{noTeacherCount === 1 ? '' : 's'} ha{noTeacherCount === 1 ? 's' : 've'} no teacher assigned.
-        </p>
-      ) : null}
 
       <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search teachers…" />
 

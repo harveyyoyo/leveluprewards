@@ -5,7 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
-import { AlertTriangle, ArrowUpRight, ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, ChevronRight, ChevronsUpDown, Download, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -336,49 +343,38 @@ export function OfficeClassesView({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {confirmDialog}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Browse office students by class. Click a name to open their profile.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {classes.length} {classes.length === 1 ? 'class' : 'classes'} · {students.length} students
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            disabled={classes.length === 0 || promotionPlan.changes.length === 0}
-            onClick={() => setPromoteOpen(true)}
-          >
-            <ArrowUpRight className="h-4 w-4" />
-            Advance for next year
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            disabled={students.length === 0}
-            onClick={exportClassRoster}
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl"
-            onClick={() => setExpandAll((v) => !v)}
-          >
-            {expandAll ? 'Collapse all' : 'Expand all'}
-          </Button>
+      <div className="flex items-center justify-between gap-2 no-print">
+        <p className="text-sm text-muted-foreground">
+          {classes.length} {classes.length === 1 ? 'class' : 'classes'} · {students.length} students
+        </p>
+        <div className="flex items-center gap-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-xl" aria-label="More options">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 rounded-xl">
+              <DropdownMenuItem onSelect={() => setExpandAll((v) => !v)}>
+                <ChevronsUpDown className="mr-2 h-4 w-4" />
+                {expandAll ? 'Collapse all classes' : 'Open all classes'}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={students.length === 0} onSelect={exportClassRoster}>
+                <Download className="mr-2 h-4 w-4" />
+                Download class lists
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={classes.length === 0 || promotionPlan.changes.length === 0}
+                onSelect={() => setPromoteOpen(true)}
+              >
+                <ArrowUpRight className="mr-2 h-4 w-4" />
+                Advance classes for next year
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button type="button" className="rounded-xl gap-2" onClick={openNewClass}>
             <Plus className="h-4 w-4" />
             New class
@@ -386,7 +382,7 @@ export function OfficeClassesView({
         </div>
       </div>
 
-      <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search class or student…" />
+      <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search classes or students…" />
 
       <div className="space-y-2">
         {filtered.map(({ class: cls, students: list }) => {
