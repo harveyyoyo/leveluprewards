@@ -49,6 +49,8 @@ export function goalTypeLabel(type: GoalType | string | undefined): string {
       return 'Savings';
     case 'class':
       return 'Class';
+    case 'school':
+      return 'Whole school';
     default:
       return 'Goal';
   }
@@ -72,6 +74,7 @@ export function goalAudienceLabel(
   students: Student[],
   classes: SchoolClass[],
 ): string {
+  if (goal.type === 'school') return 'Whole school';
   if (goal.type === 'class' && goal.classId) {
     const cls = classes.find((c) => c.id === goal.classId);
     return cls?.name?.trim() || 'Whole class';

@@ -13,7 +13,7 @@ export type GoalsOptions = {
   hallwaySpotlight: boolean;
   /** Offer goal ideas from how the class earns points. */
   suggestFromHabits: boolean;
-  /** Hide Finished / Past due / Archived when empty. */
+  /** Use a shorter empty-list message while keeping every list tab visible. */
   hideEmptySections: boolean;
   /** Prize shop shows “Need X more points”. */
   showNeedMoreInShop: boolean;
@@ -43,47 +43,42 @@ export const GOALS_OPTION_FIELDS: Array<{
   {
     key: 'celebrateOnAward',
     label: 'Cheer when a goal finishes',
-    hint: 'Confetti and a short message after points land.',
+    hint: 'Show confetti and a congratulations message when a goal is completed. Students also see encouragement when they are close. Turn this off to hide these celebrations and student messages.',
   },
   {
     key: 'teacherAlmostThereNudge',
     label: 'Nudge teachers when someone is close',
-    hint: 'A tip after awarding if a student is near a goal.',
+    hint: 'Show the teacher an “Almost there!” message after awarding points when a goal reaches 80% of its target — for example, 80 out of 100 points. Turn this off to hide that reminder.',
   },
   {
     key: 'showOnClassroom',
     label: 'Show progress on classroom seats',
-    hint: 'Small rings on the seating chart.',
+    hint: 'Add a small progress ring to each student’s seat on the classroom seating chart so teachers can see how close they are to a goal. Turn this off to hide the rings.',
   },
   {
     key: 'showNeedMoreInShop',
     label: 'Show “need more points” in the shop',
-    hint: 'Kids see how many points they still need.',
+    hint: 'In the student prize shop, show how many more points a student needs for a prize. For example, a 100-point prize says “Need 30 more points” if they have 70. Turn this off to hide that extra message.',
   },
   {
     key: 'hallwaySpotlight',
     label: 'Spotlight finishes on hallway screens',
-    hint: 'Recently finished goals get a “Just finished!” callout.',
+    hint: 'Highlight recently completed goals on hallway displays with a “Just finished!” message. Turn this off to stop highlighting those finishes on the screens.',
   },
   {
     key: 'classPartyMode',
     label: 'Class goal party',
-    hint: 'Extra cheer when the whole class hits a goal.',
-  },
-  {
-    key: 'suggestFromHabits',
-    label: 'Suggest goals from class habits',
-    hint: 'Quick ideas based on how points are earned.',
+    hint: 'Use a bigger confetti celebration when a shared class goal is completed. “Cheer when a goal finishes” must also be on. Turn this off to use the regular celebration; it does not change rewards.',
   },
   {
     key: 'hideEmptySections',
-    label: 'Hide empty lists',
-    hint: 'Skip Finished / Past due / Archived when they have nothing.',
+    label: 'Keep empty lists simple',
+    hint: 'When a list has no goals, show only “No goals in this list yet.” Turn this off to also show tips for adding or finding goals. Current, Finished, Past due, and Archived always stay visible.',
   },
   {
     key: 'familyFriendlyPortal',
     label: 'Family-friendly home portal words',
-    hint: 'Softer labels for students and families at home.',
+    hint: 'Use friendlier goal labels and progress messages on the student home page, such as “Saving for a reward” and “Needs 20 more points.” Turn this off to use the standard wording. Points and rewards stay the same.',
   },
 ];
 
@@ -128,6 +123,8 @@ export function familyGoalTypeLabel(type: GoalType | string | undefined): string
       return 'Saving for a reward';
     case 'class':
       return 'Class challenge';
+    case 'school':
+      return 'School challenge';
     default:
       return 'Goal';
   }
@@ -275,7 +272,7 @@ export function activeGoalsForStudent(
     (g) =>
       !g.archived &&
       g.status === 'active' &&
-      (g.studentId === student.id || (g.type === 'class' && g.classId && g.classId === student.classId)),
+      (g.type === 'school' || g.studentId === student.id || (g.type === 'class' && g.classId && g.classId === student.classId)),
   );
 }
 

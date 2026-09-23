@@ -154,6 +154,8 @@ export const deleteStudent = async (firestore: Firestore, schoolId: string, stud
 };
 
 export type AwardPointsOptions = {
+  /** Stable receipt for a goal bonus so concurrent progress checks cannot pay twice. */
+  goalRewardId?: string;
   /** When true, skip syncing student goals after this award (avoids loops for goal-completion bonuses). */
   skipGoalSync?: boolean;
   /** When true, increment the student's house cached totals (requires `houseId` on student). */
@@ -184,6 +186,10 @@ export const awardPointsToStudent = async (
         throw new Error("Student not found.");
       }
       const studentData = studentDoc.data() as Student;
+      const goalReceipt = options?.goalRewardId
+        ? doc(firestore, 'schools', schoolId, 'students', studentId, 'activities', `goal-reward-${options.goalRewardId}`)
+        : null;
+      if (goalReceipt && (await transaction.get(goalReceipt)).exists()) return;
 
       const houseSnap =
         options?.rollupHousePoints && studentData.houseId
@@ -229,7 +235,7 @@ export const awardPointsToStudent = async (
         updatedAt: now,
       });
 
-      const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+      const activityRef = goalReceipt ?? doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
       transaction.set(activityRef, { desc: description, amount: points, date: now });
 
       if (houseSnap && shouldRollupCategoryToHouse(description, allCategories)) {

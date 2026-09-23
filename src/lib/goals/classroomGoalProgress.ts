@@ -20,8 +20,8 @@ export function estimateGoalProgressSync(
     return Math.max(0, viewer.points || 0);
   }
 
-  if (goal.type === 'class') {
-    const members = roster.filter((s) => s.classId === goal.classId);
+  if (goal.type === 'class' || goal.type === 'school') {
+    const members = goal.type === 'school' ? roster : roster.filter((s) => s.classId === goal.classId);
     if (goal.categoryId) {
       if (!catName) return 0;
       return members.reduce((acc, s) => acc + (s.categoryPoints?.[catName] || 0), 0);
@@ -42,6 +42,7 @@ export function buildStudentGoalRatioMap(
   goals: Goal[],
   students: Student[],
   categories: Category[],
+  schoolStudents?: Student[],
 ): Record<string, number> {
   const byClass = new Map<string, Student[]>();
   for (const s of students) {
@@ -53,12 +54,12 @@ export function buildStudentGoalRatioMap(
 
   const out: Record<string, number> = {};
   for (const student of students) {
-    const relevant = activeGoalsForStudent(goals, student);
+    const relevant = activeGoalsForStudent(goals, student).filter((g) => g.type !== 'school' || schoolStudents);
     if (relevant.length === 0) continue;
     const progressByGoalId: Record<string, number> = {};
     for (const g of relevant) {
       const roster =
-        g.type === 'class' && g.classId ? byClass.get(g.classId) || [student] : [student];
+        g.type === 'school' ? schoolStudents! : g.type === 'class' && g.classId ? byClass.get(g.classId) || [student] : [student];
       progressByGoalId[g.id] = estimateGoalProgressSync(g, student, roster, categories);
     }
     const best = bestGoalProgressRatio(relevant, progressByGoalId);

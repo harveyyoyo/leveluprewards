@@ -301,13 +301,20 @@ function ClassroomPointsPanelInner({
     [settings.enableGoals, goalsOpts.showOnClassroom, firestore, schoolId],
   );
   const { data: classroomGoals } = useCollection<Goal>(goalsQuery);
+  const hasSchoolGoal = classroomGoals?.some((goal) => goal.type === 'school' && goal.status === 'active' && !goal.archived);
+  const schoolGoalStudentsQuery = useMemoFirebase(
+    () => hasSchoolGoal && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null,
+    [hasSchoolGoal, firestore, schoolId],
+  );
+  const { data: schoolGoalStudents } = useCollection<Student>(schoolGoalStudentsQuery);
   const goalRatioByStudentId = useMemo(() => {
     if (!settings.enableGoals || !goalsOpts.showOnClassroom || !classroomGoals?.length) return undefined;
-    return buildStudentGoalRatioMap(classroomGoals, deferredStudents, categories || []);
+    return buildStudentGoalRatioMap(classroomGoals, deferredStudents, categories || [], schoolGoalStudents ?? undefined);
   }, [
     settings.enableGoals,
     goalsOpts.showOnClassroom,
     classroomGoals,
+    schoolGoalStudents,
     deferredStudents,
     categories,
   ]);

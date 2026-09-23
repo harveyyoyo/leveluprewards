@@ -782,7 +782,7 @@ export interface Database {
   hasMigratedIncentivesToCategories?: boolean;
 }
 
-export type GoalType = 'personal' | 'prize_savings' | 'class';
+export type GoalType = 'personal' | 'prize_savings' | 'class' | 'school';
 
 export interface Goal {
   id: string;
@@ -800,6 +800,12 @@ export interface Goal {
   studentId?: string; // For personal/prize goals
   classId?: string;   // For class-wide goals
   teacherId?: string; // The teacher who created the goal
+  /** Stable staff identity (teacher document ID, or role + signed-in user ID). */
+  assignedByStaffId?: string;
+  assignedByName?: string;
+  assignedByRole?: 'teacher' | 'admin' | 'staff';
+  /** Controls staff Goals lists; student participation is determined by the goal audience. */
+  staffVisibility?: 'creator' | 'all';
   prizeId?: string;   // If this is a prize savings goal
   
   // Time limits
@@ -814,6 +820,7 @@ export interface Goal {
   createdAt: number;
   /** When the goal first reached its target. */
   completedAt?: number;
+  completedProgress?: number;
   /** Student (or kiosk) created this savings wishlist item. */
   createdByStudent?: boolean;
   /** Soft-hidden from the main staff lists. */

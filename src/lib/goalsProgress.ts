@@ -51,13 +51,13 @@ export async function computeGoalProgress(
   categories: Category[],
 ): Promise<number> {
   const now = Date.now();
+  if (goal.status === 'completed') return Math.max(goal.targetPoints || 0, goal.completedProgress || 0);
   if (goal.status !== 'active') {
     // Still show final progress on completed/expired cards when possible.
-    if (goal.status !== 'completed' && goal.status !== 'expired') return 0;
+    if (goal.status !== 'expired') return 0;
   }
   if (goal.status === 'active') {
     if (goal.startDate && now < goal.startDate) return 0;
-    if (goal.endDate && now > goal.endDate) return 0;
   }
 
   const catName = categoryNameFromId(categories, goal.categoryId);
@@ -71,8 +71,11 @@ export async function computeGoalProgress(
     return Math.max(0, viewerStudent.points || 0);
   }
 
-  if (goal.type === 'class') {
-    const roster = rosterStudents.filter((s) => s.classId === goal.classId);
+  if (goal.type === 'class' || goal.type === 'school') {
+    // Callers may only have a teacher's class roster. Always load the full school here.
+    const roster = goal.type === 'school'
+      ? (await getDocs(collection(firestore, 'schools', schoolId, 'students'))).docs.map((d) => ({ id: d.id, ...d.data() } as Student))
+      : rosterStudents.filter((s) => s.classId === goal.classId);
     if (goal.categoryId) {
       if (!catName) return 0;
       if (useActivityRange) {
@@ -105,10 +108,10 @@ export async function computeGoalProgress(
 
   if (useActivityRange) {
     const ranged = await sumActivitiesInRange(firestore, schoolId, viewerStudent.id, rangeStart, rangeEnd);
-    return goal.status === 'completed' ? Math.max(ranged, goal.targetPoints || 0) : ranged;
+    return ranged;
   }
   const lifetime = viewerStudent.lifetimePoints ?? viewerStudent.points ?? 0;
-  return goal.status === 'completed' ? Math.max(lifetime, goal.targetPoints || 0) : lifetime;
+  return lifetime;
 }
 
 export type GoalSyncEvent = {
@@ -137,7 +140,7 @@ export async function syncGoalsForStudent(
     .filter((g) => g.status === 'active')
     .filter(
       (g) =>
-        g.studentId === studentId ||
+        g.type === 'school' || g.studentId === studentId ||
         (g.type === 'class' && g.classId && g.classId === student.classId),
     );
 
@@ -166,7 +169,10 @@ export async function syncGoalsForStudent(
     }
 
     let rosterList: Student[] = [];
-    if (goal.type === 'class' && goal.classId) {
+    if (goal.type === 'school') {
+      const snap = await getDocs(collection(firestore, 'schools', schoolId, 'students'));
+      rosterList = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Student));
+    } else if (goal.type === 'class' && goal.classId) {
       rosterList = await rosterForClass(goal.classId);
     } else {
       rosterList = [student];
@@ -187,35 +193,27 @@ export async function syncGoalsForStudent(
     }
 
     if (progress >= target && target > 0) {
-      await updateGoal(firestore, schoolId, goal.id, { status: 'completed', completedAt: now });
-      events.push({
-        goalId: goal.id,
-        title: goal.title,
-        kind: 'completed',
-        type: goal.type,
-        classId: goal.classId,
-      });
-
       const bonus = goal.bonusPointsReward ?? 0;
       if (bonus > 0) {
-        if (goal.type === 'class') {
+        if (goal.type === 'class' || goal.type === 'school') {
           for (const member of rosterList) {
-            await awardPointsToStudent(
+            const result = await awardPointsToStudent(
               firestore,
               schoolId,
               member.id,
               bonus,
-              `Class goal reward: ${goal.title}`,
+              `${goal.type === 'school' ? 'School' : 'Class'} goal reward: ${goal.title}`,
               [],
               categories,
               [],
-              { skipGoalSync: true },
+              { skipGoalSync: true, goalRewardId: goal.id },
             );
+            if (!result.success) throw new Error(result.message);
           }
         } else {
           const recipient = goal.studentId;
           if (recipient) {
-            await awardPointsToStudent(
+            const result = await awardPointsToStudent(
               firestore,
               schoolId,
               recipient,
@@ -224,11 +222,21 @@ export async function syncGoalsForStudent(
               [],
               categories,
               [],
-              { skipGoalSync: true },
+              { skipGoalSync: true, goalRewardId: goal.id },
             );
+            if (!result.success) throw new Error(result.message);
           }
         }
       }
+      await updateGoal(firestore, schoolId, goal.id, { status: 'completed', completedAt: now, completedProgress: progress });
+      events.push({
+        goalId: goal.id,
+        title: goal.title,
+        kind: 'completed',
+        type: goal.type,
+        classId: goal.classId,
+      });
+
     }
   }
 

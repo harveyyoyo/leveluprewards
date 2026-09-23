@@ -246,7 +246,7 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
               const family = resolveGoalsOptions(settings.goalsOptions).familyFriendlyPortal;
               const label = family
                 ? familyGoalTypeLabel(goal.type as string)
-                : goal.type === 'class'
+                : goal.type === 'school' ? 'Whole school' : goal.type === 'class'
                   ? 'Class goal'
                   : goal.type === 'prize_savings'
                     ? 'Savings goal'

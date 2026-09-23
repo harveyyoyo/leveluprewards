@@ -404,7 +404,7 @@ export default function HallOfFamePage({
                 targetPoints: g.targetPoints,
                 classId: g.classId,
                 className: g.classId ? getClassName(g.classId) : 'School-wide',
-                initials: g.type === 'class' ? 'C' : 'P',
+                initials: g.type === 'school' ? 'S' : g.type === 'class' ? 'C' : 'P',
                 description: g.description || '',
                 status: g.status,
                 goalType: g.type,

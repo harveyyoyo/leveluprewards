@@ -22,26 +22,33 @@ export function GoalsOptionsPanel(props: {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings2 className="w-5 h-5 text-muted-foreground" />
-          Goals options
+          Goals settings
         </CardTitle>
         <CardDescription>
-          Keep the main screens simple. Turn extras on only when you want them.
+          Choose where goal progress appears and which messages people see. Each explanation tells you what turning the setting on or off does.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {GOALS_OPTION_FIELDS.map((field) => (
+        {[
+          { title: 'Celebrations and reminders', keys: ['celebrateOnAward', 'teacherAlmostThereNudge', 'classPartyMode'] },
+          { title: 'Where progress appears', keys: ['showOnClassroom', 'showNeedMoreInShop', 'hallwaySpotlight'] },
+          { title: 'Page appearance', keys: [ 'hideEmptySections', 'familyFriendlyPortal'] },
+        ].map((group) => <section key={group.title} className="space-y-3">
+          <h3 className="font-semibold text-base">{group.title}</h3>
+          {GOALS_OPTION_FIELDS.filter((field) => group.keys.includes(field.key)).map((field) => (
           <div
             key={field.key}
             className="flex items-start justify-between gap-4 rounded-xl border bg-muted/10 px-3 py-3"
           >
-            <div className="min-w-0 space-y-0.5">
+            <div className="min-w-0 space-y-2">
               <Label htmlFor={`goals-opt-${field.key}`} className="text-sm font-semibold">
                 {field.label}
               </Label>
-              <p className="text-[11px] text-muted-foreground leading-snug">{field.hint}</p>
+              <p id={`goals-opt-${field.key}-hint`} className="text-sm text-muted-foreground leading-relaxed">{field.hint}</p>
             </div>
             <Switch
               id={`goals-opt-${field.key}`}
+              aria-describedby={`goals-opt-${field.key}-hint`}
               checked={opts[field.key]}
               disabled={props.disabled}
               onCheckedChange={(checked) => {
@@ -49,7 +56,7 @@ export function GoalsOptionsPanel(props: {
               }}
             />
           </div>
-        ))}
+        ))}</section>)}
       </CardContent>
     </Card>
   );

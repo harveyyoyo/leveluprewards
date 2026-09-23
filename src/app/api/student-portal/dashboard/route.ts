@@ -86,8 +86,8 @@ async function goalProgress(
     return goal.studentId === studentId ? Math.max(0, Number(student.points || 0)) : 0;
   }
 
-  if (goal.type === 'class') {
-    const classRoster = roster.filter((s) => s.classId === goal.classId);
+  if (goal.type === 'class' || goal.type === 'school') {
+    const classRoster = goal.type === 'school' ? roster : roster.filter((s) => s.classId === goal.classId);
     if (goal.categoryId) {
       if (!categoryName) return 0;
       if (useActivityRange) {
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
       .filter((goal) => goal.status === 'active' || goal.status === 'completed')
       .filter(
         (goal) =>
-          goal.studentId === studentId ||
+          goal.type === 'school' || goal.studentId === studentId ||
           (goal.type === 'class' && goal.classId && goal.classId === student.classId),
       );
 
@@ -200,9 +200,11 @@ export async function POST(req: NextRequest) {
       return roster;
     }
 
+    const schoolRoster = goals.some((goal) => goal.type === 'school')
+      ? (await schoolRef.collection('students').get()).docs.map((doc) => docData<JsonRecord>(doc)) : [];
     const goalRows = await Promise.all(
       goals.map(async (goal) => {
-        const roster = goal.type === 'class' && typeof goal.classId === 'string' ? await rosterFor(goal.classId) : [student];
+        const roster = goal.type === 'school' ? schoolRoster : goal.type === 'class' && typeof goal.classId === 'string' ? await rosterFor(goal.classId) : [student];
         return {
           ...goal,
           progress: await goalProgress(db, schoolId, goal, student, roster, categories),
