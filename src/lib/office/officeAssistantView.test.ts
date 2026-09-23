@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  describeOfficeAssistantView,
   dollarsParamToCents,
   findClassByAskedName,
   officeAssistantSystemPrompt,
@@ -30,12 +31,64 @@ describe('parseOfficeAssistantDecision', () => {
   });
 });
 
+describe('student name filters', () => {
+  it('reads "last name starts with L" as a starts-with filter, and never searches a single letter', () => {
+    const d = parseOfficeAssistantDecision({
+      type: 'view',
+      view: { page: 'students', label: 'Last name L', lastNameStarts: 'L' },
+    });
+    if (d.type !== 'view' || d.view.page !== 'students') throw new Error('expected a students view');
+    expect(d.view.lastNameStarts).toBe('L');
+    expect(officeAssistantViewHref('schoolabc', d.view)).toContain('lastStarts=L');
+    // A one-letter name search would match nearly everyone, so it's dropped (and with nothing
+    // else asked, the question gets a written answer instead of a wrong list).
+    expect(
+      parseOfficeAssistantDecision({ type: 'view', view: { page: 'students', label: 'x', text: 'l' } }),
+    ).toEqual({ type: 'answer' });
+  });
+});
+
+describe('describeOfficeAssistantView', () => {
+  it('describes the filters actually applied, not the AI wording', () => {
+    const base = {
+      page: 'students' as const,
+      label: 'Students from Brooklyn',
+      text: null,
+      lastNameStarts: null,
+      firstNameStarts: null,
+      birthMonth: null,
+      className: null,
+      teacher: null,
+      address: null,
+      show: null,
+    };
+    expect(describeOfficeAssistantView({ ...base, lastNameStarts: 'L' })).toBe('Students with last name starting with “L”');
+    expect(describeOfficeAssistantView({ ...base, show: 'allergies', className: 'Grade 7' })).toBe(
+      'Students with allergies in Grade 7',
+    );
+    expect(describeOfficeAssistantView({ ...base, text: 'lo' })).toBe('Students whose name or class includes “lo”');
+    expect(describeOfficeAssistantView({ ...base, birthMonth: 3 })).toBe('Students with a birthday in March');
+    expect(
+      describeOfficeAssistantView({ page: 'billing', label: 'x', minOwed: 1800, maxOwed: null, status: 'overdue', family: null }),
+    ).toBe('Families owing more than $1,800, with an overdue bill');
+    expect(
+      describeOfficeAssistantView(
+        { page: 'attendance', label: 'x', date: '2026-09-23', status: 'absent', className: null },
+        '2026-09-23',
+      ),
+    ).toBe('Students marked absent today');
+  });
+});
+
 describe('officeAssistantViewHref', () => {
-  it('builds a Students link with the address filter and label', () => {
+  it('builds a Students link with the address filter and a description of it', () => {
     const href = officeAssistantViewHref('schoolabc', {
       page: 'students',
       label: 'Students living in Brooklyn',
       text: null,
+      lastNameStarts: null,
+      firstNameStarts: null,
+      birthMonth: null,
       className: null,
       teacher: null,
       address: 'Brooklyn',
@@ -43,7 +96,7 @@ describe('officeAssistantViewHref', () => {
     });
     expect(href).toContain('/students?');
     expect(href).toContain('address=Brooklyn');
-    expect(href).toContain('ask=Students+living+in+Brooklyn');
+    expect(new URL(href, 'http://x').searchParams.get('ask')).toBe('Students whose home address includes “Brooklyn”');
   });
 
   it('builds a Billing link with the amount', () => {
@@ -96,6 +149,9 @@ describe('officeAssistantSystemPrompt', () => {
       page: 'students' as const,
       label: 'Students with allergies',
       text: null,
+      lastNameStarts: null,
+      firstNameStarts: null,
+      birthMonth: null,
       className: null,
       teacher: null,
       address: null,
