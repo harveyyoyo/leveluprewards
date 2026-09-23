@@ -31,6 +31,10 @@ const STATE_NAME_RE = new RegExp(
   'g',
 );
 
+// After normalizing, "New York City" reads "ny city" and "New York, NY" reads "ny ny".
+const NYC_SEARCHES = new Set(['nyc', 'ny city']);
+const NYC_PLACES = /\b(brooklyn|queens|bronx|staten island|manhattan)\b|\bny ny\b/;
+
 function normalizeAddressText(value: string): string {
   return value
     .toLowerCase()
@@ -49,6 +53,8 @@ export function officeAddressMatches(address: string | null | undefined, search:
   if (!want) return true;
   const have = normalizeAddressText(address ?? '');
   if (!have) return false;
+  // Addresses never say "NYC": it means a New York borough, or New York, NY.
+  if (NYC_SEARCHES.has(want)) return /\bny\b/.test(have) && NYC_PLACES.test(have);
   // A lone state code must be its own word, so "ny" doesn't match "Sunnyside".
   if (STATE_CODES.has(want)) return new RegExp(`\\b${want}\\b`).test(have);
   return have.includes(want);
