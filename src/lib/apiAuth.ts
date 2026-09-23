@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseConfig } from '@/firebase/config';
+import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
 /**
  * Lightweight API auth + abuse controls for Next.js route handlers that call
@@ -131,6 +132,11 @@ async function checkSchoolRole(
     return cached.allowed;
   }
 
+  if (isPublicSampleSchoolId(schoolId)) {
+    roleCache.set(cacheKey, { allowed: true, expiresAt: Date.now() + ROLE_CACHE_MS });
+    return true;
+  }
+
   const projectId = firebaseConfig.projectId;
   if (!projectId) return false;
 
@@ -144,6 +150,7 @@ async function checkSchoolRole(
     `${base}/roles_librarian/${encodeURIComponent(uid)}`,
     `${base}/roles_office/${encodeURIComponent(uid)}`,
     `${base}/roles_houseCoordinator/${encodeURIComponent(uid)}`,
+    `${base}/anonymousPortalSessions/${encodeURIComponent(uid)}`,
   ];
 
   const STAFF_ROLES = new Set([
@@ -159,9 +166,6 @@ async function checkSchoolRole(
 
   let allowed = false;
   try {
-    // Run role lookups in parallel using the user's ID token, so
-    // Firestore rules (not a service account) decide whether the read is
-    // permitted. A 200 with a 'fields.role' string value = authorized.
     const results = await Promise.all(
       urls.map((url) =>
         fetch(url, {
@@ -173,8 +177,12 @@ async function checkSchoolRole(
 
     for (const body of results) {
       if (!body || typeof body !== 'object') continue;
-      const fields = (body as { fields?: { role?: { stringValue?: string } } }).fields;
-      const role = fields?.role?.stringValue;
+      const doc = body as { name?: string; fields?: { role?: { stringValue?: string } } };
+      if (doc.name && doc.name.includes('/anonymousPortalSessions/')) {
+        allowed = true;
+        break;
+      }
+      const role = doc.fields?.role?.stringValue;
       if (role && STAFF_ROLES.has(role)) {
         allowed = true;
         break;
