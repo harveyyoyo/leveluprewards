@@ -88,12 +88,27 @@ export type OfficeClass = {
   notes?: string | null;
   /** Soft cap used to show an over-capacity warning; no enforcement. */
   capacity?: number | null;
+  /** Weekly timetable for this class (who teaches what, when). */
+  schedule?: OfficeScheduleBlock[];
   updatedAt: number;
   archived?: boolean;
   archivedAt?: number;
 };
 
-export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+/** One repeating time slot on a class's weekly schedule. */
+export type OfficeScheduleBlock = {
+  id: string;
+  subject: string;
+  teacherId?: string | null;
+  /** 0 = Sunday … 6 = Saturday. */
+  days: number[];
+  /** 24-hour "HH:MM". */
+  startTime: string;
+  endTime: string;
+  room?: string | null;
+};
+
+export type OfficeAttendanceStatus ='present' | 'absent' | 'late' | 'excused';
 
 /** One student's attendance mark for one class on one day (`schools/{id}/officeAttendance`). */
 export type OfficeAttendanceEntry = {

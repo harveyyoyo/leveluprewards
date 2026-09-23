@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
+import { OfficeTeacherWeek } from '@/components/office/OfficeClassScheduleSection';
+import { teacherWeek } from '@/lib/office/officeSchedule';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import {
@@ -57,7 +59,7 @@ export function OfficeTeacherSheet({
   const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
-  const { openStudent } = useOfficeEntityNav();
+  const { openStudent, openClass } = useOfficeEntityNav();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -304,6 +306,8 @@ export function OfficeTeacherSheet({
                 </a>
               </section>
             ) : null}
+
+            <OfficeTeacherWeek week={teacherWeek(classes, teacher.id)} onOpenClass={openClass} />
 
             <section>
               <div className="flex items-center justify-between gap-2">

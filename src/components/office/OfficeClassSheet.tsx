@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
+import { OfficeClassScheduleSection } from '@/components/office/OfficeClassScheduleSection';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeStudentFullName, getOfficeTeacherLabel, officeStudentsForClass } from '@/lib/office/officeUtils';
 import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
@@ -22,6 +23,7 @@ type OfficeClassSheetProps = {
   onOpenChange: (open: boolean) => void;
   students: OfficeStudent[];
   teachers?: OfficeTeacher[];
+  allClasses?: OfficeClass[];
   teacherNameById: Map<string, string>;
 };
 
@@ -32,6 +34,7 @@ export function OfficeClassSheet({
   onOpenChange,
   students,
   teachers = [],
+  allClasses = [],
   teacherNameById,
 }: OfficeClassSheetProps) {
   const { openStudent } = useOfficeEntityNav();
@@ -169,6 +172,14 @@ export function OfficeClassSheet({
               </p>
             ) : null}
           </section>
+
+          <OfficeClassScheduleSection
+            schoolId={schoolId}
+            officeClass={officeClass}
+            allClasses={allClasses}
+            teachers={teachers}
+            teacherNameById={teacherNameById}
+          />
 
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Students</h3>

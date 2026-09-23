@@ -23,6 +23,7 @@ import type {
   OfficeInvoice,
   OfficePayment,
   OfficePaymentMethod,
+  OfficeScheduleBlock,
   OfficeStudent,
   OfficeTeacher,
 } from '@/lib/office/types';
@@ -333,6 +334,26 @@ export async function setOfficeClassTeachers(
     summary: `${cls.name}: ${parts.join('; ') || 'updated teachers'}`,
     before: officeAuditSnapshot({ teacherIds: before }),
     after: officeAuditSnapshot({ teacherIds, studentIds: classStudentIds }),
+  });
+}
+
+/** Saves a class's whole weekly schedule; `summary` says what changed in plain words. */
+export async function saveOfficeClassSchedule(
+  ctx: OfficeWriteContext,
+  params: { cls: OfficeClass; schedule: OfficeScheduleBlock[]; summary: string },
+): Promise<void> {
+  const { cls, schedule, summary } = params;
+  await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    schedule,
+    updatedAt: Date.now(),
+  });
+  await audit(ctx, {
+    entityType: 'officeClass',
+    entityId: cls.id,
+    action: 'update',
+    summary: `${cls.name} schedule: ${summary}`,
+    before: officeAuditSnapshot({ schedule: cls.schedule ?? [] }),
+    after: officeAuditSnapshot({ schedule }),
   });
 }
 
