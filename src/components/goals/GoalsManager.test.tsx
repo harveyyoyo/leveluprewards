@@ -19,6 +19,20 @@ vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ userId
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/components/tabWalkthrough/TabWalkthroughContext', () => ({ TabWalkthroughHeaderAction: () => null }));
 vi.mock('@/components/staff/StaffPortalTabHeader', () => ({ StaffPortalTabPanel: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
+vi.mock('@/components/admin/CategoryModal', () => ({
+  CategoryModal: ({ isOpen, onCreated }: { isOpen: boolean; onCreated?: (cat: { id: string; name: string }) => void }) =>
+    isOpen ? (
+      <div data-testid="category-modal">
+        <p>New Category Modal</p>
+        <button
+          type="button"
+          onClick={() => onCreated?.({ id: 'new-cat', name: 'Creativity' })}
+        >
+          Save category
+        </button>
+      </div>
+    ) : null,
+}));
 
 import { GoalsManager } from './GoalsManager';
 import { updateGoal, deleteGoal } from '@/lib/db';
@@ -263,5 +277,29 @@ describe('Goals manager', () => {
     } finally {
       fixtures.goals[0] = original;
     }
+  });
+
+  it('opens add category window and selects the created category', async () => {
+    await act(async () => { showGoals(); });
+    openGoal();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    const addCatBtn = screen.getByRole('button', { name: /Add category/ });
+    expect(addCatBtn).toBeInTheDocument();
+    fireEvent.click(addCatBtn);
+    expect(screen.getByTestId('category-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save category'));
+    expect(screen.getByText('50 Creativity points')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() =>
+      expect(updateGoal).toHaveBeenCalledWith(
+        fixtures.db,
+        'school',
+        'goal',
+        expect.objectContaining({
+          categoryId: 'new-cat',
+          title: '50 Creativity points',
+        }),
+      ),
+    );
   });
 });

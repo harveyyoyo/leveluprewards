@@ -26,6 +26,7 @@ import {
   resolveGoalsOptions,
 } from '@/lib/goals/goalsOptions';
 import { GoalsOptionsPanel } from '@/components/goals/GoalsOptionsPanel';
+import { CategoryModal } from '@/components/admin/CategoryModal';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { canManageGoal, canSeeStaffGoal, goalStaffVisibility } from '@/lib/goals/goalStaffVisibility';
@@ -224,6 +225,22 @@ export function GoalsManager(props: {
   const [form, setForm] = useState<GoalFormState>(emptyForm);
   const [studentSearch, setStudentSearch] = useState('');
   const [createStaffSearch, setCreateStaffSearch] = useState('');
+  const [createdCategories, setCreatedCategories] = useState<Category[]>([]);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [categoryModalTarget, setCategoryModalTarget] = useState<'create' | 'edit'>('create');
+
+  const allCategories = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const c of categories || []) map.set(c.id, c);
+    for (const c of createdCategories) map.set(c.id, c);
+    return Array.from(map.values());
+  }, [categories, createdCategories]);
+
+  const handleCategoryCreated = (newCategory: Category) => {
+    setCreatedCategories((prev) => [...prev, newCategory]);
+    patchForm({ categoryId: newCategory.id }, categoryModalTarget);
+  };
+
   const [saving, setSaving] = useState(false);
   const [progressRows, setProgressRows] = useState<{ goal: Goal; progress: number }[]>([]);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
@@ -284,7 +301,7 @@ export function GoalsManager(props: {
         if (goal.type === 'class' && goal.classId) {
           roster = rosterForClass(goal.classId);
         }
-        const progress = await computeGoalProgress(firestore, schoolId, goal, viewer, roster, categories);
+        const progress = await computeGoalProgress(firestore, schoolId, goal, viewer, roster, allCategories);
         out.push({ goal, progress });
         // Catch goals that already meet the target (e.g. created after points were earned).
         if (goal.status === 'active' && progress >= Number(goal.targetPoints || 0) && Number(goal.targetPoints || 0) > 0) {
@@ -301,7 +318,7 @@ export function GoalsManager(props: {
     return () => {
       cancelled = true;
     };
-  }, [firestore, schoolId, filteredGoals, listStudents, categories, rosterForClass]);
+  }, [firestore, schoolId, filteredGoals, listStudents, allCategories, rosterForClass]);
 
   // Celebrate newly finished goals and ping “almost there” once per session.
   useEffect(() => {
@@ -385,7 +402,7 @@ export function GoalsManager(props: {
     if (state.goalType === 'prize_savings') return state.title.trim();
     // Otherwise the system names it from the target and category, e.g. "50 Kindness points".
     const tp = Number(state.targetPoints);
-    const category = categories?.find((c) => c.id === state.categoryId)?.name;
+    const category = allCategories?.find((c) => c.id === state.categoryId)?.name;
     if (!Number.isSafeInteger(tp) || tp <= 0) return '';
     return `${tp.toLocaleString()} ${category ? `${category} ` : ''}points`;
   };
@@ -766,27 +783,58 @@ export function GoalsManager(props: {
       </div>}
       {(target === 'edit' || createStep === 2) && <div className="space-y-4">
       {state.goalType !== 'prize_savings' && <div className="space-y-2">
-        <Label htmlFor={`goal-category-${target}`}>Which category counts?</Label>
-        <Select value={state.categoryId === '__none__' ? undefined : state.categoryId} onValueChange={(v) => patchForm({ categoryId: v }, target)}>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={`goal-category-${target}`}>Which category counts?</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary font-medium"
+            onClick={() => {
+              setCategoryModalTarget(target);
+              setIsAddCategoryOpen(true);
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add category
+          </Button>
+        </div>
+        <Select
+          value={state.categoryId === '__none__' ? undefined : state.categoryId}
+          onValueChange={(v) => {
+            if (v === '__new_category__') {
+              setCategoryModalTarget(target);
+              setIsAddCategoryOpen(true);
+              return;
+            }
+            patchForm({ categoryId: v }, target);
+          }}
+        >
           <SelectTrigger id={`goal-category-${target}`} className="rounded-xl">
             <SelectValue placeholder="Choose a category" />
           </SelectTrigger>
           <SelectContent>
-            {(categories || []).map((c) => (
+            {(allCategories || []).map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}
               </SelectItem>
             ))}
+            <SelectItem value="__new_category__" className="text-primary font-medium focus:text-primary">
+              <span className="flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5" />
+                Add category…
+              </span>
+            </SelectItem>
             {state.categoryId !== '__none__' &&
-            (categories?.length ?? 0) > 0 &&
-            !(categories || []).some((c) => c.id === state.categoryId) ? (
+            (allCategories?.length ?? 0) > 0 &&
+            !(allCategories || []).some((c) => c.id === state.categoryId) ? (
               <SelectItem value={state.categoryId}>Unknown category (deleted)</SelectItem>
             ) : null}
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
           {(() => {
-            const picked = categories?.find((c) => c.id === state.categoryId)?.name;
+            const picked = allCategories?.find((c) => c.id === state.categoryId)?.name;
             return picked
               ? `Only points earned in ${picked} count toward this goal.`
               : 'Only points earned in the category you choose count toward this goal.';
@@ -1006,7 +1054,7 @@ export function GoalsManager(props: {
           {state.goalType === 'prize_savings' ? (
             <p className="text-sm">Uses the student’s available points. Spending points reduces progress until the goal is finished.</p>
           ) : <>
-            <p className="text-sm">Category: {categories?.find((category) => category.id === state.categoryId)?.name ?? 'Not chosen'}</p>
+            <p className="text-sm">Category: {allCategories?.find((category) => category.id === state.categoryId)?.name ?? 'Not chosen'}</p>
             <p className="text-sm">{state.startDate ? `Counts points earned from ${state.startDate}.` : 'Includes points already earned.'} {state.goalType === 'school' ? 'The whole school works toward one shared total.' : state.goalType === 'class' ? 'The class works toward one shared total.' : ''}</p>
           </>}
           <p className="text-sm">{state.goalType === 'school' ? 'Whole school' : state.goalType === 'class' ? classes.find((c) => c.id === state.classId)?.name : studentLabel(students.find((student) => student.id === state.studentId) || { id: '', firstName: '', lastName: '' } as Student)}</p>
@@ -1171,7 +1219,7 @@ export function GoalsManager(props: {
                               {g.description && <p className="text-sm text-muted-foreground mt-1">{g.description}</p>}
                             <p className="text-sm text-muted-foreground">Assigned by: {g.assignedByName || (g.teacherId ? 'Teacher (older goal)' : g.createdByStudent ? 'Student' : 'Not recorded (older goal)')} · {g.staffVisibility === 'all' ? 'Shown to all staff' : g.staffVisibility === 'specific' ? `Shared with ${g.sharedStaffIds?.length ?? 0} staff members` : g.assignedByStaffId || g.teacherId ? 'Only the assigner and admins' : 'Older goal'}</p>
                               {g.type === 'prize_savings' ? <p className="text-sm text-muted-foreground">Counts available points to spend.</p> : <>
-                                <p className="text-sm text-muted-foreground">Category: {g.categoryId ? categories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
+                                <p className="text-sm text-muted-foreground">Category: {g.categoryId ? allCategories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
                                 <p className="text-sm text-muted-foreground">{g.startDate ? `Counts points earned from ${new Date(g.startDate).toLocaleDateString()}.` : 'Includes points already earned.'} {g.type === 'school' ? 'One shared school total.' : g.type === 'class' ? 'One shared class total.' : ''}</p>
                               </>}
                             <p className="text-sm text-muted-foreground">{g.endDate ? `Due ${new Date(g.endDate).toLocaleDateString()}` : 'No deadline'}</p>
@@ -1346,6 +1394,14 @@ export function GoalsManager(props: {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CategoryModal
+        isOpen={isAddCategoryOpen}
+        setIsOpen={setIsAddCategoryOpen}
+        category={null}
+        defaultTeacherId={ownerTeacherId}
+        onCreated={handleCategoryCreated}
+      />
     </StaffPortalTabPanel>
   );
 }
