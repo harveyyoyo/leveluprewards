@@ -102,7 +102,7 @@ export function OfficeClassesView({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
-  const [classTeacherId, setClassTeacherId] = useState('');
+  const [classTeacherIds, setClassTeacherIds] = useState<string[]>([]);
   const [classCapacity, setClassCapacity] = useState('');
   const [classNotes, setClassNotes] = useState('');
   const [busy, setBusy] = useState(false);
@@ -112,7 +112,7 @@ export function OfficeClassesView({
   const openNewClass = () => {
     setEditingClass(null);
     setClassName('');
-    setClassTeacherId('');
+    setClassTeacherIds([]);
     setClassCapacity('');
     setClassNotes('');
     setDialogOpen(true);
@@ -122,7 +122,7 @@ export function OfficeClassesView({
     e.stopPropagation();
     setEditingClass(cls);
     setClassName(cls.name);
-    setClassTeacherId(cls.teacherId ?? '');
+    setClassTeacherIds(cls.teacherIds ?? (cls.teacherId ? [cls.teacherId] : []));
     setClassCapacity(cls.capacity != null ? String(cls.capacity) : '');
     setClassNotes(cls.notes ?? '');
     setDialogOpen(true);
@@ -139,13 +139,19 @@ export function OfficeClassesView({
       toast({ variant: 'destructive', title: 'Capacity must be a positive number.' });
       return;
     }
-    const nextTeacherId = classTeacherId || null;
-    const teacherChanged = editingClass ? (editingClass.teacherId ?? null) !== nextTeacherId : !!nextTeacherId;
+    const nextTeacherIds = classTeacherIds.length > 0 ? classTeacherIds : null;
+    const oldTeacherIds = editingClass?.teacherIds ?? (editingClass?.teacherId ? [editingClass.teacherId] : []);
+    
+    // Check if teachers changed by comparing arrays
+    const teacherChanged = !editingClass || 
+      (nextTeacherIds?.join(',') !== oldTeacherIds.join(','));
+      
     setBusy(true);
     try {
       const classId = await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
         name: className.trim(),
-        teacherId: nextTeacherId,
+        teacherId: nextTeacherIds?.[0] ?? null, // keep single field for legacy
+        teacherIds: nextTeacherIds ?? [], // use new array field
         capacity: parsedCapacity,
         notes: classNotes.trim() || null,
       });
@@ -157,7 +163,8 @@ export function OfficeClassesView({
           const batch = writeBatch(firestore!);
           for (const student of classStudents) {
             batch.update(doc(firestore!, 'schools', schoolId, 'officeStudents', student.id), {
-              teacherId: nextTeacherId,
+              teacherId: nextTeacherIds?.[0] ?? null,
+              teacherIds: nextTeacherIds ?? [],
               teacherName: null,
               updatedAt: Date.now(),
             });
@@ -176,7 +183,7 @@ export function OfficeClassesView({
       });
       setDialogOpen(false);
       setClassName('');
-      setClassTeacherId('');
+      setClassTeacherIds([]);
       setClassCapacity('');
       setClassNotes('');
       setEditingClass(null);
@@ -563,20 +570,45 @@ export function OfficeClassesView({
               />
             </div>
             <div className="space-y-2">
-              <Label>Teacher (optional)</Label>
-              <Select value={classTeacherId || '__none__'} onValueChange={(v) => setClassTeacherId(v === '__none__' ? '' : v)}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="No teacher assigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">No teacher</SelectItem>
-                  {teachers.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Teachers (optional)</Label>
+              <div className="flex flex-col gap-2">
+                <Select 
+                  value="__none__" 
+                  onValueChange={(v) => {
+                    if (v !== '__none__' && !classTeacherIds.includes(v)) {
+                      setClassTeacherIds([...classTeacherIds, v]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder={classTeacherIds.length > 0 ? "Add another teacher" : "No teacher assigned"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select a teacher...</SelectItem>
+                    {teachers.filter(t => !classTeacherIds.includes(t.id)).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {classTeacherIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {classTeacherIds.map((id) => (
+                      <div key={id} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
+                        <span>{teachers.find(t => t.id === id)?.name || 'Unknown'}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setClassTeacherIds(classTeacherIds.filter(tId => tId !== id))}
+                          className="text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {editingClass ? (
                 <p className="text-xs text-muted-foreground">
                   Changing this updates the teacher for every student currently in this class.

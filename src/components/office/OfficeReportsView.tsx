@@ -177,12 +177,18 @@ export function OfficeReportsView({
   const printStudentRoster = () => {
     const rows = rosterStudents
       .map(
-        (student) => `
+        (student) => {
+          const teachersText = getTeacherIds(student).length > 0
+            ? getTeacherIds(student).map(id => teacherNameById.get(id) || 'Teacher').join(', ')
+            : '—';
+          
+          return `
         <tr>
           <td>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}</td>
           <td>${escapeOfficePrintHtml((student.classId && classNameById.get(student.classId)) || '—')}</td>
-          <td>${escapeOfficePrintHtml(getOfficeTeacherLabel(student, teacherNameById) || '—')}</td>
-        </tr>`,
+          <td>${escapeOfficePrintHtml(teachersText)}</td>
+        </tr>`;
+        }
       )
       .join('');
     const html = buildOfficeDocumentShell({
@@ -207,12 +213,16 @@ export function OfficeReportsView({
           <h2>${escapeOfficePrintHtml(section.className)} (${section.students.length})</h2>
           <ul>${section.students
             .map(
-              (student) =>
-                `<li>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}${
-                  getOfficeTeacherLabel(student, teacherNameById)
-                    ? ` · ${escapeOfficePrintHtml(getOfficeTeacherLabel(student, teacherNameById))}`
+              (student) => {
+                const teachersText = getTeacherIds(student).length > 0
+                  ? getTeacherIds(student).map(id => teacherNameById.get(id) || 'Teacher').join(', ')
+                  : '';
+                return `<li>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}${
+                  teachersText
+                    ? ` · ${escapeOfficePrintHtml(teachersText)}`
                     : ''
-                }</li>`,
+                }</li>`;
+              }
             )
             .join('')}</ul>
         </section>`,
@@ -419,13 +429,18 @@ export function OfficeReportsView({
                       {(student.classId && classNameById.get(student.classId)) || '—'}
                     </td>
                     <td className="py-2">
-                      {student.teacherId ? (
-                        <OfficeEntityLink
-                          kind="teacher"
-                          id={student.teacherId}
-                          label={getOfficeTeacherLabel(student, teacherNameById)}
-                          muted
-                        />
+                      {getTeacherIds(student).length > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          {getTeacherIds(student).map((tId) => (
+                            <OfficeEntityLink
+                              key={tId}
+                              kind="teacher"
+                              id={tId}
+                              label={teacherNameById.get(tId) ?? 'Teacher'}
+                              muted
+                            />
+                          ))}
+                        </div>
                       ) : (
                         '—'
                       )}

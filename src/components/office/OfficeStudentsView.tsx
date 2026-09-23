@@ -101,7 +101,7 @@ export function OfficeStudentsView({
           ? students.filter((s) => s.status === 'graduated')
           : activeStudents;
     const list = base.filter((s) => {
-      if (homeroomFilter !== 'all' && s.teacherId !== homeroomFilter) return false;
+      if (homeroomFilter !== 'all' && !getTeacherIds(s).includes(homeroomFilter)) return false;
       if (rosterFilter === 'unassigned' && s.classId) return false;
       if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
       if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
@@ -322,13 +322,18 @@ export function OfficeStudentsView({
                   )}
                 </td>
                 <td className="px-4 py-3 hidden md:table-cell">
-                  {s.teacherId ? (
-                    <OfficeEntityLink
-                      kind="teacher"
-                      id={s.teacherId}
-                      label={getOfficeTeacherLabel(s, teacherNameById)}
-                      muted
-                    />
+                  {getTeacherIds(s).length > 0 ? (
+                    <div className="flex flex-col gap-0.5">
+                      {getTeacherIds(s).map((tId) => (
+                        <OfficeEntityLink
+                          key={tId}
+                          kind="teacher"
+                          id={tId}
+                          label={teacherNameById.get(tId) ?? 'Teacher'}
+                          muted
+                        />
+                      ))}
+                    </div>
                   ) : (
                     '—'
                   )}

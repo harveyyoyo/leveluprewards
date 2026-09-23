@@ -197,7 +197,7 @@ export async function deleteOfficeFamily(ctx: OfficeWriteContext, familyId: stri
 export async function upsertOfficeClass(
   ctx: OfficeWriteContext,
   classId: string | null,
-  data: Pick<OfficeClass, 'name' | 'teacherId' | 'notes' | 'capacity'>,
+  data: Pick<OfficeClass, 'name' | 'teacherId' | 'notes' | 'capacity'> & { teacherIds?: string[] },
 ): Promise<string> {
   const id =
     classId ?? doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses')).id;
@@ -208,6 +208,7 @@ export async function upsertOfficeClass(
     id,
     name: data.name.trim(),
     teacherId: data.teacherId ?? null,
+    teacherIds: data.teacherIds ?? (data.teacherId ? [data.teacherId] : []),
     notes: data.notes ?? null,
     capacity: data.capacity ?? null,
     updatedAt: Date.now(),

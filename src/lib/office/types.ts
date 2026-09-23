@@ -58,7 +58,9 @@ export type OfficeStudent = {
   classId?: string | null;
   /** Assigned homeroom teacher (`officeTeachers` doc id). */
   teacherId?: string | null;
-  /** Legacy free-text; prefer `teacherId`. Kept for old rows and CSV until migrated. */
+  /** IDs of all teachers assigned to this class (co-teachers). If present, overrides teacherId. */
+  teacherIds?: string[];
+  /** Legacy free-text; prefer `teacherId` or `teacherIds`. Kept for old rows and CSV until migrated. */
   teacherName?: string | null;
   /** Student-level bus override; family `busRoute` is the default. */
   busRoute?: string | null;
@@ -75,6 +77,8 @@ export type OfficeClass = {
   name: string;
   /** Homeroom / primary teacher for this class (`officeTeachers` doc id). */
   teacherId?: string | null;
+  /** IDs of all teachers assigned to this class (co-teachers). If present, overrides teacherId. */
+  teacherIds?: string[];
   notes?: string | null;
   /** Soft cap used to show an over-capacity warning; no enforcement. */
   capacity?: number | null;

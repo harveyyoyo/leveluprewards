@@ -75,7 +75,7 @@ export function OfficeStudentSheet({
   const [lastName, setLastName] = useState('');
   const [nickname, setNickname] = useState('');
   const [classId, setClassId] = useState('');
-  const [teacherId, setTeacherId] = useState('');
+  const [teacherIds, setTeacherIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [status, setStatus] = useState<StudentStatus>('active');
@@ -89,7 +89,7 @@ export function OfficeStudentSheet({
       setLastName(student.lastName ?? '');
       setNickname(student.nickname ?? '');
       setClassId(student.classId ?? '');
-      setTeacherId(student.teacherId ?? '');
+      setTeacherIds(student.teacherIds ?? (student.teacherId ? [student.teacherId] : []));
       setNotes(student.notes ?? '');
       setDateOfBirth(student.dateOfBirth ?? '');
       setStatus((student.status as StudentStatus | undefined) ?? 'active');
@@ -153,7 +153,8 @@ export function OfficeStudentSheet({
           lastName: lastName.trim(),
           nickname: nickname.trim() || null,
           classId: classId || null,
-          teacherId: teacherId || null,
+          teacherId: teacherIds[0] ?? null,
+          teacherIds: teacherIds,
           teacherName: null,
           notes: notes.trim() || null,
           dateOfBirth: dateOfBirth || null,
@@ -275,15 +276,20 @@ export function OfficeStudentSheet({
               ) : (
                 <span>No class</span>
               )}
-              {student.teacherId ? (
+              {getTeacherIds(student).length > 0 ? (
                 <>
                   <span>·</span>
-                  <OfficeEntityLink
-                    kind="teacher"
-                    id={student.teacherId}
-                    label={getOfficeTeacherLabel(student, teacherNameById)}
-                    muted
-                  />
+                  {getTeacherIds(student).map((tId, idx) => (
+                    <span key={tId} className="flex items-center gap-1">
+                      {idx > 0 && <span>, </span>}
+                      <OfficeEntityLink
+                        kind="teacher"
+                        id={tId}
+                        label={teacherNameById.get(tId) ?? 'Teacher'}
+                        muted
+                      />
+                    </span>
+                  ))}
                 </>
               ) : null}
             </SheetDescription>
@@ -362,8 +368,9 @@ export function OfficeStudentSheet({
             <OfficeTeacherSelect
               schoolId={schoolId}
               teachers={teachers}
-              value={teacherId}
-              onChange={setTeacherId}
+              values={teacherIds}
+              onValuesChange={setTeacherIds}
+              multiple
             />
 
             <div className="space-y-1.5">

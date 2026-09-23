@@ -25,22 +25,33 @@ export function getOfficeStudentFullName(student: Pick<OfficeStudent, 'firstName
   return label || last;
 }
 
+  /** Helper to get all teacher IDs for an entity, handling the transition from single to multiple teachers. */
+export function getTeacherIds(entity: { teacherId?: string | null; teacherIds?: string[] }): string[] {
+  if (entity.teacherIds && Array.isArray(entity.teacherIds) && entity.teacherIds.length > 0) {
+    return entity.teacherIds;
+  }
+  if (entity.teacherId?.trim()) {
+    return [entity.teacherId.trim()];
+  }
+  return [];
+}
+
 export function getOfficeTeacherLabel(
-  student: Pick<OfficeStudent, 'teacherId' | 'teacherName'>,
+  student: Pick<OfficeStudent, 'teacherId' | 'teacherIds' | 'teacherName'>,
   teacherNameById: Map<string, string>,
 ): string {
-  const id = student.teacherId?.trim();
-  if (id) {
-    const fromRoster = teacherNameById.get(id);
+  const ids = getTeacherIds(student);
+  if (ids.length > 0) {
+    const fromRoster = ids.map(id => teacherNameById.get(id)).filter(Boolean).join(', ');
     if (fromRoster) return fromRoster;
   }
   return student.teacherName?.trim() || '';
 }
 
 export function officeStudentHasTeacher(
-  student: Pick<OfficeStudent, 'teacherId' | 'teacherName'>,
+  student: Pick<OfficeStudent, 'teacherId' | 'teacherIds' | 'teacherName'>,
 ): boolean {
-  return Boolean(student.teacherId?.trim() || student.teacherName?.trim());
+  return Boolean(getTeacherIds(student).length > 0 || student.teacherName?.trim());
 }
 
 export function resolveOfficeTeacherIdByName(
@@ -58,9 +69,11 @@ export function countOfficeStudentsByTeacher(
 ): Map<string, number> {
   const counts = new Map<string, number>();
   for (const s of students) {
-    const id = s.teacherId?.trim();
-    if (!id) continue;
-    counts.set(id, (counts.get(id) ?? 0) + 1);
+    const ids = getTeacherIds(s);
+    for (const id of ids) {
+      if (!id) continue;
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
   }
   return counts;
 }
@@ -69,7 +82,7 @@ export function officeStudentsForTeacher(students: OfficeStudent[], teacherId: s
   const id = teacherId.trim();
   if (!id) return [];
   return students
-    .filter((s) => s.teacherId?.trim() === id)
+    .filter((s) => getTeacherIds(s).includes(id))
     .slice()
     .sort((a, b) => getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b)));
 }
