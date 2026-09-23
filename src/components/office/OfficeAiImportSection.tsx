@@ -37,6 +37,8 @@ import type {
 } from '@/lib/office/types';
 import { useFirestore } from '@/firebase';
 import { cn } from '@/lib/utils';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { officeAuditSnapshot } from '@/lib/office/officeAuditLog';
 
 type OfficeAiImportSectionProps = {
   schoolId: string;
@@ -60,6 +62,7 @@ export function OfficeAiImportSection({
   userName,
 }: OfficeAiImportSectionProps) {
   const firestore = useFirestore();
+  const write = useOfficeWrite(schoolId);
   const authFetch = useAuthFetch();
   const { toast } = useToast();
 
@@ -378,6 +381,15 @@ export function OfficeAiImportSection({
         canImportStaff,
       });
       const summary = formatOfficeImportReport(report);
+      if (write.ctx) {
+        await write.logOfficeChange(write.ctx, {
+          entityType: 'officeStudent',
+          entityId: 'import',
+          action: upsertStudents ? 'update' : 'create',
+          summary: `Smart import · ${summary}`,
+          after: officeAuditSnapshot(report as unknown as Record<string, unknown>),
+        });
+      }
       toast({
         title: 'Import complete',
         description: report.errors.length ? `${summary} · ${report.errors[0]}` : summary,
@@ -403,14 +415,14 @@ export function OfficeAiImportSection({
         AI import
       </h2>
       <p className="mt-1 text-xs text-muted-foreground max-w-2xl">
-        Paste or upload anything — rosters, grade exports, tuition lists, family contacts. The model figures out
+        Paste or upload anything — rosters, grade exports, tuition lists, family contacts. It works out the
         classes, students, grades, billing, invoices, and office staff logins. You do not need to label the file type.
       </p>
 
       <Alert className="mt-4 rounded-xl border-teal-200/60 bg-teal-50/40 dark:border-teal-900/40 dark:bg-teal-950/20">
         <AlertTitle className="text-sm font-semibold">Tip</AlertTitle>
         <AlertDescription className="text-xs leading-relaxed pt-1">
-          Combine multiple snippets in one go (e.g. a grade spreadsheet plus a family billing export). Use CSV import
+          Combine multiple snippets in one go (e.g. a grade spreadsheet plus a family billing export). Use "Import from a spreadsheet"
           on Students or Grades when columns are already standard.
         </AlertDescription>
       </Alert>
@@ -430,7 +442,7 @@ export function OfficeAiImportSection({
               onClick={() => docInputRef.current?.click()}
             >
               {extractingDoc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-              PDF, DOCX, TXT, CSV
+              Attach a file
             </Button>
             {extractedDocName ? (
               <span className="max-w-[220px] truncate text-xs text-muted-foreground" title={extractedDocName}>

@@ -6,6 +6,8 @@ export type OfficeTeacher = {
   name: string;
   email?: string | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeFamilyContactRole =
@@ -35,6 +37,8 @@ export type OfficeFamily = {
   id: string;
   displayName: string;
   contacts: OfficeFamilyContact[];
+  /** Home address on one line, e.g. "12 Oak St, Springfield, NJ 07081". */
+  homeAddress?: string | null;
   medicalNotes?: string | null;
   legalNotes?: string | null;
   busRoute?: string | null;
@@ -42,6 +46,8 @@ export type OfficeFamily = {
   generalNotes?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 /** Office student roster. */
@@ -58,12 +64,45 @@ export type OfficeStudent = {
   classId?: string | null;
   /** Assigned homeroom teacher (`officeTeachers` doc id). */
   teacherId?: string | null;
-  /** Legacy free-text; prefer `teacherId`. Kept for old rows and CSV until migrated. */
+  /** IDs of all teachers assigned to this class (co-teachers). If present, overrides teacherId. */
+  teacherIds?: string[];
+  /** Legacy free-text; prefer `teacherId` or `teacherIds`. Kept for old rows and CSV until migrated. */
   teacherName?: string | null;
   /** Student-level bus override; family `busRoute` is the default. */
   busRoute?: string | null;
   notes?: string | null;
+  /** Free-form labels (e.g. "needs a ride", "scholarship") shown as chips. */
+  tags?: string[] | null;
+  /** Defaults to `active` when unset. Withdrawn/graduated students are hidden from the main roster by default. */
+  status?: 'active' | 'withdrawn' | 'graduated' | null;
+  /** Optional details — see `OFFICE_STUDENT_DETAIL_FIELDS`. */
+  studentNumber?: string | null;
+  gender?: string | null;
+  /** ISO date `YYYY-MM-DD`. */
+  enrollmentDate?: string | null;
+  previousSchool?: string | null;
+  homeLanguage?: string | null;
+  allergies?: string | null;
+  healthNotes?: string | null;
+  pickupNotes?: string | null;
+  /** Values for school-defined fields, keyed by `OfficeCustomFieldDef.id`. */
+  customFields?: Record<string, OfficeCustomFieldValue> | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+export type OfficeCustomFieldType = 'text' | 'longText' | 'number' | 'date' | 'yesNo' | 'choice';
+export type OfficeCustomFieldValue = string | number | boolean | null;
+
+/** A school-defined student field, created in Settings. Never deleted — hiding keeps saved values. */
+export type OfficeCustomFieldDef = {
+  id: string;
+  label: string;
+  type: OfficeCustomFieldType;
+  /** Choices for `choice` fields. */
+  options?: string[];
+  archived?: boolean;
 };
 
 export type OfficeClass = {
@@ -71,7 +110,72 @@ export type OfficeClass = {
   name: string;
   /** Homeroom / primary teacher for this class (`officeTeachers` doc id). */
   teacherId?: string | null;
+  /** IDs of all teachers assigned to this class (co-teachers). If present, overrides teacherId. */
+  teacherIds?: string[];
+  notes?: string | null;
+  /** Soft cap used to show an over-capacity warning; no enforcement. */
+  capacity?: number | null;
+  /** Weekly timetable for this class (who teaches what, when). */
+  schedule?: OfficeScheduleBlock[];
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+/** One repeating time slot on a class's weekly schedule. */
+export type OfficeScheduleBlock = {
+  id: string;
+  subject: string;
+  teacherId?: string | null;
+  /** 0 = Sunday … 6 = Saturday. */
+  days: number[];
+  /** 24-hour "HH:MM". */
+  startTime: string;
+  endTime: string;
+  room?: string | null;
+};
+
+export type OfficeDeskLogKind = 'late_arrival' | 'early_pickup' | 'nurse_visit';
+
+/** One front-desk event (`schools/{id}/officeDeskLog`): late arrival, early pickup, or nurse visit. */
+export type OfficeDeskLogEntry = {
+  id: string;
+  kind: OfficeDeskLogKind;
+  studentId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  /** 24-hour "HH:MM". */
+  time: string;
+  /** Why they were late / leaving / came to the nurse. */
+  reason?: string | null;
+  /** Early pickup: who took the student. */
+  pickedUpBy?: string | null;
+  /** Early pickup: whether that person is on the family's contact list. */
+  pickupApproved?: boolean | null;
+  /** Nurse: what was done (ice pack, rest, medication given…). */
+  nurseAction?: string | null;
+  parentContacted?: boolean | null;
+  sentHome?: boolean | null;
+  notes?: string | null;
+  recordedBy?: string | null;
+  createdAt: number;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+export type OfficeAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+/** One student's attendance mark for one class on one day (`schools/{id}/officeAttendance`). */
+export type OfficeAttendanceEntry = {
+  id: string;
+  studentId: string;
+  classId: string;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  status: OfficeAttendanceStatus;
+  notes?: string | null;
+  updatedAt: number;
+  updatedBy?: string | null;
 };
 
 export type OfficeGradeEntry = {
@@ -85,6 +189,8 @@ export type OfficeGradeEntry = {
   notes?: string | null;
   updatedAt: number;
   updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeBillingAccountStatus = 'active' | 'past_due' | 'closed';
@@ -100,7 +206,13 @@ export type OfficeBillingAccount = {
   contactEmail?: string | null;
   contactPhone?: string | null;
   notes?: string | null;
+  /** Standing discount/scholarship applied when staff create new invoices for this family. */
+  discountLabel?: string | null;
+  /** 0–100. Informational — staff apply it manually per invoice, it never changes amounts silently. */
+  discountPercent?: number | null;
   updatedAt: number;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeInvoiceStatus = 'draft' | 'sent' | 'partial' | 'paid' | 'void';
@@ -135,6 +247,8 @@ export type OfficeInvoice = {
   /** How payment was recorded when marked paid outside Stripe. */
   paymentMethod?: OfficePaymentMethod | null;
   paymentNote?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
 };
 
 export type OfficeGradeEntryInput = Omit<OfficeGradeEntry, 'id' | 'updatedAt' | 'updatedBy'>;
@@ -150,6 +264,9 @@ export type OfficeFeatureFlags = {
   medicalNotes?: boolean;
   aiHelp?: boolean;
   auditLog?: boolean;
+  attendance?: boolean;
+  /** Late arrivals, early pickups, and nurse visits log. */
+  frontDesk?: boolean;
 };
 
 export type OfficeAuditAction = 'create' | 'update' | 'delete';
@@ -162,6 +279,12 @@ export type OfficeAuditEntityType =
   | 'officeGradeEntry'
   | 'officeBillingAccount'
   | 'officeInvoice'
+  | 'officePayment'
+  | 'officeAttendanceEntry'
+  | 'officeDeskLog'
+  | 'officeForm'
+  | 'officeEvent'
+  | 'officeStudentDocument'
   | 'officeSettings';
 
 /** Append-only change log (`schools/{id}/officeAuditLog`). */
@@ -177,6 +300,60 @@ export type OfficeAuditLogEntry = {
   changedAt: number;
 };
 
+export type OfficeFormResponseStatus = 'sent' | 'returned' | 'declined';
+
+/**
+ * A permission slip / form sent home for a class or the whole school
+ * (`schools/{id}/officeForms`). Per-student status lives inline since target lists are small.
+ */
+export type OfficeForm = {
+  id: string;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  /** `'all'` or a specific `officeClasses` doc id. */
+  targetClassId: string;
+  /** studentId -> status, seeded to `sent` for every targeted student when created. */
+  responses: Record<string, OfficeFormResponseStatus>;
+  createdAt: number;
+  updatedAt: number;
+  updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+/**
+ * Metadata for a file uploaded for a student (report card, medical form, signed permission
+ * slip, etc.) — `schools/{id}/officeStudentDocuments`. The actual file lives in Storage and is
+ * never publicly readable; `storagePath` is only resolved to a real URL server-side, on demand,
+ * after checking the requester's staff role for this school.
+ */
+export type OfficeStudentDocument = {
+  id: string;
+  studentId: string;
+  name: string;
+  storagePath: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: number;
+  uploadedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
+/** A school calendar event (`schools/{id}/officeEvents`). */
+export type OfficeEvent = {
+  id: string;
+  title: string;
+  description?: string | null;
+  /** ISO date `YYYY-MM-DD`. */
+  date: string;
+  updatedAt: number;
+  updatedBy?: string | null;
+  archived?: boolean;
+  archivedAt?: number;
+};
+
 /** School-wide School Office preferences (`schools/{id}/officeSettings/config`). */
 export type OfficeSettings = {
   defaultActiveTerm?: string | null;
@@ -186,6 +363,8 @@ export type OfficeSettings = {
   /** When true, UI says "Marks" instead of "Grades". */
   useMarksTerminology?: boolean;
   features?: OfficeFeatureFlags | null;
+  /** Extra student fields this school added in Settings. */
+  studentCustomFields?: OfficeCustomFieldDef[] | null;
   updatedAt: number;
   updatedBy?: string | null;
 };

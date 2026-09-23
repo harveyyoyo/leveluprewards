@@ -18,7 +18,7 @@ Use the rest of this doc only if you later want a dedicated office hostname agai
 ## Firebase (optional subdomain)
 
 1. **Authentication → Authorized domains**: `office.leveluprewards.app`
-2. **Hosting → Custom domain**: attach `office.leveluprewards.app` to site **`levelup-office`** (not the default rewards site). Run `npm run office:domain-check` for current status and console steps.
+2. **Hosting → Custom domain**: attach `office.leveluprewards.app` to the default hosting site (`studio-1273073612-71183`) — there is no longer a separate `apps/office` app or `levelup-office` hosting site; School Office is served entirely by the main app's own `/office` routes.
 
 ## Behaviour when subdomain is enabled
 

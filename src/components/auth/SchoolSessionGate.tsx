@@ -189,6 +189,13 @@ function SchoolSessionGateBody({
   const route = routeSchoolId.trim().toLowerCase();
   const canAutoEnterPublicKiosk =
     isPublicSampleSchoolId(route) && isStudentKioskRoute(pathname, route);
+  // School Office pages have their own sign-in (admin passcode or office staff account) that also
+  // handles "signed in to a different school", so they never bounce through the general school
+  // sign-in first — that made office staff sign in twice.
+  const officeSection = pathname.startsWith(`/${route}/`) ? pathname.slice(route.length + 2).split('/')[0] : '';
+  const officeSignsInItself =
+    officeSection === 'office' ||
+    (typeof window !== 'undefined' && isOfficeHostname(window.location.host) && isOfficeSchoolScopedPath(pathname));
 
   const schoolLoginHref = useCallback(
     (options?: { changeSchool?: boolean }) =>
@@ -208,6 +215,7 @@ function SchoolSessionGateBody({
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
+    if (officeSignsInItself) return;
 
     if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
       if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {
@@ -276,6 +284,7 @@ function SchoolSessionGateBody({
     canAutoEnterPublicKiosk,
     schoolLoginHref,
     redirectToSchoolLogin,
+    officeSignsInItself,
   ]);
 
   if (!isInitialized || isUserLoading) {
@@ -285,6 +294,9 @@ function SchoolSessionGateBody({
       </div>
     );
   }
+
+  // The office page shows its own sign-in card.
+  if (officeSignsInItself) return <>{children}</>;
 
   if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
     if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {

@@ -22,18 +22,6 @@
       "frameworksBackend": {
         "region": "us-central1"
       }
-    },
-    {
-      "target": "office",
-      "source": "apps/office",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "frameworksBackend": {
-        "region": "us-central1"
-      }
     }
   ],
   "firestore": {

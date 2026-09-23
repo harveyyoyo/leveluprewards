@@ -38,7 +38,6 @@
     "node_modules",
     "functions",
     "leveluphello-main",
-    "promo-video",
-    "apps/office"
+    "promo-video"
   ]
 }

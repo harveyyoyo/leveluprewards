@@ -79,7 +79,7 @@ export function OfficeBillingReportPanel({
           />
         </div>
         <Button type="button" variant="outline" className="rounded-xl" onClick={exportCsv}>
-          Export CSV
+          Download spreadsheet
         </Button>
       </div>
 

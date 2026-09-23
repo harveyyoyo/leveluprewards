@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, SendHorizonal, Sparkles, Trash2 } from 'lucide-react';
+import { CircleHelp, Loader2, SendHorizonal, Trash2 } from 'lucide-react';
+import { OfficeGuidePanel } from '@/components/office/OfficeGuideSection';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -54,6 +55,7 @@ export function OfficeAiHelpButton() {
   );
 
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<'guide' | 'ask'>('guide');
   const [messages, setMessages] = useState<ChatMessage[]>(() => [welcome]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -113,34 +115,62 @@ export function OfficeAiHelpButton() {
     }
   }, [authFetch, input, loginState, messages, officeContext, schoolId, sending, toast]);
 
-  if (!features.aiHelp) return null;
+  const showAsk = features.aiHelp;
+  const activeTab = showAsk ? tab : 'guide';
 
   return (
     <>
       <Button
         type="button"
         variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0 rounded-lg"
+        size="sm"
+        className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs"
         onClick={() => setOpen(true)}
-        aria-label="Office AI help"
-        title="AI help"
+        aria-label="Help"
+        title="Guide to every page, and questions"
       >
-        <Sparkles className="h-3.5 w-3.5" />
+        <CircleHelp className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Help</span>
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
           <SheetHeader className="border-b px-4 py-4 text-left">
             <SheetTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-teal-600" />
-              Office AI help
+              <CircleHelp className="h-4 w-4 text-teal-600" />
+              Help
             </SheetTitle>
-            <SheetDescription>
-              Ask questions about billing, rosters, {marksLabels.plural}, and workflows.
-            </SheetDescription>
+            <SheetDescription>What each page is for, and answers to your questions.</SheetDescription>
+            {showAsk ? (
+              <div className="mt-2 grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800" role="tablist">
+                {(
+                  [
+                    ['guide', 'Guide'],
+                    ['ask', 'Ask a question'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === id}
+                    onClick={() => setTab(id)}
+                    className={cn(
+                      'rounded-lg py-1.5 text-sm font-medium transition-colors',
+                      activeTab === id ? 'bg-white shadow-sm dark:bg-slate-950' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </SheetHeader>
 
+          {activeTab === 'guide' ? (
+            <OfficeGuidePanel schoolId={schoolId} onNavigate={() => setOpen(false)} />
+          ) : (
+          <>
           <ScrollArea className="flex-1 px-4 py-3">
             <div className="space-y-3 pb-4">
               {messages.map((m, i) => (
@@ -190,6 +220,8 @@ export function OfficeAiHelpButton() {
               </div>
             </div>
           </div>
+          </>
+          )}
         </SheetContent>
       </Sheet>
     </>

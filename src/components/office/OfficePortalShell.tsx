@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Building2, LogOut, Maximize2, Menu, Minimize2, X } from 'lucide-react';
-import { useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Building2, LogOut, Menu, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
-import { schoolPortalHref } from '@/lib/officePublicUrl';
+import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
+import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeUniversalSearch } from '@/components/office/OfficeUniversalSearch';
 import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
@@ -45,10 +46,28 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
 
   const displaySchool = schoolName?.trim() || schoolId;
   const { settings, marksLabels } = useOfficePortalChrome();
-  const navItems = getOfficeNavItems(settings);
+  const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
+  const navItems = useMemo(() => {
+    const all = getOfficeNavItems(settings);
+    if (!allowedSections) return all;
+    return all.filter((item) => item.id === 'home' || allowedSections.includes(item.id));
+  }, [settings, allowedSections]);
   const activeNav = navItems.find((i) => i.id === activeId);
+  const { hidden: hiddenSections } = useOfficeHiddenSections();
+  // Sections hidden in Interface drop out of the menu only; the current page always stays listed.
+  const menuItems = useMemo(
+    () => navItems.filter((item) => item.id === 'home' || item.id === activeId || !hiddenSections.includes(item.id)),
+    [navItems, hiddenSections, activeId],
+  );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeId !== 'home' && !navItems.some((i) => i.id === activeId)) {
+      router.replace(navItems[0]?.href(schoolId) ?? `/${schoolId}/office`);
+    }
+  }, [activeId, navItems, router, schoolId]);
   const { term: workingTerm } = useOfficeTerm(schoolId);
-  const { isWide, toggleLayoutMode } = useOfficeLayoutMode();
+  const { isWide } = useOfficeLayoutMode();
 
   return (
     <div
@@ -59,14 +78,23 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
     >
       <div
         className={cn(
-          'flex min-h-screen',
+          // `lg:h-screen` here (not just `min-h-screen`) matters: this element also carries the
+          // `sm:py-6` padding below. If only its *child* were pinned to exactly 100vh while this
+          // parent had no height of its own, the padding would add on top of that 100vh — an
+          // invisible few-pixel overflow that made the sidebar think it needed to scroll even
+          // when everything visibly fit.
+          'flex min-h-screen lg:h-screen',
           !isWide && 'justify-center px-0 sm:px-6 lg:px-10 sm:py-6',
         )}
       >
         <div
           className={cn(
             OFFICE_LAYOUT_PANE_CLASS,
-            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:flex-row dark:bg-slate-950',
+            // `lg:overflow-y-auto` + `lg:h-full` (100% of the now correctly-sized parent above,
+            // padding already accounted for) make this the actual scrolling container on
+            // desktop (instead of the window), which is what lets the sidebar below stick to
+            // the viewport via `position: sticky` rather than stretching with the page.
+            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:h-full lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
             isWide
               ? 'max-w-none border-0 shadow-none'
               : 'max-w-5xl shadow-none sm:min-h-[calc(100vh-3rem)] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:shadow-xl dark:sm:border-slate-800',
@@ -75,7 +103,14 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
         <aside
           className={cn(
             OFFICE_SIDEBAR_PANE_CLASS,
-            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:static lg:inset-auto lg:z-0 lg:shrink-0 lg:translate-x-0',
+            // On desktop the sidebar is pinned to the viewport (sticky + its own height/scroll)
+            // instead of stretching to match the main content's height — otherwise a long page
+            // (e.g. a big student roster) drags the sidebar's own bottom section far below the
+            // fold, leaving a blank gap where the nav used to be as you scroll.
+            // Fixed height, no overflow of its own — the header and footer below always stay
+            // put, and only the nav list (which has its own `overflow-y-auto`) scrolls if
+            // there isn't room for every section.
+            'fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-teal-900/10 bg-[#0f3d4a] text-white shadow-xl transition-transform lg:sticky lg:top-0 lg:z-0 lg:h-screen lg:shrink-0 lg:translate-x-0',
             mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
           )}
         >
@@ -99,8 +134,11 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             </Button>
           </div>
 
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            {navItems.map((item) => {
+          {/* `min-h-0` overrides a flex item's default `min-height: auto`, which otherwise
+              forces this nav to grow to fit every item instead of shrinking and scrolling —
+              the classic reason a flex child with `overflow-y-auto` refuses to actually scroll. */}
+          <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+            {menuItems.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeId;
               return (
@@ -108,16 +146,14 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   key={item.id}
                   href={item.href(schoolId)}
                   onClick={() => setMobileOpen(false)}
+                  title={item.description}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl px-3 py-3 transition-colors',
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-colors',
                     active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/10',
                   )}
                 >
-                  <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
-                  <span>
-                    <span className="block text-base font-semibold leading-snug">{item.label}</span>
-                    <span className="block text-xs leading-snug text-teal-100/60">{item.description}</span>
-                  </span>
+                  <Icon className={cn('h-4.5 w-4.5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
+                  {item.label}
                 </Link>
               );
             })}
@@ -141,12 +177,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               <LogOut className="h-4 w-4" />
               Sign out
             </Button>
-            <Link
-              href={schoolPortalHref(schoolId)}
-              className="block rounded-lg px-3 py-2 text-center text-xs text-teal-200/80 hover:bg-white/5"
-            >
-              Back to main portal
-            </Link>
             <p className="px-2 pt-1 text-[10px] text-teal-200/50 text-center">
               v{process.env.NEXT_PUBLIC_VERSION}
               {process.env.NEXT_PUBLIC_BUILD_TIME ? ` · ${process.env.NEXT_PUBLIC_BUILD_TIME}` : ''}
@@ -197,17 +227,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                 <OfficeUniversalSearch />
                 <OfficeInterfaceSettingsSheet schoolId={schoolId} />
                 <OfficeAiHelpButton />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="hidden h-8 w-8 rounded-lg sm:inline-flex"
-                  onClick={toggleLayoutMode}
-                  aria-label={isWide ? 'Use standard centered layout' : 'Use wide full-screen layout'}
-                  title={isWide ? 'Standard layout' : 'Wide layout'}
-                >
-                  {isWide ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                </Button>
               </div>
             </div>
           </header>

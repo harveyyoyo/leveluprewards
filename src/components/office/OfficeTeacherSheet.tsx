@@ -1,21 +1,32 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { Check, ExternalLink, Mail, Pencil, Trash2, Users } from 'lucide-react';
+import { Check, ExternalLink, Mail, Pencil, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
+import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
+import { OfficeTeacherWeek } from '@/components/office/OfficeClassScheduleSection';
+import { teacherWeek } from '@/lib/office/officeSchedule';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
-import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
+import { officePublicHref } from '@/lib/officePublicUrl';
 import {
   formatGradeDisplay,
   getOfficeStudentFullName,
+  getTeacherIds,
   gradesForStudent,
   officeStudentsForTeacher,
   studentIdsWithGradesForTerm,
@@ -45,13 +56,15 @@ export function OfficeTeacherSheet({
   gradeEntries,
   activeTerm,
 }: OfficeTeacherSheetProps) {
-  const firestore = useFirestore();
+  const write = useOfficeWrite(schoolId);
   const { toast } = useToast();
-  const { openStudent } = useOfficeEntityNav();
+  const { confirm, confirmDialog } = useOfficeConfirm();
+  const { openStudent, openClass } = useOfficeEntityNav();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editClassIds, setEditClassIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (teacher) {
@@ -66,6 +79,14 @@ export function OfficeTeacherSheet({
     [students, teacher],
   );
 
+  const assignedClasses = useMemo(() => {
+    if (!teacher) return [];
+    return classes.filter((c) => {
+      const ids = c.teacherIds && c.teacherIds.length > 0 ? c.teacherIds : (c.teacherId ? [c.teacherId] : []);
+      return ids.includes(teacher.id);
+    });
+  }, [classes, teacher]);
+
   const gradedForTerm = useMemo(
     () => studentIdsWithGradesForTerm(gradeEntries, activeTerm),
     [gradeEntries, activeTerm],
@@ -77,17 +98,29 @@ export function OfficeTeacherSheet({
   const gradesHref = `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`;
 
   const handleSave = async () => {
-    if (!firestore || !name.trim()) {
+    if (!write.ctx || !name.trim()) {
       toast({ variant: 'destructive', title: 'Teacher name is required.' });
       return;
     }
     setBusy(true);
     try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', teacher.id), {
-        name: name.trim(),
-        email: email.trim() || null,
-        updatedAt: Date.now(),
-      });
+      // upsertOfficeTeacher and setOfficeClassTeachers also write the change-history entries.
+      await write.upsertOfficeTeacher(write.ctx, teacher.id, { name: name.trim(), email: email.trim() || null });
+      const beforeIds = assignedClasses.map((c) => c.id);
+      const changed = classes.filter((c) => beforeIds.includes(c.id) !== editClassIds.includes(c.id));
+      const teacherNameById = new Map([[teacher.id, name.trim()]]);
+      for (const cls of changed) {
+        const current = getTeacherIds(cls);
+        const next = editClassIds.includes(cls.id)
+          ? [...current.filter((id) => id !== teacher.id), teacher.id]
+          : current.filter((id) => id !== teacher.id);
+        await write.setOfficeClassTeachers(write.ctx, {
+          cls,
+          teacherIds: next,
+          classStudentIds: students.filter((s) => s.classId === cls.id).map((s) => s.id),
+          teacherNameById,
+        });
+      }
       toast({ title: 'Teacher updated' });
       setIsEditing(false);
     } catch (e) {
@@ -98,20 +131,28 @@ export function OfficeTeacherSheet({
   };
 
   const handleDelete = async () => {
-    if (!firestore) return;
-    if (assignedStudents.length > 0) {
+    if (!write.ctx) return;
+    if (assignedStudents.length > 0 || assignedClasses.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Teacher has students',
-        description: `Reassign ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'} before deleting.`,
+        title: 'Teacher is assigned',
+        description: assignedClasses.length > 0 
+          ? `This teacher is assigned to ${assignedClasses.length} class${assignedClasses.length === 1 ? '' : 'es'}. Remove them from the classes first.`
+          : `Reassign ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'} before deleting.`,
       });
       return;
     }
-    if (!confirm(`Remove ${teacher.name} from the office teacher list?`)) return;
+    const ok = await confirm({
+      title: `Remove ${teacher.name}?`,
+      description: 'They will be hidden from the teacher list. Their past records stay in the change history.',
+      confirmLabel: 'Remove teacher',
+      tone: 'caution',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
-      await deleteDoc(doc(firestore, 'schools', schoolId, 'officeTeachers', teacher.id));
-      toast({ title: 'Teacher removed' });
+      await write.archiveOfficeTeacher(write.ctx, teacher);
+      toast({ title: 'Teacher removed', description: 'Their past records are kept in the change history.' });
       onOpenChange(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
@@ -123,6 +164,7 @@ export function OfficeTeacherSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        {confirmDialog}
         <SheetHeader className="relative">
           {isEditing ? (
             <SheetTitle>Edit teacher</SheetTitle>
@@ -135,22 +177,11 @@ export function OfficeTeacherSheet({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  aria-label="Copy teacher link"
-                  onClick={() => {
-                    const url = `${officeAbsoluteHref(schoolId, 'teachers')}?teacher=${encodeURIComponent(teacher.id)}`;
-                    void navigator.clipboard.writeText(url);
-                    toast({ title: 'Copied teacher link' });
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   aria-label="Edit teacher"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    setEditClassIds(assignedClasses.map((c) => c.id));
+                    setIsEditing(true);
+                  }}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -159,7 +190,26 @@ export function OfficeTeacherSheet({
           )}
           {!isEditing ? (
             <SheetDescription>
-              {assignedStudents.length} student{assignedStudents.length === 1 ? '' : 's'} assigned
+              {assignedClasses.length > 0 ? (
+                <>
+                  {(() => {
+                    // The first teacher on a class is its main teacher.
+                    const main = assignedClasses.filter((c) => getTeacherIds(c)[0] === teacher.id).map((c) => c.name);
+                    const also = assignedClasses.filter((c) => getTeacherIds(c)[0] !== teacher.id).map((c) => c.name);
+                    return [
+                      main.length ? `Main teacher of ${main.join(', ')}` : '',
+                      also.length ? `${main.length ? 'also teaches' : 'Teaches'} ${also.join(', ')}` : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ');
+                  })()}
+                  {assignedStudents.length > 0 ? ` · ${assignedStudents.length} student${assignedStudents.length === 1 ? '' : 's'}` : ''}
+                </>
+              ) : (
+                <>
+                  {assignedStudents.length} student{assignedStudents.length === 1 ? '' : 's'} assigned
+                </>
+              )}
               {teacher.email ? ` · ${teacher.email}` : ''}
             </SheetDescription>
           ) : null}
@@ -181,6 +231,45 @@ export function OfficeTeacherSheet({
                 placeholder="for office contact only"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Classes</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                {editClassIds.map((id) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1 rounded-full border bg-white py-0.5 pl-3 pr-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    {classNameById.get(id) ?? 'Class'}
+                    <button
+                      type="button"
+                      onClick={() => setEditClassIds((prev) => prev.filter((x) => x !== id))}
+                      aria-label={`Take off ${classNameById.get(id) ?? 'class'}`}
+                      className="rounded-full p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-slate-800"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+                {editClassIds.length === 0 ? <span className="text-sm text-muted-foreground">No classes yet.</span> : null}
+              </div>
+              {classes.some((c) => !editClassIds.includes(c.id)) ? (
+                <Select value="" onValueChange={(id) => id && setEditClassIds((prev) => [...prev, id])}>
+                  <SelectTrigger className="h-9 w-full rounded-lg" aria-label="Add a class">
+                    <SelectValue placeholder="+ Add a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes
+                      .filter((c) => !editClassIds.includes(c.id))
+                      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+            </div>
             <div className="space-y-2 border-t pt-4">
               <Button type="button" className="w-full rounded-xl gap-2" onClick={() => void handleSave()} disabled={busy}>
                 <Check className="h-4 w-4" />
@@ -197,7 +286,7 @@ export function OfficeTeacherSheet({
                 disabled={busy}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete teacher
+                Remove teacher
               </Button>
             </div>
           </div>
@@ -227,6 +316,8 @@ export function OfficeTeacherSheet({
                 </a>
               </section>
             ) : null}
+
+            <OfficeTeacherWeek week={teacherWeek(classes, teacher.id)} onOpenClass={openClass} />
 
             <section>
               <div className="flex items-center justify-between gap-2">
@@ -258,11 +349,11 @@ export function OfficeTeacherSheet({
                             <span
                               className={
                                 gradedForTerm.has(student.id)
-                                  ? 'rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800'
-                                  : 'rounded-full bg-amber-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-amber-900'
+                                  ? 'shrink-0 text-xs text-emerald-800 dark:text-emerald-300'
+                                  : 'shrink-0 text-xs text-muted-foreground'
                               }
                             >
-                              {gradedForTerm.has(student.id) ? 'Graded' : 'Missing'}
+                              {gradedForTerm.has(student.id) ? 'Graded' : 'Not yet'}
                             </span>
                           </div>
                           {termGrades.length > 0 ? (
@@ -285,11 +376,7 @@ export function OfficeTeacherSheet({
               )}
             </section>
 
-            <section className="rounded-xl border bg-muted/20 p-3 text-xs text-muted-foreground">
-              <Users className="mb-2 h-4 w-4 text-teal-700" aria-hidden />
-              Homeroom teachers are separate from rewards staff in Admin. Assign this teacher when editing a student
-              profile.
-            </section>
+            <OfficeEntityHistorySection schoolId={schoolId} entityId={teacher.id} />
           </div>
         )}
       </SheetContent>

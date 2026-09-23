@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 
 type OfficeEntityLinkProps = {
-  kind: 'student' | 'teacher' | 'class';
+  kind: 'student' | 'teacher' | 'class' | 'family';
   id: string;
   label: string;
   className?: string;
@@ -12,7 +12,7 @@ type OfficeEntityLinkProps = {
 };
 
 export function OfficeEntityLink({ kind, id, label, className, muted }: OfficeEntityLinkProps) {
-  const { openStudent, openTeacher, openClass } = useOfficeEntityNav();
+  const { openStudent, openTeacher, openClass, openFamily } = useOfficeEntityNav();
 
   if (!id?.trim() || !label?.trim()) {
     return <span className={cn(muted && 'text-muted-foreground', className)}>—</span>;
@@ -30,6 +30,7 @@ export function OfficeEntityLink({ kind, id, label, className, muted }: OfficeEn
         event.stopPropagation();
         if (kind === 'student') openStudent(id);
         else if (kind === 'teacher') openTeacher(id);
+        else if (kind === 'family') openFamily(id);
         else openClass(id);
       }}
     >

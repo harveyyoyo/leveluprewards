@@ -70,6 +70,42 @@ export function buildOfficeFamilyStatementHtml(params: {
     </body></html>`;
 }
 
+export function buildOfficeReceiptHtml(params: {
+  account: OfficeBillingAccount;
+  amountCents: number;
+  method: string;
+  note?: string | null;
+  allocations: Array<{ label: string; amountCents: number }>;
+  schoolLabel: string;
+  paidAt?: number;
+}): string {
+  const rows = params.allocations
+    .map(
+      (a) => `
+      <tr>
+        <td>${escapeOfficePrintHtml(a.label)}</td>
+        <td style="text-align:right">${formatCents(a.amountCents)}</td>
+      </tr>`,
+    )
+    .join('');
+
+  return buildOfficeDocumentShell({
+    title: `Payment receipt — ${params.account.familyName}`,
+    schoolLabel: params.schoolLabel,
+    subtitle: new Date(params.paidAt ?? Date.now()).toLocaleString(),
+    bodyHtml: `
+      <p class="muted">Received from ${escapeOfficePrintHtml(params.account.familyName)}</p>
+      <p class="total">Amount: ${formatCents(params.amountCents)}</p>
+      <p class="muted">Method: ${escapeOfficePrintHtml(params.method)}${params.note ? ` · ${escapeOfficePrintHtml(params.note)}` : ''}</p>
+      ${
+        rows
+          ? `<table><thead><tr><th>Applied to</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>`
+          : ''
+      }
+    `,
+  });
+}
+
 export function buildOfficeDocumentShell(params: {
   title: string;
   schoolLabel: string;

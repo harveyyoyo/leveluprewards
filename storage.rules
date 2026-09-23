@@ -20,6 +20,13 @@ service firebase.storage {
       allow read: if true;
       allow write: if false;
     }
+    // Student documents (report cards, medical forms, signed permission slips) may contain
+    // sensitive information, unlike photos — no public read. Access is only through the
+    // upload/download API routes (Admin SDK + a signed URL), which re-check the requester's
+    // staff role for the school first.
+    match /office-student-documents/{schoolId}/{studentId}/{fileName} {
+      allow read, write: if false;
+    }
     // Student custom emoji/sticker images — public read; writes via Cloud Functions.
     match /student-custom-emojis/{schoolId}/{studentId} {
       allow read: if true;

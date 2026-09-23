@@ -151,6 +151,14 @@ export interface StaffAccount {
   roles?: StaffAccountRole[];
   email?: string;
   phone?: string;
+  /**
+   * For `role: 'office'` accounts only — which School Office nav sections (an `OfficeNavId`,
+   * e.g. 'students', 'billing') this account can see. Omitted/undefined means full access
+   * (matches the historical default so existing accounts are unaffected). This hides sections
+   * in the office sidebar and pages; it is a UI convenience, not a server-side security rule —
+   * Firestore access for the underlying data is unchanged either way.
+   */
+  officeSections?: string[] | null;
 }
 
 export interface Teacher {

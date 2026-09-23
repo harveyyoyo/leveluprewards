@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { OfficeGradeReportView } from '@/components/office/OfficeGradeReportView';
+import { OfficeSchoolHealthReport } from '@/components/office/OfficeSchoolHealthReport';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { formatCents } from '@/lib/office/officeNav';
@@ -27,6 +28,7 @@ import {
   buildOverdueFamiliesDigest,
   getOfficeStudentFullName,
   getOfficeTeacherLabel,
+  getTeacherIds,
   isInvoiceOverdue,
 } from '@/lib/office/officeUtils';
 import { OFFICE_REPORTS, parseOfficeReportId, type OfficeReportId } from '@/lib/office/officeReports';
@@ -36,7 +38,9 @@ import type {
   OfficeGradeEntry,
   OfficeInvoice,
   OfficeStudent,
+  OfficeTeacher,
 } from '@/lib/office/types';
+import { OfficeHistoryView } from '@/components/office/OfficeHistoryView';
 import { cn } from '@/lib/utils';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { useToast } from '@/hooks/use-toast';
@@ -52,6 +56,7 @@ type OfficeReportsViewProps = {
   studentLabelById: Map<string, string>;
   classNameById: Map<string, string>;
   teacherNameById: Map<string, string>;
+  teachers?: OfficeTeacher[];
 };
 
 export function OfficeReportsView({
@@ -65,6 +70,7 @@ export function OfficeReportsView({
   studentLabelById,
   classNameById,
   teacherNameById,
+  teachers = [],
 }: OfficeReportsViewProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -176,12 +182,18 @@ export function OfficeReportsView({
   const printStudentRoster = () => {
     const rows = rosterStudents
       .map(
-        (student) => `
+        (student) => {
+          const teachersText = getTeacherIds(student).length > 0
+            ? getTeacherIds(student).map((id: string) => teacherNameById.get(id) || 'Teacher').join(', ')
+            : '—';
+          
+          return `
         <tr>
           <td>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}</td>
           <td>${escapeOfficePrintHtml((student.classId && classNameById.get(student.classId)) || '—')}</td>
-          <td>${escapeOfficePrintHtml(getOfficeTeacherLabel(student, teacherNameById) || '—')}</td>
-        </tr>`,
+          <td>${escapeOfficePrintHtml(teachersText)}</td>
+        </tr>`;
+        }
       )
       .join('');
     const html = buildOfficeDocumentShell({
@@ -206,12 +218,16 @@ export function OfficeReportsView({
           <h2>${escapeOfficePrintHtml(section.className)} (${section.students.length})</h2>
           <ul>${section.students
             .map(
-              (student) =>
-                `<li>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}${
-                  getOfficeTeacherLabel(student, teacherNameById)
-                    ? ` · ${escapeOfficePrintHtml(getOfficeTeacherLabel(student, teacherNameById))}`
+              (student) => {
+                const teachersText = getTeacherIds(student).length > 0
+                  ? getTeacherIds(student).map((id: string) => teacherNameById.get(id) || 'Teacher').join(', ')
+                  : '';
+                return `<li>${escapeOfficePrintHtml(getOfficeStudentFullName(student))}${
+                  teachersText
+                    ? ` · ${escapeOfficePrintHtml(teachersText)}`
                     : ''
-                }</li>`,
+                }</li>`;
+              }
             )
             .join('')}</ul>
         </section>`,
@@ -312,6 +328,26 @@ export function OfficeReportsView({
         })}
       </div>
 
+      {reportId === 'history' ? (
+        <OfficeHistoryView
+          schoolId={schoolId}
+          studentIds={new Set(students.map((s) => s.id))}
+          teacherIds={new Set(teachers.map((t) => t.id))}
+          classIds={new Set(classes.map((c) => c.id))}
+        />
+      ) : null}
+
+      {reportId === 'health' ? (
+        <OfficeSchoolHealthReport
+          schoolId={schoolId}
+          students={students}
+          classes={classes}
+          gradeEntries={gradeEntries}
+          billingAccounts={billingAccounts}
+          invoices={invoices}
+        />
+      ) : null}
+
       {reportId === 'grades' ? (
         <OfficeGradeReportView
           embedded
@@ -407,13 +443,18 @@ export function OfficeReportsView({
                       {(student.classId && classNameById.get(student.classId)) || '—'}
                     </td>
                     <td className="py-2">
-                      {student.teacherId ? (
-                        <OfficeEntityLink
-                          kind="teacher"
-                          id={student.teacherId}
-                          label={getOfficeTeacherLabel(student, teacherNameById)}
-                          muted
-                        />
+                      {getTeacherIds(student).length > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          {getTeacherIds(student).map((tId: string) => (
+                            <OfficeEntityLink
+                              key={tId}
+                              kind="teacher"
+                              id={tId}
+                              label={teacherNameById.get(tId) ?? 'Teacher'}
+                              muted
+                            />
+                          ))}
+                        </div>
                       ) : (
                         '—'
                       )}

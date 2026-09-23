@@ -47,13 +47,16 @@ export function defaultOfficeFeatureFlags(): Required<NonNullable<OfficeSettings
     medicalNotes: true,
     aiHelp: true,
     auditLog: true,
+    attendance: true,
+    frontDesk: true,
   };
 }
 
 export function resolveOfficeFeatureFlags(
   settings: Pick<OfficeSettings, 'features'> | null | undefined,
 ): Required<NonNullable<OfficeSettings['features']>> {
-  return { ...defaultOfficeFeatureFlags(), ...(settings?.features ?? {}) };
+  // The change history is always on: every Office record change must stay traceable.
+  return { ...defaultOfficeFeatureFlags(), ...(settings?.features ?? {}), auditLog: true };
 }
 
 export function isOfficeFeatureEnabled(

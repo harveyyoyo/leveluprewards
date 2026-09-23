@@ -1,8 +1,9 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
+  increment,
+  runTransaction,
   setDoc,
   updateDoc,
   writeBatch,
@@ -10,14 +11,20 @@ import {
 import { officeAuditSnapshot, writeOfficeAuditEntry } from '@/lib/office/officeAuditLog';
 import { billingStatusForAccount } from '@/lib/office/officeUtils';
 import type {
+  OfficeAttendanceEntry,
   OfficeAuditEntityType,
   OfficeBillingAccount,
   OfficeClass,
+  OfficeDeskLogEntry,
+  OfficeEvent,
   OfficeFamily,
+  OfficeForm,
+  OfficeFormResponseStatus,
   OfficeGradeEntry,
   OfficeInvoice,
   OfficePayment,
   OfficePaymentMethod,
+  OfficeScheduleBlock,
   OfficeStudent,
   OfficeTeacher,
 } from '@/lib/office/types';
@@ -33,22 +40,47 @@ function sid(schoolId: string): string {
   return schoolId.trim().toLowerCase();
 }
 
-async function audit(
+/**
+ * Office records are never erased — "removing" one only hides it, so every past record stays
+ * available for lookups and history. Returns the fields written, for the audit entry.
+ */
+async function archiveOfficeDoc(
   ctx: OfficeWriteContext,
-  params: {
-    entityType: OfficeAuditEntityType;
-    entityId: string;
-    action: 'create' | 'update' | 'delete';
-    summary: string;
-    before?: Record<string, unknown> | null;
-    after?: Record<string, unknown> | null;
-  },
-): Promise<void> {
+  collectionName: string,
+  id: string,
+): Promise<{ archived: true; archivedAt: number }> {
+  const now = Date.now();
+  const fields = { archived: true as const, archivedAt: now };
+  await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), collectionName, id), {
+    ...fields,
+    updatedAt: now,
+  });
+  return fields;
+}
+
+export type OfficeChangeParams = {
+  entityType: OfficeAuditEntityType;
+  entityId: string;
+  action: 'create' | 'update' | 'delete';
+  summary: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+};
+
+async function audit(ctx: OfficeWriteContext, params: OfficeChangeParams): Promise<void> {
   if (!ctx.auditLog) return;
   await writeOfficeAuditEntry(ctx.firestore, sid(ctx.schoolId), {
     ...params,
     changedBy: ctx.changedBy,
   });
+}
+
+/**
+ * Adds a change-history entry for a save made outside this module (e.g. Billing's own
+ * multi-invoice payment flow). Every Office save must leave one of these behind.
+ */
+export async function logOfficeChange(ctx: OfficeWriteContext, params: OfficeChangeParams): Promise<void> {
+  await audit(ctx, params);
 }
 
 /** Creates a student and auto-provisions an `officeFamilies` row when none is supplied. */
@@ -114,7 +146,7 @@ export async function updateOfficeStudent(
   });
 }
 
-export async function deleteOfficeStudentBatch(
+export async function archiveOfficeStudentBatch(
   ctx: OfficeWriteContext,
   params: {
     student: OfficeStudent;
@@ -123,14 +155,23 @@ export async function deleteOfficeStudentBatch(
   },
 ): Promise<void> {
   const batch = writeBatch(ctx.firestore);
-  batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', params.student.id));
+  const now = Date.now();
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', params.student.id), {
+    archived: true,
+    archivedAt: now,
+    updatedAt: now,
+  });
   for (const gid of params.gradeEntryIds) {
-    batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', gid));
+    batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', gid), {
+      archived: true,
+      archivedAt: now,
+      updatedAt: now,
+    });
   }
   for (const u of params.billingUpdates) {
     batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', u.accountId), {
       studentIds: u.studentIds,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   await batch.commit();
@@ -138,9 +179,9 @@ export async function deleteOfficeStudentBatch(
     entityType: 'officeStudent',
     entityId: params.student.id,
     action: 'delete',
-    summary: `Deleted student ${params.student.firstName} ${params.student.lastName}`.trim(),
+    summary: `Archived student ${params.student.firstName} ${params.student.lastName}`.trim(),
     before: officeAuditSnapshot(params.student as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
   });
 }
 
@@ -173,25 +214,26 @@ export async function upsertOfficeFamily(
   return id;
 }
 
-export async function deleteOfficeFamily(ctx: OfficeWriteContext, familyId: string): Promise<void> {
+export async function archiveOfficeFamily(ctx: OfficeWriteContext, familyId: string): Promise<void> {
   const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeFamilies', familyId);
   const beforeSnap = await getDoc(ref);
   const before = beforeSnap.exists() ? (beforeSnap.data() as OfficeFamily) : null;
-  await deleteDoc(ref);
+  const now = Date.now();
+  await updateDoc(ref, { archived: true, archivedAt: now, updatedAt: now });
   await audit(ctx, {
     entityType: 'officeFamily',
     entityId: familyId,
     action: 'delete',
-    summary: `Deleted family ${before?.displayName ?? familyId}`,
+    summary: `Archived family ${before?.displayName ?? familyId}`,
     before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
   });
 }
 
 export async function upsertOfficeClass(
   ctx: OfficeWriteContext,
   classId: string | null,
-  data: Pick<OfficeClass, 'name' | 'teacherId'>,
+  data: Pick<OfficeClass, 'name' | 'teacherId' | 'notes' | 'capacity'> & { teacherIds?: string[] },
 ): Promise<string> {
   const id =
     classId ?? doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses')).id;
@@ -202,6 +244,9 @@ export async function upsertOfficeClass(
     id,
     name: data.name.trim(),
     teacherId: data.teacherId ?? null,
+    teacherIds: data.teacherIds ?? (data.teacherId ? [data.teacherId] : []),
+    notes: data.notes ?? null,
+    capacity: data.capacity ?? null,
     updatedAt: Date.now(),
   };
   await setDoc(ref, payload, { merge: true });
@@ -216,17 +261,22 @@ export async function upsertOfficeClass(
   return id;
 }
 
-export async function deleteOfficeClassBatch(
+export async function archiveOfficeClassBatch(
   ctx: OfficeWriteContext,
   cls: OfficeClass,
   unassignStudentIds: string[],
 ): Promise<void> {
   const batch = writeBatch(ctx.firestore);
-  batch.delete(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id));
+  const now = Date.now();
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    archived: true,
+    archivedAt: now,
+    updatedAt: now,
+  });
   for (const studentId of unassignStudentIds) {
     batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', studentId), {
       classId: null,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
   }
   await batch.commit();
@@ -234,9 +284,79 @@ export async function deleteOfficeClassBatch(
     entityType: 'officeClass',
     entityId: cls.id,
     action: 'delete',
-    summary: `Deleted class ${cls.name}`,
+    summary: `Archived class ${cls.name}`,
     before: officeAuditSnapshot(cls as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot({ archived: true, archivedAt: now }),
+  });
+}
+
+/**
+ * Replaces a class's teacher list and carries it to every student in the class (students
+ * follow their homeroom's teachers), with one history entry naming who was added/removed.
+ */
+export async function setOfficeClassTeachers(
+  ctx: OfficeWriteContext,
+  params: {
+    cls: OfficeClass;
+    teacherIds: string[];
+    classStudentIds: string[];
+    teacherNameById?: Map<string, string>;
+  },
+): Promise<void> {
+  const { cls, teacherIds, classStudentIds, teacherNameById } = params;
+  const before = cls.teacherIds?.length ? cls.teacherIds : cls.teacherId ? [cls.teacherId] : [];
+  const now = Date.now();
+  const teacherFields = { teacherId: teacherIds[0] ?? null, teacherIds };
+  const batch = writeBatch(ctx.firestore);
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    ...teacherFields,
+    updatedAt: now,
+  });
+  for (const studentId of classStudentIds) {
+    batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', studentId), {
+      ...teacherFields,
+      teacherName: null,
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+
+  const nameOf = (id: string) => teacherNameById?.get(id) ?? 'a teacher';
+  const added = teacherIds.filter((id) => !before.includes(id)).map(nameOf);
+  const removed = before.filter((id) => !teacherIds.includes(id)).map(nameOf);
+  const parts = [
+    added.length ? `added ${added.join(', ')}` : '',
+    removed.length ? `removed ${removed.join(', ')}` : '',
+    // The first teacher is the class's main teacher.
+    teacherIds[0] && teacherIds[0] !== before[0] ? `main teacher is now ${nameOf(teacherIds[0])}` : '',
+  ].filter(Boolean);
+  await audit(ctx, {
+    entityType: 'officeClass',
+    entityId: cls.id,
+    action: 'update',
+    summary: `${cls.name}: ${parts.join('; ') || 'updated teachers'}`,
+    before: officeAuditSnapshot({ teacherIds: before }),
+    after: officeAuditSnapshot({ teacherIds, studentIds: classStudentIds }),
+  });
+}
+
+/** Saves a class's whole weekly schedule; `summary` says what changed in plain words. */
+export async function saveOfficeClassSchedule(
+  ctx: OfficeWriteContext,
+  params: { cls: OfficeClass; schedule: OfficeScheduleBlock[]; summary: string },
+): Promise<void> {
+  const { cls, schedule, summary } = params;
+  await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    schedule,
+    updatedAt: Date.now(),
+  });
+  await audit(ctx, {
+    entityType: 'officeClass',
+    entityId: cls.id,
+    action: 'update',
+    summary: `${cls.name} schedule: ${summary}`,
+    before: officeAuditSnapshot({ schedule: cls.schedule ?? [] }),
+    after: officeAuditSnapshot({ schedule }),
   });
 }
 
@@ -268,18 +388,18 @@ export async function upsertOfficeTeacher(
   return id;
 }
 
-export async function deleteOfficeTeacher(
+export async function archiveOfficeTeacher(
   ctx: OfficeWriteContext,
   teacher: OfficeTeacher,
 ): Promise<void> {
-  await deleteDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeTeachers', teacher.id));
+  const fields = await archiveOfficeDoc(ctx, 'officeTeachers', teacher.id);
   await audit(ctx, {
     entityType: 'officeTeacher',
     entityId: teacher.id,
     action: 'delete',
-    summary: `Deleted teacher ${teacher.name}`,
+    summary: `Archived teacher ${teacher.name}`,
     before: officeAuditSnapshot(teacher as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -296,27 +416,32 @@ export async function linkStudentsToFamily(
   );
 }
 
-export async function deleteOfficeBillingAccount(ctx: OfficeWriteContext, account: OfficeBillingAccount): Promise<void> {
-  const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', account.id);
-  await deleteDoc(ref);
+export async function archiveOfficeBillingAccount(ctx: OfficeWriteContext, account: OfficeBillingAccount): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeBillingAccounts', account.id);
   await audit(ctx, {
     entityType: 'officeBillingAccount',
     entityId: account.id,
     action: 'delete',
-    summary: `Deleted billing account ${account.familyName}`,
+    summary: `Archived billing account ${account.familyName}`,
     before: officeAuditSnapshot(account as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
+/**
+ * Applies a signed CHANGE to the account's balance atomically via Firestore `increment()`,
+ * instead of writing an absolute value computed from a (possibly stale) client-side read.
+ * Two staff recording payments/invoices for the same account at nearly the same time would
+ * otherwise silently overwrite each other's balance change.
+ */
 async function patchOfficeBillingAccountBalance(
   ctx: OfficeWriteContext,
   account: OfficeBillingAccount,
   nextInvoices: OfficeInvoice[],
-  balanceCents: number,
+  balanceDeltaCents: number,
 ): Promise<void> {
   await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', account.id), {
-    balanceCents,
+    balanceCents: increment(balanceDeltaCents),
     status: billingStatusForAccount(account.id, nextInvoices, account.status),
     updatedAt: Date.now(),
   });
@@ -368,18 +493,20 @@ export async function saveOfficeInvoiceWithBalance(
         },
       ];
 
-  let balanceCents = account.balanceCents || 0;
+  // The account balance only ever reflects `sent`/`partial` invoices — a `draft` invoice's
+  // amount was never counted, so only these transitions change it.
+  let deltaCents = 0;
   if (existing) {
     if (existing.status === 'sent' || existing.status === 'partial') {
-      balanceCents = Math.max(0, balanceCents + (data.amountCents - (existing.amountCents || 0)));
+      deltaCents = data.amountCents - (existing.amountCents || 0);
     } else if (data.status === 'sent' && existing.status === 'draft') {
-      balanceCents += data.amountCents;
+      deltaCents = data.amountCents;
     }
   } else if (data.status === 'sent') {
-    balanceCents += data.amountCents;
+    deltaCents = data.amountCents;
   }
 
-  await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, balanceCents);
+  await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, deltaCents);
   return id;
 }
 
@@ -391,10 +518,11 @@ export async function voidOfficeInvoiceWithBalance(
 ): Promise<void> {
   await upsertOfficeInvoice(ctx, inv.id, { ...inv, status: 'void' });
   const nextInvoices = invoices.map((i) => (i.id === inv.id ? { ...i, status: 'void' as const } : i));
-  if (inv.status === 'sent' || inv.status === 'draft' || inv.status === 'partial') {
+  // Only `sent`/`partial` invoices were ever added to the balance — voiding a `draft` invoice
+  // must not subtract anything, since that amount was never added in the first place.
+  if (inv.status === 'sent' || inv.status === 'partial') {
     const remaining = Math.max(0, (inv.amountCents || 0) - (inv.paidAmountCents || 0));
-    const balanceCents = Math.max(0, (account.balanceCents || 0) - remaining);
-    await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, balanceCents);
+    await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, -remaining);
   }
 }
 
@@ -407,8 +535,7 @@ export async function sendOfficeDraftInvoiceWithBalance(
   if (inv.status !== 'draft') return;
   await upsertOfficeInvoice(ctx, inv.id, { ...inv, status: 'sent' });
   const nextInvoices = invoices.map((i) => (i.id === inv.id ? { ...i, status: 'sent' as const } : i));
-  const balanceCents = (account.balanceCents || 0) + (inv.amountCents || 0);
-  await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, balanceCents);
+  await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, inv.amountCents || 0);
 }
 
 export async function bulkCreateOfficeInvoices(
@@ -448,12 +575,7 @@ export async function bulkCreateOfficeInvoices(
           paymentNote: null,
         },
       ];
-      await patchOfficeBillingAccountBalance(
-        ctx,
-        account,
-        nextInvoices,
-        (account.balanceCents || 0) + amountCents,
-      );
+      await patchOfficeBillingAccountBalance(ctx, account, nextInvoices, amountCents);
     }
   }
   await audit(ctx, {
@@ -547,24 +669,28 @@ export async function recordOfficePayment(
   await setDoc(paymentRef, payment);
 
   if (params.invoice) {
-    const paidAmountCents = (params.invoice.paidAmountCents ?? 0) + amount;
-    const fullyPaid = paidAmountCents >= (params.invoice.amountCents || 0);
-    await updateDoc(
-      doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeInvoices', params.invoice.id),
-      {
+    // Read-modify-write inside a transaction so two payments landing on the same invoice at
+    // nearly the same time (two staff, or a double-click) both count instead of one clobbering
+    // the other's `paidAmountCents`.
+    const invoiceRef = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeInvoices', params.invoice.id);
+    await runTransaction(ctx.firestore, async (tx) => {
+      const snap = await tx.get(invoiceRef);
+      const current = snap.exists() ? (snap.data() as OfficeInvoice) : params.invoice!;
+      const paidAmountCents = (current.paidAmountCents ?? 0) + amount;
+      const fullyPaid = paidAmountCents >= (current.amountCents || 0);
+      tx.update(invoiceRef, {
         paidAmountCents,
         status: fullyPaid ? 'paid' : 'partial',
-        paidAt: fullyPaid ? Date.now() : params.invoice.paidAt ?? null,
+        paidAt: fullyPaid ? Date.now() : current.paidAt ?? null,
         paymentMethod: params.method,
-        paymentNote: params.note?.trim() || params.invoice.paymentNote || null,
-      },
-    );
+        paymentNote: params.note?.trim() || current.paymentNote || null,
+      });
+    });
   }
 
-  const nextBalance = Math.max(0, (params.account.balanceCents || 0) - amount);
   await updateDoc(
     doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeBillingAccounts', params.account.id),
-    { balanceCents: nextBalance, updatedAt: Date.now() },
+    { balanceCents: increment(-amount), updatedAt: Date.now() },
   );
 
   await audit(ctx, {
@@ -599,16 +725,15 @@ export async function createOfficeGradeEntry(
   return ref.id;
 }
 
-export async function deleteOfficeGradeEntry(ctx: OfficeWriteContext, entry: OfficeGradeEntry): Promise<void> {
-  const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeGradeEntries', entry.id);
-  await deleteDoc(ref);
+export async function archiveOfficeGradeEntry(ctx: OfficeWriteContext, entry: OfficeGradeEntry): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeGradeEntries', entry.id);
   await audit(ctx, {
     entityType: 'officeGradeEntry',
     entityId: entry.id,
     action: 'delete',
-    summary: `Deleted grade entry ${entry.subject} · ${entry.termLabel}`,
+    summary: `Archived grade entry ${entry.subject} · ${entry.termLabel}`,
     before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
-    after: null,
+    after: officeAuditSnapshot(fields),
   });
 }
 
@@ -656,6 +781,208 @@ export async function updateOfficeGradeEntry(
     summary: `Updated grade entry ${before?.subject ?? entryId}`,
     before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
     after: officeAuditSnapshot({ ...(before ?? {}), ...next } as unknown as Record<string, unknown>),
+  });
+}
+
+/** Deterministic doc id so re-marking the same student on the same day overwrites instead of duplicating. */
+function attendanceDocId(date: string, studentId: string): string {
+  return `${date}_${studentId}`;
+}
+
+/** Marks attendance for one or more students in one class on one day. One audit entry per save. */
+export async function bulkSetOfficeAttendance(
+  ctx: OfficeWriteContext,
+  params: {
+    classId: string;
+    date: string;
+    marks: Array<{ studentId: string; status: OfficeAttendanceEntry['status']; notes?: string | null }>;
+  },
+): Promise<number> {
+  if (params.marks.length === 0) return 0;
+  const batch = writeBatch(ctx.firestore);
+  const now = Date.now();
+  const changedBy = ctx.changedBy?.trim() || null;
+  for (const mark of params.marks) {
+    const ref = doc(
+      ctx.firestore,
+      'schools',
+      sid(ctx.schoolId),
+      'officeAttendance',
+      attendanceDocId(params.date, mark.studentId),
+    );
+    batch.set(ref, {
+      studentId: mark.studentId,
+      classId: params.classId,
+      date: params.date,
+      status: mark.status,
+      notes: mark.notes ?? null,
+      updatedAt: now,
+      updatedBy: changedBy,
+    });
+  }
+  await batch.commit();
+  const counts = params.marks.reduce<Record<string, number>>((acc, m) => {
+    acc[m.status] = (acc[m.status] ?? 0) + 1;
+    return acc;
+  }, {});
+  await audit(ctx, {
+    entityType: 'officeAttendanceEntry',
+    entityId: `${params.classId}_${params.date}`,
+    action: 'update',
+    summary: `Recorded attendance for ${params.marks.length} student${params.marks.length === 1 ? '' : 's'} on ${params.date}`,
+    // Keep each student's mark so earlier marks on the same day remain traceable after a re-mark.
+    after: officeAuditSnapshot({ classId: params.classId, date: params.date, counts, marks: params.marks }),
+  });
+  return params.marks.length;
+}
+
+const DESK_KIND_LABEL: Record<OfficeDeskLogEntry['kind'], string> = {
+  late_arrival: 'Late arrival',
+  early_pickup: 'Early pickup',
+  nurse_visit: 'Nurse visit',
+};
+
+/**
+ * Logs a front-desk event. The history entry is filed under the student so it shows on their
+ * card's History as well as the school-wide change history.
+ */
+export async function createOfficeDeskLog(
+  ctx: OfficeWriteContext,
+  data: Omit<OfficeDeskLogEntry, 'id' | 'createdAt' | 'recordedBy'>,
+  studentName: string,
+): Promise<string> {
+  const ref = doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeDeskLog'));
+  const payload = { ...data, createdAt: Date.now(), recordedBy: ctx.changedBy?.trim() || null };
+  await setDoc(ref, payload);
+  const detail =
+    data.kind === 'early_pickup' && data.pickedUpBy
+      ? ` · picked up by ${data.pickedUpBy}`
+      : data.reason
+        ? ` · ${data.reason}`
+        : '';
+  await audit(ctx, {
+    entityType: 'officeDeskLog',
+    entityId: data.studentId,
+    action: 'create',
+    summary: `${DESK_KIND_LABEL[data.kind]}: ${studentName} at ${data.time} on ${data.date}${detail}`,
+    after: officeAuditSnapshot({ ...payload, logId: ref.id }),
+  });
+  return ref.id;
+}
+
+export async function archiveOfficeDeskLog(
+  ctx: OfficeWriteContext,
+  entry: OfficeDeskLogEntry,
+  studentName: string,
+): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeDeskLog', entry.id);
+  await audit(ctx, {
+    entityType: 'officeDeskLog',
+    entityId: entry.studentId,
+    action: 'delete',
+    summary: `Removed ${DESK_KIND_LABEL[entry.kind].toLowerCase()} for ${studentName} (${entry.date} ${entry.time})`,
+    before: officeAuditSnapshot(entry as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
+  });
+}
+
+export async function createOfficeForm(
+  ctx: OfficeWriteContext,
+  data: {
+    title: string;
+    description?: string | null;
+    dueDate?: string | null;
+    targetClassId: string;
+    studentIds: string[];
+  },
+): Promise<string> {
+  const ref = doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeForms'));
+  const responses: Record<string, OfficeFormResponseStatus> = {};
+  for (const studentId of data.studentIds) responses[studentId] = 'sent';
+  const payload = {
+    title: data.title,
+    description: data.description ?? null,
+    dueDate: data.dueDate ?? null,
+    targetClassId: data.targetClassId,
+    responses,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    updatedBy: ctx.changedBy?.trim() || null,
+  };
+  await setDoc(ref, payload);
+  await audit(ctx, {
+    entityType: 'officeForm',
+    entityId: ref.id,
+    action: 'create',
+    summary: `Sent form "${data.title}" to ${data.studentIds.length} student${data.studentIds.length === 1 ? '' : 's'}`,
+    after: officeAuditSnapshot({ title: data.title, targetClassId: data.targetClassId, count: data.studentIds.length }),
+  });
+  return ref.id;
+}
+
+export async function setOfficeFormResponse(
+  ctx: OfficeWriteContext,
+  formId: string,
+  studentId: string,
+  status: OfficeFormResponseStatus,
+): Promise<void> {
+  await updateDoc(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeForms', formId), {
+    [`responses.${studentId}`]: status,
+    updatedAt: Date.now(),
+    updatedBy: ctx.changedBy?.trim() || null,
+  });
+}
+
+export async function archiveOfficeForm(ctx: OfficeWriteContext, form: OfficeForm): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeForms', form.id);
+  await audit(ctx, {
+    entityType: 'officeForm',
+    entityId: form.id,
+    action: 'delete',
+    summary: `Archived form "${form.title}"`,
+    before: officeAuditSnapshot(form as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
+  });
+}
+
+export async function upsertOfficeEvent(
+  ctx: OfficeWriteContext,
+  eventId: string | null,
+  data: { title: string; description?: string | null; date: string },
+): Promise<string> {
+  const id = eventId ?? doc(collection(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeEvents')).id;
+  const ref = doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeEvents', id);
+  const beforeSnap = await getDoc(ref);
+  const before = beforeSnap.exists() ? (beforeSnap.data() as OfficeEvent) : null;
+  const payload: OfficeEvent = {
+    id,
+    title: data.title.trim(),
+    description: data.description?.trim() || null,
+    date: data.date,
+    updatedAt: Date.now(),
+    updatedBy: ctx.changedBy?.trim() || null,
+  };
+  await setDoc(ref, payload, { merge: true });
+  await audit(ctx, {
+    entityType: 'officeEvent',
+    entityId: id,
+    action: before ? 'update' : 'create',
+    summary: before ? `Updated event ${payload.title}` : `Created event ${payload.title}`,
+    before: before ? officeAuditSnapshot(before as unknown as Record<string, unknown>) : null,
+    after: officeAuditSnapshot(payload as unknown as Record<string, unknown>),
+  });
+  return id;
+}
+
+export async function archiveOfficeEvent(ctx: OfficeWriteContext, event: OfficeEvent): Promise<void> {
+  const fields = await archiveOfficeDoc(ctx, 'officeEvents', event.id);
+  await audit(ctx, {
+    entityType: 'officeEvent',
+    entityId: event.id,
+    action: 'delete',
+    summary: `Archived event ${event.title}`,
+    before: officeAuditSnapshot(event as unknown as Record<string, unknown>),
+    after: officeAuditSnapshot(fields),
   });
 }
 

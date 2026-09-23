@@ -130,7 +130,7 @@ html[dir='rtl'] body {
 
 /*
  * School Office typography: Tailwind uses rem from <html>, not the parent pane.
- * Sidebar baseline = 18px on html; main pane uses zoom so all rem utilities shrink (~14px effective body).
+ * Sidebar baseline = 18px on html; main pane uses zoom so rem utilities land on standard 16px sizes.
  */
 html[data-office-portal] {
   font-size: var(--office-sidebar-font-size, 18px);
@@ -145,7 +145,7 @@ html[data-hide-global-header] #levelup-global-app-header {
 }
 
 html[data-office-portal] .office-main-pane {
-  zoom: var(--office-main-zoom, 0.7777777778);
+  zoom: var(--office-main-zoom, 0.8888888889);
 }
 
 /* Tailwind text-* uses rem from <html>; cap large type in the workspace pane. */
@@ -175,9 +175,9 @@ html[data-office-portal] .office-content-pane {
 
 @supports not (zoom: 1) {
   html[data-office-portal] .office-main-pane {
-    transform: scale(var(--office-main-zoom, 0.7777777778));
+    transform: scale(var(--office-main-zoom, 0.8888888889));
     transform-origin: top left;
-    width: calc(100% / var(--office-main-zoom, 0.7777777778));
+    width: calc(100% / var(--office-main-zoom, 0.8888888889));
   }
 }
 

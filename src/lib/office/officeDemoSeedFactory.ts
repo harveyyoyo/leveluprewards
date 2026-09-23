@@ -1,7 +1,8 @@
-import type { Class, StaffAccount, Student } from '@/lib/types';
+import type { Class, StaffAccount, Student, Teacher } from '@/lib/types';
 import type {
   OfficeBillingAccount,
   OfficeClass,
+  OfficeFamily,
   OfficeGradeEntry,
   OfficeInvoice,
   OfficeStudent,
@@ -17,13 +18,15 @@ export type OfficeDemoVariant = 'schoolabc' | 'yeshiva';
 export type OfficeDemoSeedInput = {
   variant: OfficeDemoVariant;
   students: Pick<Student, 'id' | 'firstName' | 'lastName' | 'nickname' | 'classId'>[];
-  classes: Pick<Class, 'id' | 'name'>[];
+  classes: Pick<Class, 'id' | 'name' | 'primaryTeacherId'>[];
+  teachers?: Pick<Teacher, 'id' | 'name' | 'email'>[];
 };
 
 export type OfficeDemoSeedPayload = {
   officeTeachers: OfficeTeacher[];
   officeStudents: OfficeStudent[];
   officeClasses: OfficeClass[];
+  officeFamilies: OfficeFamily[];
   gradeEntries: OfficeGradeEntry[];
   billingAccounts: OfficeBillingAccount[];
   invoices: OfficeInvoice[];
@@ -84,6 +87,96 @@ const TEACHER_NAMES_YESHIVA = [
   'Rabbi Epstein',
 ] as const;
 
+const DEMO_PARENT_FIRST = {
+  schoolabc: {
+    a: ['Sarah', 'Jennifer', 'Emily', 'Rachel', 'Laura', 'Megan', 'Hannah', 'Rebecca', 'Nicole', 'Amanda'],
+    b: ['Michael', 'David', 'James', 'Daniel', 'Robert', 'Matthew', 'Andrew', 'Joseph', 'Brian', 'Kevin'],
+  },
+  yeshiva: {
+    a: ['Rivka', 'Chana', 'Leah', 'Sara', 'Miriam', 'Esther', 'Devorah', 'Shira', 'Tova', 'Rochel'],
+    b: ['Moshe', 'Yosef', 'Avraham', 'Dovid', 'Yaakov', 'Shmuel', 'Chaim', 'Eliyahu', 'Binyamin', 'Menachem'],
+  },
+} as const;
+
+const DEMO_STREETS = ['Oak Street', 'Maple Avenue', 'Cedar Lane', 'Elm Road', 'Birch Court', 'Willow Way', 'Pine Street', 'Chestnut Drive'];
+const DEMO_ALLERGIES = ['Peanuts', 'Tree nuts', 'Dairy', 'Bee stings'];
+
+/**
+ * Fake households for demo students: siblings (same last name) share one family with two parent
+ * contacts, phone numbers, emails, and a home address. Deterministic so re-running gives the same data.
+ */
+export function buildOfficeDemoFamilies(
+  variant: OfficeDemoVariant,
+  students: Pick<OfficeStudent, 'id' | 'lastName' | 'firstName'>[],
+): { families: OfficeFamily[]; familyIdByStudentId: Map<string, string> } {
+  const now = Date.now();
+  const names = DEMO_PARENT_FIRST[variant];
+  const byLast = new Map<string, typeof students>();
+  for (const s of students) {
+    const key = (s.lastName?.trim() || s.firstName?.trim() || 'family').toLowerCase();
+    byLast.set(key, [...(byLast.get(key) ?? []), s]);
+  }
+  const families: OfficeFamily[] = [];
+  const familyIdByStudentId = new Map<string, string>();
+  for (const [key, members] of [...byLast.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    const last = members[0].lastName?.trim() || members[0].firstName?.trim() || 'Family';
+    const slug = key.replace(/[^a-z0-9]/g, '') || 'family';
+    const id = `ofam-${slug}`;
+    const h = hashToIndex(key, 10_000);
+    const parentA = names.a[h % names.a.length];
+    const parentB = names.b[(h >> 3) % names.b.length];
+    const phone = (n: number) => `(555) 01${n % 10}-${String(1000 + ((h + n * 37) % 9000)).padStart(4, '0')}`;
+    families.push({
+      id,
+      displayName: `${last} family`,
+      homeAddress: `${10 + (h % 890)} ${DEMO_STREETS[h % DEMO_STREETS.length]}, Springfield, NJ 07081`,
+      contacts: [
+        {
+          id: `${id}-a`,
+          name: `${parentA} ${last}`,
+          role: 'parent',
+          relationship: 'Mother',
+          phone: phone(1),
+          email: `${parentA.toLowerCase()}.${slug}@example.com`,
+          isPrimary: true,
+          notes: null,
+        },
+        {
+          id: `${id}-b`,
+          name: `${parentB} ${last}`,
+          role: 'parent',
+          relationship: 'Father',
+          phone: phone(2),
+          email: `${parentB.toLowerCase()}.${slug}@example.com`,
+          isPrimary: false,
+          notes: null,
+        },
+      ],
+      medicalNotes: h % 9 === 0 ? 'Carries an EpiPen — nurse has a spare.' : null,
+      legalNotes: h % 17 === 0 ? 'Custody paperwork on file. Check with the office before releasing to anyone not listed.' : null,
+      busRoute: h % 3 === 0 ? `Route ${1 + (h % 6)}` : null,
+      busNotes: null,
+      generalNotes: null,
+      updatedAt: now,
+      updatedBy: 'demo-seed',
+    });
+    for (const m of members) familyIdByStudentId.set(m.id, id);
+  }
+  return { families, familyIdByStudentId };
+}
+
+/** A few sample details so the student "Details" section has something to show in the demo. */
+export function demoStudentDetails(studentId: string): Partial<OfficeStudent> {
+  const h = hashToIndex(studentId, 1000);
+  const year = new Date().getFullYear() - 1 - (h % 4);
+  return {
+    studentNumber: `S${String(10000 + h * 7).slice(0, 5)}`,
+    enrollmentDate: `${year}-09-0${1 + (h % 5)}`,
+    allergies: h % 11 === 0 ? DEMO_ALLERGIES[h % DEMO_ALLERGIES.length] : null,
+    pickupNotes: h % 13 === 0 ? 'Grandmother picks up on Fridays.' : null,
+  };
+}
+
 export function buildOfficeDemoStaffAccount(variant: OfficeDemoVariant): StaffAccount {
   return {
     id: OFFICE_DEMO_STAFF_ACCOUNT_ID,
@@ -108,30 +201,63 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
   const teacherNames =
     input.variant === 'yeshiva' ? TEACHER_NAMES_YESHIVA : TEACHER_NAMES_SCHOOLABC;
 
-  const officeClasses: OfficeClass[] = input.classes.map((c) => ({
-    id: c.id,
-    name: c.name?.trim() || 'Class',
-    updatedAt: now,
-  }));
+  // 1. Create office teachers from rewards teachers if available, else fallback to presets.
+  const officeTeachers: OfficeTeacher[] = input.teachers?.length 
+    ? input.teachers.map(t => ({
+        id: t.id,
+        name: t.name,
+        email: t.email ?? null,
+        updatedAt: now
+      }))
+    : teacherNames.map((teacherName, index) => ({
+        id: `oteacher-${input.variant}-${index + 1}`,
+        name: teacherName,
+        email: null,
+        updatedAt: now,
+      }));
 
-  const officeTeachers: OfficeTeacher[] = teacherNames.map((teacherName, index) => ({
-    id: `oteacher-${input.variant}-${index + 1}`,
-    name: teacherName,
-    email: null,
-    updatedAt: now,
-  }));
+  const officeTeacherById = new Map(officeTeachers.map(t => [t.id, t]));
 
-  const officeStudents: OfficeStudent[] = input.students.map((s) => ({
-    id: s.id,
-    firstName: s.firstName?.trim() || 'Student',
-    lastName: s.lastName?.trim() || '',
-    nickname: s.nickname?.trim() || null,
-    classId: s.classId ?? null,
-    teacherId: officeTeachers[hashToIndex(s.id, officeTeachers.length)]?.id ?? null,
-    teacherName: null,
-    notes: null,
-    updatedAt: now,
-  }));
+  // 2. Create office classes, assigning the teacher from the rewards class record.
+  const officeClasses: OfficeClass[] = input.classes.map((c, index) => {
+    // Try to find the teacher assigned to this class in rewards.
+    let teacherId: string | null = null;
+    if (c.primaryTeacherId && officeTeacherById.has(c.primaryTeacherId)) {
+      teacherId = c.primaryTeacherId;
+    } else {
+      // Fallback to round-robin if mapping fails.
+      teacherId = officeTeachers[index % officeTeachers.length]?.id ?? null;
+    }
+    
+    return {
+      id: c.id,
+      name: c.name?.trim() || 'Class',
+      teacherId,
+      updatedAt: now,
+    };
+  });
+
+  const officeClassById = new Map(officeClasses.map(c => [c.id, c]));
+
+  // 3. Create office students, assigning them to the teacher of their class, grouped into families.
+  const { families: officeFamilies, familyIdByStudentId } = buildOfficeDemoFamilies(input.variant, input.students);
+  const officeStudents: OfficeStudent[] = input.students.map((s) => {
+    const cls = s.classId ? officeClassById.get(s.classId) : null;
+    return {
+      ...demoStudentDetails(s.id),
+      familyId: familyIdByStudentId.get(s.id) ?? null,
+      id: s.id,
+      firstName: s.firstName?.trim() || 'Student',
+      lastName: s.lastName?.trim() || '',
+      nickname: s.nickname?.trim() || null,
+      classId: s.classId ?? null,
+      // Assign the teacher from the class, with NO random fallback.
+      teacherId: cls?.teacherId ?? null,
+      teacherName: null,
+      notes: null,
+      updatedAt: now,
+    };
+  });
 
   const gradeEntries: OfficeGradeEntry[] = [];
   for (const student of officeStudents) {
@@ -186,6 +312,7 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
     billingAccounts.push({
       id: accountId,
       familyName,
+      familyId: members[0] ? familyIdByStudentId.get(members[0].id) ?? null : null,
       studentIds,
       balanceCents: 0,
       status,
@@ -245,6 +372,7 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
     officeTeachers,
     officeStudents,
     officeClasses,
+    officeFamilies,
     gradeEntries,
     billingAccounts,
     invoices,

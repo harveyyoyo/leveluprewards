@@ -1,5 +1,17 @@
 import type { LucideIcon } from 'lucide-react';
-import { CreditCard, FileText, GraduationCap, Home, LayoutGrid, Settings, UserRound, Users } from 'lucide-react';
+import {
+  CalendarCheck,
+  CreditCard,
+  DoorOpen,
+  FileText,
+  GraduationCap,
+  Home,
+  LayoutGrid,
+  Megaphone,
+  Settings,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeMarksLabels } from '@/lib/office/officeTerminology';
 import type { OfficeSettings } from '@/lib/office/types';
@@ -10,6 +22,9 @@ export type OfficeNavId =
   | 'classes'
   | 'teachers'
   | 'grades'
+  | 'attendance'
+  | 'frontdesk'
+  | 'communication'
   | 'reports'
   | 'billing'
   | 'settings';
@@ -18,17 +33,23 @@ export type OfficeNavItem = {
   id: OfficeNavId;
   label: string;
   description: string;
+  /** One or two plain sentences on what the page is for (shown in Help → Guide). */
+  explainer: string;
   href: (schoolId: string) => string;
   icon: LucideIcon;
 };
 
-export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTerminology'> | null): OfficeNavItem[] {
+export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTerminology' | 'features'> | null): OfficeNavItem[] {
   const marks = getOfficeMarksLabels(settings);
+  const showAttendance = settings?.features?.attendance !== false;
+  const showFrontDesk = settings?.features?.frontDesk !== false;
+
   return [
     {
       id: 'home',
       label: 'Home',
       description: 'Overview and quick actions',
+      explainer: 'What needs attention today, a few key numbers, and shortcuts to everyday jobs.',
       href: (schoolId) => officePublicHref(schoolId),
       icon: Home,
     },
@@ -36,6 +57,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'students',
       label: 'Students',
       description: 'Roster and family profiles',
+      explainer: 'Every student\'s record: class, teachers, family, grades, bills, documents, and history. Click a name to open their card.',
       href: (schoolId) => officePublicHref(schoolId, 'students'),
       icon: Users,
     },
@@ -43,6 +65,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'classes',
       label: 'Classes',
       description: 'Group students by class',
+      explainer: 'Groups of students. Click a class name to set its teachers and weekly schedule.',
       href: (schoolId) => officePublicHref(schoolId, 'classes'),
       icon: LayoutGrid,
     },
@@ -50,6 +73,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'teachers',
       label: 'Teachers',
       description: 'Homeroom teachers',
+      explainer: 'Your teachers. Click one to see their classes, students, and weekly schedule.',
       href: (schoolId) => officePublicHref(schoolId, 'teachers'),
       icon: UserRound,
     },
@@ -57,13 +81,47 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'grades',
       label: marks.section,
       description: marks.enterAction,
+      explainer: `Enter and review ${marks.plural} by term. Pick the term at the top; use More to import, fill in missing ${marks.plural}, or print.`,
       href: (schoolId) => officePublicHref(schoolId, 'grades'),
       icon: GraduationCap,
+    },
+    ...(showAttendance
+      ? [
+          {
+            id: 'attendance' as const,
+            label: 'Attendance',
+            description: 'Daily present / absent',
+            explainer: 'Mark who\'s present, absent, late, or excused, one class and one day at a time.',
+            href: (schoolId: string) => officePublicHref(schoolId, 'attendance'),
+            icon: CalendarCheck,
+          },
+        ]
+      : []),
+    ...(showFrontDesk
+      ? [
+          {
+            id: 'frontdesk' as const,
+            label: 'Front desk',
+            description: 'Late arrivals, early pickups, nurse visits',
+            explainer: 'Log what happens at the office door: students who come in late, leave early (and who picked them up), and nurse visits.',
+            href: (schoolId: string) => officePublicHref(schoolId, 'front-desk'),
+            icon: DoorOpen,
+          },
+        ]
+      : []),
+    {
+      id: 'communication',
+      label: 'Communication',
+      description: 'Announcements & forms',
+      explainer: 'Email families, send permission slips and see who returned them, and keep the school calendar.',
+      href: (schoolId) => officePublicHref(schoolId, 'communication'),
+      icon: Megaphone,
     },
     {
       id: 'reports',
       label: 'Reports',
       description: 'Filtered views and exports',
+      explainer: 'Print or download grades, billing statements, class lists, and the full change history.',
       href: (schoolId) => officePublicHref(schoolId, 'reports'),
       icon: FileText,
     },
@@ -71,6 +129,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'billing',
       label: 'Billing',
       description: 'Family invoices and payments',
+      explainer: 'Family bills and payments. Record checks, cash, or transfers; one payment can cover several bills.',
       href: (schoolId) => officePublicHref(schoolId, 'billing'),
       icon: CreditCard,
     },
@@ -78,6 +137,7 @@ export function getOfficeNavItems(settings?: Pick<OfficeSettings, 'useMarksTermi
       id: 'settings',
       label: 'Settings',
       description: 'Terms, staff accounts, import',
+      explainer: 'School-wide choices: terms, which sections are on, extra student fields, staff sign-ins, and importing data.',
       href: (schoolId) => officePublicHref(schoolId, 'settings'),
       icon: Settings,
     },
@@ -104,6 +164,9 @@ export function officeNavIdFromPath(pathname: string, schoolId: string): OfficeN
   if (rest.startsWith('classes')) return 'classes';
   if (rest.startsWith('teachers')) return 'teachers';
   if (rest.startsWith('grades')) return 'grades';
+  if (rest.startsWith('attendance')) return 'attendance';
+  if (rest.startsWith('front-desk')) return 'frontdesk';
+  if (rest.startsWith('communication')) return 'communication';
   if (rest.startsWith('reports')) return 'reports';
   if (rest.startsWith('billing')) return 'billing';
   if (rest.startsWith('settings')) return 'settings';

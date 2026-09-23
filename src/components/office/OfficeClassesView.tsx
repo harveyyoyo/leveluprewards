@@ -5,13 +5,24 @@ import { useSearchParams } from 'next/navigation';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
-import { ArrowUpRight, ChevronRight, Download, Plus, Pencil, Trash2 } from 'lucide-react';
-import { doc, setDoc, updateDoc, writeBatch, collection } from 'firebase/firestore';
+import { AlertTriangle, ArrowUpRight, ChevronRight, ChevronsUpDown, Download, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { officeAuditSnapshot } from '@/lib/office/officeAuditLog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
+import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 import {
   Select,
   SelectContent,
@@ -37,6 +48,7 @@ type OfficeClassesViewProps = {
   schoolId: string;
   students: OfficeStudent[];
   classes: OfficeClass[];
+  teachers?: OfficeTeacher[];
   teacherNameById: Map<string, string>;
   isLoading: boolean;
 };
@@ -45,11 +57,14 @@ export function OfficeClassesView({
   schoolId,
   students,
   classes,
+  teachers = [],
   teacherNameById,
   isLoading,
 }: OfficeClassesViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
+  const write = useOfficeWrite(schoolId);
   const { openStudent, openClass } = useOfficeEntityNav();
 
   const exportClassRoster = () => {
@@ -88,15 +103,19 @@ export function OfficeClassesView({
     }
   }, [searchParams, classes, students, isLoading]);
 
+  // `student` in the URL belongs to the profile sheet (OfficeEntityNavProvider); writing it here
+  // re-added it right after the sheet closed and reopened the profile.
   useOfficeUrlSync({
     class: expandedClassId ?? undefined,
-    student: highlightStudentId ?? undefined,
   });
 
   // Class Dialog State
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<OfficeClass | null>(null);
   const [className, setClassName] = useState('');
+  const [classTeacherIds, setClassTeacherIds] = useState<string[]>([]);
+  const [classCapacity, setClassCapacity] = useState('');
+  const [classNotes, setClassNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [promoteOpen, setPromoteOpen] = useState(false);
   const promotionPlan = useMemo(() => planOfficeClassPromotion(classes), [classes]);
@@ -104,6 +123,9 @@ export function OfficeClassesView({
   const openNewClass = () => {
     setEditingClass(null);
     setClassName('');
+    setClassTeacherIds([]);
+    setClassCapacity('');
+    setClassNotes('');
     setDialogOpen(true);
   };
 
@@ -111,53 +133,86 @@ export function OfficeClassesView({
     e.stopPropagation();
     setEditingClass(cls);
     setClassName(cls.name);
+    setClassTeacherIds(cls.teacherIds ?? (cls.teacherId ? [cls.teacherId] : []));
+    setClassCapacity(cls.capacity != null ? String(cls.capacity) : '');
+    setClassNotes(cls.notes ?? '');
     setDialogOpen(true);
   };
 
   const handleSaveClass = async () => {
-    if (!firestore) return;
+    if (!write.ctx) return;
     if (!className.trim()) {
       toast({ variant: 'destructive', title: 'Class name is required.' });
       return;
     }
+    const parsedCapacity = classCapacity.trim() ? Number.parseInt(classCapacity.trim(), 10) : null;
+    if (classCapacity.trim() && (!Number.isFinite(parsedCapacity) || (parsedCapacity ?? 0) <= 0)) {
+      toast({ variant: 'destructive', title: 'Capacity must be a positive number.' });
+      return;
+    }
+    const nextTeacherIds = classTeacherIds.length > 0 ? classTeacherIds : null;
+    const oldTeacherIds = editingClass?.teacherIds ?? (editingClass?.teacherId ? [editingClass.teacherId] : []);
+    
+    // Check if teachers changed by comparing arrays
+    const teacherChanged = !editingClass || 
+      (nextTeacherIds?.join(',') !== oldTeacherIds.join(','));
+      
     setBusy(true);
     try {
-      if (editingClass) {
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeClasses', editingClass.id), {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class renamed' });
-      } else {
-        const ref = doc(collection(firestore, 'schools', schoolId, 'officeClasses'));
-        await setDoc(ref, {
-          name: className.trim(),
-          updatedAt: Date.now(),
-        });
-        toast({ title: 'Class created' });
+      const classId = await write.upsertOfficeClass(write.ctx, editingClass?.id ?? null, {
+        name: className.trim(),
+        teacherId: nextTeacherIds?.[0] ?? null, // keep single field for legacy
+        teacherIds: nextTeacherIds ?? [], // use new array field
+        capacity: parsedCapacity,
+        notes: classNotes.trim() || null,
+      });
+
+      let updatedStudentCount = 0;
+      if (teacherChanged && editingClass) {
+        const classStudents = students.filter((s) => s.classId === classId);
+        if (classStudents.length > 0) {
+          const batch = writeBatch(firestore!);
+          for (const student of classStudents) {
+            batch.update(doc(firestore!, 'schools', schoolId, 'officeStudents', student.id), {
+              teacherId: nextTeacherIds?.[0] ?? null,
+              teacherIds: nextTeacherIds ?? [],
+              teacherName: null,
+              updatedAt: Date.now(),
+            });
+          }
+          await batch.commit();
+          updatedStudentCount = classStudents.length;
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeClass',
+            entityId: classId,
+            action: 'update',
+            summary: `Updated the teacher for ${classStudents.length} student${classStudents.length === 1 ? '' : 's'} in ${className.trim()}`,
+            before: officeAuditSnapshot({ teacherIds: oldTeacherIds }),
+            after: officeAuditSnapshot({
+              teacherIds: nextTeacherIds ?? [],
+              studentIds: classStudents.map((s) => s.id),
+            }),
+          });
+        }
       }
+
+      toast({
+        title: editingClass ? 'Class updated' : 'Class created',
+        description:
+          updatedStudentCount > 0
+            ? `Also updated the teacher for ${updatedStudentCount} student${updatedStudentCount === 1 ? '' : 's'} in this class.`
+            : undefined,
+      });
       setDialogOpen(false);
       setClassName('');
+      setClassTeacherIds([]);
+      setClassCapacity('');
+      setClassNotes('');
       setEditingClass(null);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Could not save class', description: (e as Error).message });
     } finally {
       setBusy(false);
-    }
-  };
-
-  const assignStudentToClass = async (student: OfficeStudent, nextClassId: string) => {
-    if (!firestore) return;
-    const cid = nextClassId === '__none__' ? null : nextClassId;
-    if (cid === (student.classId ?? null)) return;
-    try {
-      await updateDoc(doc(firestore, 'schools', schoolId, 'officeStudents', student.id), {
-        classId: cid,
-        updatedAt: Date.now(),
-      });
-      toast({ title: 'Class updated' });
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Could not move student', description: (e as Error).message });
     }
   };
 
@@ -174,6 +229,19 @@ export function OfficeClassesView({
         });
       }
       await batch.commit();
+      if (write.ctx) {
+        for (const row of promotionPlan.changes) {
+          const before = classes.find((c) => c.id === row.classId);
+          await write.logOfficeChange(write.ctx, {
+            entityType: 'officeClass',
+            entityId: row.classId,
+            action: 'update',
+            summary: `Advanced class ${before?.name ?? row.classId} → ${row.nextName} for next year`,
+            before: officeAuditSnapshot({ name: before?.name ?? null }),
+            after: officeAuditSnapshot({ name: row.nextName }),
+          });
+        }
+      }
       toast({
         title: 'Class names advanced',
         description: `${promotionPlan.changes.length} class${promotionPlan.changes.length === 1 ? '' : 'es'} updated for next year.`,
@@ -192,34 +260,31 @@ export function OfficeClassesView({
 
   const handleDeleteClass = async (cls: OfficeClass, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!firestore) return;
+    if (!write.ctx) return;
 
     const classStudents = students.filter((s) => s.classId === cls.id);
     const hasStudents = classStudents.length > 0;
 
-    let msg = `Are you sure you want to delete the class "${cls.name}"?`;
-    if (hasStudents) {
-      msg = `The class "${cls.name}" has ${classStudents.length} student(s) assigned. Deleting it will unassign these students. Are you sure you want to proceed?`;
-    }
-
-    if (!confirm(msg)) return;
+    const ok = await confirm({
+      title: `Remove the class “${cls.name}”?`,
+      description: hasStudents
+        ? `Its ${classStudents.length} student${classStudents.length === 1 ? '' : 's'} will move to “No class” so you can place them again. The class stays in the change history.`
+        : 'The class stays in the change history.',
+      confirmLabel: 'Remove class',
+      tone: 'caution',
+    });
+    if (!ok) return;
 
     setBusy(true);
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'schools', schoolId, 'officeClasses', cls.id));
-
-      for (const s of classStudents) {
-        batch.update(doc(firestore, 'schools', schoolId, 'officeStudents', s.id), {
-          classId: null,
-          updatedAt: Date.now(),
-        });
-      }
-
-      await batch.commit();
-      toast({ title: 'Class deleted successfully' });
+      await write.archiveOfficeClassBatch(
+        write.ctx,
+        cls,
+        classStudents.map((s) => s.id),
+      );
+      toast({ title: 'Class removed' });
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Delete failed', description: (e as Error).message });
+      toast({ variant: 'destructive', title: 'Could not remove class', description: (e as Error).message });
     } finally {
       setBusy(false);
     }
@@ -278,48 +343,38 @@ export function OfficeClassesView({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between no-print">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Browse office students by class. Click a name to open their profile.
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {classes.length} {classes.length === 1 ? 'class' : 'classes'} · {students.length} students
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 self-start sm:self-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            disabled={classes.length === 0 || promotionPlan.changes.length === 0}
-            onClick={() => setPromoteOpen(true)}
-          >
-            <ArrowUpRight className="h-4 w-4" />
-            Advance for next year
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl gap-1.5"
-            disabled={students.length === 0}
-            onClick={exportClassRoster}
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-xl"
-            onClick={() => setExpandAll((v) => !v)}
-          >
-            {expandAll ? 'Collapse all' : 'Expand all'}
-          </Button>
+    <div className="space-y-3">
+      {confirmDialog}
+      <div className="flex items-center justify-between gap-2 no-print">
+        <p className="text-sm text-muted-foreground">
+          {classes.length} {classes.length === 1 ? 'class' : 'classes'} · {students.length} students
+        </p>
+        <div className="flex items-center gap-2">
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="outline" size="icon" className="h-10 w-10 rounded-xl" aria-label="More options">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60 rounded-xl">
+              <DropdownMenuItem onSelect={() => setExpandAll((v) => !v)}>
+                <ChevronsUpDown className="mr-2 h-4 w-4" />
+                {expandAll ? 'Collapse all classes' : 'Open all classes'}
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={students.length === 0} onSelect={exportClassRoster}>
+                <Download className="mr-2 h-4 w-4" />
+                Download class lists
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={classes.length === 0 || promotionPlan.changes.length === 0}
+                onSelect={() => setPromoteOpen(true)}
+              >
+                <ArrowUpRight className="mr-2 h-4 w-4" />
+                Advance classes for next year
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button type="button" className="rounded-xl gap-2" onClick={openNewClass}>
             <Plus className="h-4 w-4" />
             New class
@@ -327,7 +382,7 @@ export function OfficeClassesView({
         </div>
       </div>
 
-      <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search class or student…" />
+      <OfficeSearchInput value={query} onChange={setQuery} placeholder="Search classes or students…" />
 
       <div className="space-y-2">
         {filtered.map(({ class: cls, students: list }) => {
@@ -348,33 +403,25 @@ export function OfficeClassesView({
                   ) : (
                     <OfficeEntityLink kind="class" id={cls.id} label={cls.name} className="text-base" />
                   )}
-                  <span className="ml-2 text-sm text-muted-foreground">{list.length} students</span>
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {list.length}
+                    {cls.capacity ? `/${cls.capacity}` : ''} students
+                    {(() => {
+                      const ids = cls.teacherIds?.length ? cls.teacherIds : cls.teacherId ? [cls.teacherId] : [];
+                      const names = ids.map((id) => teacherNameById.get(id)).filter(Boolean);
+                      if (names.length === 0) return '';
+                      // First teacher is the main one; say so only when there's more than one.
+                      return names.length === 1 ? ` · ${names[0]}` : ` · ${names[0]} (main), ${names.slice(1).join(', ')}`;
+                    })()}
+                  </span>
+                  {cls.capacity && list.length > cls.capacity ? (
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-red-800 dark:bg-red-950/50 dark:text-red-200">
+                      <AlertTriangle className="h-3 w-3" aria-hidden />
+                      Over capacity
+                    </span>
+                  ) : null}
                 </span>
                 <div className="flex items-center gap-1">
-                  {cls.id !== '__unassigned__' && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-                        onClick={(e) => openEditClass(cls, e)}
-                        aria-label="Edit class name"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-lg hover:bg-muted/80 text-destructive hover:text-destructive/80"
-                        onClick={(e) => void handleDeleteClass(cls, e)}
-                        aria-label="Delete class"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
                   <ChevronRight className={cn('h-5 w-5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')} />
                 </div>
               </div>
@@ -399,22 +446,6 @@ export function OfficeClassesView({
                       >
                           {getOfficeStudentLabel(s)} {s.lastName}
                       </button>
-                      <Select
-                        value={s.classId && classes.some((c) => c.id === s.classId) ? s.classId : '__none__'}
-                        onValueChange={(v) => void assignStudentToClass(s, v)}
-                      >
-                        <SelectTrigger className="h-8 w-36 rounded-lg text-xs" onClick={(e) => e.stopPropagation()}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">Unassigned</SelectItem>
-                          {classes.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </li>
                   ))}
                   {list.length === 0 ? (
@@ -497,7 +528,7 @@ export function OfficeClassesView({
       >
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingClass ? 'Edit class name' : 'New class'}</DialogTitle>
+            <DialogTitle>{editingClass ? 'Edit class' : 'New class'}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="space-y-2">
@@ -513,14 +544,96 @@ export function OfficeClassesView({
                 }}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Teachers (optional)</Label>
+              <div className="flex flex-col gap-2">
+                <Select 
+                  value="__none__" 
+                  onValueChange={(v) => {
+                    if (v !== '__none__' && !classTeacherIds.includes(v)) {
+                      setClassTeacherIds([...classTeacherIds, v]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue placeholder={classTeacherIds.length > 0 ? "Add another teacher" : "No teacher assigned"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Select a teacher...</SelectItem>
+                    {teachers.filter(t => !classTeacherIds.includes(t.id)).map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {classTeacherIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {classTeacherIds.map((id) => (
+                      <div key={id} className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm">
+                        <span>{teachers.find(t => t.id === id)?.name || 'Unknown'}</span>
+                        <button 
+                          type="button" 
+                          onClick={() => setClassTeacherIds(classTeacherIds.filter(tId => tId !== id))}
+                          className="text-muted-foreground hover:text-foreground p-0.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {editingClass ? (
+                <p className="text-xs text-muted-foreground">
+                  Changing this updates the teacher for every student currently in this class.
+                </p>
+              ) : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="class-capacity-input">Capacity (optional)</Label>
+              <Input
+                id="class-capacity-input"
+                type="number"
+                min={1}
+                value={classCapacity}
+                onChange={(e) => setClassCapacity(e.target.value)}
+                placeholder="e.g. 20"
+                className="rounded-xl"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="class-notes-input">Notes (optional)</Label>
+              <Textarea
+                id="class-notes-input"
+                value={classNotes}
+                onChange={(e) => setClassNotes(e.target.value)}
+                placeholder="Supply list, room number, schedule quirks…"
+                className="rounded-xl"
+              />
+            </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={() => void handleSaveClass()} disabled={busy}>
-              {editingClass ? 'Save changes' : 'Create class'}
-            </Button>
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+            {editingClass ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={(e) => editingClass && void handleDeleteClass(editingClass, e)}
+                disabled={busy}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete class
+              </Button>
+            ) : <div />}
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button type="button" onClick={() => void handleSaveClass()} disabled={busy} className="rounded-xl">
+                {editingClass ? 'Save changes' : 'Create class'}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

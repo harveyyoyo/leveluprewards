@@ -21,6 +21,8 @@ type OfficePortalChromeValue = {
     busInfo: boolean;
     medicalNotes: boolean;
     auditLog: boolean;
+    attendance: boolean;
+    frontDesk: boolean;
   };
   isDataLoading: boolean;
 };
@@ -64,6 +66,8 @@ export function OfficePortalChromeProvider({
         busInfo: isOfficeFeatureEnabled(settings, 'busInfo'),
         medicalNotes: isOfficeFeatureEnabled(settings, 'medicalNotes'),
         auditLog: isOfficeFeatureEnabled(settings, 'auditLog'),
+        attendance: isOfficeFeatureEnabled(settings, 'attendance'),
+        frontDesk: isOfficeFeatureEnabled(settings, 'frontDesk'),
       },
       isDataLoading: shared.isLoading || portal.isOfficeDataLoading || settingsLoading,
     };

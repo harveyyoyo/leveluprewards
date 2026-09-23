@@ -113,12 +113,6 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
   const teacherNames =
     input.variant === 'yeshiva' ? TEACHER_NAMES_YESHIVA : TEACHER_NAMES_SCHOOLABC;
 
-  const officeClasses: OfficeClass[] = input.classes.map((c) => ({
-    id: c.id,
-    name: c.name?.trim() || 'Class',
-    updatedAt: now,
-  }));
-
   const officeTeachers: OfficeTeacher[] = teacherNames.map((teacherName, index) => ({
     id: `oteacher-${input.variant}-${index + 1}`,
     name: teacherName,
@@ -126,17 +120,27 @@ export function buildOfficeDemoSeed(input: OfficeDemoSeedInput): OfficeDemoSeedP
     updatedAt: now,
   }));
 
-  const officeStudents: OfficeStudent[] = input.students.map((s) => ({
-    id: s.id,
-    firstName: s.firstName?.trim() || 'Student',
-    lastName: s.lastName?.trim() || '',
-    nickname: s.nickname?.trim() || null,
-    classId: s.classId ?? null,
-    teacherId: officeTeachers[hashToIndex(s.id, officeTeachers.length)]?.id ?? null,
-    teacherName: null,
-    notes: null,
+  const officeClasses: OfficeClass[] = input.classes.map((c, index) => ({
+    id: c.id,
+    name: c.name?.trim() || 'Class',
+    teacherId: officeTeachers[index % officeTeachers.length]?.id ?? null,
     updatedAt: now,
   }));
+
+  const officeStudents: OfficeStudent[] = input.students.map((s) => {
+    const cls = officeClasses.find((c) => c.id === s.classId);
+    return {
+      id: s.id,
+      firstName: s.firstName?.trim() || 'Student',
+      lastName: s.lastName?.trim() || '',
+      nickname: s.nickname?.trim() || null,
+      classId: s.classId ?? null,
+      teacherId: cls?.teacherId ?? officeTeachers[hashToIndex(s.id, officeTeachers.length)]?.id ?? null,
+      teacherName: null,
+      notes: null,
+      updatedAt: now,
+    };
+  });
 
   const gradeEntries: OfficeGradeEntry[] = [];
   for (const student of officeStudents) {

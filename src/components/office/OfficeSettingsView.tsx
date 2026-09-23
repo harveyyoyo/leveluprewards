@@ -16,22 +16,43 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { addStaffAccount, deleteStaffAccount, updateStaffAccount } from '@/lib/db/staffAccounts';
 import { hasVerifiedOfficeFirestoreAccess } from '@/lib/office/officeAccess';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import { useOfficeSettings } from '@/lib/office/useOfficeSettings';
 import { compareOfficeTermLabels, getSuggestedTermLabel } from '@/lib/office/officeUtils';
 import { defaultOfficeFeatureFlags } from '@/lib/office/officeTerminology';
+import { getOfficeNavItems, type OfficeNavId } from '@/lib/office/officeNav';
 import type { OfficeFeatureFlags } from '@/lib/office/types';
 import { Switch } from '@/components/ui/switch';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
+import { OfficeStudentFieldsSettings } from '@/components/office/OfficeStudentFieldsSettings';
+import { OfficeDemoDataSection } from '@/components/office/OfficeDemoDataSection';
+import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
+import { useSearchParams } from 'next/navigation';
+import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
 import type { StaffAccount } from '@/lib/types';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+
+type SettingsTab = 'school' | 'fields' | 'staff' | 'import';
+
+/** Short tabs so everyday choices aren't buried under one-time setup. */
+const SETTINGS_TABS: Array<{ id: SettingsTab; label: string }> = [
+  { id: 'school', label: 'School' },
+  { id: 'fields', label: 'Student fields' },
+  { id: 'staff', label: 'Staff sign-ins' },
+  { id: 'import', label: 'Import' },
+];
+
+function parseSettingsTab(value: string | null | undefined): SettingsTab {
+  return SETTINGS_TABS.some((t) => t.id === value) ? (value as SettingsTab) : 'school';
+}
 
 function isOfficeStaffAccount(account: StaffAccount): boolean {
   const roles = account.roles?.length ? account.roles : [account.role];
@@ -46,6 +67,13 @@ type OfficeSettingsViewProps = {
 export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { confirm, confirmDialog } = useOfficeConfirm();
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<SettingsTab>(() => parseSettingsTab(searchParams.get('tab')));
+  useEffect(() => {
+    setTab(parseSettingsTab(searchParams.get('tab')));
+  }, [searchParams]);
+  useOfficeUrlSync({ tab: tab === 'school' ? undefined : tab });
   const { loginState, isAdmin, isOffice, userName } = useAppContext();
   const { settings, isLoading: settingsLoading } = useOfficeSettings(schoolId);
   const { gradeEntries, billingAccounts } = useOfficePortalData();
@@ -82,8 +110,15 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [officeSections, setOfficeSections] = useState<OfficeNavId[]>([]);
   const [staffBusy, setStaffBusy] = useState(false);
   const [copiedId, setCopiedId] = useState('');
+
+  const assignableSections = useMemo(
+    () => getOfficeNavItems(settings).filter((item) => item.id !== 'home'),
+    [settings],
+  );
+  const allSectionIds = useMemo(() => assignableSections.map((s) => s.id), [assignableSections]);
 
   useEffect(() => {
     setDefaultTerm(settings?.defaultActiveTerm?.trim() || '');
@@ -144,11 +179,29 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     }
   };
 
+  /** On/off switches save immediately — a separate Save button is easy to miss after flipping one. */
+  const saveSwitch = async (patch: { useMarksTerminology?: boolean; features?: Required<OfficeFeatureFlags> }) => {
+    if (!firestore) return;
+    setPrefsBusy(true);
+    try {
+      await saveOfficeSettings(firestore, schoolId, patch, userName);
+      toast({ title: 'Saved' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not save', description: (e as Error).message });
+      // Put the switches back to what is actually stored.
+      setUseMarksTerminology(settings?.useMarksTerminology === true);
+      setFeatures({ ...defaultOfficeFeatureFlags(), ...(settings?.features ?? {}) });
+    } finally {
+      setPrefsBusy(false);
+    }
+  };
+
   const openNewStaff = () => {
     setEditing(null);
     setUsername('');
     setPasscode('');
     setDisplayName('');
+    setOfficeSections(allSectionIds);
     setDialogOpen(true);
   };
 
@@ -157,7 +210,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
     setUsername(account.username);
     setPasscode(account.passcode);
     setDisplayName(account.displayName);
+    setOfficeSections((account.officeSections as OfficeNavId[] | undefined) ?? allSectionIds);
     setDialogOpen(true);
+  };
+
+  const toggleOfficeSection = (id: OfficeNavId) => {
+    setOfficeSections((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
   };
 
   const handleSaveStaff = async () => {
@@ -169,6 +227,11 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
       toast({ variant: 'destructive', title: 'Name, username, and passcode are required.' });
       return;
     }
+    if (officeSections.length === 0) {
+      toast({ variant: 'destructive', title: 'Give this account access to at least one section.' });
+      return;
+    }
+    const sectionsToSave = officeSections.length === allSectionIds.length ? null : officeSections;
     const taken = (staffRaw ?? []).some(
       (a) => a.id !== editing?.id && (a.username ?? '').trim().toLowerCase() === cleanUsername,
     );
@@ -187,6 +250,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           displayName: cleanDisplayName,
           role: 'office',
           roles: ['office'],
+          officeSections: sectionsToSave,
         };
         await updateStaffAccount(firestore, schoolId, updated);
         const merged = (staffRaw ?? []).map((row) => (row.id === updated.id ? updated : row));
@@ -199,6 +263,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           displayName: cleanDisplayName,
           role: 'office',
           roles: ['office'],
+          officeSections: sectionsToSave,
         });
         void syncSchoolStaffDirectory(firestore, schoolId, [], [...(staffRaw ?? []), created]).catch(
           () => undefined,
@@ -215,7 +280,13 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
 
   const handleDeleteStaff = async (account: StaffAccount) => {
     if (!firestore || !canManageStaff) return;
-    if (!confirm(`Remove ${account.displayName}? They will no longer be able to sign in to School Office.`)) return;
+    const ok = await confirm({
+      title: `Remove ${account.displayName}?`,
+      description: 'They will no longer be able to sign in to the School Office. Everything they did stays in the change history.',
+      confirmLabel: 'Remove sign-in',
+      tone: 'caution',
+    });
+    if (!ok) return;
     try {
       await deleteStaffAccount(firestore, schoolId, account.id);
       const merged = (staffRaw ?? []).filter((a) => a.id !== account.id);
@@ -231,11 +302,16 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
   }
 
   return (
-    <div className="space-y-8">
-      <p className="text-sm text-muted-foreground max-w-2xl">
-        School-wide defaults for grades and billing, plus desk accounts for front-office staff to sign in here.
-      </p>
+    <div className="space-y-5">
+      {confirmDialog}
+      <ContentSectionTreeNav
+        items={SETTINGS_TABS}
+        value={tab}
+        onValueChange={(v) => setTab(v as SettingsTab)}
+        aria-label="Settings section"
+      />
 
+      {tab === 'school' ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-base font-bold flex items-center gap-2">
           <Building2 className="h-4 w-4 text-teal-700" />
@@ -324,20 +400,28 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
             <Switch
               id="office-use-marks"
               checked={useMarksTerminology}
-              onCheckedChange={setUseMarksTerminology}
+              disabled={prefsBusy}
+              onCheckedChange={(checked) => {
+                setUseMarksTerminology(checked);
+                void saveSwitch({ useMarksTerminology: checked });
+              }}
             />
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-semibold">Feature sections</p>
+            <div>
+              <p className="text-sm font-semibold">Sections</p>
+              <p className="text-xs text-muted-foreground">Switches save as soon as you flip them.</p>
+            </div>
             {(
               [
                 ['familyProfiles', 'Family profiles', 'Household contacts, grandparents, and family notes'],
                 ['studentPhotos', 'Student photos', 'Upload student pictures on roster profiles'],
                 ['busInfo', 'Bus & transport', 'Bus route fields on families and students'],
                 ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
-                ['aiHelp', 'AI help button', 'Floating assistant in the Office header'],
-                ['auditLog', 'Change history', 'Append-only audit log for Office record changes'],
+                ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
+                ['frontDesk', 'Front desk', 'Log late arrivals, early pickups, and nurse visits'],
+                ['aiHelp', 'Question assistant', 'Adds “Ask a question” to Help in the top bar'],
               ] as const
             ).map(([key, title, description]) => (
               <div key={key} className="flex items-center justify-between gap-4 rounded-xl border p-3">
@@ -347,7 +431,12 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 </div>
                 <Switch
                   checked={features[key]}
-                  onCheckedChange={(checked) => setFeatures((prev) => ({ ...prev, [key]: checked }))}
+                  disabled={prefsBusy}
+                  onCheckedChange={(checked) => {
+                    const next = { ...features, [key]: checked };
+                    setFeatures(next);
+                    void saveSwitch({ features: next });
+                  }}
                   aria-label={title}
                 />
               </div>
@@ -361,11 +450,16 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           disabled={prefsBusy}
           onClick={() => void handleSavePrefs()}
         >
-          {prefsBusy ? 'Saving…' : 'Save preferences'}
+          {prefsBusy ? 'Saving…' : 'Save term & name changes'}
         </Button>
       </section>
+      ) : null}
 
-      {roleVerified ? (
+      {tab === 'fields' && roleVerified ? (
+        <OfficeStudentFieldsSettings schoolId={schoolId} fields={settings?.studentCustomFields ?? []} />
+      ) : null}
+
+      {tab === 'import' && roleVerified ? (
         <OfficeAiImportSection
           schoolId={schoolId}
           classes={shared.classes}
@@ -378,6 +472,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
         />
       ) : null}
 
+      {tab === 'import' && roleVerified ? <OfficeDemoDataSection schoolId={schoolId} /> : null}
+
+      {tab === 'staff' ? (
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -386,7 +483,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
               Office staff accounts
             </h2>
             <p className="mt-1 text-xs text-muted-foreground max-w-xl">
-              Each person gets a username and passcode for School Office sign-in. They only access grades and billing.
+              Each person gets a username and passcode for School Office sign-in. You choose which pages each person can open.
               {isAdmin ? ' School admins can also manage all desk staff from Admin → Teachers.' : null}
             </p>
           </div>
@@ -429,6 +526,9 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                   <p className="font-semibold">{account.displayName}</p>
                   <p className="text-xs text-muted-foreground">
                     Username: <span className="font-mono">{account.username}</span>
+                    {account.officeSections?.length
+                      ? ` · ${account.officeSections.length} of ${allSectionIds.length} sections`
+                      : ' · Full access'}
                   </p>
                 </div>
                 {canManageStaff ? (
@@ -470,6 +570,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           </ul>
         )}
       </section>
+      ) : null}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md rounded-2xl">
@@ -504,6 +605,25 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 onChange={(e) => setPasscode(e.target.value)}
                 className="rounded-xl"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>What can this account see?</Label>
+              <p className="text-xs text-muted-foreground">
+                Unchecked sections are hidden from this account&apos;s menu. Leave everything checked for full access.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl border p-3">
+                {assignableSections.map((section) => (
+                  <label key={section.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={officeSections.includes(section.id)}
+                      onChange={() => toggleOfficeSection(section.id)}
+                      className="h-4 w-4 accent-teal-700"
+                    />
+                    {section.label}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

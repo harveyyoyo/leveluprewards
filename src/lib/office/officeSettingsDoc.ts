@@ -12,7 +12,12 @@ export function officeSettingsDocRef(firestore: Firestore, schoolId: string) {
 export type OfficeSettingsPatch = Partial<
   Pick<
     OfficeSettings,
-    'defaultActiveTerm' | 'statementSchoolName' | 'configuredTerms' | 'useMarksTerminology' | 'features'
+    | 'defaultActiveTerm'
+    | 'statementSchoolName'
+    | 'configuredTerms'
+    | 'useMarksTerminology'
+    | 'features'
+    | 'studentCustomFields'
   >
 >;
 
