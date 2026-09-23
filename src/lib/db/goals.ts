@@ -3,6 +3,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   collection,
   getDocs,
   Firestore,
@@ -44,11 +45,18 @@ export const updateGoal = async (
   firestore: Firestore,
   schoolId: string,
   goalId: string,
-  updates: Partial<Goal>
+  updates: Partial<Goal> & { clearFields?: Array<keyof Goal> }
 ) => {
   const goalRef = doc(firestore, 'schools', schoolId, 'goals', goalId);
+  const { clearFields, ...rest } = updates;
+  const payload = removeUndefined(rest as unknown as Record<string, unknown>) as Record<string, unknown>;
+  if (clearFields?.length) {
+    for (const key of clearFields) {
+      payload[key] = deleteField();
+    }
+  }
   try {
-    await updateDoc(goalRef, removeUndefined(updates as unknown as Record<string, unknown>) as DocumentData);
+    await updateDoc(goalRef, payload as DocumentData);
   } catch (error) {
     reportFirestorePermissionError(error, {
       path: goalRef.path,

@@ -866,8 +866,10 @@ export function AdminStudentsTab({
                             });
                             return;
                           }
-                          router.push(
+                          window.open(
                             `/${schoolId.trim().toLowerCase()}/student?student=${encodeURIComponent(s.id)}`,
+                            '_blank',
+                            'noopener,noreferrer',
                           );
                         }}
                         title="Sign in to student kiosk"

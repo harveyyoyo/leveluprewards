@@ -372,7 +372,7 @@ export interface Student {
 }
 
 /** Who may redeem the coupon at the student kiosk. Omit or `school` = any student. */
-export type CouponRedemptionScope = 'school' | 'creator' | 'classes' | 'teachers';
+export type CouponRedemptionScope = 'school' | 'creator' | 'classes' | 'teachers' | 'students';
 
 export interface Coupon {
   id: string;
@@ -398,6 +398,8 @@ export interface Coupon {
   allowedClassIds?: string[];
   /** When `redemptionScope` is `teachers`, student must match via `teacherIds` or class `primaryTeacherId`. */
   allowedTeacherIds?: string[];
+  /** When `redemptionScope` is `students`, only these student ids may redeem. */
+  allowedStudentIds?: string[];
   /** Human-readable redemption limits for printing on the coupon (set when generated). */
   redemptionPrintNote?: string;
   /** When true, staff-printed coupon can be redeemed repeatedly (keep the slip). */
@@ -812,12 +814,20 @@ export interface Goal {
   startDate?: number;
   endDate?: number;
   
-  // Reward upon completion
+  // Reward upon completion (for class goals: bonus given to each student)
   bonusPointsReward?: number;
   
   // Status tracking
   status: 'active' | 'completed' | 'expired';
   createdAt: number;
+  /** When the goal first reached its target. */
+  completedAt?: number;
+  /** Student (or kiosk) created this savings wishlist item. */
+  createdByStudent?: boolean;
+  /** Soft-hidden from the main staff lists. */
+  archived?: boolean;
+  /** Set when staff/students were alerted that progress crossed ~80%. */
+  almostThereNotifiedAt?: number;
 }
 
 export interface HomeworkAssignment {

@@ -12,6 +12,7 @@ export type CachedCoupon = {
   createdByTeacherId?: string;
   allowedClassIds?: string[];
   allowedTeacherIds?: string[];
+  allowedStudentIds?: string[];
   reusable?: boolean;
   reusableSample?: boolean;
 };

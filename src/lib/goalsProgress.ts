@@ -7,9 +7,10 @@ import {
   where,
   type Firestore,
 } from 'firebase/firestore';
-import type { Category, Goal, Student } from '@/lib/types';
+import type { Category, Goal, GoalType, Student } from '@/lib/types';
 import { updateGoal } from '@/lib/db/goals';
 import { awardPointsToStudent } from '@/lib/db/students';
+import { GOAL_ALMOST_THERE_RATIO } from '@/lib/goals/goalHelpers';
 
 export function categoryNameFromId(categories: Category[], categoryId?: string): string | undefined {
   if (!categoryId) return undefined;
@@ -50,9 +51,14 @@ export async function computeGoalProgress(
   categories: Category[],
 ): Promise<number> {
   const now = Date.now();
-  if (goal.status !== 'active') return 0;
-  if (goal.startDate && now < goal.startDate) return 0;
-  if (goal.endDate && now > goal.endDate) return 0;
+  if (goal.status !== 'active') {
+    // Still show final progress on completed/expired cards when possible.
+    if (goal.status !== 'completed' && goal.status !== 'expired') return 0;
+  }
+  if (goal.status === 'active') {
+    if (goal.startDate && now < goal.startDate) return 0;
+    if (goal.endDate && now > goal.endDate) return 0;
+  }
 
   const catName = categoryNameFromId(categories, goal.categoryId);
   const rangeStart = goal.startDate ?? 0;
@@ -98,19 +104,30 @@ export async function computeGoalProgress(
   }
 
   if (useActivityRange) {
-    return sumActivitiesInRange(firestore, schoolId, viewerStudent.id, rangeStart, rangeEnd);
+    const ranged = await sumActivitiesInRange(firestore, schoolId, viewerStudent.id, rangeStart, rangeEnd);
+    return goal.status === 'completed' ? Math.max(ranged, goal.targetPoints || 0) : ranged;
   }
-  return viewerStudent.lifetimePoints ?? viewerStudent.points ?? 0;
+  const lifetime = viewerStudent.lifetimePoints ?? viewerStudent.points ?? 0;
+  return goal.status === 'completed' ? Math.max(lifetime, goal.targetPoints || 0) : lifetime;
 }
+
+export type GoalSyncEvent = {
+  goalId: string;
+  title: string;
+  kind: 'completed' | 'almost_there';
+  type: GoalType;
+  classId?: string;
+};
 
 export async function syncGoalsForStudent(
   firestore: Firestore,
   schoolId: string,
   studentId: string,
-): Promise<void> {
+): Promise<GoalSyncEvent[]> {
+  const events: GoalSyncEvent[] = [];
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const studentSnap = await getDoc(studentRef);
-  if (!studentSnap.exists()) return;
+  if (!studentSnap.exists()) return events;
 
   const student = { id: studentSnap.id, ...studentSnap.data() } as Student;
 
@@ -124,7 +141,7 @@ export async function syncGoalsForStudent(
         (g.type === 'class' && g.classId && g.classId === student.classId),
     );
 
-  if (goals.length === 0) return;
+  if (goals.length === 0) return events;
 
   const categoriesSnap = await getDocs(collection(firestore, 'schools', schoolId, 'categories'));
   const categories = categoriesSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Category));
@@ -156,26 +173,64 @@ export async function syncGoalsForStudent(
     }
 
     const progress = await computeGoalProgress(firestore, schoolId, goal, student, rosterList, categories);
+    const target = Number(goal.targetPoints) || 0;
 
-    if (progress >= goal.targetPoints) {
-      await updateGoal(firestore, schoolId, goal.id, { status: 'completed' });
+    if (target > 0 && progress >= target * GOAL_ALMOST_THERE_RATIO && progress < target && !goal.almostThereNotifiedAt) {
+      await updateGoal(firestore, schoolId, goal.id, { almostThereNotifiedAt: now });
+      events.push({
+        goalId: goal.id,
+        title: goal.title,
+        kind: 'almost_there',
+        type: goal.type,
+        classId: goal.classId,
+      });
+    }
+
+    if (progress >= target && target > 0) {
+      await updateGoal(firestore, schoolId, goal.id, { status: 'completed', completedAt: now });
+      events.push({
+        goalId: goal.id,
+        title: goal.title,
+        kind: 'completed',
+        type: goal.type,
+        classId: goal.classId,
+      });
+
       const bonus = goal.bonusPointsReward ?? 0;
-      if (bonus > 0 && goal.type !== 'class') {
-        const recipient = goal.studentId;
-        if (recipient) {
-          await awardPointsToStudent(
-            firestore,
-            schoolId,
-            recipient,
-            bonus,
-            `Goal reward: ${goal.title}`,
-            [],
-            categories,
-            [],
-            { skipGoalSync: true },
-          );
+      if (bonus > 0) {
+        if (goal.type === 'class') {
+          for (const member of rosterList) {
+            await awardPointsToStudent(
+              firestore,
+              schoolId,
+              member.id,
+              bonus,
+              `Class goal reward: ${goal.title}`,
+              [],
+              categories,
+              [],
+              { skipGoalSync: true },
+            );
+          }
+        } else {
+          const recipient = goal.studentId;
+          if (recipient) {
+            await awardPointsToStudent(
+              firestore,
+              schoolId,
+              recipient,
+              bonus,
+              `Goal reward: ${goal.title}`,
+              [],
+              categories,
+              [],
+              { skipGoalSync: true },
+            );
+          }
         }
       }
     }
   }
+
+  return events;
 }

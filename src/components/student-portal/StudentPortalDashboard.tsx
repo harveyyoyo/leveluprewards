@@ -21,6 +21,11 @@ import { StudentPortalMyBooksCard } from './StudentPortalMyBooksCard';
 import { StudentPortalMyHouseCard } from './StudentPortalMyHouseCard';
 import { useSchoolSurfaceSnapshotReporter } from '@/hooks/useSchoolSurfaceSnapshotReporter';
 import { STUDENT_PORTAL_PREVIEW_DEVICE_ID } from '@/lib/kiosk/kioskScreenTypes';
+import {
+  familyGoalStatusLine,
+  familyGoalTypeLabel,
+  resolveGoalsOptions,
+} from '@/lib/goals/goalsOptions';
 
 type Props = {
   schoolId: string;
@@ -238,12 +243,24 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
               const target = Math.max(0, Number(goal.targetPoints || 0));
               const progress = Math.max(0, Number(goal.progress || 0));
               const pct = target > 0 ? Math.min(100, Math.round((progress / target) * 100)) : 0;
-              const label =
-                goal.type === 'class'
+              const family = resolveGoalsOptions(settings.goalsOptions).familyFriendlyPortal;
+              const label = family
+                ? familyGoalTypeLabel(goal.type as string)
+                : goal.type === 'class'
                   ? 'Class goal'
                   : goal.type === 'prize_savings'
                     ? 'Savings goal'
                     : 'Personal goal';
+              const statusLine = family
+                ? familyGoalStatusLine({
+                    status: goal.status as string,
+                    progress,
+                    targetPoints: target,
+                    createdByStudent: Boolean((goal as { createdByStudent?: boolean }).createdByStudent),
+                  })
+                : goal.status === 'completed'
+                  ? 'Completed'
+                  : null;
               return (
                 <div key={goal.id} className="space-y-2 rounded-2xl border border-border/60 bg-muted/20 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -259,8 +276,17 @@ export function StudentPortalDashboard({ schoolId, studentId, onSignOut, signing
                     </span>
                   </div>
                   <Progress value={pct} className="h-2" />
-                  {goal.status === 'completed' ? (
-                    <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">Completed</p>
+                  {statusLine ? (
+                    <p
+                      className={cn(
+                        'text-[11px] font-bold',
+                        goal.status === 'completed'
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-muted-foreground',
+                      )}
+                    >
+                      {statusLine}
+                    </p>
                   ) : null}
                 </div>
               );

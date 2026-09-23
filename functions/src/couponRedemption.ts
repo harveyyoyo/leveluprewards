@@ -2,9 +2,11 @@
  * Mirrors src/lib/couponRedemptionRules.ts for server-side redemption (kept separate because functions bundle does not import app src).
  */
 
-export function normalizeRedemptionScope(coupon: any): "school" | "creator" | "classes" | "teachers" {
+export function normalizeRedemptionScope(
+  coupon: any
+): "school" | "creator" | "classes" | "teachers" | "students" {
   const s = coupon?.redemptionScope;
-  if (s === "creator" || s === "classes" || s === "teachers") return s;
+  if (s === "creator" || s === "classes" || s === "teachers" || s === "students") return s;
   return "school";
 }
 
@@ -59,6 +61,20 @@ export function studentMayRedeemCouponData(
       ok: false,
       message: "This coupon is only for students linked to selected teachers.",
     };
+  }
+
+  if (scope === "students") {
+    const ids = Array.isArray(coupon?.allowedStudentIds)
+      ? (coupon.allowedStudentIds as unknown[]).filter((x): x is string => typeof x === "string" && x.length > 0)
+      : [];
+    if (ids.length === 0) {
+      return { ok: false, message: "This coupon is not set up correctly (no students)." };
+    }
+    const studentId = typeof student?.id === "string" ? student.id : "";
+    if (!studentId || !ids.includes(studentId)) {
+      return { ok: false, message: "This coupon is only for selected students." };
+    }
+    return { ok: true };
   }
 
   return { ok: true };

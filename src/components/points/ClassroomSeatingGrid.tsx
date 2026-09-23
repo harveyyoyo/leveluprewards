@@ -137,6 +137,8 @@ type SeatingDeskCellProps = {
   hideEmptyDesks?: boolean;
   /** Instant Award: right-click opens the awards menu. */
   deskMenuEnabled?: boolean;
+  /** Best active goal fill ratio (0–1+) for a thin progress ring. */
+  goalRatio?: number | null;
 };
 
 function attendanceDotClass(status: TodayAttendanceStatus): string {
@@ -204,7 +206,8 @@ function seatingDeskCellPropsEqual(prev: SeatingDeskCellProps, next: SeatingDesk
     prev.handlersRef === next.handlersRef &&
     prev.cellWrapRef === next.cellWrapRef &&
     prev.hideEmptyDesks === next.hideEmptyDesks &&
-    prev.deskMenuEnabled === next.deskMenuEnabled
+    prev.deskMenuEnabled === next.deskMenuEnabled &&
+    prev.goalRatio === next.goalRatio
   );
 }
 
@@ -250,6 +253,7 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
   cellWrapRef,
   hideEmptyDesks = false,
   deskMenuEnabled = false,
+  goalRatio = null,
 }: SeatingDeskCellProps) {
   const hasStudent = !!studentId || !!display;
   const tokenLook = isClassroomTokenDesign(design);
@@ -528,6 +532,18 @@ const SeatingDeskCell = memo(function SeatingDeskCell({
           />
         ) : null}
 
+        {typeof goalRatio === 'number' && goalRatio > 0 && display ? (
+          <span
+            className="pointer-events-none absolute left-1 top-1 z-[11] h-3.5 w-3.5 rounded-full"
+            title={`Goal ${Math.min(999, Math.round(goalRatio * 100))}%`}
+            style={{
+              background: `conic-gradient(${accentColor} ${Math.min(100, goalRatio * 100)}%, hsl(var(--muted)) 0)`,
+              boxShadow: '0 0 0 1px hsl(var(--background))',
+            }}
+            aria-hidden
+          />
+        ) : null}
+
         {attendanceEnabled && display && attendanceLook === 'manual' && attCue === 'present' ? (
           <span
             className="pointer-events-none absolute right-1 top-1 z-[12] flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm"
@@ -657,6 +673,8 @@ export type ClassroomSeatingGridProps = {
   fitViewport?: boolean;
   /** Class screen: hide empty desk cards but keep the same row/column seats. */
   hideEmptyDesks?: boolean;
+  /** Best active goal fill ratio by student id (Goals classroom option). */
+  goalRatioByStudentId?: Record<string, number>;
   /** Instant Award: right-click opens the awards menu. */
   deskMenuEnabled?: boolean;
 };
@@ -702,6 +720,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
   handlersRef,
   className,
   hideEmptyDesks = false,
+  goalRatioByStudentId,
   deskMenuEnabled = false,
 }: ClassroomSeatingGridProps) {
   const reduceMotion = useReducedMotion();
@@ -890,6 +909,7 @@ export const ClassroomSeatingGrid = memo(function ClassroomSeatingGrid({
               hallPass={studentId ? hallPassByStudent?.get(studentId) ?? null : null}
               hideEmptyDesks={hideEmptyDesks}
               deskMenuEnabled={deskMenuEnabled}
+              goalRatio={studentId && goalRatioByStudentId ? goalRatioByStudentId[studentId] ?? null : null}
               pendingStartedAt={pendingCellIndex === cellIndex ? pendingStartedAt : null}
               autoAwardMs={autoAwardMs}
               activeCelebration={activeCelebration}

@@ -111,7 +111,11 @@ export const redeemCoupon = async (
           if (cl.primaryTeacherId) classPrimaryTeacherId = cl.primaryTeacherId;
         }
       }
-      const gate = studentMayRedeemCoupon(coupon, currentStudent, classPrimaryTeacherId);
+      const gate = studentMayRedeemCoupon(
+        coupon,
+        { ...currentStudent, id: studentId },
+        classPrimaryTeacherId,
+      );
       if (!gate.ok) throw new Error(gate.message || 'Not eligible to redeem this coupon.');
 
       // A malformed coupon doc (missing or negative value) must not write NaN

@@ -224,6 +224,8 @@ export function StaffPointsTab({
 
           teachers={teachers}
 
+          students={students}
+
           issuerDisplayName={issuerDisplayName}
 
           creatorTeacherId={redemptionUi === 'teacher' ? managerTeacherId : undefined}

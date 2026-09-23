@@ -311,9 +311,12 @@ export function RewardsInteractiveGuide({
   const handleAction = (topic: RewardsGuideTopic) => {
     playSound('click');
     handleOpenChange(false);
-    if (schoolId) {
-      router.push(topic.getHref(schoolId));
+    if (!schoolId) return;
+    if (topic.id === 'kiosk') {
+      window.open(topic.getHref(schoolId), '_blank', 'noopener,noreferrer');
+      return;
     }
+    router.push(topic.getHref(schoolId));
   };
 
   return (

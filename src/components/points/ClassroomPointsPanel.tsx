@@ -77,12 +77,17 @@ import {
   mergeClassroomWhosOutPasses,
 } from '@/lib/classroom/classroomWhosOutPasses';
 import { useAppContext } from '@/components/AppProvider';
-import { useFirestore, useFunctions } from '@/firebase';
+import { useFirestore, useFunctions, useCollection, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Goal } from '@/lib/types';
+import { buildStudentGoalRatioMap } from '@/lib/goals/classroomGoalProgress';
+import { resolveGoalsOptions } from '@/lib/goals/goalsOptions';
+import { syncAndPresentGoalsForStudents } from '@/lib/goals/presentGoalEvents';
+import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import {
   DEFAULT_CLASSROOM_INTERACTION_MODE,
   type ClassroomInteractionMode,
 } from '@/lib/classroom/classroomInteractionMode';
-import { awardClassroomPoints } from '@/lib/classroom/classroomPointsClient';
 import {
   classroomPointSoundEffect,
   CLASSROOM_PICK_SOUND,
@@ -287,6 +292,25 @@ function ClassroomPointsPanelInner({
   const playSound = useArcadeSound({ ignoreSchoolSoundMute: true });
   const { settings, updateSettings } = useSettings();
   const firestore = useFirestore();
+  const goalsOpts = resolveGoalsOptions(settings.goalsOptions);
+  const goalsQuery = useMemoFirebase(
+    () =>
+      settings.enableGoals && goalsOpts.showOnClassroom && schoolId
+        ? collection(firestore, 'schools', schoolId, 'goals')
+        : null,
+    [settings.enableGoals, goalsOpts.showOnClassroom, firestore, schoolId],
+  );
+  const { data: classroomGoals } = useCollection<Goal>(goalsQuery);
+  const goalRatioByStudentId = useMemo(() => {
+    if (!settings.enableGoals || !goalsOpts.showOnClassroom || !classroomGoals?.length) return undefined;
+    return buildStudentGoalRatioMap(classroomGoals, deferredStudents, categories || []);
+  }, [
+    settings.enableGoals,
+    goalsOpts.showOnClassroom,
+    classroomGoals,
+    deferredStudents,
+    categories,
+  ]);
   const functions = useFunctions();
   const sessionOnly = sessionOnlyProp ?? isClassroomOnlyMode(settings);
   const rewardsPillarOn = isRewardsPillarOn(settings);
@@ -1187,6 +1211,14 @@ function ClassroomPointsPanelInner({
                 : `You gave +${magnitude} · ${awardLabel}`,
             });
           }
+          if (settings.enableGoals && !isDeduct) {
+            void syncAndPresentGoalsForStudents(firestore, schoolId, studentIds, {
+              enabled: true,
+              options: settings.goalsOptions,
+              toast,
+              playSound: () => playSound('success'),
+            });
+          }
           if (effectiveClassId) {
             startTransition(() => {
               recordSessionAwards(studentIds, magnitude, description);
@@ -1383,6 +1415,7 @@ function ClassroomPointsPanelInner({
       isSecretary,
       settings.enableTeacherOfflineAwardQueue,
       playClassroomSound,
+      playSound,
       toast,
       schoolId,
       effectiveClassId,
@@ -1399,6 +1432,8 @@ function ClassroomPointsPanelInner({
       deferredStudents,
       label,
       icon,
+      settings.enableGoals,
+      settings.goalsOptions,
     ],
   );
 
@@ -2669,6 +2704,7 @@ function ClassroomPointsPanelInner({
           design={design}
           photoDisplayMode={settings.photoDisplayMode === 'contain' ? 'contain' : 'cover'}
           accentColor={accentColor}
+          goalRatioByStudentId={goalRatioByStudentId}
           sessionTotals={sessionData.totals}
           sessionLastAwards={sessionData.lastAward}
           showBalance={effectiveDeskDisplay.showPointBalances}

@@ -173,7 +173,7 @@ function WhereToDrawnTitle({
 export default function PortalPage() {
     const { t, dir } = useTranslation();
     const params = useParams<{ schoolId: string }>();
-    const { loginState, isInitialized, schoolId: ctxSchoolId, isAdmin, isOffice, login, logout } = useAppContext();
+    const { loginState, isInitialized, schoolId: ctxSchoolId, isAdmin, isOffice, login } = useAppContext();
     const schoolId =
         normalizeSchoolId(ctxSchoolId) ||
         normalizeSchoolId(typeof params.schoolId === 'string' ? params.schoolId : '');
@@ -435,11 +435,8 @@ export default function PortalPage() {
         }
 
         if (tourId === 'student') {
-            if (loginState === 'admin') {
-                logout({ staffNavigateTo: 'student' });
-                return;
-            }
-            router.push(`/${schoolId}/student`);
+            // Opens in its own tab so this portal screen (and any admin session on it) stays put.
+            window.open(`/${schoolId}/student`, '_blank', 'noopener,noreferrer');
         }
     };
 
@@ -550,7 +547,6 @@ export default function PortalPage() {
                             ? portalLibraryCardIconForeground(libraryTheme)
                             : undefined;
                         const libraryBodyColor = isLibraryCard ? libraryTheme.swatches.text : undefined;
-                        const needsAdminKioskHandoff = area.id === 'redeem' && loginState === 'admin';
                         const needsAdminPasscode = area.id === 'admin' && !isAdmin && !canBypassAdminPasscode;
                         // School gate, admins, and developers can pick staff (or continue as admin); signed-in teachers go straight through.
                         const needsTeacherLogin =
@@ -697,6 +693,8 @@ export default function PortalPage() {
                                 key={area.id}
                                 href={area.href}
                                 data-intro-tour={`portal-${area.id}`}
+                                target={area.id === 'redeem' ? '_blank' : undefined}
+                                rel={area.id === 'redeem' ? 'noopener noreferrer' : undefined}
                                 onPointerEnter={() => prefetchPortalHref(area.href)}
                                 onFocus={() => prefetchPortalHref(area.href)}
                                 onClick={(e) => {
@@ -735,11 +733,6 @@ export default function PortalPage() {
                                         setSelectedTeacherKey('');
                                         setTeacherPasscode('');
                                         setTeacherDialogOpen(true);
-                                        return;
-                                    }
-                                    if (needsAdminKioskHandoff) {
-                                        e.preventDefault();
-                                        logout({ staffNavigateTo: 'student' });
                                         return;
                                     }
                                     if (area.id === 'redeem' && isSchoolChooser) return;
