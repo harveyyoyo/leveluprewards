@@ -36,13 +36,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Archive, CalendarPlus, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
+import { Archive, CalendarPlus, Check, ChevronsUpDown, Loader2, Pencil, Plus, RotateCcw, Target, Trash2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { TabWalkthroughHeaderAction } from '@/components/tabWalkthrough/TabWalkthroughContext';
 import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
-import { ContentSectionTreeNav } from '@/components/ui/content-section-tree-nav';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -179,6 +180,7 @@ export function GoalsManager(props: {
   const [editStudentSearch, setEditStudentSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Goal | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [studentPickerOpen, setStudentPickerOpen] = useState<'create' | 'edit' | null>(null);
   const [celebratedIds, setCelebratedIds] = useState<Set<string>>(() => new Set());
   const [alertedAlmostIds, setAlertedAlmostIds] = useState<Set<string>>(() => new Set());
   const [baselineReady, setBaselineReady] = useState(false);
@@ -540,28 +542,57 @@ export function GoalsManager(props: {
 
       {(state.goalType === 'personal' || state.goalType === 'prize_savings') && (
         <div className="space-y-2">
-          <Label>Student</Label>
-          <Input
-            className="rounded-xl"
-            placeholder="Search by name…"
-            value={searchValue}
-            onChange={(e) => onSearch(e.target.value)}
-          />
-          <Select value={state.studentId || undefined} onValueChange={(v) => patchForm({ studentId: v }, target)}>
-            <SelectTrigger className="rounded-xl">
-              <SelectValue placeholder="Select student" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[280px]">
-              {studentOptions.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {studentLabel(s)}
-                </SelectItem>
-              ))}
-              {state.studentId && students.length > 0 && !students.some((s) => s.id === state.studentId) ? (
-                <SelectItem value={state.studentId}>Unknown student (removed)</SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
+          <Label htmlFor={`goal-student-${target}`}>Student</Label>
+          <Popover
+            open={studentPickerOpen === target}
+            onOpenChange={(open) => {
+              setStudentPickerOpen(open ? target : null);
+              if (!open) onSearch('');
+            }}
+          >
+            <PopoverTrigger asChild>
+              <Button
+                id={`goal-student-${target}`}
+                type="button"
+                variant="outline"
+                role="combobox"
+                aria-expanded={studentPickerOpen === target}
+                className="w-full justify-between rounded-xl font-normal"
+              >
+                <span className={cn('truncate', !state.studentId && 'text-muted-foreground')}>
+                  {state.studentId
+                    ? (() => {
+                        const picked = students.find((s) => s.id === state.studentId);
+                        return picked ? studentLabel(picked) : 'Unknown student (removed)';
+                      })()
+                    : 'Type or choose a student…'}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command shouldFilter={false}>
+                <CommandInput placeholder="Search by name…" value={searchValue} onValueChange={onSearch} />
+                <CommandList className="max-h-[280px]">
+                  <CommandEmpty>No students match that name.</CommandEmpty>
+                  {studentOptions.map((s) => (
+                    <CommandItem
+                      key={s.id}
+                      value={s.id}
+                      onSelect={() => {
+                        patchForm({ studentId: s.id }, target);
+                        setStudentPickerOpen(null);
+                        onSearch('');
+                      }}
+                    >
+                      <Check className={cn('mr-2 h-4 w-4', state.studentId === s.id ? 'opacity-100' : 'opacity-0')} />
+                      {studentLabel(s)}
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -768,19 +799,16 @@ export function GoalsManager(props: {
           <Button onClick={() => { setCreateStep(1); setSection('create'); }}><Plus className="w-4 h-4 mr-2" />Add goal</Button>
         </div>
       </div>
-      <ContentSectionTreeNav
-        branchLabel="Goals"
-        items={sectionItems}
-        value={section}
-        onValueChange={(id) => setSection(id as SectionId)}
-        className="mb-6"
-      />
-
       {section === 'options' ? (
-        <GoalsOptionsPanel
-          value={settings.goalsOptions}
-          onChange={(next) => updateSettings({ goalsOptions: next })}
-        />
+        <div className="space-y-3">
+          <Button variant="link" className="h-auto px-0 text-sm" onClick={() => setSection('active')}>
+            ← Back to goals
+          </Button>
+          <GoalsOptionsPanel
+            value={settings.goalsOptions}
+            onChange={(next) => updateSettings({ goalsOptions: next })}
+          />
+        </div>
       ) : section === 'create' ? (
         <Card
           className={cn(
@@ -841,6 +869,28 @@ export function GoalsManager(props: {
                     ? 'These ran out of time before the target was hit.'
                     : 'Hidden from the main lists. Restore anytime.'}
             </CardDescription>
+            <nav aria-label="Goal lists" className="flex flex-wrap gap-1 pt-2">
+              {sectionItems.map((item) => {
+                const selected = section === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSection(item.id)}
+                    className={cn(
+                      'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                      selected
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                    )}
+                  >
+                    {item.label}
+                    {item.badge ? <span className="ml-1 opacity-70">{item.badge}</span> : null}
+                  </button>
+                );
+              })}
+            </nav>
           </CardHeader>
           <CardContent>
             {isLoading ? (
