@@ -26,11 +26,13 @@ import {
   OFFICE_ASSISTANT_PAGE_LABEL,
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
+  type OfficeAssistantView,
 } from '@/lib/office/officeAssistantView';
 import {
   countLabel,
   readOfficeAssistantResults,
   subscribeOfficeAssistantResults,
+  type OfficeAssistantOpenTarget,
   type OfficeAssistantResults,
 } from '@/lib/office/officeAssistantResults';
 import { useRouter } from 'next/navigation';
@@ -43,6 +45,8 @@ type ChatList = {
   href: string;
   askAt: string;
   page: string;
+  /** The filters behind this list, so a follow-up ("only grade 8") can narrow it. */
+  view: OfficeAssistantView;
   results: OfficeAssistantResults | null;
   timedOut?: boolean;
 };
@@ -56,7 +60,15 @@ function withAskAt(href: string, askAt: string): string {
 }
 
 /** The answer under a "show me" question: how many, the first few names, and where the rest are. */
-function ChatListAnswer({ list, onShowAgain }: { list: ChatList; onShowAgain: () => void }) {
+function ChatListAnswer({
+  list,
+  onShowAgain,
+  onOpen,
+}: {
+  list: ChatList;
+  onShowAgain: () => void;
+  onOpen: (target: OfficeAssistantOpenTarget) => void;
+}) {
   const r = list.results;
   return (
     <div className="mt-1.5 space-y-1.5">
@@ -77,7 +89,18 @@ function ChatListAnswer({ list, onShowAgain }: { list: ChatList; onShowAgain: ()
           <ul className="space-y-0.5">
             {r.rows.map((row) => (
               <li key={row.id} className="flex flex-wrap gap-x-1.5">
-                <span>{row.name}</span>
+                {row.open ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpen(row.open!)}
+                    className="text-left font-medium text-teal-800 hover:underline dark:text-teal-300"
+                    title={row.open.kind === 'family' ? 'Open family' : 'Open student'}
+                  >
+                    {row.name}
+                  </button>
+                ) : (
+                  <span>{row.name}</span>
+                )}
                 {row.detail ? <span className="text-muted-foreground">· {row.detail}</span> : null}
               </li>
             ))}
@@ -142,7 +165,7 @@ export function OfficeAiHelpButton() {
     () => ({
       role: 'assistant',
       content:
-        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me for a list — like “families who owe more than $100”, “students with allergies in Grade 5”, or “who is absent today” — and I'll answer here and open it in the app. You can also ask how to do anything in the office.`,
+        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me for a list — like “families who owe more than $100” or “who is absent today” — and I'll answer here and open it in the app. Then narrow it down, like “only Grade 5”. Click a name to open their card. You can also ask how to do anything in the office.`,
     }),
     [userName],
   );
@@ -191,6 +214,18 @@ export function OfficeAiHelpButton() {
     );
   }, []);
 
+  /** A name in a list answer: close Help and open that student's or family's card on this page. */
+  const openCard = useCallback(
+    (target: OfficeAssistantOpenTarget) => {
+      const params = new URLSearchParams(window.location.search);
+      for (const key of ['student', 'teacher', 'classSheet', 'family']) params.delete(key);
+      params.set(target.kind, target.id);
+      setOpen(false);
+      router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+    },
+    [router],
+  );
+
   const showAgain = useCallback(
     (index: number) => {
       const list = messages[index]?.list;
@@ -223,7 +258,14 @@ export function OfficeAiHelpButton() {
       const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const viewRes = await authFetch('/api/office/assistant-view', {
         method: 'POST',
-        body: JSON.stringify({ schoolId, question: text, today, classNames: shared.classes.map((c) => c.name) }),
+        body: JSON.stringify({
+          schoolId,
+          question: text,
+          today,
+          classNames: shared.classes.map((c) => c.name),
+          // Only the filters of the last list (never its names), for follow-ups like "only grade 8".
+          previous: [...messages].reverse().find((m) => m.list)?.list?.view ?? null,
+        }),
       });
       // Re-check the reply here too: only known pages and filters are ever opened.
       const decision = viewRes.ok ? parseOfficeAssistantDecision(await viewRes.json().catch(() => null)) : null;
@@ -248,7 +290,7 @@ export function OfficeAiHelpButton() {
           {
             role: 'assistant',
             content: decision.view.label,
-            list: { href, askAt, page, results: readOfficeAssistantResults(askAt) },
+            list: { href, askAt, page, view: decision.view, results: readOfficeAssistantResults(askAt) },
           },
         ]);
         setSending(false);
@@ -376,7 +418,9 @@ export function OfficeAiHelpButton() {
                   )}
                 >
                   <ChatText text={m.content} />
-                  {m.list ? <ChatListAnswer list={m.list} onShowAgain={() => showAgain(i)} /> : null}
+                  {m.list ? (
+                    <ChatListAnswer list={m.list} onShowAgain={() => showAgain(i)} onOpen={openCard} />
+                  ) : null}
                 </div>
               ))}
               {sending ? (

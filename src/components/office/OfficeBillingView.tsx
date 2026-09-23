@@ -304,6 +304,11 @@ export function OfficeBillingView({
         id: a.id,
         name: a.familyName?.trim() || 'Family',
         detail: owed > 0 ? `owes ${formatCents(owed)}` : 'nothing owed',
+        open: a.familyId
+          ? { kind: 'family' as const, id: a.familyId }
+          : a.studentIds?.[0]
+            ? { kind: 'student' as const, id: a.studentIds[0] }
+            : undefined,
       })),
   }));
 

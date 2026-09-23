@@ -8,7 +8,10 @@ import { useEffect, useRef } from 'react';
  * in the browser — nothing here is sent to the AI.
  */
 
-export type OfficeAssistantResultRow = { id: string; name: string; detail?: string };
+/** The card a name in the chat opens when clicked. */
+export type OfficeAssistantOpenTarget = { kind: 'student' | 'family'; id: string };
+
+export type OfficeAssistantResultRow = { id: string; name: string; detail?: string; open?: OfficeAssistantOpenTarget };
 
 type Report =
   | { status: 'ready'; total: number; noun: readonly [string, string]; rows: OfficeAssistantResultRow[] }

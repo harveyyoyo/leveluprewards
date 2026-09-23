@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   dollarsParamToCents,
   findClassByAskedName,
+  officeAssistantSystemPrompt,
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
 } from '@/lib/office/officeAssistantView';
@@ -86,6 +87,24 @@ describe('attendance and front desk views', () => {
     });
     expect(href).toContain('tab=arrivals');
     expect(href).toContain('kind=early_pickup');
+  });
+});
+
+describe('officeAssistantSystemPrompt', () => {
+  it('includes the list on screen only when there is one, so follow-ups can narrow it', () => {
+    const previous = {
+      page: 'students' as const,
+      label: 'Students with allergies',
+      text: null,
+      className: null,
+      teacher: null,
+      address: null,
+      show: 'allergies' as const,
+    };
+    const withList = officeAssistantSystemPrompt({ today: '2026-09-23', classNames: ['Grade 5'], previous });
+    expect(withList).toContain('"show":"allergies"');
+    expect(withList).toContain('only grade 8');
+    expect(officeAssistantSystemPrompt({ today: '2026-09-23', classNames: [] })).not.toContain('list on screen');
   });
 });
 

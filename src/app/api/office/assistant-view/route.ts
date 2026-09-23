@@ -6,6 +6,7 @@ import { guardAiRoute } from '@/lib/apiAuth';
 import { STAFF_HELP_AI_MODEL } from '@/lib/aiModelPreference';
 import {
   officeAssistantSystemPrompt,
+  officeAssistantViewSchema,
   parseOfficeAssistantDecision,
 } from '@/lib/office/officeAssistantView';
 
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest) {
           .filter(Boolean)
           .slice(0, MAX_CLASS_NAMES)
       : [];
+    // The list already on screen (filters only, no records), so "only grade 8" can narrow it.
+    const previousParsed = officeAssistantViewSchema.safeParse(body.previous);
+    const previous = previousParsed.success ? previousParsed.data : null;
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
       max_tokens: 250,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: officeAssistantSystemPrompt({ today, classNames }) },
+        { role: 'system', content: officeAssistantSystemPrompt({ today, classNames, previous }) },
         { role: 'user', content: question },
       ],
     });
