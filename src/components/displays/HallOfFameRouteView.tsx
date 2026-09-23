@@ -391,7 +391,8 @@ export default function HallOfFamePage({
         } else {
             // rankType === 'goals'
             if (!allGoals) return [];
-            let sorted = [...allGoals];
+            // Hallway screens are student-facing: skip archived goals and ones staff hid from students.
+            let sorted = allGoals.filter((g) => !g.archived && !g.hiddenFromStudents && (g.status === 'active' || g.status === 'completed'));
             if (scope !== 'all') {
                 sorted = sorted.filter(g => g.classId === scope);
             }

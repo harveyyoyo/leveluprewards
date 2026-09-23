@@ -1,6 +1,7 @@
 import type { Category, Goal, Student } from '@/lib/types';
 import { categoryNameFromId } from '@/lib/goalsProgress';
 import { activeGoalsForStudent, bestGoalProgressRatio } from '@/lib/goals/goalsOptions';
+import { earnedInCategory } from '@/lib/goals/goalCategoryPoints';
 
 /**
  * Fast progress estimate for classroom rings (no activity-log queries).
@@ -24,7 +25,7 @@ export function estimateGoalProgressSync(
     const members = goal.type === 'school' ? roster : roster.filter((s) => s.classId === goal.classId);
     if (goal.categoryId) {
       if (!catName) return 0;
-      return members.reduce((acc, s) => acc + (s.categoryPoints?.[catName] || 0), 0);
+      return members.reduce((acc, s) => acc + earnedInCategory(s, catName), 0);
     }
     return members.reduce((acc, s) => acc + (s.lifetimePoints ?? s.points ?? 0), 0);
   }
@@ -32,7 +33,7 @@ export function estimateGoalProgressSync(
   if (!goal.studentId || goal.studentId !== viewer.id) return 0;
   if (goal.categoryId) {
     if (!catName) return 0;
-    return viewer.categoryPoints?.[catName] || 0;
+    return earnedInCategory(viewer, catName);
   }
   return viewer.lifetimePoints ?? viewer.points ?? 0;
 }

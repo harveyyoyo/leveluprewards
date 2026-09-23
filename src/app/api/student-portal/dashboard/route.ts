@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminAuth, getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { clientIp, jsonError, rateLimit, sameOrigin } from '@/lib/server/apiSecurity';
+import { activityCountsForCategory, earnedInCategory } from '@/lib/goals/goalCategoryPoints';
 
 const SCHOOL_ID_RE = /^[\w-]{1,128}$/;
 const MAX_BODY_BYTES = 8 * 1024;
@@ -55,7 +56,7 @@ async function sumActivitiesInRange(
     const data = doc.data();
     const amount = typeof data.amount === 'number' ? data.amount : 0;
     if (amount <= 0) return;
-    if (categoryName && data.desc !== categoryName) return;
+    if (categoryName && !activityCountsForCategory(data.desc, categoryName)) return;
     sum += amount;
   });
   return sum;
@@ -70,11 +71,13 @@ async function goalProgress(
   categories: JsonRecord[],
 ) {
   const now = Date.now();
-  if (goal.status !== 'active') return 0;
+  if (goal.status === 'completed') {
+    return Math.max(Number(goal.targetPoints || 0), Number(goal.completedProgress || 0));
+  }
+  if (goal.status !== 'active' && goal.status !== 'expired') return 0;
   const startDate = typeof goal.startDate === 'number' ? goal.startDate : undefined;
   const endDate = typeof goal.endDate === 'number' ? goal.endDate : undefined;
   if (startDate && now < startDate) return 0;
-  if (endDate && now > endDate) return 0;
 
   const categoryName = categoryNameFromId(categories, goal.categoryId);
   const rangeStart = startDate ?? 0;
@@ -96,10 +99,7 @@ async function goalProgress(
         );
         return sums.reduce((a, b) => a + b, 0);
       }
-      return classRoster.reduce((acc, s) => {
-        const categoryPoints = (s.categoryPoints || {}) as Record<string, number>;
-        return acc + Number(categoryPoints[categoryName] || 0);
-      }, 0);
+      return classRoster.reduce((acc, s) => acc + earnedInCategory(s as never, categoryName), 0);
     }
     if (useActivityRange) {
       const sums = await Promise.all(
@@ -114,8 +114,7 @@ async function goalProgress(
   if (goal.categoryId) {
     if (!categoryName) return 0;
     if (useActivityRange) return sumActivitiesInRange(db, schoolId, studentId, rangeStart, rangeEnd, categoryName);
-    const categoryPoints = (student.categoryPoints || {}) as Record<string, number>;
-    return Number(categoryPoints[categoryName] || 0);
+    return earnedInCategory(student as never, categoryName);
   }
   if (useActivityRange) return sumActivitiesInRange(db, schoolId, studentId, rangeStart, rangeEnd);
   return Number(student.lifetimePoints ?? student.points ?? 0);

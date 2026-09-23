@@ -113,6 +113,21 @@ describe('Goals manager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: '50 Kindness points' })));
   });
+  it('treats a higher target on a finished goal, saved through Edit, as a raise', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = { ...original, status: 'completed', ...{ completedAt: 5, completedProgress: 50 } };
+    try {
+      await act(async () => { showGoals(); });
+      fireEvent.click(screen.getByRole('button', { name: /Finished/ }));
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      fireEvent.change(screen.getByLabelText('Target points'), { target: { value: '90' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({
+        status: 'active', targetPoints: 90, targetRaises: 1,
+        clearFields: expect.arrayContaining(['completedAt', 'completedProgress', 'almostThereNotifiedAt']),
+      })));
+    } finally { fixtures.goals[0] = original; }
+  });
   it('requires a category for a points goal', async () => {
     const original = fixtures.goals[0];
     fixtures.goals[0] = { ...original, ...{ categoryId: undefined as unknown as string } };

@@ -12,6 +12,7 @@ import { updateGoal } from '@/lib/db/goals';
 import { awardPointsToStudent } from '@/lib/db/students';
 import { redeemPrize } from '@/lib/db/prizes';
 import { GOAL_ALMOST_THERE_RATIO } from '@/lib/goals/goalHelpers';
+import { activityCountsForCategory, earnedInCategory } from '@/lib/goals/goalCategoryPoints';
 
 export function categoryNameFromId(categories: Category[], categoryId?: string): string | undefined {
   if (!categoryId) return undefined;
@@ -34,7 +35,7 @@ async function sumActivitiesInRange(
     const data = d.data() as { desc?: string; amount?: number };
     const amt = typeof data.amount === 'number' ? data.amount : 0;
     if (amt <= 0) return;
-    if (categoryName !== undefined && categoryName !== '' && data.desc !== categoryName) return;
+    if (categoryName !== undefined && categoryName !== '' && !activityCountsForCategory(data.desc, categoryName)) return;
     sum += amt;
   });
   return sum;
@@ -85,7 +86,7 @@ export async function computeGoalProgress(
         );
         return sums.reduce((a, b) => a + b, 0);
       }
-      return roster.reduce((acc, s) => acc + (s.categoryPoints?.[catName] || 0), 0);
+      return roster.reduce((acc, s) => acc + earnedInCategory(s, catName), 0);
     }
     if (useActivityRange) {
       const sums = await Promise.all(
@@ -104,7 +105,7 @@ export async function computeGoalProgress(
     if (useActivityRange) {
       return sumActivitiesInRange(firestore, schoolId, viewerStudent.id, rangeStart, rangeEnd, catName);
     }
-    return viewerStudent.categoryPoints?.[catName] || 0;
+    return earnedInCategory(viewerStudent, catName);
   }
 
   if (useActivityRange) {

@@ -527,8 +527,16 @@ export function GoalsManager(props: {
       if (!payload.bonusPointsReward) clearFields.push('bonusPointsReward');
       if (!payload.startDate) clearFields.push('startDate');
       if (!payload.endDate) clearFields.push('endDate');
+      // A higher target on a finished goal starts a new round, like "Raise target".
+      const raised = editingGoal.status === 'completed' && payload.targetPoints > Number(editingGoal.targetPoints || 0);
+      // A later (or removed) deadline brings a past-due goal back.
+      const reopened = editingGoal.status === 'expired' && (!payload.endDate || payload.endDate > Date.now());
+      if (raised) clearFields.push('completedAt', 'completedProgress', 'prizeAwardProblem');
+      if (raised || payload.targetPoints !== Number(editingGoal.targetPoints || 0)) clearFields.push('almostThereNotifiedAt');
       await updateGoal(firestore, schoolId, editingGoal.id, {
         ...payload,
+        ...(raised ? { status: 'active' as const, targetRaises: (editingGoal.targetRaises ?? 0) + 1 } : {}),
+        ...(reopened ? { status: 'active' as const } : {}),
         teacherId: editingGoal.teacherId,
         assignedByStaffId: editingGoal.assignedByStaffId || (editingGoal.teacherId ? `teacher:${editingGoal.teacherId}` : staffId),
         assignedByName: editingGoal.assignedByName || userName || 'Staff',
@@ -584,7 +592,7 @@ export function GoalsManager(props: {
     const endDate = msFromDateInput(raiseEndDate, true);
     setSaving(true);
     try {
-      const clearFields: Array<keyof Goal> = ['completedAt', 'completedProgress', 'prizeAwardProblem'];
+      const clearFields: Array<keyof Goal> = ['completedAt', 'completedProgress', 'prizeAwardProblem', 'almostThereNotifiedAt'];
       if (!endDate) clearFields.push('endDate');
       await updateGoal(firestore, schoolId, raiseTarget.id, {
         status: 'active',

@@ -90,10 +90,12 @@ export function goalAudienceLabel(
   return 'School';
 }
 
-export function bucketForGoal(goal: Goal): GoalListBucket {
+export function bucketForGoal(goal: Goal, now = Date.now()): GoalListBucket {
   if (goal.archived) return 'archived';
   if (goal.status === 'completed') return 'finished';
   if (goal.status === 'expired') return 'past_due';
+  // Goals are marked expired when points next come in; show an overdue goal as past due right away.
+  if (goal.endDate && goal.endDate < now) return 'past_due';
   return 'active';
 }
 

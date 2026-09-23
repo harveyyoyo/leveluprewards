@@ -90,7 +90,7 @@ export async function syncAndPresentGoalsForStudents(
 ): Promise<void> {
   if (!args.enabled || !firestore || !schoolId || studentIds.length === 0) return;
   const opts = resolveGoalsOptions(args.options);
-  if (!opts.celebrateOnAward && !opts.teacherAlmostThereNudge) return;
+  // Always check goals, even with cheers and nudges off: finishing a goal also pays its bonus and prize.
 
   try {
     const { syncGoalsForStudent } = await import('@/lib/goalsProgress');

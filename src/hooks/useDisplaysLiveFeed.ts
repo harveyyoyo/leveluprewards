@@ -130,7 +130,11 @@ export function useDisplaysLiveFeed(
   const classes = useMemo(() => rawClasses || [], [rawClasses]);
   const houses = useMemo(() => rawHouses || [], [rawHouses]);
   const prizes = useMemo(() => rawPrizes || [], [rawPrizes]);
-  const goals = useMemo(() => rawGoals || [], [rawGoals]);
+  // Displays are student-facing: leave out archived goals and ones staff hid from students.
+  const goals = useMemo(
+    () => (rawGoals || []).filter((g) => !g.archived && !g.hiddenFromStudents),
+    [rawGoals],
+  );
   const bulletinPosts = useMemo(() => rawPosts || [], [rawPosts]);
   const bulletinIncentives = useMemo(
     () => incentiveCategoriesForSurface(rawIncentives, "bulletinBoard"),

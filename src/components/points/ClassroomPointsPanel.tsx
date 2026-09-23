@@ -1403,6 +1403,16 @@ function ClassroomPointsPanelInner({
           }
         }
 
+        // Points just landed: check goals so they finish, pay bonuses, and cheer right away.
+        if (rewardsMode && !isDeduct && result.count > 0 && settings.enableGoals) {
+          void syncAndPresentGoalsForStudents(firestore, schoolId, studentIds, {
+            enabled: true,
+            options: settings.goalsOptions,
+            toast,
+            playSound: () => playSound('success'),
+          });
+        }
+
         return true;
       } finally {
         if (rewardsMode) removeAwardingStudents(studentIds);
