@@ -187,6 +187,7 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
           rows: askMatches.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((m) => ({
             id: m.entry.id,
             name: m.name,
+            open: { kind: 'student', id: m.entry.studentId },
             detail: [m.className, askStatus === 'not-present' ? STATUS_LABEL[m.entry.status] : null]
               .filter(Boolean)
               .join(' · '),

@@ -168,7 +168,12 @@ export function dollarsParamToCents(value: string | null | undefined): number | 
 }
 
 /** Instructions for the AI: turn a question into one view, or say it needs a written answer. */
-export function officeAssistantSystemPrompt(params: { today: string; classNames: string[] }): string {
+export function officeAssistantSystemPrompt(params: {
+  today: string;
+  classNames: string[];
+  /** The list on screen from the last question, so a follow-up can narrow or change it. */
+  previous?: OfficeAssistantView | null;
+}): string {
   return [
     'You turn a school office staff member\'s question into a filtered list the app can show.',
     'Reply with JSON only, in one of these two shapes:',
@@ -192,5 +197,13 @@ export function officeAssistantSystemPrompt(params: { today: string; classNames:
     params.classNames.length
       ? `The school's classes are: ${params.classNames.join(', ')}. Use the exact class name when one is meant.`
       : 'The school has no classes yet.',
+    ...(params.previous
+      ? [
+          '',
+          `The list on screen now came from this view: ${JSON.stringify(params.previous)}`,
+          'If the new question changes or narrows that list (e.g. "only grade 8", "what about over $500", "and yesterday?", "now just the late ones"), reply with that same view changed accordingly — keep its other filters — and a new label describing the whole list.',
+          'If the new question is about something else, ignore the list on screen.',
+        ]
+      : []),
   ].join('\n');
 }

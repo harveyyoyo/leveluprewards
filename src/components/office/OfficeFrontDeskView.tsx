@@ -155,6 +155,7 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
             id: e.id,
             name: nameOf(e.studentId),
             detail: `${KIND_LABEL[e.kind]}, ${formatScheduleTime(e.time)}${e.reason ? ` · ${e.reason}` : ''}`,
+            open: { kind: 'student', id: e.studentId },
           })),
         },
   );

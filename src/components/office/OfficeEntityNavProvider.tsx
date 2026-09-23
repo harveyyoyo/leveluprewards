@@ -61,8 +61,12 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
   const hydratedFromQuery = useRef(false);
 
   const replaceEntityQuery = useCallback(
-    (next: { student?: string | null; teacher?: string | null; classSheet?: string | null }) => {
+    (next: { student?: string | null; teacher?: string | null; classSheet?: string | null; family?: string | null }) => {
       const params = new URLSearchParams(searchParams.toString());
+      if ('family' in next) {
+        if (next.family) params.set('family', next.family);
+        else params.delete('family');
+      }
       if ('student' in next) {
         if (next.student) params.set('student', next.student);
         else params.delete('student');
@@ -88,7 +92,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedTeacherId(null);
       setSelectedClassId(null);
       setSelectedFamilyId(null);
-      replaceEntityQuery({ student: id, teacher: null, classSheet: null });
+      replaceEntityQuery({ student: id, teacher: null, classSheet: null, family: null });
     },
     [replaceEntityQuery],
   );
@@ -100,7 +104,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedStudentId(null);
       setSelectedClassId(null);
       setSelectedFamilyId(null);
-      replaceEntityQuery({ teacher: id, student: null, classSheet: null });
+      replaceEntityQuery({ teacher: id, student: null, classSheet: null, family: null });
     },
     [replaceEntityQuery],
   );
@@ -112,24 +116,28 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       setSelectedStudentId(null);
       setSelectedTeacherId(null);
       setSelectedFamilyId(null);
-      replaceEntityQuery({ classSheet: id, student: null, teacher: null });
+      replaceEntityQuery({ classSheet: id, student: null, teacher: null, family: null });
     },
     [replaceEntityQuery],
   );
 
-  const openFamily = useCallback((familyId: string) => {
-    setSelectedFamilyId(familyId);
-    setSelectedStudentId(null);
-    setSelectedTeacherId(null);
-    setSelectedClassId(null);
-  }, []);
+  const openFamily = useCallback(
+    (familyId: string) => {
+      setSelectedFamilyId(familyId);
+      setSelectedStudentId(null);
+      setSelectedTeacherId(null);
+      setSelectedClassId(null);
+      replaceEntityQuery({ family: familyId, student: null, teacher: null, classSheet: null });
+    },
+    [replaceEntityQuery],
+  );
 
   const closeAll = useCallback(() => {
     setSelectedStudentId(null);
     setSelectedTeacherId(null);
     setSelectedClassId(null);
     setSelectedFamilyId(null);
-    replaceEntityQuery({ student: null, teacher: null, classSheet: null });
+    replaceEntityQuery({ student: null, teacher: null, classSheet: null, family: null });
   }, [replaceEntityQuery]);
 
   useEffect(() => {
@@ -138,9 +146,19 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
     const studentId = searchParams.get('student')?.trim() || null;
     const teacherId = searchParams.get('teacher')?.trim() || null;
     const classSheetId = searchParams.get('classSheet')?.trim() || null;
+    const familyId = searchParams.get('family')?.trim() || null;
 
     if (studentId && shared.students.some((s) => s.id === studentId)) {
       setSelectedStudentId(studentId);
+      setSelectedTeacherId(null);
+      setSelectedClassId(null);
+      setSelectedFamilyId(null);
+      hydratedFromQuery.current = true;
+      return;
+    }
+    if (familyId && shared.families.some((f) => f.id === familyId)) {
+      setSelectedFamilyId(familyId);
+      setSelectedStudentId(null);
       setSelectedTeacherId(null);
       setSelectedClassId(null);
       hydratedFromQuery.current = true;
@@ -161,13 +179,14 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
       return;
     }
 
-    if (hydratedFromQuery.current || studentId || teacherId || classSheetId) {
+    if (hydratedFromQuery.current || studentId || teacherId || classSheetId || familyId) {
       setSelectedStudentId(null);
       setSelectedTeacherId(null);
       setSelectedClassId(null);
+      setSelectedFamilyId(null);
     }
     hydratedFromQuery.current = true;
-  }, [searchParams, shared.isLoading, shared.students, shared.teachers, shared.classes]);
+  }, [searchParams, shared.isLoading, shared.students, shared.teachers, shared.classes, shared.families]);
 
   const selectedStudent = useMemo(
     () => shared.students.find((s) => s.id === selectedStudentId) ?? null,
@@ -273,7 +292,10 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
         billingAccount={selectedFamilyBillingAccount}
         open={!!selectedFamily}
         onOpenChange={(open) => {
-          if (!open) setSelectedFamilyId(null);
+          if (!open) {
+            setSelectedFamilyId(null);
+            replaceEntityQuery({ family: null });
+          }
         }}
       />
     </OfficeEntityNavContext.Provider>

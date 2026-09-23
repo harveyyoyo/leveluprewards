@@ -267,6 +267,7 @@ export function OfficeStudentsView({
       id: s.id,
       name: getOfficeStudentFullName(s),
       detail: (s.classId && classNameById.get(s.classId)) || undefined,
+      open: { kind: 'student', id: s.id },
     })),
   }));
 
