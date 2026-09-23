@@ -63,6 +63,26 @@
   max-height: 1.1em;
 }
 
+/* When validity dates are shown, shrink the barcode strip so dates stay inside the coupon. */
+.coupon-barcode.coupon-barcode--with-dates.print-barcode .print-barcode-svg {
+  max-height: 0.92em;
+}
+
+.coupon-scalable {
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.coupon-scalable-body {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.coupon-dates {
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
 .coupon-qr-slot {
   width: 1.35em;
   height: 1.35em;
@@ -1066,6 +1086,13 @@ html[data-office-portal] .office-content-pane {
 
   .coupon-print-match-wrapper--30 .coupon-scalable, .coupon-print-match-wrapper--30 .money-bill-scalable {
     font-size: 28px;
+    justify-content: flex-start;
+    gap: 0.04em;
+    padding-top: 0.16em;
+    padding-bottom: 0.14em;
+  }
+
+  .coupon-print-match-wrapper--30 .coupon-scalable-body {
     justify-content: flex-start;
     gap: 0.04em;
     padding-top: 0.16em;
@@ -3361,6 +3388,11 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     box-shadow: none !important;
   }
 
+  .print-coupon-wrapper .coupon-scalable-body {
+    width: 100%;
+    max-height: 100%;
+  }
+
   .print-coupon-wrapper--rounded .coupon-scalable, .print-coupon-wrapper--rounded .money-bill-scalable,
   .print-coupon-wrapper--rounded .print-coupon--rounded {
     border-radius: 0.75em !important;
@@ -3372,6 +3404,14 @@ html.dark[data-dark-colorize="on"][data-color-scheme="default"] {
     gap: 0.04em !important;
     padding-top: 0.16em !important;
     padding-bottom: 0.14em !important;
+  }
+
+  .coupon-print-page--30 .print-coupon-wrapper .coupon-scalable-body {
+    justify-content: flex-start !important;
+    gap: 0.04em !important;
+    padding-top: 0.16em !important;
+    padding-bottom: 0.14em !important;
+    max-height: 100%;
   }
 
   .coupon-print-page--30 .print-coupon-wrapper .coupon-title {
