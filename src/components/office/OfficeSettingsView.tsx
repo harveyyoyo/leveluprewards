@@ -421,7 +421,7 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 ['medicalNotes', 'Medical notes', 'Confidential medical section on family profiles'],
                 ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
                 ['frontDesk', 'Front desk', 'Log late arrivals, early pickups, and nurse visits'],
-                ['aiHelp', 'Help button', 'An assistant in the top bar that answers questions'],
+                ['aiHelp', 'Question assistant', 'Adds “Ask a question” to Help in the top bar'],
               ] as const
             ).map(([key, title, description]) => (
               <div key={key} className="flex items-center justify-between gap-4 rounded-xl border p-3">
