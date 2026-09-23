@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BookOpen, Check, ChevronsUpDown, Plus, Trash2, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
+import { BookOpen, Check, ChevronsUpDown, Plus, Trash2, ChevronDown, ChevronUp, UserPlus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -14,6 +14,12 @@ import { StaffPortalTabPanel } from '@/components/staff/StaffPortalTabHeader';
 import { StaffPortalTabInfoPopover, staffPortalTabInfoSection } from '@/components/staff/StaffPortalTabInfoPopover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Badge } from '@/components/ui/badge';
@@ -53,6 +59,49 @@ export function AdminClassesTab({
     setExpandedClassIds(next);
   };
 
+  const handleAddTeacherToClass = async (c: Class, teacherId: string) => {
+    const current = Array.isArray(c.teacherIds) && c.teacherIds.length > 0
+      ? c.teacherIds
+      : c.primaryTeacherId
+        ? [c.primaryTeacherId]
+        : [];
+    if (current.includes(teacherId)) return;
+    const nextTeacherIds = [...current, teacherId];
+    const nextClass: Class = {
+      ...c,
+      primaryTeacherId: nextTeacherIds[0],
+      teacherIds: nextTeacherIds,
+    };
+    onUpdateClass(nextClass);
+
+    // Sync students in this class so they have the teacher linked
+    const classStudents = (students || []).filter((s) => s.classId === c.id);
+    for (const student of classStudents) {
+      const studentTeacherIds = student.teacherIds || [];
+      if (!studentTeacherIds.includes(teacherId)) {
+        await onUpdateStudent({
+          ...student,
+          teacherIds: [...studentTeacherIds, teacherId],
+        });
+      }
+    }
+  };
+
+  const handleRemoveTeacherFromClass = async (c: Class, teacherId: string) => {
+    const current = Array.isArray(c.teacherIds) && c.teacherIds.length > 0
+      ? c.teacherIds
+      : c.primaryTeacherId
+        ? [c.primaryTeacherId]
+        : [];
+    const nextTeacherIds = current.filter((id) => id !== teacherId);
+    const nextClass: Class = {
+      ...c,
+      primaryTeacherId: nextTeacherIds[0] || undefined,
+      teacherIds: nextTeacherIds.length > 0 ? nextTeacherIds : undefined,
+    };
+    onUpdateClass(nextClass);
+  };
+
   return (
     <StaffPortalTabPanel
       tabValue="classes"
@@ -70,10 +119,10 @@ export function AdminClassesTab({
         <ul className="space-y-4 pr-1">
           {classes && classes.length > 0 ? (
             <AdminRecordListHeader
-              gridClassName="grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_110px_44px]"
+              gridClassName="grid-cols-[minmax(160px,1.2fr)_minmax(200px,2fr)_110px_44px]"
               columns={[
                 { label: 'Class Name' },
-                { label: 'Assigned Teacher' },
+                { label: 'Assigned Teachers' },
                 { label: 'Students' },
                 { label: 'Delete', className: 'text-right' },
               ]}
@@ -92,36 +141,69 @@ export function AdminClassesTab({
             const isExpanded = expandedClassIds.has(c.id);
             const isPickerOpen = openStudentPickerClassId === c.id;
 
+            const classTeacherIds = Array.isArray(c.teacherIds) && c.teacherIds.length > 0
+              ? c.teacherIds
+              : c.primaryTeacherId
+                ? [c.primaryTeacherId]
+                : [];
+            const availableTeachers = (teachers || []).filter((t) => !classTeacherIds.includes(t.id));
+
             return (
               <li
                 key={c.id}
                 className="flex flex-col bg-secondary/45 rounded-2xl border border-ring/20 hover:border-ring/45 transition-all overflow-hidden"
               >
-                <div className="grid grid-cols-[minmax(180px,1fr)_minmax(160px,220px)_110px_44px] items-center gap-3 p-3">
+                <div className="grid grid-cols-[minmax(160px,1.2fr)_minmax(200px,2fr)_110px_44px] items-center gap-3 p-3">
                   <div className="truncate text-sm font-bold">{c.name}</div>
-                  <div className="min-w-0">
-                    <Select
-                      value={c.primaryTeacherId || '__none__'}
-                      onValueChange={(value) => {
-                        const next = value === '__none__' ? { ...c, primaryTeacherId: undefined } : { ...c, primaryTeacherId: value };
-                        onUpdateClass(next);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 w-full rounded-lg bg-background text-xs">
-                        <SelectValue placeholder="Unassigned" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Unassigned</SelectItem>
-                        {c.primaryTeacherId && teachers && !teachers.some((t) => t.id === c.primaryTeacherId) ? (
-                          <SelectItem value={c.primaryTeacherId}>Unknown teacher (deleted)</SelectItem>
-                        ) : null}
-                        {teachers?.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="min-w-0 flex flex-wrap items-center gap-1.5 py-0.5">
+                    {classTeacherIds.map((tid) => {
+                      const t = teachers?.find((teacher) => teacher.id === tid);
+                      const name = t?.name || (tid === c.primaryTeacherId ? 'Assigned teacher' : 'Unknown');
+                      return (
+                        <Badge
+                          key={tid}
+                          variant="secondary"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-normal bg-background border border-border/80 shadow-xs"
+                        >
+                          <span className="truncate max-w-[120px]">{name}</span>
+                          <button
+                            type="button"
+                            onClick={() => void handleRemoveTeacherFromClass(c, tid)}
+                            className="text-muted-foreground hover:text-destructive rounded-full p-0.5 transition-colors cursor-pointer"
+                            title={`Remove ${name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                    {availableTeachers.length > 0 ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-xs gap-1 rounded-lg border-dashed text-muted-foreground hover:text-foreground"
+                          >
+                            <Plus className="h-3 w-3" />
+                            {classTeacherIds.length === 0 ? 'Assign teacher' : 'Add teacher'}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="max-h-56 overflow-y-auto">
+                          {availableTeachers.map((t) => (
+                            <DropdownMenuItem
+                              key={t.id}
+                              onSelect={() => void handleAddTeacherToClass(c, t.id)}
+                            >
+                              {t.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
+                    {classTeacherIds.length === 0 && availableTeachers.length === 0 && (
+                      <span className="text-xs text-muted-foreground italic">No teachers available</span>
+                    )}
                   </div>
                   <div className="flex items-center justify-start">
                     <Button

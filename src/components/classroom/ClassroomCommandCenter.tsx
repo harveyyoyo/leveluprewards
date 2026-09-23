@@ -133,7 +133,7 @@ export function ClassroomCommandCenter({
   const availableClasses = useMemo(() => {
     const list = (propClasses ?? []).slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     if (variant === 'admin' || !effectiveTeacherId) return list;
-    return list.filter((c) => c.primaryTeacherId === effectiveTeacherId);
+    return list.filter((c) => c.primaryTeacherId === effectiveTeacherId || c.teacherIds?.includes(effectiveTeacherId));
   }, [propClasses, variant, effectiveTeacherId]);
 
   const [selectedClassId, setSelectedClassId] = useState<string>(() => {

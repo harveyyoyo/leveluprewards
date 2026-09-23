@@ -105,6 +105,8 @@ export interface Class {
   name: string;
   /** Optional primary teacher for this class, used for per-teacher attendance. */
   primaryTeacherId?: string;
+  /** Optional assigned teachers for this class (co-teachers). */
+  teacherIds?: string[];
 }
 
 /** School house for spirit competitions and rosters. */
@@ -813,7 +815,9 @@ export interface Goal {
   assignedByName?: string;
   assignedByRole?: 'teacher' | 'admin' | 'staff';
   /** Controls staff Goals lists; student participation is determined by the goal audience. */
-  staffVisibility?: 'creator' | 'all';
+  staffVisibility?: 'creator' | 'all' | 'specific';
+  /** Staff or teacher IDs allowed to view this goal when staffVisibility is 'specific'. */
+  sharedStaffIds?: string[];
   prizeId?: string;   // Prize the goal is working toward (savings goals, or any goal with a prize)
   /** For goals with a prize: `free` gives the prize on completion; `shop` (default) means they get it in the shop. */
   prizeReward?: 'shop' | 'free';

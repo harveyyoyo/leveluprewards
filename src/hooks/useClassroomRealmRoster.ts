@@ -70,7 +70,7 @@ export function useClassroomRealmRoster(schoolId: string, options?: { includeCat
       students.map((s) => s.classId).filter((id): id is string => Boolean(id)),
     );
     return list
-      .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === activeTeacherId)
+      .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === activeTeacherId || (activeTeacherId ? c.teacherIds?.includes(activeTeacherId) : false))
       .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
   }, [allClasses, schoolWide, students, activeTeacherId]);
 

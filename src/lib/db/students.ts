@@ -35,24 +35,29 @@ import { ensureStudentHasClassPrimaryTeacher } from '@/lib/studentTeacherRoster'
 
 export { lookupStudentId } from './lookup';
 
-async function primaryTeacherIdForClass(
-  firestore: Firestore,
-  schoolId: string,
-  classId: string,
-): Promise<string | undefined> {
-  const trimmed = classId.trim();
-  if (!trimmed) return undefined;
-  const classRef = doc(firestore, 'schools', schoolId, 'classes', trimmed);
-  const classSnap = await getDoc(classRef);
-  if (!classSnap.exists()) return undefined;
-  const teacherId = ((classSnap.data() as Class).primaryTeacherId || '').trim();
-  return teacherId || undefined;
+function extractTeacherIdsFromClass(classData: Class): string[] {
+  const ids = new Set<string>();
+  if (classData.primaryTeacherId?.trim()) {
+    ids.add(classData.primaryTeacherId.trim());
+  }
+  if (Array.isArray(classData.teacherIds)) {
+    for (const tid of classData.teacherIds) {
+      if (typeof tid === 'string' && tid.trim()) {
+        ids.add(tid.trim());
+      }
+    }
+  }
+  return Array.from(ids);
 }
 
-function withPrimaryTeacherId(student: Student, primaryTeacherId: string): Student {
+function withClassTeachers(student: Student, teacherIds: string[]): Student {
+  if (!teacherIds.length) return student;
   const current = student.teacherIds || [];
-  if (current.includes(primaryTeacherId)) return student;
-  return { ...student, teacherIds: [...current, primaryTeacherId] };
+  const merged = Array.from(new Set([...current, ...teacherIds]));
+  if (merged.length === current.length && current.every((id, idx) => id === merged[idx])) {
+    return student;
+  }
+  return { ...student, teacherIds: merged };
 }
 
 // --- Student Mutations ---
@@ -74,9 +79,13 @@ export const addStudent = async (firestore: Firestore, schoolId: string, student
   };
   const classId = (newStudent.classId || '').trim();
   if (classId) {
-    const primaryTeacherId = await primaryTeacherIdForClass(firestore, schoolId, classId);
-    if (primaryTeacherId) {
-      newStudent = withPrimaryTeacherId(newStudent, primaryTeacherId);
+    const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
+    const classSnap = await getDoc(classRef);
+    if (classSnap.exists()) {
+      const classTeachers = extractTeacherIdsFromClass(classSnap.data() as Class);
+      if (classTeachers.length > 0) {
+        newStudent = withClassTeachers(newStudent, classTeachers);
+      }
     }
   }
   const studentDocRef = doc(firestore, 'schools', schoolId, 'students', newStudent.id);
@@ -110,9 +119,9 @@ export const updateStudent = async (firestore: Firestore, schoolId: string, stud
         const classRef = doc(firestore, 'schools', schoolId, 'classes', classId);
         const classSnap = await transaction.get(classRef);
         if (classSnap.exists()) {
-          const primaryTeacherId = ((classSnap.data() as Class).primaryTeacherId || '').trim();
-          if (primaryTeacherId) {
-            studentToWrite = withPrimaryTeacherId(student, primaryTeacherId);
+          const classTeachers = extractTeacherIdsFromClass(classSnap.data() as Class);
+          if (classTeachers.length > 0) {
+            studentToWrite = withClassTeachers(studentToWrite, classTeachers);
           }
         }
       }

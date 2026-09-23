@@ -442,14 +442,20 @@ function TeacherClassesTab({
     const [isClaimDialogOpen, setIsClaimDialogOpen] = useState(false);
     const [isBusy, setIsBusy] = useState(false);
 
-    const myClasses = useMemo(() => classes.filter((c) => c.primaryTeacherId === teacherId), [classes, teacherId]);
-    const unassignedClasses = useMemo(() => classes.filter((c) => !c.primaryTeacherId), [classes]);
+    const myClasses = useMemo(
+        () => classes.filter((c) => c.primaryTeacherId === teacherId || c.teacherIds?.includes(teacherId)),
+        [classes, teacherId],
+    );
+    const unassignedClasses = useMemo(
+        () => classes.filter((c) => !c.primaryTeacherId && (!c.teacherIds || c.teacherIds.length === 0)),
+        [classes],
+    );
 
     const handleCreateClass = async () => {
         if (!newClassName.trim()) return;
         setIsBusy(true);
         try {
-            await addClass({ name: newClassName.trim(), primaryTeacherId: teacherId });
+            await addClass({ name: newClassName.trim(), primaryTeacherId: teacherId, teacherIds: [teacherId] });
             toast({ title: 'Class created', description: `"${newClassName}" has been created and assigned to you.` });
             setIsCreateClassDialogOpen(false);
             setNewClassName('');
@@ -465,8 +471,14 @@ function TeacherClassesTab({
         if (!cls) return;
         setIsBusy(true);
         try {
-            await updateClass({ ...cls, primaryTeacherId: teacherId });
-            toast({ title: 'Class claimed', description: `You are now the primary teacher for "${cls.name}".` });
+            const currentTids = cls.teacherIds || (cls.primaryTeacherId ? [cls.primaryTeacherId] : []);
+            const nextTids = Array.from(new Set([...currentTids, teacherId]));
+            await updateClass({
+                ...cls,
+                primaryTeacherId: cls.primaryTeacherId || teacherId,
+                teacherIds: nextTids,
+            });
+            toast({ title: 'Class claimed', description: `You are now assigned to "${cls.name}".` });
             setIsClaimDialogOpen(false);
         } catch (e) {
             toast({ variant: 'destructive', title: 'Failed to claim class', description: (e as Error).message });
@@ -479,14 +491,20 @@ function TeacherClassesTab({
         const ok = await confirm({
             title: `Unlink from ${cls.name}?`,
             description:
-                "You will no longer be the primary teacher for this class. Students will remain in the class but won't show on your roster unless directly linked.",
+                "You will no longer be assigned to this class. Students will remain in the class but won't show on your roster unless directly linked.",
             confirmLabel: 'Unlink',
             destructive: true,
         });
         if (!ok) return;
         setIsBusy(true);
         try {
-            await updateClass({ ...cls, primaryTeacherId: '' });
+            const currentTids = cls.teacherIds || (cls.primaryTeacherId ? [cls.primaryTeacherId] : []);
+            const nextTids = currentTids.filter((id) => id !== teacherId);
+            await updateClass({
+                ...cls,
+                primaryTeacherId: nextTids[0] || '',
+                teacherIds: nextTids.length > 0 ? nextTids : undefined,
+            });
             toast({ title: 'Class unlinked' });
         } catch (e) {
             toast({ variant: 'destructive', title: 'Failed to unlink class', description: (e as Error).message });
@@ -649,7 +667,7 @@ function TeacherRosterTab({
 
     const classMap = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
     const classIdsForTeacher = useMemo(
-        () => new Set(classes.filter((c) => c.primaryTeacherId === teacherId).map((c) => c.id)),
+        () => new Set(classes.filter((c) => c.primaryTeacherId === teacherId || c.teacherIds?.includes(teacherId)).map((c) => c.id)),
         [classes, teacherId],
     );
     const normalizedSearch = search.trim().toLowerCase();
@@ -2063,7 +2081,7 @@ function TeacherPrinterInnerBody({
             studentsForTeacherActions.map((s) => s.classId).filter((id): id is string => Boolean(id)),
         );
         return cls
-            .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId)
+            .filter((c) => fromStudents.has(c.id) || c.primaryTeacherId === teacherId || c.teacherIds?.includes(teacherId))
             .slice()
             .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     }, [secretaryMode, schoolWideTeacherScope, classes, studentsForTeacherActions, teacherId]);
