@@ -145,7 +145,14 @@ export function StudentBulkActionsMenu({
                       onSelect={() =>
                         void bulkUpdateSelected('Class updated', (s) => {
                           if (s.classId === c.id) return null;
-                          return { ...s, classId: c.id };
+                          const classTeachers = Array.isArray(c.teacherIds) && c.teacherIds.length > 0
+                            ? c.teacherIds
+                            : c.primaryTeacherId
+                              ? [c.primaryTeacherId]
+                              : [];
+                          const currentTeachers = s.teacherIds || [];
+                          const merged = Array.from(new Set([...currentTeachers, ...classTeachers]));
+                          return { ...s, classId: c.id, teacherIds: merged };
                         })
                       }
                     >

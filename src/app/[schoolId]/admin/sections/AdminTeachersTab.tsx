@@ -339,7 +339,7 @@ export function AdminTeachersTab({
             ) : null}
             {classroomTeachers.map((t) => {
               const rows = scopedStudentsByTeacher.get(t.id) ?? [];
-              const managedClasses = (classes || []).filter((c) => c.primaryTeacherId === t.id);
+              const managedClasses = (classes || []).filter((c) => c.primaryTeacherId === t.id || c.teacherIds?.includes(t.id));
               return (
               <li
                 key={t.id}
@@ -479,7 +479,13 @@ export function AdminTeachersTab({
                                 className="h-8 shrink-0 gap-1 text-destructive hover:bg-destructive/10"
                                 onClick={async () => {
                                   if (!onUpdateClass) return;
-                                  await onUpdateClass({ ...c, primaryTeacherId: '' });
+                                  const currentTids = c.teacherIds || (c.primaryTeacherId ? [c.primaryTeacherId] : []);
+                                  const nextTids = currentTids.filter((id) => id !== t.id);
+                                  await onUpdateClass({
+                                    ...c,
+                                    primaryTeacherId: nextTids[0] || undefined,
+                                    teacherIds: nextTids.length > 0 ? nextTids : undefined,
+                                  });
                                 }}
                               >
                                 <Minus className="h-3.5 w-3.5" />
@@ -494,13 +500,22 @@ export function AdminTeachersTab({
                         <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Assign to class</p>
                         <ul className="max-h-36 overflow-y-auto space-y-1 rounded-xl border border-border/50 bg-background/80 p-2 text-sm">
                           {(classes || [])
-                            .filter((c) => c.primaryTeacherId !== t.id)
+                            .filter((c) => c.primaryTeacherId !== t.id && !c.teacherIds?.includes(t.id))
                             .map((c) => (
                               <li key={c.id} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1 hover:bg-muted/40">
                                 <span className="min-w-0">
                                   <span className="block truncate font-medium text-foreground">{c.name}</span>
                                   <span className="block text-xs text-muted-foreground">
-                                    {c.primaryTeacherId ? `Current: ${teachers?.find(te => te.id === c.primaryTeacherId)?.name || 'Unknown'}` : 'Unassigned'}
+                                    {(() => {
+                                      const currentTids = c.teacherIds && c.teacherIds.length > 0
+                                        ? c.teacherIds
+                                        : c.primaryTeacherId
+                                          ? [c.primaryTeacherId]
+                                          : [];
+                                      if (currentTids.length === 0) return 'Unassigned';
+                                      const names = currentTids.map((id) => teachers?.find((te) => te.id === id)?.name || 'Unknown').join(', ');
+                                      return `Current: ${names}`;
+                                    })()}
                                   </span>
                                 </span>
                                 <Button
@@ -510,7 +525,13 @@ export function AdminTeachersTab({
                                   className="h-8 shrink-0 gap-1"
                                   onClick={async () => {
                                     if (!onUpdateClass) return;
-                                    await onUpdateClass({ ...c, primaryTeacherId: t.id });
+                                    const currentTids = c.teacherIds || (c.primaryTeacherId ? [c.primaryTeacherId] : []);
+                                    const nextTids = Array.from(new Set([...currentTids, t.id]));
+                                    await onUpdateClass({
+                                      ...c,
+                                      primaryTeacherId: c.primaryTeacherId || t.id,
+                                      teacherIds: nextTids,
+                                    });
                                   }}
                                 >
                                   <Plus className="h-3.5 w-3.5" />

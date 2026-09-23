@@ -147,7 +147,7 @@ export function AttendanceTodayBoard({
     let list = students || [];
     if (teacherIdScope && variant === 'teacher') {
       const teacherClassIds = new Set(
-        classes.filter((c) => c.primaryTeacherId === teacherIdScope).map((c) => c.id)
+        classes.filter((c) => c.primaryTeacherId === teacherIdScope || c.teacherIds?.includes(teacherIdScope)).map((c) => c.id)
       );
       list = list.filter((s) => s.classId && teacherClassIds.has(s.classId));
     }

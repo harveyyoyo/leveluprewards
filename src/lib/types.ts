@@ -105,6 +105,8 @@ export interface Class {
   name: string;
   /** Optional primary teacher for this class, used for per-teacher attendance. */
   primaryTeacherId?: string;
+  /** Optional assigned teachers for this class (co-teachers). */
+  teacherIds?: string[];
 }
 
 /** School house for spirit competitions and rosters. */
