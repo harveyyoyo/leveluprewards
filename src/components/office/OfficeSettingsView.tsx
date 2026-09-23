@@ -30,6 +30,7 @@ import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import { OfficeAiImportSection } from '@/components/office/OfficeAiImportSection';
 import { OfficeStudentFieldsSettings } from '@/components/office/OfficeStudentFieldsSettings';
+import { OfficeDemoDataSection } from '@/components/office/OfficeDemoDataSection';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { officeAbsoluteHref } from '@/lib/officePublicUrl';
 import { syncSchoolStaffDirectory } from '@/lib/syncSchoolStaffDirectory';
@@ -602,6 +603,8 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {roleVerified ? <OfficeDemoDataSection schoolId={schoolId} /> : null}
     </div>
   );
 }

@@ -8,14 +8,12 @@ import {
   CreditCard,
   GraduationCap,
   Plus,
-  RefreshCw,
   Upload,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
-import type { OfficeGradeEntry } from '@/lib/office/types';
 import { formatCents } from '@/lib/office/officeNav';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import type { OfficeDashboardInsights } from '@/lib/office/officeUtils';
@@ -27,21 +25,8 @@ type OfficeDashboardProps = {
   classCount: number;
   teacherCount: number;
   insights: OfficeDashboardInsights;
-  studentLabelById: Map<string, string>;
-  accountNameById: Map<string, string>;
-  canPopulateDemoData?: boolean;
-  isPopulatingDemoData?: boolean;
-  onPopulateDemoData?: () => void;
   activeTerm: string;
-  /** Unused since the term picker left Home (Grades has it); kept so callers don't break. */
-  onActiveTermChange?: (term: string) => void;
-  gradeEntries?: OfficeGradeEntry[];
-  schoolDefaultTerm?: string | null;
-  configuredTerms?: string[];
   showAttendance?: boolean;
-  /** Demo schools only: students still without a family, and the action that fills them in. */
-  demoStudentsWithoutFamily?: number;
-  onAddDemoFamilies?: () => void;
 };
 
 type StatTile = {
@@ -58,13 +43,8 @@ export function OfficeDashboard({
   classCount,
   teacherCount,
   insights,
-  canPopulateDemoData = false,
-  isPopulatingDemoData = false,
-  onPopulateDemoData,
   activeTerm,
   showAttendance = true,
-  demoStudentsWithoutFamily = 0,
-  onAddDemoFamilies,
 }: OfficeDashboardProps) {
   const gradePct =
     insights.termSubjects.length > 0
@@ -217,33 +197,6 @@ export function OfficeDashboard({
 
         </>
       )}
-
-      {canPopulateDemoData && onPopulateDemoData ? (
-        <p className="text-center text-xs text-muted-foreground">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1 underline-offset-2 hover:underline disabled:opacity-50"
-            disabled={isPopulatingDemoData}
-            onClick={onPopulateDemoData}
-          >
-            <RefreshCw className={cn('h-3 w-3', isPopulatingDemoData && 'animate-spin')} />
-            {isPopulatingDemoData ? 'Working…' : 'Load demo office data'}
-          </button>
-          {demoStudentsWithoutFamily > 0 && onAddDemoFamilies ? (
-            <>
-              {' · '}
-              <button
-                type="button"
-                className="underline-offset-2 hover:underline disabled:opacity-50"
-                disabled={isPopulatingDemoData}
-                onClick={onAddDemoFamilies}
-              >
-                Add demo families ({demoStudentsWithoutFamily} students)
-              </button>
-            </>
-          ) : null}
-        </p>
-      ) : null}
     </div>
   );
 }
