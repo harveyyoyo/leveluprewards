@@ -851,15 +851,7 @@ export function GoalsManager(props: {
       ) : (
         <Card className={cn('border-t-8 border-muted shadow-md', isGraphic ? 'bg-card/60 backdrop-blur-xl' : '')}>
           <CardHeader>
-            <CardTitle>
-              {section === 'active'
-                ? 'Current goals'
-                : section === 'finished'
-                  ? 'Finished goals'
-                  : section === 'past_due'
-                    ? 'Past due'
-                    : 'Archived'}
-            </CardTitle>
+            <CardTitle>Goals</CardTitle>
             <CardDescription>
               {section === 'active'
                 ? 'Progress updates after points change. Goals near the finish line show “Almost there.”'
