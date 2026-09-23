@@ -14,7 +14,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
-import { formatCents } from '@/lib/office/officeNav';
+import { formatCents, type OfficeNavId } from '@/lib/office/officeNav';
+import { useAppContext } from '@/components/AppProvider';
+import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
+import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import type { OfficeDashboardInsights } from '@/lib/office/officeUtils';
 import { cn } from '@/lib/utils';
@@ -29,7 +32,12 @@ type OfficeDashboardProps = {
   showAttendance?: boolean;
 };
 
+/** Grid widths by how many boxes are showing, so hidden sections don't leave gaps. */
+const STAT_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
+const ACTION_COLS: Record<number, string> = { 1: 'lg:grid-cols-2', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' };
+
 type StatTile = {
+  section: OfficeNavId;
   href: string;
   label: string;
   value: string;
@@ -46,37 +54,52 @@ export function OfficeDashboard({
   activeTerm,
   showAttendance = true,
 }: OfficeDashboardProps) {
+  const { userName } = useAppContext();
+  const { hidden } = useOfficeHiddenSections();
+  const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
+  // Home only offers what this person has in their menu: sections switched off in Interface,
+  // not allowed for their sign-in, or turned off for the school don't appear here either.
+  const isShown = (id: OfficeNavId) =>
+    !hidden.includes(id) &&
+    (!allowedSections || allowedSections.includes(id)) &&
+    (id !== 'attendance' || showAttendance);
+
   const gradePct =
     insights.termSubjects.length > 0
       ? insights.subjectGradeCompletionPct
       : insights.gradeCompletionPct;
 
-  const attentionItems: { label: string; href: string }[] = [];
+  const attentionItems: { label: string; href: string; section: OfficeNavId }[] = [];
   if (insights.overdueInvoiceCount > 0) {
     attentionItems.push({
       label: `${insights.overdueInvoiceCount} overdue invoice${insights.overdueInvoiceCount === 1 ? '' : 's'}`,
       href: `${officePublicHref(schoolId, 'billing')}?filter=overdue`,
+      section: 'billing',
     });
   }
   if (insights.studentsMissingGrades > 0) {
     attentionItems.push({
       label: `${insights.studentsMissingGrades} student${insights.studentsMissingGrades === 1 ? '' : 's'} need grades`,
       href: `${officePublicHref(schoolId, 'students')}?filter=missing-grades`,
+      section: 'grades',
     });
   }
   if (insights.dueSoonCount > 0) {
     attentionItems.push({
       label: `${insights.dueSoonCount} payment${insights.dueSoonCount === 1 ? '' : 's'} due soon`,
       href: `${officePublicHref(schoolId, 'billing')}?filter=due-soon`,
+      section: 'billing',
     });
   }
+  const visibleAttention = attentionItems.filter((item) => isShown(item.section));
 
-  const allClear = attentionItems.length === 0 && studentCount > 0;
+  const allClear = visibleAttention.length === 0 && studentCount > 0;
   const isEmpty = studentCount === 0;
 
   // A few numbers at a glance — the side menu already lists every page, so Home doesn't repeat it.
-  const stats: StatTile[] = [
+  const allStats: StatTile[] = [
     {
+      section: 'students',
       href: officePublicHref(schoolId, 'students'),
       label: 'Students',
       value: String(studentCount),
@@ -84,6 +107,7 @@ export function OfficeDashboard({
       icon: Users,
     },
     {
+      section: 'grades',
       href: `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`,
       label: 'Grades done',
       value: `${gradePct}%`,
@@ -91,6 +115,7 @@ export function OfficeDashboard({
       icon: GraduationCap,
     },
     {
+      section: 'billing',
       href: officePublicHref(schoolId, 'billing'),
       label: 'Still owed',
       value: formatCents(insights.openBalanceCents),
@@ -98,19 +123,25 @@ export function OfficeDashboard({
       icon: CreditCard,
     },
   ];
+  const stats = allStats.filter((s) => isShown(s.section));
 
-  const quickActions = [
-    { href: officePublicHref(schoolId, 'students'), label: 'Add student', icon: Users },
+  const allQuickActions: Array<{ section: OfficeNavId; href: string; label: string; icon: LucideIcon }> = [
+    { section: 'students', href: officePublicHref(schoolId, 'students'), label: 'Add student', icon: Users },
     {
+      section: 'grades',
       href: `${officePublicHref(schoolId, 'grades')}?term=${encodeURIComponent(activeTerm)}`,
       label: 'Record grades',
       icon: GraduationCap,
     },
-    { href: `${officePublicHref(schoolId, 'billing')}?action=new-invoice`, label: 'New invoice', icon: CreditCard },
-    ...(showAttendance
-      ? [{ href: officePublicHref(schoolId, 'attendance'), label: 'Take attendance', icon: CalendarCheck }]
-      : []),
+    {
+      section: 'billing',
+      href: `${officePublicHref(schoolId, 'billing')}?action=new-invoice`,
+      label: 'New invoice',
+      icon: CreditCard,
+    },
+    { section: 'attendance', href: officePublicHref(schoolId, 'attendance'), label: 'Take attendance', icon: CalendarCheck },
   ];
+  const quickActions = allQuickActions.filter((a) => isShown(a.section));
 
   return (
     <div className="w-full space-y-5">
@@ -123,7 +154,7 @@ export function OfficeDashboard({
         </section>
       ) : null}
 
-      {attentionItems.length > 0 ? (
+      {visibleAttention.length > 0 ? (
         <section
           className="rounded-2xl bg-amber-50/80 px-4 py-3.5 ring-1 ring-amber-200/60 dark:bg-amber-950/25 dark:ring-amber-900/40"
           role="status"
@@ -135,7 +166,7 @@ export function OfficeDashboard({
                 A few things to look at
               </p>
               <ul className="flex flex-wrap gap-2">
-                {attentionItems.map((item) => (
+                {visibleAttention.map((item) => (
                   <li key={item.href}>
                     <Link
                       href={item.href}
@@ -183,18 +214,21 @@ export function OfficeDashboard({
         />
       ) : (
         <>
-          <section className="grid gap-2.5 sm:grid-cols-3">
-            {stats.map((stat) => (
-              <StatTileLink key={stat.href} {...stat} />
-            ))}
-          </section>
+          {stats.length > 0 ? (
+            <section className={cn('grid gap-2.5', STAT_COLS[stats.length])}>
+              {stats.map((stat) => (
+                <StatTileLink key={stat.href} {...stat} />
+              ))}
+            </section>
+          ) : null}
 
-          <section className="grid grid-cols-2 gap-2.5 lg:grid-cols-4" aria-label="Quick actions">
-            {quickActions.map((action) => (
-              <QuickAction key={action.href} {...action} />
-            ))}
-          </section>
-
+          {quickActions.length > 0 ? (
+            <section className={cn('grid grid-cols-2 gap-2.5', ACTION_COLS[quickActions.length])} aria-label="Quick actions">
+              {quickActions.map((action) => (
+                <QuickAction key={action.href} href={action.href} label={action.label} icon={action.icon} />
+              ))}
+            </section>
+          ) : null}
         </>
       )}
     </div>
