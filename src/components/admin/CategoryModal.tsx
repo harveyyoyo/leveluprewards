@@ -44,9 +44,11 @@ interface CategoryModalProps {
     category: Category | null;
     /** When creating a category from the teacher portal, assign ownership to this teacher. */
     defaultTeacherId?: string;
+    /** Callback fired when a new category is successfully created. */
+    onCreated?: (category: Category) => void;
 }
 
-export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }: CategoryModalProps) {
+export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId, onCreated }: CategoryModalProps) {
     const { addCategory, updateCategory, categories, schoolId } = useAppContext();
     const { settings } = useSettings();
     const schoolCurrency = useCurrency();
@@ -195,6 +197,9 @@ export function CategoryModal({ isOpen, setIsOpen, category, defaultTeacherId }:
                 }
                 playSound('success');
                 toast({ title: 'Category added!' });
+                if (created && onCreated) {
+                    onCreated(created);
+                }
             }
             setIsOpen(false);
         } catch (error) {

@@ -1,10 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import type { Student } from '@/lib/types';
+import type { Student, Teacher } from '@/lib/types';
 
 const fixtures = vi.hoisted(() => ({
-  goals: [{ id: 'goal', title: 'Kindness target', type: 'personal', studentId: 'student', targetPoints: 50, status: 'active', createdAt: 1, description: 'Old description', bonusPointsReward: 5, categoryId: 'kind' }],
+  goals: [{ id: 'goal', title: 'Kindness target', type: 'personal', studentId: 'student', targetPoints: 50, status: 'active', createdAt: 1, description: 'Old description', bonusPointsReward: 5, categoryId: 'kind' }] as import('@/lib/types').Goal[],
   db: {},
 }));
 vi.mock('@/firebase', () => ({
@@ -19,6 +19,20 @@ vi.mock('@/components/providers/AuthProvider', () => ({ useAuth: () => ({ userId
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/components/tabWalkthrough/TabWalkthroughContext', () => ({ TabWalkthroughHeaderAction: () => null }));
 vi.mock('@/components/staff/StaffPortalTabHeader', () => ({ StaffPortalTabPanel: ({ children }: { children: ReactNode }) => <div>{children}</div> }));
+vi.mock('@/components/admin/CategoryModal', () => ({
+  CategoryModal: ({ isOpen, onCreated }: { isOpen: boolean; onCreated?: (cat: { id: string; name: string }) => void }) =>
+    isOpen ? (
+      <div data-testid="category-modal">
+        <p>New Category Modal</p>
+        <button
+          type="button"
+          onClick={() => onCreated?.({ id: 'new-cat', name: 'Creativity' })}
+        >
+          Save category
+        </button>
+      </div>
+    ) : null,
+}));
 
 import { GoalsManager } from './GoalsManager';
 import { updateGoal, deleteGoal } from '@/lib/db';
@@ -29,11 +43,15 @@ const students = [{ id: 'student', firstName: 'Alex', lastName: 'Sample' }] as S
 const classes: [] = [];
 const categories = [{ id: 'kind', name: 'Kindness' }] as never[];
 const prizes: [] = [];
+const sampleTeachers = [
+  { id: 'teacher-1', name: 'Mrs. Smith' },
+  { id: 'teacher-2', name: 'Mr. Jones' },
+] as Teacher[];
 function openGoal(title: RegExp = /Kindness target/) {
   fireEvent.click(screen.getByRole('button', { name: title }));
 }
-function showGoals() {
-  return render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={prizes} />);
+function showGoals(teachers: Teacher[] = sampleTeachers) {
+  return render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={prizes} teachers={teachers} />);
 }
 
 describe('Goals manager', () => {
@@ -202,5 +220,86 @@ describe('Goals manager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete goal' }));
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(deleteGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal'));
+  });
+
+  it('allows picking specific staff members who can see the goal', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = {
+      ...original,
+      staffVisibility: 'specific',
+      sharedStaffIds: ['teacher-1'],
+    };
+    try {
+      await act(async () => { showGoals(); });
+      openGoal();
+      expect(screen.getByText(/Shared with 1 staff members/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      expect(screen.getByText('1 chosen')).toBeInTheDocument();
+      const jonesCheckbox = screen.getByRole('checkbox', { name: 'Mr. Jones' });
+      expect(jonesCheckbox).not.toBeChecked();
+      fireEvent.click(jonesCheckbox);
+      expect(screen.getByText('2 chosen')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() =>
+        expect(updateGoal).toHaveBeenCalledWith(
+          fixtures.db,
+          'school',
+          'goal',
+          expect.objectContaining({
+            staffVisibility: 'specific',
+            sharedStaffIds: expect.arrayContaining(['teacher-1', 'teacher-2']),
+          }),
+        ),
+      );
+    } finally {
+      fixtures.goals[0] = original;
+    }
+  });
+
+  it('requires at least one staff member when specific staff is chosen', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = {
+      ...original,
+      staffVisibility: 'specific',
+      sharedStaffIds: ['teacher-1'],
+    };
+    try {
+      await act(async () => { showGoals(); });
+      openGoal();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      const smithCheckbox = screen.getByRole('checkbox', { name: 'Mrs. Smith' });
+      expect(smithCheckbox).toBeChecked();
+      fireEvent.click(smithCheckbox);
+      expect(screen.getByText('0 chosen')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(updateGoal).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    } finally {
+      fixtures.goals[0] = original;
+    }
+  });
+
+  it('opens add category window and selects the created category', async () => {
+    await act(async () => { showGoals(); });
+    openGoal();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    const addCatBtn = screen.getByRole('button', { name: /Add category/ });
+    expect(addCatBtn).toBeInTheDocument();
+    fireEvent.click(addCatBtn);
+    expect(screen.getByTestId('category-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save category'));
+    expect(screen.getByText('50 Creativity points')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() =>
+      expect(updateGoal).toHaveBeenCalledWith(
+        fixtures.db,
+        'school',
+        'goal',
+        expect.objectContaining({
+          categoryId: 'new-cat',
+          title: '50 Creativity points',
+        }),
+      ),
+    );
   });
 });

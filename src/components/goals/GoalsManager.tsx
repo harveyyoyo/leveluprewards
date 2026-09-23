@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { collection } from 'firebase/firestore';
 import confetti from 'canvas-confetti';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import type { Category, Class as SchoolClass, Goal, GoalType, Prize, Student } from '@/lib/types';
+import type { Category, Class as SchoolClass, Goal, GoalType, Prize, Student, Teacher } from '@/lib/types';
 import { addGoal, deleteGoal, updateGoal } from '@/lib/db';
 import { computeGoalProgress } from '@/lib/goalsProgress';
 import {
@@ -26,6 +26,7 @@ import {
   resolveGoalsOptions,
 } from '@/lib/goals/goalsOptions';
 import { GoalsOptionsPanel } from '@/components/goals/GoalsOptionsPanel';
+import { CategoryModal } from '@/components/admin/CategoryModal';
 import { useSettings } from '@/components/providers/SettingsProvider';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { canManageGoal, canSeeStaffGoal, goalStaffVisibility } from '@/lib/goals/goalStaffVisibility';
@@ -104,7 +105,8 @@ type GoalFormState = {
   startDate: string;
   endDate: string;
   bonusPoints: string;
-  staffVisibility: 'creator' | 'all';
+  staffVisibility: 'creator' | 'all' | 'specific';
+  sharedStaffIds: string[];
   prizeReward: 'shop' | 'free';
   showToStudents: boolean;
 };
@@ -123,6 +125,7 @@ const emptyForm = (): GoalFormState => ({
   endDate: '',
   bonusPoints: '',
   staffVisibility: 'creator',
+  sharedStaffIds: [],
   prizeReward: 'shop',
   showToStudents: true,
 });
@@ -141,6 +144,7 @@ function formFromGoal(goal: Goal): GoalFormState {
     endDate: dateInputFromMs(goal.endDate),
     bonusPoints: goal.bonusPointsReward != null ? String(goal.bonusPointsReward) : '',
     staffVisibility: goalStaffVisibility(goal),
+    sharedStaffIds: goal.sharedStaffIds ? [...goal.sharedStaffIds] : [],
     prizeReward: goal.prizeReward ?? 'shop',
     showToStudents: goal.hiddenFromStudents !== true,
   };
@@ -157,6 +161,7 @@ export function GoalsManager(props: {
   classes: SchoolClass[];
   categories: Category[];
   prizes: Prize[];
+  teachers?: Teacher[];
   isGraphic?: boolean;
 }) {
   const { schoolId, variant, teacherId, secretaryMode, students, classes, categories, prizes, isGraphic } = props;
@@ -186,8 +191,22 @@ export function GoalsManager(props: {
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   }, [goalsLive, staffViewer]);
 
+  const teachersQuery = useMemoFirebase(
+    () => (schoolId ? collection(firestore, 'schools', schoolId, 'teachers') : null),
+    [firestore, schoolId],
+  );
+  const { data: teachersLive } = useCollection<Teacher>(teachersQuery);
+  const staffMembers: Teacher[] = useMemo(() => {
+    if (props.teachers && props.teachers.length > 0) return props.teachers;
+    return teachersLive ?? [];
+  }, [props.teachers, teachersLive]);
+
+  const sortedStaffMembers = useMemo(() => {
+    return [...staffMembers].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [staffMembers]);
+
   // A shared goal (or the office's school-wide view) can involve students outside this roster.
-  const hasSharedGoals = !!secretaryMode || filteredGoals.some((goal) => goal.staffVisibility === 'all');
+  const hasSharedGoals = !!secretaryMode || filteredGoals.some((goal) => goal.staffVisibility === 'all' || goal.staffVisibility === 'specific');
   const sharedStudentsQuery = useMemoFirebase(
     () => hasSharedGoals && schoolId ? collection(firestore, 'schools', schoolId, 'students') : null,
     [hasSharedGoals, schoolId, firestore],
@@ -205,11 +224,29 @@ export function GoalsManager(props: {
   const [section, setSection] = useState<SectionId>('active');
   const [form, setForm] = useState<GoalFormState>(emptyForm);
   const [studentSearch, setStudentSearch] = useState('');
+  const [createStaffSearch, setCreateStaffSearch] = useState('');
+  const [createdCategories, setCreatedCategories] = useState<Category[]>([]);
+  const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
+  const [categoryModalTarget, setCategoryModalTarget] = useState<'create' | 'edit'>('create');
+
+  const allCategories = useMemo(() => {
+    const map = new Map<string, Category>();
+    for (const c of categories || []) map.set(c.id, c);
+    for (const c of createdCategories) map.set(c.id, c);
+    return Array.from(map.values());
+  }, [categories, createdCategories]);
+
+  const handleCategoryCreated = (newCategory: Category) => {
+    setCreatedCategories((prev) => [...prev, newCategory]);
+    patchForm({ categoryId: newCategory.id }, categoryModalTarget);
+  };
+
   const [saving, setSaving] = useState(false);
   const [progressRows, setProgressRows] = useState<{ goal: Goal; progress: number }[]>([]);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [editForm, setEditForm] = useState<GoalFormState>(emptyForm);
   const [editStudentSearch, setEditStudentSearch] = useState('');
+  const [editStaffSearch, setEditStaffSearch] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Goal | null>(null);
   const [raiseTarget, setRaiseTarget] = useState<Goal | null>(null);
   const [raiseValue, setRaiseValue] = useState('');
@@ -264,7 +301,7 @@ export function GoalsManager(props: {
         if (goal.type === 'class' && goal.classId) {
           roster = rosterForClass(goal.classId);
         }
-        const progress = await computeGoalProgress(firestore, schoolId, goal, viewer, roster, categories);
+        const progress = await computeGoalProgress(firestore, schoolId, goal, viewer, roster, allCategories);
         out.push({ goal, progress });
         // Catch goals that already meet the target (e.g. created after points were earned).
         if (goal.status === 'active' && progress >= Number(goal.targetPoints || 0) && Number(goal.targetPoints || 0) > 0) {
@@ -281,7 +318,7 @@ export function GoalsManager(props: {
     return () => {
       cancelled = true;
     };
-  }, [firestore, schoolId, filteredGoals, listStudents, categories, rosterForClass]);
+  }, [firestore, schoolId, filteredGoals, listStudents, allCategories, rosterForClass]);
 
   // Celebrate newly finished goals and ping “almost there” once per session.
   useEffect(() => {
@@ -365,7 +402,7 @@ export function GoalsManager(props: {
     if (state.goalType === 'prize_savings') return state.title.trim();
     // Otherwise the system names it from the target and category, e.g. "50 Kindness points".
     const tp = Number(state.targetPoints);
-    const category = categories?.find((c) => c.id === state.categoryId)?.name;
+    const category = allCategories?.find((c) => c.id === state.categoryId)?.name;
     if (!Number.isSafeInteger(tp) || tp <= 0) return '';
     return `${tp.toLocaleString()} ${category ? `${category} ` : ''}points`;
   };
@@ -425,6 +462,9 @@ export function GoalsManager(props: {
     if (bonus !== undefined && (!Number.isSafeInteger(bonus) || bonus < 0)) {
       return 'Enter a valid bonus (0 or more) or leave blank.';
     }
+    if (state.staffVisibility === 'specific' && (!state.sharedStaffIds || state.sharedStaffIds.length === 0)) {
+      return 'Choose at least one staff member who can see this goal.';
+    }
     if (state.goalType !== 'prize_savings' && state.startDate && state.endDate && state.startDate > state.endDate) return 'The end date must be on or after the start date.';
     return null;
   };
@@ -451,6 +491,7 @@ export function GoalsManager(props: {
       endDate: msFromDateInput(state.endDate, true),
       bonusPointsReward: bonus !== undefined && bonus > 0 ? bonus : undefined,
       staffVisibility: state.staffVisibility,
+      sharedStaffIds: state.staffVisibility === 'specific' ? state.sharedStaffIds : undefined,
       hiddenFromStudents: state.showToStudents ? undefined : true,
     };
   };
@@ -487,6 +528,7 @@ export function GoalsManager(props: {
       toast({ title: 'Goal created' });
       setForm(emptyForm());
       setStudentSearch('');
+      setCreateStaffSearch('');
       setSection('active');
     } catch (e: unknown) {
       toast({
@@ -504,6 +546,7 @@ export function GoalsManager(props: {
     setEditingGoal(goal);
     setEditForm(formFromGoal(goal));
     setEditStudentSearch('');
+    setEditStaffSearch('');
   };
 
   const handleSaveEdit = async () => {
@@ -528,6 +571,7 @@ export function GoalsManager(props: {
       if (!payload.bonusPointsReward) clearFields.push('bonusPointsReward');
       if (!payload.startDate) clearFields.push('startDate');
       if (!payload.endDate) clearFields.push('endDate');
+      if (!payload.sharedStaffIds || payload.sharedStaffIds.length === 0 || payload.staffVisibility !== 'specific') clearFields.push('sharedStaffIds');
       // A higher target on a finished goal starts a new round, like "Raise target".
       const raised = editingGoal.status === 'completed' && payload.targetPoints > Number(editingGoal.targetPoints || 0);
       // A later (or removed) deadline brings a past-due goal back.
@@ -635,7 +679,14 @@ export function GoalsManager(props: {
     studentOptions: Student[],
     searchValue: string,
     onSearch: (v: string) => void,
-  ) => (
+  ) => {
+    const staffSearchVal = target === 'create' ? createStaffSearch : editStaffSearch;
+    const setStaffSearchVal = target === 'create' ? setCreateStaffSearch : setEditStaffSearch;
+    const visibleStaff = sortedStaffMembers.filter((m) =>
+      (m.name || '').toLowerCase().includes(staffSearchVal.toLowerCase().trim()),
+    );
+
+    return (
     <div className="space-y-5">
       {(target === 'edit' || createStep === 1) && <div className="space-y-4">
       <div className="space-y-2">
@@ -732,27 +783,58 @@ export function GoalsManager(props: {
       </div>}
       {(target === 'edit' || createStep === 2) && <div className="space-y-4">
       {state.goalType !== 'prize_savings' && <div className="space-y-2">
-        <Label htmlFor={`goal-category-${target}`}>Which category counts?</Label>
-        <Select value={state.categoryId === '__none__' ? undefined : state.categoryId} onValueChange={(v) => patchForm({ categoryId: v }, target)}>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor={`goal-category-${target}`}>Which category counts?</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1 px-2 text-primary hover:text-primary font-medium"
+            onClick={() => {
+              setCategoryModalTarget(target);
+              setIsAddCategoryOpen(true);
+            }}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add category
+          </Button>
+        </div>
+        <Select
+          value={state.categoryId === '__none__' ? undefined : state.categoryId}
+          onValueChange={(v) => {
+            if (v === '__new_category__') {
+              setCategoryModalTarget(target);
+              setIsAddCategoryOpen(true);
+              return;
+            }
+            patchForm({ categoryId: v }, target);
+          }}
+        >
           <SelectTrigger id={`goal-category-${target}`} className="rounded-xl">
             <SelectValue placeholder="Choose a category" />
           </SelectTrigger>
           <SelectContent>
-            {(categories || []).map((c) => (
+            {(allCategories || []).map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}
               </SelectItem>
             ))}
+            <SelectItem value="__new_category__" className="text-primary font-medium focus:text-primary">
+              <span className="flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5" />
+                Add category…
+              </span>
+            </SelectItem>
             {state.categoryId !== '__none__' &&
-            (categories?.length ?? 0) > 0 &&
-            !(categories || []).some((c) => c.id === state.categoryId) ? (
+            (allCategories?.length ?? 0) > 0 &&
+            !(allCategories || []).some((c) => c.id === state.categoryId) ? (
               <SelectItem value={state.categoryId}>Unknown category (deleted)</SelectItem>
             ) : null}
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
           {(() => {
-            const picked = categories?.find((c) => c.id === state.categoryId)?.name;
+            const picked = allCategories?.find((c) => c.id === state.categoryId)?.name;
             return picked
               ? `Only points earned in ${picked} count toward this goal.`
               : 'Only points earned in the category you choose count toward this goal.';
@@ -856,14 +938,69 @@ export function GoalsManager(props: {
       {(target === 'edit' || createStep === 3) && <div className="space-y-4">
         <div className="space-y-2 rounded-xl border p-4">
           <Label htmlFor={`goal-sharing-${target}`}>Who can see this in their staff Goals list?</Label>
-          <Select value={state.staffVisibility} onValueChange={(value) => patchForm({ staffVisibility: value as 'creator' | 'all' }, target)}>
+          <Select value={state.staffVisibility} onValueChange={(value) => patchForm({ staffVisibility: value as 'creator' | 'all' | 'specific' }, target)}>
             <SelectTrigger id={`goal-sharing-${target}`} className="rounded-xl"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="creator">Only me and admins</SelectItem>
               <SelectItem value="all">Show for all staff</SelectItem>
+              <SelectItem value="specific">Choose specific staff</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">{state.staffVisibility === 'all' ? 'All teachers and staff can see this goal. You remain the person who manages it.' : 'Only you and admins see this goal in the staff Goals list.'} The students taking part can still see their goal.</p>
+          <p className="text-sm text-muted-foreground">
+            {state.staffVisibility === 'all'
+              ? 'All teachers and staff can see this goal. You remain the person who manages it.'
+              : state.staffVisibility === 'specific'
+              ? 'Only you, admins, and the chosen staff members see this goal in the staff Goals list.'
+              : 'Only you and admins see this goal in the staff Goals list.'}{' '}
+            The students taking part can still see their goal.
+          </p>
+          {state.staffVisibility === 'specific' && (
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-sm font-medium">Choose staff members</Label>
+                <span className="text-xs text-muted-foreground">
+                  {(state.sharedStaffIds || []).length} chosen
+                </span>
+              </div>
+              <Input
+                className="h-9 rounded-lg text-sm bg-background"
+                placeholder="Search staff by name…"
+                value={staffSearchVal}
+                onChange={(e) => setStaffSearchVal(e.target.value)}
+              />
+              <div className="max-h-48 overflow-y-auto space-y-1 rounded-lg border bg-background p-2">
+                {visibleStaff.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2 text-center">
+                    {sortedStaffMembers.length === 0 ? 'No staff members found.' : 'No staff match that name.'}
+                  </p>
+                ) : (
+                  visibleStaff.map((m) => {
+                    const checked = (state.sharedStaffIds || []).includes(m.id) || (state.sharedStaffIds || []).includes(`teacher:${m.id}`);
+                    return (
+                      <label
+                        key={m.id}
+                        htmlFor={`goal-staff-${target}-${m.id}`}
+                        className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          id={`goal-staff-${target}-${m.id}`}
+                          checked={checked}
+                          onCheckedChange={() => {
+                            const current = state.sharedStaffIds || [];
+                            const next = checked
+                              ? current.filter((x) => x !== m.id && x !== `teacher:${m.id}`)
+                              : [...current, m.id];
+                            patchForm({ sharedStaffIds: next }, target);
+                          }}
+                        />
+                        <span className="truncate">{m.name || 'Unnamed staff'}</span>
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
           <p className="text-sm">Assigned by: {target === 'edit' ? editingGoal?.assignedByName || userName || 'You' : userName || 'You'}</p>
           {target === 'edit' && !editingGoal?.assignedByStaffId && <p className="text-sm text-muted-foreground">This older goal has no recorded assigner name. Saving it will record you as the person managing it.</p>}
         </div>
@@ -909,7 +1046,7 @@ export function GoalsManager(props: {
 </div></details>
         {target === 'create' && <div className="rounded-xl bg-muted p-4 space-y-2" aria-label="Goal summary">
           <p className="font-semibold">Ready to start?</p>
-          <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : 'Only me and admins'} · {state.showToStudents ? 'Shown on student page' : 'Hidden from students'}</p>
+          <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : state.staffVisibility === 'specific' ? `Specific staff (${(state.sharedStaffIds || []).length} chosen)` : 'Only me and admins'} · {state.showToStudents ? 'Shown on student page' : 'Hidden from students'}</p>
           <p>{goalTitleFor(state) || 'Your goal'} · {state.targetPoints} points</p>
           {state.prizeId !== '__none__' && (
             <p className="text-sm">Prize: {prizes.find((prize) => prize.id === state.prizeId)?.name ?? 'Reward no longer available'} · {state.prizeReward === 'free' ? 'given free when they finish' : 'they get it in the shop'}</p>
@@ -917,7 +1054,7 @@ export function GoalsManager(props: {
           {state.goalType === 'prize_savings' ? (
             <p className="text-sm">Uses the student’s available points. Spending points reduces progress until the goal is finished.</p>
           ) : <>
-            <p className="text-sm">Category: {categories?.find((category) => category.id === state.categoryId)?.name ?? 'Not chosen'}</p>
+            <p className="text-sm">Category: {allCategories?.find((category) => category.id === state.categoryId)?.name ?? 'Not chosen'}</p>
             <p className="text-sm">{state.startDate ? `Counts points earned from ${state.startDate}.` : 'Includes points already earned.'} {state.goalType === 'school' ? 'The whole school works toward one shared total.' : state.goalType === 'class' ? 'The class works toward one shared total.' : ''}</p>
           </>}
           <p className="text-sm">{state.goalType === 'school' ? 'Whole school' : state.goalType === 'class' ? classes.find((c) => c.id === state.classId)?.name : studentLabel(students.find((student) => student.id === state.studentId) || { id: '', firstName: '', lastName: '' } as Student)}</p>
@@ -926,6 +1063,7 @@ export function GoalsManager(props: {
       </div>}
     </div>
   );
+  };
 
   return (
     <StaffPortalTabPanel tabValue="goals">
@@ -1079,9 +1217,9 @@ export function GoalsManager(props: {
                           <div id={`goal-details-${g.id}`} className="space-y-3 border-t px-3 py-3">
                             <div className="space-y-0.5">
                               {g.description && <p className="text-sm text-muted-foreground mt-1">{g.description}</p>}
-                            <p className="text-sm text-muted-foreground">Assigned by: {g.assignedByName || (g.teacherId ? 'Teacher (older goal)' : g.createdByStudent ? 'Student' : 'Not recorded (older goal)')} · {g.staffVisibility === 'all' ? 'Shown to all staff' : g.assignedByStaffId || g.teacherId ? 'Only the assigner and admins' : 'Older goal'}</p>
+                            <p className="text-sm text-muted-foreground">Assigned by: {g.assignedByName || (g.teacherId ? 'Teacher (older goal)' : g.createdByStudent ? 'Student' : 'Not recorded (older goal)')} · {g.staffVisibility === 'all' ? 'Shown to all staff' : g.staffVisibility === 'specific' ? `Shared with ${g.sharedStaffIds?.length ?? 0} staff members` : g.assignedByStaffId || g.teacherId ? 'Only the assigner and admins' : 'Older goal'}</p>
                               {g.type === 'prize_savings' ? <p className="text-sm text-muted-foreground">Counts available points to spend.</p> : <>
-                                <p className="text-sm text-muted-foreground">Category: {g.categoryId ? categories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
+                                <p className="text-sm text-muted-foreground">Category: {g.categoryId ? allCategories?.find((category) => category.id === g.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
                                 <p className="text-sm text-muted-foreground">{g.startDate ? `Counts points earned from ${new Date(g.startDate).toLocaleDateString()}.` : 'Includes points already earned.'} {g.type === 'school' ? 'One shared school total.' : g.type === 'class' ? 'One shared class total.' : ''}</p>
                               </>}
                             <p className="text-sm text-muted-foreground">{g.endDate ? `Due ${new Date(g.endDate).toLocaleDateString()}` : 'No deadline'}</p>
@@ -1256,6 +1394,14 @@ export function GoalsManager(props: {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CategoryModal
+        isOpen={isAddCategoryOpen}
+        setIsOpen={setIsAddCategoryOpen}
+        category={null}
+        defaultTeacherId={ownerTeacherId}
+        onCreated={handleCategoryCreated}
+      />
     </StaffPortalTabPanel>
   );
 }
