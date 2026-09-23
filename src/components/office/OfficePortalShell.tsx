@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
+import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
@@ -52,6 +53,12 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
     return all.filter((item) => item.id === 'home' || allowedSections.includes(item.id));
   }, [settings, allowedSections]);
   const activeNav = navItems.find((i) => i.id === activeId);
+  const { hidden: hiddenSections } = useOfficeHiddenSections();
+  // Sections hidden in Interface drop out of the menu only; the current page always stays listed.
+  const menuItems = useMemo(
+    () => navItems.filter((item) => item.id === 'home' || item.id === activeId || !hiddenSections.includes(item.id)),
+    [navItems, hiddenSections, activeId],
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -131,7 +138,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               forces this nav to grow to fit every item instead of shrinking and scrolling —
               the classic reason a flex child with `overflow-y-auto` refuses to actually scroll. */}
           <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-            {navItems.map((item) => {
+            {menuItems.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeId;
               return (

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, ExternalLink, Mail, Pencil, Trash2 } from 'lucide-react';
+import { Check, ExternalLink, Mail, Pencil, Trash2, X } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
@@ -20,7 +20,7 @@ import {
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
-import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
+import { officePublicHref } from '@/lib/officePublicUrl';
 import {
   formatGradeDisplay,
   getOfficeStudentFullName,
@@ -62,6 +62,7 @@ export function OfficeTeacherSheet({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editClassIds, setEditClassIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (teacher) {
@@ -101,8 +102,23 @@ export function OfficeTeacherSheet({
     }
     setBusy(true);
     try {
-      // upsertOfficeTeacher also writes the change-history entry.
+      // upsertOfficeTeacher and setOfficeClassTeachers also write the change-history entries.
       await write.upsertOfficeTeacher(write.ctx, teacher.id, { name: name.trim(), email: email.trim() || null });
+      const beforeIds = assignedClasses.map((c) => c.id);
+      const changed = classes.filter((c) => beforeIds.includes(c.id) !== editClassIds.includes(c.id));
+      const teacherNameById = new Map([[teacher.id, name.trim()]]);
+      for (const cls of changed) {
+        const current = getTeacherIds(cls);
+        const next = editClassIds.includes(cls.id)
+          ? [...current.filter((id) => id !== teacher.id), teacher.id]
+          : current.filter((id) => id !== teacher.id);
+        await write.setOfficeClassTeachers(write.ctx, {
+          cls,
+          teacherIds: next,
+          classStudentIds: students.filter((s) => s.classId === cls.id).map((s) => s.id),
+          teacherNameById,
+        });
+      }
       toast({ title: 'Teacher updated' });
       setIsEditing(false);
     } catch (e) {
@@ -159,22 +175,11 @@ export function OfficeTeacherSheet({
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  aria-label="Copy teacher link"
-                  onClick={() => {
-                    const url = `${officeAbsoluteHref(schoolId, 'teachers')}?teacher=${encodeURIComponent(teacher.id)}`;
-                    void navigator.clipboard.writeText(url);
-                    toast({ title: 'Copied teacher link' });
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
                   aria-label="Edit teacher"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    setEditClassIds(assignedClasses.map((c) => c.id));
+                    setIsEditing(true);
+                  }}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -213,6 +218,45 @@ export function OfficeTeacherSheet({
                 className="rounded-xl"
                 placeholder="for office contact only"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Classes</Label>
+              <div className="flex flex-wrap items-center gap-2">
+                {editClassIds.map((id) => (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1 rounded-full border bg-white py-0.5 pl-3 pr-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                  >
+                    {classNameById.get(id) ?? 'Class'}
+                    <button
+                      type="button"
+                      onClick={() => setEditClassIds((prev) => prev.filter((x) => x !== id))}
+                      aria-label={`Take off ${classNameById.get(id) ?? 'class'}`}
+                      className="rounded-full p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-slate-800"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+                {editClassIds.length === 0 ? <span className="text-sm text-muted-foreground">No classes yet.</span> : null}
+              </div>
+              {classes.some((c) => !editClassIds.includes(c.id)) ? (
+                <Select value="" onValueChange={(id) => id && setEditClassIds((prev) => [...prev, id])}>
+                  <SelectTrigger className="h-9 w-full rounded-lg" aria-label="Add a class">
+                    <SelectValue placeholder="+ Add a class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes
+                      .filter((c) => !editClassIds.includes(c.id))
+                      .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
+                      .map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
             </div>
             <div className="space-y-2 border-t pt-4">
               <Button type="button" className="w-full rounded-xl gap-2" onClick={() => void handleSave()} disabled={busy}>

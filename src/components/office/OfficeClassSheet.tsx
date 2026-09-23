@@ -1,16 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { AlertTriangle, X } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEntityLink } from '@/components/office/OfficeEntityLink';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { getOfficeStudentFullName, getOfficeTeacherLabel, officeStudentsForClass } from '@/lib/office/officeUtils';
-import type { OfficeClass, OfficeStudent } from '@/lib/office/types';
+import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/types';
 
 type OfficeClassSheetProps = {
   schoolId: string;
@@ -18,6 +21,7 @@ type OfficeClassSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   students: OfficeStudent[];
+  teachers?: OfficeTeacher[];
   teacherNameById: Map<string, string>;
 };
 
@@ -27,9 +31,13 @@ export function OfficeClassSheet({
   open,
   onOpenChange,
   students,
+  teachers = [],
   teacherNameById,
 }: OfficeClassSheetProps) {
   const { openStudent } = useOfficeEntityNav();
+  const write = useOfficeWrite(schoolId);
+  const { toast } = useToast();
+  const [busy, setBusy] = useState(false);
 
   const classStudents = useMemo(
     () => (officeClass ? officeStudentsForClass(students, officeClass.id) : []),
@@ -50,7 +58,33 @@ export function OfficeClassSheet({
     return teacherIds.map((id) => teacherNameById.get(id)).filter(Boolean).join(', ');
   }, [teacherIds, teacherNameById]);
 
+  const availableTeachers = useMemo(
+    () =>
+      teachers
+        .filter((t) => !teacherIds.includes(t.id))
+        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? '')),
+    [teachers, teacherIds],
+  );
+
   if (!officeClass) return null;
+
+  const saveTeachers = async (nextTeacherIds: string[]) => {
+    if (!write.ctx) return;
+    setBusy(true);
+    try {
+      await write.setOfficeClassTeachers(write.ctx, {
+        cls: officeClass,
+        teacherIds: nextTeacherIds,
+        classStudentIds: classStudents.map((s) => s.id),
+        teacherNameById,
+      });
+      toast({ title: 'Teachers updated' });
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not update teachers', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const classesHref = `${officePublicHref(schoolId, 'classes')}?class=${encodeURIComponent(officeClass.id)}`;
 
@@ -87,21 +121,54 @@ export function OfficeClassSheet({
             </section>
           ) : null}
 
-          {teacherIds.length > 0 ? (
-            <section>
-              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Teachers</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {teacherIds.map((teacherId) => (
-                  <OfficeEntityLink
-                    key={teacherId}
-                    kind="teacher"
-                    id={teacherId}
-                    label={teacherNameById.get(teacherId) ?? 'Teacher'}
-                  />
-                ))}
-              </div>
-            </section>
-          ) : null}
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Teachers</h3>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {teacherIds.map((teacherId) => (
+                <span
+                  key={teacherId}
+                  className="inline-flex items-center gap-1 rounded-full border bg-white py-0.5 pl-3 pr-1 text-sm dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <OfficeEntityLink kind="teacher" id={teacherId} label={teacherNameById.get(teacherId) ?? 'Teacher'} />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void saveTeachers(teacherIds.filter((id) => id !== teacherId))}
+                    aria-label={`Take ${teacherNameById.get(teacherId) ?? 'this teacher'} off ${officeClass.name}`}
+                    className="rounded-full p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground disabled:opacity-50 dark:hover:bg-slate-800"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+              {teacherIds.length === 0 ? <span className="text-sm text-muted-foreground">No teacher yet.</span> : null}
+            </div>
+            {availableTeachers.length > 0 ? (
+              <Select
+                value=""
+                disabled={busy}
+                onValueChange={(id) => {
+                  if (id) void saveTeachers([...teacherIds, id]);
+                }}
+              >
+                <SelectTrigger className="mt-2 h-9 w-full rounded-lg sm:w-60" aria-label="Add a teacher to this class">
+                  <SelectValue placeholder="+ Add a teacher" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTeachers.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
+            {classStudents.length > 0 ? (
+              <p className="mt-1.5 text-xs text-muted-foreground">
+                Changes also apply to the {classStudents.length} student{classStudents.length === 1 ? '' : 's'} in this class.
+              </p>
+            ) : null}
+          </section>
 
           <section>
             <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Students</h3>

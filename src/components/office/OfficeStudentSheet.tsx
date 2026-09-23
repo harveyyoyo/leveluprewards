@@ -2,14 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, ChevronDown, ChevronUp, Copy, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, ExternalLink, Mail, Pencil, Phone, Printer, Trash2, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { formatCents } from '@/lib/office/officeNav';
-import { officeAbsoluteHref, officePublicHref } from '@/lib/officePublicUrl';
+import { officePublicHref } from '@/lib/officePublicUrl';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
@@ -232,33 +232,6 @@ export function OfficeStudentSheet({
                 ) : null}
               </div>
               <div className="flex gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  aria-label="Copy name"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(name);
-                    toast({ title: 'Copied name' });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 rounded-lg hover:bg-muted/60"
-                  aria-label="Copy link to student"
-                  onClick={() => {
-                    const url = `${officeAbsoluteHref(schoolId, 'students')}?student=${encodeURIComponent(student.id)}`;
-                    void navigator.clipboard.writeText(url);
-                    toast({ title: 'Copied student link' });
-                  }}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
                 <Button
                   type="button"
                   variant="ghost"

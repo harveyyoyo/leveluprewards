@@ -410,7 +410,11 @@ export function OfficeClassesView({
                   <span className="ml-2 text-sm text-muted-foreground">
                     {list.length}
                     {cls.capacity ? `/${cls.capacity}` : ''} students
-                    {cls.teacherId ? ` · ${teacherNameById.get(cls.teacherId) ?? 'Teacher'}` : ''}
+                    {(() => {
+                      const ids = cls.teacherIds?.length ? cls.teacherIds : cls.teacherId ? [cls.teacherId] : [];
+                      const names = ids.map((id) => teacherNameById.get(id)).filter(Boolean);
+                      return names.length ? ` · ${names.join(', ')}` : '';
+                    })()}
                   </span>
                   {cls.capacity && list.length > cls.capacity ? (
                     <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-red-800 dark:bg-red-950/50 dark:text-red-200">

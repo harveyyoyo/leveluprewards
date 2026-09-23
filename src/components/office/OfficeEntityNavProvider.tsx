@@ -262,6 +262,7 @@ export function OfficeEntityNavProvider({ schoolId, children }: OfficeEntityNavP
           }
         }}
         students={shared.students}
+        teachers={shared.teachers}
         teacherNameById={shared.teacherNameById}
       />
       <OfficeFamilySheet

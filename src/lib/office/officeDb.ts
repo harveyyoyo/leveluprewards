@@ -288,6 +288,54 @@ export async function archiveOfficeClassBatch(
   });
 }
 
+/**
+ * Replaces a class's teacher list and carries it to every student in the class (students
+ * follow their homeroom's teachers), with one history entry naming who was added/removed.
+ */
+export async function setOfficeClassTeachers(
+  ctx: OfficeWriteContext,
+  params: {
+    cls: OfficeClass;
+    teacherIds: string[];
+    classStudentIds: string[];
+    teacherNameById?: Map<string, string>;
+  },
+): Promise<void> {
+  const { cls, teacherIds, classStudentIds, teacherNameById } = params;
+  const before = cls.teacherIds?.length ? cls.teacherIds : cls.teacherId ? [cls.teacherId] : [];
+  const now = Date.now();
+  const teacherFields = { teacherId: teacherIds[0] ?? null, teacherIds };
+  const batch = writeBatch(ctx.firestore);
+  batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeClasses', cls.id), {
+    ...teacherFields,
+    updatedAt: now,
+  });
+  for (const studentId of classStudentIds) {
+    batch.update(doc(ctx.firestore, 'schools', sid(ctx.schoolId), 'officeStudents', studentId), {
+      ...teacherFields,
+      teacherName: null,
+      updatedAt: now,
+    });
+  }
+  await batch.commit();
+
+  const nameOf = (id: string) => teacherNameById?.get(id) ?? 'a teacher';
+  const added = teacherIds.filter((id) => !before.includes(id)).map(nameOf);
+  const removed = before.filter((id) => !teacherIds.includes(id)).map(nameOf);
+  const parts = [
+    added.length ? `added ${added.join(', ')}` : '',
+    removed.length ? `removed ${removed.join(', ')}` : '',
+  ].filter(Boolean);
+  await audit(ctx, {
+    entityType: 'officeClass',
+    entityId: cls.id,
+    action: 'update',
+    summary: `${cls.name}: ${parts.join('; ') || 'updated teachers'}`,
+    before: officeAuditSnapshot({ teacherIds: before }),
+    after: officeAuditSnapshot({ teacherIds, studentIds: classStudentIds }),
+  });
+}
+
 export async function upsertOfficeTeacher(
   ctx: OfficeWriteContext,
   teacherId: string | null,
