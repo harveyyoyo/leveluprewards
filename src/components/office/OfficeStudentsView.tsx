@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
+import { officeAddressMatches } from '@/lib/office/officeAddress';
 import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -178,8 +179,8 @@ export function OfficeStudentsView({
       if (rosterFilter === 'allergies' && !s.allergies?.trim()) return false;
       if (teacherIdsMatchingText && !getTeacherIds(s).some((id) => teacherIdsMatchingText.has(id))) return false;
       if (addressText.trim()) {
-        const address = (s.familyId && familyById.get(s.familyId)?.homeAddress) || '';
-        if (!address.toLowerCase().includes(addressText.trim().toLowerCase())) return false;
+        const address = s.familyId ? familyById.get(s.familyId)?.homeAddress : null;
+        if (!officeAddressMatches(address, addressText)) return false;
       }
       if (classFilter === '__unassigned__' && s.classId) return false;
       if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;

@@ -89,6 +89,12 @@ function buildSystemPrompt(context: {
     '',
     '**Response style**',
     '- Be brief: short paragraphs or bullets; avoid long preamble.',
+    ...(context.product === 'office'
+      ? [
+          '- The School Office records students, families, classes and teachers (with class schedules), student attendance, the front desk log (late arrivals, early pickups, nurse visits), grades/marks, billing, forms, events and messages.',
+          '- If they ask for something the office does not record (for example teacher absences, substitutes or staff time off), say so plainly in one or two sentences. Never invent screens, buttons or steps that are not in the app.',
+        ]
+      : []),
     ...(onLibrary
       ? [
           '- Prefer Library screens: Home, Librarian, Catalog, Kiosk, and Settings (gear).',
