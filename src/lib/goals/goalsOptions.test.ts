@@ -16,7 +16,7 @@ describe('goalsOptions', () => {
   it('resolves defaults and overrides', () => {
     expect(resolveGoalsOptions(undefined).celebrateOnAward).toBe(true);
     expect(resolveGoalsOptions({ celebrateOnAward: false }).celebrateOnAward).toBe(false);
-    expect(resolveGoalsOptions({}).hideEmptySections).toBe(DEFAULT_GOALS_OPTIONS.hideEmptySections);
+    expect(resolveGoalsOptions({}).celebrateOnAward).toBe(DEFAULT_GOALS_OPTIONS.celebrateOnAward);
   });
 
   it('computes need-more and crushed progress', () => {

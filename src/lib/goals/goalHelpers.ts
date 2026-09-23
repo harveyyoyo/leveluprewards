@@ -49,6 +49,8 @@ export function goalTypeLabel(type: GoalType | string | undefined): string {
       return 'Savings';
     case 'class':
       return 'Class';
+    case 'school':
+      return 'Whole school';
     default:
       return 'Goal';
   }
@@ -72,6 +74,7 @@ export function goalAudienceLabel(
   students: Student[],
   classes: SchoolClass[],
 ): string {
+  if (goal.type === 'school') return 'Whole school';
   if (goal.type === 'class' && goal.classId) {
     const cls = classes.find((c) => c.id === goal.classId);
     return cls?.name?.trim() || 'Whole class';
@@ -87,10 +90,12 @@ export function goalAudienceLabel(
   return 'School';
 }
 
-export function bucketForGoal(goal: Goal): GoalListBucket {
+export function bucketForGoal(goal: Goal, now = Date.now()): GoalListBucket {
   if (goal.archived) return 'archived';
   if (goal.status === 'completed') return 'finished';
   if (goal.status === 'expired') return 'past_due';
+  // Goals are marked expired when points next come in; show an overdue goal as past due right away.
+  if (goal.endDate && goal.endDate < now) return 'past_due';
   return 'active';
 }
 

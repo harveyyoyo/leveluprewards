@@ -35,6 +35,9 @@ describe('goalHelpers', () => {
     expect(bucketForGoal({ ...base, status: 'completed' })).toBe('finished');
     expect(bucketForGoal({ ...base, status: 'expired' })).toBe('past_due');
     expect(bucketForGoal({ ...base, status: 'completed', archived: true })).toBe('archived');
+    // Past its deadline but not yet marked expired: shown as past due straight away.
+    expect(bucketForGoal({ ...base, status: 'active', endDate: 1_000 }, 2_000)).toBe('past_due');
+    expect(bucketForGoal({ ...base, status: 'active', endDate: 3_000 }, 2_000)).toBe('active');
   });
 
   it('detects almost-there and progress percent', () => {

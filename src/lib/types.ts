@@ -782,7 +782,7 @@ export interface Database {
   hasMigratedIncentivesToCategories?: boolean;
 }
 
-export type GoalType = 'personal' | 'prize_savings' | 'class';
+export type GoalType = 'personal' | 'prize_savings' | 'class' | 'school';
 
 export interface Goal {
   id: string;
@@ -800,7 +800,21 @@ export interface Goal {
   studentId?: string; // For personal/prize goals
   classId?: string;   // For class-wide goals
   teacherId?: string; // The teacher who created the goal
-  prizeId?: string;   // If this is a prize savings goal
+  /** Stable staff identity (teacher document ID, or role + signed-in user ID). */
+  assignedByStaffId?: string;
+  assignedByName?: string;
+  assignedByRole?: 'teacher' | 'admin' | 'staff';
+  /** Controls staff Goals lists; student participation is determined by the goal audience. */
+  staffVisibility?: 'creator' | 'all';
+  prizeId?: string;   // Prize the goal is working toward (savings goals, or any goal with a prize)
+  /** For goals with a prize: `free` gives the prize on completion; `shop` (default) means they get it in the shop. */
+  prizeReward?: 'shop' | 'free';
+  /** How many times the target was raised after finishing; each round pays its own bonus/prize. */
+  targetRaises?: number;
+  /** When true, the goal is left off student pages (kiosk and home portal). Staff still see it. */
+  hiddenFromStudents?: boolean;
+  /** Set when a free prize could not be handed out automatically (e.g. out of stock). */
+  prizeAwardProblem?: string;
   
   // Time limits
   startDate?: number;
@@ -814,6 +828,7 @@ export interface Goal {
   createdAt: number;
   /** When the goal first reached its target. */
   completedAt?: number;
+  completedProgress?: number;
   /** Student (or kiosk) created this savings wishlist item. */
   createdByStudent?: boolean;
   /** Soft-hidden from the main staff lists. */

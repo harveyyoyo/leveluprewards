@@ -25,20 +25,22 @@ export function presentGoalSyncEvents(
     forStudent?: boolean;
   },
 ): void {
+  // Goals staff chose to keep off student pages don't cheer on student screens either.
+  if (args.forStudent) events = events?.filter((e) => !e.hiddenFromStudents);
   if (!events?.length) return;
   const opts = resolveGoalsOptions(args.options);
   const completed = events.filter((e) => e.kind === 'completed');
   const almost = events.filter((e) => e.kind === 'almost_there');
 
   if (completed.length && opts.celebrateOnAward) {
-    const classHit = completed.some((e) => e.type === 'class');
-    const burst = classHit && opts.classPartyMode ? 160 : 90;
-    confetti({ particleCount: burst, spread: classHit && opts.classPartyMode ? 100 : 70, origin: { y: 0.6 } });
+    // Shared class and whole-school goals always get the bigger celebration.
+    const classHit = completed.some((e) => e.type === 'class' || e.type === 'school');
+    confetti({ particleCount: classHit ? 160 : 90, spread: classHit ? 100 : 70, origin: { y: 0.6 } });
     args.playSound?.('success');
     const first = completed[0]!;
     if (args.forStudent) {
       args.toast({
-        title: classHit && opts.classPartyMode ? 'Class goal party!' : 'You did it!',
+        title: classHit ? 'Team goal party!' : 'You did it!',
         description:
           completed.length === 1
             ? `"${first.title}" is finished.`
@@ -46,7 +48,7 @@ export function presentGoalSyncEvents(
       });
     } else {
       args.toast({
-        title: classHit && opts.classPartyMode ? 'Class goal finished!' : 'Goal finished!',
+        title: classHit ? 'Team goal finished!' : 'Goal finished!',
         description:
           completed.length === 1
             ? `"${first.title}" is done.`
@@ -88,7 +90,7 @@ export async function syncAndPresentGoalsForStudents(
 ): Promise<void> {
   if (!args.enabled || !firestore || !schoolId || studentIds.length === 0) return;
   const opts = resolveGoalsOptions(args.options);
-  if (!opts.celebrateOnAward && !opts.teacherAlmostThereNudge) return;
+  // Always check goals, even with cheers and nudges off: finishing a goal also pays its bonus and prize.
 
   try {
     const { syncGoalsForStudent } = await import('@/lib/goalsProgress');
