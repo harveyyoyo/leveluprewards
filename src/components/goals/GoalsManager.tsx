@@ -62,6 +62,31 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+/** One color per goal type: stripe, type pill, and progress bar. */
+const GOAL_TYPE_COLORS: Record<string, { stripe: string; pill: string; bar: string }> = {
+  personal: {
+    stripe: 'border-l-sky-500',
+    pill: 'bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
+    bar: 'bg-sky-100 dark:bg-sky-500/15 [&>div]:bg-sky-500',
+  },
+  prize_savings: {
+    stripe: 'border-l-violet-500',
+    pill: 'bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200',
+    bar: 'bg-violet-100 dark:bg-violet-500/15 [&>div]:bg-violet-500',
+  },
+  class: {
+    stripe: 'border-l-amber-500',
+    pill: 'bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200',
+    bar: 'bg-amber-100 dark:bg-amber-500/15 [&>div]:bg-amber-500',
+  },
+  school: {
+    stripe: 'border-l-rose-500',
+    pill: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
+    bar: 'bg-rose-100 dark:bg-rose-500/15 [&>div]:bg-rose-500',
+  },
+};
+const DONE_BAR = 'bg-emerald-100 dark:bg-emerald-500/15 [&>div]:bg-emerald-500';
+
 function studentLabel(s: Student) {
   return `${s.firstName} ${s.lastName}`.trim() || s.id;
 }
@@ -907,8 +932,10 @@ export function GoalsManager(props: {
                     const almost = g.status === 'active' && isAlmostThere(p, g.targetPoints);
                     const crushed = isGoalCrushed(p, g.targetPoints);
                     const open = expandedGoalIds.has(g.id);
+                    const colors = GOAL_TYPE_COLORS[g.type] ?? GOAL_TYPE_COLORS.personal;
+                    const done = g.status === 'completed' || (crushed && g.status !== 'expired');
                     return (
-                      <li key={g.id} className="rounded-xl border bg-muted/15">
+                      <li key={g.id} className={cn('rounded-xl border border-l-4 bg-card', colors.stripe)}>
                         <button
                           type="button"
                           aria-expanded={open}
@@ -927,7 +954,10 @@ export function GoalsManager(props: {
                                 ) : null}
                               </p>
                               <p className="text-[11px] text-muted-foreground truncate">
-                                {goalTypeLabel(g.type)} · {goalAudienceLabel(g, listStudents, listClasses)} ·{' '}
+                                <span className={cn('mr-1.5 rounded-full px-1.5 py-0.5 font-semibold', colors.pill)}>
+                                  {goalTypeLabel(g.type)}
+                                </span>
+                                {goalAudienceLabel(g, listStudents, listClasses)} ·{' '}
                                 {goalStatusLabel(g.status)}
                                 {g.createdByStudent ? ' · Student wishlist' : ''}
                               </p>
@@ -937,7 +967,7 @@ export function GoalsManager(props: {
                             </span>
                             <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
                           </div>
-                          <Progress value={Math.min(100, pct)} className="mt-2 h-1.5" />
+                          <Progress value={Math.min(100, pct)} className={cn('mt-2 h-1.5', done ? DONE_BAR : colors.bar)} />
                         </button>
                         {open && (
                           <div id={`goal-details-${g.id}`} className="space-y-3 border-t px-3 py-3">
