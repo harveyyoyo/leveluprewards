@@ -285,6 +285,12 @@ service cloud.firestore {
         allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
       }
 
+      // Per-teacher Google Classroom connection metadata (course link, roster map).
+      // Never holds the OAuth refresh token — that lives in classroomGoogleTokens below.
+      match /teachers/{teacherId}/classroomGoogleConnection/{docId} {
+        allow read, write: if isAdmin(schoolId) || isDeveloper() || isTeacherSelf(schoolId, teacherId);
+      }
+
       match /homework/{assignmentId} {
         allow read: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
         allow write: if isAdmin(schoolId) || isTeacher(schoolId) || isDeveloper();
@@ -513,8 +519,10 @@ service cloud.firestore {
         allow read, write: if canAccessOffice(schoolId);
       }
 
+      // Attendance marks are corrected in place (each change is in officeAuditLog), never erased.
       match /officeAttendance/{entryId} {
-        allow read, write: if canAccessOffice(schoolId);
+        allow read, create, update: if canAccessOffice(schoolId);
+        allow delete: if false;
       }
 
       // Front-desk log (late arrivals, early pickups, nurse visits). Entries are hidden, never
@@ -572,6 +580,17 @@ service cloud.firestore {
       }
 
       match /studentPortalDevices/{deviceId} {
+        allow read, write: if false;
+      }
+
+      // Google Classroom OAuth refresh tokens; never readable by clients.
+      // Only the Admin SDK (Next.js API routes, Cloud Functions) reads/writes these.
+      match /classroomGoogleTokens/{teacherId} {
+        allow read, write: if false;
+      }
+
+      // Dedupe log so the scheduled sync never awards the same submission twice.
+      match /classroomGoogleAwarded/{docId} {
         allow read, write: if false;
       }
 
