@@ -32,7 +32,8 @@ export const DESK_STAFF_LIST_GRID_COLS_LEGACY =
  * then delete. Kept to 8 columns (down from up to 10) so each one has more room.
  */
 export function prizesListGridColumns() {
-  return '4.75rem minmax(0, 1fr) 3.25rem 3.25rem 2.25rem 2.25rem 2.25rem minmax(2.75rem, 4rem)';
+  // Points needs room for 5–6 digit costs (e.g. 10000).
+  return '4.75rem minmax(0, 1fr) 4.5rem 3.25rem 2.25rem 2.25rem 2.25rem minmax(2.75rem, 4rem)';
 }
 
 export const adminRecordListGridClassName =
