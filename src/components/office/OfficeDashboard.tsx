@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   CreditCard,
   GraduationCap,
-  History,
   Plus,
   RefreshCw,
   Upload,
@@ -16,10 +15,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
-import { OfficeHistoryEntryRow } from '@/components/office/OfficeHistoryEntryRow';
-import { useOfficeHistory } from '@/lib/office/useOfficeHistory';
-import { useOfficeHistoryNames } from '@/lib/office/useOfficeHistoryNames';
-import { OfficeWorkingTermSelect } from '@/components/office/OfficeWorkingTermSelect';
 import type { OfficeGradeEntry } from '@/lib/office/types';
 import { formatCents } from '@/lib/office/officeNav';
 import { officePublicHref } from '@/lib/officePublicUrl';
@@ -38,7 +33,8 @@ type OfficeDashboardProps = {
   isPopulatingDemoData?: boolean;
   onPopulateDemoData?: () => void;
   activeTerm: string;
-  onActiveTermChange: (term: string) => void;
+  /** Unused since the term picker left Home (Grades has it); kept so callers don't break. */
+  onActiveTermChange?: (term: string) => void;
   gradeEntries?: OfficeGradeEntry[];
   schoolDefaultTerm?: string | null;
   configuredTerms?: string[];
@@ -63,10 +59,6 @@ export function OfficeDashboard({
   isPopulatingDemoData = false,
   onPopulateDemoData,
   activeTerm,
-  onActiveTermChange,
-  gradeEntries,
-  schoolDefaultTerm,
-  configuredTerms,
   showAttendance = true,
 }: OfficeDashboardProps) {
   const gradePct =
@@ -136,28 +128,15 @@ export function OfficeDashboard({
   ];
 
   return (
-    <div className="w-full space-y-6">
-      <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">
-        <p className="text-lg font-medium text-slate-900 dark:text-white">
-          {isEmpty ? 'Welcome — let’s set up your roster.' : 'School overview'}
-        </p>
-        <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          {isEmpty
-            ? 'Add students, teachers, and classes to get started.'
-            : 'Grades and reports filter to the selected term.'}
-        </p>
-        <div className="mt-4">
-          <OfficeWorkingTermSelect
-            layout="inline"
-            label="Term"
-            value={activeTerm}
-            onValueChange={onActiveTermChange}
-            gradeEntries={gradeEntries}
-            schoolDefaultTerm={schoolDefaultTerm}
-            configuredTerms={configuredTerms}
-          />
-        </div>
-      </section>
+    <div className="w-full space-y-5">
+      {isEmpty ? (
+        <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">
+          <p className="text-lg font-medium text-slate-900 dark:text-white">Welcome — let’s set up your roster.</p>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            Add students, teachers, and classes to get started.
+          </p>
+        </section>
+      ) : null}
 
       {attentionItems.length > 0 ? (
         <section
@@ -231,7 +210,6 @@ export function OfficeDashboard({
             ))}
           </section>
 
-          <OfficeRecentChanges schoolId={schoolId} />
         </>
       )}
 
@@ -281,33 +259,5 @@ function QuickAction({ href, label, icon: Icon }: { href: string; label: string;
       </span>
       {label}
     </Link>
-  );
-}
-
-/** The last few changes anyone made, with a link to the full history. */
-function OfficeRecentChanges({ schoolId }: { schoolId: string }) {
-  const { entries, isLoading } = useOfficeHistory(schoolId, 6);
-  const nameFor = useOfficeHistoryNames(schoolId);
-  if (isLoading || entries.length === 0) return null;
-  return (
-    <section className="space-y-2.5">
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-1.5 text-sm font-medium">
-          <History className="h-4 w-4 text-muted-foreground" aria-hidden />
-          Recent changes
-        </p>
-        <Link
-          href={`${officePublicHref(schoolId, 'reports')}?report=history`}
-          className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
-        >
-          See all history
-        </Link>
-      </div>
-      <ul className="space-y-1.5">
-        {entries.map((entry) => (
-          <OfficeHistoryEntryRow key={entry.id} entry={entry} showDate compact nameFor={nameFor} />
-        ))}
-      </ul>
-    </section>
   );
 }
