@@ -13,7 +13,9 @@ export function useOfficeEvents(schoolId: string | null) {
     [firestore, schoolId],
   );
 
-  const { data, isLoading } = useCollection<OfficeEvent>(eventsQuery);
+  const { data, isLoading, error } = useCollection<OfficeEvent>(eventsQuery, {
+    reportPermissionErrors: false,
+  });
   const events = useMemo(() => (data ?? []).slice().sort((a, b) => a.date.localeCompare(b.date)), [data]);
-  return { events, isLoading };
+  return { events, isLoading, error };
 }

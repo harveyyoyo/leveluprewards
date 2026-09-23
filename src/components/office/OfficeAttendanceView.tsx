@@ -62,7 +62,11 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
     [students, classId],
   );
 
-  const { entries: dayEntries, isLoading: attendanceLoading } = useOfficeAttendanceForDate(schoolId, date || null);
+  const {
+    entries: dayEntries,
+    isLoading: attendanceLoading,
+    error: attendanceError,
+  } = useOfficeAttendanceForDate(schoolId, date || null);
 
   const existingForClass = useMemo(() => {
     const map = new Map<string, OfficeAttendanceStatus>();
@@ -123,6 +127,16 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
         icon={CalendarCheck}
         title="No classes yet"
         description="Create a class on the Classes page before taking attendance."
+      />
+    );
+  }
+
+  if (attendanceError) {
+    return (
+      <OfficeEmptyState
+        icon={CalendarCheck}
+        title="Attendance isn’t unlocked on the live site yet"
+        description="This page is ready in the app, but the live data locks for it still need to be published. Home, Students, Billing, and the other older Office pages still work."
       />
     );
   }

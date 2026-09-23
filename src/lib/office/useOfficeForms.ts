@@ -13,10 +13,12 @@ export function useOfficeForms(schoolId: string | null) {
     [firestore, schoolId],
   );
 
-  const { data, isLoading } = useCollection<OfficeForm>(formsQuery);
+  const { data, isLoading, error } = useCollection<OfficeForm>(formsQuery, {
+    reportPermissionErrors: false,
+  });
   const forms = useMemo(
     () => (data ?? []).slice().sort((a, b) => b.createdAt - a.createdAt),
     [data],
   );
-  return { forms, isLoading };
+  return { forms, isLoading, error };
 }

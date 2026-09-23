@@ -19,7 +19,9 @@ export function useOfficeStudentDocuments(schoolId: string | null, studentId: st
     [firestore, schoolId, studentId, enabled],
   );
 
-  const { data, isLoading } = useCollection<OfficeStudentDocument>(docsQuery);
+  const { data, isLoading, error } = useCollection<OfficeStudentDocument>(docsQuery, {
+    reportPermissionErrors: false,
+  });
   const documents = useMemo(() => (data ?? []).slice().sort((a, b) => b.uploadedAt - a.uploadedAt), [data]);
-  return { documents, isLoading };
+  return { documents, isLoading, error };
 }
