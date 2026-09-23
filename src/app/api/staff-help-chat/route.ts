@@ -87,8 +87,10 @@ function buildSystemPrompt(context: {
     `- ${productLine}`,
     `- ${codeLine}`,
     '',
-    '**Response style**',
+    '**Response style & accuracy**',
     '- Be brief: short paragraphs or bullets; avoid long preamble.',
+    '- STRICT TRUTHFULNESS: Never invent, assume, or guess fake tabs (there is NO "Dashboard" tab on the Admin screen; the first tab is "Welcome"), fake buttons, or features that do not exist in LevelUp.',
+    '- If the app cannot do what the user asks, or if a requested feature does not exist, plainly and politely state that LevelUp does not have that feature yet. Never make up steps.',
     ...(onLibrary
       ? [
           '- Prefer Library screens: Home, Librarian, Catalog, Kiosk, and Settings (gear).',

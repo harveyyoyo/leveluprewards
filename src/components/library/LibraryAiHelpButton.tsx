@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2, SendHorizonal, Sparkles, Trash2 } from 'lucide-react';
+import { Loader2, RefreshCw, SendHorizonal, Sparkles, Trash2 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -115,6 +115,56 @@ export function LibraryAiHelpButton({
     setMessages([welcome]);
     setInput('');
   }, [welcome]);
+
+  const [syncingKnowledge, setSyncingKnowledge] = useState(false);
+
+  const handleSyncKnowledge = useCallback(async () => {
+    if (syncingKnowledge || !schoolId) return;
+    setSyncingKnowledge(true);
+    try {
+      const res = await authFetch('/api/staff-help-sync', {
+        method: 'POST',
+        body: JSON.stringify({ schoolId }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        tabsCount?: number;
+        error?: string;
+      };
+
+      if (!res.ok || !data.ok) {
+        toast({
+          title: 'Could not update knowledge',
+          description: data.error || 'Please check your connection and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            data.message ||
+            '✅ App knowledge updated! I have rescanned all screens, 17 Admin tabs, Office, Library, and Kiosk features.',
+        },
+      ]);
+      toast({
+        title: 'App knowledge updated',
+        description: `Scanned all screens and ${data.tabsCount || 17} Admin tabs.`,
+      });
+    } catch {
+      toast({
+        title: 'Could not update knowledge',
+        description: 'Network error. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncingKnowledge(false);
+    }
+  }, [authFetch, schoolId, syncingKnowledge, toast]);
 
   const send = useCallback(async () => {
     const text = input.replace(/\u0000/g, '').trim();
@@ -311,12 +361,25 @@ export function LibraryAiHelpButton({
               value="ai"
               className="flex flex-col flex-1 min-h-0 mt-0 overflow-hidden data-[state=inactive]:hidden"
             >
-              <div className="flex items-center justify-end px-4 pb-1 shrink-0">
+              <div className="flex items-center justify-between px-4 pb-1 shrink-0">
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-1 text-muted-foreground"
+                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={handleSyncKnowledge}
+                  disabled={syncingKnowledge}
+                  aria-label="Update app knowledge"
+                  title="Scan current screens and tabs so the assistant learns recent updates"
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", syncingKnowledge && "animate-spin text-primary")} />
+                  {syncingKnowledge ? 'Updating...' : 'Update app info'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
                   onClick={clearChat}
                   aria-label="Clear chat"
                 >
