@@ -33,7 +33,7 @@ export type OfficeNavItem = {
   id: OfficeNavId;
   label: string;
   description: string;
-  /** One or two plain sentences on what the page is for (page tip + Help guide). */
+  /** One or two plain sentences on what the page is for (shown in Help → Guide). */
   explainer: string;
   href: (schoolId: string) => string;
   icon: LucideIcon;

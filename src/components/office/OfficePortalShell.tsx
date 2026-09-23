@@ -15,7 +15,6 @@ import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeUniversalSearch } from '@/components/office/OfficeUniversalSearch';
 import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
 import { OfficeAiHelpButton } from '@/components/office/OfficeAiHelpButton';
-import { OfficePageTip } from '@/components/office/OfficePageTip';
 import {
   OFFICE_CONTENT_PANE_CLASS,
   OFFICE_LAYOUT_PANE_CLASS,
@@ -233,7 +232,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           </header>
           <main className="flex-1 py-4 sm:py-6">
             <div className={cn(OFFICE_CONTENT_PANE_CLASS, 'w-full px-4 sm:px-6')}>
-              <OfficePageTip item={activeNav} />
               <OfficeEntityNavProvider schoolId={schoolId}>{children}</OfficeEntityNavProvider>
             </div>
           </main>

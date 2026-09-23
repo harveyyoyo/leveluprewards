@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Info } from 'lucide-react';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { getOfficeNavItems } from '@/lib/office/officeNav';
-import { useOfficePageTips } from '@/lib/office/useOfficePageTips';
 
 /** Handy things that aren't obvious from the menu. */
 const TIPS = [
@@ -15,12 +14,10 @@ const TIPS = [
 ];
 
 /**
- * Help → Guide: what every page is for (the same text as each page's first-visit tip), with links,
- * plus a few tips. Replaces the old Office guide card.
+ * Help → Guide: what every page is for, with links, plus a few tips. Replaces the old Office guide card.
  */
 export function OfficeGuidePanel({ schoolId, onNavigate }: { schoolId: string | null; onNavigate: () => void }) {
   const { settings } = useOfficePortalChrome();
-  const { showAllAgain } = useOfficePageTips();
   const pages = getOfficeNavItems(settings);
 
   return (
@@ -65,17 +62,6 @@ export function OfficeGuidePanel({ schoolId, onNavigate }: { schoolId: string | 
           ))}
         </ul>
       </section>
-
-      <button
-        type="button"
-        onClick={() => {
-          showAllAgain();
-          onNavigate();
-        }}
-        className="text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
-      >
-        Show the tip at the top of each page again
-      </button>
     </div>
   );
 }
