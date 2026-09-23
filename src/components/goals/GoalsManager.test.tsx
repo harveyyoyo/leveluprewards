@@ -29,8 +29,8 @@ const students = [{ id: 'student', firstName: 'Alex', lastName: 'Sample' }] as S
 const classes: [] = [];
 const categories: [] = [];
 const prizes: [] = [];
-function openGoal() {
-  fireEvent.click(screen.getByRole('button', { name: /Kindness target/ }));
+function openGoal(title: RegExp = /Kindness target/) {
+  fireEvent.click(screen.getByRole('button', { name: title }));
 }
 function showGoals() {
   return render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={prizes} />);
@@ -77,6 +77,20 @@ describe('Goals manager', () => {
     } finally {
       fixtures.goals[0] = original;
     }
+  });
+  it('names a savings goal after its reward instead of asking for a title', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = { ...original, type: 'prize_savings', ...{ prizeId: 'lunch', title: 'Old name' } };
+    const rewards = [{ id: 'lunch', name: 'Lunch with Teacher', points: 1200 }] as never[];
+    try {
+      await act(async () => {
+        render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={rewards} />);
+      });
+      openGoal(/Old name/); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ title: 'Save for Lunch with Teacher' })));
+    } finally { fixtures.goals[0] = original; }
   });
   it('rejects an end date before the start date', async () => {
     await act(async () => { showGoals(); });

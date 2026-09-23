@@ -344,17 +344,22 @@ export function GoalsManager(props: {
     else setForm((f) => ({ ...f, ...patch }));
   };
 
+  /** Savings goals are named after their reward; older goals without one keep their saved title. */
+  const goalTitleFor = (state: GoalFormState): string => {
+    if (state.goalType === 'prize_savings') {
+      const prize = prizes.find((p) => p.id === state.prizeId);
+      if (prize) return titleForPrizeSavings(prize);
+    }
+    return state.title.trim();
+  };
+
   const applyPrizeAutofill = (prizeId: string, target: 'create' | 'edit') => {
-    const current = target === 'edit' ? editForm : form;
     const patch: Partial<GoalFormState> = { prizeId };
     if (prizeId && prizeId !== '__none__') {
       const prize = prizes.find((p) => p.id === prizeId);
       if (prize) {
         const cost = Number(prize.points ?? 0);
         if (cost > 0) patch.targetPoints = String(cost);
-        if (!current.title.trim() || current.title.startsWith('Save for ')) {
-          patch.title = titleForPrizeSavings(prize);
-        }
       }
     }
     patchForm(patch, target);
@@ -381,7 +386,10 @@ export function GoalsManager(props: {
 
   const validateForm = (state: GoalFormState): string | null => {
     const tp = Number(state.targetPoints);
-    if (!state.title.trim() || !Number.isSafeInteger(tp) || tp <= 0) {
+    if (state.goalType === 'prize_savings' && !goalTitleFor(state)) {
+      return 'Choose the reward they are saving for.';
+    }
+    if (!goalTitleFor(state) || !Number.isSafeInteger(tp) || tp <= 0) {
       return 'Enter a title and a positive target.';
     }
     if ((state.goalType === 'personal' || state.goalType === 'prize_savings') && !state.studentId) {
@@ -403,7 +411,7 @@ export function GoalsManager(props: {
     const bonus = state.bonusPoints.trim() ? Number(state.bonusPoints) : undefined;
     return {
       type: state.goalType,
-      title: state.title.trim(),
+      title: goalTitleFor(state),
       description: state.description.trim() || undefined,
       targetPoints: tp,
       categoryId: state.goalType !== 'prize_savings' && state.categoryId && state.categoryId !== '__none__' ? state.categoryId : undefined,
@@ -661,7 +669,7 @@ export function GoalsManager(props: {
         </Select>
         <p className="text-sm text-muted-foreground">{state.goalType === 'prize_savings' ? 'Build up enough points to afford a prize. Spending points lowers the amount saved.' : 'Reach a points target, such as earning 50 kindness points.'}</p>
       </div>}
-      <div className="space-y-2">
+      {state.goalType !== 'prize_savings' && <div className="space-y-2">
         <Label htmlFor={`goal-title-${target}`}>Title</Label>
         <Input
           id={`goal-title-${target}`}
@@ -670,17 +678,16 @@ export function GoalsManager(props: {
           onChange={(e) => patchForm({ title: e.target.value }, target)}
           placeholder="e.g. 50 kindness points this month"
         />
-      </div>
+      </div>}
 
       {state.goalType === 'prize_savings' && (
         <div className="space-y-2">
-          <Label>Related reward (optional)</Label>
-          <Select value={state.prizeId} onValueChange={(v) => applyPrizeAutofill(v, target)}>
-            <SelectTrigger className="rounded-xl">
-              <SelectValue placeholder="None" />
+          <Label htmlFor={`goal-reward-${target}`}>Which reward are they saving for?</Label>
+          <Select value={state.prizeId === '__none__' ? undefined : state.prizeId} onValueChange={(v) => applyPrizeAutofill(v, target)}>
+            <SelectTrigger id={`goal-reward-${target}`} className="rounded-xl">
+              <SelectValue placeholder="Choose a reward" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">None</SelectItem>
               {(prizes || []).map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.name} ({Number(p.points ?? 0)} pts)
@@ -694,7 +701,7 @@ export function GoalsManager(props: {
             </SelectContent>
           </Select>
           <p className="text-[11px] text-muted-foreground">
-            Picking a reward fills in the target from its cost when helpful.
+            The goal is named after this reward, and the target is set to its cost.
           </p>
         </div>
       )}
@@ -806,7 +813,7 @@ export function GoalsManager(props: {
         {target === 'create' && <div className="rounded-xl bg-muted p-4 space-y-2" aria-label="Goal summary">
           <p className="font-semibold">Ready to start?</p>
           <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : 'Only me and admins'}</p>
-          <p>{state.title || 'Your goal'} · {state.targetPoints} points</p>
+          <p>{goalTitleFor(state) || 'Your goal'} · {state.targetPoints} points</p>
           {state.goalType === 'prize_savings' ? <>
             <p className="text-sm">Save points for: {prizes.find((prize) => prize.id === state.prizeId)?.name ?? 'A prize to choose later'}</p>
             <p className="text-sm">Uses the student’s available points. Spending points reduces progress until the goal is finished.</p>
