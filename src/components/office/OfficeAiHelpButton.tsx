@@ -27,10 +27,78 @@ import {
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
 } from '@/lib/office/officeAssistantView';
+import {
+  countLabel,
+  readOfficeAssistantResults,
+  subscribeOfficeAssistantResults,
+  type OfficeAssistantResults,
+} from '@/lib/office/officeAssistantResults';
 import { useRouter } from 'next/navigation';
 
-/** `href` is set when the assistant opened a filtered list in the app, so it can be shown again. */
-type ChatMessage = { role: 'user' | 'assistant'; content: string; href?: string };
+/**
+ * `list` is set when the assistant opened a filtered list in the app: the page reports what it
+ * found (`results`), and the chat shows the same names. `href` opens it again.
+ */
+type ChatList = {
+  href: string;
+  askAt: string;
+  page: string;
+  results: OfficeAssistantResults | null;
+  timedOut?: boolean;
+};
+type ChatMessage = { role: 'user' | 'assistant'; content: string; list?: ChatList };
+
+/** How long to wait for the page to report before just pointing at it. */
+const RESULTS_WAIT_MS = 10_000;
+
+function withAskAt(href: string, askAt: string): string {
+  return /[?&]askAt=\d+/.test(href) ? href.replace(/askAt=\d+/, `askAt=${askAt}`) : `${href}&askAt=${askAt}`;
+}
+
+/** The answer under a "show me" question: how many, the first few names, and where the rest are. */
+function ChatListAnswer({ list, onShowAgain }: { list: ChatList; onShowAgain: () => void }) {
+  const r = list.results;
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      {!r && !list.timedOut ? (
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Finding them…
+        </p>
+      ) : !r ? (
+        <p>It&apos;s open on the {list.page} page.</p>
+      ) : r.status === 'unavailable' ? (
+        <p>{r.message}</p>
+      ) : r.total === 0 ? (
+        <p>None found.</p>
+      ) : (
+        <>
+          <p className="font-semibold">{countLabel(r.total, r.noun)}</p>
+          <ul className="space-y-0.5">
+            {r.rows.map((row) => (
+              <li key={row.id} className="flex flex-wrap gap-x-1.5">
+                <span>{row.name}</span>
+                {row.detail ? <span className="text-muted-foreground">· {row.detail}</span> : null}
+              </li>
+            ))}
+          </ul>
+          {r.total > r.rows.length ? (
+            <p className="text-xs text-muted-foreground">
+              …and {r.total - r.rows.length} more on the {list.page} page.
+            </p>
+          ) : null}
+        </>
+      )}
+      <button
+        type="button"
+        onClick={onShowAgain}
+        className="block text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+      >
+        Show in the app again
+      </button>
+    </div>
+  );
+}
 
 /** Keeps the model's line breaks and turns `**bold**` into bold instead of showing the stars. */
 function ChatText({ text }: { text: string }) {
@@ -74,7 +142,7 @@ export function OfficeAiHelpButton() {
     () => ({
       role: 'assistant',
       content:
-        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me to show you a list — like “families who owe more than $100”, “students with allergies in Grade 5”, or “who left early today” — and I'll open it in the app. You can also ask how to do anything in the office.`,
+        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me for a list — like “families who owe more than $100”, “students with allergies in Grade 5”, or “who is absent today” — and I'll answer here and open it in the app. You can also ask how to do anything in the office.`,
     }),
     [userName],
   );
@@ -99,6 +167,45 @@ export function OfficeAiHelpButton() {
     setInput('');
   }, [welcome]);
 
+  // Fill in each "show me" answer when its page reports what it found.
+  useEffect(
+    () =>
+      subscribeOfficeAssistantResults((results) =>
+        setMessages((prev) =>
+          prev.map((m) => (m.list?.askAt === results.askAt ? { ...m, list: { ...m.list, results } } : m)),
+        ),
+      ),
+    [],
+  );
+
+  /** If the page never reports (e.g. it was left right away), just point at it. */
+  const stopWaitingLater = useCallback((askAt: string) => {
+    window.setTimeout(
+      () =>
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.list?.askAt === askAt && !m.list.results ? { ...m, list: { ...m.list, timedOut: true } } : m,
+          ),
+        ),
+      RESULTS_WAIT_MS,
+    );
+  }, []);
+
+  const showAgain = useCallback(
+    (index: number) => {
+      const list = messages[index]?.list;
+      if (!list) return;
+      const askAt = String(Date.now());
+      const href = withAskAt(list.href, askAt);
+      setMessages((prev) =>
+        prev.map((m, i) => (i === index && m.list ? { ...m, list: { ...m.list, href, askAt, results: null, timedOut: false } } : m)),
+      );
+      stopWaitingLater(askAt);
+      router.push(href);
+    },
+    [messages, router, stopWaitingLater],
+  );
+
   const send = useCallback(async () => {
     const text = input.replace(/\u0000/g, '').trim();
     if (!text || !schoolId || sending) return;
@@ -121,14 +228,31 @@ export function OfficeAiHelpButton() {
       // Re-check the reply here too: only known pages and filters are ever opened.
       const decision = viewRes.ok ? parseOfficeAssistantDecision(await viewRes.json().catch(() => null)) : null;
       if (decision?.type === 'view') {
-        const href = `${officeAssistantViewHref(schoolId, decision.view)}&askAt=${Date.now()}`;
         const page = OFFICE_ASSISTANT_PAGE_LABEL[decision.view.page];
+        const turnedOff =
+          (decision.view.page === 'attendance' && settings?.features?.attendance === false) ||
+          (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false);
+        if (turnedOff) {
+          setMessages((prev) => [
+            ...prev,
+            { role: 'assistant', content: `${page} is turned off for this school. It can be turned back on in Settings.` },
+          ]);
+          setSending(false);
+          return;
+        }
+        // Open the list behind this panel; the page reports what it found and the answer fills in.
+        const askAt = String(Date.now());
+        const href = withAskAt(officeAssistantViewHref(schoolId, decision.view), askAt);
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: `Showing ${decision.view.label.toLowerCase()} on ${page}.`, href },
+          {
+            role: 'assistant',
+            content: decision.view.label,
+            list: { href, askAt, page, results: readOfficeAssistantResults(askAt) },
+          },
         ]);
         setSending(false);
-        setOpen(false);
+        stopWaitingLater(askAt);
         router.push(href);
         return;
       }
@@ -146,7 +270,8 @@ export function OfficeAiHelpButton() {
           product: 'office',
           officeContext,
           model: getArcadeAiModelFromStorage(),
-          messages: nextForApi.slice(1).slice(-10),
+          // Just the words — never the names a list answer showed.
+          messages: nextForApi.slice(1).slice(-10).map(({ role, content }) => ({ role, content })),
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { reply?: string; error?: string };
@@ -165,7 +290,21 @@ export function OfficeAiHelpButton() {
     } finally {
       setSending(false);
     }
-  }, [authFetch, input, loginState, messages, officeContext, schoolId, sending, toast, shared.classes, router]);
+  }, [
+    authFetch,
+    input,
+    loginState,
+    messages,
+    officeContext,
+    schoolId,
+    sending,
+    toast,
+    shared.classes,
+    router,
+    stopWaitingLater,
+    settings?.features?.attendance,
+    settings?.features?.frontDesk,
+  ]);
 
   const showAsk = features.aiHelp;
   const activeTab = showAsk ? tab : 'guide';
@@ -186,7 +325,8 @@ export function OfficeAiHelpButton() {
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+        {/* Light overlay so a list opened from a question stays visible beside the answer. */}
+        <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md" overlayClassName="bg-slate-950/20">
           <SheetHeader className="border-b px-4 py-4 text-left">
             <SheetTitle className="flex items-center gap-2">
               <CircleHelp className="h-4 w-4 text-teal-600" />
@@ -236,18 +376,7 @@ export function OfficeAiHelpButton() {
                   )}
                 >
                   <ChatText text={m.content} />
-                  {m.href ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpen(false);
-                        router.push(m.href!.replace(/askAt=\d+/, `askAt=${Date.now()}`));
-                      }}
-                      className="mt-1 block text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
-                    >
-                      Show again
-                    </button>
-                  ) : null}
+                  {m.list ? <ChatListAnswer list={m.list} onShowAgain={() => showAgain(i)} /> : null}
                 </div>
               ))}
               {sending ? (

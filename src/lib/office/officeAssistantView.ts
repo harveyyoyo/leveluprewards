@@ -54,18 +54,40 @@ const billingView = z.object({
   family: text,
 });
 
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .nullish()
+  .transform((v) => v ?? null);
+
+export const DESK_KIND_OPTIONS = ['late_arrival', 'early_pickup', 'nurse_visit'] as const;
+
 const frontDeskView = z.object({
   page: z.literal('frontdesk'),
   label: z.string().trim().min(1).max(120),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullish()
-    .transform((v) => v ?? null),
+  date: isoDate,
   tab: z.enum(['arrivals', 'nurse']).nullish().transform((v) => v ?? null),
+  kind: z.enum(DESK_KIND_OPTIONS).nullish().transform((v) => v ?? null),
 });
 
-export const officeAssistantViewSchema = z.discriminatedUnion('page', [studentsView, billingView, frontDeskView]);
+/** "not-present" = absent, late, or excused. */
+export const ATTENDANCE_STATUS_OPTIONS = ['absent', 'late', 'excused', 'not-present'] as const;
+export type OfficeAssistantAttendanceStatus = (typeof ATTENDANCE_STATUS_OPTIONS)[number];
+
+const attendanceView = z.object({
+  page: z.literal('attendance'),
+  label: z.string().trim().min(1).max(120),
+  date: isoDate,
+  status: z.enum(ATTENDANCE_STATUS_OPTIONS).nullish().transform((v) => v ?? 'absent'),
+  className: text,
+});
+
+export const officeAssistantViewSchema = z.discriminatedUnion('page', [
+  studentsView,
+  billingView,
+  frontDeskView,
+  attendanceView,
+]);
 export type OfficeAssistantView = z.infer<typeof officeAssistantViewSchema>;
 
 /** What the AI returns: a view to show, or "this needs a written answer". */
@@ -108,8 +130,16 @@ export function officeAssistantViewHref(schoolId: string, view: OfficeAssistantV
     if (view.family) params.set('q', view.family);
     return `${officePublicHref(schoolId, 'billing')}?${params.toString()}`;
   }
+  if (view.page === 'attendance') {
+    if (view.date) params.set('date', view.date);
+    params.set('status', view.status);
+    if (view.className) params.set('className', view.className);
+    return `${officePublicHref(schoolId, 'attendance')}?${params.toString()}`;
+  }
   if (view.date) params.set('date', view.date);
-  if (view.tab) params.set('tab', view.tab);
+  const tab = view.kind ? (view.kind === 'nurse_visit' ? 'nurse' : 'arrivals') : view.tab;
+  if (tab) params.set('tab', tab);
+  if (view.kind) params.set('kind', view.kind);
   return `${officePublicHref(schoolId, 'front-desk')}?${params.toString()}`;
 }
 
@@ -117,7 +147,18 @@ export const OFFICE_ASSISTANT_PAGE_LABEL: Record<OfficeAssistantView['page'], st
   students: 'Students',
   billing: 'Billing',
   frontdesk: 'Front desk',
+  attendance: 'Attendance',
 };
+
+/** Finds the class a question named: exact name first, then a name that contains it. */
+export function findClassByAskedName<T extends { name?: string | null }>(classes: T[], asked: string | null | undefined): T | undefined {
+  const want = asked?.trim().toLowerCase();
+  if (!want) return undefined;
+  return (
+    classes.find((c) => (c.name ?? '').trim().toLowerCase() === want) ??
+    classes.find((c) => (c.name ?? '').toLowerCase().includes(want))
+  );
+}
 
 /** Reads a dollar amount from the address (e.g. "100" or "99.50") as cents. */
 export function dollarsParamToCents(value: string | null | undefined): number | null {
@@ -137,10 +178,14 @@ export function officeAssistantSystemPrompt(params: { today: string; classNames:
     'Views (use null for anything not asked for; never invent names):',
     '1. Students: {"page":"students","label":"...","text":null|"part of a student name","className":null|"class name","teacher":null|"teacher name","address":null|"town, street or zip","show":null|"missing-grades"|"no-billing"|"unassigned"|"no-teacher"|"no-family"|"allergies"|"withdrawn"|"graduated"}',
     '   - "unassigned" = students with no class. "address" matches the family home address (e.g. a town like Brooklyn).',
+    '   - "text" is only for part of a student\'s name. Never put other words in it (not "absent", "late", "sick", "new", etc.).',
     '2. Billing (family accounts): {"page":"billing","label":"...","minOwed":null|dollars,"maxOwed":null|dollars,"status":null|"open"|"overdue"|"due-soon","family":null|"family name"}',
     '   - "owes more than $100" → minOwed 100. "owes less than $50" → maxOwed 50 and status "open".',
-    '3. Front desk log: {"page":"frontdesk","label":"...","date":null|"YYYY-MM-DD","tab":null|"arrivals"|"nurse"}',
-    '   - arrivals = late arrivals and early pickups; nurse = nurse visits.',
+    '3. Front desk log: {"page":"frontdesk","label":"...","date":null|"YYYY-MM-DD","tab":null|"arrivals"|"nurse","kind":null|"late_arrival"|"early_pickup"|"nurse_visit"}',
+    '   - arrivals = late arrivals and early pickups; nurse = nurse visits. Use "kind" when they ask about only one of them (e.g. who left early → early_pickup).',
+    '4. Attendance for one day (all classes unless one is named): {"page":"attendance","label":"...","date":null|"YYYY-MM-DD","status":"absent"|"late"|"excused"|"not-present","className":null|"class name"}',
+    '   - "who is absent today" → status "absent". "not-present" = absent, late or excused.',
+    'If they ask for a list of something none of these views cover (for example teacher absences), reply {"type":"answer"}.',
     '',
     '"label" is a short plain description of the list, e.g. "Families owing more than $100".',
     `Today is ${params.today}. Use it for words like today or yesterday.`,

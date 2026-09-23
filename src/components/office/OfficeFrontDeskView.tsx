@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import { AlertTriangle, ChevronLeft, ChevronRight, DoorOpen, HeartPulse, Info, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -103,6 +104,9 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
 
   // A day opened from Help → Ask ("who left early today?"). Applied once per question.
   const appliedAskAt = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
+  // Only one kind of entry, when the question asked about one ("who left early").
+  const [askKind, setAskKind] = useState<OfficeDeskLogKind | null>(null);
   useEffect(() => {
     const askAt = searchParams.get('askAt');
     const ask = searchParams.get('ask')?.trim();
@@ -110,13 +114,18 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
     appliedAskAt.current = askAt;
     const askedDate = searchParams.get('date');
     const askedTab = searchParams.get('tab');
+    const kind = searchParams.get('kind');
+    setReportAskAt(askAt);
     setAskLabel(ask);
-    if (askedDate && /^\d{4}-\d{2}-\d{2}$/.test(askedDate) && askedDate <= today) setDate(askedDate);
+    setDate(askedDate && /^\d{4}-\d{2}-\d{2}$/.test(askedDate) && askedDate <= today ? askedDate : today);
     if (askedTab === 'arrivals' || askedTab === 'nurse') setTab(askedTab);
+    setAskKind(kind && kind in KIND_LABEL ? (kind as OfficeDeskLogKind) : null);
   }, [searchParams, today]);
 
   const clearAsk = () => {
+    setReportAskAt(null);
     setAskLabel('');
+    setAskKind(null);
     setDate(today);
     router.replace(pathname, { scroll: false });
   };
@@ -132,7 +141,23 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
 
   const arrivals = entries.filter((e) => e.kind !== 'nurse_visit');
   const nurse = entries.filter((e) => e.kind === 'nurse_visit');
-  const shown = tab === 'arrivals' ? arrivals : nurse;
+  const shown = (tab === 'arrivals' ? arrivals : nurse).filter((e) => !askKind || e.kind === askKind);
+
+  // Tell the Help chat what this day shows, so it can answer with the same names.
+  useReportOfficeAssistantResults(reportAskAt, !!error || (!isLoading && !logLoading), () =>
+    error
+      ? { status: 'unavailable', message: 'The front desk log isn’t open yet — it opens after the next update.' }
+      : {
+          status: 'ready',
+          total: shown.length,
+          noun: ['entry', 'entries'],
+          rows: shown.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((e) => ({
+            id: e.id,
+            name: nameOf(e.studentId),
+            detail: `${KIND_LABEL[e.kind]}, ${formatScheduleTime(e.time)}${e.reason ? ` · ${e.reason}` : ''}`,
+          })),
+        },
+  );
 
   const draftStudent = draft?.studentId ? studentById.get(draft.studentId) : undefined;
   const draftFamily = draftStudent?.familyId ? familyById.get(draftStudent.familyId) : undefined;
@@ -272,7 +297,14 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
         <OfficeLoadingRows cols={3} rows={3} />
       ) : shown.length === 0 ? (
         <p className="rounded-2xl border border-dashed bg-white px-4 py-8 text-center text-sm text-muted-foreground dark:border-slate-800 dark:bg-slate-900">
-          {tab === 'nurse' ? 'No nurse visits' : 'No late arrivals or early pickups'} {date === today ? 'today' : 'this day'}.
+          {askKind === 'late_arrival'
+            ? 'No late arrivals'
+            : askKind === 'early_pickup'
+              ? 'No early pickups'
+              : tab === 'nurse'
+                ? 'No nurse visits'
+                : 'No late arrivals or early pickups'}{' '}
+          {date === today ? 'today' : 'this day'}.
         </p>
       ) : (
         <ul className="divide-y overflow-hidden rounded-2xl border bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">

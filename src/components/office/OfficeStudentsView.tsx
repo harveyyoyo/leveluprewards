@@ -5,6 +5,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { officeAddressMatches } from '@/lib/office/officeAddress';
+import { findClassByAskedName } from '@/lib/office/officeAssistantView';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -225,18 +227,18 @@ export function OfficeStudentsView({
     }
   }, [searchParams]);
 
-  // A list opened from Help → Ask. Applied once per question.
+  // A list opened from Help → Ask. Applied once per question, after the roster has loaded.
   const appliedAskAt = useRef<string | null>(null);
+  const pendingAskClass = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
   useEffect(() => {
     const askAt = searchParams.get('askAt');
     const ask = searchParams.get('ask')?.trim();
-    if (!askAt || !ask || appliedAskAt.current === askAt) return;
+    if (isLoading || !askAt || !ask || appliedAskAt.current === askAt) return;
     appliedAskAt.current = askAt;
     const f = searchParams.get('filter')?.trim() ?? '';
-    const className = searchParams.get('className')?.trim().toLowerCase() ?? '';
-    const cls =
-      classes.find((c) => (c.name ?? '').trim().toLowerCase() === className) ??
-      (className ? classes.find((c) => (c.name ?? '').toLowerCase().includes(className)) : undefined);
+    const cls = findClassByAskedName(classes, searchParams.get('className'));
+    setReportAskAt(askAt);
     setAskLabel(ask);
     setQuery(searchParams.get('q')?.trim() ?? '');
     setTeacherText(searchParams.get('teacher')?.trim() ?? '');
@@ -244,9 +246,32 @@ export function OfficeStudentsView({
     setHomeroomFilter('all');
     setRosterFilter((ROSTER_FILTERS as string[]).includes(f) ? (f as RosterFilter) : 'all');
     setClassFilter(f === 'unassigned' ? '__unassigned__' : cls ? cls.id : 'all');
-  }, [searchParams, classes]);
+    // The class list can arrive a moment after the page first shows; pick the class up then.
+    const askedClass = searchParams.get('className')?.trim();
+    pendingAskClass.current = !cls && askedClass && f !== 'unassigned' ? askedClass : null;
+  }, [searchParams, classes, isLoading]);
+
+  useEffect(() => {
+    const cls = findClassByAskedName(classes, pendingAskClass.current);
+    if (!cls) return;
+    pendingAskClass.current = null;
+    setClassFilter(cls.id);
+  }, [classes]);
+
+  // Tell the Help chat what this list shows, so it can answer with the same names.
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
+    status: 'ready',
+    total: filtered.length,
+    noun: ['student', 'students'],
+    rows: filtered.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((s) => ({
+      id: s.id,
+      name: getOfficeStudentFullName(s),
+      detail: (s.classId && classNameById.get(s.classId)) || undefined,
+    })),
+  }));
 
   const clearAll = () => {
+    setReportAskAt(null);
     setAskLabel('');
     setQuery('');
     setTeacherText('');

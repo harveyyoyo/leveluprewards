@@ -17,6 +17,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { dollarsParamToCents } from '@/lib/office/officeAssistantView';
+import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
 import {
   Archive,
   Ban,
@@ -275,12 +276,14 @@ export function OfficeBillingView({
 
   // A list opened from Help → Ask ("families owing more than $100"). Applied once per question.
   const appliedAskAt = useRef<string | null>(null);
+  const [reportAskAt, setReportAskAt] = useState<string | null>(null);
   useEffect(() => {
     const askAt = searchParams.get('askAt');
     const ask = searchParams.get('ask')?.trim();
     if (!askAt || !ask || appliedAskAt.current === askAt) return;
     appliedAskAt.current = askAt;
     const f = searchParams.get('filter')?.trim();
+    setReportAskAt(askAt);
     setAskLabel(ask);
     setMinOwedCents(dollarsParamToCents(searchParams.get('minOwed')));
     setMaxOwedCents(dollarsParamToCents(searchParams.get('maxOwed')));
@@ -288,7 +291,24 @@ export function OfficeBillingView({
     setInvoiceFilter(f === 'due-soon' || f === 'overdue' || f === 'open' ? f : 'all');
   }, [searchParams]);
 
+  // Tell the Help chat what this list shows (largest balance first), so it can answer with it.
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
+    status: 'ready',
+    total: filteredAccounts.length,
+    noun: ['family', 'families'],
+    rows: filteredAccounts
+      .map((a) => ({ a, owed: owedByAccount.get(a.id) ?? 0 }))
+      .sort((x, y) => y.owed - x.owed)
+      .slice(0, OFFICE_ASSISTANT_CHAT_ROWS)
+      .map(({ a, owed }) => ({
+        id: a.id,
+        name: a.familyName?.trim() || 'Family',
+        detail: owed > 0 ? `owes ${formatCents(owed)}` : 'nothing owed',
+      })),
+  }));
+
   const clearAsk = () => {
+    setReportAskAt(null);
     setAskLabel('');
     setMinOwedCents(null);
     setMaxOwedCents(null);

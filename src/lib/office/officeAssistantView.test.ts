@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dollarsParamToCents,
+  findClassByAskedName,
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
 } from '@/lib/office/officeAssistantView';
@@ -55,6 +56,46 @@ describe('officeAssistantViewHref', () => {
     });
     expect(href).toContain('/billing?');
     expect(href).toContain('minOwed=100');
+  });
+});
+
+describe('attendance and front desk views', () => {
+  it('reads "who is absent today" as an attendance list, absent by default', () => {
+    const d = parseOfficeAssistantDecision({
+      type: 'view',
+      view: { page: 'attendance', label: 'Absent today', date: '2026-09-23', className: null },
+    });
+    expect(d).toEqual({
+      type: 'view',
+      view: { page: 'attendance', label: 'Absent today', date: '2026-09-23', status: 'absent', className: null },
+    });
+    if (d.type !== 'view') throw new Error('expected a view');
+    const href = officeAssistantViewHref('schoolabc', d.view);
+    expect(href).toContain('/attendance?');
+    expect(href).toContain('status=absent');
+    expect(href).toContain('date=2026-09-23');
+  });
+
+  it('opens the right front desk tab for one kind of entry', () => {
+    const href = officeAssistantViewHref('schoolabc', {
+      page: 'frontdesk',
+      label: 'Left early today',
+      date: null,
+      tab: null,
+      kind: 'early_pickup',
+    });
+    expect(href).toContain('tab=arrivals');
+    expect(href).toContain('kind=early_pickup');
+  });
+});
+
+describe('findClassByAskedName', () => {
+  const classes = [{ name: 'Grade 5' }, { name: 'Grade 10' }, { name: 'Kindergarten A' }];
+  it('prefers the exact class, then one that contains the words', () => {
+    expect(findClassByAskedName(classes, 'grade 5')).toEqual({ name: 'Grade 5' });
+    expect(findClassByAskedName(classes, 'kindergarten')).toEqual({ name: 'Kindergarten A' });
+    expect(findClassByAskedName(classes, null)).toBeUndefined();
+    expect(findClassByAskedName(classes, 'Grade 3')).toBeUndefined();
   });
 });
 
