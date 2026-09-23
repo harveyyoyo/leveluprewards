@@ -37,6 +37,7 @@ import {
   type OfficeAssistantOpenTarget,
   type OfficeAssistantResults,
 } from '@/lib/office/officeAssistantResults';
+import { subscribeOfficeAssistantAsk } from '@/lib/office/officeAssistantAsk';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import { useRouter } from 'next/navigation';
 
@@ -315,8 +316,9 @@ export function OfficeAiHelpButton() {
     [messages, router, stopWaitingLater],
   );
 
-  const send = useCallback(async () => {
-    const text = input.replace(/\u0000/g, '').trim();
+  /** Sends what's typed in the box, or `asked` (a question from the Home page's ask box). */
+  const send = useCallback(async (asked?: string) => {
+    const text = (asked ?? input).replace(/\u0000/g, '').trim();
     if (!text || !schoolId || sending) return;
 
     const userMsg: ChatMessage = { role: 'user', content: text };
@@ -480,6 +482,28 @@ export function OfficeAiHelpButton() {
 
   const showAsk = features.aiHelp;
   const activeTab = showAsk ? tab : 'guide';
+
+  // A question from the Home page's ask box: open on Ask and answer it.
+  const [askedFromHome, setAskedFromHome] = useState<string | null>(null);
+  useEffect(
+    () =>
+      subscribeOfficeAssistantAsk((question) => {
+        setTab('ask');
+        setOpen(true);
+        setAskedFromHome(question);
+      }),
+    [],
+  );
+  useEffect(() => {
+    if (!askedFromHome || !showAsk) return;
+    if (sending) {
+      // Still answering the last one: leave the new question in the box to send next.
+      setInput(askedFromHome);
+    } else {
+      void send(askedFromHome);
+    }
+    setAskedFromHome(null);
+  }, [askedFromHome, showAsk, sending, send]);
 
   return (
     <>

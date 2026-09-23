@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, LogOut, Menu, X } from 'lucide-react';
+import { Building2, GripVertical, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
+import { applyOfficeMenuOrder, moveOfficeMenuItem, useOfficeMenuOrder } from '@/lib/office/useOfficeMenuOrder';
+import type { OfficeNavId } from '@/lib/office/officeNav';
 import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
@@ -54,11 +56,21 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   }, [settings, allowedSections]);
   const activeNav = navItems.find((i) => i.id === activeId);
   const { hidden: hiddenSections } = useOfficeHiddenSections();
+  const { order: menuOrder, setOrder: setMenuOrder } = useOfficeMenuOrder();
+  // Everyone's own order, set by dragging items up and down the menu.
+  const orderedNavItems = useMemo(() => applyOfficeMenuOrder(navItems, menuOrder), [navItems, menuOrder]);
   // Sections hidden in Interface drop out of the menu only; the current page always stays listed.
   const menuItems = useMemo(
-    () => navItems.filter((item) => item.id === 'home' || item.id === activeId || !hiddenSections.includes(item.id)),
-    [navItems, hiddenSections, activeId],
+    () => orderedNavItems.filter((item) => item.id === 'home' || item.id === activeId || !hiddenSections.includes(item.id)),
+    [orderedNavItems, hiddenSections, activeId],
   );
+  const [dragging, setDragging] = useState<OfficeNavId | null>(null);
+  const [dragOver, setDragOver] = useState<OfficeNavId | null>(null);
+  const dropOn = (target: OfficeNavId) => {
+    if (dragging) setMenuOrder(moveOfficeMenuItem(orderedNavItems.map((i) => i.id), dragging, target));
+    setDragging(null);
+    setDragOver(null);
+  };
   const router = useRouter();
 
   useEffect(() => {
@@ -146,14 +158,40 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   key={item.id}
                   href={item.href(schoolId)}
                   onClick={() => setMobileOpen(false)}
-                  title={item.description}
+                  title={`${item.description} — drag to move`}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', item.id);
+                    setDragging(item.id);
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragging) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOver !== item.id) setDragOver(item.id);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    dropOn(item.id);
+                  }}
+                  onDragEnd={() => {
+                    setDragging(null);
+                    setDragOver(null);
+                  }}
                   className={cn(
-                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-colors',
+                    'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-colors',
                     active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/10',
+                    dragging === item.id && 'opacity-40',
+                    dragging && dragOver === item.id && dragging !== item.id && 'ring-2 ring-teal-300/70',
                   )}
                 >
                   <Icon className={cn('h-4.5 w-4.5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
-                  {item.label}
+                  <span className="min-w-0 flex-1">{item.label}</span>
+                  <GripVertical
+                    className="h-4 w-4 shrink-0 cursor-grab text-teal-200/0 transition-colors group-hover:text-teal-200/50"
+                    aria-hidden
+                  />
                 </Link>
               );
             })}

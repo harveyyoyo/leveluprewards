@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
+import { OfficeHomeAskBox } from '@/components/office/OfficeHomeAskBox';
 import { formatCents, type OfficeNavId } from '@/lib/office/officeNav';
 import { useAppContext } from '@/components/AppProvider';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
@@ -145,6 +146,8 @@ export function OfficeDashboard({
 
   return (
     <div className="w-full space-y-5">
+      <OfficeHomeAskBox />
+
       {isEmpty ? (
         <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">
           <p className="text-lg font-medium text-slate-900 dark:text-white">Welcome — let’s set up your roster.</p>
