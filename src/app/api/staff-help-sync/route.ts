@@ -25,8 +25,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       tabsCount: result.tabsCount,
+      routesCount: result.routesCount,
+      officeCount: result.officeCount,
+      libraryCount: result.libraryCount,
+      featuresCount: result.featuresCount,
       timestamp: result.timestamp,
-      message: `App knowledge refreshed! Scanned ${result.tabsCount} Admin tabs, School Office, Library, and Kiosks.`,
+      message: `✅ Internal guide updated! I performed a fresh scan of the entire app:\n- **${result.tabsCount} Admin tabs** & workflows\n- **${result.routesCount} school routes**\n- **${result.officeCount} School Office modules**\n- **${result.libraryCount} Library systems**\n- Student Themes, Kiosks, Coupons & Rewards\n\nMy internal guide is now fully updated with everything the app can do!`,
     });
   } catch (err: unknown) {
     console.error('staff-help-sync error:', err);

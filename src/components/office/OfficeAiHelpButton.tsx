@@ -88,6 +88,7 @@ export function OfficeAiHelpButton() {
         ok?: boolean;
         message?: string;
         tabsCount?: number;
+        routesCount?: number;
         error?: string;
       };
 
@@ -110,8 +111,8 @@ export function OfficeAiHelpButton() {
         },
       ]);
       toast({
-        title: 'App knowledge updated',
-        description: `Scanned all screens and ${data.tabsCount || 17} Admin tabs.`,
+        title: 'Internal guide updated',
+        description: `Scanned ${data.routesCount || 27} screens, ${data.tabsCount || 17} Admin tabs, and Office modules.`,
       });
     } catch {
       toast({
