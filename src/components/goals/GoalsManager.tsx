@@ -118,7 +118,8 @@ const emptyForm = (): GoalFormState => ({
   studentId: '',
   classId: '',
   prizeId: '__none__',
-  startDate: '',
+  // New goals count only points earned from the day they are made.
+  startDate: dateInputFromMs(Date.now()),
   endDate: '',
   bonusPoints: '',
   staffVisibility: 'creator',
@@ -837,7 +838,7 @@ export function GoalsManager(props: {
               id={`goal-start-${target}`} value={state.startDate}
               onChange={(e) => patchForm({ startDate: e.target.value }, target)}
             />
-            <p className="text-sm text-muted-foreground">Only points earned from this date count. Leave blank to include earlier points; the goal may already be reached.</p>
+            <p className="text-sm text-muted-foreground">Only points earned from this date count. It starts as today; clear it to also count points earned before, which may finish the goal right away.</p>
           </div>
         )}
         <div className="space-y-2">
