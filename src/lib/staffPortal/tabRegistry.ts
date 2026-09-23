@@ -199,7 +199,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Clock,
     kind: 'addon',
     roles: ['admin', 'teacher'],
-    teacherOperated: true,
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'attendance')) return false;
@@ -262,7 +261,6 @@ export const STAFF_PORTAL_TAB_REGISTRY: StaffPortalTabDef[] = [
     icon: Target,
     kind: 'addon',
     roles: ['admin', 'teacher'],
-    teacherOperated: true,
     isEnabled: (s, role) => {
       if (role === 'teacher') {
         if (teacherAddonHidden(s, 'goals')) return false;
@@ -607,20 +605,6 @@ export function staffPortalPinWelcomeFirst<T extends { value: string }>(tabs: T[
   const welcome = tabs.find((t) => t.value === 'welcome');
   if (!welcome) return tabs;
   return [welcome, ...tabs.filter((t) => t.value !== 'welcome')];
-}
-
-/** Description for Welcome tab cards — uses registry `description`, then map, then `title`. */
-export function staffPortalIsTeacherOperatedTab(tabValue: string): boolean {
-  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
-  return def?.teacherOperated === true;
-}
-
-/** Banner copy when school admin opens a teacher-operated tab. */
-export function staffPortalTeacherOperatedAdminNote(tabValue: string): string | null {
-  if (!staffPortalIsTeacherOperatedTab(tabValue)) return null;
-  const def = STAFF_PORTAL_TAB_REGISTRY.find((t) => t.value === tabValue);
-  const label = def?.label ?? 'This section';
-  return `${label} is mainly for teachers in day-to-day classroom use. You can preview and set defaults here as school admin.`;
 }
 
 /** Banner copy when a teacher opens a school-wide add-on. */

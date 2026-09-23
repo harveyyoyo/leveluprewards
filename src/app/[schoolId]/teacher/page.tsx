@@ -73,7 +73,7 @@ function TeacherPrinterSkeleton() {
     return (
         <div
             className={cn(
-                'min-h-screen flex items-center justify-center font-sans bg-background',
+                'min-h-[calc(100dvh-5rem)] flex items-center justify-center font-sans bg-background',
                 isGraphic ? 'text-primary' : 'text-muted-foreground',
             )}
         >
@@ -328,7 +328,7 @@ export default function TeacherPage() {
 
     if (!isInitialized || !schoolId) {
         return (
-            <div className={`min-h-screen flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
+            <div className={`min-h-[calc(100dvh-5rem)] flex items-center justify-center font-sans ${isGraphic ? 'bg-background text-primary' : 'bg-background text-muted-foreground'}`}>
                 <Button disabled variant="ghost" size="lg" className="text-muted-foreground">
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Initializing Portal...
@@ -356,43 +356,43 @@ export default function TeacherPage() {
 
     return (
         <ErrorBoundary name="TeacherPage">
-            <div className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-500 py-10 px-4 ${isGraphic ? 'bg-gradient-to-br from-indigo-950/20 to-slate-900/20' : 'bg-slate-100'}`}>
+            <div className={`w-full flex-1 min-h-0 flex flex-col items-center justify-center transition-colors duration-500 p-2 sm:p-4 overflow-hidden ${isGraphic ? 'bg-gradient-to-br from-indigo-950/20 to-slate-900/20' : 'bg-slate-100'}`}>
                 <Card className={`w-full max-w-md border-t-4 transition-all ${isGraphic
                     ? 'bg-card/80 backdrop-blur-xl border-primary shadow-[0_0_50px_hsl(var(--chart-1)/0.2)]'
                     : 'bg-white border-chart-1 shadow-2xl'
                     }`}>
-                    <CardHeader className="text-center space-y-4">
-                        <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg transition-transform hover:scale-105 duration-300 bg-primary text-primary-foreground">
-                            <UserCheck className="w-10 h-10" />
+                    <CardHeader className="text-center p-3 sm:p-5 pb-1 sm:pb-2 space-y-1 sm:space-y-2">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto rounded-xl flex items-center justify-center shadow-md transition-transform hover:scale-105 duration-300 bg-primary text-primary-foreground">
+                            <UserCheck className="w-5 h-5 sm:w-6 sm:h-6" />
                         </div>
                         <div>
-                            <CardTitle className={`text-2xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
-                            <CardDescription className={isGraphic ? 'text-muted-foreground' : ''}>
-                                Print point coupons from the Coupons tab, use Manually Add or Deduct Points for direct changes, and manage reports and prizes.
+                            <CardTitle className={`text-lg sm:text-xl font-black tracking-tight ${isGraphic ? 'text-foreground' : 'text-slate-800'}`}>Teacher Portal</CardTitle>
+                            <CardDescription className={`text-xs sm:text-sm ${isGraphic ? 'text-muted-foreground' : ''}`}>
+                                Print point coupons, manage points, and view reports.
                             </CardDescription>
                         </div>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="p-3 sm:p-5 pt-1 sm:pt-2 space-y-3">
                         <form
-                            className="space-y-6"
+                            className="space-y-3"
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 if (!isSubmitting) void handleLogin();
                             }}
                         >
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="staff-account" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Staff member</Label>
+                            <div className="space-y-2.5">
+                                <div className="space-y-1">
+                                    <Label htmlFor="staff-account" className={`text-[11px] sm:text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Staff member</Label>
                                     {directAccountSelected ? (
-                                        <div className={`min-h-14 rounded-xl border px-4 py-3 ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}>
-                                            <p className="text-lg font-bold leading-tight">{selectedOption.label}</p>
+                                        <div className={`min-h-9 rounded-xl border px-3 py-1.5 ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}>
+                                            <p className="text-sm sm:text-base font-bold leading-tight">{selectedOption.label}</p>
                                             <p className="text-xs text-muted-foreground">{roleLabel(selectedOption)}</p>
                                         </div>
                                     ) : (
                                         <Select value={selectedLoginKey} onValueChange={setSelectedLoginKey} disabled={optionsLoading}>
                                             <SelectTrigger
                                                 id="staff-account"
-                                                className={`h-14 rounded-xl text-lg font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
+                                                className={`h-9 sm:h-10 rounded-xl text-sm sm:text-base font-bold ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
                                             >
                                                 <SelectValue
                                                     placeholder={
@@ -414,30 +414,30 @@ export default function TeacherPage() {
                                         </Select>
                                     )}
                                 </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="teacher-passcode" className={`text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Passcode</Label>
+                                <div className="space-y-1">
+                                    <Label htmlFor="teacher-passcode" className={`text-[11px] sm:text-xs font-semibold uppercase tracking-wide ${isGraphic ? 'text-muted-foreground' : 'text-slate-500'}`}>Passcode</Label>
                                     <Input
                                         id="teacher-passcode"
                                         type="password"
                                         value={passcode}
                                         onChange={(e) => setPasscode(e.target.value)}
                                         ref={passcodeRef}
-                                        className={`h-14 rounded-xl text-lg font-mono tracking-widest text-center ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
+                                        className={`h-9 sm:h-10 rounded-xl text-sm sm:text-base font-mono tracking-widest text-center ${isGraphic ? 'bg-foreground/5 border-border' : 'bg-slate-50'}`}
                                         autoComplete="current-password"
                                         autoFocus={!!directAccountKey}
                                     />
                                 </div>
                             </div>
 
-                            <Button type="submit" className="w-full h-16 rounded-2xl font-black text-lg uppercase tracking-widest shadow-xl transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={optionsLoading || isSubmitting}>
+                            <Button type="submit" className="w-full h-10 sm:h-11 rounded-xl min-h-0 font-black text-sm sm:text-base uppercase tracking-wider shadow-lg transition-all active:scale-95 text-primary-foreground bg-primary hover:bg-primary/90 shadow-primary/20" disabled={optionsLoading || isSubmitting}>
                                 {isSubmitting ? (
                                     <>
-                                        <Loader2 className="mr-3 w-6 h-6 animate-spin" aria-hidden />
+                                        <Loader2 className="mr-2 w-4 h-4 animate-spin" aria-hidden />
                                         Signing in...
                                     </>
                                 ) : (
                                     <>
-                                        <LogIn className="mr-3 w-6 h-6" aria-hidden /> Login
+                                        <LogIn className="mr-2 w-4 h-4" aria-hidden /> Login
                                     </>
                                 )}
                             </Button>
@@ -446,7 +446,7 @@ export default function TeacherPage() {
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="w-full h-12 rounded-xl font-bold"
+                                    className="w-full h-8 sm:h-9 rounded-xl min-h-0 font-bold text-xs sm:text-sm"
                                     data-intro-tour="teacher-sign-in-admin"
                                     onClick={() => {
                                         playSound('click');

@@ -58,7 +58,9 @@ export function AdminBadgesTab(props: any) {
         }
     >
     <StaffPortalSectionCard className="w-full overflow-hidden">
-      <StaffPortalSectionCardContent>
+      <StaffPortalSectionCardContent className="p-0 sm:p-0">
+        <div className="overflow-x-auto w-full p-4 sm:p-6">
+          <div className="min-w-[860px]">
         {badgesLoading ? (
           <ul className="space-y-2 pr-1">
             {[1, 2, 3].map((i: number) => (
@@ -173,6 +175,8 @@ export function AdminBadgesTab(props: any) {
             )}
           </ul>
         )}
+          </div>
+        </div>
       </StaffPortalSectionCardContent>
     </StaffPortalSectionCard>
     </StaffPortalTabPanel>
