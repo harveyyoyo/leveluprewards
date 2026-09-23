@@ -136,6 +136,12 @@ export default async function RootLayout({
             </FirebaseClientProvider>
           </ErrorBoundary>
         </div>
+        {process.env.NEXT_PUBLIC_TEST_SITE === '1' ? (
+          // Built only by the test-site workflow, so nobody mistakes the test copy for the real site.
+          <div className="no-print pointer-events-none fixed bottom-3 left-3 z-[100] rounded-full bg-amber-400 px-3 py-1 text-xs font-bold text-amber-950 shadow-lg">
+            TEST COPY · same school data as the real site
+          </div>
+        ) : null}
       </body>
     </html>
   );
