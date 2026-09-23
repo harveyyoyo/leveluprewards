@@ -71,17 +71,23 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
     >
       <div
         className={cn(
-          'flex min-h-screen',
+          // `lg:h-screen` here (not just `min-h-screen`) matters: this element also carries the
+          // `sm:py-6` padding below. If only its *child* were pinned to exactly 100vh while this
+          // parent had no height of its own, the padding would add on top of that 100vh — an
+          // invisible few-pixel overflow that made the sidebar think it needed to scroll even
+          // when everything visibly fit.
+          'flex min-h-screen lg:h-screen',
           !isWide && 'justify-center px-0 sm:px-6 lg:px-10 sm:py-6',
         )}
       >
         <div
           className={cn(
             OFFICE_LAYOUT_PANE_CLASS,
-            // `lg:overflow-y-auto` + `lg:h-screen` make this the actual scrolling container on
+            // `lg:overflow-y-auto` + `lg:h-full` (100% of the now correctly-sized parent above,
+            // padding already accounted for) make this the actual scrolling container on
             // desktop (instead of the window), which is what lets the sidebar below stick to
             // the viewport via `position: sticky` rather than stretching with the page.
-            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:h-screen lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
+            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:h-full lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
             isWide
               ? 'max-w-none border-0 shadow-none'
               : 'max-w-5xl shadow-none sm:min-h-[calc(100vh-3rem)] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:shadow-xl dark:sm:border-slate-800',
@@ -124,7 +130,7 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           {/* `min-h-0` overrides a flex item's default `min-height: auto`, which otherwise
               forces this nav to grow to fit every item instead of shrinking and scrolling —
               the classic reason a flex child with `overflow-y-auto` refuses to actually scroll. */}
-          <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-4">
+          <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeId;
@@ -133,16 +139,14 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
                   key={item.id}
                   href={item.href(schoolId)}
                   onClick={() => setMobileOpen(false)}
+                  title={item.description}
                   className={cn(
-                    'flex items-start gap-3 rounded-xl px-3 py-3 transition-colors',
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold leading-snug transition-colors',
                     active ? 'bg-white/15 text-white shadow-inner' : 'text-teal-100/90 hover:bg-white/10',
                   )}
                 >
-                  <Icon className={cn('mt-0.5 h-5 w-5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
-                  <span>
-                    <span className="block text-base font-semibold leading-snug">{item.label}</span>
-                    <span className="block text-xs leading-snug text-teal-100/60">{item.description}</span>
-                  </span>
+                  <Icon className={cn('h-4.5 w-4.5 shrink-0', active ? 'text-teal-200' : 'text-teal-300/70')} />
+                  {item.label}
                 </Link>
               );
             })}
