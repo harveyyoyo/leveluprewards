@@ -422,6 +422,11 @@ export function OfficeSettingsView({ schoolId, schoolName }: OfficeSettingsViewP
                 ['attendance', 'Daily attendance', 'Record daily present, absent, and late marks for students'],
                 ['frontDesk', 'Front desk', 'Log late arrivals, early pickups, and nurse visits'],
                 ['aiHelp', 'Question assistant', 'Adds “Ask a question” to Help in the top bar'],
+                [
+                  'aiRecords',
+                  'Assistant can read records',
+                  'For questions like “summarize this student”, Help reads attendance, grades and front desk entries — never names, addresses or contact details. Off keeps all records away from the AI.',
+                ],
               ] as const
             ).map(([key, title, description]) => (
               <div key={key} className="flex items-center justify-between gap-4 rounded-xl border p-3">

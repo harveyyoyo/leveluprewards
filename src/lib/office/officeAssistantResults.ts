@@ -14,7 +14,14 @@ export type OfficeAssistantOpenTarget = { kind: 'student' | 'family'; id: string
 export type OfficeAssistantResultRow = { id: string; name: string; detail?: string; open?: OfficeAssistantOpenTarget };
 
 type Report =
-  | { status: 'ready'; total: number; noun: readonly [string, string]; rows: OfficeAssistantResultRow[] }
+  | {
+      status: 'ready';
+      total: number;
+      noun: readonly [string, string];
+      rows: OfficeAssistantResultRow[];
+      /** Every student on the list (ids only), so "these students" can be asked about next. */
+      studentIds?: string[];
+    }
   | { status: 'unavailable'; message: string };
 
 export type OfficeAssistantResults = Report & { askAt: string };

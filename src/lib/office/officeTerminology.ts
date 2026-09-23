@@ -46,6 +46,7 @@ export function defaultOfficeFeatureFlags(): Required<NonNullable<OfficeSettings
     busInfo: true,
     medicalNotes: true,
     aiHelp: true,
+    aiRecords: true,
     auditLog: true,
     attendance: true,
     frontDesk: true,

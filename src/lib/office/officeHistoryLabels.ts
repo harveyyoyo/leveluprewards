@@ -10,7 +10,8 @@ export type OfficeHistoryGroup =
   | 'billing'
   | 'attendance'
   | 'communication'
-  | 'settings';
+  | 'settings'
+  | 'assistant';
 
 export const OFFICE_HISTORY_GROUPS: Array<{ id: OfficeHistoryGroup; label: string }> = [
   { id: 'all', label: 'Everything' },
@@ -22,6 +23,7 @@ export const OFFICE_HISTORY_GROUPS: Array<{ id: OfficeHistoryGroup; label: strin
   { id: 'attendance', label: 'Attendance & front desk' },
   { id: 'communication', label: 'Forms & events' },
   { id: 'settings', label: 'Settings' },
+  { id: 'assistant', label: 'Help reading records' },
 ];
 
 const GROUP_BY_TYPE: Record<OfficeAuditEntityType, OfficeHistoryGroup> = {
@@ -39,13 +41,17 @@ const GROUP_BY_TYPE: Record<OfficeAuditEntityType, OfficeHistoryGroup> = {
   officeForm: 'communication',
   officeEvent: 'communication',
   officeSettings: 'settings',
+  officeAssistant: 'assistant',
 };
 
 export function officeHistoryGroup(entry: Pick<OfficeAuditLogEntry, 'entityType'>): OfficeHistoryGroup {
   return GROUP_BY_TYPE[entry.entityType] ?? 'all';
 }
 
-export function officeHistoryActionLabel(entry: Pick<OfficeAuditLogEntry, 'action' | 'summary'>): string {
+export function officeHistoryActionLabel(
+  entry: Pick<OfficeAuditLogEntry, 'action' | 'summary'> & Partial<Pick<OfficeAuditLogEntry, 'entityType'>>,
+): string {
+  if (entry.entityType === 'officeAssistant') return 'Read';
   if (entry.action === 'create') return 'Added';
   if (entry.action === 'delete') return 'Removed';
   return 'Changed';
