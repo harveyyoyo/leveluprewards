@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { AlertTriangle, ChevronLeft, ChevronRight, DoorOpen, HeartPulse, Info, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,6 +96,30 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
   const today = localIsoDate();
   const [date, setDate] = useState(today);
   const [tab, setTab] = useState<Tab>('arrivals');
+  const [askLabel, setAskLabel] = useState('');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // A day opened from Help → Ask ("who left early today?"). Applied once per question.
+  const appliedAskAt = useRef<string | null>(null);
+  useEffect(() => {
+    const askAt = searchParams.get('askAt');
+    const ask = searchParams.get('ask')?.trim();
+    if (!askAt || !ask || appliedAskAt.current === askAt) return;
+    appliedAskAt.current = askAt;
+    const askedDate = searchParams.get('date');
+    const askedTab = searchParams.get('tab');
+    setAskLabel(ask);
+    if (askedDate && /^\d{4}-\d{2}-\d{2}$/.test(askedDate) && askedDate <= today) setDate(askedDate);
+    if (askedTab === 'arrivals' || askedTab === 'nurse') setTab(askedTab);
+  }, [searchParams, today]);
+
+  const clearAsk = () => {
+    setAskLabel('');
+    setDate(today);
+    router.replace(pathname, { scroll: false });
+  };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busy, setBusy] = useState(false);
   const { entries, isLoading: logLoading, error } = useOfficeDeskLogForDate(schoolId, date);
@@ -191,6 +217,7 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
   return (
     <div className="space-y-3">
       {confirmDialog}
+      {askLabel ? <OfficeAssistantBanner label={askLabel} onClear={clearAsk} /> : null}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-lg" aria-label="Previous day" onClick={() => setDate(shiftDate(date, -1))}>

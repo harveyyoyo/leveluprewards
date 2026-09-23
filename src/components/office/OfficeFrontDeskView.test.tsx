@@ -19,6 +19,12 @@ vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({ toast: vi.fn() }),
 }));
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => '/schoolabc/office/front-desk',
+}));
+
 const openStudent = vi.fn();
 vi.mock('@/components/office/OfficeEntityNavProvider', () => ({
   useOfficeEntityNav: () => ({ openStudent }),

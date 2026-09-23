@@ -22,16 +22,41 @@ import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { useOfficePortalData } from '@/components/office/OfficePortalGate';
 import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { buildOfficeAiHelpContext } from '@/lib/office/officeHelpContext';
+import {
+  OFFICE_ASSISTANT_PAGE_LABEL,
+  officeAssistantViewHref,
+  parseOfficeAssistantDecision,
+} from '@/lib/office/officeAssistantView';
+import { useRouter } from 'next/navigation';
 
-type ChatMessage = { role: 'user' | 'assistant'; content: string };
+/** `href` is set when the assistant opened a filtered list in the app, so it can be shown again. */
+type ChatMessage = { role: 'user' | 'assistant'; content: string; href?: string };
+
+/** Keeps the model's line breaks and turns `**bold**` into bold instead of showing the stars. */
+function ChatText({ text }: { text: string }) {
+  return (
+    <span className="whitespace-pre-line">
+      {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        part.startsWith('**') && part.endsWith('**') && part.length > 4 ? (
+          <strong key={i} className="font-semibold">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          part.replace(/^#{1,6}\s+/gm, '')
+        ),
+      )}
+    </span>
+  );
+}
 
 export function OfficeAiHelpButton() {
   const { schoolId, loginState, userName } = useAppContext();
-  const { features, marksLabels, settings } = useOfficePortalChrome();
+  const { features, settings } = useOfficePortalChrome();
   const portal = useOfficePortalData();
   const shared = useOfficeSharedData(schoolId, true);
   const authFetch = useAuthFetch();
   const { toast } = useToast();
+  const router = useRouter();
 
   const officeContext = useMemo(
     () =>
@@ -49,9 +74,9 @@ export function OfficeAiHelpButton() {
     () => ({
       role: 'assistant',
       content:
-        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! I'm your School Office assistant. Ask about billing balances, overdue invoices, ${marksLabels.missing}, student rosters, family contacts, or how to use any Office screen.`,
+        `Hi${userName ? ` ${userName.split(/\s+/)[0]}` : ''}! Ask me to show you a list — like “families who owe more than $100”, “students with allergies in Grade 5”, or “who left early today” — and I'll open it in the app. You can also ask how to do anything in the office.`,
     }),
-    [marksLabels.missing, userName],
+    [userName],
   );
 
   const [open, setOpen] = useState(false);
@@ -84,6 +109,33 @@ export function OfficeAiHelpButton() {
     setInput('');
     setSending(true);
 
+    // First: is this a "show me …" question the app can answer as a filtered list? Only the
+    // question and class names go to the AI; the app itself finds the matching records.
+    try {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const viewRes = await authFetch('/api/office/assistant-view', {
+        method: 'POST',
+        body: JSON.stringify({ schoolId, question: text, today, classNames: shared.classes.map((c) => c.name) }),
+      });
+      // Re-check the reply here too: only known pages and filters are ever opened.
+      const decision = viewRes.ok ? parseOfficeAssistantDecision(await viewRes.json().catch(() => null)) : null;
+      if (decision?.type === 'view') {
+        const href = `${officeAssistantViewHref(schoolId, decision.view)}&askAt=${Date.now()}`;
+        const page = OFFICE_ASSISTANT_PAGE_LABEL[decision.view.page];
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `Showing ${decision.view.label.toLowerCase()} on ${page}.`, href },
+        ]);
+        setSending(false);
+        setOpen(false);
+        router.push(href);
+        return;
+      }
+    } catch {
+      // Fall through to a written answer.
+    }
+
     try {
       const res = await authFetch('/api/staff-help-chat', {
         method: 'POST',
@@ -113,7 +165,7 @@ export function OfficeAiHelpButton() {
     } finally {
       setSending(false);
     }
-  }, [authFetch, input, loginState, messages, officeContext, schoolId, sending, toast]);
+  }, [authFetch, input, loginState, messages, officeContext, schoolId, sending, toast, shared.classes, router]);
 
   const showAsk = features.aiHelp;
   const activeTab = showAsk ? tab : 'guide';
@@ -183,7 +235,19 @@ export function OfficeAiHelpButton() {
                       : 'mr-4 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100',
                   )}
                 >
-                  {m.content}
+                  <ChatText text={m.content} />
+                  {m.href ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpen(false);
+                        router.push(m.href!.replace(/askAt=\d+/, `askAt=${Date.now()}`));
+                      }}
+                      className="mt-1 block text-xs font-medium text-teal-800 hover:underline dark:text-teal-300"
+                    >
+                      Show again
+                    </button>
+                  ) : null}
                 </div>
               ))}
               {sending ? (
@@ -201,7 +265,7 @@ export function OfficeAiHelpButton() {
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="e.g. Which families are overdue on billing?"
+                placeholder="e.g. Show families who owe more than $100"
                 className="min-h-[72px] resize-none rounded-xl"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
