@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { Student } from '@/lib/types';
 
 const fixtures = vi.hoisted(() => ({
-  goals: [{ id: 'goal', title: 'Kindness target', type: 'personal', studentId: 'student', targetPoints: 50, status: 'active', createdAt: 1, description: 'Old description', bonusPointsReward: 5 }],
+  goals: [{ id: 'goal', title: 'Kindness target', type: 'personal', studentId: 'student', targetPoints: 50, status: 'active', createdAt: 1, description: 'Old description', bonusPointsReward: 5, categoryId: 'kind' }],
   db: {},
 }));
 vi.mock('@/firebase', () => ({
@@ -27,7 +27,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 const students = [{ id: 'student', firstName: 'Alex', lastName: 'Sample' }] as Student[];
 const classes: [] = [];
-const categories: [] = [];
+const categories = [{ id: 'kind', name: 'Kindness' }] as never[];
 const prizes: [] = [];
 function openGoal(title: RegExp = /Kindness target/) {
   fireEvent.click(screen.getByRole('button', { name: title }));
@@ -57,14 +57,13 @@ describe('Goals manager', () => {
       await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ assignedByStaffId: 'admin:admin-one', assignedByName: 'Original Admin Name', staffVisibility: 'all' })));
     } finally { fixtures.goals[0] = original; }
   });
-  it('keeps unused category and start-date rules out of a savings goal', async () => {
+  it('keeps category and start-date rules out of a student wishlist goal', async () => {
     const original = fixtures.goals[0];
     fixtures.goals[0] = { ...original, type: 'prize_savings', ...{ categoryId: 'old-category', startDate: 1 } };
     try {
       await act(async () => { showGoals(); });
       openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
       expect(screen.getByLabelText('Who is this for?')).toHaveTextContent('One student');
-      expect(screen.getByLabelText('What are they working toward?')).toHaveTextContent('Save points for a prize');
       expect(screen.queryByLabelText('Start date (optional)')).not.toBeInTheDocument();
       expect(screen.queryByLabelText('Which category counts?')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
@@ -77,6 +76,34 @@ describe('Goals manager', () => {
     } finally {
       fixtures.goals[0] = original;
     }
+  });
+  it('requires a category for a points goal', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = { ...original, ...{ categoryId: undefined } };
+    try {
+      await act(async () => { showGoals(); });
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      expect(updateGoal).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    } finally { fixtures.goals[0] = original; }
+  });
+  it('names a points goal after its prize and saves how the prize is given', async () => {
+    const original = fixtures.goals[0];
+    fixtures.goals[0] = { ...original, ...{ prizeId: 'lunch', prizeReward: 'free' } };
+    const rewards = [{ id: 'lunch', name: 'Lunch with Teacher', points: 1200 }] as never[];
+    try {
+      await act(async () => {
+        render(<GoalsManager schoolId="school" variant="admin" students={students} classes={classes} categories={categories} prizes={rewards} />);
+      });
+      openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('How do they get the prize?')).toHaveTextContent('Give it to them free when they finish');
+      fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+      await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({
+        type: 'personal', title: 'Earn Lunch with Teacher', prizeId: 'lunch', prizeReward: 'free', categoryId: 'kind',
+      })));
+    } finally { fixtures.goals[0] = original; }
   });
   it('names a savings goal after its reward instead of asking for a title', async () => {
     const original = fixtures.goals[0];

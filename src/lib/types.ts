@@ -806,7 +806,11 @@ export interface Goal {
   assignedByRole?: 'teacher' | 'admin' | 'staff';
   /** Controls staff Goals lists; student participation is determined by the goal audience. */
   staffVisibility?: 'creator' | 'all';
-  prizeId?: string;   // If this is a prize savings goal
+  prizeId?: string;   // Prize the goal is working toward (savings goals, or any goal with a prize)
+  /** For goals with a prize: `free` gives the prize on completion; `shop` (default) means they get it in the shop. */
+  prizeReward?: 'shop' | 'free';
+  /** Set when a free prize could not be handed out automatically (e.g. out of stock). */
+  prizeAwardProblem?: string;
   
   // Time limits
   startDate?: number;

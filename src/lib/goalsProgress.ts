@@ -7,9 +7,10 @@ import {
   where,
   type Firestore,
 } from 'firebase/firestore';
-import type { Category, Goal, GoalType, Student } from '@/lib/types';
+import type { Category, Goal, GoalType, Prize, Student } from '@/lib/types';
 import { updateGoal } from '@/lib/db/goals';
 import { awardPointsToStudent } from '@/lib/db/students';
+import { redeemPrize } from '@/lib/db/prizes';
 import { GOAL_ALMOST_THERE_RATIO } from '@/lib/goals/goalHelpers';
 
 export function categoryNameFromId(categories: Category[], categoryId?: string): string | undefined {
@@ -112,6 +113,41 @@ export async function computeGoalProgress(
   }
   const lifetime = viewerStudent.lifetimePoints ?? viewerStudent.points ?? 0;
   return lifetime;
+}
+
+/**
+ * Hands a goal's free prize to each student who finished it, at no point cost, through the
+ * normal redemption path (so it lands in the pickup list and uses stock). Repeat-safe via a
+ * fixed receipt per student. Never blocks the goal from finishing: returns a note for staff
+ * when a prize could not be given (for example, out of stock).
+ */
+async function giveGoalPrize(
+  firestore: Firestore,
+  schoolId: string,
+  goal: Goal,
+  teamRoster: Student[],
+  categories: Category[],
+): Promise<string | null> {
+  const prizeSnap = await getDoc(doc(firestore, 'schools', schoolId, 'prizes', goal.prizeId!));
+  if (!prizeSnap.exists()) return 'The prize no longer exists. Hand out a reward yourself.';
+  const prize = { id: prizeSnap.id, ...prizeSnap.data() } as Prize;
+  const recipients = teamRoster.length ? teamRoster.map((s) => s.id) : goal.studentId ? [goal.studentId] : [];
+  let missed = 0;
+  for (const studentId of recipients) {
+    try {
+      await redeemPrize(firestore, schoolId, studentId, prize, 1, 0, {
+        receiptId: `goal-prize-${goal.id}`,
+        historyNote: '(goal prize)',
+        skipGoalSync: true,
+      }, categories);
+    } catch {
+      missed += 1;
+    }
+  }
+  if (!missed) return null;
+  return recipients.length === 1
+    ? `The free prize could not be given automatically. Hand out "${prize.name}" yourself.`
+    : `${missed} of ${recipients.length} students could not get "${prize.name}" automatically. Hand those out yourself.`;
 }
 
 export type GoalSyncEvent = {
@@ -228,7 +264,15 @@ export async function syncGoalsForStudent(
           }
         }
       }
-      await updateGoal(firestore, schoolId, goal.id, { status: 'completed', completedAt: now, completedProgress: progress });
+      const prizeProblem = goal.prizeId && goal.prizeReward === 'free'
+        ? await giveGoalPrize(firestore, schoolId, goal, goal.type === 'class' || goal.type === 'school' ? rosterList : [], categories)
+        : null;
+      await updateGoal(firestore, schoolId, goal.id, {
+        status: 'completed',
+        completedAt: now,
+        completedProgress: progress,
+        ...(prizeProblem ? { prizeAwardProblem: prizeProblem } : {}),
+      });
       events.push({
         goalId: goal.id,
         title: goal.title,

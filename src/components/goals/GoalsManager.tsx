@@ -104,6 +104,7 @@ type GoalFormState = {
   endDate: string;
   bonusPoints: string;
   staffVisibility: 'creator' | 'all';
+  prizeReward: 'shop' | 'free';
 };
 
 const emptyForm = (): GoalFormState => ({
@@ -119,6 +120,7 @@ const emptyForm = (): GoalFormState => ({
   endDate: '',
   bonusPoints: '',
   staffVisibility: 'creator',
+  prizeReward: 'shop',
 });
 
 function formFromGoal(goal: Goal): GoalFormState {
@@ -135,6 +137,7 @@ function formFromGoal(goal: Goal): GoalFormState {
     endDate: dateInputFromMs(goal.endDate),
     bonusPoints: goal.bonusPointsReward != null ? String(goal.bonusPointsReward) : '',
     staffVisibility: goalStaffVisibility(goal),
+    prizeReward: goal.prizeReward ?? 'shop',
   };
 }
 
@@ -344,11 +347,11 @@ export function GoalsManager(props: {
     else setForm((f) => ({ ...f, ...patch }));
   };
 
-  /** Savings goals are named after their reward; older goals without one keep their saved title. */
+  /** Goals with a prize are named after it; older goals whose prize was removed keep their saved title. */
   const goalTitleFor = (state: GoalFormState): string => {
-    if (state.goalType === 'prize_savings') {
-      const prize = prizes.find((p) => p.id === state.prizeId);
-      if (prize) return titleForPrizeSavings(prize);
+    const prize = prizes.find((p) => p.id === state.prizeId);
+    if (prize) {
+      return state.goalType === 'prize_savings' ? titleForPrizeSavings(prize) : `Earn ${(prize.name || 'reward').trim()}`;
     }
     return state.title.trim();
   };
@@ -392,6 +395,9 @@ export function GoalsManager(props: {
     if (!goalTitleFor(state) || !Number.isSafeInteger(tp) || tp <= 0) {
       return 'Enter a title and a positive target.';
     }
+    if (state.goalType !== 'prize_savings' && (!state.categoryId || state.categoryId === '__none__')) {
+      return 'Choose which category counts toward this goal.';
+    }
     if ((state.goalType === 'personal' || state.goalType === 'prize_savings') && !state.studentId) {
       return 'Choose which student this goal is for.';
     }
@@ -419,9 +425,10 @@ export function GoalsManager(props: {
         state.goalType === 'personal' || state.goalType === 'prize_savings' ? state.studentId : undefined,
       classId: state.goalType === 'class' ? state.classId : undefined,
       teacherId: variant === 'teacher' && teacherId ? teacherId : undefined,
-      prizeId:
-        state.goalType === 'prize_savings' && state.prizeId && state.prizeId !== '__none__'
-          ? state.prizeId
+      prizeId: state.prizeId && state.prizeId !== '__none__' ? state.prizeId : undefined,
+      prizeReward:
+        state.goalType !== 'prize_savings' && state.prizeId && state.prizeId !== '__none__'
+          ? state.prizeReward
           : undefined,
       startDate: state.goalType === 'prize_savings' ? undefined : msFromDateInput(state.startDate, false),
       endDate: msFromDateInput(state.endDate, true),
@@ -496,6 +503,7 @@ export function GoalsManager(props: {
       if (!payload.studentId) clearFields.push('studentId');
       if (!payload.classId) clearFields.push('classId');
       if (!payload.prizeId) clearFields.push('prizeId');
+      if (!payload.prizeReward) clearFields.push('prizeReward');
       if (!payload.categoryId) clearFields.push('categoryId');
       if (!payload.description) clearFields.push('description');
       if (!payload.bonusPointsReward) clearFields.push('bonusPointsReward');
@@ -567,7 +575,7 @@ export function GoalsManager(props: {
       {(target === 'edit' || createStep === 1) && <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor={`goal-audience-${target}`}>Who is this for?</Label>
-        <Select value={state.goalType === 'school' ? 'school' : state.goalType === 'class' ? 'class' : 'student'} onValueChange={(v) => patchForm({ goalType: v === 'school' ? 'school' : v === 'class' ? 'class' : 'personal', prizeId: '__none__' }, target)}>
+        <Select value={state.goalType === 'school' ? 'school' : state.goalType === 'class' ? 'class' : 'student'} onValueChange={(v) => patchForm({ goalType: v === 'school' ? 'school' : v === 'class' ? 'class' : 'personal' }, target)}>
           <SelectTrigger id={`goal-audience-${target}`} className="rounded-xl">
             <SelectValue />
           </SelectTrigger>
@@ -658,90 +666,13 @@ export function GoalsManager(props: {
 
       </div>}
       {(target === 'edit' || createStep === 2) && <div className="space-y-4">
-      {(state.goalType === 'personal' || state.goalType === 'prize_savings') && <div className="space-y-2">
-        <Label htmlFor={`goal-purpose-${target}`}>What are they working toward?</Label>
-        <Select value={state.goalType} onValueChange={(v) => patchForm({ goalType: v as GoalType, prizeId: '__none__', ...(v === 'prize_savings' ? { categoryId: '__none__', startDate: '' } : {}) }, target)}>
-          <SelectTrigger id={`goal-purpose-${target}`} className="rounded-xl"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="personal">Earn points toward a target</SelectItem>
-            <SelectItem value="prize_savings">Save points for a prize</SelectItem>
-          </SelectContent>
-        </Select>
-        <p className="text-sm text-muted-foreground">{state.goalType === 'prize_savings' ? 'Build up enough points to afford a prize. Spending points lowers the amount saved.' : 'Reach a points target, such as earning 50 kindness points.'}</p>
-      </div>}
-      {state.goalType !== 'prize_savings' && <div className="space-y-2">
-        <Label htmlFor={`goal-title-${target}`}>Title</Label>
-        <Input
-          id={`goal-title-${target}`}
-          className="rounded-xl"
-          value={state.title}
-          onChange={(e) => patchForm({ title: e.target.value }, target)}
-          placeholder="e.g. 50 kindness points this month"
-        />
-      </div>}
-
-      {state.goalType === 'prize_savings' && (
-        <div className="space-y-2">
-          <Label htmlFor={`goal-reward-${target}`}>Which reward are they saving for?</Label>
-          <Select value={state.prizeId === '__none__' ? undefined : state.prizeId} onValueChange={(v) => applyPrizeAutofill(v, target)}>
-            <SelectTrigger id={`goal-reward-${target}`} className="rounded-xl">
-              <SelectValue placeholder="Choose a reward" />
-            </SelectTrigger>
-            <SelectContent>
-              {(prizes || []).map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name} ({Number(p.points ?? 0)} pts)
-                </SelectItem>
-              ))}
-              {state.prizeId !== '__none__' &&
-              (prizes?.length ?? 0) > 0 &&
-              !(prizes || []).some((p) => p.id === state.prizeId) ? (
-                <SelectItem value={state.prizeId}>Unknown reward (deleted)</SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
-          <p className="text-[11px] text-muted-foreground">
-            The goal is named after this reward, and the target is set to its cost.
-          </p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor={`goal-target-${target}`}>Target points</Label>
-          <Input
-            id={`goal-target-${target}`}
-            className="rounded-xl"
-            inputMode="numeric"
-            value={state.targetPoints}
-            onChange={(e) => patchForm({ targetPoints: e.target.value }, target)}
-          />
-        </div>
-
-      </div>
-
-      {state.goalType === 'prize_savings' ? (
-        <p className="rounded-xl bg-muted p-3 text-sm">Savings use the student’s current balance. Spending points can reduce progress until the goal is finished.</p>
-      ) : (
-        <div className="space-y-2">
-          <Label htmlFor={`goal-start-${target}`}>Start date (optional)</Label>
-          <Input
-            type="date"
-            className="rounded-xl"
-            id={`goal-start-${target}`} value={state.startDate}
-            onChange={(e) => patchForm({ startDate: e.target.value }, target)}
-          />
-          <p className="text-sm text-muted-foreground">Only points earned from this date count. Leave blank to include earlier points; the goal may already be reached.</p>
-        </div>
-      )}
       {state.goalType !== 'prize_savings' && <div className="space-y-2">
         <Label htmlFor={`goal-category-${target}`}>Which category counts?</Label>
-        <Select value={state.categoryId} onValueChange={(v) => patchForm({ categoryId: v }, target)}>
+        <Select value={state.categoryId === '__none__' ? undefined : state.categoryId} onValueChange={(v) => patchForm({ categoryId: v }, target)}>
           <SelectTrigger id={`goal-category-${target}`} className="rounded-xl">
-            <SelectValue placeholder="All categories" />
+            <SelectValue placeholder="Choose a category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__none__">All categories</SelectItem>
             {(categories || []).map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.name}
@@ -754,10 +685,94 @@ export function GoalsManager(props: {
             ) : null}
           </SelectContent>
         </Select>
-        <p className="text-sm text-muted-foreground">Choose one category, such as Kindness, or count points from all categories.</p>
+        <p className="text-sm text-muted-foreground">Only points earned in this category, such as Kindness, count toward the goal.</p>
+      </div>}
+
+      <div className="space-y-2">
+        <Label htmlFor={`goal-reward-${target}`}>
+          {state.goalType === 'prize_savings' ? 'Which reward are they saving for?' : 'Prize for reaching the goal (optional)'}
+        </Label>
+        <Select value={state.prizeId === '__none__' ? (state.goalType === 'prize_savings' ? undefined : '__none__') : state.prizeId} onValueChange={(v) => applyPrizeAutofill(v, target)}>
+          <SelectTrigger id={`goal-reward-${target}`} className="rounded-xl">
+            <SelectValue placeholder="Choose a reward" />
+          </SelectTrigger>
+          <SelectContent>
+            {state.goalType !== 'prize_savings' && <SelectItem value="__none__">No prize</SelectItem>}
+            {(prizes || []).map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name} ({Number(p.points ?? 0)} pts)
+              </SelectItem>
+            ))}
+            {state.prizeId !== '__none__' &&
+            (prizes?.length ?? 0) > 0 &&
+            !(prizes || []).some((p) => p.id === state.prizeId) ? (
+              <SelectItem value={state.prizeId}>Unknown reward (deleted)</SelectItem>
+            ) : null}
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          {state.prizeId !== '__none__'
+            ? 'The goal is named after this prize, and the target is set to its cost.'
+            : 'Pick a prize to name the goal after it, or leave it off and write your own title.'}
+        </p>
       </div>
 
-}
+      {state.goalType !== 'prize_savings' && state.prizeId !== '__none__' && <div className="space-y-2">
+        <Label htmlFor={`goal-prize-reward-${target}`}>How do they get the prize?</Label>
+        <Select value={state.prizeReward} onValueChange={(v) => patchForm({ prizeReward: v as 'shop' | 'free' }, target)}>
+          <SelectTrigger id={`goal-prize-reward-${target}`} className="rounded-xl"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="shop">They get it in the shop with their points</SelectItem>
+            <SelectItem value="free">Give it to them free when they finish</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-muted-foreground">
+          {state.prizeReward === 'free'
+            ? (state.goalType === 'class' || state.goalType === 'school')
+              ? 'When the goal is reached, every student taking part gets the prize at no cost. It appears in the list of prizes to hand out.'
+              : 'When the goal is reached, the student gets the prize at no cost. It appears in the list of prizes to hand out.'
+            : 'The goal shows what they are working toward. They still spend their points on it in the shop.'}
+        </p>
+      </div>}
+
+      {state.prizeId === '__none__' && <div className="space-y-2">
+        <Label htmlFor={`goal-title-${target}`}>Title</Label>
+        <Input
+          id={`goal-title-${target}`}
+          className="rounded-xl"
+          value={state.title}
+          onChange={(e) => patchForm({ title: e.target.value }, target)}
+          placeholder="e.g. 50 kindness points this month"
+        />
+      </div>}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor={`goal-target-${target}`}>Target points</Label>
+          <Input
+            id={`goal-target-${target}`}
+            className="rounded-xl"
+            inputMode="numeric"
+            value={state.targetPoints}
+            onChange={(e) => patchForm({ targetPoints: e.target.value }, target)}
+          />
+        </div>
+      </div>
+
+      {state.goalType === 'prize_savings' ? (
+        <p className="rounded-xl bg-muted p-3 text-sm">This is a student wishlist goal. It uses the student’s current balance, so spending points can lower progress until it is finished.</p>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor={`goal-start-${target}`}>Start date (optional)</Label>
+          <Input
+            type="date"
+            className="rounded-xl"
+            id={`goal-start-${target}`} value={state.startDate}
+            onChange={(e) => patchForm({ startDate: e.target.value }, target)}
+          />
+          <p className="text-sm text-muted-foreground">Only points earned from this date count. Leave blank to include earlier points; the goal may already be reached.</p>
+        </div>
+      )}
       </div>}
       {(target === 'edit' || createStep === 3) && <div className="space-y-4">
         <div className="space-y-2 rounded-xl border p-4">
@@ -814,11 +829,13 @@ export function GoalsManager(props: {
           <p className="font-semibold">Ready to start?</p>
           <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : 'Only me and admins'}</p>
           <p>{goalTitleFor(state) || 'Your goal'} · {state.targetPoints} points</p>
-          {state.goalType === 'prize_savings' ? <>
-            <p className="text-sm">Save points for: {prizes.find((prize) => prize.id === state.prizeId)?.name ?? 'A prize to choose later'}</p>
+          {state.prizeId !== '__none__' && (
+            <p className="text-sm">Prize: {prizes.find((prize) => prize.id === state.prizeId)?.name ?? 'Reward no longer available'} · {state.prizeReward === 'free' ? 'given free when they finish' : 'they get it in the shop'}</p>
+          )}
+          {state.goalType === 'prize_savings' ? (
             <p className="text-sm">Uses the student’s available points. Spending points reduces progress until the goal is finished.</p>
-          </> : <>
-            <p className="text-sm">Category: {state.categoryId !== '__none__' ? categories?.find((category) => category.id === state.categoryId)?.name ?? 'Category no longer available' : 'All categories'}</p>
+          ) : <>
+            <p className="text-sm">Category: {categories?.find((category) => category.id === state.categoryId)?.name ?? 'Not chosen'}</p>
             <p className="text-sm">{state.startDate ? `Counts points earned from ${state.startDate}.` : 'Includes points already earned.'} {state.goalType === 'school' ? 'The whole school works toward one shared total.' : state.goalType === 'class' ? 'The class works toward one shared total.' : ''}</p>
           </>}
           <p className="text-sm">{state.goalType === 'school' ? 'Whole school' : state.goalType === 'class' ? classes.find((c) => c.id === state.classId)?.name : studentLabel(students.find((student) => student.id === state.studentId) || { id: '', firstName: '', lastName: '' } as Student)}</p>
@@ -985,7 +1002,8 @@ export function GoalsManager(props: {
                                 <p className="text-sm text-muted-foreground">{g.startDate ? `Counts points earned from ${new Date(g.startDate).toLocaleDateString()}.` : 'Includes points already earned.'} {g.type === 'school' ? 'One shared school total.' : g.type === 'class' ? 'One shared class total.' : ''}</p>
                               </>}
                             <p className="text-sm text-muted-foreground">{g.endDate ? `Due ${new Date(g.endDate).toLocaleDateString()}` : 'No deadline'}</p>
-                              {g.prizeId && <p className="text-sm">Saving for: {prizes.find((p) => p.id === g.prizeId)?.name ?? 'Reward no longer available'}</p>}
+                              {g.prizeId && <p className="text-sm">{g.type === 'prize_savings' ? 'Saving for' : 'Prize'}: {prizes.find((p) => p.id === g.prizeId)?.name ?? 'Reward no longer available'}{g.type !== 'prize_savings' ? (g.prizeReward === 'free' ? ' · given free when they finish' : ' · they get it in the shop') : ''}</p>}
+                              {g.prizeAwardProblem && <p className="text-sm font-medium text-amber-700 dark:text-amber-300">{g.prizeAwardProblem}</p>}
                               {!!g.bonusPointsReward && <p className="text-sm">{(g.type === 'class' || g.type === 'school') ? 'Bonus for each student' : 'Completion bonus'}: {g.bonusPointsReward} points</p>}
                               <p className="text-sm font-medium">{g.status === 'completed' ? 'Finished — well done!' : `${Math.max(0, Number(g.targetPoints) - p).toLocaleString()} more points to go`}</p>
                             </div>

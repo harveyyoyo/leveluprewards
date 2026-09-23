@@ -174,12 +174,20 @@ export const redeemPrize = async (
   prize: Prize,
   quantity: number,
   pointsOverride?: number,
-  options?: { markFulfilled?: boolean },
+  options?: {
+    markFulfilled?: boolean;
+    /** Fixed activity ID so a repeat call (e.g. a goal's free prize) is skipped instead of redeemed twice. */
+    receiptId?: string;
+    /** Added after the prize name in history, e.g. "(goal prize)". Keeps the "Redeemed:" prefix the pickup lists rely on. */
+    historyNote?: string;
+    skipGoalSync?: boolean;
+  },
   categories: Category[] = [],
 ): Promise<{ success: boolean; activityId: string; redeemedAt: number; totalCost: number }> => {
   const studentRef = doc(firestore, 'schools', schoolId, 'students', studentId);
   const prizeRef = doc(firestore, 'schools', schoolId, 'prizes', prize.id);
-  const activityRef = doc(collection(firestore, 'schools', schoolId, 'students', studentId, 'activities'));
+  const activitiesRef = collection(firestore, 'schools', schoolId, 'students', studentId, 'activities');
+  const activityRef = options?.receiptId ? doc(activitiesRef, options.receiptId) : doc(activitiesRef);
   const redeemedAt = Date.now();
   // A negative or fractional quantity would flip the deduction into a credit
   // and inflate stock; reject before touching the transaction.
@@ -187,12 +195,18 @@ export const redeemPrize = async (
     throw new Error('Invalid quantity.');
   }
   let committedTotalCost = 0;
+  let alreadyRedeemed = false;
   try {
     await runTransaction(firestore, async (transaction) => {
-      const [studentDoc, prizeDoc] = await Promise.all([
+      const [studentDoc, prizeDoc, receiptDoc] = await Promise.all([
         transaction.get(studentRef),
         transaction.get(prizeRef),
+        options?.receiptId ? transaction.get(activityRef) : Promise.resolve(null),
       ]);
+      if (receiptDoc?.exists()) {
+        alreadyRedeemed = true;
+        return;
+      }
 
       if (!studentDoc.exists()) {
         throw new Error("Student not found.");
@@ -252,7 +266,7 @@ export const redeemPrize = async (
 
       const restrictionIds = prizeRestrictionTeacherIds(prizeData as Prize);
       const newHistoryItem: Omit<HistoryItem, 'id'> = {
-        desc: `Redeemed: ${prizeData.name}${quantity > 1 ? ` (x${quantity})` : ''}`,
+        desc: `Redeemed: ${prizeData.name}${quantity > 1 ? ` (x${quantity})` : ''}${options?.historyNote ? ` ${options.historyNote}` : ''}`,
         amount: -totalCost,
         date: redeemedAt,
         fulfilled: options?.markFulfilled === true,
@@ -279,9 +293,11 @@ export const redeemPrize = async (
       // possibly stale prize snapshot.
       committedTotalCost = totalCost;
     });
-    void import('@/lib/goalsProgress').then((m) =>
-      m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
-    );
+    if (!options?.skipGoalSync && !alreadyRedeemed) {
+      void import('@/lib/goalsProgress').then((m) =>
+        m.syncGoalsForStudent(firestore, schoolId, studentId).catch(() => {}),
+      );
+    }
     return { success: true, activityId: activityRef.id, redeemedAt, totalCost: committedTotalCost };
   } catch (e) {
     reportFirestorePermissionError(e, { path: studentRef.path, operation: 'update', requestResourceData: { prizeId: prize.id, quantity } });
