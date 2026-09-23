@@ -184,7 +184,7 @@ export async function POST(req: NextRequest) {
     const categories = categoriesSnap.docs.map((snap) => docData<JsonRecord>(snap));
     const goals = goalsSnap.docs
       .map((snap) => docData<JsonRecord>(snap))
-      .filter((goal) => goal.status === 'active' || goal.status === 'completed')
+      .filter((goal) => (goal.status === 'active' || goal.status === 'completed') && goal.hiddenFromStudents !== true)
       .filter(
         (goal) =>
           goal.type === 'school' || goal.studentId === studentId ||

@@ -77,9 +77,18 @@ describe('Goals manager', () => {
       fixtures.goals[0] = original;
     }
   });
+  it('shows goals to students by default and can hide one', async () => {
+    await act(async () => { showGoals(); });
+    openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));
+    const box = screen.getByRole('checkbox', { name: 'Show on student page' });
+    expect(box).toBeChecked();
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(updateGoal).toHaveBeenCalledWith(fixtures.db, 'school', 'goal', expect.objectContaining({ hiddenFromStudents: true })));
+  });
   it('requires a category for a points goal', async () => {
     const original = fixtures.goals[0];
-    fixtures.goals[0] = { ...original, ...{ categoryId: undefined } };
+    fixtures.goals[0] = { ...original, ...{ categoryId: undefined as unknown as string } };
     try {
       await act(async () => { showGoals(); });
       openGoal(); fireEvent.click(screen.getByRole('button', { name: 'Edit goal' }));

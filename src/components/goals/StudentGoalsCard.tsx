@@ -50,7 +50,7 @@ export function StudentGoalsCard(props: {
     if (!allGoals) return [];
     return allGoals
       .filter((g) => !g.archived)
-      .filter((g) => g.status === 'active' || g.status === 'completed')
+      .filter((g) => (g.status === 'active' || g.status === 'completed') && !g.hiddenFromStudents)
       .filter(
         (g) =>
           g.type === 'school' || g.studentId === student.id ||

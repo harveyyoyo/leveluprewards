@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
@@ -105,6 +106,7 @@ type GoalFormState = {
   bonusPoints: string;
   staffVisibility: 'creator' | 'all';
   prizeReward: 'shop' | 'free';
+  showToStudents: boolean;
 };
 
 const emptyForm = (): GoalFormState => ({
@@ -121,6 +123,7 @@ const emptyForm = (): GoalFormState => ({
   bonusPoints: '',
   staffVisibility: 'creator',
   prizeReward: 'shop',
+  showToStudents: true,
 });
 
 function formFromGoal(goal: Goal): GoalFormState {
@@ -138,6 +141,7 @@ function formFromGoal(goal: Goal): GoalFormState {
     bonusPoints: goal.bonusPointsReward != null ? String(goal.bonusPointsReward) : '',
     staffVisibility: goalStaffVisibility(goal),
     prizeReward: goal.prizeReward ?? 'shop',
+    showToStudents: goal.hiddenFromStudents !== true,
   };
 }
 
@@ -434,6 +438,7 @@ export function GoalsManager(props: {
       endDate: msFromDateInput(state.endDate, true),
       bonusPointsReward: bonus !== undefined && bonus > 0 ? bonus : undefined,
       staffVisibility: state.staffVisibility,
+      hiddenFromStudents: state.showToStudents ? undefined : true,
     };
   };
 
@@ -504,6 +509,7 @@ export function GoalsManager(props: {
       if (!payload.classId) clearFields.push('classId');
       if (!payload.prizeId) clearFields.push('prizeId');
       if (!payload.prizeReward) clearFields.push('prizeReward');
+      if (!payload.hiddenFromStudents) clearFields.push('hiddenFromStudents');
       if (!payload.categoryId) clearFields.push('categoryId');
       if (!payload.description) clearFields.push('description');
       if (!payload.bonusPointsReward) clearFields.push('bonusPointsReward');
@@ -788,6 +794,22 @@ export function GoalsManager(props: {
           <p className="text-sm">Assigned by: {target === 'edit' ? editingGoal?.assignedByName || userName || 'You' : userName || 'You'}</p>
           {target === 'edit' && !editingGoal?.assignedByStaffId && <p className="text-sm text-muted-foreground">This older goal has no recorded assigner name. Saving it will record you as the person managing it.</p>}
         </div>
+        <div className="flex items-start gap-3 rounded-xl border p-4">
+          <Checkbox
+            id={`goal-show-students-${target}`}
+            checked={state.showToStudents}
+            onCheckedChange={(checked) => patchForm({ showToStudents: checked === true }, target)}
+            className="mt-0.5"
+          />
+          <div className="space-y-1">
+            <Label htmlFor={`goal-show-students-${target}`}>Show on student page</Label>
+            <p className="text-sm text-muted-foreground">
+              {state.showToStudents
+                ? 'Students taking part see this goal and its progress on the kiosk and their home page.'
+                : 'Students won’t see this goal. It still counts their points, and any bonus or prize is still given.'}
+            </p>
+          </div>
+        </div>
         <div className="space-y-2">
           <Label htmlFor={`goal-bonus-${target}`}>
             {(state.goalType === 'class' || state.goalType === 'school') ? 'Bonus each student gets (optional)' : 'Bonus on completion (optional)'}
@@ -827,7 +849,7 @@ export function GoalsManager(props: {
 </div></details>
         {target === 'create' && <div className="rounded-xl bg-muted p-4 space-y-2" aria-label="Goal summary">
           <p className="font-semibold">Ready to start?</p>
-          <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : 'Only me and admins'}</p>
+          <p className="text-sm">Staff visibility: {state.staffVisibility === 'all' ? 'Show for all staff' : 'Only me and admins'} · {state.showToStudents ? 'Shown on student page' : 'Hidden from students'}</p>
           <p>{goalTitleFor(state) || 'Your goal'} · {state.targetPoints} points</p>
           {state.prizeId !== '__none__' && (
             <p className="text-sm">Prize: {prizes.find((prize) => prize.id === state.prizeId)?.name ?? 'Reward no longer available'} · {state.prizeReward === 'free' ? 'given free when they finish' : 'they get it in the shop'}</p>
@@ -983,6 +1005,7 @@ export function GoalsManager(props: {
                                 {goalAudienceLabel(g, listStudents, listClasses)} ·{' '}
                                 {goalStatusLabel(g.status)}
                                 {g.createdByStudent ? ' · Student wishlist' : ''}
+                                {g.hiddenFromStudents ? ' · Hidden from students' : ''}
                               </p>
                             </div>
                             <span className="shrink-0 text-xs font-bold tabular-nums">

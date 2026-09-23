@@ -809,6 +809,8 @@ export interface Goal {
   prizeId?: string;   // Prize the goal is working toward (savings goals, or any goal with a prize)
   /** For goals with a prize: `free` gives the prize on completion; `shop` (default) means they get it in the shop. */
   prizeReward?: 'shop' | 'free';
+  /** When true, the goal is left off student pages (kiosk and home portal). Staff still see it. */
+  hiddenFromStudents?: boolean;
   /** Set when a free prize could not be handed out automatically (e.g. out of stock). */
   prizeAwardProblem?: string;
   

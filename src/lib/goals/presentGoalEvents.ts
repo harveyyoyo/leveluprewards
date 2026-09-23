@@ -25,6 +25,8 @@ export function presentGoalSyncEvents(
     forStudent?: boolean;
   },
 ): void {
+  // Goals staff chose to keep off student pages don't cheer on student screens either.
+  if (args.forStudent) events = events?.filter((e) => !e.hiddenFromStudents);
   if (!events?.length) return;
   const opts = resolveGoalsOptions(args.options);
   const completed = events.filter((e) => e.kind === 'completed');

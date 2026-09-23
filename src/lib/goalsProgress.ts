@@ -156,6 +156,7 @@ export type GoalSyncEvent = {
   kind: 'completed' | 'almost_there';
   type: GoalType;
   classId?: string;
+  hiddenFromStudents?: boolean;
 };
 
 export async function syncGoalsForStudent(
@@ -225,6 +226,7 @@ export async function syncGoalsForStudent(
         kind: 'almost_there',
         type: goal.type,
         classId: goal.classId,
+        hiddenFromStudents: goal.hiddenFromStudents,
       });
     }
 
@@ -279,6 +281,7 @@ export async function syncGoalsForStudent(
         kind: 'completed',
         type: goal.type,
         classId: goal.classId,
+        hiddenFromStudents: goal.hiddenFromStudents,
       });
 
     }
