@@ -128,6 +128,11 @@ export function OfficeStudentsView({
   const [askLabel, setAskLabel] = useState('');
   const [addressText, setAddressText] = useState('');
   const [teacherText, setTeacherText] = useState('');
+  // "Last name starts with L" from Help → Ask.
+  const [lastStarts, setLastStarts] = useState('');
+  const [firstStarts, setFirstStarts] = useState('');
+  /** 1–12, from "birthdays in March". */
+  const [birthMonth, setBirthMonth] = useState<number | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
@@ -184,6 +189,9 @@ export function OfficeStudentsView({
         const address = s.familyId ? familyById.get(s.familyId)?.homeAddress : null;
         if (!officeAddressMatches(address, addressText)) return false;
       }
+      if (lastStarts && !(s.lastName ?? '').trim().toLowerCase().startsWith(lastStarts.toLowerCase())) return false;
+      if (firstStarts && !(s.firstName ?? '').trim().toLowerCase().startsWith(firstStarts.toLowerCase())) return false;
+      if (birthMonth && Number(s.dateOfBirth?.slice(5, 7)) !== birthMonth) return false;
       if (classFilter === '__unassigned__' && s.classId) return false;
       if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;
       if (!q) return true;
@@ -217,6 +225,9 @@ export function OfficeStudentsView({
     teacherIdsMatchingText,
     addressText,
     familyById,
+    lastStarts,
+    firstStarts,
+    birthMonth,
   ]);
 
   useEffect(() => {
@@ -243,6 +254,10 @@ export function OfficeStudentsView({
     setQuery(searchParams.get('q')?.trim() ?? '');
     setTeacherText(searchParams.get('teacher')?.trim() ?? '');
     setAddressText(searchParams.get('address')?.trim() ?? '');
+    setLastStarts(searchParams.get('lastStarts')?.trim() ?? '');
+    setFirstStarts(searchParams.get('firstStarts')?.trim() ?? '');
+    const month = Number(searchParams.get('birthMonth'));
+    setBirthMonth(Number.isInteger(month) && month >= 1 && month <= 12 ? month : null);
     setHomeroomFilter('all');
     setRosterFilter((ROSTER_FILTERS as string[]).includes(f) ? (f as RosterFilter) : 'all');
     setClassFilter(f === 'unassigned' ? '__unassigned__' : cls ? cls.id : 'all');
@@ -266,7 +281,16 @@ export function OfficeStudentsView({
     rows: filtered.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((s) => ({
       id: s.id,
       name: getOfficeStudentFullName(s),
-      detail: (s.classId && classNameById.get(s.classId)) || undefined,
+      detail:
+        [
+          (s.classId && classNameById.get(s.classId)) || null,
+          // For a birthday list, show the day too.
+          birthMonth && s.dateOfBirth
+            ? `birthday ${new Date(`${s.dateOfBirth}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ') || undefined,
       open: { kind: 'student', id: s.id },
     })),
   }));
@@ -277,6 +301,9 @@ export function OfficeStudentsView({
     setQuery('');
     setTeacherText('');
     setAddressText('');
+    setLastStarts('');
+    setFirstStarts('');
+    setBirthMonth(null);
     setRosterFilter('all');
     setClassFilter('all');
     setHomeroomFilter('all');
@@ -346,7 +373,10 @@ export function OfficeStudentsView({
     homeroomFilter !== 'all' ||
     !!query.trim() ||
     !!teacherText.trim() ||
-    !!addressText.trim();
+    !!addressText.trim() ||
+    !!lastStarts ||
+    !!firstStarts ||
+    !!birthMonth;
 
   return (
     <div className="space-y-3">

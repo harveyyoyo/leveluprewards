@@ -91,8 +91,9 @@ function buildSystemPrompt(context: {
     '- Be brief: short paragraphs or bullets; avoid long preamble.',
     ...(context.product === 'office'
       ? [
-          '- The School Office records students, families, classes and teachers (with class schedules), student attendance, the front desk log (late arrivals, early pickups, nurse visits), grades/marks, billing, forms, events and messages.',
-          '- If they ask for something the office does not record (for example teacher absences, substitutes or staff time off), say so plainly in one or two sentences. Never invent screens, buttons or steps that are not in the app.',
+          '- The School Office records students (with date of birth, gender, student number, enrollment date, previous school, home language, allergies, health and pickup notes, bus route, tags, and any extra fields the school adds in Settings), families (contacts, home address, custody and medical notes), classes and teachers (with class schedules), student attendance, the front desk log (late arrivals, early pickups, nurse visits), grades/marks, billing and payments, forms, events, messages, student documents, and a full change history.',
+          '- If they asked for a list you could not make (you are answering in words), say "I can\'t make that list yet" and, if the office records that information, say where to see it (for example each student\'s card). Never say the office does not record something that is in the list above.',
+          '- Only if it is truly not recorded (for example teacher absences, substitutes or staff time off), say so plainly in one or two sentences. Never invent screens, buttons or steps that are not in the app.',
         ]
       : []),
     ...(onLibrary

@@ -24,6 +24,8 @@ import { useOfficeSharedData } from '@/lib/office/useOfficeSharedData';
 import { buildOfficeAiHelpContext } from '@/lib/office/officeHelpContext';
 import {
   OFFICE_ASSISTANT_PAGE_LABEL,
+  describeOfficeAssistantView,
+  findClassByAskedName,
   officeAssistantViewHref,
   parseOfficeAssistantDecision,
   type OfficeAssistantView,
@@ -274,22 +276,29 @@ export function OfficeAiHelpButton() {
         const turnedOff =
           (decision.view.page === 'attendance' && settings?.features?.attendance === false) ||
           (decision.view.page === 'frontdesk' && settings?.features?.frontDesk === false);
-        if (turnedOff) {
-          setMessages((prev) => [
-            ...prev,
-            { role: 'assistant', content: `${page} is turned off for this school. It can be turned back on in Settings.` },
-          ]);
+        // A class the school doesn't have would otherwise be ignored and show every class.
+        const askedClass =
+          decision.view.page === 'students' || decision.view.page === 'attendance' ? decision.view.className : null;
+        const missingClass = askedClass && !findClassByAskedName(shared.classes, askedClass);
+        const cannot = turnedOff
+          ? `${page} is turned off for this school. It can be turned back on in Settings.`
+          : missingClass
+            ? `I couldn't find a class called “${askedClass}”. Check the name on the Classes page and ask again.`
+            : null;
+        if (cannot) {
+          setMessages((prev) => [...prev, { role: 'assistant', content: cannot }]);
           setSending(false);
           return;
         }
         // Open the list behind this panel; the page reports what it found and the answer fills in.
         const askAt = String(Date.now());
-        const href = withAskAt(officeAssistantViewHref(schoolId, decision.view), askAt);
+        const href = withAskAt(officeAssistantViewHref(schoolId, decision.view, today), askAt);
         setMessages((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: decision.view.label,
+            // Describes the filters actually applied, so a mismatch with the question shows.
+            content: describeOfficeAssistantView(decision.view, today),
             list: { href, askAt, page, view: decision.view, results: readOfficeAssistantResults(askAt) },
           },
         ]);

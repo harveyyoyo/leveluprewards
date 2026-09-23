@@ -169,7 +169,9 @@ export function buildOfficeDemoFamilies(
 export function demoStudentDetails(studentId: string): Partial<OfficeStudent> {
   const h = hashToIndex(studentId, 1000);
   const year = new Date().getFullYear() - 1 - (h % 4);
+  const born = new Date().getFullYear() - 6 - (h % 12);
   return {
+    dateOfBirth: `${born}-${String(1 + ((h * 7) % 12)).padStart(2, '0')}-${String(1 + ((h * 13) % 28)).padStart(2, '0')}`,
     studentNumber: `S${String(10000 + h * 7).slice(0, 5)}`,
     enrollmentDate: `${year}-09-0${1 + (h % 5)}`,
     allergies: h % 11 === 0 ? DEMO_ALLERGIES[h % DEMO_ALLERGIES.length] : null,
