@@ -18,6 +18,7 @@ describe('multi-teacher class assignments', () => {
   const students: Student[] = [
     {
       id: 's1',
+      nfcId: 'nfc-s1',
       firstName: 'Alice',
       lastName: 'Johnson',
       points: 10,
@@ -27,6 +28,7 @@ describe('multi-teacher class assignments', () => {
     },
     {
       id: 's2',
+      nfcId: 'nfc-s2',
       firstName: 'Bob',
       lastName: 'Miller',
       points: 5,

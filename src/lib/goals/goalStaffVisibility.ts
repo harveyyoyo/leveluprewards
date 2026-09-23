@@ -17,5 +17,7 @@ export function canSeeStaffGoal(goal: Goal, viewer: GoalStaffViewer): boolean {
 }
 
 export function goalStaffVisibility(goal: Goal): 'creator' | 'all' {
+  // Sharing with specific staff isn't offered in the goal form yet; show it as the private choice.
+  if (goal.staffVisibility === 'specific') return 'creator';
   return goal.staffVisibility ?? (goal.teacherId || goal.assignedByStaffId ? 'creator' : 'all');
 }
