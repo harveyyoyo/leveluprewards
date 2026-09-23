@@ -10,9 +10,10 @@ interface NumericKeypadProps {
   onChange: (newValue: string) => void;
   onSubmit?: () => void;
   className?: string;
+  compact?: boolean;
 }
 
-export function NumericKeypad({ value, onChange, onSubmit, className }: NumericKeypadProps) {
+export function NumericKeypad({ value, onChange, onSubmit, className, compact = false }: NumericKeypadProps) {
   const playSound = useArcadeSound();
 
   const handleKeyPress = (key: string) => {
@@ -35,15 +36,15 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
   return (
-    <div className={`mx-auto w-full max-w-[320px] p-1 select-none ${className || ''}`} data-testid="numeric-keypad">
-      <div className="grid grid-cols-3 gap-2">
+    <div className={`mx-auto w-full ${compact ? 'max-w-[260px] p-0' : 'max-w-[320px] p-1'} select-none ${className || ''}`} data-testid="numeric-keypad">
+      <div className={`grid grid-cols-3 ${compact ? 'gap-1' : 'gap-2'}`}>
         {keys.map((key) => (
           <Button
             key={key}
             type="button"
             variant="outline"
             onMouseDown={(e) => e.preventDefault()}
-            className="h-12 text-xl font-black rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm"
+            className={`${compact ? 'h-8 min-h-0 text-sm font-bold rounded-lg px-2' : 'h-12 text-xl font-black rounded-xl'} border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm`}
             onClick={() => handleKeyPress(key)}
           >
             {key}
@@ -53,7 +54,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
           type="button"
           variant="outline"
           onMouseDown={(e) => e.preventDefault()}
-          className="h-12 text-xs font-bold uppercase tracking-wider rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm"
+          className={`${compact ? 'h-8 min-h-0 text-[10px] font-bold uppercase tracking-wider rounded-lg px-1' : 'h-12 text-xs font-bold uppercase tracking-wider rounded-xl'} border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm`}
           onClick={handleClear}
           title="Clear all"
         >
@@ -63,7 +64,7 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
           type="button"
           variant="outline"
           onMouseDown={(e) => e.preventDefault()}
-          className="h-12 text-xl font-black rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm"
+          className={`${compact ? 'h-8 min-h-0 text-sm font-bold rounded-lg px-2' : 'h-12 text-xl font-black rounded-xl'} border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 flex items-center justify-center shadow-sm`}
           onClick={() => handleKeyPress('0')}
         >
           0
@@ -72,11 +73,11 @@ export function NumericKeypad({ value, onChange, onSubmit, className }: NumericK
           type="button"
           variant="outline"
           onMouseDown={(e) => e.preventDefault()}
-          className="h-12 rounded-xl border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm"
+          className={`${compact ? 'h-8 min-h-0 rounded-lg px-2' : 'h-12 rounded-xl'} border border-border/60 bg-card hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform duration-100 text-muted-foreground flex items-center justify-center shadow-sm`}
           onClick={handleBackspace}
           title="Backspace"
         >
-          <Delete className="h-5 w-5" />
+          <Delete className={compact ? 'h-3.5 w-3.5' : 'h-5 w-5'} />
         </Button>
       </div>
     </div>

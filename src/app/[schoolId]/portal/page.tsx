@@ -921,10 +921,10 @@ export default function PortalPage() {
                     }
                     setTeacherDialogOpen(open);
                 }}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle className="font-headline font-black tracking-tight">{t('portal.staffSignIn.title')}</DialogTitle>
-                            <DialogDescription>
+                    <DialogContent className="sm:max-w-md p-3 sm:p-4 md:p-4 gap-2 sm:gap-2.5 md:gap-2.5 max-h-[95vh] overflow-y-auto">
+                        <DialogHeader className="space-y-1">
+                            <DialogTitle className="font-headline font-black tracking-tight text-lg sm:text-xl">{t('portal.staffSignIn.title')}</DialogTitle>
+                            <DialogDescription className="text-xs sm:text-sm">
                                 {t('portal.staffSignIn.description')}
                             </DialogDescription>
                         </DialogHeader>
@@ -933,7 +933,7 @@ export default function PortalPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full rounded-xl font-bold"
+                                className="w-full rounded-xl font-bold h-8 sm:h-9 min-h-0 text-xs sm:text-sm"
                                 data-intro-tour="teacher-sign-in-admin"
                                 disabled={adminSubmitting}
                                 onClick={() => {
@@ -981,7 +981,7 @@ export default function PortalPage() {
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="w-full rounded-xl font-bold"
+                                className="w-full rounded-xl font-bold h-8 sm:h-9 min-h-0 text-xs sm:text-sm"
                                 data-intro-tour="teacher-sign-in-admin"
                                 onClick={() => {
                                     playSound('click');
@@ -994,13 +994,13 @@ export default function PortalPage() {
                             </Button>
                         )}
 
-                        <div className="space-y-4">
-                            <div className="space-y-2">
+                        <div className="space-y-2.5 sm:space-y-3">
+                            <div className="space-y-1">
                                 <Label className="text-xs font-semibold text-muted-foreground">
                                     {t('portal.staffSignIn.selectName')}
                                 </Label>
                                 <Select value={selectedTeacherKey} onValueChange={setSelectedTeacherKey}>
-                                    <SelectTrigger className="h-12 rounded-xl font-semibold" autoFocus={!isAdmin}>
+                                    <SelectTrigger className="h-8 sm:h-9 rounded-xl font-semibold text-xs sm:text-sm" autoFocus={!isAdmin}>
                                         <SelectValue placeholder={staffOptions.length ? t('portal.staffSignIn.chooseName') : t('portal.staffSignIn.noStaffAccounts')} />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -1017,8 +1017,8 @@ export default function PortalPage() {
                                     </p>
                                 )}
                             </div>
-                             <div className="space-y-4 py-2">
-                                <div className="space-y-2">
+                            <div className="space-y-2">
+                                <div className="space-y-1">
                                     <Label htmlFor="teacher-passcode" className="text-xs font-semibold text-muted-foreground">
                                         {t('common.passcode')}
                                     </Label>
@@ -1027,7 +1027,7 @@ export default function PortalPage() {
                                         type="password"
                                         value={teacherPasscode}
                                         onChange={(e) => setTeacherPasscode(e.target.value)}
-                                        className="h-12 rounded-xl font-mono tracking-[0.25em] text-center"
+                                        className="h-8 sm:h-9 rounded-xl font-mono tracking-[0.25em] text-center text-sm"
                                         autoComplete="current-password"
                                         onKeyDown={(e) => {
                                             if (e.key !== 'Enter') return;
@@ -1081,15 +1081,15 @@ export default function PortalPage() {
                                         }}
                                     />
                                 </div>
-                                <NumericKeypad value={teacherPasscode} onChange={setTeacherPasscode} />
+                                <NumericKeypad value={teacherPasscode} onChange={setTeacherPasscode} compact />
                             </div>
                         </div>
 
-                        <DialogFooter className="gap-2 sm:gap-0">
+                        <DialogFooter className="gap-2 sm:gap-2 pt-1">
                             <Button
                                 type="button"
                                 variant="outline"
-                                className="rounded-xl font-bold"
+                                className="rounded-xl font-bold h-8 sm:h-9 min-h-0 text-xs sm:text-sm"
                                 onClick={() => setTeacherDialogOpen(false)}
                                 disabled={teacherSubmitting}
                             >
@@ -1097,7 +1097,7 @@ export default function PortalPage() {
                             </Button>
                             <Button
                                 type="button"
-                                className="rounded-xl font-black"
+                                className="rounded-xl font-black h-8 sm:h-9 min-h-0 text-xs sm:text-sm"
                                 disabled={teacherSubmitting}
                                 onClick={() => {
                                     if (teacherSubmitting) return;
