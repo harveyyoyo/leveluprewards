@@ -192,6 +192,17 @@ export type OfficeBusStop = {
   isSchool?: boolean;
 };
 
+export type OfficeBusMaintenanceEntry = {
+  id: string;
+  serviceDate: string;
+  serviceType: string;
+  mileage?: number | null;
+  vendor?: string | null;
+  notes?: string | null;
+  /** Removed records stay in the route history and are simply hidden. */
+  archived?: boolean;
+};
+
 export type OfficeBusVehicleDetails = {
   make?: string | null;
   model?: string | null;
@@ -201,6 +212,24 @@ export type OfficeBusVehicleDetails = {
   inspectionDue?: string | null;
   insuranceDue?: string | null;
   notes?: string | null;
+  /** Service and repair history kept with this bus. */
+  maintenanceLog?: OfficeBusMaintenanceEntry[] | null;
+};
+
+export type OfficeBusGpsDevice = {
+  id: string;
+  label: string;
+  status: 'active' | 'revoked';
+  assignedRouteId: string | null;
+  assignmentVersion: number;
+  keyVersion: number;
+  lastSeenAt: number | null;
+  lastSequence: number | null;
+  createdAt: number;
+  createdBy: string;
+  updatedAt: number;
+  updatedBy: string;
+  revokedAt?: number | null;
 };
 
 /** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */
@@ -216,6 +245,12 @@ export type OfficeBusRoute = {
   capacity?: number | null;
   /** Optional vehicle identity and maintenance dates. */
   vehicle?: OfficeBusVehicleDetails | null;
+  /** When enabled, a driver problem report queues an update for opted-in family contacts. */
+  notifyFamiliesOnAlert?: boolean;
+  /** When enabled, a confirmed stop arrival can queue one message for opted-in family contacts. */
+  notifyFamiliesOnArrival?: boolean;
+  /** When enabled, every rider marked off needs a recorded release before the run ends. */
+  requireReleaseConfirmations?: boolean;
   stops: OfficeBusStop[];
   notes?: string | null;
   updatedAt: number;
@@ -250,6 +285,7 @@ export type OfficeBusLocation = {
   speed?: number | null;
   heading?: number | null;
   at: number;
+  source?: 'browser' | 'gps_device';
 };
 
 export type OfficeBusReleaseMethod = 'authorized_contact' | 'id_checked' | 'office_override';
@@ -266,7 +302,7 @@ export type OfficeBusRelease = {
 
 export type OfficeBusEvent =
   | { kind: 'rider'; studentId: string; status: OfficeBusRiderStatus | null; at: number; by: string }
-  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string }
+  | { kind: 'stop'; stopId: string; reached: boolean; at: number; by: string; source?: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }
   | { kind: 'release'; studentId: string; contactId?: string | null; contactName: string; method: OfficeBusReleaseMethod; at: number; by: string };
 
 export type OfficeBusRiderManifestEntry = {
@@ -301,8 +337,14 @@ export type OfficeBusTrip = {
   startedAt: number;
   endedAt?: number | null;
   location?: OfficeBusLocation | null;
+  /** Trusted tracker bound when this run began, when one is assigned. */
+  gpsDeviceId?: string | null;
+  gpsAssignmentVersion?: number | null;
+  locationSource?: 'browser' | 'gps_device' | null;
   /** stopId -> time the bus reached it. */
   stopArrivals?: Record<string, number> | null;
+  /** Trusted arrival details, kept separately from the simple stop time map. */
+  stopArrivalDetails?: Record<string, { at: number; source: 'browser' | 'gps_device' | 'manual'; deviceId?: string | null; sampleId?: string | null; accuracyM?: number | null; distanceM?: number | null }> | null;
   /** studentId -> latest status on this run. */
   riders?: Record<string, { status: OfficeBusRiderStatus; at: number }> | null;
   /** Release confirmation for each rider who was marked off. */

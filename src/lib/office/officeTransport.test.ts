@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   distanceMeters,
   exampleRoutes,
+  latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
+  missingReleaseStudentIds,
   nextStop,
   orderedStops,
   pointAlongStops,
@@ -12,9 +14,11 @@ import {
   riderSnapshotFromStudents,
   routeForTrip,
   routeReadiness,
+  stopMinutesLate,
   transportDaySummary,
   transportDaySummaryText,
   transportFamilyEmails,
+  transportPhoneStatusText,
   tripWarnings,
   vehicleDueLabel,
   vehicleLabel,
@@ -76,10 +80,33 @@ describe('officeTransport', () => {
     expect(vehicleDueLabel(vehicle, at(2, 0))).toBe('Inspection overdue');
   });
 
+  it('warns before vehicle dates are due', () => {
+    expect(vehicleDueLabel({ inspectionDue: '2026-10-01' }, at(2, 0))).toBe('Inspection due in 8 days');
+    expect(vehicleDueLabel({ insuranceDue: '2026-11-15' }, at(2, 0))).toBeNull();
+  });
+
+  it('shows the newest visible service record', () => {
+    expect(
+      latestMaintenanceLabel({
+        maintenanceLog: [
+          { id: 'old', serviceDate: '2026-01-01', serviceType: 'Oil change' },
+          { id: 'new', serviceDate: '2026-03-01', serviceType: 'Inspection', archived: true },
+          { id: 'current', serviceDate: '2026-02-01', serviceType: 'Tire repair' },
+        ],
+      }),
+    ).toBe('2026-02-01 · Tire repair');
+  });
+
   it('finds the first stop not reached yet', () => {
     expect(nextStop(route, trip())?.id).toBe('a');
     expect(nextStop(route, trip({ stopArrivals: { a: 1 } }))?.id).toBe('b');
     expect(nextStop(route, trip({ stopArrivals: { a: 1, b: 1, s: 1 } }))).toBeNull();
+  });
+
+  it('compares an arrival with the planned stop time', () => {
+    expect(stopMinutesLate(route.stops[0], 'am', at(7, 20))).toBe(5);
+    expect(stopMinutesLate(route.stops[0], 'am', at(7, 12))).toBe(-3);
+    expect(stopMinutesLate(route.stops[0], 'am', null)).toBeNull();
   });
 
   it('measures distance in metres', () => {
@@ -91,6 +118,20 @@ describe('officeTransport', () => {
     const onStop = { lat: 40.72, lng: -74.32, at: at(7, 20) };
     expect(minutesLate(route, trip({ location: onStop }), at(7, 10))).toBe(0);
     expect(minutesLate(route, trip({ location: onStop }), at(7, 24))).toBe(10);
+  });
+
+  it('creates a safe phone status message without exposing coordinates', () => {
+    const status = transportPhoneStatusText(route, trip({ location: { lat: 40.719, lng: -74.319, at: at(7, 15) } }), at(7, 16));
+    expect(status.status).toBe('on_way');
+    expect(status.text).toContain('Oak');
+    expect(status.text).not.toContain('40.719');
+    expect(transportPhoneStatusText(route, null).status).toBe('not_started');
+  });
+
+  it('marks a phone status unavailable when the bus update is old', () => {
+    const status = transportPhoneStatusText(route, trip({ location: { lat: 40.719, lng: -74.319, at: at(7, 0) } }), at(7, 10));
+    expect(status.status).toBe('unavailable');
+    expect(status.text).toContain('temporarily unavailable');
   });
 
   it('warns about riders never marked off and stale locations', () => {
@@ -110,6 +151,15 @@ describe('officeTransport', () => {
       riders: { kid1: { status: 'off', at: at(7, 30) } },
     });
     expect(tripWarnings([route], [newTrip], names, at(7, 35)).some((warning) => warning.id === 't1-release')).toBe(true);
+  });
+
+  it('finds riders who are off without a release record', () => {
+    const recorded = trip({
+      riderSnapshot: ['kid1', 'kid2', 'kid3'],
+      riders: { kid1: { status: 'off', at: 1 }, kid2: { status: 'off', at: 2 }, kid3: { status: 'absent', at: 3 } },
+      releases: { kid1: { studentId: 'kid1', contactName: 'Mom', method: 'authorized_contact', occurredAt: 4, by: 'driver' } },
+    });
+    expect(missingReleaseStudentIds(recorded)).toEqual(['kid2']);
   });
 
   it('moves a practice bus along the stops', () => {
@@ -179,6 +229,10 @@ describe('officeTransport', () => {
     ];
     expect(transportFamilyEmails(students, families, 'r1')).toEqual(['dad@example.com', 'mom@example.com']);
     expect(transportFamilyEmails(students, families, 'r1', { riderSnapshot: [], riderManifest: [] })).toEqual([]);
+  });
+
+  it('keeps route safety choices for the active trip view', () => {
+    expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true, requireReleaseConfirmations: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true, requireReleaseConfirmations: true });
   });
 
   it('uses the route saved with a trip for past history', () => {

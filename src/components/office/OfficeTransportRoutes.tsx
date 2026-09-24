@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Building2, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Building2, Copy, Download, MapPin, Plus, Route as RouteIcon, Search, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +16,9 @@ import { useOfficeConfirm } from '@/components/office/useOfficeConfirm';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
+import { OfficeRouteSuggestionsPanel } from '@/components/office/OfficeRouteSuggestionsPanel';
+import { OfficeGpsDevicePanel } from '@/components/office/OfficeGpsDevicePanel';
+import { OfficeTransportParentAccessPanel } from '@/components/office/OfficeTransportParentAccessPanel';
 import { OfficeStudentPicker } from '@/components/office/OfficeStudentPicker';
 import { OfficePlaceSearch } from '@/components/office/OfficePlaceSearch';
 import { OfficeTransportMap, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
@@ -23,6 +27,8 @@ import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import {
   BUS_ROUTE_COLORS,
   exampleRoutes,
+  latestMaintenanceLabel,
+  localIsoDate,
   newTransportId,
   ridersForRoute,
   routeLabel,
@@ -31,8 +37,8 @@ import {
   vehicleLabel,
   type LatLng,
 } from '@/lib/office/officeTransport';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
+import { downloadCsv, getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import type { OfficeBusMaintenanceEntry, OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
@@ -40,6 +46,7 @@ type Props = {
   schoolId: string;
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   classNameById: Map<string, string>;
   activeRouteIds: Set<string>;
   school: { address?: string | null; lat: number; lng: number } | null;
@@ -48,7 +55,7 @@ type Props = {
 };
 
 /** Routes: one card per bus, with stops and riders inside. */
-export function OfficeTransportRoutes({ schoolId, routes, students, classNameById, activeRouteIds, school, center, isLoading }: Props) {
+export function OfficeTransportRoutes({ schoolId, routes, students, familyById, classNameById, activeRouteIds, school, center, isLoading }: Props) {
   const write = useOfficeWrite(schoolId);
   const firestore = useFirestore();
   const { userName } = useAppContext();
@@ -56,7 +63,14 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
   const [openId, setOpenId] = useState<string | 'new' | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingSchool, setEditingSchool] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [search, setSearch] = useState('');
   const isDemoSchool = isPublicSampleSchoolId(schoolId);
+  const visibleRoutes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return routes;
+    return routes.filter((route) => [route.name, route.busNumber, route.driverName, vehicleLabel(route.vehicle)].filter(Boolean).join(' ').toLowerCase().includes(query));
+  }, [routes, search]);
 
   const saveSchool = async (place: LatLng & { label: string }) => {
     if (!firestore) return;
@@ -110,7 +124,31 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
             </Button>
           </>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-2 rounded-xl"
+          aria-expanded={suggestOpen}
+          aria-controls="office-route-suggestions"
+          onClick={() => setSuggestOpen((open) => !open)}
+        >
+          <Sparkles className="h-4 w-4" aria-hidden />
+          Suggest routes
+        </Button>
       </div>
+
+      {suggestOpen ? (
+        <OfficeRouteSuggestionsPanel
+          schoolId={schoolId}
+          school={school}
+          routes={routes}
+          onRouteCreated={(routeId) => setOpenId(routeId)}
+        />
+      ) : null}
+
+      <OfficeGpsDevicePanel schoolId={schoolId} routes={routes} isLoading={isLoading} />
+      <OfficeTransportParentAccessPanel schoolId={schoolId} familyById={familyById} students={students} isLoading={isLoading} />
 
       {routes.length === 0 ? (
         <OfficeEmptyState
@@ -132,18 +170,24 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         />
       ) : (
         <>
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <div className="relative sm:w-64">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Find a route, bus, or driver" className="rounded-xl pl-9" aria-label="Find a route" />
+            </div>
             <Button type="button" className="gap-2 rounded-xl" onClick={() => setOpenId('new')}>
               <Plus className="h-4 w-4" /> New route
             </Button>
           </div>
+          {visibleRoutes.length === 0 ? <p className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">No routes match “{search.trim()}”.</p> : null}
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {routes.map((route) => {
+            {visibleRoutes.map((route) => {
               const riders = ridersForRoute(students, route.id).length;
               const pct = route.capacity ? Math.min(100, Math.round((riders / route.capacity) * 100)) : null;
               const readiness = routeReadiness(route);
               const vehicle = vehicleLabel(route.vehicle);
               const vehicleDue = vehicleDueLabel(route.vehicle);
+              const lastService = latestMaintenanceLabel(route.vehicle);
               return (
                 <li key={route.id}>
                   <button
@@ -165,6 +209,10 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                     ) : null}
                     {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
+                    {lastService ? <span className="mt-1 block text-xs text-muted-foreground">Last service: {lastService}</span> : null}
+                    {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
+                    {route.notifyFamiliesOnArrival ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Arrival messages on</span> : null}
+                    {route.requireReleaseConfirmations ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Release check required</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
                         {riders} rider{riders === 1 ? '' : 's'}
@@ -192,6 +240,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         route={openRoute}
         routes={routes}
         students={students}
+        familyById={familyById}
         classNameById={classNameById}
         activeRouteIds={activeRouteIds}
         center={school ?? center}
@@ -211,6 +260,17 @@ function vehicleDraftValue(vehicle: OfficeBusVehicleDetails | null | undefined, 
 
 function cleanVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): OfficeBusVehicleDetails | null {
   if (!vehicle) return null;
+  const maintenanceLog = Array.isArray(vehicle.maintenanceLog)
+    ? vehicle.maintenanceLog.map((entry) => ({
+        id: entry.id,
+        serviceDate: entry.serviceDate,
+        serviceType: entry.serviceType.trim(),
+        mileage: entry.mileage ?? null,
+        vendor: entry.vendor?.trim() || null,
+        notes: entry.notes?.trim() || null,
+        ...(entry.archived ? { archived: true } : {}),
+      }))
+    : [];
   const clean = {
     make: vehicle.make?.trim() || null,
     model: vehicle.model?.trim() || null,
@@ -220,6 +280,7 @@ function cleanVehicle(vehicle: OfficeBusVehicleDetails | null | undefined): Offi
     inspectionDue: vehicle.inspectionDue || null,
     insuranceDue: vehicle.insuranceDue || null,
     notes: vehicle.notes?.trim() || null,
+    maintenanceLog: maintenanceLog.length ? maintenanceLog : null,
   };
   return Object.values(clean).some((value) => value !== null) ? clean : null;
 }
@@ -237,6 +298,9 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     driverPhone: '',
     capacity: null,
     vehicle: {},
+    notifyFamiliesOnAlert: false,
+    notifyFamiliesOnArrival: false,
+    requireReleaseConfirmations: false,
     stops: [],
     notes: '',
   };
@@ -248,6 +312,7 @@ function OfficeBusRouteSheet({
   route,
   routes,
   students,
+  familyById,
   classNameById,
   activeRouteIds,
   center,
@@ -259,6 +324,7 @@ function OfficeBusRouteSheet({
   route: OfficeBusRoute | null;
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   classNameById: Map<string, string>;
   activeRouteIds: Set<string>;
   center: LatLng;
@@ -274,6 +340,13 @@ function OfficeBusRouteSheet({
   const [dirty, setDirty] = useState(false);
   const [focusStop, setFocusStop] = useState<string | null>(null);
   const [addStudentId, setAddStudentId] = useState('');
+  const [maintenanceDraft, setMaintenanceDraft] = useState({
+    serviceDate: localIsoDate(),
+    serviceType: '',
+    mileage: null as number | null,
+    vendor: '',
+    notes: '',
+  });
   const locked = !!route && activeRouteIds.has(route.id);
 
   // A different route opened, or someone else saved this one while it was open and nothing here changed.
@@ -288,6 +361,30 @@ function OfficeBusRouteSheet({
   };
   const setStop = (id: string, p: Partial<OfficeBusStop>) => patch({ stops: draft.stops.map((s) => (s.id === id ? { ...s, ...p } : s)) });
   const setVehicle = (p: Partial<OfficeBusVehicleDetails>) => patch({ vehicle: { ...(draft.vehicle ?? {}), ...p } });
+  const maintenanceLog = draft.vehicle?.maintenanceLog ?? [];
+  const visibleMaintenanceLog = maintenanceLog.filter((entry) => entry.archived !== true);
+  const addMaintenance = () => {
+    if (maintenanceLog.length >= 50) {
+      toast({ variant: 'destructive', title: 'Service history is full', description: 'Keep this bus to 50 saved service records.' });
+      return;
+    }
+    const serviceType = maintenanceDraft.serviceType.trim();
+    if (!maintenanceDraft.serviceDate || !serviceType) {
+      toast({ variant: 'destructive', title: 'Add the service date and type', description: 'For example: oil change, inspection, or tire repair.' });
+      return;
+    }
+    const entry: OfficeBusMaintenanceEntry = {
+      id: newTransportId('maintenance'),
+      serviceDate: maintenanceDraft.serviceDate,
+      serviceType,
+      mileage: maintenanceDraft.mileage,
+      vendor: maintenanceDraft.vendor.trim() || null,
+      notes: maintenanceDraft.notes.trim() || null,
+    };
+    setVehicle({ maintenanceLog: [entry, ...maintenanceLog] });
+    setMaintenanceDraft({ serviceDate: localIsoDate(), serviceType: '', mileage: null, vendor: '', notes: '' });
+  };
+  const removeMaintenance = (id: string) => setVehicle({ maintenanceLog: maintenanceLog.map((entry) => (entry.id === id ? { ...entry, archived: true } : entry)) });
   const addStop = (at: LatLng & { label?: string }) => {
     const stop: OfficeBusStop = {
       id: newTransportId('stop'),
@@ -374,6 +471,77 @@ function OfficeBusRouteSheet({
     } finally {
       setBusy(false);
     }
+  };
+
+  const duplicate = async () => {
+    if (!write.ctx || !route) return;
+    setBusy(true);
+    try {
+      const id = await write.upsertOfficeBusRoute(write.ctx, {
+        ...draft,
+        id: undefined,
+        expectedUpdatedAt: null,
+        name: `${route.name} copy`,
+        stops: draft.stops.map((stop) => ({ ...stop, id: newTransportId('stop') })),
+      });
+      toast({ title: 'Route duplicated', description: 'The new route is ready for its own riders and driver.' });
+      onOpenChange(false);
+      onCreated(id);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not duplicate route', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadManifest = () => {
+    const routeName = draft.name.trim() || (route ? routeLabel(route) : 'route');
+    const rows: string[][] = [];
+    const addRow = (order: string, stopName: string, amTime: string, pmTime: string, student: OfficeStudent | null) => {
+      const approvedContacts = student?.familyId
+        ? (familyById.get(student.familyId)?.contacts ?? [])
+            .filter((contact) => contact.pickupAuthorized !== false)
+            .map((contact) => `${contact.name}${contact.phone ? ` (${contact.phone})` : ''}`)
+            .join('; ')
+        : '';
+      rows.push([
+        routeName,
+        draft.busNumber?.trim() ?? '',
+        order,
+        stopName,
+        amTime,
+        pmTime,
+        student ? getOfficeStudentFullName(student) : '',
+        student?.classId ? classNameById.get(student.classId) ?? '' : '',
+        approvedContacts,
+      ]);
+    };
+
+    draft.stops.forEach((stop, index) => {
+      const stopStudents = assignedStudents.filter((student) => student.busStopId === stop.id);
+      if (stopStudents.length === 0) {
+        addRow(String(index + 1), stop.name, stop.amTime ?? '', stop.pmTime ?? '', null);
+        return;
+      }
+      stopStudents.forEach((student) => addRow(String(index + 1), stop.name, stop.amTime ?? '', stop.pmTime ?? '', student));
+    });
+
+    const stopIds = new Set(draft.stops.map((stop) => stop.id));
+    assignedStudents
+      .filter((student) => !student.busStopId || !stopIds.has(student.busStopId))
+      .forEach((student) => addRow('—', 'Stop not assigned', '', '', student));
+    if (rows.length === 0) addRow('—', 'No stops added', '', '', null);
+
+    const fileName = routeName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'route';
+    downloadCsv(
+      `transport-manifest-${fileName}.csv`,
+      ['Route', 'Bus number', 'Stop order', 'Stop', 'Morning time', 'Afternoon time', 'Student', 'Class', 'Approved pickup contacts'],
+      rows,
+    );
+    toast({ title: 'Manifest downloaded', description: 'The route, riders, and approved pickup contacts are ready to open in a spreadsheet.' });
   };
 
   const remove = async () => {
@@ -561,6 +729,101 @@ function OfficeBusRouteSheet({
             </div>
           </section>
 
+          <section className="space-y-3 rounded-2xl border p-4 dark:border-slate-800">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Service history</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Keep inspections, repairs, and other service work with this bus.</p>
+            </div>
+            {visibleMaintenanceLog.length > 0 ? (
+              <ul className="space-y-2">
+                {[...visibleMaintenanceLog]
+                  .sort((a, b) => b.serviceDate.localeCompare(a.serviceDate))
+                  .map((entry) => (
+                    <li key={entry.id} className="rounded-xl border px-3 py-2 text-sm dark:border-slate-800">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">{entry.serviceType}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {entry.serviceDate}
+                            {entry.mileage != null ? ` · ${entry.mileage.toLocaleString()} miles` : ''}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${entry.serviceType} service record`}
+                          disabled={locked}
+                          onClick={() => removeMaintenance(entry.id)}
+                          className="rounded p-1 text-muted-foreground hover:bg-slate-100 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-800"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {entry.vendor || entry.notes ? <p className="mt-1 text-xs text-muted-foreground">{[entry.vendor, entry.notes].filter(Boolean).join(' · ')}</p> : null}
+                    </li>
+                  ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No service records yet.</p>
+            )}
+            <div className="grid grid-cols-2 gap-3 border-t pt-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="maintenance-date">Service date</Label>
+                <Input id="maintenance-date" type="date" disabled={locked} value={maintenanceDraft.serviceDate} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, serviceDate: e.target.value }))} className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="maintenance-mileage">Mileage</Label>
+                <Input id="maintenance-mileage" type="number" min={0} disabled={locked} value={maintenanceDraft.mileage ?? ''} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, mileage: e.target.value ? Number(e.target.value) : null }))} placeholder="Optional" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                <Label htmlFor="maintenance-type">Service type</Label>
+                <Input id="maintenance-type" disabled={locked} value={maintenanceDraft.serviceType} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, serviceType: e.target.value }))} placeholder="e.g. Oil change" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                <Label htmlFor="maintenance-vendor">Service provider</Label>
+                <Input id="maintenance-vendor" disabled={locked} value={maintenanceDraft.vendor} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, vendor: e.target.value }))} placeholder="Optional" className="rounded-xl" />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="maintenance-notes">Service notes</Label>
+                <Textarea id="maintenance-notes" disabled={locked} value={maintenanceDraft.notes} onChange={(e) => setMaintenanceDraft((d) => ({ ...d, notes: e.target.value }))} placeholder="What was done?" className="min-h-[60px] rounded-xl" />
+              </div>
+            </div>
+            <Button type="button" variant="outline" disabled={locked} onClick={addMaintenance} className="rounded-xl">
+              Add service record
+            </Button>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.notifyFamiliesOnAlert === true}
+                onCheckedChange={(checked) => patch({ notifyFamiliesOnAlert: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Email families when the driver reports a problem</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Opted-in family contacts are added to the office mail queue. This is off by default.
+                </span>
+              </span>
+            </label>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.requireReleaseConfirmations === true}
+                onCheckedChange={(checked) => patch({ requireReleaseConfirmations: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Require a release check before ending each run</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Every child marked off must have a recorded pickup or release. This is off by default.
+                </span>
+              </span>
+            </label>
+          </section>
+
           <section className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Stops ({draft.stops.length})</h3>
@@ -724,9 +987,17 @@ function OfficeBusRouteSheet({
           </section>
 
           {route ? (
-            <button type="button" disabled={locked} onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">
-              <Trash2 className="h-3.5 w-3.5" /> Remove this route
-            </button>
+            <div className="flex flex-wrap items-center gap-4">
+              <button type="button" disabled={busy} onClick={downloadManifest} title="Includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Download className="h-3.5 w-3.5" /> Download rider manifest
+              </button>
+              <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Copy className="h-3.5 w-3.5" /> Duplicate route
+              </button>
+              <button type="button" disabled={locked} onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">
+                <Trash2 className="h-3.5 w-3.5" /> Remove this route
+              </button>
+            </div>
           ) : null}
         </div>
 

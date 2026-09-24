@@ -11,7 +11,7 @@ import type {
   OfficeStudent,
   OfficeTransportMode,
 } from '@/lib/office/types';
-import { scheduleMinutes } from '@/lib/office/officeSchedule';
+import { formatScheduleTime, scheduleMinutes } from '@/lib/office/officeSchedule';
 import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
 
 export const TRANSPORT_MODE_LABEL: Record<OfficeTransportMode, string> = {
@@ -83,6 +83,17 @@ export function orderedStops(route: Pick<OfficeBusRoute, 'stops'>, run: OfficeBu
 
 export function stopTime(stop: OfficeBusStop, run: OfficeBusRun): string | null {
   return (run === 'am' ? stop.amTime : stop.pmTime) || null;
+}
+
+/** Difference from a stop's planned time in minutes; negative means early. */
+export function stopMinutesLate(stop: OfficeBusStop, run: OfficeBusRun, arrivedAt: number | null | undefined): number | null {
+  const planned = stopTime(stop, run);
+  if (!planned || arrivedAt == null || !Number.isFinite(arrivedAt)) return null;
+  const [hours, minutes] = planned.split(':').map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  const plannedAt = new Date(arrivedAt);
+  plannedAt.setHours(hours, minutes, 0, 0);
+  return Math.round((arrivedAt - plannedAt.getTime()) / 60_000);
 }
 
 /** Morning before noon, afternoon after. */
@@ -303,9 +314,28 @@ export function vehicleLabel(vehicle: OfficeBusVehicleDetails | null | undefined
 export function vehicleDueLabel(vehicle: OfficeBusVehicleDetails | null | undefined, now = Date.now()): string | null {
   if (!vehicle) return null;
   const today = localIsoDate(new Date(now));
-  if (vehicle.inspectionDue && vehicle.inspectionDue < today) return 'Inspection overdue';
-  if (vehicle.insuranceDue && vehicle.insuranceDue < today) return 'Insurance overdue';
+  const daysUntil = (value: string | null | undefined): number | null => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const due = new Date(`${value}T12:00:00`);
+    const current = new Date(`${today}T12:00:00`);
+    if (Number.isNaN(due.getTime()) || Number.isNaN(current.getTime())) return null;
+    return Math.round((due.getTime() - current.getTime()) / 86_400_000);
+  };
+  const inspectionDays = daysUntil(vehicle.inspectionDue);
+  const insuranceDays = daysUntil(vehicle.insuranceDue);
+  if (inspectionDays != null && inspectionDays < 0) return 'Inspection overdue';
+  if (insuranceDays != null && insuranceDays < 0) return 'Insurance overdue';
+  const dueSoon = (label: string, days: number) => (days === 0 ? `${label} due today` : `${label} due in ${days} day${days === 1 ? '' : 's'}`);
+  if (inspectionDays != null && inspectionDays <= 30) return dueSoon('Inspection', inspectionDays);
+  if (insuranceDays != null && insuranceDays <= 30) return dueSoon('Insurance', insuranceDays);
   return null;
+}
+
+export function latestMaintenanceLabel(vehicle: OfficeBusVehicleDetails | null | undefined): string | null {
+  const latest = (vehicle?.maintenanceLog ?? [])
+    .filter((entry) => entry.archived !== true)
+    .sort((a, b) => b.serviceDate.localeCompare(a.serviceDate))[0];
+  return latest ? `${latest.serviceDate} · ${latest.serviceType}` : null;
 }
 
 /** "Bus 4 · North" or just the route name. */
@@ -341,6 +371,8 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     driverPhone: route?.driverPhone ?? null,
     capacity: route?.capacity ?? null,
     vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
+    notifyFamiliesOnAlert: route?.notifyFamiliesOnAlert === true,
+    requireReleaseConfirmations: route?.requireReleaseConfirmations === true,
     stops: snapshot.stops ?? [],
     notes: route?.notes ?? null,
     updatedAt: route?.updatedAt ?? trip.updatedAt,
@@ -350,8 +382,57 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
   };
 }
 
+export type OfficeBusPhoneStatus = {
+  status: 'not_started' | 'on_way' | 'delayed' | 'arrived' | 'ended' | 'unavailable';
+  text: string;
+  asOf: number;
+};
+
+/** A short, privacy-safe message suitable for a school phone line or preview. */
+export function transportPhoneStatusText(route: OfficeBusRoute, trip: OfficeBusTrip | null | undefined, now = Date.now()): OfficeBusPhoneStatus {
+  const activeRoute = trip ? routeForTrip(route, trip) ?? route : route;
+  const bus = routeLabel(activeRoute);
+  const disclaimer = 'This is bus information, not confirmation that a child got off.';
+  if (!trip) {
+    return { status: 'not_started', asOf: now, text: `${bus} is not on a run right now. Please call the school for help. ${disclaimer}` };
+  }
+  if (trip.status === 'done') {
+    const ended = trip.endedAt ? ` The run finished at ${clockLabel(trip.endedAt)}.` : ' The run is finished.';
+    return { status: 'ended', asOf: now, text: `${bus} is not on the road.${ended} ${disclaimer}` };
+  }
+  if (!trip.location) {
+    return { status: 'unavailable', asOf: now, text: `${bus} started the ${BUS_RUN_LABEL[trip.run].toLowerCase()} run, but its location is not available yet. ${disclaimer}` };
+  }
+  if (now - trip.location.at > LOCATION_STALE_MS) {
+    return { status: 'unavailable', asOf: trip.location.at, text: `${bus} tracking is temporarily unavailable. Last update: ${clockLabel(trip.location.at)}. ${disclaimer}` };
+  }
+  const next = nextStop(activeRoute, trip);
+  if (!next) {
+    return { status: 'arrived', asOf: trip.location.at, text: `${bus} has reached the last stop on this run. ${disclaimer}` };
+  }
+  const late = minutesLate(activeRoute, trip, now);
+  const eta = etaMinutes(trip.location, next);
+  const planned = stopTime(next, trip.run);
+  const plannedText = planned ? ` Planned time: ${formatScheduleTime(planned)}.` : '';
+  const lateText = late != null && late >= LATE_THRESHOLD_MIN ? ` It is running about ${late} minutes behind plan.` : '';
+  return {
+    status: late != null && late >= LATE_THRESHOLD_MIN ? 'delayed' : 'on_way',
+    asOf: trip.location.at,
+    text: `${bus} is expected at ${next.name} in about ${eta} minutes.${lateText}${plannedText} Last update: ${clockLabel(trip.location.at)}. ${disclaimer}`,
+  };
+}
+
 export function riderNameForTrip(trip: OfficeBusTrip, studentId: string, currentNames: Map<string, string>): string {
   return trip.riderManifest?.find((entry) => entry.studentId === studentId)?.displayName || currentNames.get(studentId) || 'Former student';
+}
+
+export function missingReleaseStudentIds(trip: OfficeBusTrip): string[] {
+  const ids = new Set([
+    ...(trip.riderManifest?.map((entry) => entry.studentId) ?? []),
+    ...(trip.riderSnapshot ?? []),
+    ...Object.keys(trip.riders ?? {}),
+  ]);
+  return [...ids].filter((studentId) => trip.riders?.[studentId]?.status === 'off' && !trip.releases?.[studentId]);
 }
 
 export function ridersForRoute(students: OfficeStudent[], routeId: string): OfficeStudent[] {
@@ -496,6 +577,9 @@ export function exampleRoutes(school: LatLng): Array<Omit<OfficeBusRoute, 'id' |
     driverName,
     driverPhone: null,
     capacity: 48,
+    notifyFamiliesOnAlert: false,
+    notifyFamiliesOnArrival: false,
+    requireReleaseConfirmations: false,
     notes: null,
     stops: [
       ...points.map(([stopName, dLat, dLng], i) => ({

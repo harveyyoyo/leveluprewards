@@ -196,6 +196,9 @@ function SchoolSessionGateBody({
   const officeSignsInItself =
     officeSection === 'office' ||
     (typeof window !== 'undefined' && isOfficeHostname(window.location.host) && isOfficeSchoolScopedPath(pathname));
+  // Families sign in with their own private code on the parent page. They must not be
+  // redirected through the staff/school sign-in before they can reach that form.
+  const parentSignsInItself = officeSection === 'parent' && loginState === 'loggedOut';
 
   const schoolLoginHref = useCallback(
     (options?: { changeSchool?: boolean }) =>
@@ -215,7 +218,7 @@ function SchoolSessionGateBody({
 
   useEffect(() => {
     if (!isInitialized || isUserLoading) return;
-    if (officeSignsInItself) return;
+    if (officeSignsInItself || parentSignsInItself) return;
 
     if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
       if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {
@@ -285,6 +288,7 @@ function SchoolSessionGateBody({
     schoolLoginHref,
     redirectToSchoolLogin,
     officeSignsInItself,
+    parentSignsInItself,
   ]);
 
   if (!isInitialized || isUserLoading) {
@@ -295,8 +299,8 @@ function SchoolSessionGateBody({
     );
   }
 
-  // The office page shows its own sign-in card.
-  if (officeSignsInItself) return <>{children}</>;
+  // The office and parent pages show their own private sign-in cards.
+  if (officeSignsInItself || parentSignsInItself) return <>{children}</>;
 
   if (loginState === 'loggedOut' || !ALLOWED.has(loginState)) {
     if (loginState === 'loggedOut' && (isStaffSignInLink || canAutoEnterPublicKiosk)) {

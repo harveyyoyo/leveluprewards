@@ -15,10 +15,12 @@ import {
   Route as RouteIcon,
   Square,
   Users,
+  Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { OfficeTransportMap, type TransportMapLine, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
@@ -35,6 +37,7 @@ import {
   etaMinutes,
   familyUpdateMessage,
   formatDistance,
+  latestMaintenanceLabel,
   latestTripForRoute,
   minutesLate,
   nextStop,
@@ -45,6 +48,7 @@ import {
   stopTime,
   tripWarnings,
   transportFamilyEmails,
+  transportPhoneStatusText,
   vehicleDueLabel,
   vehicleLabel,
   type LatLng,
@@ -69,9 +73,10 @@ type Props = {
 const PRACTICE_SECONDS = 75;
 
 /** Live view: every bus on the map, what needs attention, and each run's progress. */
-export function OfficeTransportLive({ routes, trips, students, familyById, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
+export function OfficeTransportLive({ schoolId, routes, trips, students, familyById, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
   const now = useNow(10_000);
   const { toast } = useToast();
+  const transport = useOfficeTransportApi(schoolId);
   const { openStudent } = useOfficeEntityNav();
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -100,6 +105,44 @@ export function OfficeTransportLive({ routes, trips, students, familyById, stude
       subject: `Transportation update: ${routeLabel(selected)}`,
       body: familyUpdateMessage(selected, selectedTrip, now),
     });
+  };
+
+  const copyPhoneStatus = async () => {
+    if (!selected) return;
+    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    try {
+      await navigator.clipboard.writeText(status.text);
+      toast({ title: 'Phone status copied', description: 'This short message can be used by the school phone service later.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Could not copy the phone status' });
+    }
+  };
+
+  const speakPhoneStatus = () => {
+    if (!selected || !('speechSynthesis' in window)) {
+      toast({ variant: 'destructive', title: 'Speech preview is not available' });
+      return;
+    }
+    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(status.text));
+    toast({ title: 'Playing phone-status preview', description: 'This is a preview; no phone number has been connected yet.' });
+  };
+
+  const queueSelectedFamilyUpdate = async () => {
+    if (!selectedTrip || selectedTrip.id.startsWith('practice-')) {
+      toast({ title: 'Start the bus run first', description: 'The office can queue an update after the run has started.' });
+      return;
+    }
+    try {
+      const result = await transport.queueOfficeBusFamilyUpdate(selectedTrip);
+      toast({
+        title: result.queued ? 'Update queued' : 'No family emails found',
+        description: result.queued ? `${result.queued} recipient${result.queued === 1 ? '' : 's'} added to the office mail queue.` : 'Add an email to a family contact first.',
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not queue the update', description: (error as Error).message });
+    }
   };
 
   const activeTrips = runTrips.filter((t) => t.status === 'active');
@@ -314,6 +357,8 @@ export function OfficeTransportLive({ routes, trips, students, familyById, stude
               onPractice={() => startPractice(selected)}
               onStopPractice={() => setPractice(null)}
               onOpenStudent={openStudent}
+              onCopyPhoneStatus={copyPhoneStatus}
+              onSpeakPhoneStatus={speakPhoneStatus}
               onCopy={async () => {
                 try {
                   await navigator.clipboard.writeText(familyUpdateMessage(selected, selectedTrip, now));
@@ -324,6 +369,7 @@ export function OfficeTransportLive({ routes, trips, students, familyById, stude
               }}
               onEmailFamilies={emailSelectedFamilies}
               familyRecipientCount={selectedFamilyEmails.length}
+              onQueueEmail={queueSelectedFamilyUpdate}
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
@@ -429,9 +475,12 @@ function RouteDetail({
   onPractice,
   onStopPractice,
   onOpenStudent,
+  onCopyPhoneStatus,
+  onSpeakPhoneStatus,
   onCopy,
   onEmailFamilies,
   familyRecipientCount,
+  onQueueEmail,
 }: {
   route: OfficeBusRoute;
   trip: OfficeBusTrip | null;
@@ -443,9 +492,12 @@ function RouteDetail({
   onPractice: () => void;
   onStopPractice: () => void;
   onOpenStudent: (id: string) => void;
+  onCopyPhoneStatus: () => void;
+  onSpeakPhoneStatus: () => void;
   onCopy: () => void;
   onEmailFamilies: () => void;
   familyRecipientCount: number;
+  onQueueEmail: () => void;
 }) {
   const status = statusOf(route, trip, now);
   const stops = orderedStops(route, run);
@@ -460,6 +512,7 @@ function RouteDetail({
   const alerts = [...(trip?.alerts ?? [])].reverse();
   const vehicle = vehicleLabel(route.vehicle);
   const vehicleDue = vehicleDueLabel(route.vehicle, now);
+  const lastService = latestMaintenanceLabel(route.vehicle);
 
   return (
     <div className="flex max-h-[560px] flex-col">
@@ -493,10 +546,11 @@ function RouteDetail({
           </div>
         ) : null}
 
-        {vehicle ? (
+        {vehicle || lastService ? (
           <p className={cn('rounded-xl px-3 py-2 text-xs', vehicleDue ? 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-100' : 'bg-slate-50 text-muted-foreground dark:bg-slate-800/60')}>
-            Vehicle: {vehicle}
+            {vehicle ? `Vehicle: ${vehicle}` : 'Vehicle service history'}
             {vehicleDue ? ` · ${vehicleDue}` : ''}
+            {lastService ? ` · Last service ${lastService}` : ''}
           </p>
         ) : null}
 
@@ -508,11 +562,20 @@ function RouteDetail({
               </a>
             </Button>
           ) : null}
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopyPhoneStatus} title="Copy a safe status message for a future phone service">
+            <Phone className="h-3.5 w-3.5" /> Copy phone status
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onSpeakPhoneStatus} title="Hear a preview of the phone message">
+            <Volume2 className="h-3.5 w-3.5" /> Hear phone status
+          </Button>
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopy}>
             <Copy className="h-3.5 w-3.5" /> Update for families
           </Button>
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onEmailFamilies} disabled={familyRecipientCount === 0}>
             <Mail className="h-3.5 w-3.5" /> Email families ({familyRecipientCount})
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onQueueEmail} disabled={!trip || trip.id.startsWith('practice-') || familyRecipientCount === 0} title="Add this update to the office mail queue">
+            <Mail className="h-3.5 w-3.5" /> Queue office email
           </Button>
           {isPractice ? (
             <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onStopPractice}>
@@ -524,6 +587,7 @@ function RouteDetail({
             </Button>
           ) : null}
         </div>
+        <p className="text-xs text-muted-foreground">The phone-status message contains bus information only. It does not include a child's name, address, or live location.</p>
         {isPractice ? (
           <p className="text-xs text-muted-foreground">A pretend bus is driving this route so you can see how it looks. Nothing is saved.</p>
         ) : null}

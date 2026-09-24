@@ -544,6 +544,29 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // GPS device metadata and pairing keys are server-only. The Office UI uses the protected
+      // devices API and never reads tracker credentials directly from Firestore.
+      match /officeBusGpsDevices/{deviceId} {
+        allow read, write: if false;
+      }
+
+      match /officeBusGpsDeviceKeys/{deviceId} {
+        allow read, write: if false;
+      }
+
+      match /officeBusGpsLocations/{deviceId} {
+        allow read, write: if false;
+      }
+
+      match /officeBusArrivalEvents/{eventId} {
+        allow read, write: if false;
+      }
+
+      // Private family bus access codes and their consent state are server-only.
+      match /officeTransportParentAccess/{accessId} {
+        allow read, write: if false;
+      }
+
       match /officeForms/{formId} {
         allow read, write: if canAccessOffice(schoolId);
       }
