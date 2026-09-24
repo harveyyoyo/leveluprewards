@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Building2, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Building2, Copy, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -376,6 +376,27 @@ function OfficeBusRouteSheet({
     }
   };
 
+  const duplicate = async () => {
+    if (!write.ctx || !route) return;
+    setBusy(true);
+    try {
+      const id = await write.upsertOfficeBusRoute(write.ctx, {
+        ...draft,
+        id: undefined,
+        expectedUpdatedAt: null,
+        name: `${route.name} copy`,
+        stops: draft.stops.map((stop) => ({ ...stop, id: newTransportId('stop') })),
+      });
+      toast({ title: 'Route duplicated', description: 'The new route is ready for its own riders and driver.' });
+      onOpenChange(false);
+      onCreated(id);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Could not duplicate route', description: (e as Error).message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const remove = async () => {
     if (locked) {
       toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before removing the route.' });
@@ -724,9 +745,14 @@ function OfficeBusRouteSheet({
           </section>
 
           {route ? (
-            <button type="button" disabled={locked} onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">
-              <Trash2 className="h-3.5 w-3.5" /> Remove this route
-            </button>
+            <div className="flex flex-wrap items-center gap-4">
+              <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Copy className="h-3.5 w-3.5" /> Duplicate route
+              </button>
+              <button type="button" disabled={locked} onClick={() => void remove()} className="flex items-center gap-1.5 text-sm text-red-700 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-red-400">
+                <Trash2 className="h-3.5 w-3.5" /> Remove this route
+              </button>
+            </div>
           ) : null}
         </div>
 
