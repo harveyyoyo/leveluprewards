@@ -38,7 +38,7 @@ export type OfficeRouteSuggestionOptions = {
   clusterRadiusMeters?: number;
 };
 
-export type OfficeRouteStudent = Pick<OfficeStudent, 'id' | 'familyId' | 'status' | 'archived'>;
+export type OfficeRouteStudent = Pick<OfficeStudent, 'id' | 'familyId' | 'status' | 'archived' | 'transportMode'>;
 export type OfficeRouteFamily = Pick<OfficeFamily, 'id' | 'homeAddress' | 'archived'>;
 
 export type OfficeRouteSuggestionInput = {
@@ -253,6 +253,7 @@ function activeStudents(students: readonly OfficeRouteStudent[]): OfficeRouteStu
   const byId = new Map<string, OfficeRouteStudent>();
   for (const student of students) {
     if (student.archived === true || (student.status != null && student.status !== 'active')) continue;
+    if (student.transportMode != null && student.transportMode !== 'bus') continue;
     const id = cleanId(student.id);
     if (!id) continue;
     const previous = byId.get(id);

@@ -47,7 +47,7 @@ describe('OfficeRouteSuggestionsPanel', () => {
     mocks.upsertOfficeBusRoute.mockResolvedValue('new-route-id');
   });
 
-  it('waits for an on-demand request and creates only a school-stop route draft', async () => {
+  it('waits for an on-demand request and creates a draft with an area and school stop', async () => {
     const onRouteCreated = vi.fn();
     render(
       <OfficeRouteSuggestionsPanel
@@ -88,6 +88,12 @@ describe('OfficeRouteSuggestionsPanel', () => {
       name: 'Suggested route 1',
       capacity: 12,
       stops: [
+        {
+          name: 'Suggested pickup area',
+          address: null,
+          lat: 40.01,
+          lng: -74.01,
+        },
         {
           name: 'School',
           address: school.address,

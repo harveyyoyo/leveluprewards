@@ -57,6 +57,19 @@ function schoolStop(school: NonNullable<Props['school']>): OfficeBusStop {
   };
 }
 
+function suggestedPickupStop(suggestion: OfficeRouteSuggestion): OfficeBusStop | null {
+  if (!suggestion.centroid) return null;
+  return {
+    id: newTransportId('stop'),
+    name: 'Suggested pickup area',
+    address: null,
+    lat: suggestion.centroid.lat,
+    lng: suggestion.centroid.lng,
+    amTime: null,
+    pmTime: null,
+  };
+}
+
 export function OfficeRouteSuggestionsPanel({ schoolId, school, routes, onRouteCreated }: Props) {
   const authFetch = useAuthFetch();
   const write = useOfficeWrite(schoolId);
@@ -102,6 +115,7 @@ export function OfficeRouteSuggestionsPanel({ schoolId, school, routes, onRouteC
     if (!write.ctx || !school || creatingIndex !== null || createdIndexes.has(suggestionIndex)) return;
     setCreatingIndex(suggestionIndex);
     try {
+      const pickupStop = suggestedPickupStop(suggestion);
       const routeId = await write.upsertOfficeBusRoute(write.ctx, {
         name: routeDraftName(routes, suggestionIndex),
         busNumber: null,
@@ -112,13 +126,13 @@ export function OfficeRouteSuggestionsPanel({ schoolId, school, routes, onRouteC
         vehicle: null,
         notifyFamiliesOnAlert: false,
         requireReleaseConfirmations: false,
-        stops: [schoolStop(school)],
+        stops: [...(pickupStop ? [pickupStop] : []), schoolStop(school)],
         notes: 'Draft created from family roster suggestions. No riders are assigned.',
       });
       setCreatedIndexes((current) => new Set(current).add(suggestionIndex));
       toast({
         title: 'Route draft added',
-        description: 'The school stop is ready. No students were assigned.',
+        description: 'The suggested pickup area and school stop are ready. No students were assigned.',
       });
       onRouteCreated(routeId);
     } catch (cause) {
@@ -233,7 +247,7 @@ export function OfficeRouteSuggestionsPanel({ schoolId, school, routes, onRouteC
 
                   <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-teal-800 dark:text-teal-300">
                     <MapPin className="h-3.5 w-3.5" aria-hidden />
-                    School stop added only when you create the draft
+                    Pickup area and school stop added when you create the draft
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">No riders are assigned automatically.</p>
 

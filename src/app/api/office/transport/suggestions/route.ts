@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminFirestore } from '@/lib/server/firebaseAdminAuth';
 import { checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
+import { clientIp, rateLimit } from '@/lib/server/apiSecurity';
 import {
   buildOfficeRouteSuggestions,
   type OfficeRouteFamily,
@@ -157,6 +158,7 @@ async function geocodeFamilyAddresses(
 
 export async function POST(req: NextRequest) {
   if (!sameOriginCheck(req)) return jsonError('Forbidden', 403);
+  if (!rateLimit(`office-route-suggestions:${clientIp(req)}`, 12)) return jsonError('Too many requests. Try again in a minute.', 429);
 
   const authorization = req.headers.get('authorization') ?? '';
   const idToken = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
@@ -206,9 +208,10 @@ export async function POST(req: NextRequest) {
   try {
     const firestore = await getFirebaseAdminFirestore();
     const school = firestore.collection('schools').doc(schoolId);
-    const [familySnapshot, studentSnapshot] = await Promise.all([
+    const [familySnapshot, studentSnapshot, routeSnapshot] = await Promise.all([
       school.collection('officeFamilies').get(),
       school.collection('officeStudents').get(),
+      school.collection('officeBusRoutes').get(),
     ]);
 
     const families: OfficeRouteFamily[] = familySnapshot.docs.map((snapshot) => {
@@ -220,12 +223,16 @@ export async function POST(req: NextRequest) {
       };
     });
     const students: OfficeRouteStudent[] = studentSnapshot.docs.map((snapshot) => {
-      const data = snapshot.data() as { familyId?: unknown; status?: unknown; archived?: unknown };
+      const data = snapshot.data() as { familyId?: unknown; status?: unknown; archived?: unknown; transportMode?: unknown };
+      const transportMode = data.transportMode === 'bus' || data.transportMode === 'car' || data.transportMode === 'walk' || data.transportMode === 'aftercare'
+        ? data.transportMode
+        : null;
       return {
         id: snapshot.id,
         familyId: typeof data.familyId === 'string' ? data.familyId : null,
         status: data.status === 'active' || data.status === 'withdrawn' || data.status === 'graduated' ? data.status : null,
         archived: data.archived === true,
+        transportMode,
       };
     });
 
@@ -248,6 +255,10 @@ export async function POST(req: NextRequest) {
       families,
       familyPoints: familyPoints.points,
       schoolPoint,
+      existingRouteCapacities: routeSnapshot.docs.filter((snapshot) => snapshot.data().archived !== true).map((snapshot) => {
+        const capacity = snapshot.data().capacity;
+        return typeof capacity === 'number' && Number.isFinite(capacity) ? capacity : null;
+      }),
       options: { maxRoutes, clusterRadiusMeters, defaultCapacity },
     });
 
@@ -259,8 +270,7 @@ export async function POST(req: NextRequest) {
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );
-  } catch (error) {
-    console.error('office transport suggestions', error);
+  } catch {
     return jsonError('Could not build route suggestions', 500);
   }
 }

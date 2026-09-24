@@ -141,6 +141,8 @@ describe('buildOfficeRouteSuggestions', () => {
         student('withdrawn', 'f', { status: 'withdrawn' }),
         student('archived', 'f', { archived: true }),
         student('graduated', 'f', { status: 'graduated' }),
+        student('car', 'f', { transportMode: 'car' }),
+        student('walk', 'f', { transportMode: 'walk' }),
       ],
       families: [family('f')],
       familyPoints: { f: { lat: 40.001, lng: -74 } },

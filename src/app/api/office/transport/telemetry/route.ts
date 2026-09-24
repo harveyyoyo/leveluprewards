@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic';
 const SCHOOL_ID_RE = /^[a-z0-9_-]{1,80}$/;
 const DEVICE_ID_RE = /^gpd_[A-Za-z0-9_-]{8,80}$/;
 const SAMPLE_ID_RE = /^[A-Za-z0-9_-]{8,120}$/;
+const SESSION_ID_RE = /^[A-Za-z0-9_-]{8,120}$/;
 const MAX_LOCATION_AGE_MS = 10 * 60_000;
 const LOCATION_RETENTION_MS = 7 * 24 * 60 * 60_000;
 const MIN_SAMPLE_INTERVAL_MS = 2_000;
@@ -25,9 +26,8 @@ function stringValue(value: unknown, label: string, max = 160): string {
 }
 
 function numberValue(value: unknown, label: string, min: number, max: number): number {
-  const number = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(number) || number < min || number > max) throw new Error(`${label} is invalid.`);
-  return number;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) throw new Error(`${label} is invalid.`);
+  return value;
 }
 
 function hashKey(value: string): Buffer {
@@ -74,10 +74,13 @@ function parseSample(body: Body) {
   if (!Number.isInteger(sequence)) throw new Error('Location sequence is invalid.');
   const sampleId = stringValue(body.sampleId, 'Location sample', 120);
   if (!SAMPLE_ID_RE.test(sampleId)) throw new Error('Location sample is invalid.');
+  const sessionId = stringValue(body.sessionId, 'Tracker session', 120);
+  if (!SESSION_ID_RE.test(sessionId)) throw new Error('Tracker session is invalid.');
   return {
     recordedAt,
     sequence,
     sampleId,
+    sessionId,
     lat: numberValue(body.lat, 'Bus latitude', -90, 90),
     lng: numberValue(body.lng, 'Bus longitude', -180, 180),
     accuracyM: body.accuracyM == null ? null : numberValue(body.accuracyM, 'Location accuracy', 0, 100_000),
@@ -136,8 +139,9 @@ export async function POST(req: NextRequest) {
       const trip = tripSnap.exists ? ({ id: tripSnap.id, ...tripSnap.data() } as OfficeBusTrip) : null;
       if (!trip || trip.status !== 'active') throw new Error('This bus run is not active.');
       if (auth.device.assignedRouteId !== trip.routeId || trip.gpsDeviceId !== auth.id || trip.gpsAssignmentVersion !== auth.device.assignmentVersion) throw new Error('This GPS device is not assigned to this bus run.');
-      const previous = locationSnap.exists ? locationSnap.data() as { lastSequence?: number; lastRecordedAt?: number; lastSampleId?: string; lastReceivedAt?: number; nearStopId?: string | null; nearStopFirstAt?: number | null; nearStopSampleCount?: number | null } : null;
-      if (previous?.lastSampleId === sample.sampleId || (typeof previous?.lastSequence === 'number' && sample.sequence <= previous.lastSequence)) {
+      const previous = locationSnap.exists ? locationSnap.data() as { lastSequence?: number; lastRecordedAt?: number; lastSampleId?: string; lastSessionId?: string; lastReceivedAt?: number; nearStopId?: string | null; nearStopFirstAt?: number | null; nearStopSampleCount?: number | null } : null;
+      const sameSession = previous?.lastSessionId === sample.sessionId;
+      if (previous?.lastSampleId === sample.sampleId || (sameSession && typeof previous?.lastSequence === 'number' && sample.sequence <= previous.lastSequence)) {
         duplicate = true;
         return;
       }
@@ -178,6 +182,7 @@ export async function POST(req: NextRequest) {
         lastSequence: sample.sequence,
         lastRecordedAt: sample.recordedAt,
         lastSampleId: sample.sampleId,
+        lastSessionId: sample.sessionId,
         lastReceivedAt: receivedAt,
         nearStopId,
         nearStopFirstAt,

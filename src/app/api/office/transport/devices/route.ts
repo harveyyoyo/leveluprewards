@@ -148,8 +148,8 @@ async function assign(auth: AuthContext, schoolId: string, body: Body) {
   if (routeId) await routeExists(auth.db, schoolId, routeId);
   if (routeId === current.assignedRouteId) return { device: safeDevice(current) };
   for (const affectedRouteId of [...new Set([routeId, current.assignedRouteId].filter((value): value is string => !!value))]) {
-    const activeTrips = await auth.db.collection('schools').doc(schoolId).collection('officeBusTrips').where('routeId', '==', affectedRouteId).where('status', '==', 'active').limit(1).get();
-    if (!activeTrips.empty) throw new Error('Finish the active bus run before changing its GPS device.');
+    const activeTrips = await auth.db.collection('schools').doc(schoolId).collection('officeBusTrips').where('status', '==', 'active').limit(100).get();
+    if (activeTrips.docs.some((trip) => trip.data().routeId === affectedRouteId)) throw new Error('Finish the active bus run before changing its GPS device.');
   }
   const now = Date.now();
   const next = { ...current, assignedRouteId: routeId, assignmentVersion: current.assignmentVersion + 1, updatedAt: now, updatedBy: auth.uid };
