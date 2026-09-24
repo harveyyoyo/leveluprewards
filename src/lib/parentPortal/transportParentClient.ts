@@ -13,6 +13,7 @@ export type TransportParentBus = {
   message: string;
   nextStopName: string | null;
   etaMinutes: number | null;
+  familyStops: Array<{ name: string; morningTime: string | null; afternoonTime: string | null }>;
   lastUpdateAt: number | null;
   stale: boolean;
 };

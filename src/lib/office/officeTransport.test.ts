@@ -3,6 +3,7 @@ import {
   buildDriverRunSheet,
   distanceMeters,
   exampleRoutes,
+  familyStopPlans,
   familyUpdateMessage,
   gpsMissedStopWarning,
   isAbandonedRunCandidate,
@@ -78,6 +79,12 @@ describe('officeTransport', () => {
       ready: false,
       missing: ['the school stop'],
     });
+  });
+
+  it('returns only the family assigned stops for a parent plan', () => {
+    expect(familyStopPlans(route, ['b', 'missing', 'b'])).toEqual([
+      { name: 'Maple', morningTime: '07:25', afternoonTime: '15:20' },
+    ]);
   });
 
   it('builds a driver sheet without family, contact, class, note, or location details', () => {

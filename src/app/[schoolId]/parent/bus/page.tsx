@@ -17,6 +17,7 @@ import {
   type TransportParentArrivalPreferences,
   type TransportParentStatus,
 } from '@/lib/parentPortal/transportParentClient';
+import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import { cn } from '@/lib/utils';
 
 function timeLabel(value: number | null, timeZone?: string | null): string {
@@ -26,6 +27,10 @@ function timeLabel(value: number | null, timeZone?: string | null): string {
   } catch {
     return new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   }
+}
+
+function plannedTimeLabel(value: string | null): string {
+  return value ? formatScheduleTime(value) : 'Not set';
 }
 
 export default function TransportParentPage() {
@@ -176,6 +181,22 @@ export default function TransportParentPage() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <p className="text-sm leading-6">{bus.message}</p>
+                       <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-3 dark:border-teal-900 dark:bg-teal-950/30">
+                         <p className="text-xs font-semibold uppercase tracking-wide text-teal-900 dark:text-teal-100">Today’s plan</p>
+                         {bus.familyStops?.length ? (
+                           <div className="mt-2 space-y-2">
+                             {bus.familyStops.map((stop) => (
+                               <div key={`${stop.name}-${stop.morningTime}-${stop.afternoonTime}`} className="text-sm">
+                                 <p className="font-medium">{stop.name}</p>
+                                 <p className="mt-0.5 text-xs text-muted-foreground">Morning: {plannedTimeLabel(stop.morningTime)} · Afternoon: {plannedTimeLabel(stop.afternoonTime)}</p>
+                               </div>
+                             ))}
+                           </div>
+                         ) : (
+                           <p className="mt-1 text-sm text-muted-foreground">The school has not assigned a family stop yet.</p>
+                         )}
+                         <p className="mt-2 text-xs text-muted-foreground">Planned times are not live confirmations. Please call the school if you need immediate help.</p>
+                       </div>
                       <div className="grid gap-2 text-sm sm:grid-cols-2">
                         <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
                           <p className="text-xs text-muted-foreground">Next stop</p>

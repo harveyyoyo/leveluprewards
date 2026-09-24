@@ -431,6 +431,20 @@ export function buildDriverRunSheet(
   };
 }
 
+export type OfficeFamilyStopPlan = {
+  name: string;
+  morningTime: string | null;
+  afternoonTime: string | null;
+};
+
+/** Return only the stops assigned to one family, never the rest of the route. */
+export function familyStopPlans(route: Pick<OfficeBusRoute, 'stops'>, stopIds: Iterable<string>): OfficeFamilyStopPlan[] {
+  const requested = new Set([...stopIds].filter(Boolean));
+  return route.stops
+    .filter((stop) => !stop.isSchool && requested.has(stop.id))
+    .map((stop) => ({ name: stop.name, morningTime: stop.amTime ?? null, afternoonTime: stop.pmTime ?? null }));
+}
+
 /** The newest active trip for a route/run, or the newest completed trip if none is active. */
 export function latestTripForRoute(
   trips: OfficeBusTrip[],

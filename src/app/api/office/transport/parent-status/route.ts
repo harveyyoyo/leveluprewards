@@ -9,6 +9,7 @@ import {
 } from '@/lib/server/transportParentSession';
 import {
   etaMinutes,
+  familyStopPlans,
   latestTripForRoute,
   nextStop,
   routeForTrip,
@@ -57,9 +58,16 @@ export async function GET(req: NextRequest) {
 
     const studentSnap = await school.collection('officeStudents').where('familyId', '==', family.id).limit(200).get();
     const students = studentSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OfficeStudent));
-    const routeIds = [...new Set(students
-      .filter((student) => student.archived !== true && (student.status == null || student.status === 'active') && (student.transportMode == null || student.transportMode === 'bus') && typeof student.busRouteId === 'string')
-      .map((student) => student.busRouteId as string))];
+    const familyStudents = students.filter((student) => student.archived !== true && (student.status == null || student.status === 'active') && (student.transportMode == null || student.transportMode === 'bus') && typeof student.busRouteId === 'string');
+    const routeIds = [...new Set(familyStudents.map((student) => student.busRouteId as string))];
+    const familyStopIdsByRoute = new Map<string, Set<string>>();
+    for (const student of familyStudents) {
+      if (typeof student.busStopId !== 'string' || !student.busStopId) continue;
+      const routeId = student.busRouteId as string;
+      const stopIds = familyStopIdsByRoute.get(routeId) ?? new Set<string>();
+      stopIds.add(student.busStopId);
+      familyStopIdsByRoute.set(routeId, stopIds);
+    }
 
     const buses = await Promise.all(routeIds.map(async (routeId) => {
       const [routeSnap, tripSnap] = await Promise.all([
@@ -86,6 +94,7 @@ export async function GET(req: NextRequest) {
         message: status.text,
         nextStopName: stop?.name ?? null,
         etaMinutes: eta,
+        familyStops: familyStopPlans(activeRoute, familyStopIdsByRoute.get(routeId) ?? []),
         lastUpdateAt: safeNumber(location?.at),
         stale: Boolean(location && !isFreshLocation(location, now)),
       };
