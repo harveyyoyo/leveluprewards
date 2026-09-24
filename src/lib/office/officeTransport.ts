@@ -85,6 +85,17 @@ export function stopTime(stop: OfficeBusStop, run: OfficeBusRun): string | null 
   return (run === 'am' ? stop.amTime : stop.pmTime) || null;
 }
 
+/** Difference from a stop's planned time in minutes; negative means early. */
+export function stopMinutesLate(stop: OfficeBusStop, run: OfficeBusRun, arrivedAt: number | null | undefined): number | null {
+  const planned = stopTime(stop, run);
+  if (!planned || arrivedAt == null || !Number.isFinite(arrivedAt)) return null;
+  const [hours, minutes] = planned.split(':').map(Number);
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  const plannedAt = new Date(arrivedAt);
+  plannedAt.setHours(hours, minutes, 0, 0);
+  return Math.round((arrivedAt - plannedAt.getTime()) / 60_000);
+}
+
 /** Morning before noon, afternoon after. */
 export function currentRun(now = new Date()): OfficeBusRun {
   return now.getHours() < 12 ? 'am' : 'pm';

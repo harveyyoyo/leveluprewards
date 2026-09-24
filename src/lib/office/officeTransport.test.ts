@@ -13,6 +13,7 @@ import {
   riderSnapshotFromStudents,
   routeForTrip,
   routeReadiness,
+  stopMinutesLate,
   transportDaySummary,
   transportDaySummaryText,
   transportFamilyEmails,
@@ -93,6 +94,12 @@ describe('officeTransport', () => {
     expect(nextStop(route, trip())?.id).toBe('a');
     expect(nextStop(route, trip({ stopArrivals: { a: 1 } }))?.id).toBe('b');
     expect(nextStop(route, trip({ stopArrivals: { a: 1, b: 1, s: 1 } }))).toBeNull();
+  });
+
+  it('compares an arrival with the planned stop time', () => {
+    expect(stopMinutesLate(route.stops[0], 'am', at(7, 20))).toBe(5);
+    expect(stopMinutesLate(route.stops[0], 'am', at(7, 12))).toBe(-3);
+    expect(stopMinutesLate(route.stops[0], 'am', null)).toBeNull();
   });
 
   it('measures distance in metres', () => {

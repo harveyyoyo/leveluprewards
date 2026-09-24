@@ -8,6 +8,7 @@ import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeBusTripsForDate } from '@/lib/office/useOfficeTransport';
 import { downloadCsv } from '@/lib/office/officeUtils';
+import { formatScheduleTime } from '@/lib/office/officeSchedule';
 import {
   BUS_ALERT_LABEL,
   BUS_RELEASE_METHOD_LABEL,
@@ -18,6 +19,8 @@ import {
   routeForTrip,
   riderNameForTrip,
   routeLabel,
+  stopMinutesLate,
+  stopTime,
   transportDaySummary,
   transportDaySummaryText,
   vehicleLabel,
@@ -243,13 +246,20 @@ function TripRow({
             <ul className="mt-1.5 space-y-1">
               {stops.map((s) => {
                 const at = trip.stopArrivals?.[s.id];
+                const delay = stopMinutesLate(s, trip.run, at);
+                const planned = stopTime(s, trip.run);
+                const timing = at
+                  ? `${clockLabel(at)}${delay == null ? '' : delay > 0 ? ` · ${delay} min late` : delay < 0 ? ` · ${Math.abs(delay)} min early` : ' · on time'}`
+                  : planned
+                    ? `Planned ${formatScheduleTime(planned)}`
+                    : 'Not reached';
                 return (
                   <li key={s.id} className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5">
                       {at ? <Check className="h-3.5 w-3.5 text-teal-700 dark:text-teal-400" /> : <span className="h-3.5 w-3.5" />}
                       {s.name}
                     </span>
-                    <span className="text-xs text-muted-foreground">{at ? clockLabel(at) : 'Not reached'}</span>
+                    <span className="text-xs text-muted-foreground">{timing}</span>
                   </li>
                 );
               })}
