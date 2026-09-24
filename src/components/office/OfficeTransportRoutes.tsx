@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Building2, Copy, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Building2, Copy, Download, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,7 +31,7 @@ import {
   vehicleLabel,
   type LatLng,
 } from '@/lib/office/officeTransport';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { downloadCsv, getOfficeStudentFullName } from '@/lib/office/officeUtils';
 import type { OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
@@ -397,6 +397,49 @@ function OfficeBusRouteSheet({
     }
   };
 
+  const downloadManifest = () => {
+    const routeName = draft.name.trim() || (route ? routeLabel(route) : 'route');
+    const rows: string[][] = [];
+    const addRow = (order: string, stopName: string, amTime: string, pmTime: string, student: OfficeStudent | null) => {
+      rows.push([
+        routeName,
+        draft.busNumber?.trim() ?? '',
+        order,
+        stopName,
+        amTime,
+        pmTime,
+        student ? getOfficeStudentFullName(student) : '',
+        student?.classId ? classNameById.get(student.classId) ?? '' : '',
+      ]);
+    };
+
+    draft.stops.forEach((stop, index) => {
+      const stopStudents = assignedStudents.filter((student) => student.busStopId === stop.id);
+      if (stopStudents.length === 0) {
+        addRow(String(index + 1), stop.name, stop.amTime ?? '', stop.pmTime ?? '', null);
+        return;
+      }
+      stopStudents.forEach((student) => addRow(String(index + 1), stop.name, stop.amTime ?? '', stop.pmTime ?? '', student));
+    });
+
+    const stopIds = new Set(draft.stops.map((stop) => stop.id));
+    assignedStudents
+      .filter((student) => !student.busStopId || !stopIds.has(student.busStopId))
+      .forEach((student) => addRow('—', 'Stop not assigned', '', '', student));
+    if (rows.length === 0) addRow('—', 'No stops added', '', '', null);
+
+    const fileName = routeName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'route';
+    downloadCsv(
+      `transport-manifest-${fileName}.csv`,
+      ['Route', 'Bus number', 'Stop order', 'Stop', 'Morning time', 'Afternoon time', 'Student', 'Class'],
+      rows,
+    );
+    toast({ title: 'Manifest downloaded', description: 'The route and rider list are ready to open in a spreadsheet.' });
+  };
+
   const remove = async () => {
     if (locked) {
       toast({ variant: 'destructive', title: 'Bus is on the road', description: 'Wait until this run ends before removing the route.' });
@@ -746,6 +789,9 @@ function OfficeBusRouteSheet({
 
           {route ? (
             <div className="flex flex-wrap items-center gap-4">
+              <button type="button" disabled={busy} onClick={downloadManifest} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Download className="h-3.5 w-3.5" /> Download rider manifest
+              </button>
               <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
                 <Copy className="h-3.5 w-3.5" /> Duplicate route
               </button>
