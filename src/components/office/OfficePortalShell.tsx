@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Building2, GripVertical, LogOut, Menu, X } from 'lucide-react';
+import { Building2, ChevronDown, GripVertical, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -14,9 +14,10 @@ import { useOfficeTerm } from '@/lib/office/useOfficeTerm';
 import { useOfficeLayoutMode } from '@/lib/office/useOfficeLayoutMode';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
-import { OfficeUniversalSearch } from '@/components/office/OfficeUniversalSearch';
 import { OfficeInterfaceSettingsSheet } from '@/components/office/OfficeInterfaceSettingsSheet';
-import { OfficeAiHelpButton } from '@/components/office/OfficeAiHelpButton';
+import { useApplyOfficeColorTheme } from '@/lib/office/useOfficeColorTheme';
+import { OfficeAssistant } from '@/components/office/OfficeAiHelpButton';
+import { OfficeHeaderAskBox } from '@/components/office/OfficeHomeAskBox';
 import {
   OFFICE_CONTENT_PANE_CLASS,
   OFFICE_LAYOUT_PANE_CLASS,
@@ -45,6 +46,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const pathname = usePathname();
   const activeId = officeNavIdFromPath(pathname, schoolId);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Sign out sits behind the person's name so it isn't clicked by accident.
+  const [accountOpen, setAccountOpen] = useState(false);
+  useApplyOfficeColorTheme();
 
   const displaySchool = schoolName?.trim() || schoolId;
   const { settings, marksLabels } = useOfficePortalChrome();
@@ -106,7 +110,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             // padding already accounted for) make this the actual scrolling container on
             // desktop (instead of the window), which is what lets the sidebar below stick to
             // the viewport via `position: sticky` rather than stretching with the page.
-            'relative flex min-h-screen w-full flex-col overflow-hidden bg-[#f4f7f9] lg:h-full lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
+            // `overflow-clip`, not `overflow-hidden`: it still trims the rounded corners, but doesn't stop
+            // the header from staying at the top when the page scrolls (on narrower screens).
+            'relative flex min-h-screen w-full flex-col overflow-clip bg-[#f4f7f9] lg:h-full lg:flex-row lg:overflow-y-auto dark:bg-slate-950',
             isWide
               ? 'max-w-none border-0 shadow-none'
               : 'max-w-5xl shadow-none sm:min-h-[calc(100vh-3rem)] sm:rounded-2xl sm:border sm:border-slate-200/90 sm:shadow-xl dark:sm:border-slate-800',
@@ -144,6 +150,9 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
             >
               <X className="h-5 w-5" />
             </Button>
+          </div>
+          <div className="border-b border-white/10 px-3 py-2">
+            <OfficeInterfaceSettingsSheet schoolId={schoolId} />
           </div>
 
           {/* `min-h-0` overrides a flex item's default `min-height: auto`, which otherwise
@@ -199,22 +208,33 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
 
           <div className="space-y-2 border-t border-white/10 p-4">
             {userName ? (
-              <div className="flex items-center gap-2.5 px-2">
+              <button
+                type="button"
+                onClick={() => setAccountOpen((v) => !v)}
+                aria-expanded={accountOpen}
+                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-white/10"
+              >
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-[10px] font-bold text-teal-200">
                   {getInitials(userName)}
                 </div>
-                <p className="truncate text-xs text-teal-100/70">{userName}</p>
-              </div>
+                <p className="min-w-0 flex-1 truncate text-xs text-teal-100/70">{userName}</p>
+                <ChevronDown
+                  className={cn('h-3.5 w-3.5 shrink-0 text-teal-100/60 transition-transform', accountOpen && 'rotate-180')}
+                  aria-hidden
+                />
+              </button>
             ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full justify-start gap-2 text-teal-100 hover:bg-white/10 hover:text-white"
-              onClick={onLogout}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
+            {accountOpen || !userName ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="w-full justify-start gap-2 text-teal-100 hover:bg-white/10 hover:text-white"
+                onClick={onLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
+            ) : null}
             <p className="px-2 pt-1 text-[10px] text-teal-200/50 text-center">
               v{process.env.NEXT_PUBLIC_VERSION}
               {process.env.NEXT_PUBLIC_BUILD_TIME ? ` · ${process.env.NEXT_PUBLIC_BUILD_TIME}` : ''}
@@ -235,7 +255,13 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           className={cn('flex min-w-0 flex-1 flex-col', OFFICE_MAIN_PANE_CLASS)}
           style={{ zoom: OFFICE_MAIN_ZOOM }}
         >
-          <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90">
+          {/* Home has no title bar; on small screens it keeps just the menu button. */}
+          <header
+            className={cn(
+              'sticky top-0 z-20 border-b border-slate-200/80 bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/90',
+              activeId === 'home' && 'lg:hidden',
+            )}
+          >
             <div
               className={cn(
                 OFFICE_CONTENT_PANE_CLASS,
@@ -252,22 +278,19 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <div className="min-w-0 flex-1">
+              <div className={cn('min-w-0 flex-1', activeId === 'home' && 'invisible')}>
                 <h1 className="text-base font-bold tracking-tight text-slate-900 dark:text-white">
                   {activeNav?.label ?? 'School Office'}
                 </h1>
-                <p className="truncate text-xs text-muted-foreground">
-                  {activeNav?.description ?? `${marksLabels.section} & billing`}
+                <p className="text-xs text-muted-foreground">
+                  {activeNav?.explainer ?? `${marksLabels.section} & billing`}
                   {workingTerm ? ` · Term ${workingTerm}` : ''}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <OfficeUniversalSearch />
-                <OfficeInterfaceSettingsSheet schoolId={schoolId} />
-                <OfficeAiHelpButton />
-              </div>
+              {activeId !== 'home' ? <OfficeHeaderAskBox /> : null}
             </div>
           </header>
+          <OfficeAssistant />
           <main className="flex-1 py-4 sm:py-6">
             <div className={cn(OFFICE_CONTENT_PANE_CLASS, 'w-full px-4 sm:px-6')}>
               <OfficeEntityNavProvider schoolId={schoolId}>{children}</OfficeEntityNavProvider>

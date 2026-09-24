@@ -205,6 +205,8 @@ export type OfficeBillingAccount = {
   status: OfficeBillingAccountStatus;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  /** Mailing address, only for accounts with no family profile (otherwise it's the family's home address). */
+  mailingAddress?: string | null;
   notes?: string | null;
   /** Standing discount/scholarship applied when staff create new invoices for this family. */
   discountLabel?: string | null;

@@ -4,21 +4,32 @@ import Link from 'next/link';
 import {
   AlertCircle,
   CalendarCheck,
+  CalendarPlus,
   CheckCircle2,
   CreditCard,
+  DoorOpen,
+  FileSignature,
   GraduationCap,
+  LayoutGrid,
   Plus,
   Upload,
+  UserPen,
+  UserPlus,
+  UserRound,
   Users,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeHomeAskBox } from '@/components/office/OfficeHomeAskBox';
-import { formatCents, type OfficeNavId } from '@/lib/office/officeNav';
+import { formatCents, getOfficeNavItems, officeGoHref, type OfficeNavId } from '@/lib/office/officeNav';
+import { OFFICE_TASKS, officeCommonTasks, type OfficeTaskId } from '@/lib/office/officeCommonTasks';
+import { useOfficeRecentHistory } from '@/lib/office/useOfficeRecentHistory';
 import { useAppContext } from '@/components/AppProvider';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
 import { useCurrentOfficeStaffAccess } from '@/lib/office/useCurrentOfficeStaffAccess';
+import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { officePublicHref } from '@/lib/officePublicUrl';
 import type { OfficeDashboardInsights } from '@/lib/office/officeUtils';
 import { cn } from '@/lib/utils';
@@ -36,6 +47,20 @@ type OfficeDashboardProps = {
 /** Grid widths by how many boxes are showing, so hidden sections don't leave gaps. */
 const STAT_COLS: Record<number, string> = { 1: 'sm:grid-cols-1', 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3' };
 const ACTION_COLS: Record<number, string> = { 1: 'lg:grid-cols-2', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4' };
+
+const TASK_ICONS: Record<OfficeTaskId, LucideIcon> = {
+  'add-student': UserPlus,
+  'update-student': UserPen,
+  'add-teacher': UserRound,
+  'new-class': LayoutGrid,
+  'record-grades': GraduationCap,
+  'take-attendance': CalendarCheck,
+  'front-desk': DoorOpen,
+  'new-invoice': CreditCard,
+  'record-payment': Wallet,
+  'permission-slip': FileSignature,
+  'new-event': CalendarPlus,
+};
 
 type StatTile = {
   section: OfficeNavId;
@@ -56,6 +81,8 @@ export function OfficeDashboard({
   showAttendance = true,
 }: OfficeDashboardProps) {
   const { userName } = useAppContext();
+  const { features, settings } = useOfficePortalChrome();
+  const history = useOfficeRecentHistory(schoolId, 300, features.aiHelp);
   const { hidden } = useOfficeHiddenSections();
   const { allowedSections } = useCurrentOfficeStaffAccess(schoolId, userName);
   // Home only offers what this person has in their menu: sections switched off in Interface,
@@ -144,9 +171,43 @@ export function OfficeDashboard({
   ];
   const quickActions = allQuickActions.filter((a) => isShown(a.section));
 
+  // Home is the ask box, with this person's most common jobs underneath.
+  if (features.aiHelp) {
+    // Only sections this person can open and the school has switched on (e.g. not Front desk when it's off).
+    const schoolSections = new Set(getOfficeNavItems(settings).map((item) => item.id));
+    const { tasks, fromHistory } = officeCommonTasks(history, userName, (id) => isShown(id) && schoolSections.has(id));
+    return (
+      <div className="w-full">
+        <OfficeHomeAskBox />
+        {tasks.length > 0 ? (
+          <section
+            className="mx-auto mt-32 mb-8 w-full max-w-4xl rounded-3xl bg-white/70 px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/60 dark:ring-slate-800"
+            aria-label="Jump to"
+          >
+            <div className="mb-3 flex flex-wrap items-baseline gap-x-2">
+              <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Jump to…</h2>
+              <p className="text-xs text-muted-foreground">
+                {fromHistory ? 'your most common activities' : 'everyday activities — your most common ones will show here'}
+              </p>
+            </div>
+            <div className={cn('grid grid-cols-2 gap-2.5', ACTION_COLS[tasks.length])}>
+              {tasks.map((task) => (
+                <QuickAction
+                  key={task}
+                  href={officeGoHref(schoolId, OFFICE_TASKS[task].go, settings) ?? officePublicHref(schoolId)}
+                  label={OFFICE_TASKS[task].label}
+                  icon={TASK_ICONS[task]}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full space-y-5">
-      <OfficeHomeAskBox />
 
       {isEmpty ? (
         <section className="rounded-2xl bg-white px-5 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/80 dark:ring-slate-800">

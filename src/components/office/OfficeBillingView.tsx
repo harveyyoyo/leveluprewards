@@ -17,7 +17,13 @@ import {
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { dollarsParamToCents } from '@/lib/office/officeAssistantView';
-import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import {
+  filterOfficeBillingAccounts,
+  officeBillingListReport,
+  officeInvoicesByAccount,
+  officeOwedByAccount,
+} from '@/lib/office/officeAssistantLists';
 import {
   Archive,
   Ban,
@@ -66,6 +72,7 @@ import {
   splitCentsIntoInstallments,
 } from '@/lib/office/officeUtils';
 import { OfficeSearchInput } from '@/components/office/OfficeSearchInput';
+import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
 import { OfficeQuickChips } from '@/components/office/OfficeQuickChips';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
@@ -108,7 +115,7 @@ type OfficeBillingViewProps = {
 export function OfficeBillingView({
   schoolId,
   students,
-  families: _families = [],
+  families = [],
   studentLabelById,
   accounts,
   invoices,
@@ -154,6 +161,8 @@ export function OfficeBillingView({
   const [editAccountId, setEditAccountId] = useState<string | null>(null);
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [accountAddress, setAccountAddress] = useState('');
+  const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
   const [accountNotes, setAccountNotes] = useState('');
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
   const [discountLabel, setDiscountLabel] = useState('');
@@ -200,19 +209,7 @@ export function OfficeBillingView({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [invoices]);
 
-  const invoicesByAccount = useMemo(() => {
-    const map = new Map<string, OfficeInvoice[]>();
-    for (const inv of invoices) {
-      const list = map.get(inv.accountId) ?? [];
-      list.push(inv);
-      map.set(inv.accountId, list);
-    }
-    for (const [id, list] of map) {
-      list.sort((a, b) => (b.dueDate ?? '').localeCompare(a.dueDate ?? ''));
-      map.set(id, list);
-    }
-    return map;
-  }, [invoices]);
+  const invoicesByAccount = useMemo(() => officeInvoicesByAccount(invoices), [invoices]);
 
   const openBalanceCents = useMemo(
     () => invoices.reduce((sum, i) => sum + invoiceBalanceDueCents(i), 0),
@@ -224,42 +221,23 @@ export function OfficeBillingView({
   const dueSoonCount = useMemo(() => invoices.filter((i) => isInvoiceDueSoon(i)).length, [invoices]);
 
   // What each family still owes (open invoices minus payments), for "owes more/less than" views.
-  const owedByAccount = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const inv of invoices) map.set(inv.accountId, (map.get(inv.accountId) ?? 0) + invoiceBalanceDueCents(inv));
-    return map;
-  }, [invoices]);
+  const owedByAccount = useMemo(() => officeOwedByAccount(invoices), [invoices]);
 
-  const filteredAccounts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let list = accounts;
-    if (minOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) > minOwedCents);
-    if (maxOwedCents != null) list = list.filter((a) => (owedByAccount.get(a.id) ?? 0) < maxOwedCents);
-    if (invoiceFilter === 'overdue') {
-      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceOverdue(i)));
-    } else if (invoiceFilter === 'due-soon') {
-      list = list.filter((a) => (invoicesByAccount.get(a.id) ?? []).some((i) => isInvoiceDueSoon(i)));
-    } else if (invoiceFilter === 'open') {
-      list = list.filter(
-        (a) =>
-          (a.balanceCents || 0) > 0 ||
-          (invoicesByAccount.get(a.id) ?? []).some(
-            (i) => i.status === 'sent' || i.status === 'partial' || i.status === 'draft',
-          ),
-      );
-    }
-    if (!q) return list;
-    return list.filter((a) => {
-      const linked = (a.studentIds ?? []).map((id) => studentLabelById.get(id) ?? '').join(' ');
-      return (a.familyName ?? '').toLowerCase().includes(q) || linked.toLowerCase().includes(q);
-    });
-  }, [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount, minOwedCents, maxOwedCents, owedByAccount]);
+  const filteredAccounts = useMemo(
+    () =>
+      filterOfficeBillingAccounts(
+        accounts,
+        { search, minOwedCents, maxOwedCents, invoiceFilter },
+        { owedByAccount, invoicesByAccount, studentLabelById },
+      ),
+    [accounts, search, studentLabelById, invoiceFilter, invoicesByAccount, minOwedCents, maxOwedCents, owedByAccount]);
 
   const resetAccountForm = () => {
     setFamilyName('');
     setSelectedStudentIds([]);
     setContactEmail('');
     setContactPhone('');
+    setAccountAddress('');
     setAccountNotes('');
     setAccountStudentSearch('');
     setDiscountLabel('');
@@ -292,26 +270,7 @@ export function OfficeBillingView({
   }, [searchParams]);
 
   // Tell the Help chat what this list shows (largest balance first), so it can answer with it.
-  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
-    status: 'ready',
-    total: filteredAccounts.length,
-    noun: ['family', 'families'],
-    studentIds: [...new Set(filteredAccounts.flatMap((a) => a.studentIds ?? []))],
-    rows: filteredAccounts
-      .map((a) => ({ a, owed: owedByAccount.get(a.id) ?? 0 }))
-      .sort((x, y) => y.owed - x.owed)
-      .slice(0, OFFICE_ASSISTANT_CHAT_ROWS)
-      .map(({ a, owed }) => ({
-        id: a.id,
-        name: a.familyName?.trim() || 'Family',
-        detail: owed > 0 ? `owes ${formatCents(owed)}` : 'nothing owed',
-        open: a.familyId
-          ? { kind: 'family' as const, id: a.familyId }
-          : a.studentIds?.[0]
-            ? { kind: 'student' as const, id: a.studentIds[0] }
-            : undefined,
-      })),
-  }));
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => officeBillingListReport(filteredAccounts, owedByAccount));
 
   const clearAsk = () => {
     setReportAskAt(null);
@@ -380,6 +339,8 @@ export function OfficeBillingView({
     setSelectedStudentIds(account.studentIds);
     setContactEmail(account.contactEmail ?? '');
     setContactPhone(account.contactPhone ?? '');
+    const family = account.familyId ? familyById.get(account.familyId) : undefined;
+    setAccountAddress((family ? family.homeAddress : account.mailingAddress)?.trim() ?? '');
     setAccountNotes(account.notes ?? '');
     setDiscountLabel(account.discountLabel ?? '');
     setDiscountPercent(account.discountPercent != null ? String(account.discountPercent) : '');
@@ -567,8 +528,18 @@ export function OfficeBillingView({
       };
       if (editAccountId) {
         const existing = accounts.find((a) => a.id === editAccountId);
+        // One address per family: a family with a profile keeps it there, so both screens show the same one.
+        const family = existing?.familyId ? familyById.get(existing.familyId) : undefined;
+        const address = accountAddress.trim() || null;
+        if (family && write.ctx && address !== (family.homeAddress?.trim() || null)) {
+          const { id: _id, updatedAt: _updatedAt, updatedBy: _updatedBy, ...familyData } = family;
+          await write.upsertOfficeFamily(write.ctx, family.id, { ...familyData, homeAddress: address });
+        }
         // Balance/status are left alone: they only change through invoices and payments.
-        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), payload);
+        await updateDoc(doc(firestore, 'schools', schoolId, 'officeBillingAccounts', editAccountId), {
+          ...payload,
+          ...(family ? {} : { mailingAddress: address }),
+        });
         if (write.ctx) {
           await write.logOfficeChange(write.ctx, {
             entityType: 'officeBillingAccount',
@@ -582,7 +553,7 @@ export function OfficeBillingView({
         toast({ title: 'Account updated' });
       } else {
         const ref = doc(collection(firestore, 'schools', schoolId, 'officeBillingAccounts'));
-        const created = { ...payload, balanceCents: 0, status: 'active' as const };
+        const created = { ...payload, mailingAddress: accountAddress.trim() || null, balanceCents: 0, status: 'active' as const };
         await setDoc(ref, created);
         if (write.ctx) {
           await write.logOfficeChange(write.ctx, {
@@ -1478,6 +1449,13 @@ export function OfficeBillingView({
                 <Label>Phone</Label>
                 <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} className="rounded-xl" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="office-billing-address">Address</Label>
+              <OfficeAddressInput id="office-billing-address" value={accountAddress} onChange={setAccountAddress} />
+              {editAccountId && familyById.has(accounts.find((a) => a.id === editAccountId)?.familyId ?? '') ? (
+                <p className="text-xs text-muted-foreground">The same address as on the family profile — changing it here changes it there too.</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <Label>Notes (optional)</Label>

@@ -9,7 +9,12 @@ import {
   findClassByAskedName,
   type OfficeAssistantAttendanceStatus,
 } from '@/lib/office/officeAssistantView';
-import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import {
+  OFFICE_ATTENDANCE_UNAVAILABLE,
+  officeAttendanceListReport,
+  officeAttendanceMatches,
+} from '@/lib/office/officeAssistantLists';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficeAttendanceForDate } from '@/lib/office/useOfficeAttendance';
-import { officeStudentsForClass, getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { officeStudentsForClass, getOfficeStudentFullName, officeLocalIsoDate } from '@/lib/office/officeUtils';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { cn } from '@/lib/utils';
@@ -46,11 +51,7 @@ const STATUS_STYLES: Record<OfficeAttendanceStatus, string> = {
   excused: 'bg-slate-500 text-white hover:bg-slate-500/90',
 };
 
-/** Today on this computer's calendar (not UTC, which is already tomorrow on a US evening). */
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+const todayIso = () => officeLocalIsoDate();
 
 const ASK_STATUS_LABEL: Record<OfficeAssistantAttendanceStatus, string> = {
   absent: 'absent',
@@ -163,37 +164,15 @@ export function OfficeAttendanceView({ schoolId, students, classes, isLoading }:
   }, [classStudents, existingForClass]);
 
   const classNameById = useMemo(() => new Map(classes.map((c) => [c.id, c.name ?? ''])), [classes]);
-  const askMatches = useMemo(() => {
-    if (!askLabel) return [];
-    const studentById = new Map(students.map((s) => [s.id, s]));
-    return dayEntries
-      .filter((e) => (askStatus === 'not-present' ? e.status !== 'present' : e.status === askStatus))
-      .filter((e) => !askClassId || e.classId === askClassId)
-      .map((e) => {
-        const s = studentById.get(e.studentId);
-        return { entry: e, name: s ? getOfficeStudentFullName(s) : 'Student', className: classNameById.get(e.classId) ?? '' };
-      })
-      .sort((a, b) => a.className.localeCompare(b.className) || a.name.localeCompare(b.name));
-  }, [askLabel, askStatus, askClassId, dayEntries, students, classNameById]);
+  const askMatches = useMemo(
+    () => (askLabel ? officeAttendanceMatches(dayEntries, askStatus, askClassId, students, classNameById) : []),
+    [askLabel, askStatus, askClassId, dayEntries, students, classNameById]);
 
   // Tell the Help chat what this day shows, so it can answer with the same names.
   useReportOfficeAssistantResults(reportAskAt, !!attendanceError || (!isLoading && !attendanceLoading), () =>
     attendanceError
-      ? { status: 'unavailable', message: 'Attendance isn’t open yet — it opens after the next update.' }
-      : {
-          status: 'ready',
-          total: askMatches.length,
-          noun: ['student', 'students'],
-          studentIds: [...new Set(askMatches.map((m) => m.entry.studentId))],
-          rows: askMatches.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((m) => ({
-            id: m.entry.id,
-            name: m.name,
-            open: { kind: 'student', id: m.entry.studentId },
-            detail: [m.className, askStatus === 'not-present' ? STATUS_LABEL[m.entry.status] : null]
-              .filter(Boolean)
-              .join(' · '),
-          })),
-        },
+      ? { status: 'unavailable', message: OFFICE_ATTENDANCE_UNAVAILABLE }
+      : officeAttendanceListReport(askMatches, askStatus),
   );
 
   const counts = useMemo(() => {

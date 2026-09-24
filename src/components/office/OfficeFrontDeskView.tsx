@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
-import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import {
+  OFFICE_DESK_KIND_LABEL,
+  OFFICE_DESK_UNAVAILABLE,
+  officeDeskListReport,
+  officeDeskShown,
+} from '@/lib/office/officeAssistantLists';
 import { AlertTriangle, ChevronLeft, ChevronRight, DoorOpen, HeartPulse, Info, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +27,7 @@ import { OfficeStudentPicker } from '@/components/office/OfficeStudentPicker';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficeDeskLogForDate } from '@/lib/office/useOfficeDeskLog';
 import { formatScheduleTime } from '@/lib/office/officeSchedule';
-import { getOfficeStudentFullName } from '@/lib/office/officeUtils';
+import { getOfficeStudentFullName, officeLocalIsoDate } from '@/lib/office/officeUtils';
 import type { OfficeDeskLogEntry, OfficeDeskLogKind, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import { safeString } from '@/lib/safeDisplayValue';
 import { cn } from '@/lib/utils';
@@ -29,11 +35,7 @@ import { cn } from '@/lib/utils';
 type Tab = 'arrivals' | 'nurse';
 const SOMEONE_ELSE = '__someone_else__';
 
-const KIND_LABEL: Record<OfficeDeskLogKind, string> = {
-  late_arrival: 'Late arrival',
-  early_pickup: 'Early pickup',
-  nurse_visit: 'Nurse visit',
-};
+const KIND_LABEL = OFFICE_DESK_KIND_LABEL;
 
 const QUICK_REASONS: Record<OfficeDeskLogKind, string[]> = {
   late_arrival: ['Appointment', 'Overslept', 'Bus late', 'Family emergency'],
@@ -41,9 +43,7 @@ const QUICK_REASONS: Record<OfficeDeskLogKind, string[]> = {
   nurse_visit: ['Headache', 'Stomach ache', 'Injury', 'Fever'],
 };
 
-function localIsoDate(d = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+const localIsoDate = officeLocalIsoDate;
 
 function nowTime(): string {
   const d = new Date();
@@ -141,24 +141,11 @@ export function OfficeFrontDeskView({ schoolId, students, classNameById, familyB
 
   const arrivals = entries.filter((e) => e.kind !== 'nurse_visit');
   const nurse = entries.filter((e) => e.kind === 'nurse_visit');
-  const shown = (tab === 'arrivals' ? arrivals : nurse).filter((e) => !askKind || e.kind === askKind);
+  const shown = officeDeskShown(entries, tab, askKind);
 
   // Tell the Help chat what this day shows, so it can answer with the same names.
   useReportOfficeAssistantResults(reportAskAt, !!error || (!isLoading && !logLoading), () =>
-    error
-      ? { status: 'unavailable', message: 'The front desk log isn’t open yet — it opens after the next update.' }
-      : {
-          status: 'ready',
-          total: shown.length,
-          noun: ['entry', 'entries'],
-          studentIds: [...new Set(shown.map((e) => e.studentId))],
-          rows: shown.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((e) => ({
-            id: e.id,
-            name: nameOf(e.studentId),
-            detail: `${KIND_LABEL[e.kind]}, ${formatScheduleTime(e.time)}${e.reason ? ` · ${e.reason}` : ''}`,
-            open: { kind: 'student', id: e.studentId },
-          })),
-        },
+    error ? { status: 'unavailable', message: OFFICE_DESK_UNAVAILABLE } : officeDeskListReport(shown, nameOf),
   );
 
   const draftStudent = draft?.studentId ? studentById.get(draft.studentId) : undefined;

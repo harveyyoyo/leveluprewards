@@ -395,12 +395,15 @@ function readSourceExcerpt(relPath: string, maxChars: number): string | null {
 export function selectStaffHelpSourcePaths(input: {
   pathname?: string;
   userMessage: string;
+  /** Keep only files under these folders (e.g. the School Office, which is its own app). */
+  onlyUnder?: string[];
 }): string[] {
   const keywords = extractStaffHelpKeywords(input.userMessage);
   const ranked = scoreIndexedPaths(keywords, input.pathname);
   const selected: string[] = [];
   for (const { path: rel } of ranked) {
     if (selected.length >= STAFF_HELP_CODE_MAX_FILES) break;
+    if (input.onlyUnder && !input.onlyUnder.some((prefix) => rel.startsWith(prefix))) continue;
     if (!selected.includes(rel) && existsSync(path.join(PROJECT_ROOT, rel))) {
       selected.push(rel);
     }
@@ -411,6 +414,7 @@ export function selectStaffHelpSourcePaths(input: {
 export function buildStaffHelpCodeContextBlock(input: {
   pathname?: string;
   userMessage: string;
+  onlyUnder?: string[];
 }): { block: string; files: string[] } {
   if (!staffHelpCodeContextEnabled()) {
     return { block: '', files: [] };

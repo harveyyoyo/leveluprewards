@@ -18,6 +18,8 @@ import type { OfficeClass, OfficeStudent, OfficeTeacher } from '@/lib/office/typ
 import { OfficeCsvImportDialog } from '@/components/office/OfficeCsvImportDialog';
 import { OfficeTeacherSelect } from '@/components/office/OfficeTeacherSelect';
 import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
+import { useOfficeOpenFromLink } from '@/lib/office/useOfficeOpenFromLink';
+import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
 
 type OfficeRosterManagerProps = {
   schoolId: string;
@@ -38,6 +40,8 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
   const [classId, setClassId] = useState('');
   const [teacherId, setTeacherId] = useState('');
   const [addAnother, setAddAnother] = useState(false);
+  useOfficeOpenFromLink('add', open, () => setOpen(true));
+  const { openStudent } = useOfficeEntityNav();
 
   const reset = () => {
     setFirstName('');
@@ -47,14 +51,15 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
     setTeacherId('');
   };
 
-  const handleSave = async () => {
+  /** `moreDetails`: then open the new student's card on its full form, for everything else. */
+  const handleSave = async (moreDetails = false) => {
     if (!write.ctx || !firstName.trim() || !lastName.trim()) {
       toast({ variant: 'destructive', title: 'First and last name are required.' });
       return;
     }
     setBusy(true);
     try {
-      await write.createOfficeStudentWithFamily(write.ctx, {
+      const { studentId } = await write.createOfficeStudentWithFamily(write.ctx, {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         nickname: nickname.trim() || null,
@@ -68,7 +73,11 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
         updatedAt: Date.now(),
       });
       toast({ title: 'Student added' });
-      if (addAnother) {
+      if (moreDetails) {
+        setOpen(false);
+        reset();
+        openStudent(studentId, { edit: true });
+      } else if (addAnother) {
         reset();
       } else {
         setOpen(false);
@@ -103,9 +112,9 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
           if (!next) reset();
         }}
       >
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Add office student</DialogTitle>
+            <DialogTitle>Add student</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
@@ -157,6 +166,9 @@ export function OfficeRosterManager({ schoolId, classes, teachers, importRef }: 
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
+            </Button>
+            <Button variant="outline" onClick={() => void handleSave(true)} disabled={busy}>
+              Save and add more details
             </Button>
             <Button onClick={() => void handleSave()} disabled={busy}>
               Save student

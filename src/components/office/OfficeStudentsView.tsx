@@ -4,9 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner';
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
-import { officeAddressMatches } from '@/lib/office/officeAddress';
 import { findClassByAskedName } from '@/lib/office/officeAssistantView';
-import { OFFICE_ASSISTANT_CHAT_ROWS, useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
+import { filterOfficeStudents, officeStudentsListReport, type OfficeRosterFilter } from '@/lib/office/officeAssistantLists';
 import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -65,16 +65,7 @@ function SortHeader({
     </button>
   );
 }
-type RosterFilter =
-  | 'all'
-  | 'missing-grades'
-  | 'no-billing'
-  | 'unassigned'
-  | 'no-teacher'
-  | 'no-family'
-  | 'allergies'
-  | 'withdrawn'
-  | 'graduated';
+type RosterFilter = OfficeRosterFilter;
 
 const ROSTER_FILTERS: RosterFilter[] = [
   'missing-grades',
@@ -138,13 +129,6 @@ export function OfficeStudentsView({
   const router = useRouter();
   const pathname = usePathname();
   const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
-  const teacherIdsMatchingText = useMemo(() => {
-    const q = teacherText.trim().toLowerCase();
-    if (!q) return null;
-    return new Set(
-      [...teacherNameById.entries()].filter(([, name]) => name.toLowerCase().includes(q)).map(([id]) => id),
-    );
-  }, [teacherText, teacherNameById]);
 
   const classOptions = useMemo(() => {
     return classes.slice().sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
@@ -171,37 +155,22 @@ export function OfficeStudentsView({
   );
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base =
-      rosterFilter === 'withdrawn'
-        ? students.filter((s) => s.status === 'withdrawn')
-        : rosterFilter === 'graduated'
-          ? students.filter((s) => s.status === 'graduated')
-          : activeStudents;
-    const list = base.filter((s) => {
-      if (homeroomFilter !== 'all' && !getTeacherIds(s).includes(homeroomFilter)) return false;
-      if (rosterFilter === 'unassigned' && s.classId) return false;
-      if (rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
-      if (rosterFilter === 'missing-grades' && gradedForTerm.has(s.id)) return false;
-      if (rosterFilter === 'no-billing' && billingAccountForStudent(billingAccounts, s.id)) return false;
-      if (rosterFilter === 'no-family' && s.familyId) return false;
-      if (rosterFilter === 'allergies' && !s.allergies?.trim()) return false;
-      if (teacherIdsMatchingText && !getTeacherIds(s).some((id) => teacherIdsMatchingText.has(id))) return false;
-      if (addressText.trim()) {
-        const address = s.familyId ? familyById.get(s.familyId)?.homeAddress : null;
-        if (!officeAddressMatches(address, addressText)) return false;
-      }
-      if (lastStarts && !(s.lastName ?? '').trim().toLowerCase().startsWith(lastStarts.toLowerCase())) return false;
-      if (firstStarts && !(s.firstName ?? '').trim().toLowerCase().startsWith(firstStarts.toLowerCase())) return false;
-      if (birthMonth && Number(s.dateOfBirth?.slice(5, 7)) !== birthMonth) return false;
-      if (idsFilter && !idsFilter.has(s.id)) return false;
-      if (classFilter === '__unassigned__' && s.classId) return false;
-      if (classFilter !== 'all' && classFilter !== '__unassigned__' && s.classId !== classFilter) return false;
-      if (!q) return true;
-      const label = getOfficeStudentFullName(s).toLowerCase();
-      const cls = (s.classId && classNameById.get(s.classId))?.toLowerCase() ?? '';
-      return label.includes(q) || cls.includes(q);
-    });
+    const list = filterOfficeStudents(
+      students,
+      {
+        rosterFilter,
+        classFilter,
+        homeroomFilter,
+        query,
+        teacherText,
+        addressText,
+        lastStarts,
+        firstStarts,
+        birthMonth,
+        idsFilter,
+      },
+      { classNameById, teacherNameById, gradedForTerm, billingAccounts, familyById },
+    );
     return list.slice().sort((a, b) => {
       if (sortBy === 'name-desc') {
         return getOfficeStudentFullName(b).localeCompare(getOfficeStudentFullName(a));
@@ -216,16 +185,16 @@ export function OfficeStudentsView({
     });
   }, [
     students,
-    activeStudents,
     query,
     classFilter,
     homeroomFilter,
     rosterFilter,
     sortBy,
     classNameById,
+    teacherNameById,
     gradedForTerm,
     billingAccounts,
-    teacherIdsMatchingText,
+    teacherText,
     addressText,
     familyById,
     lastStarts,
@@ -280,27 +249,9 @@ export function OfficeStudentsView({
   }, [classes]);
 
   // Tell the Help chat what this list shows, so it can answer with the same names.
-  useReportOfficeAssistantResults(reportAskAt, !isLoading, () => ({
-    status: 'ready',
-    total: filtered.length,
-    noun: ['student', 'students'],
-    studentIds: filtered.map((s) => s.id),
-    rows: filtered.slice(0, OFFICE_ASSISTANT_CHAT_ROWS).map((s) => ({
-      id: s.id,
-      name: getOfficeStudentFullName(s),
-      detail:
-        [
-          (s.classId && classNameById.get(s.classId)) || null,
-          // For a birthday list, show the day too.
-          birthMonth && s.dateOfBirth
-            ? `birthday ${new Date(`${s.dateOfBirth}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' · ') || undefined,
-      open: { kind: 'student', id: s.id },
-    })),
-  }));
+  useReportOfficeAssistantResults(reportAskAt, !isLoading, () =>
+    officeStudentsListReport(filtered, classNameById, birthMonth),
+  );
 
   const clearAll = () => {
     setReportAskAt(null);
@@ -367,7 +318,7 @@ export function OfficeStudentsView({
       <div className="space-y-4">
         <OfficeEmptyState
           icon={Users}
-          title="No office students yet"
+          title="No students yet"
           description="Add students one at a time, or import a spreadsheet."
         />
         <OfficeRosterManager schoolId={schoolId} classes={classes} teachers={teachers} />

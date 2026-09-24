@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { OFFICE_GENDER_STARTERS, OFFICE_LANGUAGE_STARTERS, officeUsedValues } from '@/lib/office/officeSuggestions';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, OrphanSelectItem, isOrphanSelectValue, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,6 +63,9 @@ type OfficeStudentSheetProps = {
   teachers?: OfficeTeacher[];
   allStudents?: OfficeStudent[];
   families?: OfficeFamily[];
+  /** Open on the full edit form (every field showing), e.g. right after the student was added. */
+  startEditing?: boolean;
+  onStartedEditing?: () => void;
 };
 
 export function OfficeStudentSheet({
@@ -77,7 +81,20 @@ export function OfficeStudentSheet({
   teachers = [],
   allStudents = [],
   families = [],
+  startEditing = false,
+  onStartedEditing,
 }: OfficeStudentSheetProps) {
+  // Boxes where the same answers come up again and again suggest the ones already used here.
+  const usedValues = useMemo(
+    () => ({
+      gender: officeUsedValues(allStudents, (s) => s.gender, 30, OFFICE_GENDER_STARTERS),
+      previousSchool: officeUsedValues(allStudents, (s) => s.previousSchool),
+      homeLanguage: officeUsedValues(allStudents, (s) => s.homeLanguage, 30, OFFICE_LANGUAGE_STARTERS),
+    }),
+    [allStudents],
+  );
+  const startEditingRef = useRef({ startEditing, onStartedEditing });
+  startEditingRef.current = { startEditing, onStartedEditing };
   const { toast } = useToast();
   const { confirm, confirmDialog } = useOfficeConfirm();
   const write = useOfficeWrite(schoolId);
@@ -128,8 +145,10 @@ export function OfficeStudentSheet({
       setStatus((student.status as StudentStatus | undefined) ?? 'active');
       setTagsText((student.tags ?? []).join(', '));
     }
-    setIsEditing(false);
-    setShowMore(false);
+    const edit = !!student && open && startEditingRef.current.startEditing;
+    setIsEditing(edit);
+    setShowMore(edit);
+    if (edit) startEditingRef.current.onStartedEditing?.();
   }, [student, open]);
 
   const family = useMemo(
@@ -509,14 +528,25 @@ export function OfficeStudentSheet({
                           className="min-h-[64px] rounded-xl"
                         />
                       ) : (
-                        <Input
-                          id={`student-${f.key}`}
-                          type={f.type === 'date' ? 'date' : 'text'}
-                          value={details[f.key] ?? ''}
-                          onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
-                          placeholder={f.placeholder}
-                          className="rounded-xl"
-                        />
+                        <>
+                          <Input
+                            id={`student-${f.key}`}
+                            type={f.type === 'date' ? 'date' : 'text'}
+                            value={details[f.key] ?? ''}
+                            onChange={(e) => setDetails((d) => ({ ...d, [f.key]: e.target.value }))}
+                            placeholder={f.placeholder}
+                            list={f.key in usedValues ? `student-${f.key}-used` : undefined}
+                            autoComplete="off"
+                            className="rounded-xl"
+                          />
+                          {f.key in usedValues ? (
+                            <datalist id={`student-${f.key}-used`}>
+                              {usedValues[f.key as keyof typeof usedValues].map((v) => (
+                                <option key={v} value={v} />
+                              ))}
+                            </datalist>
+                          ) : null}
+                        </>
                       )}
                     </div>
                   ))}

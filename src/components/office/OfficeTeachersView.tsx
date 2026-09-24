@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useOfficeOpenFromLink } from '@/lib/office/useOfficeOpenFromLink';
 import { collection, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { Mail, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useFirestore } from '@/firebase';
@@ -79,6 +80,7 @@ export function OfficeTeachersView({ schoolId, teachers, students, classes, isLo
     setSelectedClassIds([]);
     setDialogOpen(true);
   };
+  useOfficeOpenFromLink('add', dialogOpen, openNew, !isLoading);
 
   const openEdit = (t: OfficeTeacher) => {
     setEditing(t);

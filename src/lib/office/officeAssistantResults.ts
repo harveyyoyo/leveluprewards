@@ -13,7 +13,7 @@ export type OfficeAssistantOpenTarget = { kind: 'student' | 'family'; id: string
 
 export type OfficeAssistantResultRow = { id: string; name: string; detail?: string; open?: OfficeAssistantOpenTarget };
 
-type Report =
+export type OfficeAssistantReport =
   | {
       status: 'ready';
       total: number;
@@ -24,7 +24,7 @@ type Report =
     }
   | { status: 'unavailable'; message: string };
 
-export type OfficeAssistantResults = Report & { askAt: string };
+export type OfficeAssistantResults = OfficeAssistantReport & { askAt: string };
 
 /** How many names the chat lists before saying "and N more". */
 export const OFFICE_ASSISTANT_CHAT_ROWS = 8;
@@ -55,7 +55,7 @@ const SETTLE_MS = 400;
  * Page side: reports once per question, after the page has applied the question's filters and
  * stayed loaded for a moment. `askAt` should be set in the same update as the filters.
  */
-export function useReportOfficeAssistantResults(askAt: string | null, ready: boolean, build: () => Report) {
+export function useReportOfficeAssistantResults(askAt: string | null, ready: boolean, build: () => OfficeAssistantReport) {
   const reported = useRef<string | null>(null);
   const buildRef = useRef(build);
   buildRef.current = build;

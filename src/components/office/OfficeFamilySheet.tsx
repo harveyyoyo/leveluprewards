@@ -14,6 +14,7 @@ import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
 import { OfficeEntityHistorySection } from '@/components/office/OfficeEntityHistorySection';
 import { OfficeAddressInput } from '@/components/office/OfficeAddressInput';
+import { officeUsedValues } from '@/lib/office/officeSuggestions';
 import type {
   OfficeBillingAccount,
   OfficeFamily,
@@ -50,6 +51,8 @@ type OfficeFamilySheetProps = {
   schoolId: string;
   family: OfficeFamily | null;
   students: OfficeStudent[];
+  /** Every family, for suggesting bus routes already in use. */
+  allFamilies?: OfficeFamily[];
   billingAccount?: OfficeBillingAccount | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -59,6 +62,7 @@ export function OfficeFamilySheet({
   schoolId,
   family,
   students,
+  allFamilies = [],
   billingAccount,
   open,
   onOpenChange,
@@ -66,6 +70,7 @@ export function OfficeFamilySheet({
   const { toast } = useToast();
   const write = useOfficeWrite(schoolId);
   const { features } = useOfficePortalChrome();
+  const usedBusRoutes = useMemo(() => officeUsedValues(allFamilies, (f) => f.busRoute), [allFamilies]);
   const [section, setSection] = useState('overview');
   const [busy, setBusy] = useState(false);
 
@@ -298,7 +303,19 @@ export function OfficeFamilySheet({
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>Bus route</Label>
-                <Input value={busRoute} onChange={(e) => setBusRoute(e.target.value)} className="rounded-xl" />
+                <Input
+                  value={busRoute}
+                  onChange={(e) => setBusRoute(e.target.value)}
+                  list="office-family-bus-routes"
+                  autoComplete="off"
+                  className="rounded-xl"
+                />
+                {/* Routes other families already use, so the same route is spelled the same way. */}
+                <datalist id="office-family-bus-routes">
+                  {usedBusRoutes.map((v) => (
+                    <option key={v} value={v} />
+                  ))}
+                </datalist>
               </div>
               <div className="space-y-1.5">
                 <Label>Bus notes</Label>

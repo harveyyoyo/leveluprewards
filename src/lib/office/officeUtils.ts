@@ -8,6 +8,11 @@ import type {
 import { invoiceBalanceDueCents } from '@/lib/office/officeBillingPayments';
 
 /** Drops removed (archived) Office records from working lists; they stay stored for history. */
+/** A date on this computer's calendar as YYYY-MM-DD (not UTC, which is already tomorrow on a US evening). */
+export function officeLocalIsoDate(d = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function withoutArchived<T extends { archived?: boolean }>(rows: T[] | null | undefined): T[] {
   return (rows ?? []).filter((row) => !row.archived);
 }
