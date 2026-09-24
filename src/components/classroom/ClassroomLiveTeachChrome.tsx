@@ -8,13 +8,21 @@ import {
   ChevronDown,
   GraduationCap,
   Home,
+  Music,
+  Radio,
   RotateCcw,
+  Timer,
   Users,
+  Vote,
 } from 'lucide-react';
 import { ClassroomAppearancePopover } from '@/components/classroom/ClassroomAppearancePopover';
 import { ClassroomAwardsEffectsPopover } from '@/components/classroom/ClassroomAwardsEffectsPopover';
 import { ClassroomLiveCheatsheetTrigger } from '@/components/classroom/ClassroomLiveCheatsheet';
 import { ClassroomShortcutsModal, ClassroomShortcutsTrigger } from '@/components/classroom/ClassroomShortcutsModal';
+import { ClassroomMissionTimerModal } from '@/components/classroom/ClassroomMissionTimerModal';
+import { ClassroomNoiseRadarModal } from '@/components/classroom/ClassroomNoiseRadarModal';
+import { ClassroomSoundboardModal } from '@/components/classroom/ClassroomSoundboardModal';
+import { ClassroomQuickVoteModal } from '@/components/classroom/ClassroomQuickVoteModal';
 import {
   loadClassroomLiveCheatsheetShown,
   saveClassroomLiveCheatsheetShown,
@@ -96,6 +104,10 @@ export function ClassroomLiveTeachChrome({
   const attendance = headerControls?.attendance;
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [cheatsheetOpen, setCheatsheetOpen] = useState(false);
+  const [timerOpen, setTimerOpen] = useState(false);
+  const [noiseRadarOpen, setNoiseRadarOpen] = useState(false);
+  const [soundboardOpen, setSoundboardOpen] = useState(false);
+  const [quickVoteOpen, setQuickVoteOpen] = useState(false);
 
   useEffect(() => {
     setCheatsheetOpen(loadClassroomLiveCheatsheetShown());
@@ -254,6 +266,42 @@ export function ClassroomLiveTeachChrome({
             />
           </>
         ) : null}
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Mission timer"
+          title="Activity & countdown timer"
+          onClick={() => setTimerOpen(true)}
+        >
+          <Timer className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Noise radar"
+          title="Classroom sound level radar"
+          onClick={() => setNoiseRadarOpen(true)}
+        >
+          <Radio className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Soundboard"
+          title="Attention chimes, celebration fanfares & focus ambience"
+          onClick={() => setSoundboardOpen(true)}
+        >
+          <Music className="h-4 w-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={iconBtnClass}
+          aria-label="Quick vote"
+          title="Live check for understanding & polling"
+          onClick={() => setQuickVoteOpen(true)}
+        >
+          <Vote className="h-4 w-4" aria-hidden />
+        </button>
         {headerControls?.onResetSessionDisplay ? (
           <button
             type="button"
@@ -301,6 +349,15 @@ export function ClassroomLiveTeachChrome({
           </>
         ) : null}
       </motion.div>
+
+      <ClassroomMissionTimerModal open={timerOpen} onOpenChange={setTimerOpen} />
+      <ClassroomNoiseRadarModal open={noiseRadarOpen} onOpenChange={setNoiseRadarOpen} />
+      <ClassroomSoundboardModal open={soundboardOpen} onOpenChange={setSoundboardOpen} />
+      <ClassroomQuickVoteModal
+        open={quickVoteOpen}
+        onOpenChange={setQuickVoteOpen}
+        classNameLabel={pickerLabel}
+      />
     </motion.div>
   );
 }
