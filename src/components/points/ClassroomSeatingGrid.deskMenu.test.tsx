@@ -70,12 +70,31 @@ describe('ClassroomSeatingGrid Instant Award right-click', () => {
     expect(onDeskMenu).toHaveBeenCalledWith('s1', 0);
   });
 
-  it('does not open the menu when Instant Award is off', () => {
+  it('opens the awards menu on long press (hold)', () => {
+    vi.useFakeTimers();
     const onDeskMenu = vi.fn();
     const handlersRef = { current: handlers({ onDeskMenu }) };
-    renderDesk(handlersRef, false);
+    renderDesk(handlersRef, true);
 
-    fireEvent.contextMenu(screen.getByRole('button'));
+    fireEvent.pointerDown(screen.getByRole('button'), { button: 0, clientX: 10, clientY: 10 });
     expect(onDeskMenu).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(510);
+    expect(onDeskMenu).toHaveBeenCalledWith('s1', 0);
+    vi.useRealTimers();
+  });
+
+  it('cancels the long press if pointer moves significantly', () => {
+    vi.useFakeTimers();
+    const onDeskMenu = vi.fn();
+    const handlersRef = { current: handlers({ onDeskMenu }) };
+    renderDesk(handlersRef, true);
+
+    fireEvent.pointerDown(screen.getByRole('button'), { button: 0, clientX: 10, clientY: 10 });
+    fireEvent.pointerMove(screen.getByRole('button'), { clientX: 50, clientY: 50 });
+
+    vi.advanceTimersByTime(510);
+    expect(onDeskMenu).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

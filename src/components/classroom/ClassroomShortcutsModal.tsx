@@ -11,7 +11,7 @@ const spring = { type: 'spring' as const, stiffness: 280, damping: 26 };
 function shortcutRows(tapPoints: number) {
   return [
     { action: `Instant award: +${tapPoints} now`, keys: ['Left click'] },
-    { action: 'Open menu', keys: ['Right click'] },
+    { action: 'Open menu', keys: ['Right click', 'Hold desk'] },
     { action: 'Pick random student', keys: ['R'] },
     { action: 'Positive note', keys: ['Hold P', 'click'] },
     { action: 'Comment', keys: ['Hold C', 'click'] },
