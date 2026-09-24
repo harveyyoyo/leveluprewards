@@ -4,6 +4,7 @@ import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
 import { clientIp, jsonError, rateLimit } from '@/lib/server/apiSecurity';
 import { queueOfficeArrivalNotifications, type ArrivalNotificationStatus } from '@/lib/server/officeArrivalNotifications';
+import { summarizeOfficeDeliveryQueue, type OfficeQueueDeliverySummary } from '@/lib/server/officeDeliveryStatus';
 import { routeForTrip } from '@/lib/office/officeTransport';
 import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
 
@@ -66,7 +67,9 @@ async function authenticate(req: NextRequest, body: Body): Promise<AuthContext> 
   return { uid: verified.uid, db, isDeveloper };
 }
 
-function safeEvent(value: Record<string, unknown>, id: string) {
+const emptyDeliverySummary = (): OfficeQueueDeliverySummary => ({ total: 0, pending: 0, delivered: 0, failed: 0 });
+
+function safeEvent(value: Record<string, unknown>, id: string, delivery: OfficeQueueDeliverySummary = emptyDeliverySummary()) {
   const status = typeof value.notificationStatus === 'string' ? value.notificationStatus : 'pending';
   return {
     id,
@@ -79,8 +82,14 @@ function safeEvent(value: Record<string, unknown>, id: string) {
     notificationStatus: status,
     notificationsQueued: typeof value.notificationsQueued === 'number' ? value.notificationsQueued : 0,
     notificationsAlreadyQueued: typeof value.notificationsAlreadyQueued === 'number' ? value.notificationsAlreadyQueued : 0,
+    delivery,
     createdAt: typeof value.createdAt === 'number' ? value.createdAt : null,
   };
+}
+
+async function readDeliverySummaries(db: Firestore, schoolId: string): Promise<Map<string, OfficeQueueDeliverySummary>> {
+  const snapshots = await Promise.all(['mail', 'sms', 'whatsapp'].map((collectionName) => db.collection(collectionName).where('schoolId', '==', schoolId).limit(2000).get()));
+  return summarizeOfficeDeliveryQueue(snapshots.flatMap((snapshot) => snapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as Record<string, unknown> }))));
 }
 
 export async function GET(req: NextRequest) {
@@ -88,8 +97,12 @@ export async function GET(req: NextRequest) {
     if (!rateLimit(`office-transport-delivery:${clientIp(req)}`, 60)) return jsonError(429, 'Too many requests.');
     const schoolId = schoolIdFrom(req.nextUrl.searchParams.get('schoolId'));
     const auth = await authenticate(req, { schoolId });
-    const snapshot = await auth.db.collection('schools').doc(schoolId).collection('officeBusArrivalEvents').orderBy('createdAt', 'desc').limit(200).get();
-    return NextResponse.json({ events: snapshot.docs.map((doc) => safeEvent(doc.data(), doc.id)), checkedAt: Date.now() }, { headers: { 'Cache-Control': 'no-store' } });
+    const now = Date.now();
+    const [snapshot, deliverySummaries] = await Promise.all([
+      auth.db.collection('schools').doc(schoolId).collection('officeBusArrivalEvents').orderBy('createdAt', 'desc').limit(200).get(),
+      readDeliverySummaries(auth.db, schoolId),
+    ]);
+    return NextResponse.json({ events: snapshot.docs.map((doc) => safeEvent(doc.data(), doc.id, deliverySummaries.get(doc.id))), checkedAt: now }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     const status = error instanceof AuthError ? error.status : 400;
     const message = error instanceof Error ? error.message : 'Could not load delivery records.';

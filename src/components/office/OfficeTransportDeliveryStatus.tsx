@@ -32,6 +32,20 @@ function statusTone(status: string): 'good' | 'warn' | 'bad' | 'plain' {
   return 'plain';
 }
 
+function deliveryText(event: OfficeDeliveryEvent): string {
+  const delivery = event.delivery;
+  if (!delivery || delivery.total === 0) {
+    return event.notificationsQueued > 0 || event.notificationsAlreadyQueued > 0
+      ? 'The message is recorded, but its delivery list is not available yet.'
+      : 'No delivery list has been created yet.';
+  }
+  const parts: string[] = [];
+  if (delivery.delivered > 0) parts.push(`${delivery.delivered} sent`);
+  if (delivery.pending > 0) parts.push(`${delivery.pending} waiting`);
+  if (delivery.failed > 0) parts.push(`${delivery.failed} failed`);
+  return parts.join(' · ') || 'Waiting for a delivery update.';
+}
+
 export function OfficeTransportDeliveryStatus({ schoolId, routes }: { schoolId: string; routes: OfficeBusRoute[] }) {
   const api = useOfficeTransportDeliveryApi(schoolId);
   const { toast } = useToast();
@@ -83,7 +97,7 @@ export function OfficeTransportDeliveryStatus({ schoolId, routes }: { schoolId: 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold"><MessageSquare className="h-4 w-4" /> Arrival message delivery</h2>
-          <p className="mt-1 text-xs text-muted-foreground">Only bus stop and delivery details are shown here. Child names and contact details stay private.</p>
+          <p className="mt-1 text-xs text-muted-foreground">This checks the same message lists used elsewhere in Level Up Rewards. Only bus stop and delivery totals are shown here; child names and contact details stay private.</p>
         </div>
         <Button type="button" variant="outline" size="sm" className="gap-2 rounded-xl" onClick={() => void load()} disabled={isLoading}>
           <RefreshCw className={cn('h-4 w-4', isLoading && 'animate-spin')} /> Refresh
@@ -112,11 +126,17 @@ export function OfficeTransportDeliveryStatus({ schoolId, routes }: { schoolId: 
                     {STATUS_LABEL[event.notificationStatus] ?? 'Delivery status unavailable'}
                   </span>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="mt-3 space-y-2">
                   <p className="text-xs text-muted-foreground">
                     {event.notificationsQueued > 0 ? `${event.notificationsQueued} message${event.notificationsQueued === 1 ? '' : 's'} queued.` : event.notificationsAlreadyQueued > 0 ? `${event.notificationsAlreadyQueued} already in the queue.` : 'No new message was added.'}
                   </p>
-                  {canRetry ? <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" disabled={busyId === event.id} onClick={() => void retry(event)}><RotateCcw className="h-3.5 w-3.5" /> {busyId === event.id ? 'Checking…' : 'Check again'}</Button> : null}
+                  <p className={cn('text-xs', (event.delivery?.failed ?? 0) > 0 ? 'font-medium text-red-700 dark:text-red-300' : 'text-muted-foreground')}>
+                    Delivery check: {deliveryText(event)}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">No family contact details are shown.</span>
+                    {canRetry ? <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" disabled={busyId === event.id} onClick={() => void retry(event)}><RotateCcw className="h-3.5 w-3.5" /> {busyId === event.id ? 'Checking…' : 'Check again'}</Button> : null}
+                  </div>
                 </div>
               </li>
             );

@@ -15,6 +15,12 @@ export type OfficeDeliveryEvent = {
   notificationStatus: string;
   notificationsQueued: number;
   notificationsAlreadyQueued: number;
+  delivery?: {
+    total: number;
+    pending: number;
+    delivered: number;
+    failed: number;
+  };
   createdAt: number | null;
 };
 
