@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import { useAppContext } from '@/components/AppProvider';
 import { useOfficePortalChrome } from '@/components/office/OfficePortalChrome';
@@ -10,7 +10,32 @@ import { askOfficeAssistant, setOfficeAnswerSpot } from '@/lib/office/officeAssi
 const homeAnswerSpot = (el: HTMLDivElement | null) => setOfficeAnswerSpot('home', el);
 const headerAnswerSpot = (el: HTMLDivElement | null) => setOfficeAnswerSpot('header', el);
 
-const SUGGESTIONS = ['Who is absent today?', 'Families who owe more than $100', 'How do I add a student?'];
+/** Example questions; three are picked at random each time Home opens. */
+const SUGGESTIONS = [
+  'Who is absent today?',
+  'Families who owe more than $100',
+  'How do I add a student?',
+  'What needs to be done today?',
+  'Who is failing this term?',
+  'Students missing grades',
+  'Overdue bills',
+  'Who left early today?',
+  'Students with allergies',
+  'Birthdays this month',
+  'Students with no family linked',
+  'How do I record a payment?',
+  'How do I take attendance?',
+  'Who came in late today?',
+];
+
+function pickThree(): string[] {
+  const pool = [...SUGGESTIONS];
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+  }
+  return pool.slice(0, 3);
+}
 
 /**
  * The middle of the office Home page: one big box, ready to type into, like a search home page.
@@ -20,6 +45,9 @@ export function OfficeHomeAskBox() {
   const { userName } = useAppContext();
   const { features } = useOfficePortalChrome();
   const [question, setQuestion] = useState('');
+  // Picked after the page appears (not while it's drawn on the server), so it's never mismatched.
+  const [suggestions, setSuggestions] = useState(() => SUGGESTIONS.slice(0, 3));
+  useEffect(() => setSuggestions(pickThree()), []);
 
   if (!features.aiHelp) return null;
 
@@ -68,7 +96,7 @@ export function OfficeHomeAskBox() {
       </form>
 
       <div className="mt-4 flex max-w-2xl flex-wrap justify-center gap-2">
-        {SUGGESTIONS.map((s) => (
+        {suggestions.map((s) => (
           <button
             key={s}
             type="button"
