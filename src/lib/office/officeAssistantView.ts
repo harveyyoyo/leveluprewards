@@ -10,6 +10,7 @@ import { officeReasonRequestSchema, type OfficeReasonRequest } from '@/lib/offic
 
 export const STUDENT_SHOW_OPTIONS = [
   'missing-grades',
+  'failing',
   'no-billing',
   'unassigned',
   'no-teacher',
@@ -190,6 +191,7 @@ export function officeAssistantViewHref(schoolId: string, view: OfficeAssistantV
 
 const STUDENT_SHOW_LABEL: Record<(typeof STUDENT_SHOW_OPTIONS)[number], string> = {
   'missing-grades': 'Students missing grades',
+  failing: 'Students failing a subject',
   'no-billing': 'Students with no billing account',
   unassigned: 'Students with no class',
   'no-teacher': 'Students with no teacher',
@@ -330,7 +332,8 @@ export function officeAssistantSystemPrompt(params: {
       : []),
     '',
     'Views (use null for anything not asked for; never invent names):',
-    '1. Students: {"page":"students","label":"...","text":null|"part of a student name","lastNameStarts":null|"letters","firstNameStarts":null|"letters","birthMonth":null|1-12,"className":null|"class name","teacher":null|"teacher name","address":null|"town, street or zip","show":null|"missing-grades"|"no-billing"|"unassigned"|"no-teacher"|"no-family"|"allergies"|"withdrawn"|"graduated"}',
+    '1. Students: {"page":"students","label":"...","text":null|"part of a student name","lastNameStarts":null|"letters","firstNameStarts":null|"letters","birthMonth":null|1-12,"className":null|"class name","teacher":null|"teacher name","address":null|"town, street or zip","show":null|"missing-grades"|"failing"|"no-billing"|"unassigned"|"no-teacher"|"no-family"|"allergies"|"withdrawn"|"graduated"}',
+    '   "failing" = students with an F or a score under 65 in any subject this term ("who is failing", "failing grades").',
     '   - "last name starts with L" → lastNameStarts "L". "first name begins with Sh" → firstNameStarts "Sh". Never put a single letter in "text".',
     '   - "birthMonth": null|1-12 — "birthdays in March" → 3; "birthdays this month" → the current month.',
     '   - "unassigned" = students with no class. "address" matches the family home address (e.g. a town like Brooklyn).',

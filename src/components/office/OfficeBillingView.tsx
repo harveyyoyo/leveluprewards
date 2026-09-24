@@ -39,6 +39,8 @@ import {
   Printer,
   Wand2,
   AlertCircle,
+  ChevronDown,
+  Wallet,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -162,6 +164,15 @@ export function OfficeBillingView({
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [accountAddress, setAccountAddress] = useState('');
+  // Each family is one line; its bills show when it's opened.
+  const [openAccounts, setOpenAccounts] = useState<Set<string>>(() => new Set());
+  const toggleAccount = (id: string) =>
+    setOpenAccounts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const familyById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families]);
   const [accountNotes, setAccountNotes] = useState('');
   const [accountStudentSearch, setAccountStudentSearch] = useState('');
@@ -1193,32 +1204,51 @@ export function OfficeBillingView({
               .filter(Boolean)
               .join(', ');
             const acctInvoices = invoicesByAccount.get(account.id) ?? [];
+            const isOpen = openAccounts.has(account.id);
+            const overdueCount = acctInvoices.filter((i) => isInvoiceOverdue(i)).length;
             return (
               <article
                 key={account.id}
                 className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccount(account.id)}
+                    aria-expanded={isOpen}
+                    className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                  >
+                    <ChevronDown
+                      className={cn('mt-1.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform', !isOpen && '-rotate-90')}
+                      aria-hidden
+                    />
+                    <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-2">
                       <h3 className="text-lg font-bold">{account.familyName}</h3>
                       {account.discountPercent ? (
                         <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.625rem] font-bold uppercase text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
                           {account.discountLabel || 'Discount'} · {account.discountPercent}%
                         </span>
                       ) : null}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{linked || 'No students linked'}</p>
-                    <p
+                    </span>
+                    <span className="block text-sm text-muted-foreground">
+                      {linked || 'No students linked'}
+                      {acctInvoices.length > 0
+                        ? ` · ${acctInvoices.length} ${acctInvoices.length === 1 ? 'bill' : 'bills'}${overdueCount ? `, ${overdueCount} overdue` : ''}`
+                        : ''}
+                    </span>
+                    </span>
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <span
                       className={cn(
-                        'mt-1 text-sm font-semibold',
-                        account.status === 'past_due' ? 'text-amber-700' : 'text-teal-800 dark:text-teal-300',
+                        'text-right text-base font-semibold tabular-nums',
+                        overdueCount > 0 ? 'text-amber-700 dark:text-amber-300' : 'text-slate-900 dark:text-slate-100',
                       )}
                     >
-                      Balance: {formatCents(account.balanceCents || 0)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
+                      {formatCents(account.balanceCents || 0)}
+                    </span>
+                    <div className="flex items-center gap-1">
                     <Button
                       type="button"
                       variant="outline"
@@ -1277,39 +1307,41 @@ export function OfficeBillingView({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    </div>
                   </div>
                 </div>
-                {acctInvoices.length > 0 ? (
-                  <ul className="mt-4 space-y-2 border-t pt-3">
-                    {acctInvoices.map((inv) => (
-                      <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span>
-                          {inv.label} · due {inv.dueDate} · {formatCents(inv.amountCents)}
-                          {invoicePaidCents(inv) > 0 && inv.status !== 'paid' ? (
-                            <span className="text-muted-foreground">
-                              {' '}
-                              · {formatCents(invoiceRemainingCents(inv))} due
-                            </span>
-                          ) : null}
+                {isOpen && acctInvoices.length > 0 ? (
+                  <ul className="mt-3 divide-y border-t dark:divide-slate-800 dark:border-slate-800">
+                    {acctInvoices.map((inv) => {
+                      // One label per bill: overdue says it all; otherwise its state.
+                      const overdue = isInvoiceOverdue(inv);
+                      return (
+                      <li key={inv.id} className="flex items-center gap-3 py-2 pl-6 text-sm">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{inv.label}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            Due {inv.dueDate}
+                            {invoicePaidCents(inv) > 0 && inv.status !== 'paid'
+                              ? ` · ${formatCents(invoiceRemainingCents(inv))} still due`
+                              : ''}
+                          </span>
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          {isInvoiceOverdue(inv) ? (
-                            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                              Overdue
-                            </span>
-                          ) : null}
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-0.5 text-xs font-medium',
-                              inv.status === 'paid'
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
+                            overdue
+                              ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200'
+                              : inv.status === 'paid'
                                 ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200'
                                 : inv.status === 'partial'
                                   ? 'bg-sky-50 text-sky-900 dark:bg-sky-950/40 dark:text-sky-200'
                                   : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-                            )}
-                          >
-                            {INVOICE_STATUS_LABEL[inv.status] ?? inv.status}
-                          </span>
+                          )}
+                        >
+                          {overdue ? 'Overdue' : (INVOICE_STATUS_LABEL[inv.status] ?? inv.status)}
+                        </span>
+                        <span className="w-24 shrink-0 text-right font-medium tabular-nums">{formatCents(inv.amountCents)}</span>
+                        <span className="flex w-16 shrink-0 items-center justify-end gap-1">
                           {inv.status === 'draft' ? (
                             <Button
                               type="button"
@@ -1319,17 +1351,6 @@ export function OfficeBillingView({
                               onClick={() => void sendDraft(inv)}
                             >
                               Send
-                            </Button>
-                          ) : null}
-                          {isInvoicePayable(inv) && inv.status !== 'draft' ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 rounded-lg text-xs"
-                              onClick={() => openRecordPayment(account, inv)}
-                            >
-                              Record payment
                             </Button>
                           ) : null}
                           <DropdownMenu modal={false}>
@@ -1345,6 +1366,12 @@ export function OfficeBillingView({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                              {isInvoicePayable(inv) && inv.status !== 'draft' ? (
+                                <DropdownMenuItem onSelect={() => openRecordPayment(account, inv)}>
+                                  <Wallet className="mr-2 h-4 w-4" />
+                                  Record payment for this bill
+                                </DropdownMenuItem>
+                              ) : null}
                               {inv.status === 'sent' || inv.status === 'partial' ? (
                                 <>
                                   {account.contactEmail?.trim() ? (
@@ -1408,11 +1435,12 @@ export function OfficeBillingView({
                           </DropdownMenu>
                         </span>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
-                ) : (
-                  <p className="mt-3 text-xs text-muted-foreground">No invoices for this account.</p>
-                )}
+                ) : isOpen ? (
+                  <p className="mt-3 pl-6 text-xs text-muted-foreground">No invoices for this account.</p>
+                ) : null}
               </article>
             );
           })}

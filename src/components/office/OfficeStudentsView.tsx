@@ -6,7 +6,12 @@ import { OfficeAssistantBanner } from '@/components/office/OfficeAssistantBanner
 import { useOfficeUrlSync } from '@/lib/office/useOfficeUrlSync';
 import { findClassByAskedName } from '@/lib/office/officeAssistantView';
 import { useReportOfficeAssistantResults } from '@/lib/office/officeAssistantResults';
-import { filterOfficeStudents, officeStudentsListReport, type OfficeRosterFilter } from '@/lib/office/officeAssistantLists';
+import {
+  filterOfficeStudents,
+  officeFailingStudentIds,
+  officeStudentsListReport,
+  type OfficeRosterFilter,
+} from '@/lib/office/officeAssistantLists';
 import { ArrowDown, ArrowUp, Download, MoreHorizontal, Upload } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -69,6 +74,7 @@ type RosterFilter = OfficeRosterFilter;
 
 const ROSTER_FILTERS: RosterFilter[] = [
   'missing-grades',
+  'failing',
   'no-billing',
   'unassigned',
   'no-teacher',
@@ -148,6 +154,8 @@ export function OfficeStudentsView({
     [gradeEntries, activeTerm],
   );
 
+  const failingForTerm = useMemo(() => officeFailingStudentIds(gradeEntries, activeTerm), [gradeEntries, activeTerm]);
+  const failingCount = activeStudents.filter((s) => failingForTerm.has(s.id)).length;
   const missingGradesCount = activeStudents.length - activeStudents.filter((s) => gradedForTerm.has(s.id)).length;
   const noBillingCount = useMemo(
     () => activeStudents.filter((s) => !billingAccountForStudent(billingAccounts, s.id)).length,
@@ -169,7 +177,7 @@ export function OfficeStudentsView({
         birthMonth,
         idsFilter,
       },
-      { classNameById, teacherNameById, gradedForTerm, billingAccounts, familyById },
+      { classNameById, teacherNameById, gradedForTerm, failingForTerm, billingAccounts, familyById },
     );
     return list.slice().sort((a, b) => {
       if (sortBy === 'name-desc') {
@@ -193,6 +201,7 @@ export function OfficeStudentsView({
     classNameById,
     teacherNameById,
     gradedForTerm,
+    failingForTerm,
     billingAccounts,
     teacherText,
     addressText,
@@ -298,6 +307,7 @@ export function OfficeStudentsView({
     ...(missingGradesCount > 0
       ? [{ id: 'missing-grades' as const, label: `Missing grades (${missingGradesCount})` }]
       : []),
+    ...(failingCount > 0 ? [{ id: 'failing' as const, label: `Failing a subject (${failingCount})` }] : []),
     ...(noBillingCount > 0 ? [{ id: 'no-billing' as const, label: `No billing (${noBillingCount})` }] : []),
     ...(unassignedCount > 0 ? [{ id: 'unassigned' as const, label: `No class (${unassignedCount})` }] : []),
     ...(noTeacherCount > 0

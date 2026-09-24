@@ -33,11 +33,8 @@ export function OfficeHomeAskBox() {
   return (
     <section className="flex min-h-[42vh] flex-col items-center justify-center px-2 py-8" aria-label="Ask a question">
       <div className="mb-5 flex items-center gap-2.5">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-teal-600 text-white shadow-md">
-          <Sparkles className="h-5 w-5" aria-hidden />
-        </span>
         <h2 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
-          {firstName ? `Hi ${firstName}, what do you need?` : 'What do you need?'}
+          {firstName ? `Hi ${firstName}, how can I help?` : 'How can I help?'}
         </h2>
       </div>
 

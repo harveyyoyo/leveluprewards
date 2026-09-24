@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Building2, ChevronDown, GripVertical, LogOut, Menu, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { getOfficeNavItems, officeNavIdFromPath } from '@/lib/office/officeNav';
 import { useOfficeHiddenSections } from '@/lib/office/useOfficeHiddenSections';
@@ -46,8 +47,6 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
   const pathname = usePathname();
   const activeId = officeNavIdFromPath(pathname, schoolId);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // Sign out sits behind the person's name so it isn't clicked by accident.
-  const [accountOpen, setAccountOpen] = useState(false);
   useApplyOfficeColorTheme();
   useApplyOfficeAppearance();
 
@@ -208,24 +207,30 @@ export function OfficePortalShell({ schoolId, schoolName, userName, onLogout, ch
           </nav>
 
           <div className="space-y-2 border-t border-white/10 p-4">
+            {/* Sign out sits in a small menu on the person's name so it isn't clicked by accident. */}
             {userName ? (
-              <button
-                type="button"
-                onClick={() => setAccountOpen((v) => !v)}
-                aria-expanded={accountOpen}
-                className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-white/10"
-              >
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-[10px] font-bold text-teal-200">
-                  {getInitials(userName)}
-                </div>
-                <p className="min-w-0 flex-1 truncate text-xs text-teal-100/70">{userName}</p>
-                <ChevronDown
-                  className={cn('h-3.5 w-3.5 shrink-0 text-teal-100/60 transition-transform', accountOpen && 'rotate-180')}
-                  aria-hidden
-                />
-              </button>
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left hover:bg-white/10 data-[state=open]:bg-white/10"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-400/20 text-[10px] font-bold text-teal-200">
+                      {getInitials(userName)}
+                    </div>
+                    <p className="min-w-0 flex-1 truncate text-xs text-teal-100/70">{userName}</p>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 rotate-180 text-teal-100/60" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="start" className="w-56 rounded-xl">
+                  <DropdownMenuItem onSelect={onLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
-            {accountOpen || !userName ? (
+            {!userName ? (
               <Button
                 type="button"
                 variant="ghost"

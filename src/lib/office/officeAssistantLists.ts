@@ -19,6 +19,7 @@ import type {
   OfficeDeskLogEntry,
   OfficeDeskLogKind,
   OfficeFamily,
+  OfficeGradeEntry,
   OfficeInvoice,
   OfficeStudent,
 } from '@/lib/office/types';
@@ -35,6 +36,7 @@ type ListReport = OfficeAssistantReport;
 export type OfficeRosterFilter =
   | 'all'
   | 'missing-grades'
+  | 'failing'
   | 'no-billing'
   | 'unassigned'
   | 'no-teacher'
@@ -62,9 +64,27 @@ export type OfficeStudentListData = {
   classNameById: Map<string, string>;
   teacherNameById: Map<string, string>;
   gradedForTerm: Set<string>;
+  /** Students with a failing grade this term (see officeFailingStudentIds). */
+  failingForTerm: Set<string>;
   billingAccounts: OfficeBillingAccount[];
   familyById: Map<string, OfficeFamily>;
 };
+
+/** Below this a number grade is failing. */
+export const OFFICE_FAILING_BELOW = 65;
+
+/** A grade counts as failing when its letter is an F, or its number is under 65. */
+export function isOfficeFailingGrade(e: Pick<OfficeGradeEntry, 'letterGrade' | 'numericGrade'>): boolean {
+  if (e.letterGrade?.trim().toUpperCase().startsWith('F')) return true;
+  return typeof e.numericGrade === 'number' && Number.isFinite(e.numericGrade) && e.numericGrade < OFFICE_FAILING_BELOW;
+}
+
+/** Students with at least one failing grade in the term. */
+export function officeFailingStudentIds(entries: OfficeGradeEntry[], termLabel: string): Set<string> {
+  return new Set(
+    entries.filter((e) => !e.archived && e.termLabel === termLabel && isOfficeFailingGrade(e)).map((e) => e.studentId),
+  );
+}
 
 /** The students matching the filters, in no particular order. */
 export function filterOfficeStudents(
@@ -89,6 +109,7 @@ export function filterOfficeStudents(
     if (f.rosterFilter === 'unassigned' && s.classId) return false;
     if (f.rosterFilter === 'no-teacher' && officeStudentHasTeacher(s)) return false;
     if (f.rosterFilter === 'missing-grades' && data.gradedForTerm.has(s.id)) return false;
+    if (f.rosterFilter === 'failing' && !data.failingForTerm.has(s.id)) return false;
     if (f.rosterFilter === 'no-billing' && billingAccountForStudent(data.billingAccounts, s.id)) return false;
     if (f.rosterFilter === 'no-family' && s.familyId) return false;
     if (f.rosterFilter === 'allergies' && !s.allergies?.trim()) return false;
