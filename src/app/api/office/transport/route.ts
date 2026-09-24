@@ -3,7 +3,7 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import { getFirebaseAdminApp } from '@/lib/server/firebaseAdminAuth';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToken } from '@/lib/server/kioskSnapshotAuth';
-import { riderManifestFromStudents, riderSnapshotFromStudents, tripDocId } from '@/lib/office/officeTransport';
+import { familyUpdateMessage, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
 import type {
   OfficeBusEvent,
   OfficeBusLocation,
@@ -15,6 +15,7 @@ import type {
   OfficeBusTrip,
   OfficeBusTripAlert,
   OfficeBusVehicleDetails,
+  OfficeFamily,
   OfficeStudent,
 } from '@/lib/office/types';
 
@@ -561,6 +562,73 @@ async function recordRelease(auth: AuthContext, schoolId: string, body: Body): P
   return { release };
 }
 
+async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body): Promise<{ queued: number }> {
+  const tripId = safeId(body.tripId, 'Trip');
+  const trip = await getTrip(auth.db, schoolId, tripId);
+  const route = routeForTrip(undefined, trip);
+  if (!route) throw new Error('This run has no saved route information.');
+  const message = optionalString(body.message, 'Family update', 1000) ?? familyUpdateMessage(route, trip);
+  const studentIds = [...new Set([
+    ...(trip.riderManifest?.map((entry) => entry.studentId) ?? []),
+    ...(trip.riderSnapshot ?? []),
+    ...Object.keys(trip.riders ?? {}),
+  ])].filter(Boolean);
+  const familyIds = new Set<string>();
+  for (let start = 0; start < studentIds.length; start += 400) {
+    const refs = studentIds.slice(start, start + 400).map((studentId) => auth.db.collection('schools').doc(schoolId).collection('officeStudents').doc(studentId));
+    const snaps = await auth.db.getAll(...refs);
+    for (const snap of snaps) {
+      const familyId = snap.data()?.familyId;
+      if (typeof familyId === 'string' && familyId.trim()) familyIds.add(familyId.trim());
+    }
+  }
+  const recipients = new Set<string>();
+  const familyRefs = [...familyIds].map((familyId) => auth.db.collection('schools').doc(schoolId).collection('officeFamilies').doc(familyId));
+  for (let start = 0; start < familyRefs.length; start += 400) {
+    const snaps = await auth.db.getAll(...familyRefs.slice(start, start + 400));
+    for (const snap of snaps) {
+      const family = snap.data() as OfficeFamily | undefined;
+      for (const contact of family?.contacts ?? []) {
+        if (contact.transportNotificationsEnabled === false) continue;
+        const email = contact.email?.trim().toLowerCase();
+        if (email) recipients.add(email);
+      }
+    }
+  }
+  if (recipients.size === 0) return { queued: 0 };
+  const schoolSnap = await auth.db.collection('schools').doc(schoolId).get();
+  const schoolName = typeof schoolSnap.data()?.name === 'string' && schoolSnap.data()?.name.trim() ? schoolSnap.data()!.name.trim() : 'School';
+  const fromEmail = `"${schoolName} Transportation" <alerts@levelup-edu.com>`;
+  const subject = `Transportation update: ${routeLabel(route)}`;
+  const mail = auth.db.collection('mail');
+  const recipientList = [...recipients];
+  for (let start = 0; start < recipientList.length; start += 400) {
+    const batch = auth.db.batch();
+    for (const email of recipientList.slice(start, start + 400)) {
+      batch.set(mail.doc(), {
+        to: email,
+        from: fromEmail,
+        message: { subject, text: message },
+        schoolId,
+        tripId,
+        routeId: trip.routeId,
+        kind: 'transportation',
+        queuedAt: Date.now(),
+        queuedBy: auth.uid,
+      });
+    }
+    await batch.commit();
+  }
+  await audit(auth.db, schoolId, {
+    entityType: 'officeBusTrip',
+    entityId: tripId,
+    action: 'update',
+    summary: `Queued a family update for ${recipientList.length} recipient${recipientList.length === 1 ? '' : 's'}`,
+    changedBy: auth.uid,
+  });
+  return { queued: recipientList.length };
+}
+
 async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
@@ -623,6 +691,8 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(await setRiders(auth, schoolId, body));
       case 'release':
         return NextResponse.json(await recordRelease(auth, schoolId, body));
+      case 'queue':
+        return NextResponse.json(await queueFamilyUpdate(auth, schoolId, body));
       case 'alert':
         return NextResponse.json(await addAlert(auth, schoolId, body));
       case 'end':

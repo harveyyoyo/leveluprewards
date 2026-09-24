@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useOfficeEntityNav } from '@/components/office/OfficeEntityNavProvider';
+import { useOfficeTransportApi } from '@/lib/office/useOfficeTransportApi';
 import { OfficeEmptyState } from '@/components/office/OfficeEmptyState';
 import { OfficeLoadingRows } from '@/components/office/OfficeLoadingRows';
 import { OfficeTransportMap, type TransportMapLine, type TransportMapMarker } from '@/components/office/OfficeTransportMap';
@@ -69,9 +70,10 @@ type Props = {
 const PRACTICE_SECONDS = 75;
 
 /** Live view: every bus on the map, what needs attention, and each run's progress. */
-export function OfficeTransportLive({ routes, trips, students, familyById, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
+export function OfficeTransportLive({ schoolId, routes, trips, students, familyById, studentNameById, center, isLoading, onSetUpRoutes }: Props) {
   const now = useNow(10_000);
   const { toast } = useToast();
+  const transport = useOfficeTransportApi(schoolId);
   const { openStudent } = useOfficeEntityNav();
   const [run, setRun] = useState<OfficeBusRun>(() => currentRun());
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -100,6 +102,22 @@ export function OfficeTransportLive({ routes, trips, students, familyById, stude
       subject: `Transportation update: ${routeLabel(selected)}`,
       body: familyUpdateMessage(selected, selectedTrip, now),
     });
+  };
+
+  const queueSelectedFamilyUpdate = async () => {
+    if (!selectedTrip || selectedTrip.id.startsWith('practice-')) {
+      toast({ title: 'Start the bus run first', description: 'The office can queue an update after the run has started.' });
+      return;
+    }
+    try {
+      const result = await transport.queueOfficeBusFamilyUpdate(selectedTrip);
+      toast({
+        title: result.queued ? 'Update queued' : 'No family emails found',
+        description: result.queued ? `${result.queued} recipient${result.queued === 1 ? '' : 's'} added to the office mail queue.` : 'Add an email to a family contact first.',
+      });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Could not queue the update', description: (error as Error).message });
+    }
   };
 
   const activeTrips = runTrips.filter((t) => t.status === 'active');
@@ -324,6 +342,7 @@ export function OfficeTransportLive({ routes, trips, students, familyById, stude
               }}
               onEmailFamilies={emailSelectedFamilies}
               familyRecipientCount={selectedFamilyEmails.length}
+              onQueueEmail={queueSelectedFamilyUpdate}
             />
           ) : (
             <ul className="divide-y dark:divide-slate-800">
@@ -432,6 +451,7 @@ function RouteDetail({
   onCopy,
   onEmailFamilies,
   familyRecipientCount,
+  onQueueEmail,
 }: {
   route: OfficeBusRoute;
   trip: OfficeBusTrip | null;
@@ -446,6 +466,7 @@ function RouteDetail({
   onCopy: () => void;
   onEmailFamilies: () => void;
   familyRecipientCount: number;
+  onQueueEmail: () => void;
 }) {
   const status = statusOf(route, trip, now);
   const stops = orderedStops(route, run);
@@ -513,6 +534,9 @@ function RouteDetail({
           </Button>
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onEmailFamilies} disabled={familyRecipientCount === 0}>
             <Mail className="h-3.5 w-3.5" /> Email families ({familyRecipientCount})
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onQueueEmail} disabled={!trip || trip.id.startsWith('practice-') || familyRecipientCount === 0} title="Add this update to the office mail queue">
+            <Mail className="h-3.5 w-3.5" /> Queue office email
           </Button>
           {isPractice ? (
             <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onStopPractice}>

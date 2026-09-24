@@ -53,6 +53,8 @@ export function useOfficeTransportApi(schoolId: string | null) {
         studentId: string,
         release: { method: OfficeBusReleaseMethod; contactId?: string | null; recipientName?: string | null; note?: string | null },
       ) => call<{ release: unknown }>({ action: 'release', tripId: trip.id, studentId, ...release }),
+      queueOfficeBusFamilyUpdate: (trip: Pick<OfficeBusTrip, 'id'>) =>
+        call<{ queued: number }>({ action: 'queue', tripId: trip.id }),
       addOfficeBusTripAlert: (
         trip: Pick<OfficeBusTrip, 'id' | 'run'>,
         _route: OfficeBusRoute,
