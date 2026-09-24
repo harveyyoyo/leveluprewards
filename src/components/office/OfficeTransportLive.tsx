@@ -15,6 +15,7 @@ import {
   Route as RouteIcon,
   Square,
   Users,
+  Volume2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -115,6 +116,17 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
     } catch {
       toast({ variant: 'destructive', title: 'Could not copy the phone status' });
     }
+  };
+
+  const speakPhoneStatus = () => {
+    if (!selected || !('speechSynthesis' in window)) {
+      toast({ variant: 'destructive', title: 'Speech preview is not available' });
+      return;
+    }
+    const status = transportPhoneStatusText(selected, selectedTrip, now);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(status.text));
+    toast({ title: 'Playing phone-status preview', description: 'This is a preview; no phone number has been connected yet.' });
   };
 
   const queueSelectedFamilyUpdate = async () => {
@@ -346,6 +358,7 @@ export function OfficeTransportLive({ schoolId, routes, trips, students, familyB
               onStopPractice={() => setPractice(null)}
               onOpenStudent={openStudent}
               onCopyPhoneStatus={copyPhoneStatus}
+              onSpeakPhoneStatus={speakPhoneStatus}
               onCopy={async () => {
                 try {
                   await navigator.clipboard.writeText(familyUpdateMessage(selected, selectedTrip, now));
@@ -463,6 +476,7 @@ function RouteDetail({
   onStopPractice,
   onOpenStudent,
   onCopyPhoneStatus,
+  onSpeakPhoneStatus,
   onCopy,
   onEmailFamilies,
   familyRecipientCount,
@@ -479,6 +493,7 @@ function RouteDetail({
   onStopPractice: () => void;
   onOpenStudent: (id: string) => void;
   onCopyPhoneStatus: () => void;
+  onSpeakPhoneStatus: () => void;
   onCopy: () => void;
   onEmailFamilies: () => void;
   familyRecipientCount: number;
@@ -549,6 +564,9 @@ function RouteDetail({
           ) : null}
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopyPhoneStatus} title="Copy a safe status message for a future phone service">
             <Phone className="h-3.5 w-3.5" /> Copy phone status
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onSpeakPhoneStatus} title="Hear a preview of the phone message">
+            <Volume2 className="h-3.5 w-3.5" /> Hear phone status
           </Button>
           <Button type="button" variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={onCopy}>
             <Copy className="h-3.5 w-3.5" /> Update for families
