@@ -402,6 +402,35 @@ export function routeLabel(route: Pick<OfficeBusRoute, 'name' | 'busNumber'>): s
   return bus ? `Bus ${bus} (${route.name})` : route.name;
 }
 
+export type OfficeDriverRunSheet = {
+  routeName: string;
+  busNumber: string;
+  run: OfficeBusRun;
+  stops: Array<{ order: number; name: string; plannedTime: string | null; riders: string[] }>;
+};
+
+/** Build a driver-only sheet with no family, contact, address, class, note, or coordinate fields. */
+export function buildDriverRunSheet(
+  route: Pick<OfficeBusRoute, 'id' | 'name' | 'busNumber' | 'stops'>,
+  students: Array<Pick<OfficeStudent, 'id' | 'firstName' | 'lastName' | 'nickname' | 'busRouteId' | 'busStopId' | 'transportMode' | 'status' | 'archived'>>,
+  run: OfficeBusRun,
+): OfficeDriverRunSheet {
+  const riders = students
+    .filter((student) => student.transportMode === 'bus' && student.busRouteId === route.id && (student.status ?? 'active') === 'active' && student.archived !== true)
+    .sort((a, b) => getOfficeStudentFullName(a).localeCompare(getOfficeStudentFullName(b), undefined, { numeric: true }));
+  return {
+    routeName: route.name,
+    busNumber: route.busNumber?.trim() ?? '',
+    run,
+    stops: orderedStops(route, run).map((stop, index) => ({
+      order: index + 1,
+      name: stop.name,
+      plannedTime: stopTime(stop, run),
+      riders: riders.filter((student) => student.busStopId === stop.id).map((student) => getOfficeStudentFullName(student)),
+    })),
+  };
+}
+
 /** The newest active trip for a route/run, or the newest completed trip if none is active. */
 export function latestTripForRoute(
   trips: OfficeBusTrip[],

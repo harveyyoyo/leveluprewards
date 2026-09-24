@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildDriverRunSheet,
   distanceMeters,
   exampleRoutes,
   familyUpdateMessage,
@@ -28,7 +29,7 @@ import {
   vehicleDueLabel,
   vehicleLabel,
 } from '@/lib/office/officeTransport';
-import type { OfficeBusRoute, OfficeBusTrip } from '@/lib/office/types';
+import type { OfficeBusRoute, OfficeBusTrip, OfficeStudent } from '@/lib/office/types';
 
 const route: OfficeBusRoute = {
   id: 'r1',
@@ -77,6 +78,42 @@ describe('officeTransport', () => {
       ready: false,
       missing: ['the school stop'],
     });
+  });
+
+  it('builds a driver sheet without family, contact, class, note, or location details', () => {
+    const student = {
+      id: 's1',
+      firstName: 'Avery',
+      lastName: 'Lee',
+      nickname: '',
+      familyId: 'family-secret',
+      busRouteId: 'r1',
+      busStopId: 'a',
+      transportMode: 'bus',
+      status: 'active',
+      archived: false,
+      phone: '+15550000000',
+      email: 'private@example.com',
+      classId: 'class-secret',
+      medicalNotes: 'private note',
+    } as unknown as OfficeStudent;
+    const sheet = buildDriverRunSheet(route, [student], 'am');
+    expect(sheet).toEqual({
+      routeName: 'North',
+      busNumber: '4',
+      run: 'am',
+      stops: [
+        { order: 1, name: 'Oak', plannedTime: '07:15', riders: ['Avery Lee'] },
+        { order: 2, name: 'Maple', plannedTime: '07:25', riders: [] },
+        { order: 3, name: 'School', plannedTime: '07:40', riders: [] },
+      ],
+    });
+    const serialized = JSON.stringify(sheet);
+    expect(serialized).not.toContain('family-secret');
+    expect(serialized).not.toContain('private@example.com');
+    expect(serialized).not.toContain('+15550000000');
+    expect(serialized).not.toContain('class-secret');
+    expect(serialized).not.toContain('private note');
   });
 
   it('flags a school stop that is not last in the morning route', () => {

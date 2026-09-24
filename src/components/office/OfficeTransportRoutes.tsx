@@ -26,6 +26,8 @@ import { useOfficeWrite } from '@/lib/office/useOfficeWrite';
 import { saveOfficeSettings } from '@/lib/office/officeSettingsDoc';
 import {
   BUS_ROUTE_COLORS,
+  BUS_RUN_LABEL,
+  buildDriverRunSheet,
   exampleRoutes,
   latestMaintenanceLabel,
   localIsoDate,
@@ -340,6 +342,7 @@ function OfficeBusRouteSheet({
   const [dirty, setDirty] = useState(false);
   const [focusStop, setFocusStop] = useState<string | null>(null);
   const [addStudentId, setAddStudentId] = useState('');
+  const [driverRun, setDriverRun] = useState<'am' | 'pm'>('am');
   const [maintenanceDraft, setMaintenanceDraft] = useState({
     serviceDate: localIsoDate(),
     serviceType: '',
@@ -497,6 +500,27 @@ function OfficeBusRouteSheet({
     } finally {
       setBusy(false);
     }
+  };
+
+  const downloadDriverSheet = () => {
+    const sheet = buildDriverRunSheet(
+      { id: route?.id ?? 'draft-route', name: draft.name.trim() || 'Route', busNumber: draft.busNumber, stops: draft.stops },
+      assignedStudents,
+      driverRun,
+    );
+    const rows = sheet.stops.flatMap((stop) => {
+      const base = [sheet.routeName, sheet.busNumber, BUS_RUN_LABEL[driverRun], String(stop.order), stop.name, stop.plannedTime ?? ''];
+      if (stop.riders.length === 0) return [[...base, '']];
+      return stop.riders.map((rider) => [...base, rider]);
+    });
+    if (rows.length === 0) rows.push([sheet.routeName, sheet.busNumber, BUS_RUN_LABEL[driverRun], '—', 'No stops added', '', '']);
+    const fileName = (sheet.routeName || 'route').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'route';
+    downloadCsv(
+      `driver-run-sheet-${fileName}-${driverRun}.csv`,
+      ['Route', 'Bus number', 'Run', 'Stop order', 'Stop', 'Planned time', 'Rider'],
+      rows,
+    );
+    toast({ title: 'Driver run sheet downloaded', description: 'It contains only the route, stops, times, rider names, and assigned stops.' });
   };
 
   const downloadManifest = () => {
@@ -1009,8 +1033,18 @@ function OfficeBusRouteSheet({
 
           {route ? (
             <div className="flex flex-wrap items-center gap-4">
-              <button type="button" disabled={busy} onClick={downloadManifest} title="Includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
-                <Download className="h-3.5 w-3.5" /> Download rider manifest
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-teal-200 bg-teal-50/60 px-2.5 py-1.5 dark:border-teal-900 dark:bg-teal-950/30">
+                <label htmlFor="driver-run-sheet-run" className="text-xs font-medium text-teal-900 dark:text-teal-100">Driver copy:</label>
+                <select id="driver-run-sheet-run" value={driverRun} onChange={(event) => setDriverRun(event.target.value as 'am' | 'pm')} className="h-8 rounded-lg border bg-background px-2 text-xs">
+                  <option value="am">Morning</option>
+                  <option value="pm">Afternoon</option>
+                </select>
+                <button type="button" disabled={busy} onClick={downloadDriverSheet} title="No phone numbers, addresses, class names, family details, notes, or coordinates" className="flex items-center gap-1.5 text-xs font-medium text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                  <Download className="h-3.5 w-3.5" /> Download safe run sheet
+                </button>
+              </div>
+              <button type="button" disabled={busy} onClick={downloadManifest} title="Office copy includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+                <Download className="h-3.5 w-3.5" /> Office rider manifest
               </button>
               <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
                 <Copy className="h-3.5 w-3.5" /> Duplicate route
