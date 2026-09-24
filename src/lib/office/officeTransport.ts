@@ -341,6 +341,7 @@ export function routeForTrip(route: OfficeBusRoute | undefined, trip: OfficeBusT
     driverPhone: route?.driverPhone ?? null,
     capacity: route?.capacity ?? null,
     vehicle: snapshot.vehicle ?? route?.vehicle ?? null,
+    notifyFamiliesOnAlert: route?.notifyFamiliesOnAlert === true,
     stops: snapshot.stops ?? [],
     notes: route?.notes ?? null,
     updatedAt: route?.updatedAt ?? trip.updatedAt,
@@ -496,6 +497,7 @@ export function exampleRoutes(school: LatLng): Array<Omit<OfficeBusRoute, 'id' |
     driverName,
     driverPhone: null,
     capacity: 48,
+    notifyFamiliesOnAlert: false,
     notes: null,
     stops: [
       ...points.map(([stopName, dLat, dLng], i) => ({

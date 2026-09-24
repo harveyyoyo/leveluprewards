@@ -181,6 +181,10 @@ describe('officeTransport', () => {
     expect(transportFamilyEmails(students, families, 'r1', { riderSnapshot: [], riderManifest: [] })).toEqual([]);
   });
 
+  it('keeps the route family alert choice for the active trip view', () => {
+    expect(routeForTrip({ ...route, notifyFamiliesOnAlert: true }, trip())).toMatchObject({ notifyFamiliesOnAlert: true });
+  });
+
   it('uses the route saved with a trip for past history', () => {
     const oldSnapshot = {
       name: 'Old North',

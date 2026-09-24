@@ -214,6 +214,8 @@ export type OfficeBusRoute = {
   capacity?: number | null;
   /** Optional vehicle identity and maintenance dates. */
   vehicle?: OfficeBusVehicleDetails | null;
+  /** When enabled, a driver problem report queues an update for opted-in family contacts. */
+  notifyFamiliesOnAlert?: boolean;
   stops: OfficeBusStop[];
   notes?: string | null;
   updatedAt: number;

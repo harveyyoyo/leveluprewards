@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, Building2, Copy, Download, MapPin, Plus, Route as RouteIcon, Sparkles, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -165,6 +166,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
                     ) : null}
                     {vehicle ? <span className="mt-2 block text-xs text-muted-foreground">{vehicle}</span> : null}
                     {vehicleDue ? <span className="mt-1 block text-xs font-medium text-red-700 dark:text-red-300">{vehicleDue}</span> : null}
+                    {route.notifyFamiliesOnAlert ? <span className="mt-1 block text-xs font-medium text-teal-800 dark:text-teal-300">Family problem alerts on</span> : null}
                     <span className="mt-3 flex items-center justify-between text-xs">
                       <span>
                         {riders} rider{riders === 1 ? '' : 's'}
@@ -237,6 +239,7 @@ function draftFrom(route: OfficeBusRoute | null, used: string[]): Draft {
     driverPhone: '',
     capacity: null,
     vehicle: {},
+    notifyFamiliesOnAlert: false,
     stops: [],
     notes: '',
   };
@@ -623,6 +626,22 @@ function OfficeBusRouteSheet({
               <Label htmlFor="vehicle-notes">Vehicle notes</Label>
               <Textarea id="vehicle-notes" value={vehicleDraftValue(draft.vehicle, 'notes')} onChange={(e) => setVehicle({ notes: e.target.value })} placeholder="Maintenance or equipment notes" className="min-h-[60px] rounded-xl" />
             </div>
+          </section>
+
+          <section className="rounded-2xl border bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                className="mt-0.5"
+                checked={draft.notifyFamiliesOnAlert === true}
+                onCheckedChange={(checked) => patch({ notifyFamiliesOnAlert: checked === true })}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium">Email families when the driver reports a problem</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Opted-in family contacts are added to the office mail queue. This is off by default.
+                </span>
+              </span>
+            </label>
           </section>
 
           <section className="space-y-2">

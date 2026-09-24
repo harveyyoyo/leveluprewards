@@ -398,12 +398,20 @@ function DrivingScreen({
   const sendReport = async () => {
     if (!report || !ensureOnline()) return;
     try {
-      await transport.addOfficeBusTripAlert(trip, route, {
+      const result = await transport.addOfficeBusTripAlert(trip, route, {
         kind: report,
         message: reportText.trim() || null,
         minutes: report === 'delay' ? reportMinutes : null,
       });
-      toast({ title: 'Saved for the office', description: 'It will appear on the live Transportation page.' });
+      toast({
+        title: 'Saved for the office',
+        description:
+          result.notificationStatus === 'failed'
+            ? 'The report is safe, but the family update could not be queued. Please tell the office.'
+            : result.notificationsQueued > 0
+              ? `It will appear on the live page, and ${result.notificationsQueued} family update${result.notificationsQueued === 1 ? '' : 's'} will be queued.`
+              : 'It will appear on the live Transportation page.',
+      });
       setReport(null);
       setReportText('');
     } catch (e) {

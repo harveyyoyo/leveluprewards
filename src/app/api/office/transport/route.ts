@@ -574,6 +574,9 @@ async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body
     ...Object.keys(trip.riders ?? {}),
   ])].filter(Boolean);
   const familyIds = new Set<string>();
+  for (const entry of trip.riderManifest ?? []) {
+    if (entry.familyId?.trim()) familyIds.add(entry.familyId.trim());
+  }
   for (let start = 0; start < studentIds.length; start += 400) {
     const refs = studentIds.slice(start, start + 400).map((studentId) => auth.db.collection('schools').doc(schoolId).collection('officeStudents').doc(studentId));
     const snaps = await auth.db.getAll(...refs);
@@ -629,7 +632,23 @@ async function queueFamilyUpdate(auth: AuthContext, schoolId: string, body: Body
   return { queued: recipientList.length };
 }
 
-async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+function alertFamilyMessage(kind: OfficeBusTripAlert['kind'], minutes: number | null, note: string | null, route: OfficeBusRoute): string {
+  const label = kind === 'delay' ? 'a delay' : kind === 'breakdown' ? 'a vehicle problem' : kind === 'accident' ? 'an accident' : kind === 'behavior' ? 'a behavior concern' : 'a transportation problem';
+  const timing = minutes == null ? '' : ` (${minutes} minutes late)`;
+  return [
+    `The office received a report about ${label}${timing} on ${routeLabel(route)}.`,
+    note ? `Driver note: ${note}` : '',
+    'Please contact the school office if you need more information.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promise<{
+  ok: true;
+  notificationsQueued: number;
+  notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed';
+}> {
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
   assertActive(trip);
@@ -642,7 +661,27 @@ async function addAlert(auth: AuthContext, schoolId: string, body: Body): Promis
   const entry = { id: `alert-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`, kind, message, minutes, at: now, by: auth.uid };
   await tripRef(auth.db, schoolId, tripId).update({ alerts: FieldValue.arrayUnion(entry), updatedAt: now });
   await audit(auth.db, schoolId, { entityType: 'officeBusTrip', entityId: tripId, action: 'update', summary: `Driver reported ${kind}`, changedBy: auth.uid });
-  return { ok: true };
+
+  let notificationsQueued = 0;
+  let notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' = 'not_configured';
+  const routeSnap = await auth.db.collection('schools').doc(schoolId).collection('officeBusRoutes').doc(trip.routeId).get();
+  const currentRoute = routeSnap.exists ? (routeSnap.data() as OfficeBusRoute) : undefined;
+  const route = routeForTrip(currentRoute, trip);
+  if (route?.notifyFamiliesOnAlert) {
+    try {
+      notificationsQueued = (
+        await queueFamilyUpdate(auth, schoolId, {
+          tripId,
+          message: alertFamilyMessage(kind as OfficeBusTripAlert['kind'], minutes, message, route),
+        })
+      ).queued;
+      notificationStatus = notificationsQueued > 0 ? 'queued' : 'no_recipients';
+    } catch {
+      // The safety report is already saved. A mail-service problem must not make the driver retry it.
+      notificationStatus = 'failed';
+    }
+  }
+  return { ok: true, notificationsQueued, notificationStatus };
 }
 
 async function endTrip(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {

@@ -59,7 +59,7 @@ export function useOfficeTransportApi(schoolId: string | null) {
         trip: Pick<OfficeBusTrip, 'id' | 'run'>,
         _route: OfficeBusRoute,
         alert: { kind: OfficeBusAlertKind; message?: string | null; minutes?: number | null },
-      ) => call<{ ok: true }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
+      ) => call<{ ok: true; notificationsQueued: number; notificationStatus: 'not_configured' | 'queued' | 'no_recipients' | 'failed' }>({ action: 'alert', tripId: trip.id, run: trip.run, ...alert }),
       endOfficeBusTrip: (trip: Pick<OfficeBusTrip, 'id' | 'run'>, _route: OfficeBusRoute, childCheckDone: boolean) =>
         call<{ ok: true }>({ action: 'end', tripId: trip.id, run: trip.run, childCheckDone }),
     }),
