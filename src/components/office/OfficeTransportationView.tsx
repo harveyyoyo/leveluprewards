@@ -103,6 +103,7 @@ export function OfficeTransportationView({ schoolId, students, studentLabelById,
           schoolId={schoolId}
           routes={routes}
           students={students}
+          familyById={familyById}
           classNameById={classNameById}
           school={school}
           center={center}

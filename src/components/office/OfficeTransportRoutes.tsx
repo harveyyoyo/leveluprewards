@@ -35,7 +35,7 @@ import {
   type LatLng,
 } from '@/lib/office/officeTransport';
 import { downloadCsv, getOfficeStudentFullName } from '@/lib/office/officeUtils';
-import type { OfficeBusMaintenanceEntry, OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeStudent } from '@/lib/office/types';
+import type { OfficeBusMaintenanceEntry, OfficeBusRoute, OfficeBusStop, OfficeBusVehicleDetails, OfficeFamily, OfficeStudent } from '@/lib/office/types';
 import { cn } from '@/lib/utils';
 import { isPublicSampleSchoolId } from '@/lib/sampleSchools';
 
@@ -43,6 +43,7 @@ type Props = {
   schoolId: string;
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   classNameById: Map<string, string>;
   activeRouteIds: Set<string>;
   school: { address?: string | null; lat: number; lng: number } | null;
@@ -51,7 +52,7 @@ type Props = {
 };
 
 /** Routes: one card per bus, with stops and riders inside. */
-export function OfficeTransportRoutes({ schoolId, routes, students, classNameById, activeRouteIds, school, center, isLoading }: Props) {
+export function OfficeTransportRoutes({ schoolId, routes, students, familyById, classNameById, activeRouteIds, school, center, isLoading }: Props) {
   const write = useOfficeWrite(schoolId);
   const firestore = useFirestore();
   const { userName } = useAppContext();
@@ -210,6 +211,7 @@ export function OfficeTransportRoutes({ schoolId, routes, students, classNameByI
         route={openRoute}
         routes={routes}
         students={students}
+        familyById={familyById}
         classNameById={classNameById}
         activeRouteIds={activeRouteIds}
         center={school ?? center}
@@ -280,6 +282,7 @@ function OfficeBusRouteSheet({
   route,
   routes,
   students,
+  familyById,
   classNameById,
   activeRouteIds,
   center,
@@ -291,6 +294,7 @@ function OfficeBusRouteSheet({
   route: OfficeBusRoute | null;
   routes: OfficeBusRoute[];
   students: OfficeStudent[];
+  familyById: Map<string, OfficeFamily>;
   classNameById: Map<string, string>;
   activeRouteIds: Set<string>;
   center: LatLng;
@@ -464,6 +468,12 @@ function OfficeBusRouteSheet({
     const routeName = draft.name.trim() || (route ? routeLabel(route) : 'route');
     const rows: string[][] = [];
     const addRow = (order: string, stopName: string, amTime: string, pmTime: string, student: OfficeStudent | null) => {
+      const approvedContacts = student?.familyId
+        ? (familyById.get(student.familyId)?.contacts ?? [])
+            .filter((contact) => contact.pickupAuthorized !== false)
+            .map((contact) => `${contact.name}${contact.phone ? ` (${contact.phone})` : ''}`)
+            .join('; ')
+        : '';
       rows.push([
         routeName,
         draft.busNumber?.trim() ?? '',
@@ -473,6 +483,7 @@ function OfficeBusRouteSheet({
         pmTime,
         student ? getOfficeStudentFullName(student) : '',
         student?.classId ? classNameById.get(student.classId) ?? '' : '',
+        approvedContacts,
       ]);
     };
 
@@ -497,10 +508,10 @@ function OfficeBusRouteSheet({
       .replace(/^-+|-+$/g, '') || 'route';
     downloadCsv(
       `transport-manifest-${fileName}.csv`,
-      ['Route', 'Bus number', 'Stop order', 'Stop', 'Morning time', 'Afternoon time', 'Student', 'Class'],
+      ['Route', 'Bus number', 'Stop order', 'Stop', 'Morning time', 'Afternoon time', 'Student', 'Class', 'Approved pickup contacts'],
       rows,
     );
-    toast({ title: 'Manifest downloaded', description: 'The route and rider list are ready to open in a spreadsheet.' });
+    toast({ title: 'Manifest downloaded', description: 'The route, riders, and approved pickup contacts are ready to open in a spreadsheet.' });
   };
 
   const remove = async () => {
@@ -947,7 +958,7 @@ function OfficeBusRouteSheet({
 
           {route ? (
             <div className="flex flex-wrap items-center gap-4">
-              <button type="button" disabled={busy} onClick={downloadManifest} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
+              <button type="button" disabled={busy} onClick={downloadManifest} title="Includes approved pickup contacts" className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
                 <Download className="h-3.5 w-3.5" /> Download rider manifest
               </button>
               <button type="button" disabled={locked || busy} onClick={() => void duplicate()} className="flex items-center gap-1.5 text-sm text-teal-800 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-teal-300">
