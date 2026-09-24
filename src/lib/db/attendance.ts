@@ -1,6 +1,7 @@
 import {
   doc,
   setDoc,
+  updateDoc,
   getDoc,
   getDocs,
   collection,
@@ -105,7 +106,7 @@ export const setAttendanceConfig = async (
 ): Promise<void> => {
   const configRef = doc(firestore, 'schools', schoolId, 'attendance', ATTENDANCE_CONFIG_ID);
   try {
-    await setDoc(configRef, removeUndefined(settings as unknown as Record<string, unknown>));
+    await setDoc(configRef, removeUndefined(settings as unknown as Record<string, unknown>), { merge: true });
   } catch (error) {
     reportFirestorePermissionError(error, { path: configRef.path, operation: 'write', requestResourceData: settings });
     throw error;
@@ -390,6 +391,26 @@ export const recordManualAttendance = async (
 
     return { success: true, pointsAwarded: pointsToAward, periodLabel: options.periodLabel };
   });
+};
+
+/**
+ * Change the status of a check-in that already exists (e.g. on time → late, or excused).
+ * Points already given are left alone, so a correction never takes points away from a student.
+ */
+export const updateAttendanceStatus = async (
+  firestore: Firestore,
+  schoolId: string,
+  logId: string,
+  status: 'on-time' | 'late' | 'excused'
+): Promise<void> => {
+  const logRef = doc(firestore, 'schools', schoolId, 'attendanceLog', logId);
+  const patch = { status, onTime: status === 'on-time', updatedAt: Date.now() };
+  try {
+    await updateDoc(logRef, patch);
+  } catch (error) {
+    reportFirestorePermissionError(error, { path: logRef.path, operation: 'update', requestResourceData: patch });
+    throw error;
+  }
 };
 
 // ---- Logs ----

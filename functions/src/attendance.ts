@@ -406,8 +406,11 @@ exports.setAttendanceConfig = functions.https.onCall(
       if (typeof config.categoryId === "string" && config.categoryId.length > 0) {
         payload.categoryId = config.categoryId;
       }
-      if (typeof config.attendanceTimeZone === "string" && String(config.attendanceTimeZone).trim().length > 0) {
-        payload.attendanceTimeZone = String(config.attendanceTimeZone).trim();
+      // Time zone has its own control that saves on its own: leave it alone when not sent,
+      // clear it when sent empty.
+      if (typeof config.attendanceTimeZone === "string") {
+        const tz = String(config.attendanceTimeZone).trim();
+        payload.attendanceTimeZone = tz.length > 0 ? tz : FieldValue.delete();
       }
       if (config.attendanceQuietAfterMinutes !== undefined && config.attendanceQuietAfterMinutes !== null) {
         payload.attendanceQuietAfterMinutes = toFiniteNumber(config.attendanceQuietAfterMinutes, -1);
@@ -420,7 +423,6 @@ exports.setAttendanceConfig = functions.https.onCall(
         "classPeriodAssignmentsByDay",
         "enabledClassIds",
         "categoryId",
-        "attendanceTimeZone",
       ];
       for (const key of OWNED_OPTIONAL_FIELDS) {
         if (!(key in payload)) payload[key] = FieldValue.delete();

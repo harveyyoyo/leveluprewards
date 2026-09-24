@@ -170,15 +170,17 @@ export function useAdminAttendance(deps: AdminAttendanceDeps) {
     if (!attendanceConfig || !setAttendanceConfig) return;
     setAttendanceConfigSaving(true);
     try {
-      await setAttendanceConfig(attendanceConfig);
+      // The time zone control saves by itself; leave it out so an older copy here can't undo it.
+      const { attendanceTimeZone: _tz, ...rest } = attendanceConfig;
+      void _tz;
+      await setAttendanceConfig(rest);
       playSound('success');
       toast({ title: 'Attendance settings saved.' });
     } catch (error: unknown) {
       const err = error as { code?: string; message?: string };
       let description = err?.message ?? String(error);
       if (description === 'internal' || err?.code?.includes('internal')) {
-        description =
-          'Redeploy Cloud Functions (firebase deploy --only functions). Sign in at /developer with your allowed Google account so addDeveloperMe can register your UID. Check Firebase Console → Functions → Logs for details.';
+        description = 'The server could not save right now. Please try again in a minute.';
       }
       toast({ variant: 'destructive', title: 'Failed to save', description });
     } finally {
