@@ -214,6 +214,22 @@ export type OfficeBusVehicleDetails = {
   maintenanceLog?: OfficeBusMaintenanceEntry[] | null;
 };
 
+export type OfficeBusGpsDevice = {
+  id: string;
+  label: string;
+  status: 'active' | 'revoked';
+  assignedRouteId: string | null;
+  assignmentVersion: number;
+  keyVersion: number;
+  lastSeenAt: number | null;
+  lastSequence: number | null;
+  createdAt: number;
+  createdBy: string;
+  updatedAt: number;
+  updatedBy: string;
+  revokedAt?: number | null;
+};
+
 /** A bus route (`schools/{id}/officeBusRoutes`). Morning runs the stops in order, afternoon in reverse. */
 export type OfficeBusRoute = {
   id: string;

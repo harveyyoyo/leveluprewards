@@ -16,6 +16,7 @@ const SUBCOLLECTIONS = [
   "coupons",
   "officeBusRoutes",
   "officeBusTrips",
+  "officeBusGpsDevices",
 ];
 const RETENTION_DAYS = 30;
 
