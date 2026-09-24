@@ -314,8 +314,20 @@ export function vehicleLabel(vehicle: OfficeBusVehicleDetails | null | undefined
 export function vehicleDueLabel(vehicle: OfficeBusVehicleDetails | null | undefined, now = Date.now()): string | null {
   if (!vehicle) return null;
   const today = localIsoDate(new Date(now));
-  if (vehicle.inspectionDue && vehicle.inspectionDue < today) return 'Inspection overdue';
-  if (vehicle.insuranceDue && vehicle.insuranceDue < today) return 'Insurance overdue';
+  const daysUntil = (value: string | null | undefined): number | null => {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const due = new Date(`${value}T12:00:00`);
+    const current = new Date(`${today}T12:00:00`);
+    if (Number.isNaN(due.getTime()) || Number.isNaN(current.getTime())) return null;
+    return Math.round((due.getTime() - current.getTime()) / 86_400_000);
+  };
+  const inspectionDays = daysUntil(vehicle.inspectionDue);
+  const insuranceDays = daysUntil(vehicle.insuranceDue);
+  if (inspectionDays != null && inspectionDays < 0) return 'Inspection overdue';
+  if (insuranceDays != null && insuranceDays < 0) return 'Insurance overdue';
+  const dueSoon = (label: string, days: number) => (days === 0 ? `${label} due today` : `${label} due in ${days} day${days === 1 ? '' : 's'}`);
+  if (inspectionDays != null && inspectionDays <= 30) return dueSoon('Inspection', inspectionDays);
+  if (insuranceDays != null && insuranceDays <= 30) return dueSoon('Insurance', insuranceDays);
   return null;
 }
 

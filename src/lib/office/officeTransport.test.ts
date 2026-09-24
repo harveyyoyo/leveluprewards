@@ -78,6 +78,11 @@ describe('officeTransport', () => {
     expect(vehicleDueLabel(vehicle, at(2, 0))).toBe('Inspection overdue');
   });
 
+  it('warns before vehicle dates are due', () => {
+    expect(vehicleDueLabel({ inspectionDue: '2026-10-01' }, at(2, 0))).toBe('Inspection due in 8 days');
+    expect(vehicleDueLabel({ insuranceDue: '2026-11-15' }, at(2, 0))).toBeNull();
+  });
+
   it('shows the newest visible service record', () => {
     expect(
       latestMaintenanceLabel({
