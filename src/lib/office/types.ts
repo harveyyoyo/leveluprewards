@@ -281,6 +281,7 @@ export type OfficeBusLocation = {
   speed?: number | null;
   heading?: number | null;
   at: number;
+  source?: 'browser' | 'gps_device';
 };
 
 export type OfficeBusReleaseMethod = 'authorized_contact' | 'id_checked' | 'office_override';
@@ -332,6 +333,10 @@ export type OfficeBusTrip = {
   startedAt: number;
   endedAt?: number | null;
   location?: OfficeBusLocation | null;
+  /** Trusted tracker bound when this run began, when one is assigned. */
+  gpsDeviceId?: string | null;
+  gpsAssignmentVersion?: number | null;
+  locationSource?: 'browser' | 'gps_device' | null;
   /** stopId -> time the bus reached it. */
   stopArrivals?: Record<string, number> | null;
   /** studentId -> latest status on this run. */

@@ -6,6 +6,7 @@ import { checkDeveloperAllowlist, checkSchoolRole, sameOriginCheck, verifyIdToke
 import { familyUpdateMessage, missingReleaseStudentIds, riderManifestFromStudents, riderSnapshotFromStudents, routeForTrip, routeLabel, tripDocId } from '@/lib/office/officeTransport';
 import type {
   OfficeBusEvent,
+  OfficeBusGpsDevice,
   OfficeBusLocation,
   OfficeBusRelease,
   OfficeBusReleaseMethod,
@@ -289,6 +290,8 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
   const riderStudents = ridersSnap.docs.map((doc) => ({ ...(doc.data() as OfficeStudent), id: doc.id }));
   const riderManifest = riderManifestFromStudents(riderStudents);
   const riderSnapshot = riderSnapshotFromStudents(riderStudents);
+  const gpsDevices = await auth.db.collection('schools').doc(schoolId).collection('officeBusGpsDevices').where('assignedRouteId', '==', routeId).limit(10).get();
+  const assignedGpsDevice = gpsDevices.docs.map((doc) => ({ id: doc.id, ...doc.data() } as OfficeBusGpsDevice)).find((device) => device.status === 'active') ?? null;
   const now = Date.now();
   let tripId = baseId;
   let resumed = false;
@@ -363,6 +366,9 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         startedAt: now,
         endedAt: null,
         location: null,
+        gpsDeviceId: assignedGpsDevice?.id ?? null,
+        gpsAssignmentVersion: assignedGpsDevice?.assignmentVersion ?? null,
+        locationSource: null,
         stopArrivals: {},
         riders: {},
         alerts: [],
@@ -384,6 +390,7 @@ async function startTrip(auth: AuthContext, schoolId: string, body: Body): Promi
         updatedAt: now,
         ...(existing.routeSnapshot ? {} : { routeSnapshot: { name: route.name, busNumber: route.busNumber ?? null, color: route.color, vehicle: route.vehicle ?? null, stops: route.stops } }),
         ...(existing.riderSnapshot ? {} : { riderSnapshot }),
+        ...(existing.gpsDeviceId ? {} : { gpsDeviceId: assignedGpsDevice?.id ?? null, gpsAssignmentVersion: assignedGpsDevice?.assignmentVersion ?? null, locationSource: existing.locationSource ?? null }),
         driverId: auth.uid,
       });
       resumed = true;
@@ -410,12 +417,13 @@ function allowLocationUpdate(uid: string): boolean {
   return current.count <= 120;
 }
 
-async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true }> {
+async function updateLocation(auth: AuthContext, schoolId: string, body: Body): Promise<{ ok: true; ignored?: boolean }> {
   if (!allowLocationUpdate(auth.uid)) throw new AuthError('Too many location updates. Try again in a minute.', 429);
   const tripId = safeId(body.tripId, 'Trip');
   const trip = await getTrip(auth.db, schoolId, tripId);
   assertActive(trip);
   assertCanOperate(auth, trip);
+  if (trip.gpsDeviceId) return { ok: true, ignored: true };
   const raw = body.location;
   if (!raw || typeof raw !== 'object') throw new Error('A bus location is required.');
   const location = raw as Partial<OfficeBusLocation>;
@@ -436,7 +444,9 @@ async function updateLocation(auth: AuthContext, schoolId: string, body: Body): 
       speed: location.speed == null ? null : numberInRange(location.speed, 'Bus speed', 0, 200),
       heading: location.heading == null ? null : numberInRange(location.heading, 'Bus heading', 0, 360),
       at: now,
+      source: 'browser',
     },
+    locationSource: 'browser',
     updatedAt: now,
   };
   if (body.reachedStopId) {

@@ -369,7 +369,7 @@ function DrivingScreen({
         const prev = lastSent.current;
         // Reaching a stop is sent right away so the office sees it without waiting.
         const upcoming = nextStop(activeRoute, t);
-        const reached = upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
+        const reached = !t.gpsDeviceId && upcoming && distanceMeters(p, upcoming) <= STOP_ARRIVAL_RADIUS_M ? upcoming.id : null;
         if (!reached && prev && now - prev.at < SEND_EVERY_MS && distanceMeters(prev.p, p) < SEND_IF_MOVED_M) return;
         lastSent.current = { at: now, p };
         void transport
