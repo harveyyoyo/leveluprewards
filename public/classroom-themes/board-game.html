@@ -18,6 +18,14 @@
   .tile { width:64px; height:64px; border-radius:16px; flex-shrink:0; }
   .checkered { background-image: repeating-conic-gradient(rgba(70,55,25,0.045) 0% 25%, transparent 0% 50%); background-size: 56px 56px; }
 </style>
+<script id="dark-mode-detector">
+try {
+  if (new URLSearchParams(window.location.search).get('dark') === '1') {
+    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
+    document.documentElement.style.background = '#111114';
+  }
+} catch (e) {}
+</script>
 </head>
 <body class="dmsans text-[#3B3222]">
 <div class="flex h-full">

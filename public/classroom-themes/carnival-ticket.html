@@ -21,6 +21,14 @@
   .marquee-dots { background-image: radial-gradient(circle, #FFE08A 3px, transparent 3.5px); background-size: 24px 24px; }
   .starburst { clip-path: polygon(50% 0%, 59% 12%, 73% 6%, 75% 21%, 90% 21%, 84% 35%, 98% 41%, 88% 52%, 98% 63%, 84% 69%, 90% 83%, 75% 83%, 73% 98%, 59% 92%, 50% 100%, 41% 92%, 27% 98%, 25% 83%, 10% 83%, 16% 69%, 2% 63%, 12% 52%, 2% 41%, 16% 35%, 10% 21%, 25% 21%, 27% 6%, 41% 12%); }
 </style>
+<script id="dark-mode-detector">
+try {
+  if (new URLSearchParams(window.location.search).get('dark') === '1') {
+    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
+    document.documentElement.style.background = '#111114';
+  }
+} catch (e) {}
+</script>
 </head>
 <body class="dmsans text-[#2E2014]">
 <div class="flex h-full">

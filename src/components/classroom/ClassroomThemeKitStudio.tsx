@@ -7,6 +7,7 @@ import {
   Check,
   ExternalLink,
   Layers,
+  Moon,
   Palette,
   RotateCcw,
   Sliders,
@@ -46,6 +47,7 @@ type ThemeTweakSettings = {
   vivid: number;
   corners: number;
   depth: (typeof DEPTHS)[number];
+  darkMode: boolean;
 };
 
 const DEFAULT_SETTINGS: ThemeTweakSettings = {
@@ -56,6 +58,7 @@ const DEFAULT_SETTINGS: ThemeTweakSettings = {
   vivid: 100,
   corners: -1,
   depth: 'Theme',
+  darkMode: false,
 };
 
 const STORAGE_KEY = 'classroom-theme-kit-settings';
@@ -77,7 +80,21 @@ function buildOverrides(s: ThemeTweakSettings): string {
   if (s.headingFont !== 'Theme default') {
     css += `h1, h2, h3, h4, [class*="font-display"], [class*="font-heading"] { font-family: '${s.headingFont}', sans-serif !important; }`;
   }
-  if (s.hue !== 0 || s.vivid !== 100) {
+  if (s.darkMode) {
+    const totalHue = (180 + s.hue) % 360;
+    css += `
+      html {
+        filter: invert(0.92) hue-rotate(${totalHue}deg) saturate(${Math.round(s.vivid * 1.05)}%) !important;
+        background: #111114 !important;
+      }
+      body {
+        background-color: transparent !important;
+      }
+      img, video, picture, [style*="url("] {
+        filter: invert(1) hue-rotate(180deg) !important;
+      }
+    `;
+  } else if (s.hue !== 0 || s.vivid !== 100) {
     css += `html { filter: hue-rotate(${s.hue}deg) saturate(${s.vivid}%); }`;
   }
   if (s.corners >= 0) {
@@ -228,7 +245,7 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
 
   const overrides = useMemo(() => buildOverrides(settings), [settings]);
   const backHref = `/${schoolId.toLowerCase()}/classroom`;
-  const standaloneHref = `/classroom-themes/${activeDesign.slug}.html`;
+  const standaloneHref = `/classroom-themes/${activeDesign.slug}.html${settings.darkMode ? '?dark=1' : ''}`;
 
   return (
     <div className="flex h-screen w-full flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
@@ -273,6 +290,18 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
             <span className="text-zinc-500">·</span>
             <span className="truncate max-w-[140px] md:max-w-none">{activeDesign.name}</span>
           </div>
+
+          <label className="flex items-center gap-1.5 cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 hover:text-white transition-colors select-none">
+            <input
+              type="checkbox"
+              aria-label="Dark mode"
+              checked={settings.darkMode}
+              onChange={(e) => updateSetting('darkMode', e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-zinc-600 bg-zinc-700 text-emerald-500 accent-emerald-500 cursor-pointer"
+            />
+            <Moon className={settings.darkMode ? 'h-3.5 w-3.5 text-amber-400' : 'h-3.5 w-3.5 text-zinc-400'} />
+            <span className="hidden sm:inline">Dark</span>
+          </label>
 
           <Button
             asChild
@@ -478,6 +507,24 @@ export function ClassroomThemeKitStudio({ schoolId }: { schoolId: string }) {
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Dark Mode */}
+                <div className="space-y-1">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Dark Mode
+                  </span>
+                  <label className="flex h-8 items-center gap-2 cursor-pointer rounded-lg border border-zinc-700 bg-zinc-800 px-3 text-xs font-semibold text-zinc-200 hover:bg-zinc-700 transition-colors select-none">
+                    <input
+                      type="checkbox"
+                      aria-label="Dark mode"
+                      checked={settings.darkMode}
+                      onChange={(e) => updateSetting('darkMode', e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-emerald-500 accent-emerald-500 cursor-pointer"
+                    />
+                    <Moon className={settings.darkMode ? 'h-3.5 w-3.5 text-amber-400' : 'h-3.5 w-3.5 text-zinc-400'} />
+                    <span>Dark</span>
+                  </label>
                 </div>
 
                 {/* Reset button */}

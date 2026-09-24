@@ -21,6 +21,14 @@
   .ink-shadow-yellow { box-shadow: 6px 6px 0 #E3A008; }
   .ink-shadow-purple { box-shadow: 6px 6px 0 #6D28D9; }
 </style>
+<script id="dark-mode-detector">
+try {
+  if (new URLSearchParams(window.location.search).get('dark') === '1') {
+    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
+    document.documentElement.style.background = '#111114';
+  }
+} catch (e) {}
+</script>
 </head>
 <body class="dmsans text-[#1E2A4A]">
 <div class="flex h-full">

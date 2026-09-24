@@ -34,4 +34,15 @@ describe('ClassroomThemeKitStudio', () => {
     expect(screen.getByText('Shadows & Depth')).toBeDefined();
     expect(screen.getByRole('button', { name: /reset tweaks/i })).toBeDefined();
   });
+
+  it('toggles dark mode when dark mode checkbox is clicked', () => {
+    render(<ClassroomThemeKitStudio schoolId="schoolabc" />);
+
+    const darkCheckboxes = screen.getAllByRole('checkbox', { name: /dark mode/i });
+    expect(darkCheckboxes.length).toBeGreaterThan(0);
+    expect((darkCheckboxes[0] as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(darkCheckboxes[0]);
+    expect((darkCheckboxes[0] as HTMLInputElement).checked).toBe(true);
+  });
 });

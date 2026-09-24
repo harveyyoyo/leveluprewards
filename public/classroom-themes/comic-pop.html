@@ -17,6 +17,14 @@
   .bubble:before { content:''; position:absolute; bottom:-10px; left:46.5px; width:0; height:0; border-left:11px solid transparent; border-right:11px solid transparent; border-top:13px solid #FFD57E; z-index:1; }
   .halftone { background-image: radial-gradient(rgba(38,34,27,0.16) 1.3px, transparent 1.3px); background-size: 9px 9px; }
 </style>
+<script id="dark-mode-detector">
+try {
+  if (new URLSearchParams(window.location.search).get('dark') === '1') {
+    document.documentElement.style.filter = 'invert(0.92) hue-rotate(180deg)';
+    document.documentElement.style.background = '#111114';
+  }
+} catch (e) {}
+</script>
 </head>
 <body class="dmsans text-[#26221B]">
 <div class="flex h-full">
